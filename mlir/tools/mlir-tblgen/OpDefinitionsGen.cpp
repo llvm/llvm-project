@@ -83,12 +83,14 @@ const char *opSegmentSizeAttrInitCode = R"(
   auto sizeAttr = (*this)->getAttr({0}).cast<::mlir::DenseIntElementsAttr>();
 )";
 const char *attrSizedSegmentValueRangeCalcCode = R"(
-  auto sizeAttrValues = sizeAttr.getValues<uint32_t>();
+  const uint32_t *sizeAttrValueIt = &*sizeAttr.value_begin<uint32_t>();
+  if (sizeAttr.isSplat())
+    return {*sizeAttrValueIt * index, *sizeAttrValueIt};
+
   unsigned start = 0;
   for (unsigned i = 0; i < index; ++i)
-    start += *(sizeAttrValues.begin() + i);
-  unsigned size = *(sizeAttrValues.begin() + index);
-  return {start, size};
+    start += sizeAttrValueIt[i];
+  return {start, sizeAttrValueIt[index]};
 )";
 // The logic to calculate the actual value range for a declared operand
 // of an op with variadic of variadic operands within the OpAdaptor.
@@ -1510,7 +1512,10 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
 
   // Add parameters for all arguments (operands and attributes).
   int defaultValuedAttrStartIndex = op.getNumArgs();
-  if (attrParamKind == AttrParamKind::UnwrappedValue) {
+  // Successors and variadic regions go at the end of the parameter list, so no
+  // default arguments are possible.
+  bool hasTrailingParams = op.getNumSuccessors() || op.getNumVariadicRegions();
+  if (attrParamKind == AttrParamKind::UnwrappedValue && !hasTrailingParams) {
     // Calculate the start index from which we can attach default values in the
     // builder declaration.
     for (int i = op.getNumArgs() - 1; i >= 0; --i) {

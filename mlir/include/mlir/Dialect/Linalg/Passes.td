@@ -169,43 +169,15 @@ def LinalgTiling : FunctionPass<"linalg-tile"> {
     "scf::SCFDialect"
   ];
   let options = [
-    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
-  ];
-}
-
-def LinalgTilingToParallelLoops
-    : FunctionPass<"linalg-tile-to-parallel-loops"> {
-  let summary = "Tile operations in the linalg dialect to parallel loops";
-  let constructor = "mlir::createLinalgTilingToParallelLoopsPass()";
-  let options = [
-    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
-  ];
-  let dependentDialects = [
-    "AffineDialect",
-    "linalg::LinalgDialect",
-    "memref::MemRefDialect",
-    "scf::SCFDialect"
-  ];
-}
-
-def LinalgTilingToTiledLoops
-    : FunctionPass<"linalg-tile-to-tiled-loop"> {
-  let summary = "Tile operations in the linalg dialect to linalg.tiled_loop";
-  let constructor = "mlir::createLinalgTilingToTiledLoopPass()";
-  let options = [
-    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
+    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
-    ListOption<"distributionTypes", "linalg-distribution-types", "std::string",
-               "DistributionTypes",
+    Option<"loopType", "loop-type", "std::string", /*default=*/"\"for\"",
+           "Specify the type of loops to generate: for, parallel or "
+           "tiled_loop">,
+    ListOption<"distributionTypes", "distribution-types", "std::string",
+               "DistributionTypes (if loop-type=tiled_loop)",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
-  ];
-  let dependentDialects = [
-    "AffineDialect",
-    "linalg::LinalgDialect",
-    "memref::MemRefDialect",
-    "scf::SCFDialect"
+
   ];
 }
 
@@ -241,6 +213,20 @@ def LinalgDetensorize : FunctionPass<"linalg-detensorize"> {
     control flow inside a function. All blocks except for the entry block are
     detensored by converting their arguments whenever possible.
   }];
+}
+
+def LinalgTileAndFuseTensorOps
+    : FunctionPass<"linalg-tile-and-fuse-tensor-ops"> {
+  let summary = "Tile a LinalgOp and fuse its producers.";
+  let constructor = "mlir::createLinalgTileAndFuseTensorOpsPass()";
+  let options = [
+    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes",
+           "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"tileInterchange", "tile-interchange", "int64_t",
+           "Tile loop interchange",
+           "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+  ];
+  let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect"];
 }
 
 #endif // MLIR_DIALECT_LINALG_PASSES

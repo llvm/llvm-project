@@ -138,6 +138,19 @@ static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
 namespace mlir {
 namespace linalg {
 
+bool isPermutation(ArrayRef<int64_t> permutation) {
+  // Count the number of appearances for all indices.
+  SmallVector<int64_t> indexCounts(permutation.size(), 0);
+  for (auto index : permutation) {
+    // Exit if the index is out-of-range.
+    if (index < 0 || index >= static_cast<int64_t>(permutation.size()))
+      return false;
+    indexCounts[index]++;
+  }
+  // Return true if all indices appear once.
+  return count(indexCounts, 1) == static_cast<int64_t>(permutation.size());
+}
+
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim) {
@@ -729,6 +742,29 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
   }
 
   return tiledShapes;
+}
+
+void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
+                                    ArrayRef<Value> ivs) {
+  if (tiledOp.hasIndexSemantics()) {
+    assert(tiledOp->getNumRegions() == 1 &&
+           tiledOp->getRegion(0).getBlocks().size() == 1 &&
+           "expect producer to have one block.");
+    // Shift all IndexOp results by the tile offset.
+    Block &block = tiledOp->getRegion(0).front();
+    for (IndexOp indexOp : block.getOps<IndexOp>()) {
+      if (ivs[indexOp.dim()] == nullptr)
+        continue;
+      OpBuilder::InsertionGuard guard(b);
+      b.setInsertionPointAfter(indexOp);
+      AffineExpr index, offset;
+      bindDims(b.getContext(), index, offset);
+      AffineApplyOp applyOp = makeComposedAffineApply(
+          b, indexOp.getLoc(), index + offset,
+          ValueRange{indexOp.getResult(), ivs[indexOp.dim()]});
+      indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
+    }
+  }
 }
 
 } // namespace linalg

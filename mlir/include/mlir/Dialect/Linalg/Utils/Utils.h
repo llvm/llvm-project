@@ -29,16 +29,20 @@ class LinalgDependenceGraph;
 // General utilities
 //===----------------------------------------------------------------------===//
 
+/// Check if `permutation` is a permutation of the range
+/// `[0, permutation.size())`.
+bool isPermutation(ArrayRef<int64_t> permutation);
+
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
 /// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
 /// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
 template <typename T, unsigned N>
 void applyPermutationToVector(SmallVector<T, N> &inVec,
-                              ArrayRef<unsigned> permutation) {
+                              ArrayRef<int64_t> permutation) {
   SmallVector<T, N> auxVec(inVec.size());
-  for (unsigned i = 0; i < permutation.size(); ++i)
-    auxVec[i] = inVec[permutation[i]];
+  for (auto en : enumerate(permutation))
+    auxVec[en.index()] = inVec[en.value()];
   inVec = auxVec;
 }
 
@@ -76,8 +80,16 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
 
 //===----------------------------------------------------------------------===//
-// Fusion utilities
+// Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
+
+/// The type of loops to be generated during tiling.
+enum class LinalgTilingLoopType {
+  Loops = 0,
+  AffineLoops = 1,
+  ParallelLoops = 2,
+  TiledLoops = 3,
+};
 
 /// Checks whether the specific `producer` is the last write to exactly the
 /// whole `consumedView`. This checks structural dominance, that the dependence
@@ -127,6 +139,11 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
                                       ValueRange ivs, ValueRange tileSizes,
                                       ArrayRef<Value> sizeBounds);
 
+/// Add the tile loop induction variables `ivs` to the IndexOp results found in
+/// the body of the `tiledOp` to account for the tile offset.
+void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
+                                    ArrayRef<Value> ivs);
+
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,
     SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
@@ -166,6 +183,66 @@ Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
 Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                           OpResult producerOpResult,
                                           OpOperand &consumerOpOperand);
+
+//===----------------------------------------------------------------------===//
+// Fusion on tensor utilities
+//===----------------------------------------------------------------------===//
+
+/// A struct to manage the tile loop nest specific information.
+class TileLoopNest {
+public:
+  TileLoopNest(LinalgOp rootOp) : rootOp(rootOp) {}
+
+  /// Tile the root operation using the given `tileSizes` and `tileInterchange`.
+  LogicalResult tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
+                           ArrayRef<int64_t> tileInterchange);
+
+  /// Fuse the producer of `rootOpOperand` into the tile loop nest. Returns the
+  /// fused producer of fails if fusion is not possible.
+  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *rootOpOperand);
+
+  /// Returns the replacement results for the original untiled root operation.
+  ValueRange getRootOpReplacementResults();
+
+  /// Returns the tiled root operation.
+  LinalgOp getRootOp() { return rootOp; }
+
+private:
+  /// Returns true if the tile loop nest has no tile loops.
+  bool isEmpty();
+
+  /// Returns true if the tile loop nest invariants are satisfied:
+  /// - The number of tile loop operations and dimensions match.
+  /// - The innermost tile loop is the parent of `tiledOp`.
+  /// - The tile loops are directly nested.
+  // TODO: relax to support additional control flow, e.g., IfOp.
+  bool isValid();
+
+  /// Searches the block arguments tied to a block argument `bbArg` of the
+  /// innermost tile loop. Returns the block argument from outermost to
+  /// innermost or an empty vector if none are found.
+  SmallVector<BlockArgument> getTiedBBArgs(BlockArgument bbArg);
+
+  /// Returns the iteration argument of the outermost tile loop mapped to a
+  /// block argument `bbArg` of the innermost tile loop.
+  OpOperand *getTiedIterArg(BlockArgument bbArg);
+
+  /// Returns true if `bbArg` has other used than `sliceOp` and its
+  /// dependencies. Only if there are no other uses, the producer output
+  /// iteration argument may reused to pass the producer result after fusion.
+  bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
+
+  LinalgOp rootOp;
+  SmallVector<scf::ForOp> loopOps;
+  SmallVector<int64_t> loopDims;
+};
+
+/// Tiles `consumerOp` and fuses its dependencies if possible. Uses the
+/// `tileSizes` and `tileInterchange` parameters to control the tiling.
+FailureOr<TileLoopNest>
+tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
+                             ArrayRef<int64_t> tileSizes,
+                             ArrayRef<int64_t> tileInterchange);
 
 //===----------------------------------------------------------------------===//
 // Distribution utilities

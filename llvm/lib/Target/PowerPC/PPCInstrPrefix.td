@@ -621,7 +621,7 @@ class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Inst{48-63} = D_RA{15-0};    // D
 }
 
-multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
+multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> opcode, dag OOL,
                                        dag IOL, dag PCRel_IOL,
                                        string asmstr, InstrItinClass itin> {
   def NAME : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, IOL,
@@ -1652,14 +1652,14 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
 
 let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] in {
   defm PLXVP :
-    8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+    8LS_DForm_R_XTp5_SI34_MEM_p<58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
                                 (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
                                 IIC_LdStLFD>;
 }
 
 let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] in {
   defm PSTXVP :
-    8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+    8LS_DForm_R_XTp5_SI34_MEM_p<62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
                                 (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
                                 "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
 }
@@ -1854,15 +1854,6 @@ let Predicates = [PCRelativeMemops] in {
 }
 
 let Predicates = [PrefixInstrs] in {
-  def XXSPLTIW : 8RR_DForm_IMM32_XT6<32, 3, (outs vsrc:$XT),
-                                     (ins i32imm:$IMM32),
-                                     "xxspltiw $XT, $IMM32", IIC_VecGeneral,
-                                     []>;
-  def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
-                                      (ins i32imm:$IMM32),
-                                      "xxspltidp $XT, $IMM32", IIC_VecGeneral,
-                                      [(set v2f64:$XT,
-                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                             vsrc:$XC, u3imm:$UIM),
@@ -1886,9 +1877,18 @@ let Predicates = [PrefixInstrs] in {
                        IIC_VecGeneral, []>;
 }
 
-// XXSPLI32DX needs extra flags to make sure the compiler does not attempt
+// XXSPLTIW/DP/32DX need extra flags to make sure the compiler does not attempt
 // to spill part of the instruction when the values are similar.
-let isReMaterializable = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+  def XXSPLTIW : 8RR_DForm_IMM32_XT6<32, 3, (outs vsrc:$XT),
+                                     (ins i32imm:$IMM32),
+                                     "xxspltiw $XT, $IMM32", IIC_VecGeneral,
+                                     []>;
+  def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
+                                      (ins i32imm:$IMM32),
+                                      "xxspltidp $XT, $IMM32", IIC_VecGeneral,
+                                      [(set v2f64:$XT,
+                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXSPLTI32DX :
       8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
                              (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
@@ -1927,7 +1927,7 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsldbi v16i8:$VRA,
                                                               v16i8:$VRB,
-                                                              i32:$SH))]>;
+                                                              timm:$SH))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsrdbi $VRT, $VRA, $VRB, $SH",
@@ -1935,7 +1935,7 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
                                                               v16i8:$VRB, 
-                                                              i32:$SH))]>;
+                                                              timm:$SH))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$vT), (ins vrrc:$vB),
                                  "vstribr", "$vT, $vB", IIC_VecGeneral,
 				 [(set v16i8:$vT,
@@ -2790,6 +2790,10 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(atomic_store_16 PDForm:$dst, i32:$RS), (PSTH $RS, memri34:$dst)>;
   def : Pat<(atomic_store_32 PDForm:$dst, i32:$RS), (PSTW $RS, memri34:$dst)>;
   def : Pat<(atomic_store_64 PDForm:$dst, i64:$RS), (PSTD $RS, memri34:$dst)>;
+
+  // Prefixed fpext to v2f64
+  def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
+            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
 }
 
 def InsertEltShift {

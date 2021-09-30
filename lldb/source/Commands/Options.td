@@ -355,7 +355,7 @@ let Command = "expression" in {
     Desc<"When specified, debug the JIT code by setting a breakpoint on the "
     "first instruction and forcing breakpoints to not be ignored (-i0) and no "
     "unwinding to happen on error (-u0).">;
-  def expression_options_language : Option<"language", "l">, Groups<[1,2]>,
+  def expression_options_language : Option<"language", "l">, Groups<[1,2,3]>,
     Arg<"Language">, Desc<"Specifies the Language to use when parsing the "
     "expression.  If not set the target.language setting is used.">;
   def expression_options_apply_fixits : Option<"apply-fixits", "X">,

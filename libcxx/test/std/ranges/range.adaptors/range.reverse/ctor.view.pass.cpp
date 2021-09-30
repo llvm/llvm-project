@@ -13,31 +13,38 @@
 // constexpr explicit reverse_view(V r);
 
 #include <ranges>
-#include <cassert>
 
-#include "test_macros.h"
+#include <cassert>
+#include <type_traits>
+#include <utility>
+
 #include "types.h"
 
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    BidirRange r{buffer};
+    BidirRange r{buffer, buffer + 8};
     std::ranges::reverse_view<BidirRange> rev(r);
-    assert(rev.base().ptr_ == buffer);
+    assert(rev.base().begin_ == buffer);
+    assert(rev.base().end_ == buffer + 8);
   }
   {
-    const BidirRange r{buffer};
+    const BidirRange r{buffer, buffer + 8};
     const std::ranges::reverse_view<BidirRange> rev(r);
-    assert(rev.base().ptr_ == buffer);
+    assert(rev.base().begin_ == buffer);
+    assert(rev.base().end_ == buffer + 8);
   }
   {
-    std::ranges::reverse_view<BidirSentRange<MoveOnly>> rev(BidirSentRange<MoveOnly>{buffer});
-    assert(std::move(rev).base().ptr_ == buffer);
+    std::ranges::reverse_view<BidirSentRange<MoveOnly>> rev(BidirSentRange<MoveOnly>{buffer, buffer + 8});
+    auto moved = std::move(rev).base();
+    assert(moved.begin_ == buffer);
+    assert(moved.end_ == buffer + 8);
   }
   {
-    const std::ranges::reverse_view<BidirSentRange<Copyable>> rev(BidirSentRange<Copyable>{buffer});
-    assert(rev.base().ptr_ == buffer);
+    const std::ranges::reverse_view<BidirSentRange<Copyable>> rev(BidirSentRange<Copyable>{buffer, buffer + 8});
+    assert(rev.base().begin_ == buffer);
+    assert(rev.base().end_ == buffer + 8);
   }
   {
     // Make sure this ctor is marked as "explicit".

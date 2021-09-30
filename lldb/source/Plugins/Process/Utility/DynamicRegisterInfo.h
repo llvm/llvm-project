@@ -35,8 +35,13 @@ public:
   size_t SetRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                          const lldb_private::ArchSpec &arch);
 
-  void AddRegister(lldb_private::RegisterInfo &reg_info,
+  void AddRegister(lldb_private::RegisterInfo reg_info,
                    lldb_private::ConstString &set_name);
+
+  // Add a new register and cross-link it via invalidate_regs with other
+  // registers sharing its value_regs.
+  void AddSupplementaryRegister(lldb_private::RegisterInfo reg_info,
+                                lldb_private::ConstString &set_name);
 
   void Finalize(const lldb_private::ArchSpec &arch);
 

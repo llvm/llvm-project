@@ -106,16 +106,20 @@ PresburgerSet PresburgerSet::getEmptySet(unsigned nDim, unsigned nSym) {
 //
 // We directly compute (S_1 or S_2 ...) and (T_1 or T_2 ...)
 // as (S_1 and T_1) or (S_1 and T_2) or ...
+//
+// If S_i or T_j have local variables, then S_i and T_j contains the local
+// variables of both.
 PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
 
   PresburgerSet result(nDim, nSym);
   for (const FlatAffineConstraints &csA : flatAffineConstraints) {
     for (const FlatAffineConstraints &csB : set.flatAffineConstraints) {
-      FlatAffineConstraints intersection(csA);
-      intersection.append(csB);
-      if (!intersection.isEmpty())
-        result.unionFACInPlace(std::move(intersection));
+      FlatAffineConstraints csACopy = csA, csBCopy = csB;
+      csACopy.mergeLocalIds(csBCopy);
+      csACopy.append(std::move(csBCopy));
+      if (!csACopy.isEmpty())
+        result.unionFACInPlace(std::move(csACopy));
     }
   }
   return result;
@@ -133,7 +137,8 @@ static SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs) {
 /// Return the complement of the given inequality.
 ///
 /// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
-/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0.
+/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
+/// since all the variables are constrained to be integers.
 static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
   SmallVector<int64_t, 8> coeffs;
   coeffs.reserve(ineq.size());
@@ -146,22 +151,37 @@ static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
 /// Return the set difference b \ s and accumulate the result into `result`.
 /// `simplex` must correspond to b.
 ///
-/// In the following, V denotes union, ^ denotes intersection, \ denotes set
+/// In the following, U denotes union, ^ denotes intersection, \ denotes set
 /// difference and ~ denotes complement.
-/// Let b be the FlatAffineConstraints and s = (V_i s_i) be the set. We want
-/// b \ (V_i s_i).
+/// Let b be the FlatAffineConstraints and s = (U_i s_i) be the set. We want
+/// b \ (U_i s_i).
 ///
 /// Let s_i = ^_j s_ij, where each s_ij is a single inequality. To compute
 /// b \ s_i = b ^ ~s_i, we partition s_i based on the first violated inequality:
-/// ~s_i = (~s_i1) V (s_i1 ^ ~s_i2) V (s_i1 ^ s_i2 ^ ~s_i3) V ...
-/// And the required result is (b ^ ~s_i1) V (b ^ s_i1 ^ ~s_i2) V ...
-/// We recurse by subtracting V_{j > i} S_j from each of these parts and
+/// ~s_i = (~s_i1) U (s_i1 ^ ~s_i2) U (s_i1 ^ s_i2 ^ ~s_i3) U ...
+/// And the required result is (b ^ ~s_i1) U (b ^ s_i1 ^ ~s_i2) U ...
+/// We recurse by subtracting U_{j > i} S_j from each of these parts and
 /// returning the union of the results. Each equality is handled as a
 /// conjunction of two inequalities.
 ///
+/// Note that the same approach works even if an inequality involves a floor
+/// division. For example, the complement of x <= 7*floor(x/7) is still
+/// x > 7*floor(x/7). Since b \ s_i contains the inequalities of both b and s_i
+/// (or the complements of those inequalities), b \ s_i may contain the
+/// divisions present in both b and s_i. Therefore, we need to add the local
+/// division variables of both b and s_i to each part in the result. This means
+/// adding the local variables of both b and s_i, as well as the corresponding
+/// division inequalities to each part. Since the division inequalities are
+/// added to each part, we can skip the parts where the complement of any
+/// division inequality is added, as these parts will become empty anyway.
+///
 /// As a heuristic, we try adding all the constraints and check if simplex
-/// says that the intersection is empty. Also, in the process we find out that
-/// some constraints are redundant. These redundant constraints are ignored.
+/// says that the intersection is empty. If it is, then subtracting this FAC is
+/// a no-op and we just skip it. Also, in the process we find out that some
+/// constraints are redundant. These redundant constraints are ignored.
+///
+/// b and simplex are callee saved, i.e., their values on return are
+/// semantically equivalent to their values when the function is called.
 static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
                                 const PresburgerSet &s, unsigned i,
                                 PresburgerSet &result) {
@@ -169,27 +189,63 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     result.unionFACInPlace(b);
     return;
   }
-  const FlatAffineConstraints &sI = s.getFlatAffineConstraints(i);
-  assert(sI.getNumLocalIds() == 0 &&
-         "Subtracting sets with divisions is not yet supported!");
+  FlatAffineConstraints sI = s.getFlatAffineConstraints(i);
+  unsigned bInitNumLocals = b.getNumLocalIds();
+
+  // Find out which inequalities of sI correspond to division inequalities for
+  // the local variables of sI.
+  std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> repr(
+      sI.getNumLocalIds());
+  sI.getLocalReprLbUbPairs(repr);
+
+  // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
+  // sI's locals.
+  b.mergeLocalIds(sI);
+
+  // Mark which inequalities of sI are division inequalities and add all such
+  // inequalities to b.
+  llvm::SmallBitVector isDivInequality(sI.getNumInequalities());
+  for (Optional<std::pair<unsigned, unsigned>> &maybePair : repr) {
+    assert(maybePair &&
+           "Subtraction is not supported when a representation of the local "
+           "variables of the subtrahend cannot be found!");
+
+    b.addInequality(sI.getInequality(maybePair->first));
+    b.addInequality(sI.getInequality(maybePair->second));
+
+    assert(maybePair->first != maybePair->second &&
+           "Upper and lower bounds must be different inequalities!");
+    isDivInequality[maybePair->first] = true;
+    isDivInequality[maybePair->second] = true;
+  }
+
   unsigned initialSnapshot = simplex.getSnapshot();
-  unsigned offset = simplex.numConstraints();
+  unsigned offset = simplex.getNumConstraints();
+  unsigned numLocalsAdded = b.getNumLocalIds() - bInitNumLocals;
+  simplex.appendVariable(numLocalsAdded);
+
+  unsigned snapshotBeforeIntersect = simplex.getSnapshot();
   simplex.intersectFlatAffineConstraints(sI);
 
   if (simplex.isEmpty()) {
     /// b ^ s_i is empty, so b \ s_i = b. We move directly to i + 1.
     simplex.rollback(initialSnapshot);
+    b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
+                    b.getNumLocalIds());
     subtractRecursively(b, simplex, s, i + 1, result);
     return;
   }
 
   simplex.detectRedundant();
-  llvm::SmallBitVector isMarkedRedundant;
-  for (unsigned j = 0; j < 2 * sI.getNumEqualities() + sI.getNumInequalities();
-       j++)
-    isMarkedRedundant.push_back(simplex.isMarkedRedundant(offset + j));
 
-  simplex.rollback(initialSnapshot);
+  // Equalities are added to simplex as a pair of inequalities.
+  unsigned totalNewSimplexInequalities =
+      2 * sI.getNumEqualities() + sI.getNumInequalities();
+  llvm::SmallBitVector isMarkedRedundant(totalNewSimplexInequalities);
+  for (unsigned j = 0; j < totalNewSimplexInequalities; j++)
+    isMarkedRedundant[j] = simplex.isMarkedRedundant(offset + j);
+
+  simplex.rollback(snapshotBeforeIntersect);
 
   // Recurse with the part b ^ ~ineq. Note that b is modified throughout
   // subtractRecursively. At the time this function is called, the current b is
@@ -218,20 +274,28 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   // rollback b to its initial state before returning, which we will do by
   // removing all constraints beyond the original number of inequalities
   // and equalities, so we store these counts first.
-  unsigned originalNumIneqs = b.getNumInequalities();
-  unsigned originalNumEqs = b.getNumEqualities();
+  unsigned bInitNumIneqs = b.getNumInequalities();
+  unsigned bInitNumEqs = b.getNumEqualities();
 
+  // Process all the inequalities, ignoring redundant inequalities and division
+  // inequalities. The result is correct whether or not we ignore these, but
+  // ignoring them makes the result simpler.
   for (unsigned j = 0, e = sI.getNumInequalities(); j < e; j++) {
     if (isMarkedRedundant[j])
+      continue;
+    if (isDivInequality[j])
       continue;
     processInequality(sI.getInequality(j));
   }
 
   offset = sI.getNumInequalities();
   for (unsigned j = 0, e = sI.getNumEqualities(); j < e; ++j) {
-    const ArrayRef<int64_t> &coeffs = sI.getEquality(j);
-    // Same as the above loop for inequalities, done once each for the positive
-    // and negative inequalities that make up this equality.
+    ArrayRef<int64_t> coeffs = sI.getEquality(j);
+    // For each equality, process the positive and negative inequalities that
+    // make up this equality. If Simplex found an inequality to be redundant, we
+    // skip it as above to make the result simpler. Divisions are always
+    // represented in terms of inequalities and not equalities, so we do not
+    // check for division inequalities here.
     if (!isMarkedRedundant[offset + 2 * j])
       processInequality(coeffs);
     if (!isMarkedRedundant[offset + 2 * j + 1])
@@ -239,11 +303,10 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   }
 
   // Rollback b and simplex to their initial states.
-  for (unsigned i = b.getNumInequalities(); i > originalNumIneqs; --i)
-    b.removeInequality(i - 1);
-
-  for (unsigned i = b.getNumEqualities(); i > originalNumEqs; --i)
-    b.removeEquality(i - 1);
+  b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
+                  b.getNumLocalIds());
+  b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
+  b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
 
   simplex.rollback(initialSnapshot);
 }
@@ -256,8 +319,6 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 PresburgerSet PresburgerSet::getSetDifference(FlatAffineConstraints fac,
                                               const PresburgerSet &set) {
   assertDimensionsCompatible(fac, set);
-  assert(fac.getNumLocalIds() == 0 &&
-         "Subtracting sets with divisions is not yet supported!");
   if (fac.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(fac.getNumDimIds(),
                                       fac.getNumSymbolIds());
@@ -279,7 +340,7 @@ PresburgerSet PresburgerSet::complement() const {
 PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
   PresburgerSet result(nDim, nSym);
-  // We compute (V_i t_i) \ (V_i set_i) as V_i (t_i \ V_i set_i).
+  // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const FlatAffineConstraints &fac : flatAffineConstraints)
     result.unionSetInPlace(getSetDifference(fac, set));
   return result;

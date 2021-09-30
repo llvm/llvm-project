@@ -19,6 +19,8 @@
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorDylibManager.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
@@ -35,6 +37,7 @@ class SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
 public:
   using ReportErrorFunction = unique_function<void(Error)>;
 
+  /// Dispatches calls to runWrapper.
   class Dispatcher {
   public:
     virtual ~Dispatcher();
@@ -56,26 +59,64 @@ public:
   };
 #endif
 
-  static StringMap<ExecutorAddress> defaultBootstrapSymbols();
+  class Setup {
+    friend class SimpleRemoteEPCServer;
+
+  public:
+    SimpleRemoteEPCServer &server();
+    StringMap<ExecutorAddr> &bootstrapSymbols() { return BootstrapSymbols; }
+    std::vector<std::unique_ptr<ExecutorBootstrapService>> &services() {
+      return Services;
+    }
+    void setDispatcher(std::unique_ptr<Dispatcher> D) { S.D = std::move(D); }
+    void setErrorReporter(unique_function<void(Error)> ReportError) {
+      S.ReportError = std::move(ReportError);
+    }
+
+  private:
+    Setup(SimpleRemoteEPCServer &S) : S(S) {}
+    SimpleRemoteEPCServer &S;
+    StringMap<ExecutorAddr> BootstrapSymbols;
+    std::vector<std::unique_ptr<ExecutorBootstrapService>> Services;
+  };
+
+  static StringMap<ExecutorAddr> defaultBootstrapSymbols();
 
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPCServer>>
-  Create(std::unique_ptr<Dispatcher> D,
-         StringMap<ExecutorAddress> BootstrapSymbols,
+  Create(unique_function<Error(Setup &S)> SetupFunction,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
-    auto SREPCServer = std::make_unique<SimpleRemoteEPCServer>();
-    SREPCServer->D = std::move(D);
-    SREPCServer->ReportError = [](Error Err) {
-      logAllUnhandledErrors(std::move(Err), errs(), "SimpleRemoteEPCServer ");
-    };
+    auto Server = std::make_unique<SimpleRemoteEPCServer>();
+    Setup S(*Server);
+    if (auto Err = SetupFunction(S))
+      return std::move(Err);
+
+    // Set ReportError up-front so that it can be used if construction
+    // process fails.
+    if (!Server->ReportError)
+      Server->ReportError = [](Error Err) {
+        logAllUnhandledErrors(std::move(Err), errs(), "SimpleRemoteEPCServer ");
+      };
+
+    // Attempt to create transport.
     auto T = TransportT::Create(
-        *SREPCServer, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
+        *Server, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
       return T.takeError();
-    SREPCServer->T = std::move(*T);
-    if (auto Err = SREPCServer->sendSetupMessage(std::move(BootstrapSymbols)))
+    Server->T = std::move(*T);
+    if (auto Err = Server->T->start())
       return std::move(Err);
-    return std::move(SREPCServer);
+
+    // If transport creation succeeds then start up services.
+    Server->Services = std::move(S.services());
+    Server->Services.push_back(
+        std::make_unique<rt_bootstrap::SimpleExecutorDylibManager>());
+    for (auto &Service : Server->Services)
+      Service->addBootstrapSymbols(S.bootstrapSymbols());
+
+    if (auto Err = Server->sendSetupMessage(std::move(S.BootstrapSymbols)))
+      return std::move(Err);
+    return std::move(Server);
   }
 
   /// Set an error reporter for this server.
@@ -89,8 +130,7 @@ public:
   /// otherwise returns 'Continue'. If the server has moved to an error state,
   /// returns an error, which should be reported and treated as a 'Disconnect'.
   Expected<HandleMessageAction>
-  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                ExecutorAddress TagAddr,
+  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
                 SimpleRemoteEPCArgBytesVector ArgBytes) override;
 
   Error waitForDisconnect();
@@ -98,24 +138,15 @@ public:
   void handleDisconnect(Error Err) override;
 
 private:
-  Error sendSetupMessage(StringMap<ExecutorAddress> BootstrapSymbols);
+  Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
+                    ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 
-  Error handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
+  Error sendSetupMessage(StringMap<ExecutorAddr> BootstrapSymbols);
+
+  Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);
-  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
-
-  static shared::detail::CWrapperFunctionResult
-  loadDylibWrapper(const char *ArgData, size_t ArgSize);
-
-  static shared::detail::CWrapperFunctionResult
-  lookupSymbolsWrapper(const char *ArgData, size_t ArgSize);
-
-  Expected<tpctypes::DylibHandle> loadDylib(const std::string &Path,
-                                            uint64_t Mode);
-
-  Expected<std::vector<std::vector<ExecutorAddress>>>
-  lookupSymbols(const std::vector<RemoteSymbolLookup> &L);
 
   shared::WrapperFunctionResult
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);
@@ -136,6 +167,7 @@ private:
   Error ShutdownErr = Error::success();
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<Dispatcher> D;
+  std::vector<std::unique_ptr<ExecutorBootstrapService>> Services;
   ReportErrorFunction ReportError;
 
   uint64_t NextSeqNo = 0;

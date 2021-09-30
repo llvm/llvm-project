@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3" -cse -split-input-file | \
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3" -cse -split-input-file | \
 // RUN: FileCheck %s -check-prefix=TILE2
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,3" -resolve-shaped-type-result-dims -cse -split-input-file | \
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=0,3" -resolve-shaped-type-result-dims -cse -split-input-file | \
 // RUN: FileCheck %s -check-prefix=TILE1
 
 //  TILE2-DAG:  #[[MAP0:.*]] = affine_map<()[s0] -> (s0 + 8)>
@@ -111,8 +111,7 @@ func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
 //       TILE1:     else
 //       TILE1:       %[[SLICE:.*]] = tensor.extract_slice %arg0[0, %{{.*}}] [7, %{{.*}}] [1, 1] : tensor<7x9xf32> to tensor<7x?xf32>
 //       TILE1:       %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]] low[0, 0] high[7, %{{.*}}]
-//       TILE1:       %[[CAST:.*]] = tensor.cast %[[PAD]] : tensor<14x?xf32> to tensor<14x3xf32>
-//       TILE1:       scf.yield %[[CAST]] : tensor<14x3xf32>
+//       TILE1:       scf.yield %[[PAD]] : tensor<14x3xf32>
 //       TILE1:     %[[R3:.*]] = tensor.insert_slice %[[R2]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       TILE1:     scf.yield %[[R3]] : tensor<14x15xf32>
 //       TILE1:   return %[[RESULT]] : tensor<14x15xf32>

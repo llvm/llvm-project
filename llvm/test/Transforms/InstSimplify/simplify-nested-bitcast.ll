@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: define void @f1
-; CHECK: %1 = load i32 (i8 addrspace(4)*, i32 addrspace(1)*)*, i32 (i8 addrspace(4)*, i32 addrspace(1)*)* addrspace(4)* bitcast (i8* addrspace(4)* getelementptr (%__aaa_struct, %__aaa_struct addrspace(4)* addrspacecast (%__aaa_struct addrspace(1)* @__aaa_struct_ptr to %__aaa_struct addrspace(4)*), i64 0, i32 0, i32 3) to i32 (i8 addrspace(4)*, i32 addrspace(1)*)* addrspace(4)*), align 8
+; CHECK: %1 = load i32 (i8 addrspace(4)*, i32 addrspace(1)*)*, i32 (i8 addrspace(4)*, i32 addrspace(1)*)* addrspace(4)* bitcast (i8* addrspace(4)* getelementptr inbounds (%__aaa_struct, %__aaa_struct addrspace(4)* addrspacecast (%__aaa_struct addrspace(1)* @__aaa_struct_ptr to %__aaa_struct addrspace(4)*), i64 0, i32 0, i32 3) to i32 (i8 addrspace(4)*, i32 addrspace(1)*)* addrspace(4)*), align 8
 
 ; Function Attrs: alwaysinline nounwind
 define void @f1(i32 addrspace(1)*) #1 {

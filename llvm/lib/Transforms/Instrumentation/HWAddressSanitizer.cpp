@@ -282,9 +282,15 @@ public:
 
   void untagPointerOperand(Instruction *I, Value *Addr);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
+
+  int64_t getAccessInfo(bool IsWrite, unsigned AccessSizeIndex);
+  void instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
+                                  unsigned AccessSizeIndex,
+                                  Instruction *InsertBefore);
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore);
+  bool ignoreMemIntrinsic(MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O);
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
@@ -793,11 +799,11 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   if (Ptr->isSwiftError())
     return true;
 
-  if (!InstrumentStack) {
-    if (findAllocaForValue(Ptr))
+  if (findAllocaForValue(Ptr)) {
+    if (!InstrumentStack)
       return true;
-  } else if (SSI && SSI->accessIsSafe(*Inst)) {
-    return true;
+    if (SSI && SSI->stackAccessIsSafe(*Inst))
+      return true;
   }
   return false;
 }
@@ -882,29 +888,37 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
 }
 
+int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
+                                          unsigned AccessSizeIndex) {
+  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
+         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
+         (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
+         (Recover << HWASanAccessInfo::RecoverShift) +
+         (IsWrite << HWASanAccessInfo::IsWriteShift) +
+         (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
+}
+
+void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
+                                                    unsigned AccessSizeIndex,
+                                                    Instruction *InsertBefore) {
+  assert(!UsePageAliases);
+  const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
+  IRBuilder<> IRB(InsertBefore);
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
+  IRB.CreateCall(Intrinsic::getDeclaration(
+                     M, UseShortGranules
+                            ? Intrinsic::hwasan_check_memaccess_shortgranules
+                            : Intrinsic::hwasan_check_memaccess),
+                 {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+}
+
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore) {
   assert(!UsePageAliases);
-  const int64_t AccessInfo =
-      (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
-      (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
-      (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
-      (Recover << HWASanAccessInfo::RecoverShift) +
-      (IsWrite << HWASanAccessInfo::IsWriteShift) +
-      (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
+  const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
   IRBuilder<> IRB(InsertBefore);
-
-  if (OutlinedChecks) {
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-    Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
-    IRB.CreateCall(Intrinsic::getDeclaration(
-                       M, UseShortGranules
-                              ? Intrinsic::hwasan_check_memaccess_shortgranules
-                              : Intrinsic::hwasan_check_memaccess),
-                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
-    return;
-  }
 
   Value *PtrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
   Value *PtrTag = IRB.CreateTrunc(IRB.CreateLShr(PtrLong, PointerTagShift),
@@ -981,6 +995,16 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
     cast<BranchInst>(CheckFailTerm)->setSuccessor(0, CheckTerm->getParent());
 }
 
+bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
+  if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
+    return (!ClInstrumentWrites || ignoreAccess(MTI, MTI->getDest())) &&
+           (!ClInstrumentReads || ignoreAccess(MTI, MTI->getSource()));
+  }
+  if (isa<MemSetInst>(MI))
+    return !ClInstrumentWrites || ignoreAccess(MI, MI->getDest());
+  return false;
+}
+
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
@@ -1016,6 +1040,8 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
     if (InstrumentWithCalls) {
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
+    } else if (OutlinedChecks) {
+      instrumentMemAccessOutline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     } else {
       instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
@@ -1527,7 +1553,8 @@ bool HWAddressSanitizer::sanitizeFunction(
       getInterestingMemoryOperands(&Inst, OperandsToInstrument);
 
       if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
-        IntrinToInstrument.push_back(MI);
+        if (!ignoreMemIntrinsic(MI))
+          IntrinToInstrument.push_back(MI);
     }
   }
 
@@ -1594,13 +1621,11 @@ bool HWAddressSanitizer::sanitizeFunction(
   // dynamic allocas.
   if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
     InsertPt = &*F.getEntryBlock().begin();
-    for (auto II = EntryIRB.GetInsertBlock()->begin(),
-              IE = EntryIRB.GetInsertBlock()->end();
-         II != IE;) {
-      Instruction *I = &*II++;
-      if (auto *AI = dyn_cast<AllocaInst>(I))
+    for (Instruction &I :
+         llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I))
         if (isa<ConstantInt>(AI->getArraySize()))
-          I->moveBefore(InsertPt);
+          I.moveBefore(InsertPt);
     }
   }
 

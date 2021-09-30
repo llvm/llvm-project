@@ -1560,13 +1560,22 @@ llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
 }
 
 llvm::FunctionCallee
-CGOpenMPRuntime::createForStaticInitFunction(unsigned IVSize, bool IVSigned) {
+CGOpenMPRuntime::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
+                                             bool IsGPUDistribute) {
   assert((IVSize == 32 || IVSize == 64) &&
          "IV size is not compatible with the omp runtime");
-  StringRef Name = IVSize == 32 ? (IVSigned ? "__kmpc_for_static_init_4"
-                                            : "__kmpc_for_static_init_4u")
-                                : (IVSigned ? "__kmpc_for_static_init_8"
-                                            : "__kmpc_for_static_init_8u");
+  StringRef Name;
+  if (IsGPUDistribute)
+    Name = IVSize == 32 ? (IVSigned ? "__kmpc_distribute_static_init_4"
+                                    : "__kmpc_distribute_static_init_4u")
+                        : (IVSigned ? "__kmpc_distribute_static_init_8"
+                                    : "__kmpc_distribute_static_init_8u");
+  else
+    Name = IVSize == 32 ? (IVSigned ? "__kmpc_for_static_init_4"
+                                    : "__kmpc_for_static_init_4u")
+                        : (IVSigned ? "__kmpc_for_static_init_8"
+                                    : "__kmpc_for_static_init_8u");
+
   llvm::Type *ITy = IVSize == 32 ? CGM.Int32Ty : CGM.Int64Ty;
   auto *PtrTy = llvm::PointerType::getUnqual(ITy);
   llvm::Type *TypeParams[] = {
@@ -2826,7 +2835,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                                  : OMP_IDENT_WORK_SECTIONS);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
-      createForStaticInitFunction(Values.IVSize, Values.IVSigned);
+      createForStaticInitFunction(Values.IVSize, Values.IVSigned, false);
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, ScheduleKind.M1, ScheduleKind.M2, Values);
@@ -2841,8 +2850,13 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *UpdatedLocation =
       emitUpdateLocation(CGF, Loc, OMP_IDENT_WORK_DISTRIBUTE);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
-  llvm::FunctionCallee StaticInitFunction =
-      createForStaticInitFunction(Values.IVSize, Values.IVSigned);
+  llvm::FunctionCallee StaticInitFunction;
+  bool isGPUDistribute =
+      CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
+  StaticInitFunction = createForStaticInitFunction(
+      Values.IVSize, Values.IVSigned, isGPUDistribute);
+
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, OMPC_SCHEDULE_MODIFIER_unknown,
                         OMPC_SCHEDULE_MODIFIER_unknown, Values);
@@ -2863,9 +2877,16 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                                    : OMP_IDENT_WORK_SECTIONS),
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_for_static_fini),
-                      Args);
+  if (isOpenMPDistributeDirective(DKind) && CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
+    CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(
+            CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),
+        Args);
+  else
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_for_static_fini),
+                        Args);
 }
 
 void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
@@ -6740,6 +6761,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_parallel_master_taskloop:
   case OMPD_parallel_master_taskloop_simd:
   case OMPD_requires:
+  case OMPD_metadirective:
   case OMPD_unknown:
     break;
   default:
@@ -7214,6 +7236,7 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
   case OMPD_parallel_master_taskloop:
   case OMPD_parallel_master_taskloop_simd:
   case OMPD_requires:
+  case OMPD_metadirective:
   case OMPD_unknown:
     break;
   default:
@@ -9851,6 +9874,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_parallel_master_taskloop:
     case OMPD_parallel_master_taskloop_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
     case OMPD_unknown:
     default:
       llvm_unreachable("Unexpected directive.");
@@ -10701,6 +10725,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_parallel_master_taskloop:
     case OMPD_parallel_master_taskloop_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
     case OMPD_unknown:
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");
@@ -11382,6 +11407,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
     case OMPD_unknown:
     default:
       llvm_unreachable("Unexpected standalone target data directive.");

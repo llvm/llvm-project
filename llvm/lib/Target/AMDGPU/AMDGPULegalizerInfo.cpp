@@ -59,7 +59,7 @@ static LLT getPow2ScalarType(LLT Ty) {
   return LLT::scalar(Pow2Bits);
 }
 
-/// \returs true if this is an odd sized vector which should widen by adding an
+/// \returns true if this is an odd sized vector which should widen by adding an
 /// additional element. This is mostly to handle <3 x s16> -> <4 x s16>. This
 /// excludes s1 vectors, which should always be scalarized.
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
@@ -2224,9 +2224,9 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
 
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
-  // getConstantVRegValWithLookThrough.
+  // getIConstantVRegValWithLookThrough.
   Optional<ValueAndVReg> MaybeIdxVal =
-      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
   const int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
@@ -2256,9 +2256,9 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
-  // getConstantVRegValWithLookThrough.
+  // getIConstantVRegValWithLookThrough.
   Optional<ValueAndVReg> MaybeIdxVal =
-      getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -2420,43 +2420,36 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
     }
 
     // TODO: We could emit code to handle the initialization somewhere.
-    if (!AMDGPUTargetLowering::hasDefinedInitializer(GV)) {
-      const SITargetLowering *TLI = ST.getTargetLowering();
-      if (!TLI->shouldUseLDSConstAddress(GV)) {
-        MI.getOperand(1).setTargetFlags(SIInstrInfo::MO_ABS32_LO);
-        return true; // Leave in place;
-      }
-
-      if (AS == AMDGPUAS::LOCAL_ADDRESS && GV->hasExternalLinkage()) {
-        Type *Ty = GV->getValueType();
-        // HIP uses an unsized array `extern __shared__ T s[]` or similar
-        // zero-sized type in other languages to declare the dynamic shared
-        // memory which size is not known at the compile time. They will be
-        // allocated by the runtime and placed directly after the static
-        // allocated ones. They all share the same offset.
-        if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
-          // Adjust alignment for that dynamic shared memory array.
-          MFI->setDynLDSAlign(B.getDataLayout(), *cast<GlobalVariable>(GV));
-          LLT S32 = LLT::scalar(32);
-          auto Sz =
-              B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32}, false);
-          B.buildIntToPtr(DstReg, Sz);
-          MI.eraseFromParent();
-          return true;
-        }
-      }
-
-      B.buildConstant(
-          DstReg,
-          MFI->allocateLDSGlobal(B.getDataLayout(), *cast<GlobalVariable>(GV)));
-      MI.eraseFromParent();
-      return true;
+    // We ignore the initializer for now and legalize it to allow selection.
+    // The initializer will anyway get errored out during assembly emission.
+    const SITargetLowering *TLI = ST.getTargetLowering();
+    if (!TLI->shouldUseLDSConstAddress(GV)) {
+      MI.getOperand(1).setTargetFlags(SIInstrInfo::MO_ABS32_LO);
+      return true; // Leave in place;
     }
 
-    const Function &Fn = MF.getFunction();
-    DiagnosticInfoUnsupported BadInit(
-      Fn, "unsupported initializer for address space", MI.getDebugLoc());
-    Fn.getContext().diagnose(BadInit);
+    if (AS == AMDGPUAS::LOCAL_ADDRESS && GV->hasExternalLinkage()) {
+      Type *Ty = GV->getValueType();
+      // HIP uses an unsized array `extern __shared__ T s[]` or similar
+      // zero-sized type in other languages to declare the dynamic shared
+      // memory which size is not known at the compile time. They will be
+      // allocated by the runtime and placed directly after the static
+      // allocated ones. They all share the same offset.
+      if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+        // Adjust alignment for that dynamic shared memory array.
+        MFI->setDynLDSAlign(B.getDataLayout(), *cast<GlobalVariable>(GV));
+        LLT S32 = LLT::scalar(32);
+        auto Sz =
+            B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32}, false);
+        B.buildIntToPtr(DstReg, Sz);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+
+    B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(),
+                                                   *cast<GlobalVariable>(GV)));
+    MI.eraseFromParent();
     return true;
   }
 
@@ -2487,7 +2480,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   buildPCRelGlobalAddress(GOTAddr, PtrTy, B, GV, 0, SIInstrInfo::MO_GOTPCREL32);
 
   if (Ty.getSizeInBits() == 32) {
-    // Truncate if this is a 32-bit constant adrdess.
+    // Truncate if this is a 32-bit constant address.
     auto Load = B.buildLoad(PtrTy, GOTAddr, *GOTMMO);
     B.buildExtract(DstReg, Load, 0);
   } else
@@ -2811,7 +2804,7 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
     return false;
-  auto ConstVal = getConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
+  auto ConstVal = getIConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
   return ConstVal && *ConstVal == -1;
 }
 
@@ -2832,7 +2825,7 @@ verifyCFIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI, MachineInstr *&Br,
       return nullptr;
 
     // We're deleting the def of this value, so we need to remove it.
-    UseMI->eraseFromParent();
+    eraseInstr(*UseMI, MRI);
 
     UseMI = &*MRI.use_instr_nodbg_begin(NegatedCond);
     Negated = true;
@@ -2989,7 +2982,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B,
     B.buildSelect(DstRemReg, Cond, B.buildSub(S32, R, Y), R);
 }
 
-// Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
+// Build integer reciprocal sequence around V_RCP_IFLAG_F32
 //
 // Return lo, hi of result
 //
@@ -3777,11 +3770,11 @@ void AMDGPULegalizerInfo::updateBufferMMO(MachineMemOperand *MMO,
                                           unsigned ImmOffset, Register VIndex,
                                           MachineRegisterInfo &MRI) const {
   Optional<ValueAndVReg> MaybeVOffsetVal =
-      getConstantVRegValWithLookThrough(VOffset, MRI);
+      getIConstantVRegValWithLookThrough(VOffset, MRI);
   Optional<ValueAndVReg> MaybeSOffsetVal =
-      getConstantVRegValWithLookThrough(SOffset, MRI);
+      getIConstantVRegValWithLookThrough(SOffset, MRI);
   Optional<ValueAndVReg> MaybeVIndexVal =
-      getConstantVRegValWithLookThrough(VIndex, MRI);
+      getIConstantVRegValWithLookThrough(VIndex, MRI);
   // If the combined VOffset + SOffset + ImmOffset + strided VIndex is constant,
   // update the MMO with that offset. The stride is unknown so we can only do
   // this if VIndex is constant 0.
@@ -4322,8 +4315,8 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 /// to exposes all register repacking to the legalizer/combiners. We also don't
 /// want a selected instrution entering RegBankSelect. In order to avoid
 /// defining a multitude of intermediate image instructions, directly hack on
-/// the intrinsic's arguments. In cases like a16 addreses, this requires padding
-/// now unnecessary arguments with $noreg.
+/// the intrinsic's arguments. In cases like a16 addresses, this requires
+/// padding now unnecessary arguments with $noreg.
 bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B, GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
@@ -4598,7 +4591,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   MI.getOperand(0).setReg(NewResultReg);
 
   // In the IR, TFE is supposed to be used with a 2 element struct return
-  // type. The intruction really returns these two values in one contiguous
+  // type. The instruction really returns these two values in one contiguous
   // register, with one additional dword beyond the loaded data. Rewrite the
   // return type to use a single register result.
 
@@ -4810,7 +4803,7 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(
 
 bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  // Is non-HSA path or trap-handler disabled? then, report a warning
+  // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {

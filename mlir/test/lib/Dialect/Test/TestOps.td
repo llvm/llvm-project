@@ -20,6 +20,7 @@ include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "TestInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -1415,9 +1416,12 @@ def ILLegalOpC : TEST_Op<"illegal_op_c">, Results<(outs I32)>;
 def ILLegalOpD : TEST_Op<"illegal_op_d">, Results<(outs I32)>;
 def ILLegalOpE : TEST_Op<"illegal_op_e">, Results<(outs I32)>;
 def ILLegalOpF : TEST_Op<"illegal_op_f">, Results<(outs I32)>;
+def ILLegalOpG : TEST_Op<"illegal_op_g">, Results<(outs I32)>;
 def LegalOpA : TEST_Op<"legal_op_a">,
   Arguments<(ins Test_LegalizerEnum:$status)>, Results<(outs I32)>;
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
+def LegalOpC : TEST_Op<"legal_op_c">,
+  Arguments<(ins I32)>, Results<(outs I32)>;
 
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
@@ -2268,5 +2272,57 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 }
 
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
+//===----------------------------------------------------------------------===//
+// Test LinalgConvolutionOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestLinalgConvOpNotLinalgOp : TEST_Op<"conv_op_not_linalg_op", [
+    LinalgConvolutionOpInterface]> {
+  let arguments = (ins
+    AnyType:$image, AnyType:$filter, AnyType:$output);
+  let results = (outs AnyRankedTensor:$result);
+}
+
+def TestLinalgConvOp :
+  TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments,
+      LinalgStructuredInterface, LinalgConvolutionOpInterface]> {
+
+  let arguments = (ins Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    `outs` `(` $outputs `:` type($outputs) `)`
+    $region (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasIndexSemantics() { return false; }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block) {
+      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+    }
+
+    static std::function<void(mlir::ImplicitLocOpBuilder &b, mlir::Block &block)>
+    getRegionBuilder() {
+      return &regionBuilder;
+    }
+
+    mlir::ArrayAttr iterator_types() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    }
+
+    mlir::ArrayAttr indexing_maps() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+    }
+
+    std::string getLibraryCallName() {
+      return "";
+    }
+  }];
+}
 
 #endif // TEST_OPS

@@ -6,37 +6,57 @@
 # RUN: ld.lld --pie %t1.so %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --mattr=+bti --triple=aarch64-linux-gnu %t | FileCheck %s
 
+# RUN: ld.lld -shared -Bsymbolic %t1.so %t.o -o %t.so
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+bti %t | FileCheck %s --check-prefix=SHARED
+
 # When the address of an ifunc is taken using a non-got reference which clang
 # can do, LLD exports a canonical PLT entry that may have its address taken so
 # we must use bti c.
 
 # CHECK: Disassembly of section .plt:
-# CHECK: 0000000000010380 <.plt>:
-# CHECK-NEXT:    10380:         bti     c
+# CHECK: 00000000000103a0 <.plt>:
+# CHECK-NEXT:    103a0:         bti     c
 # CHECK-NEXT:                   stp     x16, x30, [sp, #-16]!
 # CHECK-NEXT:                   adrp    x16, 0x30000
-# CHECK-NEXT:                   ldr     x17, [x16, #1288]
-# CHECK-NEXT:                   add     x16, x16, #1288
+# CHECK-NEXT:                   ldr     x17, [x16, #1344]
+# CHECK-NEXT:                   add     x16, x16, #1344
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 # CHECK-NEXT:                   nop
-# CHECK: 00000000000103a0 <func1@plt>:
-# CHECK-NEXT:    103a0:         bti     c
-# CHECK-NEXT:                   adrp    x16, 0x30000
-# CHECK-NEXT:                   ldr     x17, [x16, #1296]
-# CHECK-NEXT:                   add     x16, x16, #1296
+# CHECK: 00000000000103c0 <func1@plt>:
+# CHECK-NEXT:    103c0:         adrp    x16, 0x30000
+# CHECK-NEXT:                   ldr     x17, [x16, #1352]
+# CHECK-NEXT:                   add     x16, x16, #1352
 # CHECK-NEXT:                   br      x17
+# CHECK-NEXT:                   nop
 # CHECK-NEXT:                   nop
 # CHECK-EMPTY:
 # CHECK: Disassembly of section .iplt:
 # CHECK-EMPTY:
-# CHECK-NEXT: 00000000000103c0 <myfunc>:
-# CHECK-NEXT:    103c0:         bti     c
+## The address of ifunc1@plt does not escape so it does not need `bti c`,
+## but having bti is not wrong.
+# CHECK-NEXT: 00000000000103e0 <.iplt>:
+# CHECK-NEXT:    103e0:         bti     c
 # CHECK-NEXT:                   adrp    x16, 0x30000
-# CHECK-NEXT:                   ldr     x17, [x16, #1304]
-# CHECK-NEXT:                   add     x16, x16, #1304
+# CHECK-NEXT:                   ldr     x17, [x16, #1360]
+# CHECK-NEXT:                   add     x16, x16, #1360
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
+# CHECK-EMPTY:
+## The address of ifunc2 (STT_FUNC) escapes, so it must have `bti c`.
+# CHECK-NEXT: 00000000000103f8 <ifunc2>:
+# CHECK-NEXT:    103f8:         bti     c
+# CHECK-NEXT:                   adrp    x16, 0x30000
+# CHECK-NEXT:                   ldr     x17, [x16, #1368]
+# CHECK-NEXT:                   add     x16, x16, #1368
+# CHECK-NEXT:                   br      x17
+# CHECK-NEXT:                   nop
+
+# SHARED:      <.iplt>:
+# SHARED-NEXT:    bti     c
+
+# SHARED:      <ifunc2>:
+# SHARED-NEXT:    bti     c
 
 .section ".note.gnu.property", "a"
 .long 4
@@ -50,10 +70,15 @@
 .long 0
 
 .text
-.globl myfunc
-.type myfunc,@gnu_indirect_function
-myfunc:
+.globl ifunc1
+.type ifunc1,@gnu_indirect_function
+ifunc1:
  ret
+
+.globl ifunc2
+.type ifunc2,@gnu_indirect_function
+ifunc2:
+  ret
 
 .globl func1
 
@@ -62,6 +87,7 @@ myfunc:
 .type _start, %function
 _start:
   bl func1
-  adrp x8, myfunc
-  add x8, x8, :lo12:myfunc
+  bl ifunc1
+  adrp x8, ifunc2
+  add x8, x8, :lo12:ifunc2
   ret

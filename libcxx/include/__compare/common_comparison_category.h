@@ -32,7 +32,7 @@ enum _ClassifyCompCategory : unsigned {
 };
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 constexpr _ClassifyCompCategory __type_to_enum() noexcept {
   if (is_same_v<_Tp, partial_ordering>)
     return _PartialOrd;
@@ -44,6 +44,7 @@ constexpr _ClassifyCompCategory __type_to_enum() noexcept {
 }
 
 template <size_t _Size>
+_LIBCPP_HIDE_FROM_ABI
 constexpr _ClassifyCompCategory
 __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
   int __seen[_CCC_Size] = {};
@@ -59,6 +60,7 @@ __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
 }
 
 template <class ..._Ts, bool _False = false>
+_LIBCPP_HIDE_FROM_ABI
 constexpr auto __get_comp_type() {
   using _CCC = _ClassifyCompCategory;
   constexpr _CCC __type_kinds[] = {_StrongOrd, __type_to_enum<_Ts>()...};

@@ -44,9 +44,11 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P(DeclNamed, Name, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
@@ -98,6 +100,8 @@ MATCHER_P(WithTemplateArgs, ArgName, "") {
 MATCHER_P(RangeIs, R, "") {
   return arg.beginOffset() == R.Begin && arg.endOffset() == R.End;
 }
+
+MATCHER_P(PragmaTrivia, P, "") { return arg.Trivia == P; }
 
 MATCHER(EqInc, "") {
   Inclusion Actual = testing::get<0>(arg);
@@ -491,7 +495,7 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   auto EmptyPreamble =
       buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
   ASSERT_TRUE(EmptyPreamble);
-  EXPECT_THAT(EmptyPreamble->Includes.MainFileIncludes, testing::IsEmpty());
+  EXPECT_THAT(EmptyPreamble->Includes.MainFileIncludes, IsEmpty());
 
   // Now build an AST using empty preamble and ensure patched includes worked.
   TU.Code = ModifiedContents.str();
@@ -505,18 +509,18 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   EXPECT_THAT(PatchedAST->getIncludeStructure().MainFileIncludes,
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
-  auto StringMapToVector = [](const llvm::StringMap<unsigned> SM) {
-    std::vector<std::pair<std::string, unsigned>> Res;
-    for (const auto &E : SM)
-      Res.push_back({E.first().str(), E.second});
-    llvm::sort(Res);
-    return Res;
-  };
   // Ensure file proximity signals are correct.
-  EXPECT_EQ(StringMapToVector(PatchedAST->getIncludeStructure().includeDepth(
-                testPath("foo.cpp"))),
-            StringMapToVector(ExpectedAST.getIncludeStructure().includeDepth(
-                testPath("foo.cpp"))));
+  auto &FM = PatchedAST->getSourceManager().getFileManager();
+  // Copy so that we can use operator[] to get the children.
+  IncludeStructure Includes = PatchedAST->getIncludeStructure();
+  auto MainFE = FM.getFile(testPath("foo.cpp"));
+  ASSERT_TRUE(MainFE);
+  auto MainID = Includes.getID(*MainFE);
+  auto AuxFE = FM.getFile(testPath("sub/aux.h"));
+  ASSERT_TRUE(AuxFE);
+  auto AuxID = Includes.getID(*AuxFE);
+  EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID))
+      << Includes.dump();
 }
 
 TEST(ParsedASTTest, PatchesDeletedIncludes) {
@@ -549,18 +553,20 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
   EXPECT_THAT(PatchedAST->getIncludeStructure().MainFileIncludes,
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
-  auto StringMapToVector = [](const llvm::StringMap<unsigned> SM) {
-    std::vector<std::pair<std::string, unsigned>> Res;
-    for (const auto &E : SM)
-      Res.push_back({E.first().str(), E.second});
-    llvm::sort(Res);
-    return Res;
-  };
   // Ensure file proximity signals are correct.
-  EXPECT_EQ(StringMapToVector(PatchedAST->getIncludeStructure().includeDepth(
-                testPath("foo.cpp"))),
-            StringMapToVector(ExpectedAST.getIncludeStructure().includeDepth(
-                testPath("foo.cpp"))));
+  auto &FM = ExpectedAST.getSourceManager().getFileManager();
+  // Copy so that we can getOrCreateID().
+  IncludeStructure Includes = ExpectedAST.getIncludeStructure();
+  auto MainFE = FM.getFile(testPath("foo.cpp"));
+  ASSERT_TRUE(MainFE);
+  auto MainID = Includes.getOrCreateID(*MainFE);
+  auto &PatchedFM = PatchedAST->getSourceManager().getFileManager();
+  IncludeStructure PatchedIncludes = PatchedAST->getIncludeStructure();
+  auto PatchedMainFE = PatchedFM.getFile(testPath("foo.cpp"));
+  ASSERT_TRUE(PatchedMainFE);
+  auto PatchedMainID = PatchedIncludes.getOrCreateID(*PatchedMainFE);
+  EXPECT_EQ(Includes.includeDepth(MainID)[MainID],
+            PatchedIncludes.includeDepth(PatchedMainID)[PatchedMainID]);
 }
 
 // Returns Code guarded by #ifndef guards
@@ -813,6 +819,27 @@ TEST(ParsedASTTest, HeaderGuardsImplIface) {
               ElementsAre(Diag("in included file: main file cannot be included "
                                "recursively when building a preamble")));
   EXPECT_FALSE(mainIsGuarded(AST));
+}
+
+TEST(ParsedASTTest, DiscoversPragmaMarks) {
+  TestTU TU;
+  TU.AdditionalFiles["Header.h"] = R"(
+    #pragma mark - Something API
+    int something();
+    #pragma mark Something else
+  )";
+  TU.Code = R"cpp(
+    #include "Header.h"
+    #pragma mark In Preamble
+    #pragma mark - Something Impl
+    int something() { return 1; }
+    #pragma mark End
+  )cpp";
+  auto AST = TU.build();
+
+  EXPECT_THAT(AST.getMarks(), ElementsAre(PragmaTrivia(" In Preamble"),
+                                          PragmaTrivia(" - Something Impl"),
+                                          PragmaTrivia(" End")));
 }
 
 } // namespace

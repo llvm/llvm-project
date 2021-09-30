@@ -99,6 +99,7 @@ protected:
   bool HasDotProd = false;
   bool HasCRC = false;
   bool HasLSE = false;
+  bool HasLSE2 = false;
   bool HasRAS = false;
   bool HasRDM = false;
   bool HasPerfMon = false;
@@ -375,6 +376,7 @@ public:
   bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }
   bool hasLSE() const { return HasLSE; }
+  bool hasLSE2() const { return HasLSE2; }
   bool hasRAS() const { return HasRAS; }
   bool hasRDM() const { return HasRDM; }
   bool hasSM4() const { return HasSM4; }

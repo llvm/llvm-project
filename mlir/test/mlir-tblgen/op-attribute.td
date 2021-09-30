@@ -6,6 +6,7 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
+  let cppNamespace = "foobar";
 }
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -16,6 +17,10 @@ def SomeAttr : Attr<CPred<"some-condition">, "some attribute kind"> {
   let convertFromStorage = "$_self.some-convert-from-storage()";
   let constBuilderCall = "some-const-builder-call($_builder, $0)";
 }
+
+def SomeAttrDef : AttrDef<Test_Dialect, "SomeAttr"> {
+}
+
 
 // Test required, optional, default-valued attributes
 // ---
@@ -271,12 +276,49 @@ def EOp : NS_Op<"e_op", []> {
 // DECL-LABEL: EOp declarations
 // DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
+
+// Test proper namespacing for AttrDef
+// ---
+
+def NamespaceOp : NS_Op<"namespace_op", []> {
+  let arguments = (ins
+      SomeAttrDef:$AttrDef
+  );
+}
+// DECL: NamespaceOp
+// DECL: foobar::SomeAttrAttr AttrDef()
+
+
 // Test mixing operands and attributes in arbitrary order
 // ---
 
 def MixOperandsAndAttrs : NS_Op<"mix_operands_and_attrs", []> {
   let arguments = (ins F32Attr:$attr, F32:$operand, F32Attr:$otherAttr, F32:$otherArg);
 }
+
+def OpWithDefaultAndRegion : NS_Op<"default_with_region", []> {
+  let arguments = (ins
+          DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr
+  );
+  let regions = (region VariadicRegion<AnyRegion>:$region);
+}
+
+// We should not have a default attribute in this case.
+
+// DECL-LABEL: OpWithDefaultAndRegion declarations
+// DECL: static void build({{.*}}, bool dv_bool_attr, unsigned regionCount)
+
+def OpWithDefaultAndSuccessor : NS_Op<"default_with_succ", []> {
+  let arguments = (ins
+          DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr
+  );
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$succ);
+}
+
+// We should not have a default attribute in this case.
+
+// DECL-LABEL: OpWithDefaultAndSuccessor declarations
+// DECL: static void build({{.*}}, bool dv_bool_attr, ::mlir::BlockRange succ)
 
 // DEF-LABEL: MixOperandsAndAttrs definitions
 // DEF-DAG: ::mlir::Value MixOperandsAndAttrs::operand()

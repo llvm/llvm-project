@@ -52,7 +52,6 @@ public:
 X86::X86() {
   copyRel = R_386_COPY;
   gotRel = R_386_GLOB_DAT;
-  noneRel = R_386_NONE;
   pltRel = R_386_JUMP_SLOT;
   iRelativeRel = R_386_IRELATIVE;
   relativeRel = R_386_RELATIVE;
@@ -60,6 +59,7 @@ X86::X86() {
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
+  gotBaseSymInGotPlt = true;
   pltHeaderSize = 16;
   pltEntrySize = 16;
   ipltEntrySize = 16;

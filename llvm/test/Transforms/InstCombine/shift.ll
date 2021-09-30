@@ -444,9 +444,9 @@ bb2:
 define i32 @test29(i64 %d18) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I916:%.*]] = lshr i64 [[D18:%.*]], 63
-; CHECK-NEXT:    [[I10:%.*]] = trunc i64 [[I916]] to i32
-; CHECK-NEXT:    ret i32 [[I10]]
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i64 [[D18:%.*]], 63
+; CHECK-NEXT:    [[I101:%.*]] = trunc i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[I101]]
 ;
 entry:
   %i916 = lshr i64 %d18, 32
@@ -458,9 +458,9 @@ entry:
 define <2 x i32> @test29_uniform(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
-; CHECK-NEXT:    [[I10:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[I10]]
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[I101:%.*]] = trunc <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[I101]]
 ;
 entry:
   %i916 = lshr <2 x i64> %d18, <i64 32, i64 32>
@@ -1795,6 +1795,68 @@ define void @ashr_out_of_range_1(i177* %A) {
   store i177 %B28, i177* %G62, align 4
   ret void
 }
+
+; OSS Fuzz #38078
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=38078
+define void @ossfuzz_38078(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: @ossfuzz_38078(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])
+; CHECK-NEXT:    store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       BB:
+; CHECK-NEXT:    unreachable
+;
+bb:
+  %i = or i32 0, -1
+  %B24 = urem i32 %i, -2147483648
+  %B21 = or i32 %i, %i
+  %i2 = add nsw i32 %arg, %arg1
+  %B7 = or i32 %i, %i2
+  %B8 = and i32 %i, %i2
+  %B12 = sdiv i32 %i2, %B7
+  %B3 = add i32 %i2, %B24
+  %B5 = and i32 %i, %B3
+  %B18 = and i32 %i, %B8
+  %i3 = xor i32 %i2, %B3
+  %C1 = icmp ne i32 %B8, %B5
+  %i4 = lshr i32 %B5, %i3
+  %B29 = shl nuw i32 %B8, %i3
+  %B2 = lshr i32 %B12, %i2
+  %B16 = add i32 %B2, %i3
+  %B = sdiv i32 %B29, %B5
+  %B15 = sub i32 %i2, %B5
+  %B22 = or i32 %B21, %B29
+  %B23 = mul i32 %B15, %B
+  %C2 = icmp sge i1 %C1, false
+  %C7 = icmp sle i32 %i3, %B16
+  %B20 = xor i32 %B21, %B22
+  %G1 = getelementptr i32, i32* undef, i32 %B22
+  %B1 = sub i32 %B, undef
+  %B26 = ashr i32 %B29, undef
+  %B4 = add i32 undef, %B5
+  %B27 = srem i32 %B12, %B21
+  %i5 = icmp eq i32 %B20, %B18
+  %C11 = icmp ugt i32 %i4, %B4
+  call void @llvm.assume(i1 %i5)
+  store volatile i32 %B4, i32* %G1, align 4
+  %B11 = or i32 undef, %B23
+  br label %BB
+
+BB:
+  store i1 %C7, i1* undef, align 1
+  store i32 %B11, i32* undef, align 4
+  store i1 %C11, i1* undef, align 1
+  store i32 %B1, i32* undef, align 4
+  store i32 %B27, i32* undef, align 4
+  %C = icmp ne i32 %B26, undef
+  %B17 = or i1 %C, %C2
+  store i1 %B17, i1* undef, align 1
+  unreachable
+}
+declare void @llvm.assume(i1 noundef)
 
 define i8 @lshr_mask_demand(i8 %x) {
 ; CHECK-LABEL: @lshr_mask_demand(

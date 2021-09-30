@@ -1134,7 +1134,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
   } else if (PollyDelinearize && !IsVariantInNonAffineLoop) {
     Context.Accesses[BP].push_back({Inst, AF});
 
-    if (!IsAffine || hasIVParams(AF))
+    if (!IsAffine)
       Context.NonAffineAccesses.insert(
           std::make_pair(BP, LI.getLoopFor(Inst->getParent())));
   } else if (!AllowNonAffine && !IsAffine) {
@@ -1755,6 +1755,13 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
       dbgs() << "\n";
     });
     return false;
+  }
+
+  for (BasicBlock *Pred : predecessors(CurRegion.getEntry())) {
+    Instruction *PredTerm = Pred->getTerminator();
+    if (isa<IndirectBrInst>(PredTerm) || isa<CallBrInst>(PredTerm))
+      return invalid<ReportIndirectPredecessor>(
+          Context, /*Assert=*/true, PredTerm, PredTerm->getDebugLoc());
   }
 
   // SCoP cannot contain the entry block of the function, because we need

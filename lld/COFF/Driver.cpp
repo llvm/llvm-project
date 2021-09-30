@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
+#include "COFFLinkerContext.h"
 #include "Config.h"
 #include "DebugTypes.h"
 #include "ICF.h"
@@ -59,8 +60,6 @@ using namespace llvm::sys;
 namespace lld {
 namespace coff {
 
-static Timer inputFileTimer("Input File Reading", Timer::root());
-
 Configuration *config;
 LinkerDriver *driver;
 
@@ -70,14 +69,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stderrOS = &stderrOS;
 
   errorHandler().cleanupCallback = []() {
-    TpiSource::clear();
     freeArena();
-    ObjFile::instances.clear();
-    PDBInputFile::instances.clear();
-    ImportFile::instances.clear();
-    BitcodeFile::instances.clear();
-    memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
-    OutputSection::clear();
   };
 
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
@@ -87,9 +79,9 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   errorHandler().exitEarly = canExitEarly;
   stderrOS.enable_colors(stderrOS.has_colors());
 
+  COFFLinkerContext ctx;
   config = make<Configuration>();
-  symtab = make<SymbolTable>();
-  driver = make<LinkerDriver>();
+  driver = make<LinkerDriver>(ctx);
 
   driver->linkerMain(args);
 
@@ -174,8 +166,8 @@ static StringRef mangle(StringRef sym) {
   return sym;
 }
 
-static bool findUnderscoreMangle(StringRef sym) {
-  Symbol *s = symtab->findMangle(mangle(sym));
+bool LinkerDriver::findUnderscoreMangle(StringRef sym) {
+  Symbol *s = ctx.symtab.findMangle(mangle(sym));
   return s && !isa<Undefined>(s);
 }
 
@@ -213,30 +205,30 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
         addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
-    symtab->addFile(make<ArchiveFile>(mbref));
+    ctx.symtab.addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
     if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
+      ctx.symtab.addFile(make<LazyObjFile>(ctx, mbref));
     else
-      symtab->addFile(make<BitcodeFile>(mbref, "", 0));
+      ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
     if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
+      ctx.symtab.addFile(make<LazyObjFile>(ctx, mbref));
     else
-      symtab->addFile(make<ObjFile>(mbref));
+      ctx.symtab.addFile(make<ObjFile>(ctx, mbref));
     break;
   case file_magic::pdb:
-    symtab->addFile(make<PDBInputFile>(mbref));
+    ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
     error(filename + ": is not a native COFF file. Recompile without /GL");
     break;
   case file_magic::pecoff_executable:
     if (config->mingw) {
-      symtab->addFile(make<DLLFile>(mbref));
+      ctx.symtab.addFile(make<DLLFile>(ctx, mbref));
       break;
     }
     if (filename.endswith_insensitive(".dll")) {
@@ -280,24 +272,24 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
                                     uint64_t offsetInArchive) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::coff_import_library) {
-    InputFile *imp = make<ImportFile>(mb);
+    InputFile *imp = make<ImportFile>(ctx, mb);
     imp->parentName = parentName;
-    symtab->addFile(imp);
+    ctx.symtab.addFile(imp);
     return;
   }
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = make<ObjFile>(mb);
+    obj = make<ObjFile>(ctx, mb);
   } else if (magic == file_magic::bitcode) {
-    obj = make<BitcodeFile>(mb, parentName, offsetInArchive);
+    obj = make<BitcodeFile>(ctx, mb, parentName, offsetInArchive);
   } else {
     error("unknown file type: " + mb.getBufferIdentifier());
     return;
   }
 
   obj->parentName = parentName;
-  symtab->addFile(obj);
+  ctx.symtab.addFile(obj);
   log("Loaded " + toString(obj) + " for " + symName);
 }
 
@@ -547,7 +539,7 @@ void LinkerDriver::addLibSearchPaths() {
 }
 
 Symbol *LinkerDriver::addUndefined(StringRef name) {
-  Symbol *b = symtab->addUndefined(name);
+  Symbol *b = ctx.symtab.addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
     config->gcroot.push_back(b);
@@ -562,14 +554,14 @@ StringRef LinkerDriver::mangleMaybe(Symbol *s) {
     return "";
 
   // Otherwise, see if a similar, mangled symbol exists in the symbol table.
-  Symbol *mangled = symtab->findMangle(unmangled->getName());
+  Symbol *mangled = ctx.symtab.findMangle(unmangled->getName());
   if (!mangled)
     return "";
 
   // If we find a similar mangled symbol, make this an alias to it and return
   // its name.
   log(unmangled->getName() + " aliased to " + mangled->getName());
-  unmangled->weakAlias = symtab->addUndefined(mangled->getName());
+  unmangled->weakAlias = ctx.symtab.addUndefined(mangled->getName());
   return mangled->getName();
 }
 
@@ -939,7 +931,7 @@ void LinkerDriver::enqueueTask(std::function<void()> task) {
 }
 
 bool LinkerDriver::run() {
-  ScopedTimer t(inputFileTimer);
+  ScopedTimer t(ctx.inputFileTimer);
 
   bool didWork = !taskQueue.empty();
   while (!taskQueue.empty()) {
@@ -952,7 +944,7 @@ bool LinkerDriver::run() {
 // Parse an /order file. If an option is given, the linker places
 // COMDAT sections in the same order as their names appear in the
 // given file.
-static void parseOrderFile(StringRef arg) {
+static void parseOrderFile(COFFLinkerContext &ctx, StringRef arg) {
   // For some reason, the MSVC linker requires a filename to be
   // preceded by "@".
   if (!arg.startswith("@")) {
@@ -962,7 +954,7 @@ static void parseOrderFile(StringRef arg) {
 
   // Get a list of all comdat sections for error checking.
   DenseSet<StringRef> set;
-  for (Chunk *c : symtab->getChunks())
+  for (Chunk *c : ctx.symtab.getChunks())
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         set.insert(sec->sym->getName());
@@ -996,7 +988,7 @@ static void parseOrderFile(StringRef arg) {
   driver->takeBuffer(std::move(mb));
 }
 
-static void parseCallGraphFile(StringRef path) {
+static void parseCallGraphFile(COFFLinkerContext &ctx, StringRef path) {
   std::unique_ptr<MemoryBuffer> mb =
       CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
                                   /*RequiresNullTerminator=*/false,
@@ -1005,7 +997,7 @@ static void parseCallGraphFile(StringRef path) {
 
   // Build a map from symbol name to section.
   DenseMap<StringRef, Symbol *> map;
-  for (ObjFile *file : ObjFile::instances)
+  for (ObjFile *file : ctx.objFileInstances)
     for (Symbol *sym : file->getSymbols())
       if (sym)
         map[sym->getName()] = sym;
@@ -1042,8 +1034,8 @@ static void parseCallGraphFile(StringRef path) {
   driver->takeBuffer(std::move(mb));
 }
 
-static void readCallGraphsFromObjectFiles() {
-  for (ObjFile *obj : ObjFile::instances) {
+static void readCallGraphsFromObjectFiles(COFFLinkerContext &ctx) {
+  for (ObjFile *obj : ctx.objFileInstances) {
     if (obj->callgraphSec) {
       ArrayRef<uint8_t> contents;
       cantFail(
@@ -1077,7 +1069,7 @@ static void markAddrsig(Symbol *s) {
       c->keepUnique = true;
 }
 
-static void findKeepUniqueSections() {
+static void findKeepUniqueSections(COFFLinkerContext &ctx) {
   // Exported symbols could be address-significant in other executables or DSOs,
   // so we conservatively mark them as address-significant.
   for (Export &r : config->exports)
@@ -1085,7 +1077,7 @@ static void findKeepUniqueSections() {
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
-  for (ObjFile *obj : ObjFile::instances) {
+  for (ObjFile *obj : ctx.objFileInstances) {
     ArrayRef<Symbol *> syms = obj->getSymbols();
     if (obj->addrsigSec) {
       ArrayRef<uint8_t> contents;
@@ -1169,7 +1161,7 @@ static void parsePDBAltPath(StringRef altPath) {
 void LinkerDriver::convertResources() {
   std::vector<ObjFile *> resourceObjFiles;
 
-  for (ObjFile *f : ObjFile::instances) {
+  for (ObjFile *f : ctx.objFileInstances) {
     if (f->isResourceObjFile())
       resourceObjFiles.push_back(f);
   }
@@ -1191,8 +1183,9 @@ void LinkerDriver::convertResources() {
       f->includeResourceChunks();
     return;
   }
-  ObjFile *f = make<ObjFile>(convertResToCOFF(resources, resourceObjFiles));
-  symtab->addFile(f);
+  ObjFile *f =
+      make<ObjFile>(ctx, convertResToCOFF(resources, resourceObjFiles));
+  ctx.symtab.addFile(f);
   f->includeResourceChunks();
 }
 
@@ -1219,9 +1212,9 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (Optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
 
-  symtab->forEachSymbol([&](Symbol *s) {
+  ctx.symtab.forEachSymbol([&](Symbol *s) {
     auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
+    if (!exporter.shouldExport(ctx, def))
       return;
 
     if (!def->isGCRoot) {
@@ -1266,7 +1259,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
 }
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
-  ScopedTimer rootTimer(Timer::root());
+  ScopedTimer rootTimer(ctx.rootTimer);
 
   // Needed for LTO.
   InitializeAllTargetInfos();
@@ -2018,32 +2011,32 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->imageBase == uint64_t(-1))
     config->imageBase = getDefaultImageBase();
 
-  symtab->addSynthetic(mangle("__ImageBase"), nullptr);
+  ctx.symtab.addSynthetic(mangle("__ImageBase"), nullptr);
   if (config->machine == I386) {
-    symtab->addAbsolute("___safe_se_handler_table", 0);
-    symtab->addAbsolute("___safe_se_handler_count", 0);
+    ctx.symtab.addAbsolute("___safe_se_handler_table", 0);
+    ctx.symtab.addAbsolute("___safe_se_handler_count", 0);
   }
 
-  symtab->addAbsolute(mangle("__guard_fids_count"), 0);
-  symtab->addAbsolute(mangle("__guard_fids_table"), 0);
-  symtab->addAbsolute(mangle("__guard_flags"), 0);
-  symtab->addAbsolute(mangle("__guard_iat_count"), 0);
-  symtab->addAbsolute(mangle("__guard_iat_table"), 0);
-  symtab->addAbsolute(mangle("__guard_longjmp_count"), 0);
-  symtab->addAbsolute(mangle("__guard_longjmp_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_fids_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_fids_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_flags"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_iat_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_iat_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_longjmp_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_longjmp_table"), 0);
   // Needed for MSVC 2017 15.5 CRT.
-  symtab->addAbsolute(mangle("__enclave_config"), 0);
+  ctx.symtab.addAbsolute(mangle("__enclave_config"), 0);
   // Needed for MSVC 2019 16.8 CRT.
-  symtab->addAbsolute(mangle("__guard_eh_cont_count"), 0);
-  symtab->addAbsolute(mangle("__guard_eh_cont_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
   if (config->pseudoRelocs) {
-    symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
-    symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+    ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
   }
   if (config->mingw) {
-    symtab->addAbsolute(mangle("__CTOR_LIST__"), 0);
-    symtab->addAbsolute(mangle("__DTOR_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__CTOR_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more
@@ -2069,12 +2062,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     for (auto pair : config->alternateNames) {
       StringRef from = pair.first;
       StringRef to = pair.second;
-      Symbol *sym = symtab->find(from);
+      Symbol *sym = ctx.symtab.find(from);
       if (!sym)
         continue;
       if (auto *u = dyn_cast<Undefined>(sym))
         if (!u->weakAlias)
-          u->weakAlias = symtab->addUndefined(to);
+          u->weakAlias = ctx.symtab.addUndefined(to);
     }
 
     // If any inputs are bitcode files, the LTO code generator may create
@@ -2082,25 +2075,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // file's symbol table. If any of those library functions are defined in a
     // bitcode file in an archive member, we need to arrange to use LTO to
     // compile those archive members by adding them to the link beforehand.
-    if (!BitcodeFile::instances.empty())
+    if (!ctx.bitcodeFileInstances.empty())
       for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
-        symtab->addLibcall(s);
+        ctx.symtab.addLibcall(s);
 
     // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (symtab->findUnderscore("_load_config_used"))
+    if (ctx.symtab.findUnderscore("_load_config_used"))
       addUndefined(mangle("_load_config_used"));
   } while (run());
 
   if (args.hasArg(OPT_include_optional)) {
     // Handle /includeoptional
     for (auto *arg : args.filtered(OPT_include_optional))
-      if (dyn_cast_or_null<LazyArchive>(symtab->find(arg->getValue())))
+      if (dyn_cast_or_null<LazyArchive>(ctx.symtab.find(arg->getValue())))
         addUndefined(arg->getValue());
     while (run());
   }
 
   // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
+  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
   // Load more object files that might be needed for wrapped symbols.
   if (!wrapped.empty())
     while (run());
@@ -2126,7 +2119,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // If it ends up pulling in more object files from static libraries,
     // (and maybe doing more stdcall fixups along the way), this would need
     // to loop these two calls.
-    symtab->loadMinGWSymbols();
+    ctx.symtab.loadMinGWSymbols();
     run();
   }
 
@@ -2134,8 +2127,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If we are going to do codegen for link-time optimization, check for
   // unresolvable symbols first, so we don't spend time generating code that
   // will fail to link anyway.
-  if (!BitcodeFile::instances.empty() && !config->forceUnresolved)
-    symtab->reportUnresolvable();
+  if (!ctx.bitcodeFileInstances.empty() && !config->forceUnresolved)
+    ctx.symtab.reportUnresolvable();
   if (errorCount())
     return;
 
@@ -2149,7 +2142,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
-  symtab->addCombinedLTOObjects();
+  ctx.symtab.addCombinedLTOObjects();
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2163,10 +2156,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Apply symbol renames for -wrap.
   if (!wrapped.empty())
-    wrapSymbols(wrapped);
+    wrapSymbols(ctx, wrapped);
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  symtab->resolveRemainingUndefines();
+  ctx.symtab.resolveRemainingUndefines();
   if (errorCount())
     return;
 
@@ -2177,12 +2170,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // order provided on the command line, while lld will pull in needed
     // files from static libraries only after the last object file on the
     // command line.
-    for (auto i = ObjFile::instances.begin(), e = ObjFile::instances.end();
+    for (auto i = ctx.objFileInstances.begin(), e = ctx.objFileInstances.end();
          i != e; i++) {
       ObjFile *file = *i;
       if (isCrtend(file->getName())) {
-        ObjFile::instances.erase(i);
-        ObjFile::instances.push_back(file);
+        ctx.objFileInstances.erase(i);
+        ctx.objFileInstances.push_back(file);
         break;
       }
     }
@@ -2207,7 +2200,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     StringRef name = pair.first;
     uint32_t alignment = pair.second;
 
-    Symbol *sym = symtab->find(name);
+    Symbol *sym = ctx.symtab.find(name);
     if (!sym) {
       warn("/aligncomm symbol " + name + " not found");
       continue;
@@ -2239,16 +2232,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_order)) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       error("/order and /call-graph-order-file may not be used together");
-    parseOrderFile(arg->getValue());
+    parseOrderFile(ctx, arg->getValue());
     config->callGraphProfileSort = false;
   }
 
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
   if (config->callGraphProfileSort) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
-      parseCallGraphFile(arg->getValue());
+      parseCallGraphFile(ctx, arg->getValue());
     }
-    readCallGraphsFromObjectFiles();
+    readCallGraphsFromObjectFiles(ctx);
   }
 
   // Handle /print-symbol-order.
@@ -2265,7 +2258,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // functions. This doesn't bring in more object files, but only marks
       // functions that already have been included to be retained.
       for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0"}) {
-        Defined *d = dyn_cast_or_null<Defined>(symtab->findUnderscore(n));
+        Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
         if (d && !d->isGCRoot) {
           d->isGCRoot = true;
           config->gcroot.push_back(d);
@@ -2273,7 +2266,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     }
 
-    markLive(symtab->getChunks());
+    markLive(ctx);
   }
 
   // Needs to happen after the last call to addFile().
@@ -2281,17 +2274,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Identify identical COMDAT sections to merge them.
   if (config->doICF != ICFLevel::None) {
-    findKeepUniqueSections();
-    doICF(symtab->getChunks(), config->doICF);
+    findKeepUniqueSections(ctx);
+    doICF(ctx, config->doICF);
   }
 
   // Write the result.
-  writeResult();
+  writeResult(ctx);
 
   // Stop early so we can print the results.
   rootTimer.stop();
   if (config->showTiming)
-    Timer::root().print();
+    ctx.rootTimer.print();
 }
 
 } // namespace coff

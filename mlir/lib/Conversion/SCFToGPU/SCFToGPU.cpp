@@ -37,6 +37,24 @@
 using namespace mlir;
 using namespace mlir::scf;
 
+// Name of internal attribute to mark visited operations during conversion.
+//
+// NOTE: The conversion originally used the following legality criteria:
+//   `!parallelOp->hasAttr(gpu::getMappingAttrName())`
+// But the provided pattern might reject some cases based on more detailed
+// analysis of the `mapping` attribute.
+// To avoid dialect conversion failure due to non-converted illegal operation
+// we use this extra Unit attribute as a marker, that the operation was checked
+// by the pattern and is should be considered as legal in the following legality
+// checks. The `finalizeParallelLoopToGPUConversion` function performs clean up
+// of this extra attributes ans is supposed to be called after the dialect
+// conversion.
+//
+// TODO: Implement a cleaner solution, factoring out the "matching" logic
+// from the pattern and its callees into a separate function that can be called
+// from both the pattern and the op legality check.
+static constexpr StringLiteral kVisitedAttrName = "SCFToGPU_visited";
+
 // Extract an indexed value from KernelDim3.
 static Value getDim3Value(const gpu::KernelDim3 &dim3, unsigned pos) {
   switch (pos) {
@@ -567,6 +585,9 @@ static LogicalResult processParallelLoop(
 LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
+  // Mark the operation as visited for recursive legality check.
+  parallelOp->setAttr(kVisitedAttrName, rewriter.getUnitAttr());
+
   // We can only transform starting at the outer-most loop. Launches inside of
   // parallel loops are not supported.
   if (auto parentLoop = parallelOp->getParentOfType<ParallelOp>())
@@ -649,6 +670,13 @@ void mlir::populateParallelLoopToGPUPatterns(RewritePatternSet &patterns) {
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
   target.addLegalDialect<memref::MemRefDialect>();
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
-    return !parallelOp->getAttr(gpu::getMappingAttrName());
+    return !parallelOp->hasAttr(gpu::getMappingAttrName()) ||
+           parallelOp->hasAttr(kVisitedAttrName);
+  });
+}
+
+void mlir::finalizeParallelLoopToGPUConversion(Operation *op) {
+  op->walk([](scf::ParallelOp parallelOp) {
+    parallelOp->removeAttr(kVisitedAttrName);
   });
 }

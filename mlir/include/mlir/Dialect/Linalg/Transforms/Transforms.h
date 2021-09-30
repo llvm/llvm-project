@@ -435,26 +435,14 @@ private:
   Optional<Identifier> replacement;
 };
 
-///
-/// Linalg tiling patterns.
-///
-/// Apply the `tileLinalgOp` transformation as a pattern.
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `tileLinalgOp` for more details.
-enum class LinalgTilingLoopType {
-  Loops = 0,
-  AffineLoops = 1,
-  ParallelLoops = 2,
-  TiledLoops = 3,
-};
-
 using TileSizeComputationFunction =
     std::function<SmallVector<Value, 4>(OpBuilder &, Operation *)>;
 
-/// Specify the padding value for an OpOperand. This should be a function of
-/// both the operation and the operand type.
+/// Callback returning the padding value to use for a given OpOperand or failure
+/// for no padding. This should be a function of both the operation and the
+/// operand type.
 using PaddingValueComputationFunction =
-    std::function<Value(OpBuilder &, OpOperand &)>;
+    std::function<FailureOr<Value>(OpBuilder &, OpOperand &)>;
 
 struct LinalgTilingOptions {
   /// Computation function that returns the tile sizes for each operation.
@@ -517,10 +505,11 @@ struct LinalgTilingOptions {
     return *this;
   }
 
-  /// Computation function that returns a padding value to use when padding to
-  /// force static sizes. When `paddingValueComputationFunction` is set, padding
-  /// operations are introduced, that guarantee the underlying op is statically
-  /// shaped and can thus be vectorized.
+  /// Callback returning the padding value to use for a given OpOperand or
+  /// failure for no padding. Padding operations are introduced if
+  /// `paddingValueComputationFunction` is set and does not return failure.
+  /// Padding all operands guarantees the operation is statically shaped and
+  /// thus can be vectorized.
   PaddingValueComputationFunction paddingValueComputationFunction = nullptr;
 
   LinalgTilingOptions &

@@ -1533,7 +1533,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   if (GroType->isVoidType()) {
     // Trigger a nice error message.
     InitializedEntity Entity =
-        InitializedEntity::InitializeResult(Loc, FnRetType, false);
+        InitializedEntity::InitializeResult(Loc, FnRetType);
     S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;

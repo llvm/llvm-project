@@ -439,7 +439,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!CWidth || !COffset)
       break;
 
-    // The case of Width == 0 is handled above, which makes this tranformation
+    // The case of Width == 0 is handled above, which makes this transformation
     // safe.  If Width == 0, then the ashr and lshr instructions become poison
     // value since the shift amount would be equal to the bit size.
     assert(Width != 0);

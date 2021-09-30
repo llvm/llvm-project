@@ -19,7 +19,7 @@
 #define CHECK_TYPE_SIZE_FITS(TYPE) \
   COMPILER_CHECK(sizeof(__hw_##TYPE) <= sizeof(TYPE))
 
-#if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
+#if HWASAN_WITH_INTERCEPTORS
 CHECK_TYPE_SIZE_FITS(jmp_buf);
 CHECK_TYPE_SIZE_FITS(sigjmp_buf);
 #endif

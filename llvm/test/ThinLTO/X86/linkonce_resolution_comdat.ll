@@ -3,15 +3,17 @@
 ; verification error.
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=run %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -thinlto-save-temps=%t3.
+; RUN: llvm-lto -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -thinlto-save-temps=%t3.
 
 ; RUN: llvm-dis %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
 ; RUN: llvm-dis %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
 ; Copy from first module is prevailing and converted to weak_odr, copy
 ; from second module is preempted and converted to available_externally and
 ; removed from comdat.
-; IMPORT1: define weak_odr i32 @f(i8* %0) unnamed_addr comdat($c1) {
-; IMPORT2: define available_externally i32 @f(i8* %0) unnamed_addr {
+; IMPORT1: define weak_odr i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] comdat($c1) {
+; IMPORT2: define available_externally i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] {
+
+; CHECK-DAG: attributes [[ATTR]] = { norecurse nounwind }
 
 ; RUN: llvm-nm -o - < %t1.bc.thinlto.o | FileCheck %s --check-prefix=NM1
 ; NM1: W f

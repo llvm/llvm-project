@@ -12,37 +12,39 @@
 
 using namespace llvm;
 
-SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
-  CodePointerSize = 8;
+SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
+  AssemblerDialect = AD_ATT;
   CalleeSaveStackSlotSize = 8;
-  IsLittleEndian = false;
-
-  AssemblerDialect = TT.isOSzOS() ? AD_HLASM : AD_ATT;
-
-  MaxInstLength = 6;
-
-  CommentString = AssemblerDialect == AD_HLASM ? "*" : "#";
-  RestrictCommentStringToStartOfStatement = (AssemblerDialect == AD_HLASM);
-  AllowAdditionalComments = (AssemblerDialect == AD_ATT);
-  AllowAtAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
-  AllowDollarAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
-  AllowHashAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
-  DotIsPC = (AssemblerDialect == AD_ATT);
-  StarIsPC = (AssemblerDialect == AD_HLASM);
-  EmitGNUAsmStartIndentationMarker = (AssemblerDialect == AD_ATT);
-  AllowAtInName = (AssemblerDialect == AD_HLASM);
-  EmitLabelsInUpperCase = (AssemblerDialect == AD_HLASM);
-
-  ZeroDirective = "\t.space\t";
+  CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
-  UsesELFSectionDirectiveForBSS = true;
-  SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
+  IsLittleEndian = false;
+  MaxInstLength = 6;
+  SupportsDebugInformation = true;
+  UsesELFSectionDirectiveForBSS = true;
+  ZeroDirective = "\t.space\t";
 }
 
-bool SystemZMCAsmInfo::isAcceptableChar(char C) const {
-  if (AssemblerDialect == AD_ATT)
-    return MCAsmInfo::isAcceptableChar(C);
+SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
+  AllowAdditionalComments = false;
+  AllowAtInName = true;
+  AllowAtAtStartOfIdentifier = true;
+  AllowDollarAtStartOfIdentifier = true;
+  AllowHashAtStartOfIdentifier = true;
+  AssemblerDialect = AD_HLASM;
+  CalleeSaveStackSlotSize = 8;
+  CodePointerSize = 8;
+  CommentString = "*";
+  DotIsPC = false;
+  EmitGNUAsmStartIndentationMarker = false;
+  EmitLabelsInUpperCase = true;
+  IsLittleEndian = false;
+  MaxInstLength = 6;
+  RestrictCommentStringToStartOfStatement = true;
+  StarIsPC = true;
+  SupportsDebugInformation = true;
+}
 
+bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
   return MCAsmInfo::isAcceptableChar(C) || C == '#';
 }

@@ -60,13 +60,13 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GCN-NEXT:    v_mac_f32_e32 v10, v7, v6
 ; GCN-NEXT:    v_mul_f32_e32 v1, v8, v6
 ; GCN-NEXT:    v_mul_f32_e32 v7, v6, v3
-; GCN-NEXT:    v_fmac_f32_e64 v9, -v6, v3
+; GCN-NEXT:    v_fma_f32 v3, -v6, v3, v9
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v3, v4, v10
+; GCN-NEXT:    v_add_f32_e32 v4, v4, v10
 ; GCN-NEXT:    v_fma_f32 v0, v2, s26, -v1
+; GCN-NEXT:    v_fmac_f32_e32 v7, v3, v6
+; GCN-NEXT:    v_mul_f32_e32 v3, v4, v6
 ; GCN-NEXT:    v_fma_f32 v4, v5, s0, 0x3ca3d70a
-; GCN-NEXT:    v_fmac_f32_e32 v7, v9, v6
-; GCN-NEXT:    v_mul_f32_e32 v3, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v1, v0, v6
 ; GCN-NEXT:    v_mul_f32_e32 v0, v2, v6
 ; GCN-NEXT:    v_mul_f32_e32 v2, v7, v4

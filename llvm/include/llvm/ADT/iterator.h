@@ -95,6 +95,22 @@ protected:
     operator ReferenceT() const { return *I; }
   };
 
+  /// A proxy object for computing a pointer via indirecting a copy of a
+  /// reference. This is used in APIs which need to produce a pointer but for
+  /// which the reference might be a temporary. The proxy preserves the
+  /// reference internally and exposes the pointer via a arrow operator.
+  class PointerProxy {
+    friend iterator_facade_base;
+
+    ReferenceT R;
+
+    template <typename RefT>
+    PointerProxy(RefT &&R) : R(std::forward<RefT>(R)) {}
+
+  public:
+    PointerT operator->() const { return &R; }
+  };
+
 public:
   DerivedT operator+(DifferenceTypeT n) const {
     static_assert(std::is_base_of<iterator_facade_base, DerivedT>::value,
@@ -172,19 +188,21 @@ public:
     return !(static_cast<const DerivedT &>(*this) < RHS);
   }
 
-  PointerT operator->() { return &static_cast<DerivedT *>(this)->operator*(); }
-  PointerT operator->() const {
-    return &static_cast<const DerivedT *>(this)->operator*();
+  PointerProxy operator->() {
+    return static_cast<DerivedT *>(this)->operator*();
+  }
+  PointerProxy operator->() const {
+    return static_cast<const DerivedT *>(this)->operator*();
   }
   ReferenceProxy operator[](DifferenceTypeT n) {
     static_assert(IsRandomAccess,
                   "Subscripting is only defined for random access iterators.");
-    return ReferenceProxy(static_cast<DerivedT *>(this)->operator+(n));
+    return static_cast<DerivedT *>(this)->operator+(n);
   }
   ReferenceProxy operator[](DifferenceTypeT n) const {
     static_assert(IsRandomAccess,
                   "Subscripting is only defined for random access iterators.");
-    return ReferenceProxy(static_cast<const DerivedT *>(this)->operator+(n));
+    return static_cast<const DerivedT *>(this)->operator+(n);
   }
 };
 

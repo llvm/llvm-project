@@ -57,6 +57,28 @@ def testTypeEq():
   print("t1 == None:", t1 == None)
 
 
+# CHECK-LABEL: TEST: testTypeHash
+@run
+def testTypeHash():
+  ctx = Context()
+  t1 = Type.parse("i32", ctx)
+  t2 = Type.parse("f32", ctx)
+  t3 = Type.parse("i32", ctx)
+
+  # CHECK: hash(t1) == hash(t3): True
+  print("hash(t1) == hash(t3):", t1.__hash__() == t3.__hash__())
+  # In general, hashes don't have to be unique. In this case, however, the
+  # hash is just the underlying pointer so it will be.
+  # CHECK: hash(t1) == hash(t2): False
+  print("hash(t1) == hash(t2):", t1.__hash__() == t2.__hash__())
+
+  s = set()
+  s.add(t1)
+  s.add(t2)
+  s.add(t3)
+  # CHECK: len(s): 2
+  print("len(s): ", len(s))
+
 # CHECK-LABEL: TEST: testTypeCast
 @run
 def testTypeCast():

@@ -104,7 +104,7 @@ llvm::Optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   if (It != GlobalIndices.end())
     return It->second;
 
-  // Find any previous declarations which were aleady evaluated.
+  // Find any previous declarations which were already evaluated.
   llvm::Optional<unsigned> Index;
   for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
     auto It = GlobalIndices.find(P);

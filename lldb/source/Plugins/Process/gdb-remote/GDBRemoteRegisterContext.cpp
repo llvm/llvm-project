@@ -90,7 +90,7 @@ const RegisterSet *GDBRemoteRegisterContext::GetRegisterSet(size_t reg_set) {
 bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                                             RegisterValue &value) {
   // Read the register
-  if (ReadRegisterBytes(reg_info, m_reg_data)) {
+  if (ReadRegisterBytes(reg_info)) {
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
     if (m_reg_valid[reg] == false)
       return false;
@@ -184,8 +184,7 @@ bool GDBRemoteRegisterContext::GetPrimordialRegister(
   return false;
 }
 
-bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
-                                                 DataExtractor &data) {
+bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
   ExecutionContext exe_ctx(CalculateThread());
 
   Process *process = exe_ctx.GetProcessPtr();
@@ -254,7 +253,7 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
         // We have a valid primordial register as our constituent. Grab the
         // corresponding register info.
         const RegisterInfo *prim_reg_info =
-            GetRegisterInfo(eRegisterKindProcessPlugin, prim_reg);
+            GetRegisterInfo(eRegisterKindLLDB, prim_reg);
         if (prim_reg_info == nullptr)
           success = false;
         else {
@@ -279,22 +278,6 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
       return false;
   }
 
-  if (&data != &m_reg_data) {
-    assert(m_reg_data.GetByteSize() >=
-           reg_info->byte_offset + reg_info->byte_size);
-    // If our register context and our register info disagree, which should
-    // never happen, don't read past the end of the buffer.
-    if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
-      return false;
-
-    // If we aren't extracting into our own buffer (which only happens when
-    // this function is called from ReadRegisterValue(uint32_t, Scalar&)) then
-    // we transfer bytes from our buffer into the data buffer that was passed
-    // in
-
-    data.SetByteOrder(m_reg_data.GetByteOrder());
-    data.SetData(m_reg_data, reg_info->byte_offset, reg_info->byte_size);
-  }
   return true;
 }
 
@@ -401,7 +384,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
             // We have a valid primordial register as our constituent. Grab the
             // corresponding register info.
             const RegisterInfo *value_reg_info =
-                GetRegisterInfo(eRegisterKindProcessPlugin, reg);
+                GetRegisterInfo(eRegisterKindLLDB, reg);
             if (value_reg_info == nullptr)
               success = false;
             else
@@ -422,7 +405,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                reg != LLDB_INVALID_REGNUM;
                reg = reg_info->invalidate_regs[++idx])
             SetRegisterIsValid(ConvertRegisterKindToRegisterNumber(
-                                   eRegisterKindProcessPlugin, reg),
+                                   eRegisterKindLLDB, reg),
                                false);
         }
 
@@ -526,7 +509,7 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
       if (reg_info
               ->value_regs) // skip registers that are slices of real registers
         continue;
-      ReadRegisterBytes(reg_info, m_reg_data);
+      ReadRegisterBytes(reg_info);
       // ReadRegisterBytes saves the contents of the register in to the
       // m_reg_data buffer
     }

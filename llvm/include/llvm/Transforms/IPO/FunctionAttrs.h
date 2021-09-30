@@ -17,6 +17,7 @@
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -37,6 +38,13 @@ enum MemoryAccessKind {
 
 /// Returns the memory access properties of this copy of the function.
 MemoryAccessKind computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
+
+/// Propagate function attributes for function summaries along the index's
+/// callgraph during thinlink
+bool thinLTOPropagateFunctionAttrs(
+    ModuleSummaryIndex &Index,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing);
 
 /// Computes function attributes in post-order over the call graph.
 ///

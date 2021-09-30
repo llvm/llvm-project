@@ -14,6 +14,14 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
 
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
+
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
+
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 
 ; HSA-CI-V2: is_xnack_enabled = 0
@@ -26,6 +34,8 @@
 ; CI: ; NumSgprs: 8
 ; VI-NOXNACK: ; NumSgprs: 8
 ; VI-XNACK: ; NumSgprs: 12
+; GFX9-ARCH-FLAT: ; NumSgprs: 14
+; GFX10-ARCH-FLAT: ; NumSgprs: 8
 define amdgpu_kernel void @no_vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7}"()
@@ -44,6 +54,8 @@ entry:
 ; CI: ; NumSgprs: 10
 ; VI-NOXNACK: ; NumSgprs: 10
 ; VI-XNACK: ; NumSgprs: 12
+; GFX9-ARCH-FLAT: ; NumSgprs: 14
+; GFX10-ARCH-FLAT: ; NumSgprs: 10
 define amdgpu_kernel void @vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc}"()
@@ -62,6 +74,8 @@ entry:
 ; CI: ; NumSgprs: 12
 ; VI-NOXNACK: ; NumSgprs: 14
 ; VI-XNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT: ; NumSgprs: 14
+; GFX10-ARCH-FLAT: ; NumSgprs: 8
 define amdgpu_kernel void @no_vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{flat_scratch}"()
@@ -80,6 +94,8 @@ entry:
 ; CI: ; NumSgprs: 12
 ; VI-NOXNACK: ; NumSgprs: 14
 ; VI-XNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT: ; NumSgprs: 14
+; GFX10-ARCH-FLAT: ; NumSgprs: 10
 define amdgpu_kernel void @vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc},~{flat_scratch}"()
@@ -101,6 +117,8 @@ entry:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT: ; NumSgprs: 6
+; GFX10-ARCH-FLAT: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch}"()
@@ -119,6 +137,8 @@ entry:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT: ; NumSgprs: 6
+; GFX10-ARCH-FLAT: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_lo() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_lo}"()
@@ -137,6 +157,8 @@ entry:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT: ; NumSgprs: 6
+; GFX10-ARCH-FLAT: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_hi() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_hi}"()

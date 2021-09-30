@@ -9,7 +9,6 @@
 #include "DWARFUnit.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
@@ -687,12 +686,10 @@ void DWARFUnit::ParseProducerInfo() {
         llvm::SmallVector<llvm::StringRef, 4> matches;
         if (g_clang_version_regex.Execute(llvm::StringRef(producer_cstr),
                                           &matches)) {
-          m_producer_version_major =
-              StringConvert::ToUInt32(matches[1].str().c_str(), UINT32_MAX, 10);
-          m_producer_version_minor =
-              StringConvert::ToUInt32(matches[2].str().c_str(), UINT32_MAX, 10);
-          m_producer_version_update =
-              StringConvert::ToUInt32(matches[3].str().c_str(), UINT32_MAX, 10);
+          // FIXME: improve error handling
+          llvm::to_integer(matches[1], m_producer_version_major);
+          llvm::to_integer(matches[2], m_producer_version_minor);
+          llvm::to_integer(matches[3], m_producer_version_update);
         }
         m_producer = eProducerClang;
       } else if (strstr(producer_cstr, "GNU"))

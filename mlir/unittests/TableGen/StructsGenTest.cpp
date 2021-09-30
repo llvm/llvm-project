@@ -158,7 +158,7 @@ TEST(StructsGenTest, GetElements) {
   auto denseAttr = returnedAttr.dyn_cast<mlir::DenseElementsAttr>();
   ASSERT_TRUE(denseAttr);
 
-  for (const auto &valIndexIt : llvm::enumerate(denseAttr.getIntValues())) {
+  for (const auto &valIndexIt : llvm::enumerate(denseAttr.getValues<APInt>())) {
     EXPECT_EQ(valIndexIt.value(), valIndexIt.index() + 1);
   }
 }

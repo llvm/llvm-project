@@ -104,7 +104,7 @@ private:
         RootToken.isObjCAccessSpecifier() ||
         (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
          RootToken.Next && RootToken.Next->is(tok::colon))) {
-      // The AccessModifierOffset may be overriden by IndentAccessModifiers,
+      // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
       return Style.IndentAccessModifiers ? -Style.IndentWidth

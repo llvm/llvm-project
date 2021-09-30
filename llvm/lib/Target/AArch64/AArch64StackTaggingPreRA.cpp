@@ -276,8 +276,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
     WorkList.push_back(RetagReg);
 
     while (!WorkList.empty()) {
-      Register UseReg = WorkList.back();
-      WorkList.pop_back();
+      Register UseReg = WorkList.pop_back_val();
       for (auto &UseI : MRI->use_instructions(UseReg)) {
         unsigned Opcode = UseI.getOpcode();
         if (Opcode == AArch64::STGOffset || Opcode == AArch64::ST2GOffset ||

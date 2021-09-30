@@ -503,7 +503,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86WinAllocaExpander());
+  addPass(createX86DynAllocaExpander());
 
   if (getOptLevel() != CodeGenOpt::None) {
     addPass(createX86PreTileConfigPass());
@@ -585,6 +585,9 @@ void X86PassConfig::addPreEmitPass2() {
     addPass(createEHContGuardCatchretPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
+
+  // Insert pseudo probe annotation for callsite profiling
+  addPass(createPseudoProbeInserter());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

@@ -55,6 +55,7 @@ struct ParallelLoopToGpuPass
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
+    finalizeParallelLoopToGPUConversion(getOperation());
   }
 };
 

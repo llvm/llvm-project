@@ -1430,7 +1430,7 @@ NamedDecl *Sema::getCurFunctionOrMethodDecl() {
 
 LangAS Sema::getDefaultCXXMethodAddrSpace() const {
   if (getLangOpts().OpenCL)
-    return LangAS::opencl_generic;
+    return getASTContext().getDefaultOpenCLPointeeAddrSpace();
   return LangAS::Default;
 }
 
@@ -1892,8 +1892,10 @@ void Sema::checkDeviceDecl(ValueDecl *D, SourceLocation Loc) {
     bool LongDoubleMismatched = false;
     if (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128) {
       const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(Ty);
-      if (!Ty->isIbm128Type() && !Ty->isFloat128Type() &&
-          &Sem != &Context.getTargetInfo().getLongDoubleFormat())
+      if ((&Sem != &llvm::APFloat::PPCDoubleDouble() &&
+           !Context.getTargetInfo().hasFloat128Type()) ||
+          (&Sem == &llvm::APFloat::PPCDoubleDouble() &&
+           !Context.getTargetInfo().hasIbm128Type()))
         LongDoubleMismatched = true;
     }
 
@@ -2020,7 +2022,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   Expr *VarRef =
       new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
   ExprResult Result;
-  auto IE = InitializedEntity::InitializeBlock(Loc, T, false);
+  auto IE = InitializedEntity::InitializeBlock(Loc, T);
   if (S.getLangOpts().CPlusPlus2b) {
     auto *E = ImplicitCastExpr::Create(S.Context, T, CK_NoOp, VarRef, nullptr,
                                        VK_XValue, FPOptionsOverride());

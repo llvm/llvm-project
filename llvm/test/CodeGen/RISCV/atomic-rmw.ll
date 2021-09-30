@@ -8388,17 +8388,17 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB100_2
 ; RV32I-NEXT:  .LBB100_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB100_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a3, zero
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
@@ -8406,9 +8406,9 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB100_4
 ; RV32I-NEXT:  .LBB100_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s0, a0, .LBB100_1
+; RV32I-NEXT:    bltu s1, a0, .LBB100_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB100_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -8530,11 +8530,11 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB101_2
 ; RV32I-NEXT:  .LBB101_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB101_2 Depth=1
@@ -8542,15 +8542,15 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 2
 ; RV32I-NEXT:    addi a4, zero, 2
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB101_4
 ; RV32I-NEXT:  .LBB101_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s0, a0, .LBB101_1
+; RV32I-NEXT:    bltu s1, a0, .LBB101_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB101_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -8672,27 +8672,27 @@ define i16 @atomicrmw_umax_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB102_2
 ; RV32I-NEXT:  .LBB102_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB102_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 3
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB102_4
 ; RV32I-NEXT:  .LBB102_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s0, a0, .LBB102_1
+; RV32I-NEXT:    bltu s1, a0, .LBB102_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB102_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -8814,11 +8814,11 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB103_2
 ; RV32I-NEXT:  .LBB103_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB103_2 Depth=1
@@ -8826,15 +8826,15 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 4
 ; RV32I-NEXT:    addi a4, zero, 2
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB103_4
 ; RV32I-NEXT:  .LBB103_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s0, a0, .LBB103_1
+; RV32I-NEXT:    bltu s1, a0, .LBB103_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB103_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -8956,11 +8956,11 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB104_2
 ; RV32I-NEXT:  .LBB104_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB104_2 Depth=1
@@ -8968,15 +8968,15 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 5
 ; RV32I-NEXT:    addi a4, zero, 5
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB104_4
 ; RV32I-NEXT:  .LBB104_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s0, a0, .LBB104_1
+; RV32I-NEXT:    bltu s1, a0, .LBB104_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB104_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -9098,17 +9098,17 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB105_2
 ; RV32I-NEXT:  .LBB105_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB105_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a3, zero
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
@@ -9116,9 +9116,9 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB105_4
 ; RV32I-NEXT:  .LBB105_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s0, a0, .LBB105_1
+; RV32I-NEXT:    bgeu s1, a0, .LBB105_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB105_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -9240,11 +9240,11 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB106_2
 ; RV32I-NEXT:  .LBB106_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB106_2 Depth=1
@@ -9252,15 +9252,15 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 2
 ; RV32I-NEXT:    addi a4, zero, 2
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB106_4
 ; RV32I-NEXT:  .LBB106_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s0, a0, .LBB106_1
+; RV32I-NEXT:    bgeu s1, a0, .LBB106_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB106_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -9382,27 +9382,27 @@ define i16 @atomicrmw_umin_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB107_2
 ; RV32I-NEXT:  .LBB107_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB107_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 3
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB107_4
 ; RV32I-NEXT:  .LBB107_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s0, a0, .LBB107_1
+; RV32I-NEXT:    bgeu s1, a0, .LBB107_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB107_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -9524,11 +9524,11 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB108_2
 ; RV32I-NEXT:  .LBB108_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB108_2 Depth=1
@@ -9536,15 +9536,15 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 4
 ; RV32I-NEXT:    addi a4, zero, 2
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB108_4
 ; RV32I-NEXT:  .LBB108_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s0, a0, .LBB108_1
+; RV32I-NEXT:    bgeu s1, a0, .LBB108_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB108_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -9666,11 +9666,11 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
-; RV32I-NEXT:    and s0, s2, s3
+; RV32I-NEXT:    addi s0, a0, -1
+; RV32I-NEXT:    and s1, s2, s0
 ; RV32I-NEXT:    j .LBB109_2
 ; RV32I-NEXT:  .LBB109_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB109_2 Depth=1
@@ -9678,15 +9678,15 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi a1, sp, 10
 ; RV32I-NEXT:    addi a3, zero, 5
 ; RV32I-NEXT:    addi a4, zero, 5
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
 ; RV32I-NEXT:    lh a1, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB109_4
 ; RV32I-NEXT:  .LBB109_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s0, a0, .LBB109_1
+; RV32I-NEXT:    bgeu s1, a0, .LBB109_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB109_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2

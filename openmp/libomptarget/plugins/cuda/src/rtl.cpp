@@ -28,6 +28,8 @@
 
 #include "MemoryManager.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+
 // Utility for retrieving and printing CUDA error string.
 #ifdef OMPTARGET_DEBUG
 #define CUDA_ERR_STRING(err)                                                   \
@@ -71,28 +73,17 @@ struct FuncOrGblEntryTy {
   std::vector<__tgt_offload_entry> Entries;
 };
 
-enum ExecutionModeType {
-  SPMD,         // constructors, destructors,
-                // combined constructs (`teams distribute parallel for [simd]`)
-  GENERIC,      // everything else
-  SPMD_GENERIC, // Generic kernel with SPMD execution
-  NONE
-};
-
 /// Use a single entity to encode a kernel and a set of flags.
 struct KernelTy {
   CUfunction Func;
 
   // execution mode of kernel
-  // 0 - SPMD mode (without master warp)
-  // 1 - Generic mode (with master warp)
-  // 2 - SPMD mode execution with Generic mode semantics.
-  int8_t ExecutionMode;
+  llvm::omp::OMPTgtExecModeFlags ExecutionMode;
 
   /// Maximal number of threads per block for this kernel.
   int MaxThreadsPerBlock = 0;
 
-  KernelTy(CUfunction _Func, int8_t _ExecutionMode)
+  KernelTy(CUfunction _Func, llvm::omp::OMPTgtExecModeFlags _ExecutionMode)
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
 
@@ -101,6 +92,9 @@ struct KernelTy {
 /// file later.
 struct omptarget_device_environmentTy {
   int32_t debug_level;
+  uint32_t num_devices;
+  uint32_t device_num;
+  uint64_t dynamic_shared_size;
 };
 
 namespace {
@@ -344,6 +338,8 @@ class DeviceRTLTy {
   int EnvTeamThreadLimit;
   // OpenMP requires flags
   int64_t RequiresFlags;
+  // Amount of dynamic shared memory to use at launch.
+  uint64_t DynamicMemorySize;
 
   static constexpr const int HardTeamLimit = 1U << 16U; // 64k
   static constexpr const int HardThreadLimit = 1024;
@@ -497,7 +493,8 @@ public:
 
   DeviceRTLTy()
       : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
-        EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED) {
+        EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED),
+        DynamicMemorySize(0) {
 
     DP("Start initializing CUDA\n");
 
@@ -537,6 +534,12 @@ public:
       // OMP_NUM_TEAMS has been set
       EnvNumTeams = std::stoi(EnvStr);
       DP("Parsed OMP_NUM_TEAMS=%d\n", EnvNumTeams);
+    }
+    if (const char *EnvStr = getenv("LIBOMPTARGET_SHARED_MEMORY_SIZE")) {
+      // LIBOMPTARGET_SHARED_MEMORY_SIZE has been set
+      DynamicMemorySize = std::stoi(EnvStr);
+      DP("Parsed LIBOMPTARGET_SHARED_MEMORY_SIZE = %" PRIu64 "\n",
+         DynamicMemorySize);
     }
 
     StreamManager =
@@ -855,7 +858,7 @@ public:
          DPxPTR(E - HostBegin), E->name, DPxPTR(Func));
 
       // default value GENERIC (in case symbol is missing from cubin file)
-      int8_t ExecModeVal = ExecutionModeType::GENERIC;
+      llvm::omp::OMPTgtExecModeFlags ExecModeVal;
       std::string ExecModeNameStr(E->name);
       ExecModeNameStr += "_exec_mode";
       const char *ExecModeName = ExecModeNameStr.c_str();
@@ -864,9 +867,9 @@ public:
       size_t CUSize;
       Err = cuModuleGetGlobal(&ExecModePtr, &CUSize, Module, ExecModeName);
       if (Err == CUDA_SUCCESS) {
-        if (CUSize != sizeof(int8_t)) {
+        if (CUSize != sizeof(llvm::omp::OMPTgtExecModeFlags)) {
           DP("Loading global exec_mode '%s' - size mismatch (%zd != %zd)\n",
-             ExecModeName, CUSize, sizeof(int8_t));
+             ExecModeName, CUSize, sizeof(llvm::omp::OMPTgtExecModeFlags));
           return nullptr;
         }
 
@@ -876,12 +879,6 @@ public:
                  "host = " DPxMOD ", device = " DPxMOD ", size = %zd\n",
                  DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), CUSize);
           CUDA_ERR_STRING(Err);
-          return nullptr;
-        }
-
-        if (ExecModeVal < 0 || ExecModeVal > 2) {
-          DP("Error wrong exec_mode value specified in cubin file: %d\n",
-             ExecModeVal);
           return nullptr;
         }
       } else {
@@ -899,7 +896,10 @@ public:
 
     // send device environment data to the device
     {
-      omptarget_device_environmentTy DeviceEnv{0};
+      // TODO: The device ID used here is not the real device ID used by OpenMP.
+      omptarget_device_environmentTy DeviceEnv{
+          0, static_cast<uint32_t>(NumberOfDevices),
+          static_cast<uint32_t>(DeviceId), DynamicMemorySize};
 
 #ifdef OMPTARGET_DEBUG
       if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
@@ -1083,12 +1083,19 @@ public:
 
     KernelTy *KernelInfo = reinterpret_cast<KernelTy *>(TgtEntryPtr);
 
+    const bool IsSPMDGenericMode =
+        KernelInfo->ExecutionMode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+    const bool IsSPMDMode =
+        KernelInfo->ExecutionMode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+    const bool IsGenericMode =
+        KernelInfo->ExecutionMode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
+
     int CudaThreadsPerBlock;
     if (ThreadLimit > 0) {
       DP("Setting CUDA threads per block to requested %d\n", ThreadLimit);
       CudaThreadsPerBlock = ThreadLimit;
       // Add master warp if necessary
-      if (KernelInfo->ExecutionMode == GENERIC) {
+      if (IsGenericMode) {
         DP("Adding master warp: +%d threads\n", DeviceData[DeviceId].WarpSize);
         CudaThreadsPerBlock += DeviceData[DeviceId].WarpSize;
       }
@@ -1121,13 +1128,21 @@ public:
     unsigned int CudaBlocksPerGrid;
     if (TeamNum <= 0) {
       if (LoopTripCount > 0 && EnvNumTeams < 0) {
-        if (KernelInfo->ExecutionMode == SPMD) {
+        if (IsSPMDGenericMode) {
+          // If we reach this point, then we are executing a kernel that was
+          // transformed from Generic-mode to SPMD-mode. This kernel has
+          // SPMD-mode execution, but needs its blocks to be scheduled
+          // differently because the current loop trip count only applies to the
+          // `teams distribute` region and will create var too few blocks using
+          // the regular SPMD-mode method.
+          CudaBlocksPerGrid = LoopTripCount;
+        } else if (IsSPMDMode) {
           // We have a combined construct, i.e. `target teams distribute
           // parallel for [simd]`. We launch so many teams so that each thread
           // will execute one iteration of the loop. round up to the nearest
           // integer
           CudaBlocksPerGrid = ((LoopTripCount - 1) / CudaThreadsPerBlock) + 1;
-        } else if (KernelInfo->ExecutionMode == GENERIC) {
+        } else if (IsGenericMode) {
           // If we reach this point, then we have a non-combined construct, i.e.
           // `teams distribute` with a nested `parallel for` and each team is
           // assigned one iteration of the `distribute` loop. E.g.:
@@ -1141,16 +1156,9 @@ public:
           // Threads within a team will execute the iterations of the `parallel`
           // loop.
           CudaBlocksPerGrid = LoopTripCount;
-        } else if (KernelInfo->ExecutionMode == SPMD_GENERIC) {
-          // If we reach this point, then we are executing a kernel that was
-          // transformed from Generic-mode to SPMD-mode. This kernel has
-          // SPMD-mode execution, but needs its blocks to be scheduled
-          // differently because the current loop trip count only applies to the
-          // `teams distribute` region and will create var too few blocks using
-          // the regular SPMD-mode method.
-          CudaBlocksPerGrid = LoopTripCount;
         } else {
-          REPORT("Unknown execution mode: %d\n", KernelInfo->ExecutionMode);
+          REPORT("Unknown execution mode: %d\n",
+                 static_cast<int8_t>(KernelInfo->ExecutionMode));
           return OFFLOAD_FAIL;
         }
         DP("Using %d teams due to loop trip count %" PRIu32
@@ -1170,22 +1178,18 @@ public:
     }
 
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Launching kernel %s with %d blocks and %d threads in %s "
-         "mode\n",
+         "Launching kernel %s with %d blocks and %d threads in %s mode\n",
          (getOffloadEntry(DeviceId, TgtEntryPtr))
              ? getOffloadEntry(DeviceId, TgtEntryPtr)->name
              : "(null)",
          CudaBlocksPerGrid, CudaThreadsPerBlock,
-         (KernelInfo->ExecutionMode != SPMD
-              ? (KernelInfo->ExecutionMode == GENERIC ? "Generic"
-                                                      : "SPMD-Generic")
-              : "SPMD"));
+         (!IsSPMDMode ? (IsGenericMode ? "Generic" : "SPMD-Generic") : "SPMD"));
 
     CUstream Stream = getStream(DeviceId, AsyncInfo);
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,
                          /* gridDimZ */ 1, CudaThreadsPerBlock,
                          /* blockDimY */ 1, /* blockDimZ */ 1,
-                         /* sharedMemBytes */ 0, Stream, &Args[0], nullptr);
+                         DynamicMemorySize, Stream, &Args[0], nullptr);
     if (!checkResult(Err, "Error returned from cuLaunchKernel\n"))
       return OFFLOAD_FAIL;
 

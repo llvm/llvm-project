@@ -135,6 +135,7 @@ private:
     MM_MachO,
     MM_WinCOFF,
     MM_WinCOFFX86,
+    MM_GOFF,
     MM_Mips,
     MM_XCOFF
   };
@@ -316,6 +317,7 @@ public:
     switch (ManglingMode) {
     case MM_None:
     case MM_ELF:
+    case MM_GOFF:
     case MM_Mips:
     case MM_WinCOFF:
     case MM_XCOFF:
@@ -334,6 +336,8 @@ public:
     case MM_ELF:
     case MM_WinCOFF:
       return ".L";
+    case MM_GOFF:
+      return "@";
     case MM_Mips:
       return "$";
     case MM_MachO:
@@ -578,6 +582,10 @@ public:
   /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
   int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
+
+  /// Get GEP indices to access Offset inside ElemTy. ElemTy is updated to be
+  /// the result element type and Offset to be the residual offset.
+  SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy, APInt &Offset) const;
 
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.

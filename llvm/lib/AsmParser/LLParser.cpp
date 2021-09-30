@@ -235,18 +235,18 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
   }
 
-  // Look for intrinsic functions and CallInst that need to be upgraded
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; )
-    UpgradeCallsToIntrinsic(&*FI++); // must be post-increment, as we remove
+  // Look for intrinsic functions and CallInst that need to be upgraded.  We use
+  // make_early_inc_range here because we may remove some functions.
+  for (Function &F : llvm::make_early_inc_range(*M))
+    UpgradeCallsToIntrinsic(&F);
 
   // Some types could be renamed during loading if several modules are
   // loaded in the same LLVMContext (LTO scenario). In this case we should
   // remangle intrinsics names as well.
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; ) {
-    Function *F = &*FI++;
-    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
-      F->replaceAllUsesWith(Remangled.getValue());
-      F->eraseFromParent();
+  for (Function &F : llvm::make_early_inc_range(*M)) {
+    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F)) {
+      F.replaceAllUsesWith(Remangled.getValue());
+      F.eraseFromParent();
     }
   }
 
@@ -8521,6 +8521,9 @@ bool LLParser::parseFlag(unsigned &Val) {
 ///        [',' 'returnDoesNotAlias' ':' Flag]? ')'
 ///        [',' 'noInline' ':' Flag]? ')'
 ///        [',' 'alwaysInline' ':' Flag]? ')'
+///        [',' 'noUnwind' ':' Flag]? ')'
+///        [',' 'mayThrow' ':' Flag]? ')'
+///        [',' 'hasUnknownCall' ':' Flag]? ')'
 
 bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
@@ -8568,6 +8571,24 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
       if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
         return true;
       FFlags.AlwaysInline = Val;
+      break;
+    case lltok::kw_noUnwind:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.NoUnwind = Val;
+      break;
+    case lltok::kw_mayThrow:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.MayThrow = Val;
+      break;
+    case lltok::kw_hasUnknownCall:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.HasUnknownCall = Val;
       break;
     default:
       return error(Lex.getLoc(), "expected function flag type");

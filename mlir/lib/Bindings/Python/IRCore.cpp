@@ -2026,6 +2026,10 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of Operation.
   //----------------------------------------------------------------------------
   py::class_<PyOperationBase>(m, "_OperationBase", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             [](PyOperationBase &self) {
+                               return self.getOperation().getCapsule();
+                             })
       .def("__eq__",
            [](PyOperationBase &self, PyOperationBase &other) {
              return &self.getOperation() == &other.getOperation();
@@ -2360,6 +2364,7 @@ void mlir::python::populateIRCore(py::module &m) {
       .def("__eq__",
            [](PyAttribute &self, PyAttribute &other) { return self == other; })
       .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
+      .def("__hash__", [](PyAttribute &self) { return (size_t)self.get().ptr; })
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
           kDumpDocstring)
@@ -2453,6 +2458,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def("__eq__", [](PyType &self, py::object &other) { return false; })
+      .def("__hash__", [](PyType &self) { return (size_t)self.get().ptr; })
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(

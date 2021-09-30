@@ -23,6 +23,7 @@
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/thread.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 namespace llvm {
@@ -38,7 +39,7 @@ class ToolOutputFile;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
-/// the module via thinLTOResolvePrevailingInModule.
+/// the module via thinLTOFinalizeInModule.
 ///
 /// This is done for correctness (if value exported, ensure we always
 /// emit a copy), and compile-time optimization (allow drop of duplicates).
@@ -444,6 +445,9 @@ private:
   // Identify symbols exported dynamically, and that therefore could be
   // referenced by a shared library not visible to the linker.
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
+
+  // Diagnostic optimization remarks file
+  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

@@ -551,7 +551,13 @@ def warn_pragma_restrict_expansion_macro_use :
 
 // - Note for macro annotations.
 def note_pp_macro_annotation :
-  Note<"macro marked '%select{deprecated|restrict_expansion}0' here">;
+  Note<"macro marked '%select{deprecated|restrict_expansion|final}0' here">;
+
+// - #pragma clang final(...)
+def warn_pragma_final_macro :
+  ExtWarn<"macro %0 has been marked as final and should not be "
+          "%select{undefined|redefined}1">,
+  InGroup<FinalMacro>;
 
 // - #pragma execution_character_set(...)
 def warn_pragma_exec_charset_expected :

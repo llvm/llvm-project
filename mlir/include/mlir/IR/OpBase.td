@@ -1582,7 +1582,8 @@ def SymbolRefAttr : Attr<CPred<"$_self.isa<::mlir::SymbolRefAttr>()">,
   let storageType = [{ ::mlir::SymbolRefAttr }];
   let returnType = [{ ::mlir::SymbolRefAttr }];
   let valueType = NoneType;
-  let constBuilderCall = "SymbolRefAttr::get($_builder.getContext(), $0)";
+  let constBuilderCall =
+    "::mlir::SymbolRefAttr::get($_builder.getContext(), $0)";
   let convertFromStorage = "$_self";
 }
 
@@ -1591,7 +1592,8 @@ def FlatSymbolRefAttr : Attr<CPred<"$_self.isa<::mlir::FlatSymbolRefAttr>()">,
   let storageType = [{ ::mlir::FlatSymbolRefAttr }];
   let returnType = [{ ::llvm::StringRef }];
   let valueType = NoneType;
-  let constBuilderCall = "SymbolRefAttr::get($_builder.getContext(), $0)";
+  let constBuilderCall =
+    "::mlir::SymbolRefAttr::get($_builder.getContext(), $0)";
   let convertFromStorage = "$_self.getValue()";
 }
 
@@ -2859,6 +2861,7 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
       AttrOrTypeDef<"Attr", name, traits, baseCppClass> {
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
+  let storageType = dialect.cppNamespace # "::" # name # "Attr";
 
   // The underlying C++ value type
   let returnType = dialect.cppNamespace # "::" # cppClassName;

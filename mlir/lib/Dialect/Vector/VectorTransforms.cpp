@@ -1835,9 +1835,8 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
 /// Operates under a scoped context to build the intersection between the
 /// view `xferOp.source()` @ `xferOp.indices()` and the view `alloc`.
 // TODO: view intersection/union/differences should be a proper std op.
-static Value createSubViewIntersection(OpBuilder &b,
-                                       VectorTransferOpInterface xferOp,
-                                       Value alloc) {
+static std::pair<Value, Value> createSubViewIntersection(
+    OpBuilder &b, VectorTransferOpInterface xferOp, Value alloc) {
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   int64_t memrefRank = xferOp.getShapedType().getRank();
   // TODO: relax this precondition, will require rank-reducing subviews.
@@ -1864,11 +1863,15 @@ static Value createSubViewIntersection(OpBuilder &b,
     sizes.push_back(affineMin);
   });
 
-  SmallVector<OpFoldResult, 4> indices = llvm::to_vector<4>(llvm::map_range(
+  SmallVector<OpFoldResult> srcIndices = llvm::to_vector<4>(llvm::map_range(
       xferOp.indices(), [](Value idx) -> OpFoldResult { return idx; }));
-  return lb.create<memref::SubViewOp>(
-      isaWrite ? alloc : xferOp.source(), indices, sizes,
-      SmallVector<OpFoldResult>(memrefRank, OpBuilder(xferOp).getIndexAttr(1)));
+  SmallVector<OpFoldResult> destIndices(memrefRank, b.getIndexAttr(0));
+  SmallVector<OpFoldResult> strides(memrefRank, b.getIndexAttr(1));
+  auto copySrc = lb.create<memref::SubViewOp>(
+      isaWrite ? alloc : xferOp.source(), srcIndices, sizes, strides);
+  auto copyDest = lb.create<memref::SubViewOp>(
+      isaWrite ? xferOp.source() : alloc, destIndices, sizes, strides);
+  return std::make_pair(copySrc, copyDest);
 }
 
 /// Given an `xferOp` for which:
@@ -1877,14 +1880,15 @@ static Value createSubViewIntersection(OpBuilder &b,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
-///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      %view = memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
 ///      %2 = linalg.fill(%pad, %alloc)
 ///      %3 = subview %view [...][...][...]
-///      linalg.copy(%3, %alloc)
-///      memref.cast %alloc: memref<B...> to compatibleMemRefType
-///      scf.yield %4, ... : compatibleMemRefType, index, index
+///      %4 = subview %alloc [0, 0] [...] [...]
+///      linalg.copy(%3, %4)
+///      %5 = memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %5, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
 /// Return the produced scf::IfOp.
@@ -1910,9 +1914,9 @@ createFullPartialLinalgCopy(OpBuilder &b, vector::TransferReadOp xferOp,
         b.create<linalg::FillOp>(loc, xferOp.padding(), alloc);
         // Take partial subview of memref which guarantees no dimension
         // overflows.
-        Value memRefSubView = createSubViewIntersection(
+        std::pair<Value, Value> copyArgs = createSubViewIntersection(
             b, cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
-        b.create<linalg::CopyOp>(loc, memRefSubView, alloc);
+        b.create<linalg::CopyOp>(loc, copyArgs.first, copyArgs.second);
         Value casted =
             b.create<memref::CastOp>(loc, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
@@ -2030,7 +2034,8 @@ getLocationToWriteFullVec(OpBuilder &b, vector::TransferWriteOp xferOp,
 ///    %notInBounds = xor %inBounds, %true
 ///    scf.if (%notInBounds) {
 ///      %3 = subview %alloc [...][...][...]
-///      linalg.copy(%3, %view)
+///      %4 = subview %view [0, 0][...][...]
+///      linalg.copy(%3, %4)
 ///   }
 /// ```
 static void createFullPartialLinalgCopy(OpBuilder &b,
@@ -2040,9 +2045,9 @@ static void createFullPartialLinalgCopy(OpBuilder &b,
   auto notInBounds =
       lb.create<XOrOp>(inBoundsCond, lb.create<ConstantIntOp>(true, 1));
   lb.create<scf::IfOp>(notInBounds, [&](OpBuilder &b, Location loc) {
-    Value memRefSubView = createSubViewIntersection(
+    std::pair<Value, Value> copyArgs = createSubViewIntersection(
         b, cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
-    b.create<linalg::CopyOp>(loc, memRefSubView, xferOp.source());
+    b.create<linalg::CopyOp>(loc, copyArgs.first, copyArgs.second);
     b.create<scf::YieldOp>(loc, ValueRange{});
   });
 }

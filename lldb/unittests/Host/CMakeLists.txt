@@ -12,6 +12,7 @@ set (FILES
   SocketAddressTest.cpp
   SocketTest.cpp
   SocketTestUtilities.cpp
+  XMLTest.cpp
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")

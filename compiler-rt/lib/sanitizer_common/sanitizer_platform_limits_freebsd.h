@@ -383,6 +383,8 @@ extern const int wordexp_wrde_dooffs;
 
 extern unsigned path_max;
 
+extern int struct_ttyent_sz;
+
 struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;
@@ -410,6 +412,16 @@ struct __sanitizer_ifconf {
   union {
     void *ifcu_req;
   } ifc_ifcu;
+};
+
+struct __sanitizer__ttyent {
+  char *ty_name;
+  char *ty_getty;
+  char *ty_type;
+  int ty_status;
+  char *ty_window;
+  char *ty_comment;
+  char *ty_group;
 };
 
 #  define IOC_NRBITS 8

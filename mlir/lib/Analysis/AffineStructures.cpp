@@ -189,6 +189,48 @@ FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
   values.resize(numIds, None);
 }
 
+// Construct a hyperrectangular constraint set from ValueRanges that represent
+// induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
+// expected to match one to one. The order of variables and constraints is:
+//
+// ivs | lbs | ubs | eq/ineq
+// ----+-----+-----+---------
+//   1   -1     0      >= 0
+// ----+-----+-----+---------
+//  -1    0     1      >= 0
+//
+// All dimensions as set as DimId.
+FlatAffineValueConstraints
+FlatAffineValueConstraints::getHyperrectangular(ValueRange ivs, ValueRange lbs,
+                                                ValueRange ubs) {
+  FlatAffineValueConstraints res;
+  unsigned nIvs = ivs.size();
+  assert(nIvs == lbs.size() && "expected as many lower bounds as ivs");
+  assert(nIvs == ubs.size() && "expected as many upper bounds as ivs");
+
+  if (nIvs == 0)
+    return res;
+
+  res.appendDimId(ivs);
+  unsigned lbsStart = res.appendDimId(lbs);
+  unsigned ubsStart = res.appendDimId(ubs);
+
+  MLIRContext *ctx = ivs.front().getContext();
+  for (int ivIdx = 0, e = nIvs; ivIdx < e; ++ivIdx) {
+    // iv - lb >= 0
+    AffineMap lb = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
+                                  getAffineDimExpr(lbsStart + ivIdx, ctx));
+    if (failed(res.addBound(BoundType::LB, ivIdx, lb)))
+      llvm_unreachable("Unexpected FlatAffineValueConstraints creation error");
+    // -iv + ub >= 0
+    AffineMap ub = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
+                                  getAffineDimExpr(ubsStart + ivIdx, ctx));
+    if (failed(res.addBound(BoundType::UB, ivIdx, ub)))
+      llvm_unreachable("Unexpected FlatAffineValueConstraints creation error");
+  }
+  return res;
+}
+
 void FlatAffineConstraints::reset(unsigned numReservedInequalities,
                                   unsigned numReservedEqualities,
                                   unsigned newNumReservedCols,
@@ -311,29 +353,41 @@ unsigned FlatAffineConstraints::insertLocalId(unsigned pos, unsigned num) {
 
 unsigned FlatAffineConstraints::insertId(IdKind kind, unsigned pos,
                                          unsigned num) {
-  if (kind == IdKind::Dimension)
-    assert(pos <= getNumDimIds());
-  else if (kind == IdKind::Symbol)
-    assert(pos <= getNumSymbolIds());
-  else
-    assert(pos <= getNumLocalIds());
+  assertAtMostNumIdKind(pos, kind);
 
-  unsigned absolutePos;
-  if (kind == IdKind::Dimension) {
-    absolutePos = pos;
+  unsigned absolutePos = getIdKindOffset(kind) + pos;
+  if (kind == IdKind::Dimension)
     numDims += num;
-  } else if (kind == IdKind::Symbol) {
-    absolutePos = pos + getNumDimIds();
+  else if (kind == IdKind::Symbol)
     numSymbols += num;
-  } else {
-    absolutePos = pos + getNumDimIds() + getNumSymbolIds();
-  }
   numIds += num;
 
   inequalities.insertColumns(absolutePos, num);
   equalities.insertColumns(absolutePos, num);
 
   return absolutePos;
+}
+
+void FlatAffineConstraints::assertAtMostNumIdKind(unsigned val,
+                                                  IdKind kind) const {
+  if (kind == IdKind::Dimension)
+    assert(val <= getNumDimIds());
+  else if (kind == IdKind::Symbol)
+    assert(val <= getNumSymbolIds());
+  else if (kind == IdKind::Local)
+    assert(val <= getNumLocalIds());
+  else
+    llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
+}
+
+unsigned FlatAffineConstraints::getIdKindOffset(IdKind kind) const {
+  if (kind == IdKind::Dimension)
+    return 0;
+  if (kind == IdKind::Symbol)
+    return getNumDimIds();
+  if (kind == IdKind::Local)
+    return getNumDimAndSymbolIds();
+  llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
 }
 
 unsigned FlatAffineValueConstraints::insertId(IdKind kind, unsigned pos,
@@ -363,6 +417,17 @@ bool FlatAffineValueConstraints::hasValues() const {
   return llvm::find_if(values, [](Optional<Value> id) {
            return id.hasValue();
          }) != values.end();
+}
+
+void FlatAffineConstraints::removeId(IdKind kind, unsigned pos) {
+  removeIdRange(kind, pos, pos + 1);
+}
+
+void FlatAffineConstraints::removeIdRange(IdKind kind, unsigned idStart,
+                                          unsigned idLimit) {
+  assertAtMostNumIdKind(idLimit, kind);
+  removeIdRange(getIdKindOffset(kind) + idStart,
+                getIdKindOffset(kind) + idLimit);
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
@@ -417,13 +482,11 @@ static void mergeAndAlignIds(unsigned offset, FlatAffineValueConstraints *a,
                      b->getMaybeValues().begin() + b->getNumDimAndSymbolIds(),
                      [](Optional<Value> id) { return id.hasValue(); }));
 
-  // Place local id's of A after local id's of B.
-  b->insertLocalId(/*pos=*/0, /*num=*/a->getNumLocalIds());
-  a->appendLocalId(/*num=*/b->getNumLocalIds() - a->getNumLocalIds());
+  // Bring A and B to common local space
+  a->mergeLocalIds(*b);
 
-  SmallVector<Value, 4> aDimValues, aSymValues;
+  SmallVector<Value, 4> aDimValues;
   a->getValues(offset, a->getNumDimIds(), &aDimValues);
-  a->getValues(a->getNumDimIds(), a->getNumDimAndSymbolIds(), &aSymValues);
 
   {
     // Merge dims from A into B.
@@ -448,29 +511,8 @@ static void mergeAndAlignIds(unsigned offset, FlatAffineValueConstraints *a,
            "expected same number of dims");
   }
 
-  {
-    // Merge symbols: merge A's symbols into B first.
-    unsigned s = 0;
-    for (auto aSymValue : aSymValues) {
-      unsigned loc;
-      if (b->findId(aSymValue, &loc)) {
-        assert(loc >= b->getNumDimIds() && loc < b->getNumDimAndSymbolIds() &&
-               "A's symbol appears in B's non-symbol position");
-        b->swapId(s + b->getNumDimIds(), loc);
-      } else {
-        b->insertSymbolId(s, aSymValue);
-      }
-      s++;
-    }
-    // Symbols that are in B, but not in A, are added at the end.
-    for (unsigned t = a->getNumDimAndSymbolIds(),
-                  e = b->getNumDimAndSymbolIds();
-         t < e; t++) {
-      a->appendSymbolId(b->getValue(t));
-    }
-    assert(a->getNumDimAndSymbolIds() == b->getNumDimAndSymbolIds() &&
-           "expected same number of dims and symbols");
-  }
+  // Merge and align symbols of A and B
+  a->mergeSymbolIds(*b);
 
   assert(areIdsAligned(*a, *b) && "IDs expected to be aligned");
 }
@@ -548,6 +590,38 @@ static void turnSymbolIntoDim(FlatAffineValueConstraints *cst, Value id) {
   }
 }
 
+/// Merge and align symbols of `this` and `other` such that both get union of
+/// of symbols that are unique. Symbols with Value as `None` are considered
+/// to be inequal to all other symbols.
+void FlatAffineValueConstraints::mergeSymbolIds(
+    FlatAffineValueConstraints &other) {
+  SmallVector<Value, 4> aSymValues;
+  getValues(getNumDimIds(), getNumDimAndSymbolIds(), &aSymValues);
+
+  // Merge symbols: merge symbols into `other` first from `this`.
+  unsigned s = other.getNumDimIds();
+  for (Value aSymValue : aSymValues) {
+    unsigned loc;
+    // If the id is a symbol in `other`, then align it, otherwise assume that
+    // it is a new symbol
+    if (other.findId(aSymValue, &loc) && loc >= other.getNumDimIds() &&
+        loc < getNumDimAndSymbolIds())
+      other.swapId(s, loc);
+    else
+      other.insertSymbolId(s - other.getNumDimIds(), aSymValue);
+    s++;
+  }
+
+  // Symbols that are in other, but not in this, are added at the end.
+  for (unsigned t = other.getNumDimIds() + getNumSymbolIds(),
+                e = other.getNumDimAndSymbolIds();
+       t < e; t++)
+    insertSymbolId(getNumSymbolIds(), other.getValue(t));
+
+  assert(getNumSymbolIds() == other.getNumSymbolIds() &&
+         "expected same number of symbols");
+}
+
 // Changes all symbol identifiers which are loop IVs to dim identifiers.
 void FlatAffineValueConstraints::convertLoopIVSymbolsToDims() {
   // Gather all symbols which are loop IVs.
@@ -596,7 +670,7 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
   int64_t step = forOp.getStep();
   if (step != 1) {
     if (!forOp.hasConstantLowerBound())
-      forOp.emitWarning("domain conservatively approximated");
+      LLVM_DEBUG(forOp.emitWarning("domain conservatively approximated"));
     else {
       // Add constraints for the stride.
       // (iv - lb) % step = 0 can be written as:
@@ -917,9 +991,14 @@ bool FlatAffineConstraints::isEmpty() const {
   if (isEmptyByGCDTest() || hasInvalidConstraint())
     return true;
 
-  // First, eliminate as many identifiers as possible using Gaussian
-  // elimination.
   FlatAffineConstraints tmpCst(*this);
+
+  // First, eliminate as many local variables as possible using equalities.
+  tmpCst.removeRedundantLocalVars();
+  if (tmpCst.isEmptyByGCDTest() || tmpCst.hasInvalidConstraint())
+    return true;
+
+  // Eliminate as many identifiers as possible using Gaussian elimination.
   unsigned currentPos = 0;
   while (currentPos < tmpCst.getNumIds()) {
     tmpCst.gaussianEliminateIds(currentPos, tmpCst.getNumIds());
@@ -1757,6 +1836,63 @@ void FlatAffineConstraints::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
+/// Merge local ids of `this` and `other`. This is done by appending local ids
+/// of `other` to `this` and inserting local ids of `this` to `other` at start
+/// of its local ids.
+void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
+  unsigned initLocals = getNumLocalIds();
+  insertLocalId(getNumLocalIds(), other.getNumLocalIds());
+  other.insertLocalId(0, initLocals);
+}
+
+/// Removes local variables using equalities. Each equality is checked if it
+/// can be reduced to the form: `e = affine-expr`, where `e` is a local
+/// variable and `affine-expr` is an affine expression not containing `e`.
+/// If an equality satisfies this form, the local variable is replaced in
+/// each constraint and then removed. The equality used to replace this local
+/// variable is also removed.
+void FlatAffineConstraints::removeRedundantLocalVars() {
+  // Normalize the equality constraints to reduce coefficients of local
+  // variables to 1 wherever possible.
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    normalizeConstraintByGCD</*isEq=*/true>(this, i);
+
+  while (true) {
+    unsigned i, e, j, f;
+    for (i = 0, e = getNumEqualities(); i < e; ++i) {
+      // Find a local variable to eliminate using ith equality.
+      for (j = getNumDimAndSymbolIds(), f = getNumIds(); j < f; ++j)
+        if (std::abs(atEq(i, j)) == 1)
+          break;
+
+      // Local variable can be eliminated using ith equality.
+      if (j < f)
+        break;
+    }
+
+    // No equality can be used to eliminate a local variable.
+    if (i == e)
+      break;
+
+    // Use the ith equality to simplify other equalities. If any changes
+    // are made to an equality constraint, it is normalized by GCD.
+    for (unsigned k = 0, t = getNumEqualities(); k < t; ++k) {
+      if (atEq(k, j) != 0) {
+        eliminateFromConstraint(this, k, i, j, j, /*isEq=*/true);
+        normalizeConstraintByGCD</*isEq=*/true>(this, k);
+      }
+    }
+
+    // Use the ith equality to simplify inequalities.
+    for (unsigned k = 0, t = getNumInequalities(); k < t; ++k)
+      eliminateFromConstraint(this, k, i, j, j, /*isEq=*/false);
+
+    // Remove the ith equality and the found local variable.
+    removeId(j);
+    removeEquality(i);
+  }
+}
+
 std::pair<AffineMap, AffineMap> FlatAffineConstraints::getLowerAndUpperBound(
     unsigned pos, unsigned offset, unsigned num, unsigned symStartPos,
     ArrayRef<AffineExpr> localExprs, MLIRContext *context) const {
@@ -2310,6 +2446,19 @@ void FlatAffineConstraints::removeEquality(unsigned pos) {
 
 void FlatAffineConstraints::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
+}
+
+void FlatAffineConstraints::removeEqualityRange(unsigned begin, unsigned end) {
+  if (begin >= end)
+    return;
+  equalities.removeRows(begin, end - begin);
+}
+
+void FlatAffineConstraints::removeInequalityRange(unsigned begin,
+                                                  unsigned end) {
+  if (begin >= end)
+    return;
+  inequalities.removeRows(begin, end - begin);
 }
 
 /// Finds an equality that equates the specified identifier to a constant.

@@ -251,12 +251,13 @@ void ModuleSummaryIndex::propagateAttributes(
     bool IsDSOLocal = true;
     for (auto &S : P.second.SummaryList) {
       if (!isGlobalValueLive(S.get())) {
-        // computeDeadSymbols should have marked all copies live. Note that
-        // it is possible that there is a GUID collision between internal
-        // symbols with the same name in different files of the same name but
-        // not enough distinguishing path. Because computeDeadSymbols should
-        // conservatively mark all copies live we can assert here that all are
-        // dead if any copy is dead.
+        // computeDeadSymbolsAndUpdateIndirectCalls should have marked all
+        // copies live. Note that it is possible that there is a GUID collision
+        // between internal symbols with the same name in different files of the
+        // same name but not enough distinguishing path. Because
+        // computeDeadSymbolsAndUpdateIndirectCalls should conservatively mark
+        // all copies live we can assert here that all are dead if any copy is
+        // dead.
         assert(llvm::none_of(
             P.second.SummaryList,
             [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
@@ -446,9 +447,11 @@ static std::string linkageToString(GlobalValue::LinkageTypes LT) {
 
 static std::string fflagsToString(FunctionSummary::FFlags F) {
   auto FlagValue = [](unsigned V) { return V ? '1' : '0'; };
-  char FlagRep[] = {FlagValue(F.ReadNone),     FlagValue(F.ReadOnly),
-                    FlagValue(F.NoRecurse),    FlagValue(F.ReturnDoesNotAlias),
-                    FlagValue(F.NoInline), FlagValue(F.AlwaysInline), 0};
+  char FlagRep[] = {FlagValue(F.ReadNone),  FlagValue(F.ReadOnly),
+                    FlagValue(F.NoRecurse), FlagValue(F.ReturnDoesNotAlias),
+                    FlagValue(F.NoInline),  FlagValue(F.AlwaysInline),
+                    FlagValue(F.NoUnwind),  FlagValue(F.MayThrow), 
+                    FlagValue(F.HasUnknownCall), 0};
 
   return FlagRep;
 }

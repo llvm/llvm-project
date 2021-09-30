@@ -365,8 +365,7 @@ define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out
 ; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 
-; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
-; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e64 [[REGC]], -[[REGA]], [[REGB]]
+; GCN-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 
 ; GCN-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GCN-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
@@ -375,9 +374,7 @@ define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out
 
 ; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
-; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
-; GFX10PLUS-DENORM-STRICT: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
-; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[REGC]]
+; GFX10PLUS: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64

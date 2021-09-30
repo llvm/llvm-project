@@ -196,10 +196,10 @@ template <typename SPSElementTagT> class SPSSequence;
 using SPSString = SPSSequence<char>;
 
 /// SPS tag type for executor addresseses.
-class SPSExecutorAddress {};
+class SPSExecutorAddr {};
 
 template <>
-class SPSSerializationTraits<SPSExecutorAddress, uint64_t>
+class SPSSerializationTraits<SPSExecutorAddr, uint64_t>
     : public SPSSerializationTraits<uint64_t, uint64_t> {};
 
 /// SPS tag type for maps.

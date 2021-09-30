@@ -174,21 +174,47 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   return Expr<T>{std::move(funcRef)};
 }
 
+// COUNT()
+template <typename T>
+static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
+  static_assert(T::category == TypeCategory::Integer);
+  ActualArguments &arg{ref.arguments()};
+  if (const Constant<LogicalResult> *mask{arg.empty()
+              ? nullptr
+              : Folder<LogicalResult>{context}.Folding(arg[0])}) {
+    std::optional<ConstantSubscript> dim;
+    if (arg.size() > 1 && arg[1]) {
+      dim = CheckDIM(context, arg[1], mask->Rank());
+      if (!dim) {
+        mask = nullptr;
+      }
+    }
+    if (mask) {
+      auto accumulator{[&](Scalar<T> &element, const ConstantSubscripts &at) {
+        if (mask->At(at).IsTrue()) {
+          element = element.AddSigned(Scalar<T>{1}).value;
+        }
+      }};
+      return Expr<T>{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
+    }
+  }
+  return Expr<T>{std::move(ref)};
+}
+
 // for IALL, IANY, & IPARITY
 template <typename T>
 static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer);
-  using Element = Scalar<T>;
   std::optional<ConstantSubscript> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
+    auto accumulator{[&](Scalar<T> &element, const ConstantSubscripts &at) {
       element = (element.*operation)(array->At(at));
     }};
-    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -237,17 +263,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u);
     }
   } else if (name == "count") {
-    if (!args[1]) { // TODO: COUNT(x,DIM=d)
-      if (const auto *constant{UnwrapConstantValue<LogicalResult>(args[0])}) {
-        std::int64_t result{0};
-        for (const auto &element : constant->values()) {
-          if (element.IsTrue()) {
-            ++result;
-          }
-        }
-        return Expr<T>{result};
-      }
-    }
+    return FoldCount<T>(context, std::move(funcRef));
   } else if (name == "digits") {
     if (const auto *cx{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
       return Expr<T>{std::visit(
@@ -596,7 +612,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
       if (auto named{ExtractNamedEntity(*array)}) {
         const Symbol &symbol{named->GetLastSymbol()};
-        if (semantics::IsAssumedRankArray(symbol)) {
+        if (IsAssumedRank(symbol)) {
           // DescriptorInquiry can only be placed in expression of kind
           // DescriptorInquiry::Result::kind.
           return ConvertToType<T>(Expr<
@@ -651,7 +667,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         if (auto dim{GetInt64Arg(args[1])}) {
           int rank{GetRank(*shape)};
           if (*dim >= 1 && *dim <= rank) {
-            if (auto &extent{shape->at(*dim - 1)}) {
+            const Symbol *symbol{UnwrapWholeSymbolDataRef(args[0])};
+            if (symbol && IsAssumedSizeArray(*symbol) && *dim == rank) {
+              context.messages().Say(
+                  "size(array,dim=%jd) of last dimension is not available for rank-%d assumed-size array dummy argument"_err_en_US,
+                  *dim, rank);
+              return MakeInvalidIntrinsic<T>(std::move(funcRef));
+            } else if (auto &extent{shape->at(*dim - 1)}) {
               return Fold(context, ConvertToType<T>(std::move(*extent)));
             }
           } else {
@@ -689,7 +711,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: count(w/ dim), dot_product, findloc, ibits, image_status, ishftc,
+  // TODO: dot_product, findloc, ibits, image_status, ishftc,
   // matmul, maxloc, minloc, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }

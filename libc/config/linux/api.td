@@ -111,6 +111,21 @@ def AssertAPI : PublicAPI<"assert.h"> {
 def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
+def IMaxDivT : TypeDecl<"imaxdiv_t"> {
+  let Decl = [{
+    typedef struct {
+      intmax_t quot;
+      intmax_t rem;
+    } imaxdiv_t;
+  }];
+}
+
+def IntTypesAPI : PublicAPI<"inttypes.h"> {
+  let TypeDeclarations = [
+    IMaxDivT,
+  ];
+}
+
 def MathErrHandlingMacro : MacroDef<"math_errhandling"> {
   let Defn = [{
     #ifndef math_errhandling
@@ -239,7 +254,54 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
   ];
 }
 
+def DivT : TypeDecl<"div_t"> {
+  let Decl = [{
+    typedef struct {
+      int quot;
+      int rem;
+    } div_t;
+  }];
+}
+
+def LDivT : TypeDecl<"ldiv_t"> {
+  let Decl = [{
+    typedef struct {
+      long quot;
+      long rem;
+    } ldiv_t;
+  }];
+}
+
+def LLDivT : TypeDecl<"lldiv_t"> {
+  let Decl = [{
+    typedef struct {
+      long long quot;
+      long long rem;
+    } lldiv_t;
+  }];
+}
+
+def BSearchCompareTDefn : TypeDecl<"__bsearchcompare_t"> {
+  let Decl = [{
+    typedef int(*__bsearchcompare_t)(const void *, const void *);
+  }];
+}
+
+def QSortCompareTDefn : TypeDecl<"__qsortcompare_t"> {
+  let Decl = [{
+    typedef int(*__qsortcompare_t)(const void *, const void *);
+  }];
+}
+
 def StdlibAPI : PublicAPI<"stdlib.h"> {
+  let TypeDeclarations = [
+    DivT,
+    LDivT,
+    LLDivT,
+    SizeT,
+    BSearchCompareTDefn,
+    QSortCompareTDefn,
+  ];
 }
 
 def TimeAPI : PublicAPI<"time.h"> {

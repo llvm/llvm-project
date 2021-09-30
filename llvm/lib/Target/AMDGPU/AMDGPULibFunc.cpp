@@ -352,7 +352,7 @@ const unsigned UnmangledFuncInfo::TableSize =
 static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
                                        const AMDGPULibFunc::Param (&Leads)[2]) {
   AMDGPULibFunc::Param Res = Leads[0];
-  // TBD - This switch may require to be extended for other intriniscs
+  // TBD - This switch may require to be extended for other intrinsics
   switch (id) {
   case AMDGPULibFunc::EI_SINCOS:
     Res.PtrKind = AMDGPULibFunc::BYVALUE;
@@ -778,7 +778,7 @@ namespace {
 
 
 class ItaniumMangler {
-  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substituions
+  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substitutions
   bool  UseAddrSpace;
 
   int findSubst(const AMDGPULibFunc::Param& P) const {

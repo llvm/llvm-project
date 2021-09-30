@@ -511,6 +511,7 @@ Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   return buildTensorExp(op, yield->getOperand(0));
 }
 
+/// Only returns false if we are certain this is a nonzero.
 bool Merger::maybeZero(unsigned e) const {
   if (tensorExps[e].kind == kInvariant) {
     if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())

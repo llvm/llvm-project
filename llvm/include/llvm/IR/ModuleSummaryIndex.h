@@ -572,6 +572,50 @@ public:
     unsigned NoInline : 1;
     // Indicate if function should be always inlined.
     unsigned AlwaysInline : 1;
+    // Indicate if function never raises an exception. Can be modified during
+    // thinlink function attribute propagation
+    unsigned NoUnwind : 1;
+    // Indicate if function contains instructions that mayThrow
+    unsigned MayThrow : 1;
+
+    // If there are calls to unknown targets (e.g. indirect)
+    unsigned HasUnknownCall : 1;
+
+    FFlags &operator&=(const FFlags &RHS) {
+      this->ReadNone &= RHS.ReadNone;
+      this->ReadOnly &= RHS.ReadOnly;
+      this->NoRecurse &= RHS.NoRecurse;
+      this->ReturnDoesNotAlias &= RHS.ReturnDoesNotAlias;
+      this->NoInline &= RHS.NoInline;
+      this->AlwaysInline &= RHS.AlwaysInline;
+      this->NoUnwind &= RHS.NoUnwind;
+      this->MayThrow &= RHS.MayThrow;
+      this->HasUnknownCall &= RHS.HasUnknownCall;
+      return *this;
+    }
+
+    bool anyFlagSet() {
+      return this->ReadNone | this->ReadOnly | this->NoRecurse |
+             this->ReturnDoesNotAlias | this->NoInline | this->AlwaysInline |
+             this->NoUnwind | this->MayThrow | this->HasUnknownCall;
+    }
+
+    operator std::string() {
+      std::string Output;
+      raw_string_ostream OS(Output);
+      OS << "funcFlags: (";
+      OS << "readNone: " << this->ReadNone;
+      OS << ", readOnly: " << this->ReadOnly;
+      OS << ", noRecurse: " << this->NoRecurse;
+      OS << ", returnDoesNotAlias: " << this->ReturnDoesNotAlias;
+      OS << ", noInline: " << this->NoInline;
+      OS << ", alwaysInline: " << this->AlwaysInline;
+      OS << ", noUnwind: " << this->NoUnwind;
+      OS << ", mayThrow: " << this->MayThrow;
+      OS << ", hasUnknownCall: " << this->HasUnknownCall;
+      OS << ")";
+      return OS.str();
+    }
   };
 
   /// Describes the uses of a parameter by the function.
@@ -688,6 +732,10 @@ public:
   /// Get function summary flags.
   FFlags fflags() const { return FunFlags; }
 
+  void setNoRecurse() { FunFlags.NoRecurse = true; }
+
+  void setNoUnwind() { FunFlags.NoUnwind = true; }
+
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
 
@@ -699,6 +747,8 @@ public:
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
+
+  std::vector<EdgeTy> &mutableCalls() { return CallGraphEdgeList; }
 
   void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
 

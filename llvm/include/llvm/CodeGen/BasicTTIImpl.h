@@ -364,8 +364,9 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands) {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands);
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind) {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
@@ -748,8 +749,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
   InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -1992,9 +1992,9 @@ public:
   /// \param RetTy Return value types.
   /// \param Tys Argument types.
   /// \returns The cost of Call instruction.
-  InstructionCost
-  getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-                   TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
+  InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind) {
     return 10;
   }
 
@@ -2078,7 +2078,8 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost += NumReduxLevels * thisT()->getShuffleCost(
                                      TTI::SK_PermuteSingleSrc, Ty, None, 0, Ty);
-    ArithCost += NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty);
+    ArithCost +=
+        NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
   }

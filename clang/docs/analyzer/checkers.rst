@@ -1838,6 +1838,20 @@ Method calls on a moved-from object and copying a moved-from object will be repo
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
+.. _alpha-cplusplus-SmartPtr:
+
+alpha.cplusplus.SmartPtr (C++)
+""""""""""""""""""""""""""""""
+Check for dereference of null smart pointers.
+
+.. code-block:: cpp
+
+ void deref_smart_ptr() {
+   std::unique_ptr<int> P;
+   *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
+
 alpha.deadcode
 ^^^^^^^^^^^^^^
 .. _alpha-deadcode-UnreachableCode:
@@ -1870,19 +1884,6 @@ Check unreachable code.
  void test(id x) {
    return;
    [x retain]; // warn
- }
-
-.. _alpha-cplusplus-SmartPtr:
-
-alpha.cplusplus.SmartPtr (C++)
-""""""""""""""""""""""""""""""
-Check for dereference of null smart pointers.
-
-.. code-block:: cpp
-
- void deref_smart_ptr() {
-   std::unique_ptr<int> P;
-   *P; // warn: dereference of a default constructed smart unique_ptr
  }
 
 alpha.fuchsia

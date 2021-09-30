@@ -41,6 +41,15 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for OpenNewUnit";
 
+  // INQUIRE(IOLENGTH=) j
+  io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
+      io, reinterpret_cast<const char *>(&buffer), 1, recl))
+      << "OutputUnformattedBlock() for InquireIoLength";
+  ASSERT_EQ(IONAME(GetIoLength)(io), recl) << "GetIoLength";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for InquireIoLength";
+
   static constexpr int records{10};
   for (int j{1}; j <= records; ++j) {
     // WRITE(UNIT=unit,REC=j) j
@@ -49,7 +58,7 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
 
     buffer = j;
     ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), recl, recl))
+        io, reinterpret_cast<const char *>(&buffer), 1, recl))
         << "OutputUnformattedBlock()";
 
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -61,7 +70,7 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     ASSERT_TRUE(IONAME(SetRec)(io, j)) << "SetRec(" << j << ')';
     ASSERT_TRUE(IONAME(InputUnformattedBlock)(
-        io, reinterpret_cast<char *>(&buffer), recl, recl))
+        io, reinterpret_cast<char *>(&buffer), 1, recl))
         << "InputUnformattedBlock()";
 
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -157,6 +166,17 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for OpenNewUnit";
+
+  // INQUIRE(IOLENGTH=) j, ...
+  io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
+  for (int j{1}; j <= 3; ++j) {
+    ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
+        io, reinterpret_cast<const char *>(&buffer), 1, recl))
+        << "OutputUnformattedBlock() for InquireIoLength";
+  }
+  ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for InquireIoLength";
 
   static const int records{10};
   for (int j{1}; j <= records; ++j) {
@@ -417,7 +437,7 @@ TEST(ExternalIOTests, TestSequentialVariableFormatted) {
         << "EndIoStatement() for Backspace (before read)";
 
     std::snprintf(fmt, sizeof fmt, "(%dI4)", j);
-    // READ(UNIT=unit,FMT=fmt) n; check
+    // READ(UNIT=unit,FMT=fmt,SIZE=chars) n; check
     io = IONAME(BeginExternalFormattedInput)(
         fmt, std::strlen(fmt), unit, __FILE__, __LINE__);
 
@@ -426,6 +446,9 @@ TEST(ExternalIOTests, TestSequentialVariableFormatted) {
       ASSERT_TRUE(IONAME(InputInteger)(io, check[k])) << "InputInteger()";
     }
 
+    std::size_t chars{IONAME(GetSize)(io)};
+    ASSERT_EQ(chars, j * 4u)
+        << "GetSize()=" << chars << ", expected " << (j * 4u) << '\n';
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
         << "EndIoStatement() for InputInteger";
     for (int k{0}; k < j; ++k) {

@@ -1810,6 +1810,11 @@ vec_cmpeq(vector unsigned __int128 __a, vector unsigned __int128 __b) {
   return (vector bool __int128)__builtin_altivec_vcmpequq(
       (vector bool __int128)__a, (vector bool __int128)__b);
 }
+
+static __inline__ vector bool __int128 __ATTRS_o_ai
+vec_cmpeq(vector bool __int128 __a, vector bool  __int128 __b) {
+  return (vector bool __int128)__builtin_altivec_vcmpequq(__a, __b);
+}
 #endif
 
 #ifdef __POWER9_VECTOR__
@@ -1886,6 +1891,11 @@ static __inline__ vector bool __int128 __ATTRS_o_ai
 vec_cmpne(vector signed __int128 __a, vector signed __int128 __b) {
   return (vector bool __int128) ~(__builtin_altivec_vcmpequq(
       (vector bool __int128)__a, (vector bool __int128)__b));
+}
+
+static __inline__ vector bool __int128 __ATTRS_o_ai
+vec_cmpne(vector bool __int128 __a, vector bool __int128 __b) {
+  return (vector bool __int128) ~(__builtin_altivec_vcmpequq(__a, __b));
 }
 #endif
 
@@ -14870,6 +14880,11 @@ static __inline__ int __ATTRS_o_ai vec_all_eq(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_LT, __a, __b);
 }
+
+static __inline__ int __ATTRS_o_ai vec_all_eq(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_LT, __a, __b);
+}
 #endif
 
 /* vec_all_ge */
@@ -15815,6 +15830,11 @@ static __inline__ int __ATTRS_o_ai vec_all_ne(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_EQ, __a, __b);
 }
+
+static __inline__ int __ATTRS_o_ai vec_all_ne(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_EQ, __a, __b);
+}
 #endif
 
 /* vec_all_nge */
@@ -16102,6 +16122,11 @@ static __inline__ int __ATTRS_o_ai vec_any_eq(vector signed __int128 __a,
 
 static __inline__ int __ATTRS_o_ai vec_any_eq(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_EQ_REV, __a, __b);
+}
+
+static __inline__ int __ATTRS_o_ai vec_any_eq(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_EQ_REV, __a, __b);
 }
 #endif
@@ -17077,6 +17102,11 @@ static __inline__ int __ATTRS_o_ai vec_any_ne(vector signed __int128 __a,
 
 static __inline__ int __ATTRS_o_ai vec_any_ne(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_LT_REV, __a, __b);
+}
+
+static __inline__ int __ATTRS_o_ai vec_any_ne(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_LT_REV, __a, __b);
 }
 #endif
@@ -18191,13 +18221,13 @@ vec_expandm(vector unsigned __int128 __a) {
 
 #define vec_cntm(__a, __mp)                                                    \
   _Generic((__a), vector unsigned char                                         \
-           : __builtin_altivec_vcntmbb((__a), (unsigned int)(__mp)),           \
+           : __builtin_altivec_vcntmbb((__a), (unsigned char)(__mp)),          \
              vector unsigned short                                             \
-           : __builtin_altivec_vcntmbh((__a), (unsigned int)(__mp)),           \
+           : __builtin_altivec_vcntmbh((__a), (unsigned char)(__mp)),          \
              vector unsigned int                                               \
-           : __builtin_altivec_vcntmbw((__a), (unsigned int)(__mp)),           \
+           : __builtin_altivec_vcntmbw((__a), (unsigned char)(__mp)),          \
              vector unsigned long long                                         \
-           : __builtin_altivec_vcntmbd((__a), (unsigned int)(__mp)))
+           : __builtin_altivec_vcntmbd((__a), (unsigned char)(__mp)))
 
 /* vec_gen[b|h|w|d|q]m */
 
@@ -18726,36 +18756,39 @@ static __inline__ vector double __ATTRS_o_ai vec_splatid(const float __a) {
 
 static __inline__ vector signed int __ATTRS_o_ai vec_splati_ins(
     vector signed int __a, const unsigned int __b, const signed int __c) {
+  const unsigned int __d = __b & 0x01;
 #ifdef __LITTLE_ENDIAN__
-  __a[1 - __b] = __c;
-  __a[3 - __b] = __c;
+  __a[1 - __d] = __c;
+  __a[3 - __d] = __c;
 #else
-  __a[__b] = __c;
-  __a[2 + __b] = __c;
+  __a[__d] = __c;
+  __a[2 + __d] = __c;
 #endif
   return __a;
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai vec_splati_ins(
     vector unsigned int __a, const unsigned int __b, const unsigned int __c) {
+  const unsigned int __d = __b & 0x01;
 #ifdef __LITTLE_ENDIAN__
-  __a[1 - __b] = __c;
-  __a[3 - __b] = __c;
+  __a[1 - __d] = __c;
+  __a[3 - __d] = __c;
 #else
-  __a[__b] = __c;
-  __a[2 + __b] = __c;
+  __a[__d] = __c;
+  __a[2 + __d] = __c;
 #endif
   return __a;
 }
 
 static __inline__ vector float __ATTRS_o_ai
 vec_splati_ins(vector float __a, const unsigned int __b, const float __c) {
+  const unsigned int __d = __b & 0x01;
 #ifdef __LITTLE_ENDIAN__
-  __a[1 - __b] = __c;
-  __a[3 - __b] = __c;
+  __a[1 - __d] = __c;
+  __a[3 - __d] = __c;
 #else
-  __a[__b] = __c;
-  __a[2 + __b] = __c;
+  __a[__d] = __c;
+  __a[2 + __d] = __c;
 #endif
   return __a;
 }

@@ -20,16 +20,15 @@ class EPCGenericJITLinkMemoryManager::Alloc
 public:
   struct SegInfo {
     char *WorkingMem = nullptr;
-    ExecutorAddress TargetAddr;
+    ExecutorAddr TargetAddr;
     uint64_t ContentSize = 0;
     uint64_t ZeroFillSize = 0;
   };
   using SegInfoMap = DenseMap<unsigned, SegInfo>;
 
-  Alloc(EPCGenericJITLinkMemoryManager &Parent, ExecutorAddress TargetAddr,
-        uint64_t TargetSize, std::unique_ptr<char[]> WorkingBuffer,
-        SegInfoMap Segs)
-      : Parent(Parent), TargetAddr(TargetAddr), TargetSize(TargetSize),
+  Alloc(EPCGenericJITLinkMemoryManager &Parent, ExecutorAddr TargetAddr,
+        std::unique_ptr<char[]> WorkingBuffer, SegInfoMap Segs)
+      : Parent(Parent), TargetAddr(TargetAddr),
         WorkingBuffer(std::move(WorkingBuffer)), Segs(std::move(Segs)) {}
 
   MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
@@ -50,7 +49,7 @@ public:
     tpctypes::FinalizeRequest FR;
     for (auto &KV : Segs) {
       assert(KV.second.ContentSize <= std::numeric_limits<size_t>::max());
-      FR.push_back(tpctypes::SegFinalizeRequest{
+      FR.Segments.push_back(tpctypes::SegFinalizeRequest{
           tpctypes::toWireProtectionFlags(
               static_cast<sys::Memory::ProtectionFlags>(KV.first)),
           KV.second.TargetAddr,
@@ -59,7 +58,8 @@ public:
           {WorkingMem, static_cast<size_t>(KV.second.ContentSize)}});
       WorkingMem += KV.second.ContentSize;
     }
-    Parent.EPC.callSPSWrapperAsync<rt::SPSMemoryFinalizeSignature>(
+    Parent.EPC.callSPSWrapperAsync<
+        rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(
         [OnFinalize = std::move(OnFinalize)](Error SerializationErr,
                                              Error FinalizeErr) {
           if (SerializationErr)
@@ -67,21 +67,22 @@ public:
           else
             OnFinalize(std::move(FinalizeErr));
         },
-        Parent.FAs.Finalize.getValue(), std::move(FR));
+        Parent.SAs.Finalize, Parent.SAs.Allocator, std::move(FR));
   }
 
   Error deallocate() override {
     Error Err = Error::success();
-    if (auto E2 = Parent.EPC.callSPSWrapper<rt::SPSMemoryDeallocateSignature>(
-            Parent.FAs.Deallocate.getValue(), Err, TargetAddr, TargetSize))
+    if (auto E2 = Parent.EPC.callSPSWrapper<
+                  rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
+            Parent.SAs.Deallocate, Err, Parent.SAs.Allocator,
+            ArrayRef<ExecutorAddr>(TargetAddr)))
       return E2;
     return Err;
   }
 
 private:
   EPCGenericJITLinkMemoryManager &Parent;
-  ExecutorAddress TargetAddr;
-  uint64_t TargetSize;
+  ExecutorAddr TargetAddr;
   std::unique_ptr<char[]> WorkingBuffer;
   SegInfoMap Segs;
 };
@@ -110,9 +111,10 @@ EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
   std::unique_ptr<char[]> WorkingBuffer;
   if (WorkingSize > 0)
     WorkingBuffer = std::make_unique<char[]>(WorkingSize);
-  Expected<ExecutorAddress> TargetAllocAddr((ExecutorAddress()));
-  if (auto Err = EPC.callSPSWrapper<rt::SPSMemoryReserveSignature>(
-          FAs.Reserve.getValue(), TargetAllocAddr, AllocSize))
+  Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
+  if (auto Err = EPC.callSPSWrapper<
+                 rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
+          SAs.Reserve, TargetAllocAddr, SAs.Allocator, AllocSize))
     return std::move(Err);
   if (!TargetAllocAddr)
     return TargetAllocAddr.takeError();
@@ -127,7 +129,7 @@ EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
     WorkingMem += Seg.ContentSize;
   }
 
-  return std::make_unique<Alloc>(*this, *TargetAllocAddr, AllocSize,
+  return std::make_unique<Alloc>(*this, *TargetAllocAddr,
                                  std::move(WorkingBuffer), std::move(Segs));
 }
 

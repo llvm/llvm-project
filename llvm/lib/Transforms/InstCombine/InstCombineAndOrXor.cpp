@@ -1896,44 +1896,37 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         return BinaryOperator::CreateXor(NewAnd, Op1);
       }
     }
-  }
 
-  ConstantInt *AndRHS;
-  if (match(Op1, m_ConstantInt(AndRHS))) {
-    const APInt &AndRHSMask = AndRHS->getValue();
-
-    // Optimize a variety of ((val OP C1) & C2) combinations...
-    if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
-      // ((C1 OP zext(X)) & C2) -> zext((C1-X) & C2) if C2 fits in the bitwidth
-      // of X and OP behaves well when given trunc(C1) and X.
-      // TODO: Do this for vectors by using m_APInt instead of m_ConstantInt.
-      switch (Op0I->getOpcode()) {
-      default:
-        break;
+    // ((C1 OP zext(X)) & C2) -> zext((C1 OP X) & C2) if C2 fits in the
+    // bitwidth of X and OP behaves well when given trunc(C1) and X.
+    auto isSuitableBinOpcode = [](BinaryOperator *B) {
+      switch (B->getOpcode()) {
       case Instruction::Xor:
       case Instruction::Or:
       case Instruction::Mul:
       case Instruction::Add:
       case Instruction::Sub:
-        Value *X;
-        ConstantInt *C1;
-        // TODO: The one use restrictions could be relaxed a little if the AND
-        // is going to be removed.
-        if (match(Op0I, m_OneUse(m_c_BinOp(m_OneUse(m_ZExt(m_Value(X))),
-                                           m_ConstantInt(C1))))) {
-          if (AndRHSMask.isIntN(X->getType()->getScalarSizeInBits())) {
-            auto *TruncC1 = ConstantExpr::getTrunc(C1, X->getType());
-            Value *BinOp;
-            Value *Op0LHS = Op0I->getOperand(0);
-            if (isa<ZExtInst>(Op0LHS))
-              BinOp = Builder.CreateBinOp(Op0I->getOpcode(), X, TruncC1);
-            else
-              BinOp = Builder.CreateBinOp(Op0I->getOpcode(), TruncC1, X);
-            auto *TruncC2 = ConstantExpr::getTrunc(AndRHS, X->getType());
-            auto *And = Builder.CreateAnd(BinOp, TruncC2);
-            return new ZExtInst(And, Ty);
-          }
-        }
+        return true;
+      default:
+        return false;
+      }
+    };
+    BinaryOperator *BO;
+    if (match(Op0, m_OneUse(m_BinOp(BO))) && isSuitableBinOpcode(BO)) {
+      Value *X;
+      const APInt *C1;
+      // TODO: The one-use restrictions could be relaxed a little if the AND
+      // is going to be removed.
+      if (match(BO, m_c_BinOp(m_OneUse(m_ZExt(m_Value(X))), m_APInt(C1))) &&
+          C->isIntN(X->getType()->getScalarSizeInBits())) {
+        unsigned XWidth = X->getType()->getScalarSizeInBits();
+        Constant *TruncC1 = ConstantInt::get(X->getType(), C1->trunc(XWidth));
+        Value *BinOp = isa<ZExtInst>(BO->getOperand(0))
+                           ? Builder.CreateBinOp(BO->getOpcode(), X, TruncC1)
+                           : Builder.CreateBinOp(BO->getOpcode(), TruncC1, X);
+        Constant *TruncC = ConstantInt::get(X->getType(), C->trunc(XWidth));
+        Value *And = Builder.CreateAnd(BinOp, TruncC);
+        return new ZExtInst(And, Ty);
       }
     }
   }

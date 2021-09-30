@@ -24,8 +24,6 @@
 using namespace mlir;
 using namespace detail;
 
-DialectAsmParser::~DialectAsmParser() {}
-
 //===----------------------------------------------------------------------===//
 // DialectRegistry
 //===----------------------------------------------------------------------===//

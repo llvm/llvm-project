@@ -186,22 +186,6 @@ namespace clang {
       return import(*From);
     }
 
-    // Helper for chaining together multiple imports. If an error is detected,
-    // subsequent imports will return default constructed nodes, so that failure
-    // can be detected with a single conditional branch after a sequence of
-    // imports.
-    template <typename T> T importChecked(Error &Err, const T &From) {
-      // Don't attempt to import nodes if we hit an error earlier.
-      if (Err)
-        return T{};
-      Expected<T> MaybeVal = import(From);
-      if (!MaybeVal) {
-        Err = MaybeVal.takeError();
-        return T{};
-      }
-      return *MaybeVal;
-    }
-
     ExplicitSpecifier importExplicitSpecifier(Error &Err,
                                               ExplicitSpecifier ESpec);
 
@@ -599,6 +583,7 @@ namespace clang {
     ExpectedStmt VisitSourceLocExpr(SourceLocExpr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
+    ExpectedStmt VisitShuffleVectorExpr(ShuffleVectorExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
     ExpectedStmt VisitGenericSelectionExpr(GenericSelectionExpr *E);
     ExpectedStmt VisitPredefinedExpr(PredefinedExpr *E);
@@ -668,6 +653,22 @@ namespace clang {
     ExpectedStmt VisitTypeTraitExpr(TypeTraitExpr *E);
     ExpectedStmt VisitCXXTypeidExpr(CXXTypeidExpr *E);
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
+
+    // Helper for chaining together multiple imports. If an error is detected,
+    // subsequent imports will return default constructed nodes, so that failure
+    // can be detected with a single conditional branch after a sequence of
+    // imports.
+    template <typename T> T importChecked(Error &Err, const T &From) {
+      // Don't attempt to import nodes if we hit an error earlier.
+      if (Err)
+        return T{};
+      Expected<T> MaybeVal = import(From);
+      if (!MaybeVal) {
+        Err = MaybeVal.takeError();
+        return T{};
+      }
+      return *MaybeVal;
+    }
 
     template<typename IIter, typename OIter>
     Error ImportArrayChecked(IIter Ibegin, IIter Iend, OIter Obegin) {
@@ -1824,7 +1825,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
         RecordDecl *FromRecordDecl = nullptr;
         RecordDecl *ToRecordDecl = nullptr;
         // If we have a field that is an ArrayType we need to check if the array
-        // element is a RecordDecl and if so we need to import the defintion.
+        // element is a RecordDecl and if so we need to import the definition.
         if (FieldFrom->getType()->isArrayType()) {
           // getBaseElementTypeUnsafe(...) handles multi-dimensonal arrays for us.
           FromRecordDecl = FieldFrom->getType()->getBaseElementTypeUnsafe()->getAsRecordDecl();
@@ -6730,6 +6731,24 @@ ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
                  ToRParenLoc, CondIsTrue);
 }
 
+ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
+  Error Err = Error::success();
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToType = importChecked(Err, E->getType());
+  const unsigned NumSubExprs = E->getNumSubExprs();
+
+  llvm::SmallVector<Expr *, 8> ToSubExprs;
+  llvm::ArrayRef<Expr *> FromSubExprs(E->getSubExprs(), NumSubExprs);
+  ToSubExprs.resize(NumSubExprs);
+
+  if ((Err = ImportContainerChecked(FromSubExprs, ToSubExprs)))
+    return std::move(Err);
+
+  return new (Importer.getToContext()) ShuffleVectorExpr(
+      Importer.getToContext(), ToSubExprs, ToType, ToBeginLoc, ToRParenLoc);
+}
+
 ExpectedStmt ASTNodeImporter::VisitGNUNullExpr(GNUNullExpr *E) {
   ExpectedType TypeOrErr = import(E->getType());
   if (!TypeOrErr)
@@ -8408,8 +8427,118 @@ Expected<TypeSourceInfo *> ASTImporter::Import(TypeSourceInfo *FromTSI) {
   return ToContext.getTrivialTypeSourceInfo(*TOrErr, *BeginLocOrErr);
 }
 
+// To use this object, it should be created before the new attribute is created,
+// and destructed after it is created. The construction already performs the
+// import of the data.
+template <typename T> struct AttrArgImporter {
+  AttrArgImporter<T>(const AttrArgImporter<T> &) = delete;
+  AttrArgImporter<T>(AttrArgImporter<T> &&) = default;
+  AttrArgImporter<T> &operator=(const AttrArgImporter<T> &) = delete;
+  AttrArgImporter<T> &operator=(AttrArgImporter<T> &&) = default;
+
+  AttrArgImporter(ASTNodeImporter &I, Error &Err, const T &From)
+      : To(I.importChecked(Err, From)) {}
+
+  const T &value() { return To; }
+
+private:
+  T To;
+};
+
+// To use this object, it should be created before the new attribute is created,
+// and destructed after it is created. The construction already performs the
+// import of the data. The array data is accessible in a pointer form, this form
+// is used by the attribute classes. This object should be created once for the
+// array data to be imported (the array size is not imported, just copied).
+template <typename T> struct AttrArgArrayImporter {
+  AttrArgArrayImporter<T>(const AttrArgArrayImporter<T> &) = delete;
+  AttrArgArrayImporter<T>(AttrArgArrayImporter<T> &&) = default;
+  AttrArgArrayImporter<T> &operator=(const AttrArgArrayImporter<T> &) = delete;
+  AttrArgArrayImporter<T> &operator=(AttrArgArrayImporter<T> &&) = default;
+
+  AttrArgArrayImporter(ASTNodeImporter &I, Error &Err,
+                       const llvm::iterator_range<T *> &From,
+                       unsigned ArraySize) {
+    if (Err)
+      return;
+    To.reserve(ArraySize);
+    Err = I.ImportContainerChecked(From, To);
+  }
+
+  T *value() { return To.data(); }
+
+private:
+  llvm::SmallVector<T, 2> To;
+};
+
+class AttrImporter {
+  Error Err = Error::success();
+  ASTImporter &Importer;
+  ASTNodeImporter NImporter;
+
+public:
+  AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
+
+  // Create an "importer" for an attribute parameter.
+  // Result of the 'value()' of that object is to be passed to the function
+  // 'createImpoprtedAttr', in the order that is expected by the attribute
+  // class.
+  template <class T> AttrArgImporter<T> importArg(const T &From) {
+    return AttrArgImporter<T>(NImporter, Err, From);
+  }
+
+  // Create an "importer" for an attribute parameter that has array type.
+  // Result of the 'value()' of that object is to be passed to the function
+  // 'createImpoprtedAttr', then the size of the array as next argument.
+  template <typename T>
+  AttrArgArrayImporter<T> importArrayArg(const llvm::iterator_range<T *> &From,
+                                         unsigned ArraySize) {
+    return AttrArgArrayImporter<T>(NImporter, Err, From, ArraySize);
+  }
+
+  // Create an attribute object with the specified arguments.
+  // The 'FromAttr' is the original (not imported) attribute, the 'ImportedArg'
+  // should be values that are passed to the 'Create' function of the attribute.
+  // (The 'Create' with 'ASTContext' first and 'AttributeCommonInfo' last is
+  // used here.) As much data is copied or imported from the old attribute
+  // as possible. The passed arguments should be already imported.
+  template <typename T, typename... Arg>
+  Expected<Attr *> createImportedAttr(const T *FromAttr, Arg &&...ImportedArg) {
+    static_assert(std::is_base_of<Attr, T>::value,
+                  "T should be subclass of Attr.");
+
+    const IdentifierInfo *ToAttrName = Importer.Import(FromAttr->getAttrName());
+    const IdentifierInfo *ToScopeName =
+        Importer.Import(FromAttr->getScopeName());
+    SourceRange ToAttrRange =
+        NImporter.importChecked(Err, FromAttr->getRange());
+    SourceLocation ToScopeLoc =
+        NImporter.importChecked(Err, FromAttr->getScopeLoc());
+
+    if (Err)
+      return std::move(Err);
+
+    AttributeCommonInfo ToI(ToAttrName, ToScopeName, ToAttrRange, ToScopeLoc,
+                            FromAttr->getParsedKind(), FromAttr->getSyntax(),
+                            FromAttr->getAttributeSpellingListIndex());
+    // The "SemanticSpelling" is not needed to be passed to the constructor.
+    // That value is recalculated from the SpellingListIndex if needed.
+    T *ToAttr = T::Create(Importer.getToContext(),
+                          std::forward<Arg>(ImportedArg)..., ToI);
+
+    ToAttr->setImplicit(FromAttr->isImplicit());
+    ToAttr->setPackExpansion(FromAttr->isPackExpansion());
+    if (auto *ToInheritableAttr = dyn_cast<InheritableAttr>(ToAttr))
+      ToInheritableAttr->setInherited(FromAttr->isInherited());
+
+    return ToAttr;
+  }
+};
+
 Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   Attr *ToAttr = nullptr;
+  // FIXME: Use AttrImporter as much as possible, try to remove the import
+  // of range from here.
   SourceRange ToRange;
   if (Error Err = importInto(ToRange, FromAttr->getRange()))
     return std::move(Err);
@@ -8451,6 +8580,20 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     ToAttr = To;
     break;
   }
+
+  case attr::AssertCapability: {
+    const auto *From = cast<AssertCapabilityAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+
   default:
     // FIXME: 'clone' copies every member but some of them should be imported.
     // Handle other Attrs that have parameters that should be imported.

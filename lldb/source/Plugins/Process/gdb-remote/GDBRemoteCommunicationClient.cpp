@@ -16,7 +16,6 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -356,10 +355,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
     // configuration of the transport before attaching/launching the process.
     m_qSupported_response = response.GetStringRef().str();
 
-    llvm::SmallVector<llvm::StringRef, 16> server_features;
-    response.GetStringRef().split(server_features, ';');
-
-    for (llvm::StringRef x : server_features) {
+    for (llvm::StringRef x : llvm::Split(response.GetStringRef(), ';')) {
       if (x == "qXfer:auxv:read+")
         m_supports_qXfer_auxv_read = eLazyBoolYes;
       else if (x == "qXfer:libraries-svr4:read+")
@@ -1543,14 +1539,16 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
     }
   }
 
-  if (pid != LLDB_INVALID_PROCESS_ID) {
-    if (!m_supports_multiprocess) {
-      error.SetErrorString(
-          "Multiprocess extension not supported by the server.");
-      return error;
-    }
+  if (m_supports_multiprocess) {
+    // Some servers (e.g. qemu) require specifying the PID even if only a single
+    // process is running.
+    if (pid == LLDB_INVALID_PROCESS_ID)
+      pid = GetCurrentProcessID();
     packet.PutChar(';');
     packet.PutHex64(pid);
+  } else if (pid != LLDB_INVALID_PROCESS_ID) {
+    error.SetErrorString("Multiprocess extension not supported by the server.");
+    return error;
   }
 
   StringExtractorGDBRemote response;
@@ -1659,21 +1657,12 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           error.SetErrorString(error_string.c_str());
         } else if (name.equals("dirty-pages")) {
           std::vector<addr_t> dirty_page_list;
-          std::string comma_sep_str = value.str();
-          size_t comma_pos;
-          addr_t page;
-          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
-            comma_sep_str[comma_pos] = '\0';
-            page = StringConvert::ToUInt64(comma_sep_str.c_str(),
-                                           LLDB_INVALID_ADDRESS, 16);
-            if (page != LLDB_INVALID_ADDRESS)
+          for (llvm::StringRef x : llvm::Split(value, ',')) {
+            addr_t page;
+            x.consume_front("0x");
+            if (llvm::to_integer(x, page, 16))
               dirty_page_list.push_back(page);
-            comma_sep_str.erase(0, comma_pos + 1);
           }
-          page = StringConvert::ToUInt64(comma_sep_str.c_str(),
-                                         LLDB_INVALID_ADDRESS, 16);
-          if (page != LLDB_INVALID_ADDRESS)
-            dirty_page_list.push_back(page);
           region_info.SetDirtyPageList(dirty_page_list);
         }
       }
@@ -2906,8 +2895,12 @@ GDBRemoteCommunicationClient::GetCurrentProcessAndThreadIDs(
       if (ch == 'm') {
         do {
           auto pid_tid = response.GetPidTid(LLDB_INVALID_PROCESS_ID);
+          // If we get an invalid response, break out of the loop.
+          // If there are valid tids, they have been added to ids.
+          // If there are no valid tids, we'll fall through to the
+          // bare-iron target handling below.
           if (!pid_tid)
-            return {};
+            break;
 
           ids.push_back(pid_tid.getValue());
           ch = response.GetChar(); // Skip the command separator

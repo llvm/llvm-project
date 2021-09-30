@@ -23,21 +23,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct _LIBCPP_TYPE_VIS in_place_t {
     explicit in_place_t() = default;
 };
-_LIBCPP_INLINE_VAR constexpr in_place_t in_place{};
+inline constexpr in_place_t in_place{};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS in_place_type_t {
     explicit in_place_type_t() = default;
 };
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr in_place_type_t<_Tp> in_place_type{};
+inline constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
 struct _LIBCPP_TEMPLATE_VIS in_place_index_t {
     explicit in_place_index_t() = default;
 };
 template <size_t _Idx>
-_LIBCPP_INLINE_VAR constexpr in_place_index_t<_Idx> in_place_index{};
+inline constexpr in_place_index_t<_Idx> in_place_index{};
 
 template <class _Tp> struct __is_inplace_type_imp : false_type {};
 template <class _Tp> struct __is_inplace_type_imp<in_place_type_t<_Tp>> : true_type {};

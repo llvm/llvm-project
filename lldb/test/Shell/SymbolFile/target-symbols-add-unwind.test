@@ -5,7 +5,8 @@
 
 # RUN: cd %T
 # RUN: %clang_host %S/Inputs/target-symbols-add-unwind.c -g \
-# RUN:   -fno-unwind-tables -o target-symbols-add-unwind.debug
+# RUN:   -fno-unwind-tables -fno-asynchronous-unwind-tables \
+# RUN:   -o target-symbols-add-unwind.debug
 # RUN: llvm-objcopy --strip-debug target-symbols-add-unwind.debug \
 # RUN:   target-symbols-add-unwind.stripped
 # RUN: %lldb target-symbols-add-unwind.stripped -s %s -o quit | FileCheck %s

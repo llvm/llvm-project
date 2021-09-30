@@ -22,6 +22,8 @@ namespace llvm {
   class DataLayout;
   class Instruction;
   class DominatorTree;
+  class LoopInfo;
+  class Function;
 
   /// getDefaultMaxUsesToExploreForCaptureTracking - Return default value of
   /// the maximal number of uses to explore before giving up. It is used by
@@ -55,10 +57,25 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
-  bool PointerMayBeCapturedBefore(
-      const Value *V, bool ReturnCaptures, bool StoreCaptures,
-      const Instruction *I, const DominatorTree *DT, bool IncludeI = false,
-      unsigned MaxUsesToExplore = 0);
+  bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
+                                  bool StoreCaptures, const Instruction *I,
+                                  const DominatorTree *DT,
+                                  bool IncludeI = false,
+                                  unsigned MaxUsesToExplore = 0,
+                                  const LoopInfo *LI = nullptr);
+
+  // Returns the 'earliest' instruction that captures \p V in \F. An instruction
+  // A is considered earlier than instruction B, if A dominates B. If 2 escapes
+  // do not dominate each other, the terminator of the common dominator is
+  // chosen. If not all uses can be analyzed, the earliest escape is set to
+  // the first instruction in the function entry block. If \p V does not escape,
+  // nullptr is returned. Note that the caller of the function has to ensure
+  // that the instruction the result value is compared against is not in a
+  // cycle.
+  Instruction *FindEarliestCapture(const Value *V, Function &F,
+                                   bool ReturnCaptures, bool StoreCaptures,
+                                   const DominatorTree &DT,
+                                   unsigned MaxUsesToExplore = 0);
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In
   /// addition to the interface here, you'll need to provide your own getters

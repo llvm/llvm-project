@@ -51,20 +51,21 @@ EPCEHFrameRegistrar::Create(ExecutionSession &ES) {
   auto RegisterEHFrameWrapperFnAddr = (*Result)[0][0];
   auto DeregisterEHFrameWrapperFnAddr = (*Result)[0][1];
 
-  return std::make_unique<EPCEHFrameRegistrar>(ES, RegisterEHFrameWrapperFnAddr,
-                                               DeregisterEHFrameWrapperFnAddr);
+  return std::make_unique<EPCEHFrameRegistrar>(
+      ES, ExecutorAddr(RegisterEHFrameWrapperFnAddr),
+      ExecutorAddr(DeregisterEHFrameWrapperFnAddr));
 }
 
 Error EPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
                                             size_t EHFrameSectionSize) {
-  return ES.callSPSWrapper<void(SPSExecutorAddress, uint64_t)>(
+  return ES.callSPSWrapper<void(SPSExecutorAddr, uint64_t)>(
       RegisterEHFrameWrapperFnAddr, EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 
 Error EPCEHFrameRegistrar::deregisterEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
-  return ES.callSPSWrapper<void(SPSExecutorAddress, uint64_t)>(
+  return ES.callSPSWrapper<void(SPSExecutorAddr, uint64_t)>(
       DeregisterEHFrameWrapperFnAddr, EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }

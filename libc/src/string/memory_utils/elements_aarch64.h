@@ -18,6 +18,54 @@
 #endif
 
 namespace __llvm_libc {
+namespace aarch64_memset {
+#ifdef __ARM_NEON
+struct Splat8 {
+  static constexpr size_t kSize = 8;
+  static void SplatSet(char *dst, const unsigned char value) {
+    vst1_u8((uint8_t *)dst, vdup_n_u8(value));
+  }
+};
+
+struct Splat16 {
+  static constexpr size_t kSize = 16;
+  static void SplatSet(char *dst, const unsigned char value) {
+    vst1q_u8((uint8_t *)dst, vdupq_n_u8(value));
+  }
+};
+
+using _8 = Splat8;
+using _16 = Splat16;
+#else
+using _8 = __llvm_libc::scalar::_8;
+using _16 = Repeated<_8, 2>;
+#endif // __ARM_NEON
+
+using _1 = __llvm_libc::scalar::_1;
+using _2 = __llvm_libc::scalar::_2;
+using _3 = __llvm_libc::scalar::_3;
+using _4 = __llvm_libc::scalar::_4;
+using _32 = Chained<_16, _16>;
+using _64 = Chained<_32, _32>;
+
+struct ZVA {
+  static constexpr size_t kSize = 64;
+  static void SplatSet(char *dst, const unsigned char value) {
+    asm("dc zva, %[dst]" : : [dst] "r"(dst) : "memory");
+  }
+};
+
+inline static bool AArch64ZVA(char *dst, size_t count) {
+  uint64_t zva_val;
+  asm("mrs %[zva_val], dczid_el0" : [zva_val] "=r"(zva_val));
+  if ((zva_val & 31) != 4)
+    return false;
+  SplatSet<Align<_64, Arg::_1>::Then<Loop<ZVA, _64>>>(dst, 0, count);
+  return true;
+}
+
+} // namespace aarch64_memset
+
 namespace aarch64 {
 
 using _1 = __llvm_libc::scalar::_1;
