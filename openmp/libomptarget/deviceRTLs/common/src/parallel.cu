@@ -303,14 +303,17 @@ EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
 // push params
 ////////////////////////////////////////////////////////////////////////////////
 
+#define SHARE_ATTR __attribute__((address_space(3)))
 EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
   ASSERT0(LT_FUSSY, isRuntimeInitialized(),
           "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
-  omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
-      num_threads;
+  uint16_t &u16ref =
+    omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid);
+  uint16_t SHARE_ATTR * p16_shared = (uint16_t SHARE_ATTR *) &u16ref;
+  *p16_shared = (uint16_t SHARE_ATTR) num_threads;
 }
 
 // Do nothing. The host guarantees we started the requested number of

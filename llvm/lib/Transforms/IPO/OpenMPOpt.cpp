@@ -3922,6 +3922,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_free_shared:
       // Return without setting a fixpoint, to be resolved in updateImpl.
       return;
+    case OMPRTL___kmpc_push_num_threads:
+      // num_threads clause require runtime: exclude from
+      // SPMD'ization for now
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+      SPMDCompatibilityTracker.insert(&CB);
+      break;
     default:
       // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
       // generally. However, they do not hide parallel regions.
