@@ -1137,7 +1137,7 @@ parseGlobalMemrefOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
     return success();
 
   if (succeeded(parser.parseOptionalKeyword("uninitialized"))) {
-    initialValue = UnitAttr::get(parser.getBuilder().getContext());
+    initialValue = UnitAttr::get(parser.getContext());
     return success();
   }
 
