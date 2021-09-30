@@ -1,4 +1,3 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
 ; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; Discriminator support for calls that are defined in one line:

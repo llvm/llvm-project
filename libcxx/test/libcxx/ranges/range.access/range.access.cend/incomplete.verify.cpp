@@ -9,18 +9,17 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
-// REQUIRES: stdlib=libc++
 
 // Test the libc++ specific behavior that we provide a better diagnostic when calling
-// std::ranges::end on an array of incomplete type.
+// std::ranges::cend on an array of incomplete type.
 
 #include <ranges>
 
 #include <type_traits>
 
-using end_t = decltype(std::ranges::end);
+using cend_t = decltype(std::ranges::cend);
 
-template <class T> void f() requires std::invocable<end_t&, T> { }
+template <class T> void f() requires std::invocable<cend_t&, T> { }
 template <class T> void f() { }
 
 void test() {

@@ -120,9 +120,7 @@ bool UnrollLoopsCheck::hasKnownBounds(const Stmt *Statement,
   if (isa<WhileStmt, DoStmt>(Statement))
     return false;
   // The last loop type is a for loop.
-  const auto *ForLoop = dyn_cast<ForStmt>(Statement);
-  if (!ForLoop)
-    llvm_unreachable("Unknown loop");
+  const auto *ForLoop = cast<ForStmt>(Statement);
   const Stmt *Initializer = ForLoop->getInit();
   const Expr *Conditional = ForLoop->getCond();
   const Expr *Increment = ForLoop->getInc();
@@ -142,8 +140,7 @@ bool UnrollLoopsCheck::hasKnownBounds(const Stmt *Statement,
     if (!Op->isIncrementDecrementOp())
       return false;
 
-  if (isa<BinaryOperator>(Conditional)) {
-    const auto *BinaryOp = dyn_cast<BinaryOperator>(Conditional);
+  if (const auto *BinaryOp = dyn_cast<BinaryOperator>(Conditional)) {
     const Expr *LHS = BinaryOp->getLHS();
     const Expr *RHS = BinaryOp->getRHS();
     // If both sides are value dependent or constant, loop bounds are unknown.
@@ -173,8 +170,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
     assert(CXXLoopBound && "CXX ranged for loop has no loop bound");
     return exprHasLargeNumIterations(CXXLoopBound, Context);
   }
-  const auto *ForLoop = dyn_cast<ForStmt>(Statement);
-  assert(ForLoop && "Unknown loop");
+  const auto *ForLoop = cast<ForStmt>(Statement);
   const Stmt *Initializer = ForLoop->getInit();
   const Expr *Conditional = ForLoop->getCond();
   const Expr *Increment = ForLoop->getInc();
@@ -189,10 +185,9 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       InitValue = Evaluation->getInt().getExtValue();
     }
   }
-  assert(isa<BinaryOperator>(Conditional) &&
-         "Conditional is not a binary operator");
+
   int EndValue;
-  const auto *BinaryOp = dyn_cast<BinaryOperator>(Conditional);
+  const auto *BinaryOp = cast<BinaryOperator>(Conditional);
   if (!extractValue(EndValue, BinaryOp, Context))
     return true;
 

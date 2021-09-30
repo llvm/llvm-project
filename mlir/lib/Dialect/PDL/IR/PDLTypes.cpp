@@ -39,8 +39,7 @@ static Type parsePDLType(DialectAsmParser &parser) {
     return Type();
   {
     Type genType;
-    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
-                                           parser, typeTag, genType);
+    auto parseResult = generatedTypeParser(parser, typeTag, genType);
     if (parseResult.hasValue())
       return genType;
   }
@@ -75,7 +74,7 @@ bool PDLType::classof(Type type) {
 // RangeType
 //===----------------------------------------------------------------------===//
 
-Type RangeType::parse(MLIRContext *context, DialectAsmParser &parser) {
+Type RangeType::parse(DialectAsmParser &parser) {
   if (parser.parseLess())
     return Type();
 

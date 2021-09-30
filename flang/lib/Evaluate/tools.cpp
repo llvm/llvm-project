@@ -1186,6 +1186,40 @@ bool IsLenTypeParameter(const Symbol &symbol) {
   return param && param->attr() == common::TypeParamAttr::Len;
 }
 
+bool IsExtensibleType(const DerivedTypeSpec *derived) {
+  return derived && !IsIsoCType(derived) &&
+      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
+      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
+}
+
+bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
+  if (!derived) {
+    return false;
+  } else {
+    const auto &symbol{derived->typeSymbol()};
+    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
+        symbol.name() == "__builtin_"s + name;
+  }
+}
+
+bool IsIsoCType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "c_ptr") ||
+      IsBuiltinDerivedType(derived, "c_funptr");
+}
+
+bool IsTeamType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "team_type");
+}
+
+bool IsBadCoarrayType(const DerivedTypeSpec *derived) {
+  return IsTeamType(derived) || IsIsoCType(derived);
+}
+
+bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
+  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
+      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
+}
+
 int CountLenParameters(const DerivedTypeSpec &type) {
   return std::count_if(type.parameters().begin(), type.parameters().end(),
       [](const auto &pair) { return pair.second.isLen(); });

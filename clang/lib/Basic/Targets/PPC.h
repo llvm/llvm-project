@@ -74,6 +74,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasP10Vector = false;
   bool HasPCRelativeMemops = false;
   bool HasPrefixInstrs = false;
+  bool IsISA2_06 = false;
   bool IsISA2_07 = false;
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;

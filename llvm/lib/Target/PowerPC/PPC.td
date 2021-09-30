@@ -213,6 +213,9 @@ def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
 def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
+def FeatureISA2_06 : SubtargetFeature<"isa-v206-instructions", "IsISA2_06",
+                                      "true",
+                                      "Enable instructions in ISA 2.06.">;
 def FeatureISA2_07 : SubtargetFeature<"isa-v207-instructions", "IsISA2_07",
                                       "true",
                                       "Enable instructions in ISA 2.07.">;
@@ -319,7 +322,8 @@ def ProcessorFeatures {
                                                   FeatureMFTB,
                                                   DeprecatedDST,
                                                   FeatureTwoConstNR,
-                                                  FeatureUnalignedFloats];
+                                                  FeatureUnalignedFloats,
+                                                  FeatureISA2_06];
   list<SubtargetFeature> P7SpecificFeatures = [];
   list<SubtargetFeature> P7Features =
     !listconcat(P7InheritableFeatures, P7SpecificFeatures);

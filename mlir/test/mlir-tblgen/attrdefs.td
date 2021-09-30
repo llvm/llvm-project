@@ -18,16 +18,16 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::IndexAttr,
 // DEF: ::test::SingleParameterAttr
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(::mlir::MLIRContext *context,
+// DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
 // DEF-NEXT: ::mlir::DialectAsmParser &parser,
 // DEF-NEXT: ::llvm::StringRef mnemonic, ::mlir::Type type,
 // DEF-NEXT: ::mlir::Attribute &value) {
 // DEF: if (mnemonic == ::test::CompoundAAttr::getMnemonic()) {
-// DEF-NEXT: value = ::test::CompoundAAttr::parse(context, parser, type);
+// DEF-NEXT: value = ::test::CompoundAAttr::parse(parser, type);
 // DEF-NEXT: return ::mlir::success(!!value);
 // DEF-NEXT: }
 // DEF-NEXT: if (mnemonic == ::test::IndexAttr::getMnemonic()) {
-// DEF-NEXT:   value = ::test::IndexAttr::parse(context, parser, type);
+// DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: return {};
 
@@ -66,8 +66,8 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("cmpnd_a");
 // DECL: }
-// DECL: static ::mlir::Attribute parse(::mlir::MLIRContext *context,
-// DECL-NEXT: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
+// DECL: static ::mlir::Attribute parse(
+// DECL-SAME: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
 // DECL: ::test::SimpleTypeA getExampleTdType() const;
@@ -110,8 +110,8 @@ def C_IndexAttr : TestAttr<"Index"> {
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("index");
 // DECL: }
-// DECL: static ::mlir::Attribute parse(::mlir::MLIRContext *context,
-// DECL-NEXT: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
+// DECL: static ::mlir::Attribute parse(
+// DECL-SAME: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 }
 

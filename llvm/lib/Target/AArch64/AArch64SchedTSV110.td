@@ -90,7 +90,8 @@ def : WriteRes<WriteFMul,  [TSV110UnitF]> { let Latency = 5; }
 // FP Div, Sqrt
 def : WriteRes<WriteFDiv,  [TSV110UnitFSU1]> { let Latency = 18; } 
 
-def : WriteRes<WriteV,     [TSV110UnitF]>     { let Latency = 4; }
+def : WriteRes<WriteVd,    [TSV110UnitF]>     { let Latency = 4; }
+def : WriteRes<WriteVq,    [TSV110UnitF]>     { let Latency = 4; }
 def : WriteRes<WriteVLD,   [TSV110UnitFLdSt]> { let Latency = 5; }
 def : WriteRes<WriteVST,   [TSV110UnitF]>     { let Latency = 1; }
 

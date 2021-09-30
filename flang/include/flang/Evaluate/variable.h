@@ -226,7 +226,7 @@ private:
 
 // R914 coindexed-named-object
 // R924 image-selector, R926 image-selector-spec.
-// C824 severely limits the usage of derived types with coarray ultimate
+// C825 severely limits the usage of derived types with coarray ultimate
 // components: they can't be pointers, allocatables, arrays, coarrays, or
 // function results.  They can be components of other derived types.
 // Although the F'2018 Standard never prohibits multiple image-selectors

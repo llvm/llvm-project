@@ -97,13 +97,6 @@ bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
 bool IsProcName(const Symbol &); // proc-name
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &);
-bool IsExtensibleType(const DerivedTypeSpec *);
-bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
-// Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV
-bool IsTeamType(const DerivedTypeSpec *);
-// Is this derived type either C_PTR or C_FUNPTR from module ISO_C_BINDING
-bool IsIsoCType(const DerivedTypeSpec *);
-bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 // Does a non-PARAMETER symbol have explicit initialization with =value or

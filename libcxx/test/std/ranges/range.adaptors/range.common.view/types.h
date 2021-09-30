@@ -9,6 +9,8 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H
 
+#include <ranges>
+
 #include "test_iterators.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {
@@ -103,5 +105,29 @@ constexpr auto operator-(sentinel_wrapper<RandomAccessIter> sent, RandomAccessIt
 constexpr auto operator-(RandomAccessIter iter, sentinel_wrapper<RandomAccessIter> sent) {
   return iter.base() - sent.base().base();
 }
+
+struct CommonView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+  constexpr explicit CommonView(int* b, int* e) : begin_(b), end_(e) { }
+  friend constexpr int* begin(CommonView& view) { return view.begin_; }
+  friend constexpr int* begin(CommonView const& view) { return view.begin_; }
+  friend constexpr int* end(CommonView& view) { return view.end_; }
+  friend constexpr int* end(CommonView const& view) { return view.end_; }
+};
+static_assert(std::ranges::range<CommonView>);
+static_assert(std::ranges::common_range<CommonView>);
+
+struct NonCommonView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+  constexpr explicit NonCommonView(int* b, int* e) : begin_(b), end_(e) { }
+  friend constexpr int* begin(NonCommonView& view) { return view.begin_; }
+  friend constexpr int* begin(NonCommonView const& view) { return view.begin_; }
+  friend constexpr sentinel_wrapper<int*> end(NonCommonView& view) { return sentinel_wrapper<int*>(view.end_); }
+  friend constexpr sentinel_wrapper<int*> end(NonCommonView const& view) { return sentinel_wrapper<int*>(view.end_); }
+};
+static_assert( std::ranges::range<NonCommonView>);
+static_assert(!std::ranges::common_range<NonCommonView>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H

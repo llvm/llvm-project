@@ -1,4 +1,3 @@
-; RUN: opt -argpromotion -S %s -o - | FileCheck %s
 ; RUN: opt -passes=argpromotion -S %s -o - | FileCheck %s
 
 ; Fix for PR33641. ArgumentPromotion removed the argument to bar but left the call to

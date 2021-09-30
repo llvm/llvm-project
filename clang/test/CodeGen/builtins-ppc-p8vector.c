@@ -1177,10 +1177,13 @@ void test1() {
 // CHECK: llvm.ppc.altivec.vgbbd
 // CHECK-LE: llvm.ppc.altivec.vgbbd
 
-  res_vull = vec_bperm(vux, vux);
-// CHECK: llvm.ppc.altivec.vbpermq
-// CHECK-LE: llvm.ppc.altivec.vbpermq
-// CHECK-PPC: warning: implicit declaration of function 'vec_bperm'
+  res_vull = vec_bperm(vux, vuc);
+  // CHECK: llvm.ppc.altivec.vbpermq
+  // CHECK-LE: llvm.ppc.altivec.vbpermq
+
+  res_vull = vec_bperm(vuc, vuc);
+  // CHECK: llvm.ppc.altivec.vbpermq
+  // CHECK-LE: llvm.ppc.altivec.vbpermq
 
   res_vsll = vec_neg(vsll);
 // CHECK: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
