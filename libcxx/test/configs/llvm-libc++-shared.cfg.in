@@ -54,7 +54,6 @@ config.substitutions.append(('%{exec}',
         pipes.quote(sys.executable),
         pipes.quote(runPy))
 ))
-config.substitutions.append(('%{install}', INSTALL_ROOT))
 
 # Add parameters and features to the config
 libcxx.test.newconfig.configure(

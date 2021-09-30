@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: stdlib={{.+}}-libc++
+// XFAIL: stdlib=libc++
 
 // Skip this test on windows. If built on top of the MSVC runtime, the
 // <cuchar> header actually does exist (although not provided by us).
