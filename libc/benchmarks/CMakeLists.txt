@@ -183,6 +183,7 @@ add_libc_multi_impl_benchmark(bcmp)
 add_executable(libc.benchmarks.memory_functions.opt_host
   EXCLUDE_FROM_ALL
   LibcMemoryGoogleBenchmarkMain.cpp
+  LibcDefaultImplementations.cpp
 )
 
 target_link_libraries(libc.benchmarks.memory_functions.opt_host

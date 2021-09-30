@@ -18373,18 +18373,27 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
         switch (II->getIntrinsicID()) {
         case Intrinsic::fma:
           return !IsFMS(I);
+        case Intrinsic::sadd_sat:
+        case Intrinsic::uadd_sat:
         case Intrinsic::arm_mve_add_predicated:
         case Intrinsic::arm_mve_mul_predicated:
         case Intrinsic::arm_mve_qadd_predicated:
+        case Intrinsic::arm_mve_vhadd:
         case Intrinsic::arm_mve_hadd_predicated:
+        case Intrinsic::arm_mve_vqdmull:
         case Intrinsic::arm_mve_vqdmull_predicated:
+        case Intrinsic::arm_mve_vqdmulh:
         case Intrinsic::arm_mve_qdmulh_predicated:
+        case Intrinsic::arm_mve_vqrdmulh:
         case Intrinsic::arm_mve_qrdmulh_predicated:
         case Intrinsic::arm_mve_fma_predicated:
           return true;
+        case Intrinsic::ssub_sat:
+        case Intrinsic::usub_sat:
         case Intrinsic::arm_mve_sub_predicated:
         case Intrinsic::arm_mve_qsub_predicated:
         case Intrinsic::arm_mve_hsub_predicated:
+        case Intrinsic::arm_mve_vhsub:
           return Operand == 1;
         default:
           return false;
