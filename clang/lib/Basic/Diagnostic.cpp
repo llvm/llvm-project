@@ -408,6 +408,14 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
   return false;
 }
 
+bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
+                                            diag::Group Group,
+                                            diag::Severity Map,
+                                            SourceLocation Loc) {
+  return setSeverityForGroup(Flavor, Diags->getWarningOptionForGroup(Group),
+                             Map, Loc);
+}
+
 bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
                                                          bool Enabled) {
   // If we are enabling this feature, just set the diagnostic mappings to map to

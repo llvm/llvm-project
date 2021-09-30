@@ -129,6 +129,7 @@ namespace {
   };
 
   struct GroupInfo {
+    llvm::StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
     unsigned IDNo;
@@ -174,6 +175,7 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
     Record *Group = DiagGroups[i];
     GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
+    GI.GroupName = Group->getName();
     GI.Defs.push_back(Group);
 
     std::vector<Record*> SubGroups = Group->getValueAsListOfDefs("SubGroups");
@@ -1279,8 +1281,8 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     OS << ", \"";
     OS.write_escaped(DiagTextBuilder.buildForDefinition(&R)) << '"';
 
-    // Warning associated with the diagnostic. This is stored as an index into
-    // the alphabetically sorted warning table.
+    // Warning group associated with the diagnostic. This is stored as an index
+    // into the alphabetically sorted warning group table.
     if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       std::map<std::string, GroupInfo>::iterator I = DiagsInGroup.find(
           std::string(DI->getDef()->getValueAsString("GroupName")));
@@ -1487,18 +1489,20 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
   for (auto const &I: DiagsInGroup)
     MaxLen = std::max(MaxLen, (unsigned)I.first.size());
 
-  OS << "\n#ifdef GET_DIAG_TABLE\n";
+  OS << "\n#ifdef DIAG_ENTRY\n";
   unsigned SubGroupIndex = 1, DiagArrayIndex = 1;
   for (auto const &I: DiagsInGroup) {
     // Group option string.
-    OS << "  { /* ";
+    OS << "DIAG_ENTRY(";
+    OS << I.second.GroupName << " /* ";
+
     if (I.first.find_first_not_of("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "0123456789!@#$%^*-+=:?") !=
         std::string::npos)
       PrintFatalError("Invalid character in diagnostic group '" + I.first +
                       "'");
-    OS << I.first << " */ " << std::string(MaxLen - I.first.size(), ' ');
+    OS << I.first << " */, ";
     // Store a pascal-style length byte at the beginning of the string.
     std::string Name = char(I.first.size()) + I.first;
     OS << GroupNames.GetOrAddStringOffset(Name, false) << ", ";
@@ -1517,7 +1521,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
         DiagArrayIndex += DiagsInPedantic.size();
       DiagArrayIndex += V.size() + 1;
     } else {
-      OS << "/* Empty */     0, ";
+      OS << "0, ";
     }
 
     // Subgroups.
@@ -1530,12 +1534,12 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
         SubGroupIndex += GroupsInPedantic.size();
       SubGroupIndex += SubGroups.size() + 1;
     } else {
-      OS << "/* Empty */         0";
+      OS << "0";
     }
 
-    OS << " },\n";
+    OS << ")\n";
   }
-  OS << "#endif // GET_DIAG_TABLE\n\n";
+  OS << "#endif // DIAG_ENTRY\n\n";
 }
 
 /// Emit the table of diagnostic categories.
