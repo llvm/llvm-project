@@ -93,7 +93,7 @@ bool IsConstantExprHelper::IsConstantStructureConstructorComponent(
 }
 
 bool IsConstantExprHelper::operator()(const ProcedureRef &call) const {
-  // LBOUND, UBOUND, and SIZE with DIM= arguments will have been reritten
+  // LBOUND, UBOUND, and SIZE with DIM= arguments will have been rewritten
   // into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
     if (intrinsic->name == "kind" ||
