@@ -6,9 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This routine provides some synthesis utilities to produce sequences of
-/// values. The names are intentionally kept very short as they tend to occur
-/// in common and widely used contexts.
+/// Provides some synthesis utilities to produce sequences of values. The names
+/// are intentionally kept very short as they tend to occur in common and
+/// widely used contexts.
+///
+/// The `seq(A, B)` function produces a sequence of values from `A` to up to
+/// (but not including) `B`, i.e., [`A`, `B`), that can be safely iterated over.
+/// `seq` supports both integral (e.g., `int`, `char`, `uint32_t`) and enum
+/// types. `seq_inclusive(A, B)` produces a sequence of values from `A` to `B`,
+/// including `B`.
+///
+/// Examples with integral types:
+/// ```
+/// for (int x : seq(0, 3))
+///   outs() << x << " ";
+/// ```
+///
+/// Prints: `0 1 2 `.
+///
+/// ```
+/// for (int x : seq_inclusive(0, 3))
+///   outs() << x << " ";
+/// ```
+///
+/// Prints: `0 1 2 3 `.
 ///
 //===----------------------------------------------------------------------===//
 
