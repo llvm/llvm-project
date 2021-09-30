@@ -1469,7 +1469,7 @@ bool ScopDetection::isErrorBlock(llvm::BasicBlock &BB, const llvm::Region &R) {
   if (!PollyAllowErrorBlocks)
     return false;
 
-  auto It = ErrorBlockCache.insert({{&BB, &R}, false});
+  auto It = ErrorBlockCache.insert({std::make_pair(&BB, &R), false});
   if (!It.second)
     return It.first->getSecond();
 
