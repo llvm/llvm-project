@@ -39,7 +39,6 @@ endif()
 add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
-  CLWarnings.cpp
   CharInfo.cpp
   CodeGenOptions.cpp
   Cuda.cpp

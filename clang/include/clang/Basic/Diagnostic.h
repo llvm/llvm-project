@@ -807,9 +807,6 @@ public:
   bool setSeverityForGroup(diag::Flavor Flavor, StringRef Group,
                            diag::Severity Map,
                            SourceLocation Loc = SourceLocation());
-  bool setSeverityForGroup(diag::Flavor Flavor, diag::Group Group,
-                           diag::Severity Map,
-                           SourceLocation Loc = SourceLocation());
 
   /// Set the warning-as-error flag for the given diagnostic group.
   ///

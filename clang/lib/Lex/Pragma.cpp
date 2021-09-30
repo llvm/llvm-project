@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/Pragma.h"
-#include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/FileManager.h"
@@ -1414,15 +1413,12 @@ struct PragmaWarningHandler : public PragmaHandler {
           return;
         }
       }
-      PP.getDiagnostics().pushMappings(DiagLoc);
       if (Callbacks)
         Callbacks->PragmaWarningPush(DiagLoc, Level);
     } else if (II && II->isStr("pop")) {
       // #pragma warning( pop )
       PP.Lex(Tok);
-      if (!PP.getDiagnostics().popMappings(DiagLoc))
-        PP.Diag(Tok, diag::warn_pragma_diagnostic_cannot_pop);
-      else if (Callbacks)
+      if (Callbacks)
         Callbacks->PragmaWarningPop(DiagLoc);
     } else {
       // #pragma warning( warning-specifier : warning-number-list
@@ -1486,22 +1482,6 @@ struct PragmaWarningHandler : public PragmaHandler {
           }
           Ids.push_back(int(Value));
         }
-
-        // Only act on disable for now.
-        diag::Severity SV = diag::Severity();
-        if (Specifier == PPCallbacks::PWS_Disable)
-          SV = diag::Severity::Ignored;
-        if (SV != diag::Severity())
-          for (int Id : Ids) {
-            if (auto Group = diagGroupFromCLWarningID(Id)) {
-              bool unknownDiag = PP.getDiagnostics().setSeverityForGroup(
-                  diag::Flavor::WarningOrError, *Group, SV, DiagLoc);
-              assert(!unknownDiag &&
-                     "wd table should only contain known diags");
-              (void)unknownDiag;
-            }
-          }
-
         if (Callbacks)
           Callbacks->PragmaWarning(DiagLoc, Specifier, Ids);
 
