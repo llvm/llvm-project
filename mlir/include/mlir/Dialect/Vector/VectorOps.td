@@ -1277,6 +1277,7 @@ def Vector_TransferReadOp :
       "ArrayAttr":$inBounds)>
   ];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

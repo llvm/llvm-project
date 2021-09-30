@@ -58,6 +58,15 @@ Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
   return b.create<ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }
 
+SmallVector<Value>
+mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
+  return llvm::to_vector<4>(
+      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+        return getValueOrCreateConstantIndexOp(b, loc, value);
+      }));
+}
+
 Value ArithBuilder::_and(Value lhs, Value rhs) {
   return b.create<AndOp>(loc, lhs, rhs);
 }
