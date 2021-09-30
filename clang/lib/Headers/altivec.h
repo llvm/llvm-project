@@ -13571,82 +13571,82 @@ vec_extract_fp32_from_shortl(vector unsigned short __a) {
 
 static __inline__ vector signed char __ATTRS_o_ai
 vec_insert(signed char __a, vector signed char __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0xF] = __a;
   return __b;
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_insert(unsigned char __a, vector unsigned char __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0xF] = __a;
   return __b;
 }
 
 static __inline__ vector bool char __ATTRS_o_ai vec_insert(unsigned char __a,
                                                            vector bool char __b,
                                                            int __c) {
-  __b[__c] = __a;
+  __b[__c & 0xF] = __a;
   return __b;
 }
 
 static __inline__ vector signed short __ATTRS_o_ai
 vec_insert(signed short __a, vector signed short __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x7] = __a;
   return __b;
 }
 
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_insert(unsigned short __a, vector unsigned short __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x7] = __a;
   return __b;
 }
 
 static __inline__ vector bool short __ATTRS_o_ai
 vec_insert(unsigned short __a, vector bool short __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x7] = __a;
   return __b;
 }
 
 static __inline__ vector signed int __ATTRS_o_ai
 vec_insert(signed int __a, vector signed int __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x3] = __a;
   return __b;
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_insert(unsigned int __a, vector unsigned int __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x3] = __a;
   return __b;
 }
 
 static __inline__ vector bool int __ATTRS_o_ai vec_insert(unsigned int __a,
                                                           vector bool int __b,
                                                           int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x3] = __a;
   return __b;
 }
 
 #ifdef __VSX__
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_insert(signed long long __a, vector signed long long __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x1] = __a;
   return __b;
 }
 
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_insert(unsigned long long __a, vector unsigned long long __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x1] = __a;
   return __b;
 }
 
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_insert(unsigned long long __a, vector bool long long __b, int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x1] = __a;
   return __b;
 }
 static __inline__ vector double __ATTRS_o_ai vec_insert(double __a,
                                                         vector double __b,
                                                         int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x1] = __a;
   return __b;
 }
 #endif
@@ -13654,7 +13654,7 @@ static __inline__ vector double __ATTRS_o_ai vec_insert(double __a,
 static __inline__ vector float __ATTRS_o_ai vec_insert(float __a,
                                                        vector float __b,
                                                        int __c) {
-  __b[__c] = __a;
+  __b[__c & 0x3] = __a;
   return __b;
 }
 
