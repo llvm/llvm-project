@@ -524,9 +524,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       // case, we should mark the last such terminator as being the killing
       // block, not the copy.
       MachineBasicBlock::iterator KillInst = opBlock.end();
-      MachineBasicBlock::iterator FirstTerm = opBlock.getFirstTerminator();
-      for (MachineBasicBlock::iterator Term = FirstTerm;
-          Term != opBlock.end(); ++Term) {
+      for (MachineBasicBlock::iterator Term = InsertPos; Term != opBlock.end();
+           ++Term) {
         if (Term->readsRegister(SrcReg))
           KillInst = Term;
       }
@@ -536,7 +535,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
         if (reusedIncoming || !IncomingReg) {
           // We may have to rewind a bit if we didn't insert a copy this time.
-          KillInst = FirstTerm;
+          KillInst = InsertPos;
           while (KillInst != opBlock.begin()) {
             --KillInst;
             if (KillInst->isDebugInstr())
@@ -583,9 +582,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
         if (!isLiveOut) {
           MachineBasicBlock::iterator KillInst = opBlock.end();
-          MachineBasicBlock::iterator FirstTerm = opBlock.getFirstTerminator();
-          for (MachineBasicBlock::iterator Term = FirstTerm;
-              Term != opBlock.end(); ++Term) {
+          for (MachineBasicBlock::iterator Term = InsertPos;
+               Term != opBlock.end(); ++Term) {
             if (Term->readsRegister(SrcReg))
               KillInst = Term;
           }
@@ -595,7 +593,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
             if (reusedIncoming || !IncomingReg) {
               // We may have to rewind a bit if we didn't just insert a copy.
-              KillInst = FirstTerm;
+              KillInst = InsertPos;
               while (KillInst != opBlock.begin()) {
                 --KillInst;
                 if (KillInst->isDebugInstr())
