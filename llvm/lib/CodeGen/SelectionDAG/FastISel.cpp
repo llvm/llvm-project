@@ -1152,15 +1152,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
   CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
 
-  if (const Function *F = CI->getCalledFunction())
-    if (F->hasFnAttribute("dontcall")) {
-      unsigned LocCookie = 0;
-      if (MDNode *MD = CI->getMetadata("srcloc"))
-        LocCookie =
-            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-      DiagnosticInfoDontCall D(F->getName(), LocCookie);
-      F->getContext().diagnose(D);
-    }
+  diagnoseDontCall(*CI);
 
   return lowerCallTo(CLI);
 }

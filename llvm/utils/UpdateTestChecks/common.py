@@ -7,12 +7,6 @@ import re
 import subprocess
 import sys
 
-if sys.version_info[0] > 2:
-  class string:
-    expandtabs = str.expandtabs
-else:
-  import string
-
 ##### Common utilities for update_*test_checks.py
 
 
@@ -266,7 +260,7 @@ def scrub_body(body):
   # whitespace in place.
   body = SCRUB_WHITESPACE_RE.sub(r' ', body)
   # Expand the tabs used for indentation.
-  body = string.expandtabs(body, 2)
+  body = str.expandtabs(body, 2)
   # Strip trailing whitespace.
   body = SCRUB_TRAILING_WHITESPACE_TEST_RE.sub(r'', body)
   return body

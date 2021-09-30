@@ -213,6 +213,6 @@ def AArch64PostLegalizerCombinerHelper
                         icmp_to_true_false_known_bits, merge_unmerge,
                         select_combines, fold_merge_to_zext,
                         constant_fold, identity_combines,
-                        ptr_add_immed_chain]> {
+                        ptr_add_immed_chain, overlapping_and]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

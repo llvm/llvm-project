@@ -521,7 +521,7 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
     } else {
       return op.emitOpError("LEN parameters require CHARACTER or derived type");
     }
-    for (auto lp : op.lenParams())
+    for (auto lp : op.typeparams())
       if (!fir::isa_integer(lp.getType()))
         return op.emitOpError("LEN parameters must be integral type");
   }

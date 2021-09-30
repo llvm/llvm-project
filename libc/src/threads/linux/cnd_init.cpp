@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CndVar.h"
+
 #include "src/threads/cnd_init.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, cnd_init, (cnd_t * cond)) { return thrd_success; }
+LLVM_LIBC_FUNCTION(int, cnd_init, (cnd_t * cond)) {
+  CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
+  return CndVar::init(cndvar);
+}
 
 } // namespace __llvm_libc

@@ -159,35 +159,35 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   RegionMemUsage(LoAppMemBeg(), LoAppMemEnd(), &app_res, &app_dirty);
 #endif
 
-  StackDepotStats *stacks = StackDepotGetStats();
+  StackDepotStats stacks = StackDepotGetStats();
   uptr nthread, nlive;
   ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
-  internal_snprintf(buf, buf_size,
-    "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#if !SANITIZER_GO
-    "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "heap     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#else  // !SANITIZER_GO
+  internal_snprintf(
+      buf, buf_size,
+      "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+#  if !SANITIZER_GO
+      "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "heap     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+#  else  // !SANITIZER_GO
       "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#endif
-    "stacks: %zd unique IDs, %zd kB allocated\n"
-    "threads: %zd total, %zd live\n"
-    "------------------------------\n",
-    ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
-    MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
-    TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
-#if !SANITIZER_GO
-    LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
-    HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
-    HeapMemBeg(), HeapMemEnd(), heap_res / 1024, heap_dirty / 1024,
-#else  // !SANITIZER_GO
+#  endif
+      "stacks: %zd unique IDs, %zd kB allocated\n"
+      "threads: %zd total, %zd live\n"
+      "------------------------------\n",
+      ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
+      MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
+      TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
+#  if !SANITIZER_GO
+      LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
+      HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
+      HeapMemBeg(), HeapMemEnd(), heap_res / 1024, heap_dirty / 1024,
+#  else  // !SANITIZER_GO
       LoAppMemBeg(), LoAppMemEnd(), app_res / 1024, app_dirty / 1024,
-#endif
-    stacks->n_uniq_ids, stacks->allocated / 1024,
-    nthread, nlive);
+#  endif
+      stacks.n_uniq_ids, stacks.allocated / 1024, nthread, nlive);
 }
 
 #  if !SANITIZER_GO
@@ -283,13 +283,17 @@ uptr ExtractLongJmpSp(uptr *env) {
 }
 
 #if !SANITIZER_GO
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // The pointer to the ThreadState object is stored in the shadow memory
   // of the tls.
   uptr tls_end = tls_addr + tls_size;
   uptr thread_identity = (uptr)pthread_self();
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
   if (thread_identity == main_thread_identity) {
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, tls_size);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, tls_size);
   } else {
     uptr thr_state_start = thread_identity;
     uptr thr_state_end = thr_state_start + sizeof(uptr);
@@ -297,10 +301,8 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
     CHECK_LE(thr_state_start, tls_addr + tls_size);
     CHECK_GE(thr_state_end, tls_addr);
     CHECK_LE(thr_state_end, tls_addr + tls_size);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr,
-                            thr_state_start - tls_addr);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, thr_state_end,
-                            tls_end - thr_state_end);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, thr_state_start - tls_addr);
+    MemoryRangeImitateWrite(thr, pc, thr_state_end, tls_end - thr_state_end);
   }
 }
 #endif

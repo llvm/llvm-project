@@ -155,7 +155,7 @@ public:
   void PragmaDiagnosticPop(SourceLocation Loc, StringRef Namespace) override;
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Map, StringRef Str) override;
-  void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
                      ArrayRef<int> Ids) override;
   void PragmaWarningPush(SourceLocation Loc, int Level) override;
   void PragmaWarningPop(SourceLocation Loc) override;
@@ -580,10 +580,24 @@ void PrintPPOutputPPCallbacks::PragmaDiagnostic(SourceLocation Loc,
 }
 
 void PrintPPOutputPPCallbacks::PragmaWarning(SourceLocation Loc,
-                                             StringRef WarningSpec,
+                                             PragmaWarningSpecifier WarningSpec,
                                              ArrayRef<int> Ids) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
-  OS << "#pragma warning(" << WarningSpec << ':';
+
+  OS << "#pragma warning(";
+  switch(WarningSpec) {
+    case PWS_Default:  OS << "default"; break;
+    case PWS_Disable:  OS << "disable"; break;
+    case PWS_Error:    OS << "error"; break;
+    case PWS_Once:     OS << "once"; break;
+    case PWS_Suppress: OS << "suppress"; break;
+    case PWS_Level1:   OS << '1'; break;
+    case PWS_Level2:   OS << '2'; break;
+    case PWS_Level3:   OS << '3'; break;
+    case PWS_Level4:   OS << '4'; break;
+  }
+  OS << ':';
+
   for (ArrayRef<int>::iterator I = Ids.begin(), E = Ids.end(); I != E; ++I)
     OS << ' ' << *I;
   OS << ')';

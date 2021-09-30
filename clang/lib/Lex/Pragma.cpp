@@ -1432,14 +1432,19 @@ struct PragmaWarningHandler : public PragmaHandler {
 
         // Figure out which warning specifier this is.
         bool SpecifierValid;
-        StringRef Specifier;
-        llvm::SmallString<1> SpecifierBuf;
+        PPCallbacks::PragmaWarningSpecifier Specifier;
         if (II) {
-          Specifier = II->getName();
-          SpecifierValid = llvm::StringSwitch<bool>(Specifier)
-                               .Cases("default", "disable", "error", "once",
-                                      "suppress", true)
-                               .Default(false);
+          int SpecifierInt = llvm::StringSwitch<int>(II->getName())
+                                 .Case("default", PPCallbacks::PWS_Default)
+                                 .Case("disable", PPCallbacks::PWS_Disable)
+                                 .Case("error", PPCallbacks::PWS_Error)
+                                 .Case("once", PPCallbacks::PWS_Once)
+                                 .Case("suppress", PPCallbacks::PWS_Suppress)
+                                 .Default(-1);
+          if ((SpecifierValid = SpecifierInt != -1))
+            Specifier =
+                static_cast<PPCallbacks::PragmaWarningSpecifier>(SpecifierInt);
+
           // If we read a correct specifier, snatch next token (that should be
           // ":", checked later).
           if (SpecifierValid)
@@ -1447,9 +1452,10 @@ struct PragmaWarningHandler : public PragmaHandler {
         } else {
           // Token is a numeric constant. It should be either 1, 2, 3 or 4.
           uint64_t Value;
-          Specifier = PP.getSpelling(Tok, SpecifierBuf);
           if (PP.parseSimpleIntegerLiteral(Tok, Value)) {
-            SpecifierValid = (Value >= 1) && (Value <= 4);
+            if ((SpecifierValid = (Value >= 1) && (Value <= 4)))
+              Specifier = static_cast<PPCallbacks::PragmaWarningSpecifier>(
+                  PPCallbacks::PWS_Level1 + Value - 1);
           } else
             SpecifierValid = false;
           // Next token already snatched by parseSimpleIntegerLiteral.

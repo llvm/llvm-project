@@ -122,17 +122,17 @@ void ReportStats() {
   ScopedErrorReportLock l;
 
   if (__msan_get_track_origins() > 0) {
-    StackDepotStats *stack_depot_stats = StackDepotGetStats();
+    StackDepotStats stack_depot_stats = StackDepotGetStats();
     // FIXME: we want this at normal exit, too!
     // FIXME: but only with verbosity=1 or something
-    Printf("Unique heap origins: %zu\n", stack_depot_stats->n_uniq_ids);
-    Printf("Stack depot allocated bytes: %zu\n", stack_depot_stats->allocated);
+    Printf("Unique heap origins: %zu\n", stack_depot_stats.n_uniq_ids);
+    Printf("Stack depot allocated bytes: %zu\n", stack_depot_stats.allocated);
 
-    StackDepotStats *chained_origin_depot_stats = ChainedOriginDepotGetStats();
+    StackDepotStats chained_origin_depot_stats = ChainedOriginDepotGetStats();
     Printf("Unique origin histories: %zu\n",
-           chained_origin_depot_stats->n_uniq_ids);
+           chained_origin_depot_stats.n_uniq_ids);
     Printf("History depot allocated bytes: %zu\n",
-           chained_origin_depot_stats->allocated);
+           chained_origin_depot_stats.allocated);
   }
 }
 

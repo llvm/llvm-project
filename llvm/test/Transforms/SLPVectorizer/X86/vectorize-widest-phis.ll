@@ -8,33 +8,32 @@ define void @foo() {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 6.553500e+04, undef
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[CONV]], i32 1
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ [[SUB]], [[BB1]] ], [ [[TMP9:%.*]], [[BB3:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ [[CONV]], [[BB1]] ], [ [[TMP10:%.*]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ undef, [[BB1]] ], [ [[TMP11:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP18:%.*]], [[BB3:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> undef, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x float> [[TMP2]], <2 x float> undef
-; CHECK-NEXT:    [[EXT3:%.*]] = fpext float [[TMP1]] to double
 ; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[TMP3]], [[CONV2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = fcmp ogt double [[ADD1]], [[EXT3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fptrunc double [[ADD1]] to float
-; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[CMP3]], float [[TMP1]], float [[TMP7]]
-; CHECK-NEXT:    [[EXT4:%.*]] = fpext float [[TMP0]] to double
-; CHECK-NEXT:    [[SUB1:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp ogt double [[SUB1]], [[EXT4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc double [[SUB1]] to float
-; CHECK-NEXT:    [[SEL4:%.*]] = select i1 [[CMP4]], float [[TMP0]], float [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[CONV2]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = fcmp ogt <4 x double> [[TMP13]], [[TMP4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc <4 x double> [[TMP15]] to <4 x float>
+; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP2]], <4 x float> [[TMP16]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP9]] = phi float [ [[SEL4]], [[BB4]] ], [ [[TMP0]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP10]] = phi float [ [[SEL3]], [[BB4]] ], [ [[TMP1]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP11]] = phi <2 x float> [ [[TMP6]], [[BB4]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP18]] = phi <4 x float> [ [[TMP17]], [[BB4]] ], [ [[TMP2]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 entry:

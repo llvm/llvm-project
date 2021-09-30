@@ -77,15 +77,12 @@ int CSProfileGenerator::MaxContextDepth = -1;
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const ContextSampleCounterMap &SampleCounters,
-                             enum PerfScriptType SampleType) {
+                             bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
-  if (SampleType == PERF_LBR) {
-    // TODO: Support probe based profile generation
-    Generator.reset(new ProfileGenerator(Binary, SampleCounters));
-  } else if (SampleType == PERF_LBR_STACK) {
+  if (ProfileIsCS) {
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
   } else {
-    llvm_unreachable("Unsupported perfscript!");
+    Generator.reset(new ProfileGenerator(Binary, SampleCounters));
   }
 
   return Generator;
@@ -425,6 +422,10 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
 
 void CSProfileGenerator::generateProfile() {
   FunctionSamples::ProfileIsCS = true;
+
+  if (Binary->getTrackFuncContextSize())
+    computeSizeForProfiledFunctions();
+
   if (Binary->usePseudoProbes()) {
     // Enable pseudo probe functionalities in SampleProf
     FunctionSamples::ProfileIsProbeBased = true;
@@ -433,6 +434,29 @@ void CSProfileGenerator::generateProfile() {
     generateLineNumBasedProfile();
   }
   postProcessProfiles();
+}
+
+void CSProfileGenerator::computeSizeForProfiledFunctions() {
+  // Hash map to deduplicate the function range and the item is a pair of
+  // function start and end offset.
+  std::unordered_map<uint64_t, uint64_t> FuncRanges;
+  // Go through all the ranges in the CS counters, use the start of the range to
+  // look up the function it belongs and record the function range.
+  for (const auto &CI : SampleCounters) {
+    for (auto Item : CI.second.RangeCounter) {
+      // FIXME: Filter the bogus crossing function range.
+      uint64_t RangeStartOffset = Item.first.first;
+      auto FuncRange = Binary->findFuncOffsetRange(RangeStartOffset);
+      if (FuncRange.second != 0)
+        FuncRanges[FuncRange.first] = FuncRange.second;
+    }
+  }
+
+  for (auto I : FuncRanges) {
+    uint64_t StartOffset = I.first;
+    uint64_t EndOffset = I.second;
+    Binary->computeInlinedContextSizeForRange(StartOffset, EndOffset);
+  }
 }
 
 void CSProfileGenerator::generateLineNumBasedProfile() {

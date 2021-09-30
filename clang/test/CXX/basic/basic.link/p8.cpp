@@ -27,7 +27,7 @@ extern Linkage1 linkage1f();
 void linkage2f(Linkage2);
 
 void use_linkage() {
-  &linkage1v, &linkage1iv, &linkage2v, &linkage2iv, &linkaget1v; // expected-warning 5{{unused}}
+  &linkage1v, &linkage1iv, &linkage2v, &linkage2iv, &linkaget1v; // expected-warning 4{{left operand of comma operator has no effect}} expected-warning {{unused}}
   linkage1f();
   linkage2f({});
 }

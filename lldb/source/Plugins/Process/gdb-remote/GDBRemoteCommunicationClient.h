@@ -315,8 +315,6 @@ public:
       uint32_t length,       // Byte Size of breakpoint or watchpoint
       std::chrono::seconds interrupt_timeout); // Time to wait for an interrupt
 
-  bool SetNonStopMode(const bool enable);
-
   void TestPacketSpeed(const uint32_t num_packets, uint32_t max_send,
                        uint32_t max_recv, uint64_t recv_amount, bool json,
                        Stream &strm);

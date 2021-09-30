@@ -29,7 +29,6 @@ bb:
 
 bb2:
   ret i32* %RHS
-
 }
 
 define i32 *@test2(i32 %A, i32 %Offset) {
@@ -62,7 +61,6 @@ bb:
 
 bb2:
   ret i32* %RHS
-
 }
 
 ; Perform the transformation only if we know that the GEPs used are inbounds.
@@ -93,7 +91,6 @@ bb:
 
 bb2:
   ret i32* %RHS
-
 }
 
 ; An inttoptr that requires an extension or truncation will be opaque when determining
@@ -130,7 +127,6 @@ bb:
 
 bb2:
   ret i32* %RHS
-
 }
 
 declare i32* @fun_ptr()
@@ -175,7 +171,6 @@ bb2:
 lpad:
   %l = landingpad { i8*, i32 } cleanup
   ret i32* null
-
 }
 
 declare i32 @fun_i32()
@@ -222,7 +217,6 @@ bb2:
 lpad:
   %l = landingpad { i8*, i32 } cleanup
   ret i32* null
-
 }
 
 
@@ -297,7 +291,6 @@ define i1 @test8(i64* %in, i64 %offset) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
-
   %ld = load i64, i64* %in, align 8
   %casti8 = inttoptr i64 %ld to i8*
   %gepi8 = getelementptr inbounds i8, i8* %casti8, i64 %offset
@@ -306,6 +299,4 @@ entry:
   %gepi32 = getelementptr inbounds i32*, i32** %ptrcast, i64 1
   %cmp = icmp eq i32** %gepi32, %cast
   ret i1 %cmp
-
-
 }

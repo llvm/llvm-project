@@ -49,6 +49,6 @@ namespace rdar14183893 {
 
   class A {
     TFP m_p;
-    void Enable() { 0, A(); } // expected-warning {{unused}}
+    void Enable() { 0, A(); } // expected-warning {{left operand of comma operator has no effect}}
   };
 }

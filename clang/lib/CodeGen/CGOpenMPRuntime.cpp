@@ -3453,8 +3453,7 @@ void CGOpenMPRuntime::emitStructureKernelDesc(CodeGenModule &CGM,
   llvm::Constant *AttrData[] = {
       llvm::ConstantInt::get(CGM.Int16Ty, 2), // Version
       llvm::ConstantInt::get(CGM.Int16Ty, 8), // Size in bytes
-      llvm::ConstantInt::get(CGM.Int16Ty, WG_Size),
-      llvm::ConstantInt::get(CGM.Int8Ty, Mode)}; // 0 => SPMD, 1 => GENERIC
+      llvm::ConstantInt::get(CGM.Int16Ty, WG_Size)};
 
   llvm::GlobalVariable *AttrImages = createGlobalStruct(
       CGM, getTgtAttributeStructQTy(), isDefaultLocationConstant(), AttrData,
@@ -3465,7 +3464,6 @@ void CGOpenMPRuntime::emitStructureKernelDesc(CodeGenModule &CGM,
 // Create Tgt Attribute Sruct type.
 QualType CGOpenMPRuntime::getTgtAttributeStructQTy() {
   ASTContext &C = CGM.getContext();
-  QualType KmpInt8Ty = C.getIntTypeForBitwidth(/*Width=*/8, /*Signed=*/1);
   QualType KmpInt16Ty = C.getIntTypeForBitwidth(/*Width=*/16, /*Signed=*/1);
   if (TgtAttributeStructQTy.isNull()) {
     RecordDecl *RD = C.buildImplicitRecord("__tgt_attribute_struct");
@@ -3473,7 +3471,6 @@ QualType CGOpenMPRuntime::getTgtAttributeStructQTy() {
     addFieldToRecordDecl(C, RD, KmpInt16Ty); // Version
     addFieldToRecordDecl(C, RD, KmpInt16Ty); // Struct Size in bytes.
     addFieldToRecordDecl(C, RD, KmpInt16Ty); // WG_size
-    addFieldToRecordDecl(C, RD, KmpInt8Ty);  // Mode
     RD->completeDefinition();
     TgtAttributeStructQTy = C.getRecordType(RD);
   }
