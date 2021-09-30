@@ -3536,7 +3536,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Args.reserve(II->getNumArgOperands());
 
     // Populate the argument list.
-    for (auto &Arg : II->arg_operands()) {
+    for (auto &Arg : II->args()) {
       ArgListEntry Entry;
       Entry.Val = Arg;
       Entry.Ty = Arg->getType();

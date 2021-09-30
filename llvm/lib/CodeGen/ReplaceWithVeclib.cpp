@@ -70,7 +70,7 @@ static bool replaceWithTLIFunction(CallInst &CI, const StringRef TLIName) {
   // Replace the call to the vector intrinsic with a call
   // to the corresponding function from the vector library.
   IRBuilder<> IRBuilder(&CI);
-  SmallVector<Value *> Args(CI.arg_operands());
+  SmallVector<Value *> Args(CI.args());
   // Preserve the operand bundles.
   SmallVector<OperandBundleDef, 1> OpBundles;
   CI.getOperandBundlesAsDefs(OpBundles);
@@ -106,7 +106,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // all vector operands have identical vector width.
   ElementCount VF = ElementCount::getFixed(0);
   SmallVector<Type *> ScalarTypes;
-  for (auto Arg : enumerate(CI.arg_operands())) {
+  for (auto Arg : enumerate(CI.args())) {
     auto *ArgType = Arg.value()->getType();
     // Vector calls to intrinsics can still have
     // scalar operands for specific arguments.

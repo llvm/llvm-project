@@ -5096,7 +5096,7 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
     const WithOverflowInst *II;
     if (match(I, m_ExtractValue(m_WithOverflowInst(II))) &&
         (match(ValAssumedPoison, m_ExtractValue(m_Specific(II))) ||
-         llvm::is_contained(II->arg_operands(), ValAssumedPoison)))
+         llvm::is_contained(II->args(), ValAssumedPoison)))
       return true;
   }
   return false;
