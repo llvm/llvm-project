@@ -76,6 +76,7 @@ namespace clang {
   using llvm::make_error;
   using llvm::Error;
   using llvm::Expected;
+  using ExpectedTypePtr = llvm::Expected<const Type *>;
   using ExpectedType = llvm::Expected<QualType>;
   using ExpectedStmt = llvm::Expected<Stmt *>;
   using ExpectedExpr = llvm::Expected<Expr *>;
@@ -160,7 +161,9 @@ namespace clang {
     // Call the import function of ASTImporter for a baseclass of type `T` and
     // cast the return value to `T`.
     template <typename T>
-    Expected<T *> import(T *From) {
+    auto import(T *From)
+        -> std::conditional_t<std::is_base_of<Type, T>::value,
+                              Expected<const T *>, Expected<T *>> {
       auto ToOrErr = Importer.Import(From);
       if (!ToOrErr)
         return ToOrErr.takeError();
@@ -168,7 +171,7 @@ namespace clang {
     }
 
     template <typename T>
-    Expected<T *> import(const T *From) {
+    auto import(const T *From) {
       return import(const_cast<T *>(From));
     }
 
@@ -1164,12 +1167,12 @@ ASTNodeImporter::VisitMemberPointerType(const MemberPointerType *T) {
   if (!ToPointeeTypeOrErr)
     return ToPointeeTypeOrErr.takeError();
 
-  ExpectedType ClassTypeOrErr = import(QualType(T->getClass(), 0));
+  ExpectedTypePtr ClassTypeOrErr = import(T->getClass());
   if (!ClassTypeOrErr)
     return ClassTypeOrErr.takeError();
 
-  return Importer.getToContext().getMemberPointerType(
-      *ToPointeeTypeOrErr, (*ClassTypeOrErr).getTypePtr());
+  return Importer.getToContext().getMemberPointerType(*ToPointeeTypeOrErr,
+                                                      *ClassTypeOrErr);
 }
 
 ExpectedType
@@ -1475,34 +1478,32 @@ ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
     const SubstTemplateTypeParmType *T) {
-  ExpectedType ReplacedOrErr = import(QualType(T->getReplacedParameter(), 0));
+  Expected<const TemplateTypeParmType *> ReplacedOrErr =
+      import(T->getReplacedParameter());
   if (!ReplacedOrErr)
     return ReplacedOrErr.takeError();
-  const TemplateTypeParmType *Replaced =
-      cast<TemplateTypeParmType>((*ReplacedOrErr).getTypePtr());
 
   ExpectedType ToReplacementTypeOrErr = import(T->getReplacementType());
   if (!ToReplacementTypeOrErr)
     return ToReplacementTypeOrErr.takeError();
 
   return Importer.getToContext().getSubstTemplateTypeParmType(
-        Replaced, (*ToReplacementTypeOrErr).getCanonicalType());
+      *ReplacedOrErr, ToReplacementTypeOrErr->getCanonicalType());
 }
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
     const SubstTemplateTypeParmPackType *T) {
-  ExpectedType ReplacedOrErr = import(QualType(T->getReplacedParameter(), 0));
+  Expected<const TemplateTypeParmType *> ReplacedOrErr =
+      import(T->getReplacedParameter());
   if (!ReplacedOrErr)
     return ReplacedOrErr.takeError();
-  const TemplateTypeParmType *Replaced =
-      cast<TemplateTypeParmType>(ReplacedOrErr->getTypePtr());
 
   Expected<TemplateArgument> ToArgumentPack = import(T->getArgumentPack());
   if (!ToArgumentPack)
     return ToArgumentPack.takeError();
 
   return Importer.getToContext().getSubstTemplateTypeParmPackType(
-      Replaced, *ToArgumentPack);
+      *ReplacedOrErr, *ToArgumentPack);
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
@@ -1517,7 +1518,7 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
     return std::move(Err);
 
   QualType ToCanonType;
-  if (!QualType(T, 0).isCanonical()) {
+  if (!T->isCanonicalUnqualified()) {
     QualType FromCanonType
       = Importer.getFromContext().getCanonicalType(QualType(T, 0));
     if (ExpectedType TyOrErr = import(FromCanonType))
@@ -8378,7 +8379,7 @@ ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
   return make_error<ImportError>(ImportError::UnsupportedConstruct);
 }
 
-Expected<const Type *> ASTImporter::Import(const Type *FromT) {
+ExpectedTypePtr ASTImporter::Import(const Type *FromT) {
   if (!FromT)
     return FromT;
 
@@ -8388,7 +8389,7 @@ Expected<const Type *> ASTImporter::Import(const Type *FromT) {
   if (Pos != ImportedTypes.end())
     return Pos->second;
 
-  // Import the type
+  // Import the type.
   ASTNodeImporter Importer(*this);
   ExpectedType ToTOrErr = Importer.Visit(FromT);
   if (!ToTOrErr)
@@ -8404,7 +8405,7 @@ Expected<QualType> ASTImporter::Import(QualType FromT) {
   if (FromT.isNull())
     return QualType{};
 
-  Expected<const Type *> ToTyOrErr = Import(FromT.getTypePtr());
+  ExpectedTypePtr ToTyOrErr = Import(FromT.getTypePtr());
   if (!ToTyOrErr)
     return ToTyOrErr.takeError();
 
@@ -8904,12 +8905,11 @@ ASTImporter::Import(NestedNameSpecifier *FromNNS) {
 
   case NestedNameSpecifier::TypeSpec:
   case NestedNameSpecifier::TypeSpecWithTemplate:
-    if (Expected<QualType> TyOrErr =
-            Import(QualType(FromNNS->getAsType(), 0u))) {
+    if (ExpectedTypePtr TyOrErr = Import(FromNNS->getAsType())) {
       bool TSTemplate =
           FromNNS->getKind() == NestedNameSpecifier::TypeSpecWithTemplate;
       return NestedNameSpecifier::Create(ToContext, Prefix, TSTemplate,
-                                         TyOrErr->getTypePtr());
+                                         *TyOrErr);
     } else {
       return TyOrErr.takeError();
     }
@@ -9544,16 +9544,14 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
         }
       } else {
         FromElemTy = FromValue.getLValueBase().getTypeInfoType();
-        QualType ImpTypeInfo = importChecked(
-            Err,
-            QualType(FromValue.getLValueBase().get<TypeInfoLValue>().getType(),
-                     0));
+        const Type *ImpTypeInfo = importChecked(
+            Err, FromValue.getLValueBase().get<TypeInfoLValue>().getType());
         QualType ImpType =
             importChecked(Err, FromValue.getLValueBase().getTypeInfoType());
         if (Err)
           return std::move(Err);
-        Base = APValue::LValueBase::getTypeInfo(
-            TypeInfoLValue(ImpTypeInfo.getTypePtr()), ImpType);
+        Base = APValue::LValueBase::getTypeInfo(TypeInfoLValue(ImpTypeInfo),
+                                                ImpType);
       }
     }
     CharUnits Offset = FromValue.getLValueOffset();
