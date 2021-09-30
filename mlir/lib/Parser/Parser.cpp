@@ -1093,8 +1093,6 @@ Operation *OperationParser::parseGenericOperation(Block *insertBlock,
   return op;
 }
 
-MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
-
 namespace {
 class CustomOpAsmParser : public AsmParserImpl<OpAsmParser> {
 public:

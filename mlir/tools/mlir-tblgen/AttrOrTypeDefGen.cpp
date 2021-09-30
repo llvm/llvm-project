@@ -244,7 +244,8 @@ static const char *const defDeclParametricBeginStr = R"(
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 /// {1}: Extra parser parameters.
 static const char *const defDeclParsePrintStr = R"(
-    static ::mlir::{0} parse(::mlir::DialectAsmParser &parser{1});
+    static ::mlir::{0} parse(::mlir::MLIRContext *context,
+                             ::mlir::DialectAsmParser &parser{1});
     void print(::mlir::DialectAsmPrinter &printer) const;
 )";
 
@@ -483,7 +484,7 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 /// {1}: Additional parser parameters.
 static const char *const defParserDispatchStartStr = R"(
-static ::mlir::OptionalParseResult generated{0}Parser(
+static ::mlir::OptionalParseResult generated{0}Parser(::mlir::MLIRContext *context,
                                       ::mlir::DialectAsmParser &parser,
                                       ::llvm::StringRef mnemonic{1},
                                       ::mlir::{0} &value) {{
@@ -719,11 +720,10 @@ void DefGenerator::emitParsePrint(const AttrOrTypeDef &def) {
   // Emit the parser code, if specified.
   if (Optional<StringRef> parserCode = def.getParserCode()) {
     FmtContext fmtCtxt;
-    fmtCtxt.addSubst("_parser", "parser")
-        .addSubst("_ctxt", "parser.getContext()");
+    fmtCtxt.addSubst("_parser", "parser").addSubst("_ctxt", "context");
 
     // The mnenomic must be defined so the dispatcher knows how to dispatch.
-    os << llvm::formatv("::mlir::{0} {1}::parse("
+    os << llvm::formatv("::mlir::{0} {1}::parse(::mlir::MLIRContext *context, "
                         "::mlir::DialectAsmParser &parser",
                         valueType, def.getCppClassName());
     if (isAttrGenerator) {
@@ -894,12 +894,11 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       // If the def has no parameters and no parser code, just invoke a normal
       // `get`.
       if (def.getNumParameters() == 0 && !def.getParserCode()) {
-        os << "get(parser.getContext());\n";
-        os << "    return ::mlir::success(!!value);\n  }\n";
+        os << "get(context);\n    return ::mlir::success(!!value);\n  }\n";
         continue;
       }
 
-      os << "parse(parser" << (isAttrGenerator ? ", type" : "")
+      os << "parse(context, parser" << (isAttrGenerator ? ", type" : "")
          << ");\n    return ::mlir::success(!!value);\n  }\n";
     }
   }

@@ -38,7 +38,8 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
-Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute SparseTensorEncodingAttr::parse(MLIRContext *context,
+                                          DialectAsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
   // Parse the data as a dictionary.
@@ -112,8 +113,8 @@ Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
     }
   }
   // Construct struct-like storage for attribute.
-  return parser.getChecked<SparseTensorEncodingAttr>(parser.getContext(), dlt,
-                                                     map, ptr, ind);
+  return parser.getChecked<SparseTensorEncodingAttr>(context, dlt, map, ptr,
+                                                     ind);
 }
 
 void SparseTensorEncodingAttr::print(DialectAsmPrinter &printer) const {
@@ -297,7 +298,8 @@ Attribute SparseTensorDialect::parseAttribute(DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&attrTag)))
     return Attribute();
   Attribute attr;
-  auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
+  auto parseResult =
+      generatedAttributeParser(getContext(), parser, attrTag, type, attr);
   if (parseResult.hasValue())
     return attr;
   parser.emitError(parser.getNameLoc(), "unknown sparse tensor attribute");

@@ -147,7 +147,7 @@ static ParseResult parseIncludeOp(OpAsmParser &parser, OperationState &result) {
 
   if (standardInclude)
     result.addAttribute("is_standard_include",
-                        UnitAttr::get(parser.getContext()));
+                        UnitAttr::get(parser.getBuilder().getContext()));
 
   return success();
 }
@@ -166,7 +166,8 @@ static ParseResult parseIncludeOp(OpAsmParser &parser, OperationState &result) {
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.cpp.inc"
 
-Attribute emitc::OpaqueAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute emitc::OpaqueAttr::parse(MLIRContext *context,
+                                   DialectAsmParser &parser, Type type) {
   if (parser.parseLess())
     return Attribute();
   std::string value;
@@ -177,7 +178,7 @@ Attribute emitc::OpaqueAttr::parse(DialectAsmParser &parser, Type type) {
   }
   if (parser.parseGreater())
     return Attribute();
-  return get(parser.getContext(), value);
+  return get(context, value);
 }
 
 Attribute EmitCDialect::parseAttribute(DialectAsmParser &parser,
@@ -188,7 +189,7 @@ Attribute EmitCDialect::parseAttribute(DialectAsmParser &parser,
     return Attribute();
   Attribute genAttr;
   OptionalParseResult parseResult =
-      generatedAttributeParser(parser, mnemonic, type, genAttr);
+      generatedAttributeParser(getContext(), parser, mnemonic, type, genAttr);
   if (parseResult.hasValue())
     return genAttr;
   parser.emitError(typeLoc, "unknown attribute in EmitC dialect");
@@ -213,7 +214,7 @@ void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
 
-Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
+Type emitc::OpaqueType::parse(MLIRContext *context, DialectAsmParser &parser) {
   if (parser.parseLess())
     return Type();
   std::string value;
@@ -224,7 +225,7 @@ Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
   }
   if (parser.parseGreater())
     return Type();
-  return get(parser.getContext(), value);
+  return get(context, value);
 }
 
 Type EmitCDialect::parseType(DialectAsmParser &parser) const {
@@ -234,7 +235,7 @@ Type EmitCDialect::parseType(DialectAsmParser &parser) const {
     return Type();
   Type genType;
   OptionalParseResult parseResult =
-      generatedTypeParser(parser, mnemonic, genType);
+      generatedTypeParser(getContext(), parser, mnemonic, genType);
   if (parseResult.hasValue())
     return genType;
   parser.emitError(typeLoc, "unknown type in EmitC dialect");
