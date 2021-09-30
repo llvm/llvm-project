@@ -60,15 +60,6 @@ static bool verifyInType(mlir::Type inType,
   return false;
 }
 
-static bool verifyRecordLenParams(mlir::Type inType, unsigned numLenParams) {
-  if (numLenParams > 0) {
-    if (auto rt = inType.dyn_cast<fir::RecordType>())
-      return numLenParams != rt.getNumLenParams();
-    return true;
-  }
-  return false;
-}
-
 static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
   auto ty = fir::unwrapSequenceType(inType);
   if (numParams > 0) {
@@ -155,20 +146,68 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-mlir::Type fir::AllocaOp::getAllocatedType() {
-  return getType().cast<ReferenceType>().getEleTy();
-}
-
 /// Create a legal memory reference as return type
-mlir::Type fir::AllocaOp::wrapResultType(mlir::Type intype) {
+static mlir::Type wrapAllocaResultType(mlir::Type intype) {
   // FIR semantics: memory references to memory references are disallowed
   if (intype.isa<ReferenceType>())
     return {};
   return ReferenceType::get(intype);
 }
 
+mlir::Type fir::AllocaOp::getAllocatedType() {
+  return getType().cast<ReferenceType>().getEleTy();
+}
+
 mlir::Type fir::AllocaOp::getRefTy(mlir::Type ty) {
   return ReferenceType::get(ty);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          llvm::StringRef uniqName, mlir::ValueRange typeparams,
+                          mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniqName);
+  build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          llvm::StringRef uniqName, llvm::StringRef bindcName,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  auto bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
+        bindcAttr, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, wrapAllocaResultType(inType), inType, {}, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+static mlir::LogicalResult verify(fir::AllocaOp &op) {
+  llvm::SmallVector<llvm::StringRef> visited;
+  if (verifyInType(op.getInType(), visited, op.numShapeOperands()))
+    return op.emitOpError("invalid type for allocation");
+  if (verifyTypeParamCount(op.getInType(), op.numLenParams()))
+    return op.emitOpError("LEN params do not correspond to type");
+  mlir::Type outType = op.getType();
+  if (!outType.isa<fir::ReferenceType>())
+    return op.emitOpError("must be a !fir.ref type");
+  if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
+    return op.emitOpError("cannot allocate !fir.box of unknown rank or type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
