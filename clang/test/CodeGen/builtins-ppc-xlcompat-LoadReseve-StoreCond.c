@@ -24,7 +24,7 @@ short test_lharx(volatile short *a) {
   return __lharx(a);
 }
 
-char test_lbarx(volatile unsigned char *a) {
+char test_lbarx(volatile char *a) {
   // CHECK-LABEL: @test_lbarx
   // CHECK: %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* %a)
   // CHECK-NON-PWR8-ERR:  error: this builtin is only valid on POWER8 or later CPUs
@@ -45,4 +45,19 @@ int test_sthcx(volatile short *a, short val) {
   // CHECK: %2 = tail call i32 @llvm.ppc.sthcx(i8* %0, i32 %1)
   // CHECK-NON-PWR8-ERR:  error: this builtin is only valid on POWER8 or later CPUs
   return __sthcx(a, val);
+}
+
+// Extra test cases that previously caused error during usage.
+int test_lharx_intret(volatile short *a) {
+  // CHECK-LABEL: @test_lharx_intret
+  // CHECK: %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(i16* %a)
+  // CHECK-NON-PWR8-ERR:  error: this builtin is only valid on POWER8 or later CPUs
+  return __lharx(a);
+}
+
+int test_lbarx_intret(volatile char *a) {
+  // CHECK-LABEL: @test_lbarx_intret
+  // CHECK: %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* %a)
+  // CHECK-NON-PWR8-ERR:  error: this builtin is only valid on POWER8 or later CPUs
+  return __lbarx(a);
 }
