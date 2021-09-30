@@ -602,16 +602,16 @@ declare void @g(i1)
 
 @a = external global i8
 
-; FIXME: Don't hoist invariant loads of globals.
+; FIXME: Support hoisting invariant loads of globals.
 define void @test_fence6() {
 ; CHECK-LABEL: @test_fence6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* @a)
+; CHECK-NEXT:    br label [[F:%.*]]
+; CHECK:       f:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* @a, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[T:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    br label [[F:%.*]]
-; CHECK:       f:
 ; CHECK-NEXT:    tail call void @g(i1 [[T]])
 ; CHECK-NEXT:    br label [[F]]
 ;
