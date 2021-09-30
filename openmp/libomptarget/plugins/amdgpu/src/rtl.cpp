@@ -1750,6 +1750,17 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     err = interop_get_symbol_info((char *)image->ImageStart, img_size,
                                   KernDescName, &KernDescPtr, &KernDescSize);
 
+    // Two variables are used to communicate workgroup size in amd-stg-open,
+    // neither present in trunk.
+    // VAR_kern_desc is always emitted, contains a wg size which is either zero
+    // or a value known at compile time
+    // VAR_wg_size is only emitted if there is a value known at compile time
+    // If both are present, it's because the value was known at compile time and
+    // the value will match.
+    // The commit that added this comment changed clang to emit the VAR_wg_size
+    // whenever it emits VAR_kern_desc, with the same default value of zero
+    // if the value is not derivable at compile time.
+
     if (err == HSA_STATUS_SUCCESS) {
       if ((size_t)KernDescSize != sizeof(KernDescVal))
         DP("Loading global computation properties '%s' - size mismatch (%u != "
@@ -1800,6 +1811,11 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
 
 	DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
+
+        if (WGSizeVal == 0) {
+          // zero means not known at compile time, use the default
+          WGSizeVal = RTLDeviceInfoTy::Default_WG_Size;
+        }
 
         if (WGSizeVal < RTLDeviceInfoTy::Default_WG_Size ||
             WGSizeVal > RTLDeviceInfoTy::Max_WG_Size) {

@@ -1068,8 +1068,6 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       FlatAttr = compileTimeThreadLimit;
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                             AttrVal + "," + AttrVal);
-      setPropertyWorkGroupSize(CGM, OutlinedFn->getName(),
-                               compileTimeThreadLimit);
     } // end   > 0
   } // end of amdgcn teams or parallel directive
 
@@ -1080,6 +1078,7 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                             FlatAttrVal + "," + FlatAttrVal);
   }
   // Emit a kernel descriptor for runtime.
+  setPropertyWorkGroupSize(CGM, OutlinedFn->getName(), FlatAttr);
   StringRef KernDescName = OutlinedFn->getName();
   CGOpenMPRuntime::emitStructureKernelDesc(CGM, KernDescName, FlatAttr,
                                            IsGeneric,
