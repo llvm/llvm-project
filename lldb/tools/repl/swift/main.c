@@ -57,7 +57,9 @@ int main() {
 #endif
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
-  dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
+  // We load the system's libswiftCore, but this is overriden on tests to 
+  // use the just built one by setting DYLD_LIBRARY_PATH.
+  dlopen("/usr/lib/swift/libswiftCore.dylib", RTLD_LAZY);
 #elif defined(__linux__)
   dlopen("libswiftCore.so", RTLD_LAZY);
 #elif defined(_WIN32)
