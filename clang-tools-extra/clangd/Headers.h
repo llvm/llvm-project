@@ -142,10 +142,14 @@ public:
   std::vector<Inclusion> MainFileIncludes;
 
   std::string dump() {
-    return "RealPathNames: " +
-           llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ") +
-           "\nFileEntryIDs: " +
-           llvm::join(FileEntryIDs.begin(), FileEntryIDs.end(), ", ") + '\n';
+    std::string Result =
+        "RealPathNames: " +
+        llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ") +
+        "\nFileEntryIDs: ";
+    for (const auto &FEID : FileEntryIDs) {
+      Result += std::to_string(FEID) + ", ";
+    }
+    return Result + '\n';
   }
 
 private:
