@@ -376,6 +376,28 @@ def fir_AllocMemOp : fir_Op<"allocmem",
   }];
 }
 
+def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+  let summary = "free a heap object";
+
+  let description = [{
+    Deallocates a heap memory reference that was allocated by an `allocmem`.
+    The memory object that is deallocated is placed in an undefined state
+    after `fir.freemem`.  Optimizations may treat the loading of an object
+    in the undefined state as undefined behavior.  This includes aliasing
+    references, such as the result of an `fir.embox`.
+
+    ```mlir
+      %21 = fir.allocmem !fir.type<ZT(p:i32){field:i32}>
+      ...
+      fir.freemem %21 : !fir.heap<!fir.type<ZT>>
+    ```
+  }];
+
+  let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
+
+  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
+}
+
 def fir_LoadOp : fir_OneResultOp<"load"> {
   let summary = "load a value from a memory reference";
   let description = [{
@@ -402,6 +424,39 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+  }];
+}
+
+def fir_StoreOp : fir_Op<"store", []> {
+  let summary = "store an SSA-value to a memory location";
+
+  let description = [{
+    Store an ssa-value (virtual register) to a memory reference.  The stored
+    value must be of the same type as the referent type of the memory
+    reference.
+
+    ```mlir
+      %v = ... : f64
+      %p = ... : !fir.ptr<f64>
+      fir.store %v to %p : !fir.ptr<f64>
+    ```
+
+    The above store changes the value to which the pointer is pointing and not
+    the pointer itself. The operation is undefined if the memory reference,
+    `%p`, is undefined or null.
+  }];
+
+  let arguments = (ins AnyType:$value,
+                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref);
+
+  let parser = "return parseStoreOp(parser, result);";
+
+  let printer = "::print(p, *this);";
+
+  let verifier = "return ::verify(*this);";
+
+  let extraClassDeclaration = [{
+    static mlir::Type elementType(mlir::Type refType);
   }];
 }
 
@@ -454,66 +509,6 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let verifier = [{ return ::verify(*this); }];
 }
 
-def fir_StoreOp : fir_Op<"store", []> {
-  let summary = "store an SSA-value to a memory location";
-
-  let description = [{
-    Store an ssa-value (virtual register) to a memory reference.  The stored
-    value must be of the same type as the referent type of the memory
-    reference.
-
-    ```mlir
-      %v = ... : f64
-      %p = ... : !fir.ptr<f64>
-      fir.store %v to %p : !fir.ptr<f64>
-    ```
-
-    The above store changes the value to which the pointer is pointing and not
-    the pointer itself. The operation is undefined if the memory reference,
-    `%p`, is undefined or null.
-  }];
-
-  let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref);
-
-  let parser = [{
-    mlir::Type type;
-    mlir::OpAsmParser::OperandType oper;
-    mlir::OpAsmParser::OperandType store;
-    if (parser.parseOperand(oper) ||
-        parser.parseKeyword("to") ||
-        parser.parseOperand(store) ||
-        parser.parseOptionalAttrDict(result.attributes) ||
-        parser.parseColonType(type) ||
-        parser.resolveOperand(oper, elementType(type),
-          result.operands) ||
-        parser.resolveOperand(store, type, result.operands))
-       return mlir::failure();
-    return mlir::success();
-  }];
-
-  let printer = [{
-    p << ' ';
-    p.printOperand(value());
-    p << " to ";
-    p.printOperand(memref());
-    p.printOptionalAttrDict((*this)->getAttrs(), {});
-    p << " : " << memref().getType();
-  }];
-
-  let verifier = [{
-    if (value().getType() != fir::dyn_cast_ptrEleTy(memref().getType()))
-      return emitOpError("store value type must match memory reference type");
-    if (fir::isa_unknown_size_box(value().getType()))
-      return emitOpError("cannot store !fir.box of unknown rank or type");
-    return mlir::success();
-  }];
-
-  let extraClassDeclaration = [{
-    static mlir::Type elementType(mlir::Type refType);
-  }];
-}
-
 def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
   let summary = "explicit undefined value of some type";
   let description = [{
@@ -555,28 +550,6 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-}
-
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
-  let summary = "free a heap object";
-
-  let description = [{
-    Deallocates a heap memory reference that was allocated by an `allocmem`.
-    The memory object that is deallocated is placed in an undefined state
-    after `fir.freemem`.  Optimizations may treat the loading of an object
-    in the undefined state as undefined behavior.  This includes aliasing
-    references, such as the result of an `fir.embox`.
-
-    ```mlir
-      %21 = fir.allocmem !fir.type<ZT(p:i32){field:i32}>
-      ...
-      fir.freemem %21 : !fir.heap<!fir.type<ZT>>
-    ```
-  }];
-
-  let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
-
-  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
 }
 
 //===----------------------------------------------------------------------===//

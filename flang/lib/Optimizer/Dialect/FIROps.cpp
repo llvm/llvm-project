@@ -2673,13 +2673,40 @@ static mlir::LogicalResult verify(fir::SliceOp &op) {
 //===----------------------------------------------------------------------===//
 
 mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
-  if (auto ref = refType.dyn_cast<ReferenceType>())
-    return ref.getEleTy();
-  if (auto ref = refType.dyn_cast<PointerType>())
-    return ref.getEleTy();
-  if (auto ref = refType.dyn_cast<HeapType>())
-    return ref.getEleTy();
-  return {};
+  return fir::dyn_cast_ptrEleTy(refType);
+}
+
+static mlir::ParseResult parseStoreOp(mlir::OpAsmParser &parser,
+                                      mlir::OperationState &result) {
+  mlir::Type type;
+  mlir::OpAsmParser::OperandType oper;
+  mlir::OpAsmParser::OperandType store;
+  if (parser.parseOperand(oper) || parser.parseKeyword("to") ||
+      parser.parseOperand(store) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(oper, fir::StoreOp::elementType(type),
+                            result.operands) ||
+      parser.resolveOperand(store, type, result.operands))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::StoreOp &op) {
+  p << ' ';
+  p.printOperand(op.value());
+  p << " to ";
+  p.printOperand(op.memref());
+  p.printOptionalAttrDict(op.getOperation()->getAttrs(), {});
+  p << " : " << op.memref().getType();
+}
+
+static mlir::LogicalResult verify(fir::StoreOp &op) {
+  if (op.value().getType() != fir::dyn_cast_ptrEleTy(op.memref().getType()))
+    return op.emitOpError("store value type must match memory reference type");
+  if (fir::isa_unknown_size_box(op.value().getType()))
+    return op.emitOpError("cannot store !fir.box of unknown rank or type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
