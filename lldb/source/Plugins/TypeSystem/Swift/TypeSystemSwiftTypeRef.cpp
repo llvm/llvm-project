@@ -344,6 +344,43 @@ GetDemangledType(swift::Demangle::Demangler &dem, StringRef name) {
   return GetType(dem.demangleSymbol(name));
 }
 
+/// Return a pair of modulename, type name for the outermost nominal type.
+static llvm::Optional<std::pair<StringRef, StringRef>>
+GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+  using namespace swift::Demangle;
+  switch (node->getKind()) {
+    case Node::Kind::Structure:
+    case Node::Kind::Class:
+    case Node::Kind::Enum:
+    case Node::Kind::Protocol:
+    case Node::Kind::ProtocolList:
+    case Node::Kind::ProtocolListWithClass:
+    case Node::Kind::ProtocolListWithAnyObject:
+    case Node::Kind::TypeAlias:
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::BoundGenericEnum:
+    case Node::Kind::BoundGenericStructure:
+    case Node::Kind::BoundGenericProtocol:
+    case Node::Kind::BoundGenericOtherNominalType:
+    case Node::Kind::BoundGenericTypeAlias: {
+    if (node->getNumChildren() != 2)
+      return {};
+    auto *m = node->getChild(0);
+    if (!m || m->getKind() != Node::Kind::Module || !m->hasText())
+      return {};
+    auto *n = node->getChild(1);
+    if (!n || n->getKind() != Node::Kind::Identifier || !n->hasText())
+      return {};
+    return {{m->getText(), n->getText()}};
+  }
+  default:
+    break;
+  }
+  return {};
+}
+
 /// Resolve a type alias node and return a demangle tree for the
 /// resolved type. If the type alias resolves to a Clang type, return
 /// a Clang CompilerType.
@@ -357,6 +394,24 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
                  swift::Demangle::NodePointer node,
                  bool prefer_clang_types = false) {
   LLDB_SCOPED_TIMER();
+  auto resolve_clang_type = [&]() -> CompilerType {
+    auto maybe_module_and_type_names = GetNominal(dem, node);
+    if (!maybe_module_and_type_names)
+      return {};
+
+    auto module_name = maybe_module_and_type_names->first;
+    if (module_name != swift::MANGLING_MODULE_OBJC)
+      return {};
+
+    // Resolve the typedef within the Clang debug info.
+    auto clang_type =
+        LookupClangForwardType(module_holder, node->getChild(1)->getText());
+    if (!clang_type)
+      return {};
+
+    return clang_type.GetCanonicalType();
+  };
+
   using namespace swift::Demangle;
   // Try to look this up as a Swift type alias. For each *Swift*
   // type alias there is a debug info entry that has the mangled
@@ -389,21 +444,14 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
     // check is not done earlier because a Clang typedef that points
     // to a builtin type, e.g., "typedef unsigned uint32_t", could
     // end up pointing to a *Swift* type!
-    if (node->getNumChildren() == 2 && node->getChild(0)->hasText() &&
-        node->getChild(0)->getText() == swift::MANGLING_MODULE_OBJC &&
-        node->getChild(1)->hasText()) {
-      // Resolve the typedef within the Clang debug info.
-      auto clang_type =
-          LookupClangForwardType(module_holder, node->getChild(1)->getText());
-      if (!clang_type)
-        return {{}, {}};
-      return {{}, clang_type.GetCanonicalType()};
-    }
-
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "Couldn't resolve type alias %s", mangled.AsCString());
-    return {{}, {}};
+    auto clang_type = resolve_clang_type();
+    if (!clang_type)
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't resolve type alias %s as a Swift or clang type.",
+                mangled.AsCString());
+    return {{}, clang_type};
   }
+
   auto type = types.GetTypeAtIndex(0);
   if (!type) {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
@@ -415,9 +463,16 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
   // type alias into the Type's name field.
   ConstString desugared_name = type->GetName();
   if (!isMangledName(desugared_name.GetStringRef())) {
+    // The name is not mangled, this might be a Clang typedef, try
+    // to look it up as a clang type.
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "Found non-Swift type alias %s", mangled.AsCString());
-    return {{}, {}};
+              "Found non-Swift type alias %s, looking it up as clang type.",
+              mangled.AsCString());
+    auto clang_type = resolve_clang_type();
+    if (!clang_type)
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Could not find a clang type for %s.", mangled.AsCString());
+    return {{}, clang_type};
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());
   if (!n) {
@@ -1214,42 +1269,6 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
     swift_flags |= collectTypeInfo(module_holder, dem, node->getChild(i), generic_walk);
 
   return swift_flags;
-}
-
-/// Return a pair of modulename, type name for the outermost nominal type.
-llvm::Optional<std::pair<StringRef, StringRef>>
-GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
-  if (!node)
-    return {};
-  using namespace swift::Demangle;
-  switch (node->getKind()) {
-    case Node::Kind::Structure:
-    case Node::Kind::Class:
-    case Node::Kind::Enum:
-    case Node::Kind::Protocol:
-    case Node::Kind::ProtocolList:
-    case Node::Kind::ProtocolListWithClass:
-    case Node::Kind::ProtocolListWithAnyObject:
-    case Node::Kind::BoundGenericClass:
-    case Node::Kind::BoundGenericEnum:
-    case Node::Kind::BoundGenericStructure:
-    case Node::Kind::BoundGenericProtocol:
-    case Node::Kind::BoundGenericOtherNominalType:
-    case Node::Kind::BoundGenericTypeAlias: {
-    if (node->getNumChildren() != 2)
-      return {};
-    auto *m = node->getChild(0);
-    if (!m || m->getKind() != Node::Kind::Module || !m->hasText())
-      return {};
-    auto *n = node->getChild(1);
-    if (!n || n->getKind() != Node::Kind::Identifier || !n->hasText())
-      return {};
-    return {{m->getText(), n->getText()}};
-  }
-  default:
-    break;
-  }
-  return {};
 }
 
 CompilerType TypeSystemSwift::GetInstanceType(CompilerType compiler_type) {
