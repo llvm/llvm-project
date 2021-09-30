@@ -260,13 +260,29 @@ public:
                                                sliceLength, step * extraStep);
   }
 
+  /// Returns a new vector (mapped to Python list) containing elements from two
+  /// slices. The new vector is necessary because slices may not be contiguous
+  /// or even come from the same original sequence.
+  std::vector<ElementTy> dunderAdd(Derived &other) {
+    std::vector<ElementTy> elements;
+    elements.reserve(length + other.length);
+    for (intptr_t i = 0; i < length; ++i) {
+      elements.push_back(dunderGetItem(i));
+    }
+    for (intptr_t i = 0; i < other.length; ++i) {
+      elements.push_back(other.dunderGetItem(i));
+    }
+    return elements;
+  }
+
   /// Binds the indexing and length methods in the Python class.
   static void bind(pybind11::module &m) {
     auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName,
                                            pybind11::module_local())
                      .def("__len__", &Sliceable::dunderLen)
                      .def("__getitem__", &Sliceable::dunderGetItem)
-                     .def("__getitem__", &Sliceable::dunderGetItemSlice);
+                     .def("__getitem__", &Sliceable::dunderGetItemSlice)
+                     .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
   }
 

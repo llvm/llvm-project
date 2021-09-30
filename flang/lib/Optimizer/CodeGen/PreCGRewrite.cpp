@@ -222,7 +222,7 @@ public:
       }
     auto xArrCoor = rewriter.create<cg::XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, arrCoor.indices(), arrCoor.lenParams());
+        sliceOpers, subcompOpers, arrCoor.indices(), arrCoor.typeparams());
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());

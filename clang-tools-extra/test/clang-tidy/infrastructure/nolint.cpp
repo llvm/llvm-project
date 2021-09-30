@@ -27,6 +27,9 @@ class C4 { C4(int i); }; // NOLINT(some-check, google-explicit-constructor)
 
 class C5 { C5(int i); }; // NOLINT without-brackets-skip-all, another-check
 
+class C6 { C6(int i); }; // NOLINTNEXTLINE doesn't get misconstrued as a NOLINT
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: single-argument constructors must be marked explicit
+
 void f() {
   int i;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: unused variable 'i' [clang-diagnostic-unused-variable]

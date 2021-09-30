@@ -7006,9 +7006,9 @@ def AESIMCrr : AESInst<    0b0111, "aesimc", int_aarch64_crypto_aesimc>;
 // for AES fusion on some CPUs.
 let hasSideEffects = 0, mayStore = 0, mayLoad = 0 in {
 def AESMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
-                        Sched<[WriteV]>;
+                        Sched<[WriteVq]>;
 def AESIMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
-                         Sched<[WriteV]>;
+                         Sched<[WriteVq]>;
 }
 
 // Only use constrained versions of AES(I)MC instructions if they are paired with

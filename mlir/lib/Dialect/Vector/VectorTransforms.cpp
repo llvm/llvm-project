@@ -672,10 +672,10 @@ class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
   using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
-  TransposeOpLowering(vector::VectorTransformsOptions vectorTransformsOptions,
+  TransposeOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
                       MLIRContext *context)
       : OpRewritePattern<vector::TransposeOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions) {}
+        vectorTransformOptions(vectorTransformOptions) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -689,7 +689,7 @@ public:
       transp.push_back(attr.cast<IntegerAttr>().getInt());
 
     // Handle a true 2-D matrix transpose differently when requested.
-    if (vectorTransformsOptions.vectorTransposeLowering ==
+    if (vectorTransformOptions.vectorTransposeLowering ==
             vector::VectorTransposeLowering::Flat &&
         resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0) {
       Type flattenedType =
@@ -739,7 +739,7 @@ private:
   }
 
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformsOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
 };
 
 /// Progressive lowering of OuterProductOp.
@@ -1151,7 +1151,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
-  if (vectorTransformsOptions.vectorContractLowering !=
+  if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::Matmul)
     return failure();
   if (failed(filter(op)))
@@ -1314,7 +1314,7 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
   if (llvm::size(op.masks()) != 0)
     return failure();
 
-  if (vectorTransformsOptions.vectorContractLowering !=
+  if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::OuterProduct)
     return failure();
 
@@ -1419,7 +1419,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   if (failed(filter(op)))
     return failure();
 
-  if (vectorTransformsOptions.vectorContractLowering !=
+  if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::Dot)
     return failure();
 
@@ -1560,13 +1560,13 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 
   // TODO: implement benefits, cost models.
   MLIRContext *ctx = op.getContext();
-  ContractionOpToMatmulOpLowering pat1(vectorTransformsOptions, ctx);
+  ContractionOpToMatmulOpLowering pat1(vectorTransformOptions, ctx);
   if (succeeded(pat1.matchAndRewrite(op, rewriter)))
     return success();
-  ContractionOpToOuterProductOpLowering pat2(vectorTransformsOptions, ctx);
+  ContractionOpToOuterProductOpLowering pat2(vectorTransformOptions, ctx);
   if (succeeded(pat2.matchAndRewrite(op, rewriter)))
     return success();
-  ContractionOpToDotLowering pat3(vectorTransformsOptions, ctx);
+  ContractionOpToDotLowering pat3(vectorTransformOptions, ctx);
   if (succeeded(pat3.matchAndRewrite(op, rewriter)))
     return success();
 
@@ -1835,8 +1835,9 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
 /// Operates under a scoped context to build the intersection between the
 /// view `xferOp.source()` @ `xferOp.indices()` and the view `alloc`.
 // TODO: view intersection/union/differences should be a proper std op.
-static std::pair<Value, Value> createSubViewIntersection(
-    OpBuilder &b, VectorTransferOpInterface xferOp, Value alloc) {
+static std::pair<Value, Value>
+createSubViewIntersection(OpBuilder &b, VectorTransferOpInterface xferOp,
+                          Value alloc) {
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   int64_t memrefRank = xferOp.getShapedType().getRank();
   // TODO: relax this precondition, will require rank-reducing subviews.
@@ -2195,6 +2196,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   MemRefType compatibleMemRefType =
       getCastCompatibleMemRefType(xferOp.getShapedType().cast<MemRefType>(),
                                   alloc.getType().cast<MemRefType>());
+  if (!compatibleMemRefType)
+    return failure();
+
   SmallVector<Type, 4> returnTypes(1 + xferOp.getTransferRank(),
                                    b.getIndexType());
   returnTypes[0] = compatibleMemRefType;

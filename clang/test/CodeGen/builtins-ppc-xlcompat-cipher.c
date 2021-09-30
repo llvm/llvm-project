@@ -1,13 +1,13 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpcle-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s

@@ -312,7 +312,7 @@ library version of libstdc++ contains a copy of libsupc++.
 
 .. note::
 
-  Clang does not currently automatically link against libatomic when statically
+  Clang does not currently automatically link against libsupc++ when statically
   linking libstdc++. You may need to manually add ``-lsupc++`` to support this
   configuration when using ``-static`` or ``-static-libstdc++``.
 

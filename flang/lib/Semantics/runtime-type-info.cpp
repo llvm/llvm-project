@@ -1071,11 +1071,8 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
 
 RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
     SemanticsContext &context) {
-  ModFileReader reader{context};
   RuntimeDerivedTypeTables result;
-  static const char schemataName[]{"__fortran_type_info"};
-  SourceName schemataModule{schemataName, std::strlen(schemataName)};
-  result.schemata = reader.Read(schemataModule);
+  result.schemata = context.GetBuiltinModule("__fortran_type_info");
   if (result.schemata) {
     RuntimeTableBuilder builder{context, result};
     builder.DescribeTypes(context.globalScope(), false);

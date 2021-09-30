@@ -536,6 +536,10 @@ let Command = "source" in {
     Desc<"If true, stop executing commands on continue.">;
   def source_silent_run : Option<"silent-run", "s">, Arg<"Boolean">,
     Desc<"If true don't echo commands while executing.">;
+  def cmd_relative_to_command_file : Option<"relative-to-command-file", "C">,
+    Desc<"Resolve non-absolute paths relative to the location of the "
+    "current command file. This argument can only be used when the command is "
+    "being sourced from a file.">;
 }
 
 let Command = "alias" in {

@@ -3,7 +3,7 @@
 ; block in this function, it would work fine, but that would be the part we 
 ; have to fix now, wouldn't it....
 ;
-; RUN: opt < %s -adce -S | FileCheck %s
+; RUN: opt < %s -passes=adce -S | FileCheck %s
 
 define void @foo(i8* %reg5481) {
         %cast611 = bitcast i8* %reg5481 to i8**         ; <i8**> [#uses=1]

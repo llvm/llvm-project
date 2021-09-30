@@ -1849,16 +1849,17 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyCoordinateType>:$indices,
-    Variadic<AnyIntegerType>:$lenParams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams`
+      $typeparams^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
@@ -2576,6 +2577,9 @@ def fir_IterWhileOp : region_Op<"iterate_while",
   ];
 
   let extraClassDeclaration = [{
+    static constexpr llvm::StringRef getFinalValueAttrName() {
+      return "finalValue";
+    }
     mlir::Block *getBody() { return &region().front(); }
     mlir::Value getIterateVar() { return getBody()->getArgument(1); }
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
@@ -2645,36 +2649,27 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
 
   let builders = [
     OpBuilder<(ins "mlir::FuncOp":$callee,
-        CArg<"mlir::ValueRange", "{}">:$operands),
-    [{
-      $_state.addOperands(operands);
-      $_state.addAttribute(calleeAttrName($_state.name),
-                           SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getType().getResults());
-    }]>,
+        CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,
-        CArg<"mlir::ValueRange", "{}">:$operands),
-    [{
-      $_state.addOperands(operands);
-      $_state.addAttribute(calleeAttrName($_state.name), callee);
-      $_state.addTypes(results);
-    }]>,
+        CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "llvm::StringRef":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
       build($_builder, $_state,
-            SymbolRefAttr::get($_builder.getContext(), callee), results,
-            operands);
+          SymbolRefAttr::get($_builder.getContext(), callee), results,
+          operands);
     }]>];
 
   let extraClassDeclaration = [{
+    static constexpr StringRef getCalleeAttrName() { return "callee"; }
+
     mlir::FunctionType getFunctionType();
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
-      if (calleeAttr())
+      if ((*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
@@ -2684,7 +2679,8 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      if (auto calling = calleeAttr())
+      if (auto calling =
+          (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
     }
@@ -2781,56 +2777,25 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
 
   let results = (outs fir_CharacterType);
 
-  let parser = [{
-    auto &builder = parser.getBuilder();
-    mlir::Attribute val;
-    mlir::NamedAttrList attrs;
-    llvm::SMLoc trailingTypeLoc;
-    if (parser.parseAttribute(val, "fake", attrs))
-      return mlir::failure();
-    if (auto v = val.dyn_cast<mlir::StringAttr>())
-      result.attributes.push_back(builder.getNamedAttr(value(), v));
-    else if (auto v = val.dyn_cast<mlir::ArrayAttr>())
-      result.attributes.push_back(builder.getNamedAttr(xlist(), v));
-    else
-      return parser.emitError(parser.getCurrentLocation(),
-                              "found an invalid constant");
-    mlir::IntegerAttr sz;
-    mlir::Type type;
-    if (parser.parseLParen() ||
-        parser.parseAttribute(sz, size(), result.attributes) ||
-        parser.parseRParen() ||
-        parser.getCurrentLocation(&trailingTypeLoc) ||
-        parser.parseColonType(type))
-      return mlir::failure();
-    auto charTy = type.dyn_cast<fir::CharacterType>();
-    if (!charTy)
-      return parser.emitError(trailingTypeLoc,
-                              "must have character type");
-    type = fir::CharacterType::get(builder.getContext(), charTy.getFKind(),
-                                   sz.getInt());
-    if (!type || parser.addTypesToList(type, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseStringLitOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << getValue() << '(';
-    p << getSize().cast<mlir::IntegerAttr>().getValue() << ") : ";
-    p.printType(getType());
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    if (getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
-      return emitOpError("size must be non-negative");
-    if (auto xl = (*this)->getAttr(xlist())) {
-      auto xList = xl.cast<mlir::ArrayAttr>();
-      for (auto a : xList)
-        if (!a.isa<mlir::IntegerAttr>())
-	    return emitOpError("values in list must be integers");
-    }
-    return mlir::success();
-  }];
+  let builders = [
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::StringRef":$value,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char16_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char32_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>];
+
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     static constexpr const char *size() { return "size"; }

@@ -1,5 +1,5 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-cpu pwr9 \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -target-cpu pwr9 \
 // RUN:   -verify %s
 
 extern unsigned long long ull;

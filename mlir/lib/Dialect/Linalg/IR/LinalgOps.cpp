@@ -375,7 +375,7 @@ void CopyOp::build(OpBuilder &builder, OperationState &result, Value input,
 
 ParseResult parseCopyOpRegion(OpAsmParser &parser, Region &r, Type inputType,
                               Type outputType) {
-  OpBuilder opBuilder(parser.getBuilder().getContext());
+  OpBuilder opBuilder(parser.getContext());
   fillStructuredOpRegion<CopyOp>(opBuilder, r, TypeRange{inputType},
                                  TypeRange{outputType});
   return success();
@@ -470,7 +470,7 @@ void FillOp::build(OpBuilder &builder, OperationState &result, Value value,
 
 ParseResult parseFillOpRegion(OpAsmParser &parser, Region &r, Type valueType,
                               Type outputType) {
-  OpBuilder opBuilder(parser.getBuilder().getContext());
+  OpBuilder opBuilder(parser.getContext());
   fillStructuredOpRegion<FillOp>(opBuilder, r, TypeRange{valueType},
                                  TypeRange{outputType});
   return success();
@@ -2934,7 +2934,7 @@ static ParseResult
 parseNamedStructuredOpRegion(OpAsmParser &parser, Region &region,
                              TypeRange inputTypes, TypeRange outputTypes) {
   ParseResult res = success();
-  OpBuilder opBuilder(parser.getBuilder().getContext());
+  OpBuilder opBuilder(parser.getContext());
   // Resolve `captures` into `capturedValues` at parse time so we can build the
   // region with captures.
   SmallVector<Value> capturedValues;
