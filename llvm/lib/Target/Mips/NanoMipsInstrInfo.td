@@ -37,17 +37,21 @@ def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()
                                            || isUInt<16>(Imm.getZExtValue()); }]>;
 
 def UImm12AsmOperandClass : UImmAsmOperandClass<12, []>;
-
 def UImm5AsmOperandClass : UImmAsmOperandClass<5, [UImm12AsmOperandClass]>;
+def UImm3Plus1AsmOperandClass :
+  ConstantUImmAsmOperandClass<3, [UImm5AsmOperandClass], 1>;
 
 def uimm12_nm : Operand<i32> {
   let PrintMethod = "printUImm<12>";
   let ParserMatchClass = !cast<AsmOperandClass>("UImm12AsmOperandClass");
 }
-
 def uimm5_nm : Operand<i32> {
   let PrintMethod = "printUImm<5>";
   let ParserMatchClass = !cast<AsmOperandClass>("UImm5AsmOperandClass");
+}
+def uimm3plus1_nm : Operand<i32> {
+  let PrintMethod = "printUImm<3, 1>";
+  let ParserMatchClass = !cast<AsmOperandClass>("UImm3Plus1AsmOperandClass");
 }
 
 def uimm16_simm12 : Operand<i32>;
@@ -180,6 +184,19 @@ class SaveRestore<string opstr> :
 def SAVE_NM : SaveRestore<"save">, InstSize32;
 def RESTORE_NM : SaveRestore<"restore">, InstSize32;
 def RESTOREJRC_NM : SaveRestore<"restore.jrc">, InstSize32;
+
+class LoadMultipleNM<string opstr> :
+    InstNM<(outs GPR32NMOpnd:$rt), (ins mem:$addr, uimm3plus1_nm:$count),
+           !strconcat(opstr, "\t$rt, $addr, $count"), []>, InstSize32 {
+  let DecoderMethod = "DecodeMem";
+  let mayLoad = 1;
+}
+class StoreMultipleNM<string opstr> :
+    InstNM<(outs), (ins GPR32NMOpnd:$rt, mem:$addr, uimm3plus1_nm:$count),
+           !strconcat(opstr, "\t$rt, $addr, $count"), []>, InstSize32 {
+  let DecoderMethod = "DecodeMem";
+  let mayStore = 1;
+}
 
 class EffectiveAddressNM<string opstr, RegisterOperand RO> :
   InstNM<(outs RO:$rt), (ins mem_ea:$addr), !strconcat(opstr, "\t$rt, $addr"),
@@ -497,6 +514,11 @@ def UASH_NM : UnalignedStore<"uash", NMUnalignedSH>;
 def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
 def LWGP_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem>, InstSize32;
+
+def LWM_NM : LoadMultipleNM<"lwm">;
+def UALWM_NM : LoadMultipleNM<"ualwm">;
+def SWM_NM : StoreMultipleNM<"swm">;
+def UASWM_NM : StoreMultipleNM<"uaswm">;
 
 }
 
