@@ -59,9 +59,9 @@ define void @f1() #0 {
 ; CHECK-NEXT:    %v6 = add nuw nsw i32 %v1, 1
 ; CHECK-NEXT:    --> {4,+,1}<nuw><nsw><%b1> U: [4,7) S: [4,7) Exits: 6 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v7 = phi i32 [ %v1, %b1 ]
-; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,6) S: [3,6) --> 5 U: [5,6) S: [5,6)
+; CHECK-NEXT:    --> %v7 U: [3,6) S: [3,6) --> 5 U: [5,6) S: [5,6)
 ; CHECK-NEXT:    %v8 = phi i16 [ %v3, %b1 ]
-; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set --> 12 U: [12,13) S: [12,13)
+; CHECK-NEXT:    --> %v8 U: full-set S: full-set --> 12 U: [12,13) S: [12,13)
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
 ; CHECK-NEXT:  Loop %b3: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable max backedge-taken count.
