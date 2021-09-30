@@ -58,6 +58,7 @@ endif()
 if (FLANG_BUILD_EXAMPLES)
   list(APPEND FLANG_TEST_DEPENDS
     flangPrintFunctionNames
+    flangOmpReport
     )
 endif ()
 

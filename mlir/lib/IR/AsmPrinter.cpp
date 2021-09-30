@@ -15,6 +15,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -60,15 +61,17 @@ AsmParser::~AsmParser() {}
 DialectAsmParser::~DialectAsmParser() {}
 OpAsmParser::~OpAsmParser() {}
 
-//===--------------------------------------------------------------------===//
+MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
+
+//===----------------------------------------------------------------------===//
 // DialectAsmPrinter
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 DialectAsmPrinter::~DialectAsmPrinter() {}
 
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // OpAsmPrinter
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 OpAsmPrinter::~OpAsmPrinter() {}
 
@@ -100,9 +103,9 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
     os << ')';
 }
 
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // Operation OpAsm interface.
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmInterface.cpp.inc"

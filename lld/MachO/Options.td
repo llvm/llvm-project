@@ -290,6 +290,7 @@ def no_branch_islands : Flag<["-"], "no_branch_islands">,
     Group<grp_opts>;
 def no_deduplicate : Flag<["-"], "no_deduplicate">,
     HelpText<"Disable code deduplicaiton (synonym for `--icf=none')">,
+    Alias<icf_eq>, AliasArgs<["none"]>,
     Group<grp_opts>;
 
 def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;

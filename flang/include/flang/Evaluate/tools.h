@@ -1050,6 +1050,15 @@ bool IsDummy(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
 bool IsLenTypeParameter(const Symbol &);
+bool IsExtensibleType(const DerivedTypeSpec *);
+bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
+// Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
+bool IsTeamType(const DerivedTypeSpec *);
+// Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?
+bool IsBadCoarrayType(const DerivedTypeSpec *);
+// Is this derived type either C_PTR or C_FUNPTR from module ISO_C_BINDING
+bool IsIsoCType(const DerivedTypeSpec *);
+bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 
 // ResolveAssociations() traverses use associations and host associations
 // like GetUltimate(), but also resolves through whole variable associations

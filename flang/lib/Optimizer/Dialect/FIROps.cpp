@@ -298,6 +298,22 @@ static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
+void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::FuncOp callee, mlir::ValueRange operands) {
+  result.addOperands(operands);
+  result.addAttribute(getCalleeAttrName(), SymbolRefAttr::get(callee));
+  result.addTypes(callee.getType().getResults());
+}
+
+void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::SymbolRefAttr callee,
+                        llvm::ArrayRef<mlir::Type> results,
+                        mlir::ValueRange operands) {
+  result.addOperands(operands);
+  result.addAttribute(getCalleeAttrName(), callee);
+  result.addTypes(results);
+}
+
 //===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
@@ -799,7 +815,7 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
   result.addOperands({lb, ub, step, iterate});
   if (finalCountValue) {
     result.addTypes(builder.getIndexType());
-    result.addAttribute(finalValueAttrName(result.name), builder.getUnitAttr());
+    result.addAttribute(getFinalValueAttrName(), builder.getUnitAttr());
   }
   result.addTypes(iterate.getType());
   result.addOperands(iterArgs);
@@ -841,7 +857,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   // Parse the initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> regionArgs;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> regionArgs;
   auto prependCount = false;
 
   // Induction variable.
@@ -849,8 +865,8 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
   regionArgs.push_back(iterateVar);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
-    llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> operands;
-    llvm::SmallVector<mlir::Type, 4> regionTypes;
+    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::Type> regionTypes;
     // Parse assignment list and results type list.
     if (parser.parseAssignmentList(regionArgs, operands) ||
         parser.parseArrowTypeList(regionTypes))
@@ -860,9 +876,9 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
     llvm::ArrayRef<mlir::Type> resTypes = regionTypes;
     resTypes = prependCount ? resTypes.drop_front(2) : resTypes;
     // Resolve input operands.
-    for (auto operand_type : llvm::zip(operands, resTypes))
-      if (parser.resolveOperand(std::get<0>(operand_type),
-                                std::get<1>(operand_type), result.operands))
+    for (auto operandType : llvm::zip(operands, resTypes))
+      if (parser.resolveOperand(std::get<0>(operandType),
+                                std::get<1>(operandType), result.operands))
         return failure();
     if (prependCount) {
       result.addTypes(regionTypes);
@@ -871,7 +887,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
       result.addTypes(resTypes);
     }
   } else if (succeeded(parser.parseOptionalArrow())) {
-    llvm::SmallVector<mlir::Type, 4> typeList;
+    llvm::SmallVector<mlir::Type> typeList;
     if (parser.parseLParen() || parser.parseTypeList(typeList) ||
         parser.parseRParen())
       return failure();
@@ -888,10 +904,10 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::Type, 4> argTypes;
+  llvm::SmallVector<mlir::Type> argTypes;
   // Induction variable (hidden)
   if (prependCount)
-    result.addAttribute(IterWhileOp::finalValueAttrName(result.name),
+    result.addAttribute(IterWhileOp::getFinalValueAttrName(),
                         builder.getUnitAttr());
   else
     argTypes.push_back(indexType);
@@ -984,7 +1000,8 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
   } else if (op.finalValue()) {
     p << " -> (" << op.getResultTypes() << ')';
   }
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(), {"finalValue"});
+  p.printOptionalAttrDictWithKeyword(op->getAttrs(),
+                                     {IterWhileOp::getFinalValueAttrName()});
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 }
@@ -997,7 +1014,7 @@ bool fir::IterWhileOp::isDefinedOutsideOfLoop(mlir::Value value) {
 
 mlir::LogicalResult
 fir::IterWhileOp::moveOutOfLoop(llvm::ArrayRef<mlir::Operation *> ops) {
-  for (auto op : ops)
+  for (auto *op : ops)
     op->moveBefore(*this);
   return success();
 }
@@ -1840,6 +1857,121 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 bool fir::StringLitOp::isWideValue() {
   auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
   return eleTy.cast<fir::CharacterType>().getFKind() != 1;
+}
+
+static mlir::NamedAttribute
+mkNamedIntegerAttr(mlir::OpBuilder &builder, llvm::StringRef name, int64_t v) {
+  assert(v > 0);
+  return builder.getNamedAttr(
+      name, builder.getIntegerAttr(builder.getIntegerType(64), v));
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType inType, llvm::StringRef val,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr = builder.getNamedAttr(value(), builder.getStringAttr(val));
+  int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(inType);
+}
+
+template <typename C>
+static mlir::ArrayAttr convertToArrayAttr(mlir::OpBuilder &builder,
+                                          llvm::ArrayRef<C> xlist) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  auto ty = builder.getIntegerType(8 * sizeof(C));
+  for (auto ch : xlist)
+    attrs.push_back(builder.getIntegerAttr(ty, ch));
+  return builder.getArrayAttr(attrs);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType inType,
+                             llvm::ArrayRef<char> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(inType);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType inType,
+                             llvm::ArrayRef<char16_t> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(inType);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType inType,
+                             llvm::ArrayRef<char32_t> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(inType);
+}
+
+static mlir::ParseResult parseStringLitOp(mlir::OpAsmParser &parser,
+                                          mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  mlir::Attribute val;
+  mlir::NamedAttrList attrs;
+  llvm::SMLoc trailingTypeLoc;
+  if (parser.parseAttribute(val, "fake", attrs))
+    return mlir::failure();
+  if (auto v = val.dyn_cast<mlir::StringAttr>())
+    result.attributes.push_back(
+        builder.getNamedAttr(fir::StringLitOp::value(), v));
+  else if (auto v = val.dyn_cast<mlir::ArrayAttr>())
+    result.attributes.push_back(
+        builder.getNamedAttr(fir::StringLitOp::xlist(), v));
+  else
+    return parser.emitError(parser.getCurrentLocation(),
+                            "found an invalid constant");
+  mlir::IntegerAttr sz;
+  mlir::Type type;
+  if (parser.parseLParen() ||
+      parser.parseAttribute(sz, fir::StringLitOp::size(), result.attributes) ||
+      parser.parseRParen() || parser.getCurrentLocation(&trailingTypeLoc) ||
+      parser.parseColonType(type))
+    return mlir::failure();
+  auto charTy = type.dyn_cast<fir::CharacterType>();
+  if (!charTy)
+    return parser.emitError(trailingTypeLoc, "must have character type");
+  type = fir::CharacterType::get(builder.getContext(), charTy.getFKind(),
+                                 sz.getInt());
+  if (!type || parser.addTypesToList(type, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::StringLitOp &op) {
+  p << ' ' << op.getValue() << '(';
+  p << op.getSize().cast<mlir::IntegerAttr>().getValue() << ") : ";
+  p.printType(op.getType());
+}
+
+static mlir::LogicalResult verify(fir::StringLitOp &op) {
+  if (op.getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
+    return op.emitOpError("size must be non-negative");
+  if (auto xl = op.getOperation()->getAttr(fir::StringLitOp::xlist())) {
+    auto xList = xl.cast<mlir::ArrayAttr>();
+    for (auto a : xList)
+      if (!a.isa<mlir::IntegerAttr>())
+        return op.emitOpError("values in list must be integers");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -356,6 +356,10 @@ BEGIN_REGISTER_VP_INTRINSIC(vp_select, 0, 3)
 // END_REGISTER_CASES(vp_select, VP_SELECT)
 END_REGISTER_VP_INTRINSIC(vp_select)
 
+BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5,
+                  EXPERIMENTAL_VP_SPLICE, -1)
+END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
+
 ///// } Shuffles
 
 #undef BEGIN_REGISTER_VP

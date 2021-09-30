@@ -813,10 +813,16 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
 
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
-  if (!inputShape.hasRank() &&
-      (!permsShape.hasRank() || permsShape.isDynamicDim(0))) {
+  if (!inputShape.hasRank() || !permsShape.hasRank() ||
+      permsShape.isDynamicDim(0)) {
     inferredReturnShapes.push_back(ShapedTypeComponents());
     return success();
+  }
+
+  // This would imply the number of permutations does not match the rank of the
+  // input which is illegal.
+  if (permsShape.getDimSize(0) != inputShape.getRank()) {
+    return failure();
   }
 
   // Without the input dims we cannot determine the output dim sizes but we

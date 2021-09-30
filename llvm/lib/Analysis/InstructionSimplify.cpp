@@ -1429,9 +1429,11 @@ static Value *SimplifyAShrInst(Value *Op0, Value *Op1, bool isExact,
                                     MaxRecurse))
     return V;
 
-  // all ones >>a X -> -1
+  // -1 >>a X --> -1
+  // (-1 << X) a>> X --> -1
   // Do not return Op0 because it may contain undef elements if it's a vector.
-  if (match(Op0, m_AllOnes()))
+  if (match(Op0, m_AllOnes()) ||
+      match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1))))
     return Constant::getAllOnesValue(Op0->getType());
 
   // (X << A) >> A -> X

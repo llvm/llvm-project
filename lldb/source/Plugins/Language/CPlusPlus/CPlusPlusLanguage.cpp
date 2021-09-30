@@ -20,12 +20,14 @@
 #include "llvm/Demangle/ItaniumDemangle.h"
 
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -476,6 +478,56 @@ std::vector<ConstString> CPlusPlusLanguage::GenerateAlternateFunctionManglings(
     alternates.push_back(ctor_fixup);
 
   return alternates;
+}
+
+ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
+    const Mangled mangled, const SymbolContext &sym_ctx) const {
+  ConstString demangled = mangled.GetDemangledName();
+  if (!demangled)
+    return ConstString();
+
+  CPlusPlusLanguage::MethodName cpp_name(demangled);
+  std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
+
+  if (!scope_qualified_name.size())
+    return ConstString();
+
+  if (!sym_ctx.module_sp)
+    return ConstString();
+
+  lldb_private::SymbolFile *sym_file = sym_ctx.module_sp->GetSymbolFile();
+  if (!sym_file)
+    return ConstString();
+
+  std::vector<ConstString> alternates;
+  sym_file->GetMangledNamesForFunction(scope_qualified_name, alternates);
+
+  std::vector<ConstString> param_and_qual_matches;
+  std::vector<ConstString> param_matches;
+  for (size_t i = 0; i < alternates.size(); i++) {
+    ConstString alternate_mangled_name = alternates[i];
+    Mangled mangled(alternate_mangled_name);
+    ConstString demangled = mangled.GetDemangledName();
+
+    CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
+    if (!cpp_name.IsValid())
+      continue;
+
+    if (alternate_cpp_name.GetArguments() == cpp_name.GetArguments()) {
+      if (alternate_cpp_name.GetQualifiers() == cpp_name.GetQualifiers())
+        param_and_qual_matches.push_back(alternate_mangled_name);
+      else
+        param_matches.push_back(alternate_mangled_name);
+    }
+  }
+
+  if (param_and_qual_matches.size())
+    return param_and_qual_matches[0]; // It is assumed that there will be only
+                                      // one!
+  else if (param_matches.size())
+    return param_matches[0]; // Return one of them as a best match
+  else
+    return ConstString();
 }
 
 static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

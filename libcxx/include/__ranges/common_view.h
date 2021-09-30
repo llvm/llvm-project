@@ -16,8 +16,10 @@
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <concepts>
 #include <type_traits>
@@ -100,6 +102,30 @@ common_view(_Range&&)
 template<class _View>
 inline constexpr bool enable_borrowed_range<common_view<_View>> = enable_borrowed_range<_View>;
 
+namespace views {
+namespace __common {
+  struct __fn : __range_adaptor_closure<__fn> {
+    template<class _Range>
+      requires common_range<_Range>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Range&& __range) const
+      noexcept(noexcept(views::all(_VSTD::forward<_Range>(__range))))
+      -> decltype(      views::all(_VSTD::forward<_Range>(__range)))
+      { return          views::all(_VSTD::forward<_Range>(__range)); }
+
+    template<class _Range>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Range&& __range) const
+      noexcept(noexcept(common_view{_VSTD::forward<_Range>(__range)}))
+      -> decltype(      common_view{_VSTD::forward<_Range>(__range)})
+      { return          common_view{_VSTD::forward<_Range>(__range)}; }
+  };
+}
+
+inline namespace __cpo {
+  inline constexpr auto common = __common::__fn{};
+}
+} // namespace views
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

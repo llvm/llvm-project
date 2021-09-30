@@ -595,7 +595,7 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
         return failure();
       result.addAttribute("collapse_val", attr);
     } else if (keyword == "nowait") {
-      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      auto attr = UnitAttr::get(parser.getContext());
       result.addAttribute("nowait", attr);
     } else if (keyword == "ordered") {
       mlir::IntegerAttr attr;
@@ -618,7 +618,7 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
       auto attr = parser.getBuilder().getStringAttr(order);
       result.addAttribute("order", attr);
     } else if (keyword == "inclusive") {
-      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      auto attr = UnitAttr::get(parser.getContext());
       result.addAttribute("inclusive", attr);
     } else if (keyword == "reduction") {
       if (segments[reductionVarPos])

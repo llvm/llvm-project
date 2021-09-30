@@ -365,7 +365,7 @@ struct OMPInformationCache : public InformationCache {
     if (F->arg_size() != RTFArgTypes.size())
       return false;
 
-    auto RTFTyIt = RTFArgTypes.begin();
+    auto *RTFTyIt = RTFArgTypes.begin();
     for (Argument &Arg : F->args()) {
       if (Arg.getType() != *RTFTyIt)
         return false;
@@ -1613,8 +1613,8 @@ private:
         return true;
       if (CB.getArgOperand(0)->getType() != OMPInfoCache.OMPBuilder.IdentPtr)
         return false;
-      for (unsigned u = 1; u < NumArgs; ++u)
-        if (isa<Instruction>(CB.getArgOperand(u)))
+      for (unsigned U = 1; U < NumArgs; ++U)
+        if (isa<Instruction>(CB.getArgOperand(U)))
           return false;
       return true;
     };
@@ -1740,8 +1740,8 @@ private:
     // Transitively search for more arguments by looking at the users of the
     // ones we know already. During the search the GTIdArgs vector is extended
     // so we cannot cache the size nor can we use a range based for.
-    for (unsigned u = 0; u < GTIdArgs.size(); ++u)
-      AddUserArgs(*GTIdArgs[u]);
+    for (unsigned U = 0; U < GTIdArgs.size(); ++U)
+      AddUserArgs(*GTIdArgs[U]);
   }
 
   /// Kernel (=GPU) optimizations and utility functions
@@ -3562,8 +3562,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // Now that we have most of the CFG skeleton it is time for the if-cascade
     // that checks the function pointer we got from the runtime against the
     // parallel regions we expect, if there are any.
-    for (int i = 0, e = ReachedKnownParallelRegions.size(); i < e; ++i) {
-      auto *ParallelRegion = ReachedKnownParallelRegions[i];
+    for (int I = 0, E = ReachedKnownParallelRegions.size(); I < E; ++I) {
+      auto *ParallelRegion = ReachedKnownParallelRegions[I];
       BasicBlock *PRExecuteBB = BasicBlock::Create(
           Ctx, "worker_state_machine.parallel_region.execute", Kernel,
           StateMachineEndParallelBB);
@@ -3579,7 +3579,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // Check if we need to compare the pointer at all or if we can just
       // call the parallel region function.
       Value *IsPR;
-      if (i + 1 < e || !ReachedUnknownParallelRegions.empty()) {
+      if (I + 1 < E || !ReachedUnknownParallelRegions.empty()) {
         Instruction *CmpI = ICmpInst::Create(
             ICmpInst::ICmp, llvm::CmpInst::ICMP_EQ, WorkFnCast, ParallelRegion,
             "worker.check_parallel_region", StateMachineIfCascadeCurrentBB);
@@ -3847,6 +3847,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     switch (RF) {
     // All the functions we know are compatible with SPMD mode.
     case OMPRTL___kmpc_is_spmd_exec_mode:
+    case OMPRTL___kmpc_distribute_static_fini:
     case OMPRTL___kmpc_for_static_fini:
     case OMPRTL___kmpc_global_thread_num:
     case OMPRTL___kmpc_get_hardware_num_threads_in_block:
@@ -3857,6 +3858,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_end_master:
     case OMPRTL___kmpc_barrier:
       break;
+    case OMPRTL___kmpc_distribute_static_init_4:
+    case OMPRTL___kmpc_distribute_static_init_4u:
+    case OMPRTL___kmpc_distribute_static_init_8:
+    case OMPRTL___kmpc_distribute_static_init_8u:
     case OMPRTL___kmpc_for_static_init_4:
     case OMPRTL___kmpc_for_static_init_4u:
     case OMPRTL___kmpc_for_static_init_8:
@@ -4096,9 +4101,8 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
           return OR << "Replacing OpenMP runtime call "
                     << CB->getCalledFunction()->getName() << " with "
                     << ore::NV("FoldedValue", C->getZExtValue()) << ".";
-        else
-          return OR << "Replacing OpenMP runtime call "
-                    << CB->getCalledFunction()->getName() << ".";
+        return OR << "Replacing OpenMP runtime call "
+                  << CB->getCalledFunction()->getName() << ".";
       };
 
       if (CB && EnableVerboseRemarks)

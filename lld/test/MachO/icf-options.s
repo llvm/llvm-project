@@ -12,16 +12,19 @@
 # RUN:     | FileCheck %s --check-prefix=DIAG-SAFE
 # RUN: not %lld -lSystem --icf=junk -o %t/junk %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-JUNK
-# RUN: not %lld -lSystem --icf=all -no_deduplicate -o %t/clash %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-CLASH
+# RUN: %lld -lSystem --icf=all -no_deduplicate -o %t/none2 %t/main.o 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN: %lld -lSystem -no_deduplicate --icf=all -o %t/all2 %t/main.o 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
 
 # DIAG-EMPTY-NOT: {{.}}
 # DIAG-SAFE: `--icf=safe' is not yet implemented, reverting to `none'
 # DIAG-JUNK: unknown --icf=OPTION `junk', defaulting to `none'
-# DIAG-CLASH: `--icf=all' conflicts with -no_deduplicate, setting to `none'
 
 # RUN: llvm-objdump -d --syms %t/all | FileCheck %s --check-prefix=FOLD
+# RUN: llvm-objdump -d --syms %t/all2 | FileCheck %s --check-prefix=FOLD
 # RUN: llvm-objdump -d --syms %t/none | FileCheck %s --check-prefix=NOOP
+# RUN: llvm-objdump -d --syms %t/none2 | FileCheck %s --check-prefix=NOOP
 # RUN: llvm-objdump -d --syms %t/no_dedup | FileCheck %s --check-prefix=NOOP
 
 # FOLD-LABEL: SYMBOL TABLE:

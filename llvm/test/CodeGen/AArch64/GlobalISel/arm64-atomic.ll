@@ -1877,14 +1877,15 @@ define i8 @atomicrmw_max_i8(i8* %ptr, i8 %rhs) {
 define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xff
 ; CHECK-NOLSE-O1-NEXT:  LBB35_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xff
-; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, ls
-; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB35_1
+; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-NOLSE-O1-NEXT:    stlxrb w11, w10, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB35_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NOLSE-O1-NEXT:    mov w0, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
@@ -1947,14 +1948,15 @@ define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
 define i8 @atomicrmw_umax_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xff
 ; CHECK-NOLSE-O1-NEXT:  LBB36_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xff
-; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, hi
-; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB36_1
+; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-NOLSE-O1-NEXT:    stxrb w11, w10, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB36_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NOLSE-O1-NEXT:    mov w0, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
@@ -2556,14 +2558,15 @@ define i16 @atomicrmw_max_i16(i16* %ptr, i16 %rhs) {
 define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xffff
 ; CHECK-NOLSE-O1-NEXT:  LBB45_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xffff
-; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, ls
-; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB45_1
+; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-NOLSE-O1-NEXT:    stlxrh w11, w10, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB45_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NOLSE-O1-NEXT:    mov w0, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
@@ -2626,14 +2629,15 @@ define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
 define i16 @atomicrmw_umax_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xffff
 ; CHECK-NOLSE-O1-NEXT:  LBB46_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xffff
-; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, hi
-; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB46_1
+; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-NOLSE-O1-NEXT:    stxrh w11, w10, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB46_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NOLSE-O1-NEXT:    mov w0, w8
 ; CHECK-NOLSE-O1-NEXT:    ret

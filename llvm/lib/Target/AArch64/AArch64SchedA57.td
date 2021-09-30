@@ -96,7 +96,8 @@ def : SchedAlias<WriteFCopy, A57Write_5cyc_1L>;
 def : SchedAlias<WriteFImm,  A57Write_3cyc_1V>;
 def : WriteRes<WriteFMul, [A57UnitV]> { let Latency = 5;}
 def : SchedAlias<WriteFDiv,  A57Write_17cyc_1W>;
-def : SchedAlias<WriteV,     A57Write_3cyc_1V>;
+def : SchedAlias<WriteVd,    A57Write_3cyc_1V>;
+def : SchedAlias<WriteVq,    A57Write_3cyc_1V>;
 def : SchedAlias<WriteVLD,   A57Write_5cyc_1L>;
 def : SchedAlias<WriteVST,   A57Write_1cyc_1S>;
 
