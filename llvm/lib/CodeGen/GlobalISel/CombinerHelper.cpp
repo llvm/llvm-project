@@ -2340,9 +2340,9 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
 bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
   if (!MOP.isReg())
     return false;
-  // MIPatternMatch doesn't let us look through G_ZEXT etc.
-  auto ValAndVReg = getIConstantVRegValWithLookThrough(MOP.getReg(), MRI);
-  return ValAndVReg && ValAndVReg->Value == C;
+  auto *MI = MRI.getVRegDef(MOP.getReg());
+  auto MaybeCst = isConstantOrConstantSplatVector(*MI, MRI);
+  return MaybeCst.hasValue() && MaybeCst->getSExtValue() == C;
 }
 
 bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
