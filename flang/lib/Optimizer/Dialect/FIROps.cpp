@@ -806,6 +806,18 @@ static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractValueOp
+//===----------------------------------------------------------------------===//
+
+void fir::ExtractValueOp::build(mlir::OpBuilder &builder,
+                                OperationState &result, mlir::Type resTy,
+                                mlir::Value aggVal,
+                                llvm::ArrayRef<mlir::Value> inds) {
+  auto aa = collectAsAttributes<>(builder.getContext(), result, inds);
+  build(builder, result, resTy, aggVal, aa);
+}
+
+//===----------------------------------------------------------------------===//
 // InsertOnRangeOp
 //===----------------------------------------------------------------------===//
 
@@ -840,16 +852,21 @@ static mlir::LogicalResult verify(fir::InsertOnRangeOp op) {
 // InsertValueOp
 //===----------------------------------------------------------------------===//
 
-static bool checkIsIntegerConstant(mlir::Value v, int64_t conVal) {
-  if (auto c = dyn_cast_or_null<mlir::ConstantOp>(v.getDefiningOp())) {
-    auto attr = c.getValue();
-    if (auto iattr = attr.dyn_cast<mlir::IntegerAttr>())
-      return iattr.getInt() == conVal;
-  }
+void fir::InsertValueOp::build(mlir::OpBuilder &builder, OperationState &result,
+                               mlir::Type resTy, mlir::Value aggVal,
+                               mlir::Value eleVal,
+                               llvm::ArrayRef<mlir::Value> inds) {
+  auto aa = collectAsAttributes<>(builder.getContext(), result, inds);
+  build(builder, result, resTy, aggVal, eleVal, aa);
+}
+
+static bool checkIsIntegerConstant(mlir::Attribute attr, int64_t conVal) {
+  if (auto iattr = attr.dyn_cast<mlir::IntegerAttr>())
+    return iattr.getInt() == conVal;
   return false;
 }
-static bool isZero(mlir::Value v) { return checkIsIntegerConstant(v, 0); }
-static bool isOne(mlir::Value v) { return checkIsIntegerConstant(v, 1); }
+static bool isZero(mlir::Attribute a) { return checkIsIntegerConstant(a, 0); }
+static bool isOne(mlir::Attribute a) { return checkIsIntegerConstant(a, 1); }
 
 // Undo some complex patterns created in the front-end and turn them back into
 // complex ops.
