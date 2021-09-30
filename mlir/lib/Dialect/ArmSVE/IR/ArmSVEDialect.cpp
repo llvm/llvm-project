@@ -55,8 +55,7 @@ Type ArmSVEDialect::parseType(DialectAsmParser &parser) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
   {
     Type genType;
-    auto parseResult = generatedTypeParser(parser.getBuilder().getContext(),
-                                           parser, "vector", genType);
+    auto parseResult = generatedTypeParser(parser, "vector", genType);
     if (parseResult.hasValue())
       return genType;
   }
