@@ -2607,6 +2607,19 @@ static mlir::LogicalResult verify(fir::SelectTypeOp &op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ShapeOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::ShapeOp &op) {
+  auto size = op.extents().size();
+  auto shapeTy = op.getType().dyn_cast<fir::ShapeType>();
+  assert(shapeTy && "must be a shape type");
+  if (shapeTy.getRank() != size)
+    return op.emitOpError("shape type rank mismatch");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeShiftOp
 //===----------------------------------------------------------------------===//
 
