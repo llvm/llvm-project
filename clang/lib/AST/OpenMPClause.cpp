@@ -2313,9 +2313,8 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
 
         if (Optional<APSInt> CondVal =
                 Selector.ScoreOrCondition->getIntegerConstantExpr(ASTCtx))
-          VMI.addTrait(CondVal->isNullValue()
-                           ? TraitProperty::user_condition_false
-                           : TraitProperty::user_condition_true,
+          VMI.addTrait(CondVal->isZero() ? TraitProperty::user_condition_false
+                                         : TraitProperty::user_condition_true,
                        "<condition>");
         else
           VMI.addTrait(TraitProperty::user_condition_false, "<condition>");

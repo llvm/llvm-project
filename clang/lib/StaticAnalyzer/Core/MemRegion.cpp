@@ -794,7 +794,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
         const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
         if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
-            Size.isOneValue())
+            Size.isOne())
           return true;
       }
       return false;

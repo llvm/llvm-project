@@ -1568,7 +1568,7 @@ private:
     assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
 
     if (Constraint.getConcreteValue())
-      return !Constraint.getConcreteValue()->isNullValue();
+      return !Constraint.getConcreteValue()->isZero();
 
     APSIntType T{Constraint.getMinValue()};
     Const Zero = T.getZeroValue();

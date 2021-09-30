@@ -1357,7 +1357,7 @@ bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Sc
       Val *= Base;
     }
   } else if (BaseShift < 0) {
-    for (int64_t i = BaseShift; i < 0 && !Val.isNullValue(); ++i)
+    for (int64_t i = BaseShift; i < 0 && !Val.isZero(); ++i)
       Val = Val.udiv(Base);
   }
 
