@@ -48,6 +48,7 @@ public:
     ID.AddPointer(&To());
   }
   void dump(raw_ostream &OS) const;
+  void dump() const;
 
   // In order to keep non-overlapping ranges sorted, we can compare only From
   // points.
@@ -282,6 +283,7 @@ public:
   bool contains(llvm::APSInt Point) const { return containsImpl(Point); }
 
   void dump(raw_ostream &OS) const;
+  void dump() const;
 
   bool operator==(const RangeSet &Other) const { return *Impl == *Other.Impl; }
   bool operator!=(const RangeSet &Other) const { return !(*this == Other); }
