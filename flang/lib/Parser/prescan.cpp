@@ -169,7 +169,7 @@ void Prescanner::Statement() {
     preprocessed->CloseToken();
     const char *ppd{preprocessed->ToCharBlock().begin()};
     LineClassification ppl{ClassifyLine(ppd)};
-    preprocessed->RemoveLastToken(); // remove the newline
+    preprocessed->pop_back(); // remove the newline
     switch (ppl.kind) {
     case LineClassification::Kind::Comment:
       break;
@@ -182,8 +182,10 @@ void Prescanner::Statement() {
     case LineClassification::Kind::PreprocessorDirective:
       Say(preprocessed->GetProvenanceRange(),
           "Preprocessed line resembles a preprocessor directive"_en_US);
-      preprocessed->ToLowerCase().CheckBadFortranCharacters(messages_).Emit(
-          cooked_);
+      preprocessed->ToLowerCase()
+          .CheckBadFortranCharacters(messages_)
+          .CheckBadParentheses(messages_)
+          .Emit(cooked_);
       break;
     case LineClassification::Kind::CompilerDirective:
       if (preprocessed->HasRedundantBlanks()) {
@@ -194,6 +196,7 @@ void Prescanner::Statement() {
       SourceFormChange(preprocessed->ToString());
       preprocessed->ClipComment(true /* skip first ! */)
           .CheckBadFortranCharacters(messages_)
+          .CheckBadParentheses(messages_)
           .Emit(cooked_);
       break;
     case LineClassification::Kind::Source:
@@ -209,6 +212,7 @@ void Prescanner::Statement() {
       preprocessed->ToLowerCase()
           .ClipComment()
           .CheckBadFortranCharacters(messages_)
+          .CheckBadParentheses(messages_)
           .Emit(cooked_);
       break;
     }
@@ -220,7 +224,9 @@ void Prescanner::Statement() {
     if (inFixedForm_ && line.kind == LineClassification::Kind::Source) {
       EnforceStupidEndStatementRules(tokens);
     }
-    tokens.CheckBadFortranCharacters(messages_).Emit(cooked_);
+    tokens.CheckBadFortranCharacters(messages_)
+        .CheckBadParentheses(messages_)
+        .Emit(cooked_);
   }
   if (omitNewline_) {
     omitNewline_ = false;
@@ -255,6 +261,7 @@ void Prescanner::NextLine() {
 void Prescanner::LabelField(TokenSequence &token) {
   const char *bad{nullptr};
   int outCol{1};
+  const char *start{at_};
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -271,17 +278,19 @@ void Prescanner::LabelField(TokenSequence &token) {
     }
     ++column_;
   }
+  if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+    Say(GetProvenance(bad),
+        "Character in fixed-form label field must be a digit"_en_US);
+    token.clear();
+    at_ = start;
+    return;
+  }
   if (outCol == 1) { // empty label field
     // Emit a space so that, if the line is rescanned after preprocessing,
     // a leading 'C' or 'D' won't be left-justified and then accidentally
     // misinterpreted as a comment card.
     EmitChar(token, ' ');
     ++outCol;
-  } else {
-    if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-      Say(GetProvenance(bad),
-          "Character in fixed-form label field must be a digit"_en_US);
-    }
   }
   token.CloseToken();
   SkipToNextSignificantCharacter();
