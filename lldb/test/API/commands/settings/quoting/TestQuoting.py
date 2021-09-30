@@ -18,7 +18,6 @@ class SettingsCommandTestCase(TestBase):
         """Cleanup the test byproducts."""
         cls.RemoveTempFile(SettingsCommandTestCase.output_file_name)
 
-    @skipIfReproducer  # Reproducers don't know about output.txt
     @no_debug_info_test
     def test(self):
         self.build()

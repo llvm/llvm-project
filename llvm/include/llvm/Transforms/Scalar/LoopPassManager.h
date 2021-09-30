@@ -109,7 +109,10 @@ public:
         detail::PassModel<Loop, PassT, PreservedAnalyses, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
     IsLoopNestPass.push_back(false);
-    LoopPasses.emplace_back(new LoopPassModelT(std::forward<PassT>(Pass)));
+    // Do not use make_unique or emplace_back, they cause too many template
+    // instantiations, causing terrible compile times.
+    LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
+        new LoopPassModelT(std::forward<PassT>(Pass))));
   }
 
   template <typename PassT>
@@ -120,8 +123,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(true);
-    LoopNestPasses.emplace_back(
-        new LoopNestPassModelT(std::forward<PassT>(Pass)));
+    LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
+        new LoopNestPassModelT(std::forward<PassT>(Pass))));
   }
 
   // Specializations of `addPass` for `RepeatedPass`. These are necessary since
@@ -135,7 +138,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(false);
-    LoopPasses.emplace_back(new RepeatedLoopPassModelT(std::move(Pass)));
+    LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
+        new RepeatedLoopPassModelT(std::move(Pass))));
   }
 
   template <typename PassT>
@@ -146,8 +150,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(true);
-    LoopNestPasses.emplace_back(
-        new RepeatedLoopNestPassModelT(std::move(Pass)));
+    LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
+        new RepeatedLoopNestPassModelT(std::move(Pass))));
   }
 
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
@@ -465,9 +469,13 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
   using PassModelT =
       detail::PassModel<Loop, LoopPassT, PreservedAnalyses, LoopAnalysisManager,
                         LoopStandardAnalysisResults &, LPMUpdater &>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
+
   return FunctionToLoopPassAdaptor(
-      std::make_unique<PassModelT>(std::forward<LoopPassT>(Pass)), UseMemorySSA,
-      UseBlockFrequencyInfo, UseBranchProbabilityInfo, false);
+      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<LoopPassT>(Pass))),
+      UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, false);
 }
 
 /// If \p Pass is a loop-nest pass, \p Pass will first be wrapped into a
@@ -484,9 +492,10 @@ createFunctionToLoopPassAdaptor(LoopNestPassT &&Pass, bool UseMemorySSA = false,
       detail::PassModel<Loop, LoopPassManager, PreservedAnalyses,
                         LoopAnalysisManager, LoopStandardAnalysisResults &,
                         LPMUpdater &>;
-  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
-                                   UseMemorySSA, UseBlockFrequencyInfo,
-                                   UseBranchProbabilityInfo, true);
+  return FunctionToLoopPassAdaptor(
+      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+          new PassModelT(std::move(LPM))),
+      UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, true);
 }
 
 /// If \p Pass is an instance of \c LoopPassManager, the returned adaptor will
@@ -503,9 +512,11 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(
                         LoopAnalysisManager, LoopStandardAnalysisResults &,
                         LPMUpdater &>;
   bool LoopNestMode = (LPM.getNumLoopPasses() == 0);
-  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
-                                   UseMemorySSA, UseBlockFrequencyInfo,
-                                   UseBranchProbabilityInfo, LoopNestMode);
+  return FunctionToLoopPassAdaptor(
+      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+          new PassModelT(std::move(LPM))),
+      UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo,
+      LoopNestMode);
 }
 
 /// Pass for printing a loop's contents as textual IR.

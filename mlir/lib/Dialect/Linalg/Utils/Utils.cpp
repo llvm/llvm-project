@@ -637,14 +637,33 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize
                               << ", size: " << size
                               << ": make sure in bound with affine.min\n");
+
       AffineExpr dim0, dim1, dim2;
       bindDims(builder.getContext(), dim0, dim1, dim2);
-      // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
-      AffineMap minMap =
-          AffineMap::inferFromExprList(
-              ArrayRef<ArrayRef<AffineExpr>>{{dim0, dim1 - dim2}})
+
+      // Get the dimension size for this dimension. We need to first calculate
+      // the max index and then plus one. This is important because for
+      // convolution ops, we have its input window dimension's affine map of the
+      // form `(d0 * s0 + d1)`, where `d0`/`d1 is an output/filter window
+      // dimension and `s0` is stride. Directly use the dimension size of
+      // output/filer window dimensions will cause incorrect calculation.
+      AffineMap minusOneMap =
+          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 - 1}})
               .front();
-      Value d = applyMapToValues(builder, loc, m, ubs).front();
+      AffineMap plusOneMap =
+          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 + 1}})
+              .front();
+      auto maxIndices = llvm::to_vector<8>(llvm::map_range(ubs, [&](Value ub) {
+        return makeComposedAffineApply(builder, loc, minusOneMap, {ub})
+            .getResult();
+      }));
+      Value maxIndex = applyMapToValues(builder, loc, m, maxIndices).front();
+      Value d = makeComposedAffineApply(builder, loc, plusOneMap, {maxIndex});
+
+      // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
+      AffineMap minMap = AffineMap::inferFromExprList(
+                             {ArrayRef<AffineExpr>{dim0, dim1 - dim2}})
+                             .front();
       SmallVector<Value, 4> operands{size, d, offset};
       fullyComposeAffineMapAndOperands(&minMap, &operands);
       canonicalizeMapAndOperands(&minMap, &operands);
