@@ -321,8 +321,7 @@ static ParseResult parseImageOperands(OpAsmParser &parser,
   if (parseEnumStrAttr(imageOperands, parser))
     return failure();
 
-  attr = spirv::ImageOperandsAttr::get(parser.getBuilder().getContext(),
-                                       imageOperands);
+  attr = spirv::ImageOperandsAttr::get(parser.getContext(), imageOperands);
 
   return parser.parseRSquare();
 }
@@ -3590,7 +3589,7 @@ static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
   if (!wrappedOp)
     return failure();
 
-  OpBuilder builder(parser.getBuilder().getContext());
+  OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
   builder.create<spirv::YieldOp>(wrappedOp->getLoc(), wrappedOp->getResult(0));
   state.location = wrappedOp->getLoc();
