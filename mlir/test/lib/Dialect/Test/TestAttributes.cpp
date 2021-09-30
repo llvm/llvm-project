@@ -27,13 +27,12 @@ using namespace test;
 // AttrWithSelfTypeParamAttr
 //===----------------------------------------------------------------------===//
 
-Attribute AttrWithSelfTypeParamAttr::parse(MLIRContext *context,
-                                           DialectAsmParser &parser,
+Attribute AttrWithSelfTypeParamAttr::parse(DialectAsmParser &parser,
                                            Type type) {
   Type selfType;
   if (parser.parseType(selfType))
     return Attribute();
-  return get(context, selfType);
+  return get(parser.getContext(), selfType);
 }
 
 void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
@@ -44,12 +43,11 @@ void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
 // AttrWithTypeBuilderAttr
 //===----------------------------------------------------------------------===//
 
-Attribute AttrWithTypeBuilderAttr::parse(MLIRContext *context,
-                                         DialectAsmParser &parser, Type type) {
+Attribute AttrWithTypeBuilderAttr::parse(DialectAsmParser &parser, Type type) {
   IntegerAttr element;
   if (parser.parseAttribute(element))
     return Attribute();
-  return get(context, element);
+  return get(parser.getContext(), element);
 }
 
 void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
@@ -60,8 +58,7 @@ void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
-Attribute CompoundAAttr::parse(MLIRContext *context, DialectAsmParser &parser,
-                               Type type) {
+Attribute CompoundAAttr::parse(DialectAsmParser &parser, Type type) {
   int widthOfSomething;
   Type oneType;
   SmallVector<int, 4> arrayOfInts;
@@ -79,7 +76,7 @@ Attribute CompoundAAttr::parse(MLIRContext *context, DialectAsmParser &parser,
 
   if (parser.parseRSquare() || parser.parseGreater())
     return Attribute();
-  return get(context, widthOfSomething, oneType, arrayOfInts);
+  return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
 }
 
 void CompoundAAttr::print(DialectAsmPrinter &printer) const {
@@ -93,8 +90,7 @@ void CompoundAAttr::print(DialectAsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
-Attribute TestI64ElementsAttr::parse(MLIRContext *context,
-                                     DialectAsmParser &parser, Type type) {
+Attribute TestI64ElementsAttr::parse(DialectAsmParser &parser, Type type) {
   SmallVector<uint64_t> elements;
   if (parser.parseLess() || parser.parseLSquare())
     return Attribute();
@@ -108,7 +104,7 @@ Attribute TestI64ElementsAttr::parse(MLIRContext *context,
   if (parser.parseRSquare() || parser.parseGreater())
     return Attribute();
   return parser.getChecked<TestI64ElementsAttr>(
-      context, type.cast<ShapedType>(), elements);
+      parser.getContext(), type.cast<ShapedType>(), elements);
 }
 
 void TestI64ElementsAttr::print(DialectAsmPrinter &printer) const {
@@ -158,8 +154,7 @@ Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
     return Attribute();
   {
     Attribute attr;
-    auto parseResult =
-        generatedAttributeParser(getContext(), parser, attrTag, type, attr);
+    auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
     if (parseResult.hasValue())
       return attr;
   }
