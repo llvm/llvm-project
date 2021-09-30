@@ -18,47 +18,47 @@
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fdiagnostics-show-hotness -verify -mllvm -mandatory-inlining-first=false
+// RUN:     -fdiagnostics-show-hotness -verify
 // The clang version of the previous test.
 // RUN: %clang -target x86_64-apple-macosx10.9 %s -c -emit-llvm -o /dev/null \
 // RUN:     -fprofile-instr-use=%t.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fdiagnostics-show-hotness -Xclang -verify -mllvm -mandatory-inlining-first=false
+// RUN:     -fdiagnostics-show-hotness -Xclang -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-sample-use=%t-sample.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 \
-// RUN:     -verify -mllvm -mandatory-inlining-first=false
+// RUN:     -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 -verify -mllvm -mandatory-inlining-first=false
+// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
-// RUN:     -Rpass-analysis=inline -mllvm -mandatory-inlining-first=false 2>&1 | FileCheck -check-prefix=HOTNESS_OFF %s
+// RUN:     -Rpass-analysis=inline 2>&1 | FileCheck -check-prefix=HOTNESS_OFF %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -fexperimental-new-pass-manager -O1 \
-// RUN:     -Rpass-analysis=inline -Rno-pass-with-hotness -mllvm -mandatory-inlining-first=false 2>&1 | FileCheck \
+// RUN:     -Rpass-analysis=inline -Rno-pass-with-hotness 2>&1 | FileCheck \
 // RUN:     -check-prefix=HOTNESS_OFF %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -Rpass-analysis=inline -fdiagnostics-show-hotness \
-// RUN:     -fdiagnostics-hotness-threshold=100 -mllvm -mandatory-inlining-first=false 2>&1 \
+// RUN:     -fdiagnostics-hotness-threshold=100  2>&1 \
 // RUN:     | FileCheck -allow-empty -check-prefix=THRESHOLD %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -Rpass=inline -Rpass-analysis=inline \
-// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 -mllvm -mandatory-inlining-first=false 2>&1 \
+// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 2>&1 \
 // RUN:     | FileCheck -check-prefix=NO_PGO %s
 
 int foo(int x, int y) __attribute__((always_inline));
@@ -73,7 +73,7 @@ void bar(int x) {
   // THRESHOLD-NOT: hotness
   // NO_PGO: '-fdiagnostics-show-hotness' requires profile-guided optimization information
   // NO_PGO: '-fdiagnostics-hotness-threshold=' requires profile-guided optimization information
-  // expected-remark@+1 {{'foo' inlined into 'bar' with (cost=always): always inline attribute at callsite bar:8:10; (hotness:}}
+  // expected-remark@+1 {{'foo' inlined into 'bar': always inline attribute at callsite bar:8:10; (hotness:}}
   sum += foo(x, x - 2);
 }
 
