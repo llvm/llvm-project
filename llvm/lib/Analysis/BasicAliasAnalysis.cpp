@@ -314,6 +314,22 @@ struct ExtendedValue {
     return N;
   }
 
+  KnownBits evaluateWith(KnownBits N) const {
+    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
+           "Incompatible bit width");
+    if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
+    if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
+    return N;
+  }
+
+  ConstantRange evaluateWith(ConstantRange N) const {
+    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
+           "Incompatible bit width");
+    if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
+    if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
+    return N;
+  }
+
   bool canDistributeOver(bool NUW, bool NSW) const {
     // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
     // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
@@ -1247,9 +1263,10 @@ AliasResult BasicAAResult::aliasGEP(
     bool AllNonNegative = DecompGEP1.Offset.isNonNegative();
     bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
-      APInt Scale = DecompGEP1.VarIndices[i].Scale;
-      APInt ScaleForGCD = DecompGEP1.VarIndices[i].Scale;
-      if (!DecompGEP1.VarIndices[i].IsNSW)
+      const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
+      const APInt &Scale = Index.Scale;
+      APInt ScaleForGCD = Scale;
+      if (!Index.IsNSW)
         ScaleForGCD = APInt::getOneBitSet(Scale.getBitWidth(),
                                           Scale.countTrailingZeros());
 
@@ -1259,23 +1276,11 @@ AliasResult BasicAAResult::aliasGEP(
         GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
       if (AllNonNegative || AllNonPositive) {
-        // If the Value could change between cycles, then any reasoning about
-        // the Value this cycle may not hold in the next cycle. We'll just
-        // give up if we can't determine conditions that hold for every cycle:
-        const Value *V = DecompGEP1.VarIndices[i].Val.V;
-        const Instruction *CxtI = DecompGEP1.VarIndices[i].CxtI;
-
-        KnownBits Known = computeKnownBits(V, DL, 0, &AC, CxtI, DT);
+        KnownBits Known = Index.Val.evaluateWith(
+            computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT));
+        // TODO: Account for implicit trunc.
         bool SignKnownZero = Known.isNonNegative();
         bool SignKnownOne = Known.isNegative();
-
-        // Zero-extension widens the variable, and so forces the sign
-        // bit to zero.
-        bool IsZExt =
-            DecompGEP1.VarIndices[i].Val.ZExtBits > 0 || isa<ZExtInst>(V);
-        SignKnownZero |= IsZExt;
-        SignKnownOne &= !IsZExt;
-
         AllNonNegative &= (SignKnownZero && Scale.isNonNegative()) ||
                           (SignKnownOne && Scale.isNonPositive());
         AllNonPositive &= (SignKnownZero && Scale.isNonPositive()) ||
@@ -1326,15 +1331,11 @@ AliasResult BasicAAResult::aliasGEP(
           // If V != 0 then abs(VarIndex) >= abs(Scale).
           MinAbsVarIndex = Var.Scale.abs();
         }
-        ConstantRange R = computeConstantRange(Var.Val.V, true, &AC, Var.CxtI);
-        if (!R.isFullSet() && !R.isEmptySet()) {
-          if (Var.Val.SExtBits)
-            R = R.signExtend(R.getBitWidth() + Var.Val.SExtBits);
-          if (Var.Val.ZExtBits)
-            R = R.zeroExtend(R.getBitWidth() + Var.Val.ZExtBits);
+        ConstantRange R = Var.Val.evaluateWith(
+            computeConstantRange(Var.Val.V, true, &AC, Var.CxtI));
+        if (!R.isFullSet() && !R.isEmptySet())
           VarIndexRange = R.sextOrTrunc(Var.Scale.getBitWidth())
                               .multiply(ConstantRange(Var.Scale));
-        }
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).
