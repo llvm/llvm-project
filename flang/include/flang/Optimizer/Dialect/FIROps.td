@@ -1658,7 +1658,8 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
+def fir_ArrayFetchOp : fir_Op<"array_fetch", [AttrSizedOperandSegments,
+    NoSideEffect]> {
 
   let summary = "Fetch the value of an element of an array value";
 
@@ -1689,28 +1690,22 @@ def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
 
   let arguments = (ins
     fir_SequenceType:$sequence,
-    Variadic<AnyCoordinateType>:$indices
+    Variadic<AnyCoordinateType>:$indices,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs AnyType:$element);
 
   let assemblyFormat = [{
-    $sequence `,` $indices attr-dict `:` functional-type(operands, results)
+    $sequence `,` $indices (`typeparams` $typeparams^)? attr-dict `:`
+      functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto arrTy = sequence().getType().cast<fir::SequenceType>();
-    if (indices().size() != arrTy.getDimension())
-      return emitOpError("number of indices != dimension of array");
-    if (element().getType() != arrTy.getEleTy())
-      return emitOpError("return type does not match array");
-    if (!isa<fir::ArrayLoadOp>(sequence().getDefiningOp()))
-      return emitOpError("argument #0 must be result of fir.array_load");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 }
 
-def fir_ArrayUpdateOp : fir_Op<"array_update", [NoSideEffect]> {
+def fir_ArrayUpdateOp : fir_Op<"array_update", [AttrSizedOperandSegments,
+    NoSideEffect]> {
 
   let summary = "Update the value of an element of an array value";
 
@@ -1747,32 +1742,22 @@ def fir_ArrayUpdateOp : fir_Op<"array_update", [NoSideEffect]> {
   let arguments = (ins
     fir_SequenceType:$sequence,
     AnyType:$merge,
-    Variadic<AnyCoordinateType>:$indices
+    Variadic<AnyCoordinateType>:$indices,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    $sequence `,` $merge `,` $indices attr-dict `:` functional-type(operands, results)
+    $sequence `,` $merge `,` $indices (`typeparams` $typeparams^)? attr-dict
+      `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto arrTy = sequence().getType().cast<fir::SequenceType>();
-    if (merge().getType() != arrTy.getEleTy())
-      return emitOpError("merged value does not have element type");
-    if (indices().size() != arrTy.getDimension())
-      return emitOpError("number of indices != dimension of array");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 }
 
-def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store", [
-    TypesMatchWith<"type of 'original' matches element type of 'memref'",
-                     "memref", "original",
-                     "fir::dyn_cast_ptrOrBoxEleTy($_self)">,
-    TypesMatchWith<"type of 'sequence' matches element type of 'memref'",
-                     "memref", "sequence",
-                     "fir::dyn_cast_ptrOrBoxEleTy($_self)">]> {
+def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
+    [AttrSizedOperandSegments]> {
 
   let summary = "Store merged array value to memory.";
 
@@ -1801,16 +1786,17 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store", [
   let arguments = (ins
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
-    Arg<AnyRefOrBox, "", [MemWrite]>:$memref
+    Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    Optional<fir_SliceType>:$slice,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
-  let assemblyFormat = "$original `,` $sequence `to` $memref attr-dict `:` type($memref)";
-
-  let verifier = [{
-    if (!isa<ArrayLoadOp>(original().getDefiningOp()))
-       return emitOpError("operand #0 must be result of a fir.array_load op");
-    return mlir::success();
+  let assemblyFormat = [{
+    $original `,` $sequence `to` $memref (`[` $slice^ `]`)? (`typeparams`
+      $typeparams^)? attr-dict `:` type(operands)
   }];
+
+  let verifier = "return ::verify(*this);";
 }
 
 //===----------------------------------------------------------------------===//
