@@ -291,6 +291,64 @@ def fir_AllocaOp :
   }];
 }
 
+def fir_AllocMemOp : fir_Op<"allocmem",
+    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+  let summary = "allocate storage on the heap for an object of a given type";
+
+  let description = [{
+    Creates a heap memory reference suitable for storing a value of the
+    given type, T.  The heap refernce returned has type `!fir.heap<T>`.
+    The memory object is in an undefined state.  `allocmem` operations must
+    be paired with `freemem` operations to avoid memory leaks.
+
+    ```mlir
+      %0 = fir.allocmem !fir.array<10 x f32>
+      fir.freemem %0 : !fir.heap<!fir.array<10 x f32>>
+    ```
+  }];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape
+  );
+  let results = (outs fir_HeapType);
+
+  let parser =
+      "return parseAllocatableOp(wrapAllocMemResultType, parser, result);";
+  let printer = "printAllocatableOp(p, (*this));";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      "llvm::StringRef":$bindc_name, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let verifier = [{ return ::verify(*this); }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+    bool hasLenParams() { return !typeparams().empty(); }
+    bool hasShapeOperands() { return !shape().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
+    operand_range getLenParams() { return typeparams(); }
+    unsigned numShapeOperands() { return shape().size(); }
+    operand_range getShapeOperands() { return shape(); }
+    static mlir::Type getRefTy(mlir::Type ty);
+    mlir::Type getInType() { return in_type(); }
+  }];
+}
+
 def fir_LoadOp : fir_OneResultOp<"load"> {
   let summary = "load a value from a memory reference";
   let description = [{
@@ -502,37 +560,6 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-}
-
-def fir_AllocMemOp : fir_AllocatableOp<"allocmem", DefaultResource> {
-  let summary = "allocate storage on the heap for an object of a given type";
-
-  let description = [{
-    Creates a heap memory reference suitable for storing a value of the
-    given type, T.  The heap refernce returned has type `!fir.heap<T>`.
-    The memory object is in an undefined state.  `allocmem` operations must
-    be paired with `freemem` operations to avoid memory leaks.
-
-    ```mlir
-      %0 = fir.allocmem !fir.array<10 x f32>
-      fir.freemem %0 : !fir.heap<!fir.array<10 x f32>>
-    ```
-  }];
-
-  let results = (outs fir_HeapType);
-
-  let verifier = allocVerify#[{
-    mlir::Type outType = getType();
-    if (!outType.dyn_cast<fir::HeapType>())
-      return emitOpError("must be a !fir.heap type");
-    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-      return emitOpError("cannot allocate !fir.box of unknown rank or type");
-    return mlir::success();
-  }];
-
-  let extraClassDeclaration = extraAllocClassDeclaration#[{
-    static mlir::Type wrapResultType(mlir::Type intype);
-  }];
 }
 
 def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {

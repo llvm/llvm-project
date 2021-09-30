@@ -69,6 +69,88 @@ static bool verifyRecordLenParams(mlir::Type inType, unsigned numLenParams) {
   return false;
 }
 
+static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
+  auto ty = fir::unwrapSequenceType(inType);
+  if (numParams > 0) {
+    if (auto recTy = ty.dyn_cast<fir::RecordType>())
+      return numParams != recTy.getNumLenParams();
+    if (auto chrTy = ty.dyn_cast<fir::CharacterType>())
+      return !(numParams == 1 && chrTy.hasDynamicLen());
+    return true;
+  }
+  if (auto chrTy = ty.dyn_cast<fir::CharacterType>())
+    return !chrTy.hasConstantLen();
+  return false;
+}
+
+/// Parser shared by Alloca and Allocmem
+///
+/// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
+///                      ( `(` $typeparams `)` )? ( `,` $shape )?
+///                      attr-dict-without-keyword
+template <typename FN>
+static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
+                                            mlir::OpAsmParser &parser,
+                                            mlir::OperationState &result) {
+  mlir::Type intype;
+  if (parser.parseType(intype))
+    return mlir::failure();
+  auto &builder = parser.getBuilder();
+  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+  llvm::SmallVector<mlir::Type> typeVec;
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeVec) || parser.parseRParen())
+      return mlir::failure();
+    typeparamsSize = operands.size();
+    hasOperands = true;
+  }
+  std::int32_t shapeSize = 0;
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
+      return mlir::failure();
+    shapeSize = operands.size() - typeparamsSize;
+    auto idxTy = builder.getIndexType();
+    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
+      typeVec.push_back(idxTy);
+    hasOperands = true;
+  }
+  if (hasOperands &&
+      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
+                             result.operands))
+    return mlir::failure();
+  mlir::Type restype = wrapResultType(intype);
+  if (!restype) {
+    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
+    return mlir::failure();
+  }
+  result.addAttribute("operand_segment_sizes",
+                      builder.getI32VectorAttr({typeparamsSize, shapeSize}));
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+template <typename OP>
+static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
+  p << ' ' << op.in_type();
+  if (!op.typeparams().empty()) {
+    p << '(' << op.typeparams() << " : " << op.typeparams().getTypes() << ')';
+  }
+  // print the shape of the allocation (if any); all must be index type
+  for (auto sh : op.shape()) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operand_segment_sizes"});
+}
+
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
@@ -93,6 +175,17 @@ mlir::Type fir::AllocaOp::getRefTy(mlir::Type ty) {
 // AllocMemOp
 //===----------------------------------------------------------------------===//
 
+/// Create a legal heap reference as return type
+static mlir::Type wrapAllocMemResultType(mlir::Type intype) {
+  // Fortran semantics: C852 an entity cannot be both ALLOCATABLE and POINTER
+  // 8.5.3 note 1 prohibits ALLOCATABLE procedures as well
+  // FIR semantics: one may not allocate a memory reference value
+  if (intype.isa<ReferenceType>() || intype.isa<HeapType>() ||
+      intype.isa<PointerType>() || intype.isa<FunctionType>())
+    return {};
+  return HeapType::get(intype);
+}
+
 mlir::Type fir::AllocMemOp::getAllocatedType() {
   return getType().cast<HeapType>().getEleTy();
 }
@@ -101,15 +194,50 @@ mlir::Type fir::AllocMemOp::getRefTy(mlir::Type ty) {
   return HeapType::get(ty);
 }
 
-/// Create a legal heap reference as return type
-mlir::Type fir::AllocMemOp::wrapResultType(mlir::Type intype) {
-  // Fortran semantics: C852 an entity cannot be both ALLOCATABLE and POINTER
-  // 8.5.3 note 1 prohibits ALLOCATABLE procedures as well
-  // FIR semantics: one may not allocate a memory reference value
-  if (intype.isa<ReferenceType>() || intype.isa<HeapType>() ||
-      intype.isa<PointerType>() || intype.isa<FunctionType>())
-    return {};
-  return HeapType::get(intype);
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type inType,
+                            llvm::StringRef uniqName,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniqName);
+  build(builder, result, wrapAllocMemResultType(inType), inType, nameAttr, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type inType,
+                            llvm::StringRef uniqName, llvm::StringRef bindcName,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniqName);
+  auto bindcAttr = builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocMemResultType(inType), inType, nameAttr,
+        bindcAttr, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type inType,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, wrapAllocMemResultType(inType), inType, {}, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+static mlir::LogicalResult verify(fir::AllocMemOp op) {
+  llvm::SmallVector<llvm::StringRef> visited;
+  if (verifyInType(op.getInType(), visited, op.numShapeOperands()))
+    return op.emitOpError("invalid type for allocation");
+  if (verifyTypeParamCount(op.getInType(), op.numLenParams()))
+    return op.emitOpError("LEN params do not correspond to type");
+  mlir::Type outType = op.getType();
+  if (!outType.dyn_cast<fir::HeapType>())
+    return op.emitOpError("must be a !fir.heap type");
+  if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
+    return op.emitOpError("cannot allocate !fir.box of unknown rank or type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
