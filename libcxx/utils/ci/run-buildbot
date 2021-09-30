@@ -113,15 +113,18 @@ function generate-cmake-libcxx-win() {
           "${@}"
 }
 
-function check-cxx-cxxabi() {
-    echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+function check-runtimes() {
+    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
 
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
     echo "+++ Running the libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
+
+    echo "+++ Running the libunwind tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
@@ -190,181 +193,181 @@ generic-cxx03)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-cxx11)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-cxx14)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-cxx17)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-cxx20)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-cxx2b)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-assertions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-assertions.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-debug-iterators)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-iterators.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
     check-abi-list
 ;;
 generic-noexceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-modules)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-static)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-static.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-32bit)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-clang-11)
     export CC=clang-11
     export CXX=clang++-11
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-clang-12)
     export CC=clang-12
     export CXX=clang++-12
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-gcc)
     export CC=gcc-11
     export CXX=g++-11
     clean
     generate-cmake
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-gcc-cxx11)
     export CC=gcc-11
     export CXX=g++-11
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-asan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-msan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-tsan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-ubsan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-with_llvm_unwinder)
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-singlethreaded)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-no-debug)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-debug.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-no-filesystem)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-filesystem.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-no-random_device)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-no-localization)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 generic-no-unicode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-unicode.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 x86_64-apple-system-noexceptions)
     clean
@@ -372,7 +375,7 @@ x86_64-apple-system-noexceptions)
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 x86_64-apple-system-backdeployment-*)
     clean
@@ -401,7 +404,7 @@ x86_64-apple-system-backdeployment-*)
                    -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                    -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
 
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 benchmarks)
     clean
@@ -428,7 +431,7 @@ unified-standalone)
           -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
 
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 new-standalone)
     clean
@@ -443,7 +446,7 @@ new-standalone)
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
 
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 runtimes-build)
     clean
@@ -475,7 +478,7 @@ runtimes-build)
 legacy-test-config)
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="legacy.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 legacy-standalone)
     clean
@@ -522,7 +525,7 @@ aarch64)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 aarch64-noexceptions)
     clean
@@ -530,33 +533,33 @@ aarch64-noexceptions)
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 # Aka Armv8 32 bit
 armv8)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 armv8-noexceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-noexceptions.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 armv7-noexceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-    check-cxx-cxxabi
+    check-runtimes
 ;;
 windows-dll)
     clean
