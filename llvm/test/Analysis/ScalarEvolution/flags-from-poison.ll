@@ -90,6 +90,83 @@ exit:
   ret void
 }
 
+; Case where we're checking to see if add flags are valid in defining scope
+; and all operands (other than addrec) are invariant
+define void @test-add-scope-invariant(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-invariant'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-invariant
+; CHECK-NEXT:    %offset = load i32, i32* %input, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + (-1 * %offset) + %needle) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: ((-1 * %offset) + %needle) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
+; CHECK-NEXT:    --> {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %needle LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 %needle to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-invariant
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %offset) + %needle)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %offset) + %needle)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %offset = load i32, i32* %input
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %i.next = add nuw i32 %i, 1
+  %of_interest = add nuw nsw i32 %i.next, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %of_interest, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Case where we're checking to see if add flags are valid in defining scope
+; and other operands are *not* invariant.
+define void @test-add-scope-bound(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i32, i32* %input, i32 %i
+; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
+; CHECK-NEXT:    --> ({1,+,1}<nuw><%loop> + %offset) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+; CHECK-NEXT:    --> ((4 * (sext i32 ({1,+,1}<nuw><%loop> + %offset) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %gep = getelementptr i32, i32* %input, i32 %i
+  %offset = load i32, i32* %gep
+  %i.next = add nuw i32 %i, 1
+  %of_interest = add nuw nsw i32 %i.next, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %of_interest, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @test-add-nuw-from-icmp(float* %input, i32 %offset,
 ; CHECK-LABEL: 'test-add-nuw-from-icmp'
 ; CHECK-NEXT:  Classifying expressions for: @test-add-nuw-from-icmp
