@@ -570,7 +570,7 @@ bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
     assert((ValueMask & PartMapMask) == PartMapMask &&
            "Some partial mappings overlap");
   }
-  assert(ValueMask.isAllOnesValue() && "Value is not fully mapped");
+  assert(ValueMask.isAllOnes() && "Value is not fully mapped");
   return true;
 }
 

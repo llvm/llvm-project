@@ -4187,7 +4187,7 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
   if (Inst->getOpcode() == Instruction::Xor) {
     const ConstantInt *Cst = dyn_cast<ConstantInt>(Inst->getOperand(1));
     // Make sure it is not a NOT.
-    if (Cst && !Cst->getValue().isAllOnesValue())
+    if (Cst && !Cst->getValue().isAllOnes())
       return true;
   }
 

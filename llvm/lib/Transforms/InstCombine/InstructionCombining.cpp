@@ -1059,7 +1059,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op,
         // Compare for equality including undefs as equal.
         auto *Cmp = ConstantExpr::getCompare(ICmpInst::ICMP_EQ, ConstA, ConstB);
         const APInt *C;
-        return match(Cmp, m_APIntAllowUndef(C)) && C->isOneValue();
+        return match(Cmp, m_APIntAllowUndef(C)) && C->isOne();
       };
 
       if ((areLooselyEqual(TV, Op0) && areLooselyEqual(FV, Op1)) ||

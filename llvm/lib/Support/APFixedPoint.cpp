@@ -306,7 +306,7 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
     APInt::sdivrem(ThisVal, OtherVal, Result, Rem);
     // If the quotient is negative and the remainder is nonzero, round
     // towards negative infinity by subtracting epsilon from the result.
-    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isNullValue())
+    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isZero())
       Result = Result - 1;
   } else
     Result = ThisVal.udiv(OtherVal);

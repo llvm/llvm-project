@@ -77,28 +77,28 @@ bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
     return false;
   case ICmpInst::ICMP_SLT:
     // X < 0 is equivalent to (X & SignMask) != 0.
-    if (!C->isNullValue())
+    if (!C->isZero())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_SLE:
     // X <= -1 is equivalent to (X & SignMask) != 0.
-    if (!C->isAllOnesValue())
+    if (!C->isAllOnes())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_SGT:
     // X > -1 is equivalent to (X & SignMask) == 0.
-    if (!C->isAllOnesValue())
+    if (!C->isAllOnes())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_EQ;
     break;
   case ICmpInst::ICMP_SGE:
     // X >= 0 is equivalent to (X & SignMask) == 0.
-    if (!C->isNullValue())
+    if (!C->isZero())
       return false;
     Mask = APInt::getSignMask(C->getBitWidth());
     Pred = ICmpInst::ICMP_EQ;

@@ -470,7 +470,7 @@ void STIPredicateExpander::expandOpcodeGroup(raw_ostream &OS, const OpcodeGroup 
     increaseIndentLevel();
     OS.indent(getIndentLevel() * 2);
     if (ShouldUpdateOpcodeMask) {
-      if (PI.OperandMask.isNullValue())
+      if (PI.OperandMask.isZero())
         OS << "Mask.clearAllBits();\n";
       else
         OS << "Mask = " << PI.OperandMask << ";\n";

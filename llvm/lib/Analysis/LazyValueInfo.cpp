@@ -1117,8 +1117,7 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     }
     // If (Val & Mask) != 0 then the value must be larger than the lowest set
     // bit of Mask.
-    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isNullValue() &&
-        C->isNullValue()) {
+    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isZero() && C->isZero()) {
       unsigned BitWidth = Ty->getIntegerBitWidth();
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
           APInt::getOneBitSet(BitWidth, Mask->countTrailingZeros()),

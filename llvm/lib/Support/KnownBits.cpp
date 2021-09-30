@@ -404,7 +404,7 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   // We only know that the absolute values's MSB will be zero if INT_MIN is
   // poison, or there is a set bit that isn't the sign bit (otherwise it could
   // be INT_MIN).
-  if (IntMinIsPoison || (!One.isNullValue() && !One.isMinSignedValue()))
+  if (IntMinIsPoison || (!One.isZero() && !One.isMinSignedValue()))
     KnownAbs.Zero.setSignBit();
 
   // FIXME: Handle known negative input?

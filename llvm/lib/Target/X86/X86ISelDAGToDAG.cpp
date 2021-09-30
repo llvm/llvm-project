@@ -890,7 +890,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       APInt SplatVal;
       if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
-          SplatVal.isOneValue()) {
+          SplatVal.isOne()) {
         SDLoc DL(N);
 
         MVT VT = N->getSimpleValueType(0);
@@ -4356,7 +4356,7 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
   // Check if the mask is -1. In that case, this is an unnecessary instruction
   // that escaped earlier analysis.
-  if (NegMaskVal.isAllOnesValue()) {
+  if (NegMaskVal.isAllOnes()) {
     ReplaceNode(And, And0.getNode());
     return true;
   }

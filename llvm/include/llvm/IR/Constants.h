@@ -203,7 +203,7 @@ public:
   /// to true.
   /// @returns true iff this constant's bits are all set to true.
   /// Determine if the value is all ones.
-  bool isMinusOne() const { return Val.isAllOnesValue(); }
+  bool isMinusOne() const { return Val.isAllOnes(); }
 
   /// This function will return true iff this constant represents the largest
   /// value that may be represented by the constant's type.

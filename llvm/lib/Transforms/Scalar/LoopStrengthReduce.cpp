@@ -689,7 +689,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
     const APInt &RA = RC->getAPInt();
     // Handle x /s -1 as x * -1, to give ScalarEvolution a chance to do
     // some folding.
-    if (RA.isAllOnesValue()) {
+    if (RA.isAllOnes()) {
       if (LHS->getType()->isPointerTy())
         return nullptr;
       return SE.getMulExpr(LHS, RC);
