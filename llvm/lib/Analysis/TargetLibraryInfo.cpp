@@ -653,8 +653,132 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   }
 
   if (T.isPS4()) {
+    // PS4 does have memalign.
+    TLI.setAvailable(LibFunc_memalign);
+
+    // PS4 does not have new/delete with "unsigned int" size parameter;
+    // it only has the "unsigned long" versions.
+    TLI.setUnavailable(LibFunc_ZdaPvj);
+    TLI.setUnavailable(LibFunc_ZdaPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvj);
+    TLI.setUnavailable(LibFunc_ZdlPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_Znaj);
+    TLI.setUnavailable(LibFunc_ZnajRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwj);
+    TLI.setUnavailable(LibFunc_ZnwjRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
+
+    // None of the *_chk functions.
+    TLI.setUnavailable(LibFunc_memccpy_chk);
+    TLI.setUnavailable(LibFunc_memcpy_chk);
+    TLI.setUnavailable(LibFunc_memmove_chk);
+    TLI.setUnavailable(LibFunc_mempcpy_chk);
+    TLI.setUnavailable(LibFunc_memset_chk);
+    TLI.setUnavailable(LibFunc_snprintf_chk);
+    TLI.setUnavailable(LibFunc_sprintf_chk);
+    TLI.setUnavailable(LibFunc_stpcpy_chk);
+    TLI.setUnavailable(LibFunc_stpncpy_chk);
+    TLI.setUnavailable(LibFunc_strcat_chk);
+    TLI.setUnavailable(LibFunc_strcpy_chk);
+    TLI.setUnavailable(LibFunc_strlcat_chk);
+    TLI.setUnavailable(LibFunc_strlcat_chk);
+    TLI.setUnavailable(LibFunc_strlcpy_chk);
+    TLI.setUnavailable(LibFunc_strlen_chk);
+    TLI.setUnavailable(LibFunc_strncat_chk);
+    TLI.setUnavailable(LibFunc_strncpy_chk);
+    TLI.setUnavailable(LibFunc_vsnprintf_chk);
+    TLI.setUnavailable(LibFunc_vsprintf_chk);
+
+    // Various Posix system functions.
+    TLI.setUnavailable(LibFunc_access);
+    TLI.setUnavailable(LibFunc_chmod);
+    TLI.setUnavailable(LibFunc_chown);
+    TLI.setUnavailable(LibFunc_closedir);
+    TLI.setUnavailable(LibFunc_ctermid);
+    TLI.setUnavailable(LibFunc_execl);
+    TLI.setUnavailable(LibFunc_execle);
+    TLI.setUnavailable(LibFunc_execlp);
+    TLI.setUnavailable(LibFunc_execv);
+    TLI.setUnavailable(LibFunc_execvP);
+    TLI.setUnavailable(LibFunc_execve);
+    TLI.setUnavailable(LibFunc_execvp);
+    TLI.setUnavailable(LibFunc_execvpe);
+    TLI.setUnavailable(LibFunc_fork);
+    TLI.setUnavailable(LibFunc_fstat);
+    TLI.setUnavailable(LibFunc_fstatvfs);
+    TLI.setUnavailable(LibFunc_getenv);
+    TLI.setUnavailable(LibFunc_getitimer);
+    TLI.setUnavailable(LibFunc_getlogin_r);
+    TLI.setUnavailable(LibFunc_getpwnam);
+    TLI.setUnavailable(LibFunc_gettimeofday);
+    TLI.setUnavailable(LibFunc_lchown);
+    TLI.setUnavailable(LibFunc_lstat);
+    TLI.setUnavailable(LibFunc_mkdir);
+    TLI.setUnavailable(LibFunc_open);
+    TLI.setUnavailable(LibFunc_opendir);
+    TLI.setUnavailable(LibFunc_pclose);
+    TLI.setUnavailable(LibFunc_popen);
+    TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pwrite);
+    TLI.setUnavailable(LibFunc_read);
+    TLI.setUnavailable(LibFunc_readlink);
+    TLI.setUnavailable(LibFunc_realpath);
+    TLI.setUnavailable(LibFunc_rename);
+    TLI.setUnavailable(LibFunc_rmdir);
+    TLI.setUnavailable(LibFunc_setitimer);
+    TLI.setUnavailable(LibFunc_stat);
+    TLI.setUnavailable(LibFunc_statvfs);
+    TLI.setUnavailable(LibFunc_system);
+    TLI.setUnavailable(LibFunc_times);
+    TLI.setUnavailable(LibFunc_tmpfile);
+    TLI.setUnavailable(LibFunc_unlink);
+    TLI.setUnavailable(LibFunc_uname);
+    TLI.setUnavailable(LibFunc_unsetenv);
+    TLI.setUnavailable(LibFunc_utime);
+    TLI.setUnavailable(LibFunc_utimes);
+    TLI.setUnavailable(LibFunc_valloc);
+    TLI.setUnavailable(LibFunc_write);
+
+    // Miscellaneous other functions not provided.
+    TLI.setUnavailable(LibFunc_atomic_load);
+    TLI.setUnavailable(LibFunc_atomic_store);
+    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
+    TLI.setUnavailable(LibFunc___kmpc_free_shared);
+    TLI.setUnavailable(LibFunc_dunder_strndup);
+    TLI.setUnavailable(LibFunc_bcmp);
+    TLI.setUnavailable(LibFunc_bcopy);
+    TLI.setUnavailable(LibFunc_bzero);
+    TLI.setUnavailable(LibFunc_cabs);
+    TLI.setUnavailable(LibFunc_cabsf);
+    TLI.setUnavailable(LibFunc_cabsl);
+    TLI.setUnavailable(LibFunc_ffs);
+    TLI.setUnavailable(LibFunc_flockfile);
+    TLI.setUnavailable(LibFunc_fseeko);
+    TLI.setUnavailable(LibFunc_ftello);
+    TLI.setUnavailable(LibFunc_ftrylockfile);
+    TLI.setUnavailable(LibFunc_funlockfile);
+    TLI.setUnavailable(LibFunc_htonl);
+    TLI.setUnavailable(LibFunc_htons);
+    TLI.setUnavailable(LibFunc_isascii);
+    TLI.setUnavailable(LibFunc_memccpy);
+    TLI.setUnavailable(LibFunc_mempcpy);
+    TLI.setUnavailable(LibFunc_memrchr);
+    TLI.setUnavailable(LibFunc_ntohl);
+    TLI.setUnavailable(LibFunc_ntohs);
+    TLI.setUnavailable(LibFunc_reallocf);
+    TLI.setUnavailable(LibFunc_roundeven);
+    TLI.setUnavailable(LibFunc_roundevenf);
+    TLI.setUnavailable(LibFunc_roundevenl);
     TLI.setUnavailable(LibFunc_stpcpy);
     TLI.setUnavailable(LibFunc_stpncpy);
+    TLI.setUnavailable(LibFunc_strlcat);
+    TLI.setUnavailable(LibFunc_strlcpy);
+    TLI.setUnavailable(LibFunc_strndup);
+    TLI.setUnavailable(LibFunc_strnlen);
+    TLI.setUnavailable(LibFunc_toascii);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to
