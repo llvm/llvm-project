@@ -1214,6 +1214,35 @@ static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLenOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseGlobalLenOp(mlir::OpAsmParser &parser,
+                                          mlir::OperationState &result) {
+  llvm::StringRef fieldName;
+  if (failed(parser.parseOptionalKeyword(&fieldName))) {
+    mlir::StringAttr fieldAttr;
+    if (parser.parseAttribute(fieldAttr, fir::GlobalLenOp::lenParamAttrName(),
+                              result.attributes))
+      return mlir::failure();
+  } else {
+    result.addAttribute(fir::GlobalLenOp::lenParamAttrName(),
+                        parser.getBuilder().getStringAttr(fieldName));
+  }
+  mlir::IntegerAttr constant;
+  if (parser.parseComma() ||
+      parser.parseAttribute(constant, fir::GlobalLenOp::intAttrName(),
+                            result.attributes))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::GlobalLenOp &op) {
+  p << ' ' << op.getOperation()->getAttr(fir::GlobalLenOp::lenParamAttrName())
+    << ", " << op.getOperation()->getAttr(fir::GlobalLenOp::intAttrName());
+}
+
+//===----------------------------------------------------------------------===//
 // ExtractValueOp
 //===----------------------------------------------------------------------===//
 
