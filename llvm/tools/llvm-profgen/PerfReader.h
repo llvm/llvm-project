@@ -530,15 +530,22 @@ protected:
     uint64_t Offset = 0;
     StringRef BinaryPath;
   };
-
-  // Check whther a given line is LBR sample
+  // Generate perf script from perf data
+  static std::string convertPerfDataToTrace(ProfiledBinary *Binary,
+                                            StringRef PerfData);
+  // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line);
+  // Check whether a given line is MMAP event
+  static bool isMMap2Event(StringRef Line);
   // Extract perf script type by peaking at the input
   static PerfScriptType checkPerfScriptType(StringRef FileName);
-  // Update base address based on mmap events
-  void updateBinaryAddress(const MMapEvent &Event);
   // Parse a single line of a PERF_RECORD_MMAP2 event looking for a
   // mapping between the binary name and its memory layout.
+  static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                         MMapEvent &MMap);
+  // Update base address based on mmap events
+  void updateBinaryAddress(const MMapEvent &Event);
+  // Parse mmap event and update binary address
   void parseMMap2Event(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();

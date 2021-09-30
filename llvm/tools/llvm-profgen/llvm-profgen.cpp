@@ -21,7 +21,7 @@
 
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
-static cl::opt<std::string> PerfTraceFilename(
+cl::opt<std::string> PerfTraceFilename(
     "perfscript", cl::value_desc("perfscript"), cl::ZeroOrMore,
     llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of perf-script trace created by Linux perf tool with "
