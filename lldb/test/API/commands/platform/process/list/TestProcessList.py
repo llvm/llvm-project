@@ -29,9 +29,4 @@ class ProcessListTestCase(TestBase):
 
         substrs = [str(popen.pid), "TestProcess arg1 --arg2 arg3"]
 
-        # Because LLDB isn't the one spawning the subprocess, the PID will be
-        # different during replay.
-        if configuration.is_reproducer_replay():
-            substrs.pop(0)
-
         self.expect("platform process list -v", substrs=substrs)

@@ -21,7 +21,6 @@ class ObjCModulesTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
     @skipIf(macos_version=["<", "10.12"])
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

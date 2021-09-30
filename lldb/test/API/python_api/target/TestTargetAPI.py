@@ -112,7 +112,6 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
-    @skipIfReproducer # SBTarget::ReadMemory is not instrumented.
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -143,7 +142,6 @@ class TargetAPITestCase(TestBase):
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
-    @skipIfReproducer  # stdout not captured by reproducers
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
@@ -248,18 +246,16 @@ class TargetAPITestCase(TestBase):
         self.expect(my_global_var.GetValue(), exe=False,
                     startstr="'X'")
 
-
-        if not configuration.is_reproducer():
-            # While we are at it, let's also exercise the similar
-            # SBModule.FindGlobalVariables() API.
-            for m in target.module_iter():
-                if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
-                    value_list = m.FindGlobalVariables(
-                        target, 'my_global_var_of_char_type', 3)
-                    self.assertEqual(value_list.GetSize(), 1)
-                    self.assertEqual(
-                        value_list.GetValueAtIndex(0).GetValue(), "'X'")
-                    break
+        # While we are at it, let's also exercise the similar
+        # SBModule.FindGlobalVariables() API.
+        for m in target.module_iter():
+            if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
+                value_list = m.FindGlobalVariables(
+                    target, 'my_global_var_of_char_type', 3)
+                self.assertEqual(value_list.GetSize(), 1)
+                self.assertEqual(
+                    value_list.GetValueAtIndex(0).GetValue(), "'X'")
+                break
 
     def find_compile_units(self, exe):
         """Exercise SBTarget.FindCompileUnits() API."""
@@ -324,7 +320,6 @@ class TargetAPITestCase(TestBase):
 
     @skipIfRemote
     @no_debug_info_test
-    @skipIfReproducer # Inferior doesn't run during replay.
     def test_launch_new_process_and_redirect_stdout(self):
         """Exercise SBTaget.Launch() API with redirected stdout."""
         self.build()

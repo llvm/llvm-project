@@ -19,7 +19,6 @@ class ReproducerFileSystemSensitivityTestCase(TestBase):
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    @skipIfReproducer
     def test_reproducer_attach(self):
         # The reproducer output path. Note that this is on purpose a lower-case
         # file name. See the case-sensitivity check below.

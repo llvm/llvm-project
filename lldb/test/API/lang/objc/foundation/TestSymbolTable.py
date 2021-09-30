@@ -37,19 +37,9 @@ class FoundationSymtabTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        # Create the filespec by which to locate our a.out module.
-        #
-        #  - Use the absolute path to get the module for the current variant.
-        #  - Use the relative path for reproducers. The modules are never
-        #    orphaned because the SB objects are leaked intentionally. This
-        #    causes LLDB to reuse the same module for every variant, because the
-        #    UUID is the same for all the inferiors. FindModule below only
-        #    compares paths and is oblivious to the fact that the UUIDs are the
-        #    same.
-        if configuration.is_reproducer():
-            filespec = lldb.SBFileSpec('a.out', False)
-        else:
-            filespec = lldb.SBFileSpec(exe, False)
+        # Create the filespec by which to locate our a.out module. Use the
+        # absolute path to get the module for the current variant.
+        filespec = lldb.SBFileSpec(exe, False)
 
         module = target.FindModule(filespec)
         self.assertTrue(module, VALID_MODULE)

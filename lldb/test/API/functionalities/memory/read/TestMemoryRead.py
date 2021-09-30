@@ -150,8 +150,6 @@ class MemoryReadTestCase(TestBase):
         golden_output = res.GetOutput()
 
         memory_read_file = self.getBuildArtifact("memory-read-output")
-        if configuration.is_reproducer_replay():
-            memory_read_file = self.getReproducerRemappedPath(memory_read_file)
 
         def check_file_content(expected):
             with open(memory_read_file) as f:

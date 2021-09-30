@@ -19,7 +19,6 @@ class TestDeletedExecutable(TestBase):
     @expectedFailureAll(oslist=["linux"],
         triple=no_match('aarch64-.*-android'))
         # determining the architecture of the process fails
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

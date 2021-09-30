@@ -908,9 +908,3 @@ def skipUnlessFeature(feature):
             except subprocess.CalledProcessError:
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
-
-def skipIfReproducer(func):
-    """Skip this test if the environment is set up to run LLDB with reproducers."""
-    return unittest2.skipIf(
-        configuration.capture_path or configuration.replay_path,
-        "reproducers unsupported")(func)

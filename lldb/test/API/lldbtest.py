@@ -55,15 +55,6 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
-        if 'lldb-repro-capture' in test.config.available_features or \
-           'lldb-repro-replay' in test.config.available_features:
-            reproducer_path = os.path.join(
-                test.config.lldb_reproducer_directory, testFile)
-            if 'lldb-repro-capture' in test.config.available_features:
-                cmd.extend(['--capture-path', reproducer_path])
-            else:
-                cmd.extend(['--replay-path', reproducer_path])
-
         timeoutInfo = None
         try:
             out, err, exitCode = lit.util.executeCommand(

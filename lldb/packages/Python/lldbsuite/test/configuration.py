@@ -117,10 +117,6 @@ clang_module_cache_dir = None
 # Test results handling globals
 test_result = None
 
-# Reproducers
-capture_path = None
-replay_path = None
-
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.
 all_tests = set()
@@ -158,18 +154,3 @@ def get_yaml2obj_path():
     """
     if yaml2obj and os.path.lexists(yaml2obj):
         return yaml2obj
-
-def is_reproducer_replay():
-    """
-    Returns true when dotest is being replayed from a reproducer. Never use
-    this method to guard SB API calls as it will cause a divergence between
-    capture and replay.
-    """
-    return replay_path is not None
-
-def is_reproducer():
-    """
-    Returns true when dotest is capturing a reproducer or is being replayed
-    from a reproducer. Use this method to guard SB API calls.
-    """
-    return capture_path or replay_path

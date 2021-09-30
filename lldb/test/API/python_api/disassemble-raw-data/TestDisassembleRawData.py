@@ -18,7 +18,6 @@ class DisassembleRawDataTestCase(TestBase):
 
     @no_debug_info_test
     @skipIfRemote
-    @skipIfReproducer # GetInstructions is not instrumented.
     def test_disassemble_raw_data(self):
         """Test disassembling raw bytes with the API."""
         # Create a target from the debugger.

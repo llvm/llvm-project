@@ -31,8 +31,6 @@ class TestClangModuleHashMismatch(TestBase):
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
         logfile = self.getBuildArtifact("host.log")
-        if configuration.is_reproducer_replay():
-            logfile = self.getReproducerRemappedPath(logfile)
         self.runCmd("log enable -v -f %s lldb host" % logfile)
         target, _, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.m"))

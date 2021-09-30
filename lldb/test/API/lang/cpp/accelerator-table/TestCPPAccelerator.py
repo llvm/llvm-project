@@ -15,8 +15,6 @@ class CPPAcceleratorTableTestCase(TestBase):
         self.build()
 
         logfile = self.getBuildArtifact('dwarf.log')
-        if configuration.is_reproducer_replay():
-            logfile = self.getReproducerRemappedPath(logfile)
 
         self.expect('log enable dwarf lookups -f' + logfile)
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

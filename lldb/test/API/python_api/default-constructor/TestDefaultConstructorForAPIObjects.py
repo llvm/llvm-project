@@ -104,7 +104,6 @@ class APIDefaultConstructorTestCase(TestBase):
         import sb_compileunit
         sb_compileunit.fuzz_obj(obj)
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBDebugger(self):
         obj = lldb.SBDebugger()
         if self.TraceOn():
@@ -165,7 +164,6 @@ class APIDefaultConstructorTestCase(TestBase):
         import sb_function
         sb_function.fuzz_obj(obj)
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBFile(self):
         sbf = lldb.SBFile()
         self.assertFalse(sbf.IsValid())

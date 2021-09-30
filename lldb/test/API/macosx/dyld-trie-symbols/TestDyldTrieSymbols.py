@@ -90,23 +90,20 @@ class DyldTrieSymbolsTestCase(TestBase):
         syms_ctx = stripped_target.FindSymbols("SourceBase")
         self.assertEqual(syms_ctx.GetSize(), 2)
 
-        # The next part if not deterministic and potentially causes replay to
-        # fail when the order is different during capture and replay.
-        if not configuration.is_reproducer():
-            sym1 = syms_ctx.GetContextAtIndex(0).GetSymbol()
-            sym2 = syms_ctx.GetContextAtIndex(1).GetSymbol()
+        sym1 = syms_ctx.GetContextAtIndex(0).GetSymbol()
+        sym2 = syms_ctx.GetContextAtIndex(1).GetSymbol()
 
-            # one of these should be a lldb.eSymbolTypeObjCClass, the other
-            # should be lldb.eSymbolTypeObjCMetaClass.
-            if sym1.GetType() == lldb.eSymbolTypeObjCMetaClass:
-                self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCClass)
+        # one of these should be a lldb.eSymbolTypeObjCClass, the other
+        # should be lldb.eSymbolTypeObjCMetaClass.
+        if sym1.GetType() == lldb.eSymbolTypeObjCMetaClass:
+            self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCClass)
+        else:
+            if sym1.GetType() == lldb.eSymbolTypeObjCClass:
+                self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCMetaClass)
             else:
-                if sym1.GetType() == lldb.eSymbolTypeObjCClass:
-                    self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCMetaClass)
-                else:
-                    self.assertTrue(sym1.GetType() == lldb.eSymbolTypeObjCMetaClass or sym1.GetType() == lldb.eSymbolTypeObjCClass)
+                self.assertTrue(sym1.GetType() == lldb.eSymbolTypeObjCMetaClass or sym1.GetType() == lldb.eSymbolTypeObjCClass)
 
-            syms_ctx = stripped_target.FindSymbols("SourceDerived._derivedValue")
-            self.assertEqual(syms_ctx.GetSize(), 1)
-            sym = syms_ctx.GetContextAtIndex(0).GetSymbol()
-            self.assertEqual(sym.GetType(), lldb.eSymbolTypeObjCIVar)
+        syms_ctx = stripped_target.FindSymbols("SourceDerived._derivedValue")
+        self.assertEqual(syms_ctx.GetSize(), 1)
+        sym = syms_ctx.GetContextAtIndex(0).GetSymbol()
+        self.assertEqual(sym.GetType(), lldb.eSymbolTypeObjCIVar)

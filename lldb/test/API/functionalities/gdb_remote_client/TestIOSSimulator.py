@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from gdbclientutils import *
 
-@skipIfReproducer
 class TestIOSSimulator(GDBRemoteTestBase):
     """
     Test that an ios simulator process is recognized as such.
