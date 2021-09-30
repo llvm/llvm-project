@@ -169,7 +169,18 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
-        typeparams, shape);
+        /*pinned=*/false, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          llvm::StringRef uniqName, bool pinned,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniqName);
+  build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
+        pinned, typeparams, shape);
   result.addAttributes(attributes);
 }
 
@@ -183,7 +194,22 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
   auto bindcAttr =
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
-        bindcAttr, typeparams, shape);
+        bindcAttr, /*pinned=*/false, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          llvm::StringRef uniqName, llvm::StringRef bindcName,
+                          bool pinned, mlir::ValueRange typeparams,
+                          mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  auto bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
+        bindcAttr, pinned, typeparams, shape);
   result.addAttributes(attributes);
 }
 
@@ -192,6 +218,16 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           mlir::ValueRange typeparams, mlir::ValueRange shape,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocaResultType(inType), inType, {}, {},
+        /*pinned=*/false, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type inType,
+                          bool pinned, mlir::ValueRange typeparams,
+                          mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, wrapAllocaResultType(inType), inType, {}, {}, pinned,
         typeparams, shape);
   result.addAttributes(attributes);
 }
@@ -1211,6 +1247,35 @@ static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
     appendAsAttribute<AllowFields>(attrs, v);
   assert(!attrs.empty());
   return mlir::ArrayAttr::get(ctxt, attrs);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLenOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseGlobalLenOp(mlir::OpAsmParser &parser,
+                                          mlir::OperationState &result) {
+  llvm::StringRef fieldName;
+  if (failed(parser.parseOptionalKeyword(&fieldName))) {
+    mlir::StringAttr fieldAttr;
+    if (parser.parseAttribute(fieldAttr, fir::GlobalLenOp::lenParamAttrName(),
+                              result.attributes))
+      return mlir::failure();
+  } else {
+    result.addAttribute(fir::GlobalLenOp::lenParamAttrName(),
+                        parser.getBuilder().getStringAttr(fieldName));
+  }
+  mlir::IntegerAttr constant;
+  if (parser.parseComma() ||
+      parser.parseAttribute(constant, fir::GlobalLenOp::intAttrName(),
+                            result.attributes))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::GlobalLenOp &op) {
+  p << ' ' << op.getOperation()->getAttr(fir::GlobalLenOp::lenParamAttrName())
+    << ", " << op.getOperation()->getAttr(fir::GlobalLenOp::intAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2607,6 +2672,19 @@ static mlir::LogicalResult verify(fir::SelectTypeOp &op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ShapeOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::ShapeOp &op) {
+  auto size = op.extents().size();
+  auto shapeTy = op.getType().dyn_cast<fir::ShapeType>();
+  assert(shapeTy && "must be a shape type");
+  if (shapeTy.getRank() != size)
+    return op.emitOpError("shape type rank mismatch");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeShiftOp
 //===----------------------------------------------------------------------===//
 
@@ -2673,13 +2751,40 @@ static mlir::LogicalResult verify(fir::SliceOp &op) {
 //===----------------------------------------------------------------------===//
 
 mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
-  if (auto ref = refType.dyn_cast<ReferenceType>())
-    return ref.getEleTy();
-  if (auto ref = refType.dyn_cast<PointerType>())
-    return ref.getEleTy();
-  if (auto ref = refType.dyn_cast<HeapType>())
-    return ref.getEleTy();
-  return {};
+  return fir::dyn_cast_ptrEleTy(refType);
+}
+
+static mlir::ParseResult parseStoreOp(mlir::OpAsmParser &parser,
+                                      mlir::OperationState &result) {
+  mlir::Type type;
+  mlir::OpAsmParser::OperandType oper;
+  mlir::OpAsmParser::OperandType store;
+  if (parser.parseOperand(oper) || parser.parseKeyword("to") ||
+      parser.parseOperand(store) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(oper, fir::StoreOp::elementType(type),
+                            result.operands) ||
+      parser.resolveOperand(store, type, result.operands))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::StoreOp &op) {
+  p << ' ';
+  p.printOperand(op.value());
+  p << " to ";
+  p.printOperand(op.memref());
+  p.printOptionalAttrDict(op.getOperation()->getAttrs(), {});
+  p << " : " << op.memref().getType();
+}
+
+static mlir::LogicalResult verify(fir::StoreOp &op) {
+  if (op.value().getType() != fir::dyn_cast_ptrEleTy(op.memref().getType()))
+    return op.emitOpError("store value type must match memory reference type");
+  if (fir::isa_unknown_size_box(op.value().getType()))
+    return op.emitOpError("cannot store !fir.box of unknown rank or type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

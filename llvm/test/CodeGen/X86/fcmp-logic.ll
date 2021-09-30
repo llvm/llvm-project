@@ -327,3 +327,56 @@ define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, i1* 
   %r = xor i1 %f1, %f2
   ret i1 %r
 }
+
+
+; bool f32cmp3(float x, float y, float z, float w) {
+;     return ((x > 0) || (y > 0)) != (z < w);
+; }
+
+define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
+; SSE2-LABEL: f32cmp3:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm4, %xmm4
+; SSE2-NEXT:    ucomiss %xmm4, %xmm0
+; SSE2-NEXT:    seta %al
+; SSE2-NEXT:    ucomiss %xmm4, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    orb %al, %cl
+; SSE2-NEXT:    ucomiss %xmm2, %xmm3
+; SSE2-NEXT:    seta %al
+; SSE2-NEXT:    xorb %cl, %al
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: f32cmp3:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vcmpltps %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vcmpltps %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %ecx
+; AVX1-NEXT:    vucomiss %xmm2, %xmm3
+; AVX1-NEXT:    seta %al
+; AVX1-NEXT:    xorb %cl, %al
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: f32cmp3:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX512-NEXT:    vcmpltps %zmm1, %zmm4, %k0
+; AVX512-NEXT:    vcmpltps %zmm0, %zmm4, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %ecx
+; AVX512-NEXT:    vucomiss %xmm2, %xmm3
+; AVX512-NEXT:    seta %al
+; AVX512-NEXT:    xorb %cl, %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %cmpx = fcmp ogt float %x, 0.0
+  %cmpy = fcmp ogt float %y, 0.0
+  %or = select i1 %cmpx, i1 true, i1 %cmpy
+  %cmpzw = fcmp olt float %z, %w
+  %r = xor i1 %or, %cmpzw
+  ret i1 %r
+}

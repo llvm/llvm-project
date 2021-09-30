@@ -262,7 +262,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
         // Note that this runs whether we know an alloca has escaped or not. If
         // it has, then we can't trust Tracker.AllocaUsers to be accurate.
         bool SafeToTail = true;
-        for (auto &Arg : CI->arg_operands()) {
+        for (auto &Arg : CI->args()) {
           if (isa<Constant>(Arg.getUser()))
             continue;
           if (Argument *A = dyn_cast<Argument>(Arg.getUser()))

@@ -3707,7 +3707,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     assert((OperandWidth == 64 || OperandWidth == 128) &&
            "Unexpected operand width");
     Type *NewTy = FixedVectorType::get(Type::getBFloatTy(C), OperandWidth / 16);
-    auto Iter = CI->arg_operands().begin();
+    auto Iter = CI->args().begin();
     Args.push_back(*Iter++);
     Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
     Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));

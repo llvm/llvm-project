@@ -328,7 +328,7 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
 
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
-    SmallVector<Value *, 4> Args(II->arg_operands());
+    SmallVector<Value *, 4> Args(II->args());
     // All the target-generic intrinsics currently of interest to us have one
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
