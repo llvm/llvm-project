@@ -31,6 +31,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1318,13 +1319,28 @@ AliasResult BasicAAResult::aliasGEP(
       return AliasResult::NoAlias;
 
     if (V1Size.hasValue() && V2Size.hasValue()) {
-      // Try to determine whether abs(VarIndex) > 0.
+      // Try to determine the range of values for VarIndex.
+      // VarIndexRange is such that:
+      //    (VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex) &&
+      //    VarIndexRange.contains(VarIndex)
       Optional<APInt> MinAbsVarIndex;
+      Optional<ConstantRange> VarIndexRange;
       if (DecompGEP1.VarIndices.size() == 1) {
-        // VarIndex = Scale*V. If V != 0 then abs(VarIndex) >= abs(Scale).
+        // VarIndex = Scale*V.
         const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-        if (isKnownNonZero(Var.V, DL, 0, &AC, Var.CxtI, DT))
+        if (isKnownNonZero(Var.V, DL, 0, &AC, Var.CxtI, DT)) {
+          // If V != 0 then abs(VarIndex) >= abs(Scale).
           MinAbsVarIndex = Var.Scale.abs();
+        }
+        ConstantRange R = computeConstantRange(Var.V, true, &AC, Var.CxtI);
+        if (!R.isFullSet() && !R.isEmptySet()) {
+          if (Var.SExtBits)
+            R = R.signExtend(R.getBitWidth() + Var.SExtBits);
+          if (Var.ZExtBits)
+            R = R.zeroExtend(R.getBitWidth() + Var.ZExtBits);
+          VarIndexRange = R.sextOrTrunc(Var.Scale.getBitWidth())
+                              .multiply(ConstantRange(Var.Scale));
+        }
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).
@@ -1342,10 +1358,24 @@ AliasResult BasicAAResult::aliasGEP(
         // The constant offset will have added at least +/-MinAbsVarIndex to it.
         APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
         APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
-        // Check that an access at OffsetLo or lower, and an access at OffsetHi
-        // or higher both do not alias.
+        // We know that Offset <= OffsetLo || Offset >= OffsetHi
         if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
             OffsetHi.isNonNegative() && OffsetHi.uge(V2Size.getValue()))
+          return AliasResult::NoAlias;
+      }
+
+      if (VarIndexRange) {
+        ConstantRange OffsetRange =
+            VarIndexRange->add(ConstantRange(DecompGEP1.Offset));
+
+        // We know that Offset >= MinOffset.
+        // (MinOffset >= V2Size) => (Offset >= V2Size) => NoAlias.
+        if (OffsetRange.getSignedMin().sge(V2Size.getValue()))
+          return AliasResult::NoAlias;
+
+        // We know that Offset <= MaxOffset.
+        // (MaxOffset <= -V1Size) => (Offset <= -V1Size) => NoAlias.
+        if (OffsetRange.getSignedMax().sle(-V1Size.getValue()))
           return AliasResult::NoAlias;
       }
     }
