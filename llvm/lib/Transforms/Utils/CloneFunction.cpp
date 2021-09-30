@@ -62,7 +62,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     NewBB->getInstList().push_back(NewInst);
     VMap[&I] = NewInst; // Add instruction map to value.
 
-    hasCalls |= (isa<CallInst>(I) && !isa<DbgInfoIntrinsic>(I));
+    hasCalls |= (isa<CallInst>(I) && !I.isDebugOrPseudoInst());
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
         hasDynamicAllocas = true;
@@ -410,7 +410,7 @@ void PruningFunctionCloner::CloneBlock(
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
     NewBB->getInstList().push_back(NewInst);
-    hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
+    hasCalls |= (isa<CallInst>(II) && !II->isDebugOrPseudoInst());
 
     if (CodeInfo) {
       CodeInfo->OrigVMap[&*II] = NewInst;

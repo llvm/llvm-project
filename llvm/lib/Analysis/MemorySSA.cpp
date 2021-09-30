@@ -309,6 +309,7 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
+    case Intrinsic::pseudoprobe:
       return {false, AliasResult(AliasResult::NoAlias)};
     case Intrinsic::dbg_addr:
     case Intrinsic::dbg_declare:
@@ -1782,6 +1783,7 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
       break;
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
+    case Intrinsic::pseudoprobe:
       return nullptr;
     }
   }

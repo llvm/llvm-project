@@ -1275,9 +1275,9 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       // Skip debug info intrinsics.
       do {
         --I;
-      } while (isa<DbgInfoIntrinsic>(I) && I != Preheader->begin());
+      } while (I->isDebugOrPseudoInst() && I != Preheader->begin());
 
-      if (isa<DbgInfoIntrinsic>(I) && I == Preheader->begin())
+      if (I->isDebugOrPseudoInst() && I == Preheader->begin())
         Done = true;
     } else {
       Done = true;
