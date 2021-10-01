@@ -20,7 +20,6 @@ class SBDataAPICase(TestBase):
         # Find the line number to break on inside main.cpp.
         self.line = line_number('main.cpp', '// set breakpoint here')
 
-    @skipIfReproducer # SBData::SetData is not instrumented.
     def test_byte_order_and_address_byte_size(self):
         """Test the SBData::SetData() to ensure the byte order and address
         byte size are obeyed"""
@@ -40,7 +39,6 @@ class SBDataAPICase(TestBase):
         addr = data.GetAddress(error, 0)
         self.assertEqual(addr, 0x8877665544332211);
 
-    @skipIfReproducer # SBData::SetData is not instrumented.
     def test_with_run_command(self):
         """Test the SBData APIs."""
         self.build()

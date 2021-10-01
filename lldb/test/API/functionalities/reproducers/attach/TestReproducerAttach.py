@@ -19,7 +19,6 @@ class ReproducerAttachTestCase(TestBase):
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    @skipIfReproducer
     def test_reproducer_attach(self):
         """Test thread creation after process attach."""
         exe = '%s_%d' % (self.testMethodName, os.getpid())

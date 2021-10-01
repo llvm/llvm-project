@@ -20,8 +20,6 @@ class LogTestCase(TestBase):
         super(LogTestCase, self).setUp()
         self.log_file = self.getBuildArtifact("log-file.txt")
 
-        if configuration.is_reproducer_replay():
-            self.log_file = self.getReproducerRemappedPath(self.log_file)
 
     def test_file_writing(self):
         self.build()

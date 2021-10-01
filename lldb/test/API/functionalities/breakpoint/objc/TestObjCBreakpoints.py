@@ -120,10 +120,6 @@ class TestObjCBreakpoints(TestBase):
 
         self.check_category_breakpoints()
 
-        # Stop here for reproducers. They don't capture file system changes.
-        if configuration.is_reproducer():
-            return
-
         if have_dsym:
             shutil.rmtree(exe + ".dSYM")
         self.assertEqual(subprocess.call(

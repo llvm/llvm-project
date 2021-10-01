@@ -45,7 +45,6 @@ class TestExitDuringExpression(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.build()
 
-    @skipIfReproducer # Timeouts are not currently modeled.
     def exiting_expression_test(self, before_one_thread_timeout , unwind):
         """function_to_call sleeps for g_timeout microseconds, then calls pthread_exit.
            This test calls function_to_call with an overall timeout of 500
