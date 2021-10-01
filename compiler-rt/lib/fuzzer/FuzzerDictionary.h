@@ -111,7 +111,7 @@ private:
 };
 
 // Parses one dictionary entry.
-// If successful, write the enty to Unit and returns true,
+// If successful, writes the entry to Unit and returns true,
 // otherwise returns false.
 bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
 // Parses the dictionary file, fills Units, returns true iff all lines
