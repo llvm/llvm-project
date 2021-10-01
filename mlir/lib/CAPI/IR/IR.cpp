@@ -23,6 +23,7 @@
 #include "mlir/Parser.h"
 
 #include "llvm/Support/Debug.h"
+#include <cstddef>
 
 using namespace mlir;
 
@@ -345,6 +346,13 @@ MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
+MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
+  if (const auto *abstractOp = unwrap(op)->getAbstractOperation()) {
+    return wrap(abstractOp->typeID);
+  }
+  return {nullptr};
+}
+
 MlirIdentifier mlirOperationGetName(MlirOperation op) {
   return wrap(unwrap(op)->getName().getIdentifier());
 }
@@ -658,6 +666,10 @@ MlirContext mlirTypeGetContext(MlirType type) {
   return wrap(unwrap(type).getContext());
 }
 
+MlirTypeID mlirTypeGetTypeID(MlirType type) {
+  return wrap(unwrap(type).getTypeID());
+}
+
 bool mlirTypeEqual(MlirType t1, MlirType t2) {
   return unwrap(t1) == unwrap(t2);
 }
@@ -683,6 +695,10 @@ MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
 
 MlirType mlirAttributeGetType(MlirAttribute attribute) {
   return wrap(unwrap(attribute).getType());
+}
+
+MlirTypeID mlirAttributeGetTypeID(MlirAttribute attr) {
+  return wrap(unwrap(attr).getTypeID());
 }
 
 bool mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
@@ -720,4 +736,16 @@ bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
 
 MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
   return wrap(unwrap(ident).strref());
+}
+
+//===----------------------------------------------------------------------===//
+// TypeID API.
+//===----------------------------------------------------------------------===//
+
+bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2) {
+  return unwrap(typeID1) == unwrap(typeID2);
+}
+
+size_t mlirTypeIDHashValue(MlirTypeID typeID) {
+  return hash_value(unwrap(typeID));
 }
