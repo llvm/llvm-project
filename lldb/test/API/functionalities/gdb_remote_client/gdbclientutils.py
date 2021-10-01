@@ -3,10 +3,8 @@ import errno
 import io
 import os
 import os.path
-import pty
 import threading
 import socket
-import tty
 import lldb
 import binascii
 import traceback
@@ -409,6 +407,8 @@ class TCPServerSocket(ServerSocket):
 
 class PtyServerSocket(ServerSocket):
     def __init__(self):
+        import pty
+        import tty
         master, slave = pty.openpty()
         tty.setraw(master)
         self._master = io.FileIO(master, 'r+b')
