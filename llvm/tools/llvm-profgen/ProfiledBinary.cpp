@@ -218,6 +218,12 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
     ContextVec.append(ExpandedContext);
   }
 
+  // Replace with decoded base discriminator
+  for (auto &Frame : ContextVec) {
+    Frame.Location.Discriminator = ProfileGeneratorBase::getBaseDiscriminator(
+        Frame.Location.Discriminator);
+  }
+
   assert(ContextVec.size() && "Context length should be at least 1");
 
   // Compress the context string except for the leaf frame
@@ -540,10 +546,6 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       LineOffset =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
       Discriminator = 0;
-    } else {
-      Discriminator = DILocation::getBaseDiscriminatorFromDiscriminator(
-          CallerFrame.Discriminator,
-          /* IsFSDiscriminator */ false);
     }
 
     LineLocation Line(LineOffset, Discriminator);
