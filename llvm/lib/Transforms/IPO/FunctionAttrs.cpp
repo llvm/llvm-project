@@ -593,7 +593,7 @@ struct ArgumentUsesTracker : public CaptureTracker {
     assert(UseIndex < CB->data_operands_size() &&
            "Indirect function calls should have been filtered above!");
 
-    if (UseIndex >= CB->getNumArgOperands()) {
+    if (UseIndex >= CB->arg_size()) {
       // Data operand, but not a argument operand -- must be a bundle operand
       assert(CB->hasOperandBundles() && "Must be!");
 
@@ -728,7 +728,7 @@ determinePointerReadAttrs(Argument *A,
       assert(UseIndex < CB.data_operands_size() &&
              "Data operand use expected!");
 
-      bool IsOperandBundleUse = UseIndex >= CB.getNumArgOperands();
+      bool IsOperandBundleUse = UseIndex >= CB.arg_size();
 
       if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
         assert(F->isVarArg() && "More params than args in non-varargs call");

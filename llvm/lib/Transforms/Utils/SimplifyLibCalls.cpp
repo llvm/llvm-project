@@ -1295,13 +1295,13 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
   B.setFastMathFlags(CI->getFastMathFlags());
 
   Value *Real, *Imag;
-  if (CI->getNumArgOperands() == 1) {
+  if (CI->arg_size() == 1) {
     Value *Op = CI->getArgOperand(0);
     assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
     Real = B.CreateExtractValue(Op, 0, "real");
     Imag = B.CreateExtractValue(Op, 1, "imag");
   } else {
-    assert(CI->getNumArgOperands() == 2 && "Unexpected signature for cabs!");
+    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
     Real = CI->getArgOperand(0);
     Imag = CI->getArgOperand(1);
   }
@@ -2298,7 +2298,7 @@ static bool isReportingError(Function *Callee, CallInst *CI, int StreamArg) {
   // These functions might be considered cold, but only if their stream
   // argument is stderr.
 
-  if (StreamArg >= (int)CI->getNumArgOperands())
+  if (StreamArg >= (int)CI->arg_size())
     return false;
   LoadInst *LI = dyn_cast<LoadInst>(CI->getArgOperand(StreamArg));
   if (!LI)
@@ -2330,7 +2330,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     return emitPutChar(B.getInt32(FormatStr[0]), B, TLI);
 
   // Try to remove call or emit putchar/puts.
-  if (FormatStr == "%s" && CI->getNumArgOperands() > 1) {
+  if (FormatStr == "%s" && CI->arg_size() > 1) {
     StringRef OperandStr;
     if (!getConstantStringInfo(CI->getOperand(1), OperandStr))
       return nullptr;
@@ -2361,12 +2361,12 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
 
   // Optimize specific format strings.
   // printf("%c", chr) --> putchar(chr)
-  if (FormatStr == "%c" && CI->getNumArgOperands() > 1 &&
+  if (FormatStr == "%c" && CI->arg_size() > 1 &&
       CI->getArgOperand(1)->getType()->isIntegerTy())
     return emitPutChar(CI->getArgOperand(1), B, TLI);
 
   // printf("%s\n", str) --> puts(str)
-  if (FormatStr == "%s\n" && CI->getNumArgOperands() > 1 &&
+  if (FormatStr == "%s\n" && CI->arg_size() > 1 &&
       CI->getArgOperand(1)->getType()->isPointerTy())
     return emitPutS(CI->getArgOperand(1), B, TLI);
   return nullptr;
@@ -2418,7 +2418,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
 
   // If we just have a format string (nothing else crazy) transform it.
   Value *Dest = CI->getArgOperand(0);
-  if (CI->getNumArgOperands() == 2) {
+  if (CI->arg_size() == 2) {
     // Make sure there's no % in the constant array.  We could try to handle
     // %% -> % in the future if we cared.
     if (FormatStr.find('%') != StringRef::npos)
@@ -2434,8 +2434,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
 
   // The remaining optimizations require the format string to be "%s" or "%c"
   // and have an extra operand.
-  if (FormatStr.size() != 2 || FormatStr[0] != '%' ||
-      CI->getNumArgOperands() < 3)
+  if (FormatStr.size() != 2 || FormatStr[0] != '%' || CI->arg_size() < 3)
     return nullptr;
 
   // Decode the second character of the format string.
@@ -2546,7 +2545,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
     return nullptr;
 
   // If we just have a format string (nothing else crazy) transform it.
-  if (CI->getNumArgOperands() == 3) {
+  if (CI->arg_size() == 3) {
     // Make sure there's no % in the constant array.  We could try to handle
     // %% -> % in the future if we cared.
     if (FormatStr.find('%') != StringRef::npos)
@@ -2568,8 +2567,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
 
   // The remaining optimizations require the format string to be "%s" or "%c"
   // and have an extra operand.
-  if (FormatStr.size() == 2 && FormatStr[0] == '%' &&
-      CI->getNumArgOperands() == 4) {
+  if (FormatStr.size() == 2 && FormatStr[0] == '%' && CI->arg_size() == 4) {
 
     // Decode the second character of the format string.
     if (FormatStr[1] == 'c') {
@@ -2637,7 +2635,7 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
     return nullptr;
 
   // fprintf(F, "foo") --> fwrite("foo", 3, 1, F)
-  if (CI->getNumArgOperands() == 2) {
+  if (CI->arg_size() == 2) {
     // Could handle %% -> % if we cared.
     if (FormatStr.find('%') != StringRef::npos)
       return nullptr; // We found a format specifier.
@@ -2650,8 +2648,7 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
 
   // The remaining optimizations require the format string to be "%s" or "%c"
   // and have an extra operand.
-  if (FormatStr.size() != 2 || FormatStr[0] != '%' ||
-      CI->getNumArgOperands() < 3)
+  if (FormatStr.size() != 2 || FormatStr[0] != '%' || CI->arg_size() < 3)
     return nullptr;
 
   // Decode the second character of the format string.

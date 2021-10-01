@@ -668,7 +668,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     createTailRecurseLoopHeader(CI);
 
   // Copy values of ByVal operands into local temporarily variables.
-  for (unsigned I = 0, E = CI->getNumArgOperands(); I != E; ++I) {
+  for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I))
       copyByValueOperandIntoLocalTemp(CI, I);
   }
@@ -676,7 +676,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // Ok, now that we know we have a pseudo-entry block WITH all of the
   // required PHI nodes, add entries into the PHI node for the actual
   // parameters passed into the tail-recursive call.
-  for (unsigned I = 0, E = CI->getNumArgOperands(); I != E; ++I) {
+  for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I)) {
       copyLocalTempOfByValueOperandIntoArguments(CI, I);
       ArgumentPHIs[I]->addIncoming(F.getArg(I), BB);

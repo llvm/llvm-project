@@ -293,7 +293,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   // TODO: Extend this to handle intrinsics with >2 operands where the 1st
   //       2 operands are commutative.
   auto *II = dyn_cast<IntrinsicInst>(Inst);
-  if (II && II->isCommutative() && II->getNumArgOperands() == 2) {
+  if (II && II->isCommutative() && II->arg_size() == 2) {
     Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
     if (LHS > RHS)
       std::swap(LHS, RHS);
@@ -363,7 +363,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
   auto *LII = dyn_cast<IntrinsicInst>(LHSI);
   auto *RII = dyn_cast<IntrinsicInst>(RHSI);
   if (LII && RII && LII->getIntrinsicID() == RII->getIntrinsicID() &&
-      LII->isCommutative() && LII->getNumArgOperands() == 2) {
+      LII->isCommutative() && LII->arg_size() == 2) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
            LII->getArgOperand(1) == RII->getArgOperand(0);
   }
