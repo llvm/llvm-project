@@ -1445,7 +1445,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&LiveVariablesID);
 
   // Edge splitting is smarter with machine loop info.
-  addPass(&MachineLoopInfoID, false);
+  addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID, false);
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
