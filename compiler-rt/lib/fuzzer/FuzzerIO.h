@@ -54,6 +54,10 @@ void DupAndCloseStderr();
 
 void CloseStdout();
 
+// For testing.
+FILE *GetOutputFile();
+void SetOutputFile(FILE *NewOutputFile);
+
 void Printf(const char *Fmt, ...);
 void VPrintf(bool Verbose, const char *Fmt, ...);
 
