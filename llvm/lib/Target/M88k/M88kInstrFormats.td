@@ -86,7 +86,7 @@ class F_BR<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
   let Inst{4-0} = rs2;
 }
 
-// Format: Bit-field with dual register.
+// Format: Bit-field with dyadic register.
 class F_BF<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
    : F_B<func, outs, ins, asm, " $rd, $rs2", pattern, itin> {
@@ -244,19 +244,17 @@ class F_BCOND<bits<5> func, bits<1> next,
   let Inst{15-0}  = d16;
 }
 
-// Category: Floating point.
+// Category: Floating point/graphics.
 
 // Format: Special function unit.
-class F_SFU<bits<3> sfuid,
-               dag outs, dag ins, string asm, string operands, list<dag> pattern,
-               InstrItinClass itin = NoItinerary>
+class F_SFU<dag outs, dag ins, string asm, string operands, list<dag> pattern,
+            InstrItinClass itin = NoItinerary>
    : InstM88k<outs, ins, asm, operands, pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
 
   let Inst{31-29} = 0b100;
-  let Inst{28-26} = sfuid;
   let Inst{25-21} = rd;
   let Inst{20-16} = rs1;
   let Inst{4-0} = rs2;
@@ -266,12 +264,25 @@ class F_SFU<bits<3> sfuid,
 class F_SFU1<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
                dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : F_SFU<0b001, outs, ins, asmstr, " $rd, $rs1, $rs2", pattern, itin> {
+   : F_SFU<outs, ins, asmstr, " $rd, $rs1, $rs2", pattern, itin> {
   bits<1>  regfile;
 
+  let Inst{28-26} = 0b001;
   let Inst{15} = regfile;
   let Inst{14-11} = func;
   let Inst{10-9} = t1;
   let Inst{8-7} = t2;
   let Inst{6-5} = td;
+}
+
+// Format: Triadic register.
+class F_SFU2<bits<5> func, bits<2> sat, bits<2> ty,
+               dag outs, dag ins, string asmstr, list<dag> pattern,
+               InstrItinClass itin = NoItinerary>
+   : F_SFU<outs, ins, asmstr, " $rd, $rs1, $rs2", pattern, itin> {
+  let Inst{28-26} = 0b010;
+  let Inst{15-11} = func;
+  let Inst{10-9} = 0;
+  let Inst{8-7} = sat;
+  let Inst{6-5} = ty;
 }
