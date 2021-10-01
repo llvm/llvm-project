@@ -1795,14 +1795,6 @@ public:
                            llvm::FunctionCallee OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
 
-  /// Returns __tgt_attribute_struct type.
-  QualType getTgtAttributeStructQTy();
-
-  /// Emit structure descriptor for a kernel
-  void emitStructureKernelDesc(CodeGenModule &CGM, StringRef Name,
-                               int16_t WG_Size, int8_t Mode,
-                               int8_t HostServices);
-
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
   virtual void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D);

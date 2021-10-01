@@ -3424,38 +3424,6 @@ void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
   }
 }
 
-/// Emit structure descriptor for a kernel
-void CGOpenMPRuntime::emitStructureKernelDesc(CodeGenModule &CGM,
-                                              StringRef Name, int16_t WG_Size,
-                                              int8_t Mode, int8_t HostServices) {
-  // Create all device images
-  llvm::Constant *AttrData[] = {
-      llvm::ConstantInt::get(CGM.Int16Ty, 2), // Version
-      llvm::ConstantInt::get(CGM.Int16Ty, 8), // Size in bytes
-      llvm::ConstantInt::get(CGM.Int16Ty, WG_Size)};
-
-  llvm::GlobalVariable *AttrImages = createGlobalStruct(
-      CGM, getTgtAttributeStructQTy(), isDefaultLocationConstant(), AttrData,
-      Name + Twine("_kern_desc"), llvm::GlobalValue::WeakAnyLinkage);
-  CGM.addCompilerUsedGlobal(AttrImages);
-}
-
-// Create Tgt Attribute Sruct type.
-QualType CGOpenMPRuntime::getTgtAttributeStructQTy() {
-  ASTContext &C = CGM.getContext();
-  QualType KmpInt16Ty = C.getIntTypeForBitwidth(/*Width=*/16, /*Signed=*/1);
-  if (TgtAttributeStructQTy.isNull()) {
-    RecordDecl *RD = C.buildImplicitRecord("__tgt_attribute_struct");
-    RD->startDefinition();
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Version
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Struct Size in bytes.
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // WG_size
-    RD->completeDefinition();
-    TgtAttributeStructQTy = C.getRecordType(RD);
-  }
-  return TgtAttributeStructQTy;
-}
-
 QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {
   // Make sure the type of the entry is already created. This is the type we
   // have to create:

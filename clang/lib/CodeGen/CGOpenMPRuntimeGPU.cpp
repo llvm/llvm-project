@@ -1079,10 +1079,6 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   }
   // Emit a kernel descriptor for runtime.
   setPropertyWorkGroupSize(CGM, OutlinedFn->getName(), FlatAttr);
-  StringRef KernDescName = OutlinedFn->getName();
-  CGOpenMPRuntime::emitStructureKernelDesc(CGM, KernDescName, FlatAttr,
-                                           IsGeneric,
-                                           1 /* Uses HostServices */);
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,

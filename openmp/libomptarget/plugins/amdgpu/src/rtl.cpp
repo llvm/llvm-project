@@ -1560,8 +1560,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                 " compiler flag: -march=<gpu>\n",
                 DeviceName, ElfName);
       } else {
-        fprintf(stderr, "Error loading image onto GPU: %s\n",
-                get_error_string(err));
+        DP("Error loading image onto GPU: %s\n", get_error_string(err));
       }
 
       return NULL;
@@ -1672,7 +1671,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       if (err != HSA_STATUS_SUCCESS) {
         // Inform the user what symbol prevented offloading
-        fprintf(stderr, "Loading global '%s' (Failed)\n", e->name);
+        DP("Loading global '%s' (Failed)\n", e->name);
         return NULL;
       }
 
@@ -1807,7 +1806,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
         memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
 
-	DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
+        DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
 
         if (WGSizeVal == 0) {
           // zero means not known at compile time, use the default
@@ -1839,7 +1838,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     uint32_t varsize;
     err = interop_get_symbol_info((char *)image->ImageStart, img_size,
                                   ExecModeName, &ExecModePtr, &varsize);
-
     if (err == HSA_STATUS_SUCCESS) {
       if ((size_t)varsize != sizeof(llvm::omp::OMPTgtExecModeFlags)) {
         DP("Loading global computation properties '%s' - size mismatch(%u != "
@@ -1996,18 +1994,20 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
        threadsPerGroup);
   }
 
-  if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
     // Add master thread in additional warp for GENERIC mode
     // Only one additional thread is started, not an entire warp
 
     // Do not exceed max number of threads: sacrifice last warp for
     // the thread master
     if (threadsPerGroup == RTLDeviceInfoTy::Max_WG_Size)
-      threadsPerGroup -= WarpSize -1;
+      threadsPerGroup -= WarpSize - 1;
     else {
       // Cap threadsPerGroup at WarpSize level as we need a master
-      if (threadsPerGroup < WarpSize) threadsPerGroup = WarpSize;
-      threadsPerGroup = WarpSize*(threadsPerGroup / WarpSize) +1;
+      if (threadsPerGroup < WarpSize)
+        threadsPerGroup = WarpSize;
+      threadsPerGroup = WarpSize * (threadsPerGroup / WarpSize) + 1;
     }
 
     DP("Adding master thread (+1)\n");
