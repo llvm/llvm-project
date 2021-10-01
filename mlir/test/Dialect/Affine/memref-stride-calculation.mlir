@@ -59,9 +59,6 @@ func @f(%0: index) {
   %30 = memref.alloc()[%0] : memref<f32, affine_map<()[M]->(123)>>
 // CHECK: MemRefType offset: 123 strides:
 
-  %100 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, affine_map<(i, j, k)[M, N]->(i + j, j, k)>, affine_map<(i, j, k)[M, N]->(M * i + N * j + k + 1)>>
-  // CHECK: MemRefType offset: 1 strides: ?, ?, 1
-
   %101 = memref.alloc() : memref<3x4x5xf32, affine_map<(i, j, k)->(i floordiv 4 + j + k)>>
 // CHECK: MemRefType memref<3x4x5xf32, affine_map<(d0, d1, d2) -> (d0 floordiv 4 + d1 + d2)>> cannot be converted to strided form
   %102 = memref.alloc() : memref<3x4x5xf32, affine_map<(i, j, k)->(i ceildiv 4 + j + k)>>
