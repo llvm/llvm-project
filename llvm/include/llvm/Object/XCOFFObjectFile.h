@@ -355,6 +355,7 @@ public:
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
+  uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
@@ -431,6 +432,11 @@ public:
   uint32_t getNumberOfSymbolTableEntries() const;
 
   uint32_t getSymbolIndex(uintptr_t SymEntPtr) const;
+  uint64_t getSymbolSize(DataRefImpl Symb) const;
+  uintptr_t getSymbolByIndex(uint32_t Idx) const {
+    return reinterpret_cast<uintptr_t>(SymbolTblPtr) +
+           XCOFF::SymbolTableEntrySize * Idx;
+  }
   uintptr_t getSymbolEntryAddressByIndex(uint32_t SymbolTableIndex) const;
   Expected<StringRef> getSymbolNameByIndex(uint32_t SymbolTableIndex) const;
 
