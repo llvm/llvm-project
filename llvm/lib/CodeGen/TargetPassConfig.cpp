@@ -1441,7 +1441,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // When LiveVariables is removed this has to be removed/moved either.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
-  addPass(&UnreachableMachineBlockElimID, false);
+  addPass(&UnreachableMachineBlockElimID);
   addPass(&LiveVariablesID, false);
 
   // Edge splitting is smarter with machine loop info.
