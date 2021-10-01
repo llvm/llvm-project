@@ -2671,6 +2671,37 @@ static mlir::LogicalResult verify(fir::SelectTypeOp &op) {
   return mlir::success();
 }
 
+void fir::SelectTypeOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result,
+                              mlir::Value selector,
+                              llvm::ArrayRef<mlir::Attribute> typeOperands,
+                              llvm::ArrayRef<mlir::Block *> destinations,
+                              llvm::ArrayRef<mlir::ValueRange> destOperands,
+                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  result.addOperands(selector);
+  result.addAttribute(getCasesAttr(), builder.getArrayAttr(typeOperands));
+  const auto count = destinations.size();
+  for (mlir::Block *dest : destinations)
+    result.addSuccessors(dest);
+  const auto opCount = destOperands.size();
+  llvm::SmallVector<int32_t> argOffs;
+  int32_t sumArgs = 0;
+  for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
+    if (i < opCount) {
+      result.addOperands(destOperands[i]);
+      const auto argSz = destOperands[i].size();
+      argOffs.push_back(argSz);
+      sumArgs += argSz;
+    } else {
+      argOffs.push_back(0);
+    }
+  }
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getI32VectorAttr({1, 0, sumArgs}));
+  result.addAttribute(getTargetOffsetAttr(), builder.getI32VectorAttr(argOffs));
+  result.addAttributes(attributes);
+}
+
 //===----------------------------------------------------------------------===//
 // ShapeOp
 //===----------------------------------------------------------------------===//
