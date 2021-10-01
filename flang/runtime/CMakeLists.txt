@@ -1,15 +1,9 @@
-#===-- runtime/CMakeLists.txt ----------------------------------------------===#
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-#===------------------------------------------------------------------------===#
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror string.h HAVE_STRERROR)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
+
 # Can't use symbol exists here as the function is overloaded in C++
 check_cxx_source_compiles(
   "#include <string.h>
@@ -30,7 +24,7 @@ configure_file(config.h.cmake config.h)
 # with different names
 include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 
-add_flang_library(FortranRuntime
+add_flang_library(FortranRuntime PARTIAL_SOURCES_INTENDED
   ISO_Fortran_binding.cpp
   allocatable.cpp
   assign.cpp
@@ -81,4 +75,8 @@ add_flang_library(FortranRuntime
 
   LINK_LIBS
   FortranDecimal
+)
+
+add_flang_library(Fortran_main STATIC PARTIAL_SOURCES_INTENDED
+  Fortran_main.c
 )
