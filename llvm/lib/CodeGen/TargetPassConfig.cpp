@@ -1418,7 +1418,7 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID, false);
+  addPass(&TwoAddressInstructionPassID);
 
   addRegAssignAndRewriteFast();
 }
@@ -1452,7 +1452,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   if (EarlyLiveIntervals)
     addPass(&LiveIntervalsID);
 
-  addPass(&TwoAddressInstructionPassID, false);
+  addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);
 
   // The machine scheduler may accidentally create disconnected components
