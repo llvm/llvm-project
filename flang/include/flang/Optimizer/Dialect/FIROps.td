@@ -2425,18 +2425,6 @@ class fir_UnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{ return printUnaryOp(this->getOperation(), p); }];
 }
 
-class RealUnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$operand)>;
-
-def fir_NegfOp : RealUnaryArithmeticOp<"negf">;
-
-class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$lhs, AnyRealLike:$rhs)>;
-
-def fir_ModfOp : RealArithmeticOp<"modf">;
-
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   let summary = "create a complex constant";
 
