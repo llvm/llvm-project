@@ -22,6 +22,12 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   )
 endif()
 
+if (LLDB_ENABLE_TERMIOS)
+  list(APPEND FILES
+    posix/TerminalTest.cpp
+  )
+endif()
+
 add_lldb_unittest(HostTests
   ${FILES}
   LINK_LIBS
