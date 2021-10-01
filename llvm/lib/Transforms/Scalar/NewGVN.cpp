@@ -638,6 +638,7 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
+  mutable DenseMap<const IntrinsicInst *, const Value *> IntrinsicInstPred;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -794,7 +795,7 @@ private:
                                                  BasicBlock *PHIBlock) const;
   const Expression *performSymbolicAggrValueEvaluation(Instruction *) const;
   ExprResult performSymbolicCmpEvaluation(Instruction *) const;
-  ExprResult performSymbolicPredicateInfoEvaluation(Instruction *) const;
+  ExprResult performSymbolicPredicateInfoEvaluation(IntrinsicInst *) const;
 
   // Congruence finding.
   bool someEquivalentDominates(const Instruction *, const Instruction *) const;
@@ -815,6 +816,8 @@ private:
   // Ranking
   unsigned int getRank(const Value *) const;
   bool shouldSwapOperands(const Value *, const Value *) const;
+  bool shouldSwapOperandsForIntrinsic(const Value *, const Value *,
+                                      const IntrinsicInst *I) const;
 
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
@@ -1552,7 +1555,7 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) const {
 }
 
 NewGVN::ExprResult
-NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
+NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
   auto *PI = PredInfo->getPredicateInfoFor(I);
   if (!PI)
     return ExprResult::none();
@@ -1572,7 +1575,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
   Value *AdditionallyUsedValue = CmpOp0;
 
   // Sort the ops.
-  if (shouldSwapOperands(FirstOp, SecondOp)) {
+  if (shouldSwapOperandsForIntrinsic(FirstOp, SecondOp, I)) {
     std::swap(FirstOp, SecondOp);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
     AdditionallyUsedValue = CmpOp1;
@@ -1598,7 +1601,7 @@ NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
     // Intrinsics with the returned attribute are copies of arguments.
     if (auto *ReturnedValue = II->getReturnedArgOperand()) {
       if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-        if (auto Res = performSymbolicPredicateInfoEvaluation(I))
+        if (auto Res = performSymbolicPredicateInfoEvaluation(II))
           return Res;
       return ExprResult::some(createVariableOrConstant(ReturnedValue));
     }
@@ -2951,6 +2954,7 @@ void NewGVN::cleanupTables() {
   PredicateToUsers.clear();
   MemoryToUsers.clear();
   RevisitOnReachabilityChange.clear();
+  IntrinsicInstPred.clear();
 }
 
 // Assign local DFS number mapping to instructions, and leave space for Value
@@ -4150,6 +4154,29 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   // in this order, we order by rank, which will give a strict weak ordering to
   // everything but constants, and then we order by pointer address.
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
+}
+
+bool NewGVN::shouldSwapOperandsForIntrinsic(const Value *A, const Value *B,
+                                            const IntrinsicInst *I) const {
+  auto LookupResult = IntrinsicInstPred.find(I);
+  if (shouldSwapOperands(A, B)) {
+    if (LookupResult == IntrinsicInstPred.end())
+      IntrinsicInstPred.insert({I, B});
+    else
+      LookupResult->second = B;
+    return true;
+  }
+
+  if (LookupResult != IntrinsicInstPred.end()) {
+    auto *SeenPredicate = LookupResult->second;
+    if (SeenPredicate) {
+      if (SeenPredicate == B)
+        return true;
+      else
+        LookupResult->second = nullptr;
+    }
+  }
+  return false;
 }
 
 namespace {
