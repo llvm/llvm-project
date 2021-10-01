@@ -725,9 +725,6 @@ LogicalResult mlir::linalg::peelAndCanonicalizeTiledLoop(RewriterBase &rewriter,
   int64_t numLoops = loopOp.iterator_types().size();
   if (idx < 0 || numLoops <= idx)
     return failure();
-  // Only parallel iterator supported.
-  if (!isParallelIterator(loopOp.iterator_types()[idx]))
-    return failure();
 
   Value ub = loopOp.upperBound()[idx];
   TiledLoopOp remainderLoop;
