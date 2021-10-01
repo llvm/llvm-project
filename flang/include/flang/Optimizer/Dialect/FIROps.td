@@ -2895,28 +2895,9 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
 
   let arguments = (ins StrAttr:$lenparam, APIntAttr:$intval);
 
-  let parser = [{
-    llvm::StringRef fieldName;
-    if (failed(parser.parseOptionalKeyword(&fieldName))) {
-      mlir::StringAttr fieldAttr;
-      if (parser.parseAttribute(fieldAttr, lenParamAttrName(),
-                                result.attributes))
-        return mlir::failure();
-    } else {
-      result.addAttribute(lenParamAttrName(),
-          parser.getBuilder().getStringAttr(fieldName));
-    }
-    mlir::IntegerAttr constant;
-    if (parser.parseComma() ||
-        parser.parseAttribute(constant, intAttrName(), result.attributes))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseGlobalLenOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << (*this)->getAttr(lenParamAttrName())
-      << ", " << (*this)->getAttr(intAttrName());
-  }];
+  let printer = "::print(p, *this);";
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef lenParamAttrName() { return "lenparam"; }
