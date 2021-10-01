@@ -317,8 +317,10 @@ static bool isCommutative(Instruction *I) {
 /// TODO: Can we split off and reuse the shuffle mask detection from
 /// TargetTransformInfo::getInstructionThroughput?
 static Optional<TargetTransformInfo::ShuffleKind>
-isShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   auto *EI0 = cast<ExtractElementInst>(VL[0]);
+  if (isa<ScalableVectorType>(EI0->getVectorOperandType()))
+    return None;
   unsigned Size =
       cast<FixedVectorType>(EI0->getVectorOperandType())->getNumElements();
   Value *Vec1 = nullptr;
@@ -4320,7 +4322,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // shuffle of a single/two vectors the scalars are extracted from.
       SmallVector<int> Mask;
       Optional<TargetTransformInfo::ShuffleKind> ShuffleKind =
-          isShuffle(VL, Mask);
+          isFixedVectorShuffle(VL, Mask);
       if (ShuffleKind.hasValue()) {
         // Found the bunch of extractelement instructions that must be gathered
         // into a vector and can be represented as a permutation elements in a
@@ -4892,7 +4894,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
             VectorizableTree[0]->Scalars.size()) ||
        (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
         VectorizableTree[1]->getOpcode() == Instruction::ExtractElement &&
-        isShuffle(VectorizableTree[1]->Scalars, Mask))))
+        isFixedVectorShuffle(VectorizableTree[1]->Scalars, Mask))))
     return true;
 
   // Gathering cost would be too much for tiny trees.
@@ -8912,7 +8914,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
       (llvm::all_of(BuildVectorOpds,
                     [](Value *V) { return isa<ExtractElementInst>(V); }) &&
-       isShuffle(BuildVectorOpds, Mask)))
+       isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
