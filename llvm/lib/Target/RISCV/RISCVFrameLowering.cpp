@@ -767,8 +767,10 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       // objects to 8 bytes.
       if (MFI.getStackID(FI) == TargetStackID::Default) {
         if (MFI.isFixedObjectIndex(FI)) {
-          Offset += StackOffset::get(MFI.getStackSize() + RVFI->getRVVPadding() 
-                        + RVFI->getLibCallStackSize(), RVFI->getRVVStackSize());
+          Offset +=
+              StackOffset::get(MFI.getStackSize() + RVFI->getRVVPadding() +
+                                   RVFI->getLibCallStackSize(),
+                               RVFI->getRVVStackSize());
         } else {
           Offset += StackOffset::getFixed(MFI.getStackSize());
         }
