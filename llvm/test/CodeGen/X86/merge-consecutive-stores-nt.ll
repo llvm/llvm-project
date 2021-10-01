@@ -332,14 +332,14 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) no
 ; X86-SSE4A:       # %bb.0:
 ; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE4A-NEXT:    movups (%ecx), %xmm0
-; X86-SSE4A-NEXT:    movups 16(%ecx), %xmm1
+; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; X86-SSE4A-NEXT:    movntsd %xmm2, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
-; X86-SSE4A-NEXT:    movntsd %xmm1, 16(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
 ; X86-SSE4A-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: merge_2_v4f32_align1_ntstore:
@@ -360,14 +360,14 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) no
 ;
 ; X64-SSE4A-LABEL: merge_2_v4f32_align1_ntstore:
 ; X64-SSE4A:       # %bb.0:
-; X64-SSE4A-NEXT:    movups (%rdi), %xmm0
-; X64-SSE4A-NEXT:    movups 16(%rdi), %xmm1
+; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; X64-SSE4A-NEXT:    movntsd %xmm2, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
-; X64-SSE4A-NEXT:    movntsd %xmm1, 16(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
 ; X64-SSE4A-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: merge_2_v4f32_align1_ntstore:
@@ -445,14 +445,14 @@ define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-SSE4A:       # %bb.0:
 ; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE4A-NEXT:    movups (%ecx), %xmm0
-; X86-SSE4A-NEXT:    movups 16(%ecx), %xmm1
+; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; X86-SSE4A-NEXT:    movntsd %xmm2, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
-; X86-SSE4A-NEXT:    movntsd %xmm1, 16(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
 ; X86-SSE4A-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: merge_2_v4f32_align1:
@@ -473,14 +473,14 @@ define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ;
 ; X64-SSE4A-LABEL: merge_2_v4f32_align1:
 ; X64-SSE4A:       # %bb.0:
-; X64-SSE4A-NEXT:    movups (%rdi), %xmm0
-; X64-SSE4A-NEXT:    movups 16(%rdi), %xmm1
+; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; X64-SSE4A-NEXT:    movntsd %xmm2, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
-; X64-SSE4A-NEXT:    movntsd %xmm1, 16(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
 ; X64-SSE4A-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: merge_2_v4f32_align1:
