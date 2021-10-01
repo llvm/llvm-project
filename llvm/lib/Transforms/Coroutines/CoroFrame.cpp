@@ -2527,15 +2527,6 @@ void coro::salvageDebugInfo(
         Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
     } else if (auto *StInst = dyn_cast<StoreInst>(Inst)) {
       Storage = StInst->getOperand(0);
-    } else if (auto *I2PInst = dyn_cast<llvm::IntToPtrInst>(Inst)) {
-      Storage = I2PInst->getOperand(0);
-    } else if (auto *P2IInst = dyn_cast<llvm::PtrToIntInst>(Inst)) {
-      Storage = P2IInst->getOperand(0);
-    } else if (auto *IInst = dyn_cast<llvm::IntrinsicInst>(Inst)) {
-      if (IInst->getIntrinsicID() == Intrinsic::ptrauth_auth)
-        Storage = IInst->getArgOperand(0);
-      else
-        break;
     } else if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       if (Phi->getNumIncomingValues() != 1)
         return;
