@@ -141,7 +141,7 @@ public:
   // All transitive includes (absolute paths), with their minimum include depth.
   // Root --> 0, #included file --> 1, etc.
   // Root is the ID of the header being visited first.
-  // Usually it is getID(SM.getFileEntryForID(SM.getMainFileID())->getName()).
+  // Usually it is getID(SM.getFileEntryForID(SM.getMainFileID()), SM).
   llvm::DenseMap<HeaderID, unsigned> includeDepth(HeaderID Root) const;
 
   // Maps HeaderID to the ids of the files included from it.
