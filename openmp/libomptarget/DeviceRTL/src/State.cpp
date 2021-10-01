@@ -503,9 +503,9 @@ __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 
-__attribute__((noinline)) void *__kmpc_get_dynamic_shared() {
-  return memory::getDynamicBuffer();
-}
+void *__kmpc_get_dynamic_shared() { return memory::getDynamicBuffer(); }
+
+void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 
 /// Allocate storage in shared memory to communicate arguments from the main
 /// thread to the workers in generic mode. If we exceed

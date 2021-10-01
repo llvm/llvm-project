@@ -92,6 +92,8 @@ EXTERN int omp_get_team_num(void);
 EXTERN int omp_get_initial_device(void);
 EXTERN int omp_get_max_task_priority(void);
 
+EXTERN void *llvm_omp_get_dynamic_shared();
+
 ////////////////////////////////////////////////////////////////////////////////
 // file below is swiped from kmpc host interface
 ////////////////////////////////////////////////////////////////////////////////
@@ -498,5 +500,8 @@ EXTERN void *__kmpc_alloc_shared(uint64_t Bytes);
 /// __kmpc_alloc_shared by the same thread. \p Bytes contains the size of the
 /// paired allocation to make memory management easier.
 EXTERN void __kmpc_free_shared(void *Ptr, size_t Bytes);
+
+/// Get a pointer to the dynamic shared memory buffer in the device.
+EXTERN void *__kmpc_get_dynamic_shared();
 
 #endif

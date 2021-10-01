@@ -21,6 +21,18 @@
 
 static constexpr unsigned MinBytes = 8;
 
+static constexpr unsigned Alignment = 8;
+
+/// External symbol to access dynamic shared memory.
+extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));
+#pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
+
+EXTERN void *__kmpc_get_dynamic_shared() { return DynamicSharedBuffer; }
+
+EXTERN void *llvm_omp_get_dynamic_shared() {
+  return __kmpc_get_dynamic_shared();
+}
+
 template <unsigned BPerThread, unsigned NThreads = MAX_THREADS_PER_TEAM>
 struct alignas(32) ThreadStackTy {
   static constexpr unsigned BytesPerThread = BPerThread;
