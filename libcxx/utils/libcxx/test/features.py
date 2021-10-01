@@ -179,7 +179,7 @@ gdb.execute(\"quit\")"""
 
   try:
     stdout = subprocess.check_output(
-              [gdb_path, "-ex", sys.executable + " " + test_src, "--batch"],
+              [gdb_path, "-ex", "python " + test_src, "--batch"],
               stderr=subprocess.DEVNULL, universal_newlines=True)
   except subprocess.CalledProcessError:
     # We can't set breakpoint commands
