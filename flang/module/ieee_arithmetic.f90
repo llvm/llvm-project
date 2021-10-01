@@ -11,6 +11,10 @@ module ieee_arithmetic
 
   use __Fortran_builtins, only: &
     ieee_is_nan => __builtin_ieee_is_nan, &
+    ieee_next_after => __builtin_ieee_next_after, &
+    ieee_next_down => __builtin_ieee_next_down, &
+    ieee_next_up => __builtin_ieee_next_up, &
+    ieee_scalb => scale, &
     ieee_selected_real_kind => __builtin_ieee_selected_real_kind, &
     ieee_support_datatype => __builtin_ieee_support_datatype, &
     ieee_support_denormal => __builtin_ieee_support_denormal, &

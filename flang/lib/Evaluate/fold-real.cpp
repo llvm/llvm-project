@@ -144,6 +144,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   }
   // TODO: dim, dot_product, fraction, matmul,
   // modulo, nearest, norm2, rrspacing, scale,
+  // __builtin_next_after/down/up,
   // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
