@@ -1,5 +1,6 @@
 add_lldb_unittest(TargetTests
   ABITest.cpp
+  DynamicRegisterInfoTest.cpp
   ExecutionContextTest.cpp
   MemoryRegionInfoTest.cpp
   ModuleCacheTest.cpp

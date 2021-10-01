@@ -1,6 +1,5 @@
 add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
-  DynamicRegisterInfo.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
   HistoryThread.cpp

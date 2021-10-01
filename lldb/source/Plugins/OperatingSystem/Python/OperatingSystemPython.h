@@ -13,10 +13,9 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Utility/StructuredData.h"
-
-class DynamicRegisterInfo;
 
 namespace lldb_private {
 class ScriptInterpreter;
@@ -72,14 +71,14 @@ protected:
       lldb_private::ThreadList &old_thread_list,
       std::vector<bool> &core_used_map, bool *did_create_ptr);
 
-  DynamicRegisterInfo *GetDynamicRegisterInfo();
+  lldb_private::DynamicRegisterInfo *GetDynamicRegisterInfo();
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
-  std::unique_ptr<DynamicRegisterInfo> m_register_info_up;
+  std::unique_ptr<lldb_private::DynamicRegisterInfo> m_register_info_up;
   lldb_private::ScriptInterpreter *m_interpreter;
   lldb_private::StructuredData::ObjectSP m_python_object_sp;
 };
 
-#endif
+#endif // LLDB_ENABLE_PYTHON
 
 #endif // liblldb_OperatingSystemPython_h_

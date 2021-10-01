@@ -8,7 +8,6 @@
 
 #include "RegisterContextMemory.h"
 
-#include "DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"

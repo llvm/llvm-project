@@ -12,7 +12,6 @@
 
 #include "OperatingSystemPython.h"
 
-#include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "Plugins/Process/Utility/ThreadMemory.h"
