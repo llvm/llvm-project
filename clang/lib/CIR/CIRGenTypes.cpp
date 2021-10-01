@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 
@@ -247,7 +248,19 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::Pointer: {
-    assert("not implemented");
+    const PointerType *PTy = cast<PointerType>(Ty);
+    QualType ETy = PTy->getPointeeType();
+    assert(!ETy->isConstantMatrixType() && "not implemented");
+
+    mlir::Type PointeeType = ConvertType(ETy);
+
+    // Treat effectively as a *i8.
+    // if (PointeeType->isVoidTy())
+    //  PointeeType = Builder.getI8Type();
+
+    // FIXME: add address specifier to cir::PointerType?
+    ResultType =
+        ::mlir::cir::PointerType::get(Builder.getContext(), PointeeType);
     break;
   }
 

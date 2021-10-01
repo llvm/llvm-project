@@ -1,4 +1,4 @@
-//===-- CIRDialect.td - CIR dialect definition -------------*- tablegen -*-===//
+//===-- CIROps.td - CIR dialect definition -----------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,21 +11,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef CIR_DIALECT_CIR_DIALECT
-#define CIR_DIALECT_CIR_DIALECT
+#ifndef MLIR_CIR_DIALECT_CIR_OPS
+#define MLIR_CIR_DIALECT_CIR_OPS
 
-include "mlir/IR/OpBase.td"
+include "mlir/Dialect/CIR/IR/CIRDialect.td"
+include "mlir/Dialect/CIR/IR/CIRTypes.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def CIR_Dialect : Dialect {
-  let name = "cir";
-
-  // A short one-line summary of our dialect.
-  let summary = "A high-level dialect for analyzing and optimizing Clang "
-                "compiled languages";
-
-  let cppNamespace = "::mlir::cir";
-}
+//===----------------------------------------------------------------------===//
+// CIR Ops
+//===----------------------------------------------------------------------===//
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>;
@@ -71,4 +67,4 @@ def ReturnOp : CIR_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
 }
 
 
-#endif // CIR_DIALECT_CIR_DIALECT
+#endif // MLIR_CIR_DIALECT_CIR_OPS
