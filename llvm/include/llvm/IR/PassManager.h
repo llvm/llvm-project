@@ -1226,8 +1226,11 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass) {
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
 
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
   return ModuleToFunctionPassAdaptor(
-      std::make_unique<PassModelT>(std::forward<FunctionPassT>(Pass)));
+      std::unique_ptr<ModuleToFunctionPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<FunctionPassT>(Pass))));
 }
 
 /// A utility pass template to force an analysis result to be available.
