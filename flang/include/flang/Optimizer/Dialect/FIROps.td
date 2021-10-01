@@ -123,6 +123,9 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     allocated as stack space can often be limited. A legal implementation can
     convert these large stack allocations to heap allocations regardless of
     whether the procedure is recursive or not.
+
+    The pinned attribute is used to flag fir.alloca operation in a specific
+    region and avoid them being hoisted in an alloca hoisting pass.
   }];
 
   let arguments = (ins
