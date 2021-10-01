@@ -1841,14 +1841,7 @@ def fir_ShapeOp : fir_Op<"shape", [NoSideEffect]> {
     operands attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto size = extents().size();
-    auto shapeTy = getType().dyn_cast<fir::ShapeType>();
-    assert(shapeTy && "must be a shape type");
-    if (shapeTy.getRank() != size)
-      return emitOpError("shape type rank mismatch");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     std::vector<mlir::Value> getExtents() {
