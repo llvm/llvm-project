@@ -529,7 +529,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
-      llvm::SmallVector<mlir::Attribute, 8> ivalues;
+      llvm::SmallVector<mlir::Attribute> ivalues;
       for (auto iv : compareOperands)
         ivalues.push_back($_builder.getI64IntegerAttr(iv));
       ivalues.push_back($_builder.getUnitAttr());
@@ -538,7 +538,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       for (auto d : destinations)
         $_state.addSuccessors(d);
       const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
+      llvm::SmallVector<int32_t> argOffs;
       int32_t sumArgs = 0;
       for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
         if (i < opCount) {
@@ -564,13 +564,13 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     if (parseSelector(parser, result, selector, type))
       return mlir::failure();
 
-    llvm::SmallVector<mlir::Attribute, 8> ivalues;
-    llvm::SmallVector<mlir::Block *, 8> dests;
-    llvm::SmallVector<llvm::SmallVector<mlir::Value, 8>, 8> destArgs;
+    llvm::SmallVector<mlir::Attribute> ivalues;
+    llvm::SmallVector<mlir::Block *> dests;
+    llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
     while (true) {
       mlir::Attribute ivalue; // Integer or Unit
       mlir::Block *dest;
-      llvm::SmallVector<mlir::Value, 8> destArg;
+      llvm::SmallVector<mlir::Value> destArg;
       mlir::NamedAttrList temp;
       if (parser.parseAttribute(ivalue, "i", temp) ||
           parser.parseComma() ||
@@ -586,7 +586,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     }
     auto &bld = parser.getBuilder();
     result.addAttribute(getCasesAttr(), bld.getArrayAttr(ivalues));
-    llvm::SmallVector<int32_t, 8> argOffs;
+    llvm::SmallVector<int32_t> argOffs;
     int32_t sumArgs = 0;
     const auto count = dests.size();
     for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
