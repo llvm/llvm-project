@@ -127,7 +127,8 @@ def : WriteRes<WriteFCmp, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteV, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
 
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }

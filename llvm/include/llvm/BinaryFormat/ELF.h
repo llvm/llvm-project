@@ -660,6 +660,12 @@ enum {
 #include "ELFRelocs/RISCV.def"
 };
 
+enum {
+  // Symbol may follow different calling convention than the standard calling
+  // convention.
+  STO_RISCV_VARIANT_CC = 0x80
+};
+
 // ELF Relocation types for S390/zSeries
 enum {
 #include "ELFRelocs/SystemZ.def"

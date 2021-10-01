@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -disable-output
-; RUN: opt < %s -adce -adce-remove-loops -disable-output
+; RUN: opt < %s -passes=adce -disable-output
+; RUN: opt < %s -passes=adce -adce-remove-loops -disable-output
 
 @G = external global i32*               ; <i32**> [#uses=1]
 

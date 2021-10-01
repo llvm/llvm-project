@@ -1770,6 +1770,11 @@ AffineForOp::operand_range AffineForOp::getUpperBoundOperands() {
               getUpperBoundMap().getNumInputs()};
 }
 
+AffineForOp::operand_range AffineForOp::getControlOperands() {
+  return {operand_begin(), operand_begin() + getLowerBoundMap().getNumInputs() +
+                               getUpperBoundMap().getNumInputs()};
+}
+
 bool AffineForOp::matchingBoundOperandList() {
   auto lbMap = getLowerBoundMap();
   auto ubMap = getUpperBoundMap();
@@ -3160,8 +3165,8 @@ static void deduplicateAndResolveOperands(
         uniqueOperands.push_back(operand);
       replacements.push_back(
           kind == AffineExprKind::DimId
-              ? getAffineDimExpr(pos, parser.getBuilder().getContext())
-              : getAffineSymbolExpr(pos, parser.getBuilder().getContext()));
+              ? getAffineDimExpr(pos, parser.getContext())
+              : getAffineSymbolExpr(pos, parser.getContext()));
     }
   }
 }
@@ -3271,7 +3276,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
 
   Builder &builder = parser.getBuilder();
   auto flatMap = AffineMap::get(totalNumDims, totalNumSyms, flatExprs,
-                                parser.getBuilder().getContext());
+                                parser.getContext());
   flatMap = flatMap.replaceDimsAndSymbols(
       dimRplacements, symRepacements, dimOperands.size(), symOperands.size());
 

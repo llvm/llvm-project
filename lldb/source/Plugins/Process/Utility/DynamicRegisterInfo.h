@@ -86,6 +86,16 @@ protected:
   typedef std::vector<uint8_t> dwarf_opcode;
   typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
 
+  llvm::Expected<uint32_t> ByteOffsetFromSlice(uint32_t index,
+                                               llvm::StringRef slice_str,
+                                               lldb::ByteOrder byte_order);
+  llvm::Expected<uint32_t> ByteOffsetFromComposite(
+      uint32_t index, lldb_private::StructuredData::Array &composite_reg_list,
+      lldb::ByteOrder byte_order);
+  llvm::Expected<uint32_t> ByteOffsetFromRegInfoDict(
+      uint32_t index, lldb_private::StructuredData::Dictionary &reg_info_dict,
+      lldb::ByteOrder byte_order);
+
   void MoveFrom(DynamicRegisterInfo &&info);
 
   void ConfigureOffsets();
@@ -102,4 +112,5 @@ protected:
   bool m_finalized = false;
   bool m_is_reconfigurable = false;
 };
+
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H

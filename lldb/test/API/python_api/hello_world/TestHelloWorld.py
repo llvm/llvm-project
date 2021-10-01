@@ -72,7 +72,6 @@ class HelloWorldTestCase(TestBase):
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
     @skipIfiOSSimulator
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
         exe = '%s_%d'%(self.testMethodName, os.getpid())
@@ -104,7 +103,6 @@ class HelloWorldTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIfAsan # FIXME: Hangs indefinitely.
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
         exe = '%s_%d'%(self.testMethodName, os.getpid())

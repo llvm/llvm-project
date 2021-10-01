@@ -47,6 +47,16 @@ define void @test_vp_reduction(i32 %x, <8 x i32> %vi, <8 x float> %vf, float %f,
   ret void
 }
 
+define void @test_vp_splice0(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %l0, i32 %l1) {
+  %r0 = call <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x i32> %i0, <8 x i32> %i1, i32 2, <8 x i1> %m, i32 %l0, i32 %l1)
+  ret void
+}
+
+define void @test_vp_splice1(<vscale x 8 x i32> %i0, <vscale x 8 x i32> %i1, <vscale x 8 x i1> %m, i32 %l0, i32 %l1) {
+  %r0 = call <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32> %i0, <vscale x 8 x i32> %i1, i32 -1, <vscale x 8 x i1> %m, i32 %l0, i32 %l1)
+  ret void
+}
+
 ; integer arith
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -82,3 +92,6 @@ declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
+; shuffles
+declare <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x i32>, <8 x i32>, i32, <8 x i1>, i32, i32)
+declare <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, i32, <vscale x 8 x i1>, i32, i32)

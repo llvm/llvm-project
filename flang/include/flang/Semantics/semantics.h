@@ -174,6 +174,13 @@ public:
   SourceName SaveTempName(std::string &&);
   SourceName GetTempName(const Scope &);
 
+  // Locate and process the contents of a built-in module on demand
+  Scope *GetBuiltinModule(const char *name);
+
+  // Defines builtinsScope_ from the __Fortran_builtins module
+  void UseFortranBuiltinsModule();
+  const Scope *GetBuiltinsScope() const { return builtinsScope_; }
+
 private:
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
@@ -202,6 +209,7 @@ private:
       activeIndexVars_;
   UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
+  const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
 };
 
 class Semantics {

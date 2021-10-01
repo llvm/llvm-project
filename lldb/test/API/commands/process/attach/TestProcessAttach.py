@@ -43,7 +43,23 @@ class ProcessAttachTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
+    @skipIfiOSSimulator
+    def test_attach_to_process_by_id_autocontinue(self):
+        """Test attach by process id"""
+        self.build()
+        exe = self.getBuildArtifact(exe_name)
+
+        # Spawn a new process
+        popen = self.spawnSubprocess(exe)
+
+        self.runCmd("process attach -c -p " + str(popen.pid))
+
+        target = self.dbg.GetSelectedTarget()
+
+        process = target.GetProcess()
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertTrue(process.GetState(), lldb.eStateRunning)
+
     @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""

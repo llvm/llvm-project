@@ -8,6 +8,7 @@ define amdgpu_kernel void @fneg_f32() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f32 = fneg float undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f32 = fneg <2 x float> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f32 = fneg <3 x float> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = fneg <4 x float> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f32 = fneg <5 x float> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
@@ -15,12 +16,14 @@ define amdgpu_kernel void @fneg_f32() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f32 = fneg float undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f32 = fneg <2 x float> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f32 = fneg <3 x float> undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = fneg <4 x float> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f32 = fneg <5 x float> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = fneg float undef
   %v2f32 = fneg <2 x float> undef
   %v3f32 = fneg <3 x float> undef
+  %v4f32 = fneg <4 x float> undef
   %v5f32 = fneg <5 x float> undef
   ret void
 }
@@ -30,17 +33,23 @@ define amdgpu_kernel void @fneg_f64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f64 = fneg double undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = fneg <2 x double> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f64 = fneg <3 x double> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = fneg <4 x double> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f64 = fneg <5 x double> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'fneg_f64'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f64 = fneg double undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = fneg <2 x double> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f64 = fneg <3 x double> undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = fneg <4 x double> undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f64 = fneg <5 x double> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f64 = fneg double undef
   %v2f64 = fneg <2 x double> undef
   %v3f64 = fneg <3 x double> undef
+  %v4f64 = fneg <4 x double> undef
+  %v5f64 = fneg <5 x double> undef
   ret void
 }
 
@@ -49,16 +58,22 @@ define amdgpu_kernel void @fneg_f16() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fneg half undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fneg <2 x half> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f16 = fneg <3 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = fneg <4 x half> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fneg <5 x half> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'fneg_f16'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fneg half undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fneg <2 x half> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f16 = fneg <3 x half> undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = fneg <4 x half> undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fneg <5 x half> undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fneg half undef
   %v2f16 = fneg <2 x half> undef
   %v3f16 = fneg <3 x half> undef
+  %v4f16 = fneg <4 x half> undef
+  %v5f16 = fneg <5 x half> undef
   ret void
 }

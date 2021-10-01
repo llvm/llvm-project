@@ -26,9 +26,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
-SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
-  return nullptr;
-}
+SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
 
 void *BackgroundThread(void *arg) {
   const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
@@ -48,16 +46,12 @@ void *BackgroundThread(void *arg) {
         prev_reported_rss = current_rss_mb;
       }
       // If stack depot has grown 10% since last time, print it too.
-      StackDepotStats *stack_depot_stats = StackDepotGetStats();
-      if (stack_depot_stats) {
-        if (prev_reported_stack_depot_size * 11 / 10 <
-            stack_depot_stats->allocated) {
-          Printf("%s: StackDepot: %zd ids; %zdM allocated\n",
-                 SanitizerToolName,
-                 stack_depot_stats->n_uniq_ids,
-                 stack_depot_stats->allocated >> 20);
-          prev_reported_stack_depot_size = stack_depot_stats->allocated;
-        }
+      StackDepotStats stack_depot_stats = StackDepotGetStats();
+      if (prev_reported_stack_depot_size * 11 / 10 <
+          stack_depot_stats.allocated) {
+        Printf("%s: StackDepot: %zd ids; %zdM allocated\n", SanitizerToolName,
+               stack_depot_stats.n_uniq_ids, stack_depot_stats.allocated >> 20);
+        prev_reported_stack_depot_size = stack_depot_stats.allocated;
       }
     }
     // Check RSS against the limit.

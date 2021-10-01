@@ -22,6 +22,7 @@
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "PS4CPU.h"
+#include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
@@ -795,11 +796,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 
   if (TC.getTriple().isOSAIX()) {
-    if (PGOGenerateArg)
-      if (!D.isUsingLTO(false /*IsDeviceOffloadAction */) ||
-          D.getLTOMode() != LTOK_Full)
-        D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-            << PGOGenerateArg->getSpelling() << "-flto";
     if (ProfileGenerateArg)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << ProfileGenerateArg->getSpelling() << TC.getTriple().str();
@@ -5443,7 +5439,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_W_Group);
+  for (const Arg *A :
+       Args.filtered(options::OPT_W_Group, options::OPT__SLASH_wd)) {
+    A->claim();
+    if (A->getOption().getID() == options::OPT__SLASH_wd) {
+      unsigned WarningNumber;
+      if (StringRef(A->getValue()).getAsInteger(10, WarningNumber)) {
+        D.Diag(diag::err_drv_invalid_int_value)
+            << A->getAsString(Args) << A->getValue();
+        continue;
+      }
+
+      if (auto Group = diagGroupFromCLWarningID(WarningNumber)) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "-Wno-" + DiagnosticIDs::getWarningOptionForGroup(*Group)));
+      }
+      continue;
+    }
+    A->render(Args, CmdArgs);
+  }
+
   if (Args.hasFlag(options::OPT_pedantic, options::OPT_no_pedantic, false))
     CmdArgs.push_back("-pedantic");
   Args.AddLastArg(CmdArgs, options::OPT_pedantic_errors);

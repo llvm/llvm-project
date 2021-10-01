@@ -4804,12 +4804,10 @@ Value *ScalarExprEmitter::VisitAsTypeExpr(AsTypeExpr *E) {
   // to vec4 if the original type is not vec4, then a shuffle vector to
   // get a vec3.
   if (NumElementsSrc != 3 && NumElementsDst == 3) {
-    if (!CGF.CGM.getCodeGenOpts().PreserveVec3Type) {
-      auto *Vec4Ty = llvm::FixedVectorType::get(
-          cast<llvm::VectorType>(DstTy)->getElementType(), 4);
-      Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
-                                         Vec4Ty);
-    }
+    auto *Vec4Ty = llvm::FixedVectorType::get(
+        cast<llvm::VectorType>(DstTy)->getElementType(), 4);
+    Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
+                                       Vec4Ty);
 
     Src = ConvertVec3AndVec4(Builder, CGF, Src, 3);
     Src->setName("astype");

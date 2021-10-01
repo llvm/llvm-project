@@ -339,12 +339,12 @@ void f22() {
     (void)(0 && x);
     (void)y7;
     (void)(0 || (y8, ({ return; }), 1));
-    // non-nested-warning@-1 {{expression result unused}}
+    // non-nested-warning@-1 {{left operand of comma operator has no effect}}
     (void)x;
     break;
   case 8:
     (void)(1 && (y9, ({ return; }), 1));
-    // non-nested-warning@-1 {{expression result unused}}
+    // non-nested-warning@-1 {{left operand of comma operator has no effect}}
     (void)x;
     break;
   case 9:

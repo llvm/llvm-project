@@ -2417,7 +2417,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                           EltTy->getPointerTo());
       Value *Load = Builder.CreateLoad(EltTy, Cast);
       Type *I32Ty = Type::getInt32Ty(C);
-      Rep = UndefValue::get(VecTy);
+      Rep = PoisonValue::get(VecTy);
       for (unsigned I = 0; I < EltNum; ++I)
         Rep = Builder.CreateInsertElement(Rep, Load,
                                           ConstantInt::get(I32Ty, I));
@@ -3707,7 +3707,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     assert((OperandWidth == 64 || OperandWidth == 128) &&
            "Unexpected operand width");
     Type *NewTy = FixedVectorType::get(Type::getBFloatTy(C), OperandWidth / 16);
-    auto Iter = CI->arg_operands().begin();
+    auto Iter = CI->args().begin();
     Args.push_back(*Iter++);
     Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
     Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));

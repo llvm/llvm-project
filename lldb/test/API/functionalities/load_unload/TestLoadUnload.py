@@ -93,7 +93,6 @@ class LoadUnloadTestCase(TestBase):
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
-    @skipIfReproducer # VFS is a snapshot.
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
         if self.platformIsDarwin():
@@ -217,7 +216,6 @@ class LoadUnloadTestCase(TestBase):
         self.setSvr4Support(True)
         self.run_lldb_process_load_and_unload_commands()
 
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def run_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()

@@ -1,4 +1,4 @@
-; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

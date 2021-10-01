@@ -2979,14 +2979,13 @@ FinishTemplateArgumentDeduction(
   auto *Template = Partial->getSpecializedTemplate();
   const ASTTemplateArgumentListInfo *PartialTemplArgInfo =
       Partial->getTemplateArgsAsWritten();
-  const TemplateArgumentLoc *PartialTemplateArgs =
-      PartialTemplArgInfo->getTemplateArgs();
 
   TemplateArgumentListInfo InstArgs(PartialTemplArgInfo->LAngleLoc,
                                     PartialTemplArgInfo->RAngleLoc);
 
-  if (S.Subst(PartialTemplateArgs, PartialTemplArgInfo->NumTemplateArgs,
-              InstArgs, MultiLevelTemplateArgumentList(*DeducedArgumentList))) {
+  if (S.SubstTemplateArguments(
+          PartialTemplArgInfo->arguments(),
+          MultiLevelTemplateArgumentList(*DeducedArgumentList), InstArgs)) {
     unsigned ArgIdx = InstArgs.size(), ParamIdx = ArgIdx;
     if (ParamIdx >= Partial->getTemplateParameters()->size())
       ParamIdx = Partial->getTemplateParameters()->size() - 1;
@@ -2994,7 +2993,7 @@ FinishTemplateArgumentDeduction(
     Decl *Param = const_cast<NamedDecl *>(
         Partial->getTemplateParameters()->getParam(ParamIdx));
     Info.Param = makeTemplateParameter(Param);
-    Info.FirstArg = PartialTemplateArgs[ArgIdx].getArgument();
+    Info.FirstArg = (*PartialTemplArgInfo)[ArgIdx].getArgument();
     return Sema::TDK_SubstitutionFailure;
   }
 

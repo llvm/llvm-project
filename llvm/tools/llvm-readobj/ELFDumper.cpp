@@ -1622,6 +1622,9 @@ static const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MIPS16)
 };
 
+static const EnumEntry<unsigned> ElfRISCVSymOtherFlags[] = {
+    LLVM_READOBJ_ENUM_ENT(ELF, STO_RISCV_VARIANT_CC)};
+
 static const char *getElfMipsOptionsOdkType(unsigned Odk) {
   switch (Odk) {
   LLVM_READOBJ_ENUM_CASE(ELF, ODK_NULL);
@@ -3775,6 +3778,15 @@ void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       if (Other & STO_AARCH64_VARIANT_PCS) {
         Other &= ~STO_AARCH64_VARIANT_PCS;
         Fields[5].Str += " [VARIANT_PCS";
+        if (Other != 0)
+          Fields[5].Str.append(" | " + to_hexString(Other, false));
+        Fields[5].Str.append("]");
+      }
+    } else if (this->Obj.getHeader().e_machine == ELF::EM_RISCV) {
+      uint8_t Other = Symbol.st_other & ~0x3;
+      if (Other & STO_RISCV_VARIANT_CC) {
+        Other &= ~STO_RISCV_VARIANT_CC;
+        Fields[5].Str += " [VARIANT_CC";
         if (Other != 0)
           Fields[5].Str.append(" | " + to_hexString(Other, false));
         Fields[5].Str.append("]");
@@ -6583,6 +6595,10 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       SymOtherFlags.insert(SymOtherFlags.end(),
                            std::begin(ElfAArch64SymOtherFlags),
                            std::end(ElfAArch64SymOtherFlags));
+    } else if (this->Obj.getHeader().e_machine == EM_RISCV) {
+      SymOtherFlags.insert(SymOtherFlags.end(),
+                           std::begin(ElfRISCVSymOtherFlags),
+                           std::end(ElfRISCVSymOtherFlags));
     }
     W.printFlags("Other", Symbol.st_other, makeArrayRef(SymOtherFlags), 0x3u);
   }

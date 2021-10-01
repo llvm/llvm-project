@@ -75,7 +75,6 @@ void ARMException::endFunction(const MachineFunction *MF) {
     // Emit references to personality.
     if (Per) {
       MCSymbol *PerSym = Asm->getSymbol(Per);
-      Asm->OutStreamer->emitSymbolAttribute(PerSym, MCSA_Global);
       ATS.emitPersonality(PerSym);
     }
 

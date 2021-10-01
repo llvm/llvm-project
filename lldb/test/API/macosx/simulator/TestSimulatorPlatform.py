@@ -6,7 +6,6 @@ import json
 import unittest2
 
 
-@skipIfReproducer
 class TestSimulatorPlatformLaunching(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

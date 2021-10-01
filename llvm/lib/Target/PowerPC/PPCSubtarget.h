@@ -147,6 +147,7 @@ protected:
   bool HasStoreFusion;
   bool HasAddiLoadFusion;
   bool HasAddisLoadFusion;
+  bool IsISA2_06;
   bool IsISA2_07;
   bool IsISA3_0;
   bool IsISA3_1;
@@ -322,6 +323,7 @@ public:
 
   bool hasHTM() const { return HasHTM; }
   bool hasFloat128() const { return HasFloat128; }
+  bool isISA2_06() const { return IsISA2_06; }
   bool isISA2_07() const { return IsISA2_07; }
   bool isISA3_0() const { return IsISA3_0; }
   bool isISA3_1() const { return IsISA3_1; }

@@ -18,7 +18,7 @@ namespace dr1413 { // dr1413: 12
       Check<true ? 0 : A::unknown_spec>::type *var1; // expected-error {{undeclared identifier 'var1'}}
       Check<true ? 0 : a>::type *var2; // ok, variable declaration  expected-note 0+{{here}}
       Check<true ? 0 : b>::type *var3; // expected-error {{undeclared identifier 'var3'}}
-      Check<true ? 0 : (c, 0)>::type *var4; // expected-error {{undeclared identifier 'var4'}}
+      Check<true ? 0 : ((void)c, 0)>::type *var4; // expected-error {{undeclared identifier 'var4'}}
       // value-dependent because of the implied type-dependent 'this->', not because of 'd'
       Check<true ? 0 : (d(), 0)>::type *var5; // expected-error {{undeclared identifier 'var5'}}
       // value-dependent because of the value-dependent '&' operator, not because of 'A::d'

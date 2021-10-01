@@ -26,7 +26,6 @@ class ConditionalBreakTestCase(TestBase):
         self.build()
         self.do_conditional_break()
 
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_with_command(self):
         """Simulate a user using lldb commands to break on c() if called from a()."""
         self.build()

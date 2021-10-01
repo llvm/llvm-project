@@ -746,6 +746,7 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::Cpp;
   case dwarf::DW_LANG_Fortran77:
   case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
   case dwarf::DW_LANG_Fortran03:
   case dwarf::DW_LANG_Fortran08:
     return SourceLanguage::Fortran;

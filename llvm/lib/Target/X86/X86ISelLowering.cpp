@@ -2167,6 +2167,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
     setOperationAction(ISD::UREM, MVT::i128, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i128, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i128, Custom);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i128, Custom);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i128, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i128, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i128, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i128, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
   }
 
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
@@ -20445,6 +20453,9 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
+  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+    return LowerWin64_INT128_TO_FP(Op, DAG);
+
   if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
     return Extract;
 
@@ -20943,6 +20954,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
+
+  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+    return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
     return Extract;
@@ -28686,6 +28700,77 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   return DAG.getBitcast(VT, CallInfo.first);
 }
 
+SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
+                                                   SelectionDAG &DAG,
+                                                   SDValue &Chain) const {
+  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  EVT VT = Op.getValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+
+  SDValue Arg = Op.getOperand(IsStrict ? 1 : 0);
+  EVT ArgVT = Arg.getValueType();
+
+  assert(VT.isInteger() && VT.getSizeInBits() == 128 &&
+         "Unexpected return type for lowering");
+
+  RTLIB::Libcall LC;
+  if (Op->getOpcode() == ISD::FP_TO_SINT ||
+      Op->getOpcode() == ISD::STRICT_FP_TO_SINT)
+    LC = RTLIB::getFPTOSINT(ArgVT, VT);
+  else
+    LC = RTLIB::getFPTOUINT(ArgVT, VT);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected request for libcall!");
+
+  SDLoc dl(Op);
+  MakeLibCallOptions CallOptions;
+  Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+
+  SDValue Result;
+  // Expect the i128 argument returned as a v2i64 in xmm0, cast back to the
+  // expected VT (i128).
+  std::tie(Result, Chain) =
+      makeLibCall(DAG, LC, MVT::v2i64, Arg, CallOptions, dl, Chain);
+  Result = DAG.getBitcast(VT, Result);
+  return Result;
+}
+
+SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  EVT VT = Op.getValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+
+  SDValue Arg = Op.getOperand(IsStrict ? 1 : 0);
+  EVT ArgVT = Arg.getValueType();
+
+  assert(ArgVT.isInteger() && ArgVT.getSizeInBits() == 128 &&
+         "Unexpected argument type for lowering");
+
+  RTLIB::Libcall LC;
+  if (Op->getOpcode() == ISD::SINT_TO_FP ||
+      Op->getOpcode() == ISD::STRICT_SINT_TO_FP)
+    LC = RTLIB::getSINTTOFP(ArgVT, VT);
+  else
+    LC = RTLIB::getUINTTOFP(ArgVT, VT);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected request for libcall!");
+
+  SDLoc dl(Op);
+  MakeLibCallOptions CallOptions;
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+
+  // Pass the i128 argument as an indirect argument on the stack.
+  SDValue StackPtr = DAG.CreateStackTemporary(ArgVT, 16);
+  int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo MPI =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+  Chain = DAG.getStore(Chain, dl, Arg, StackPtr, MPI, Align(16));
+
+  SDValue Result;
+  std::tie(Result, Chain) =
+      makeLibCall(DAG, LC, VT, StackPtr, CallOptions, dl, Chain);
+  return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
+}
+
 // Return true if the required (according to Opcode) shift-imm form is natively
 // supported by the Subtarget
 static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
@@ -31660,6 +31745,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, SDLoc(N), VecVT, Res);
       Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Res, ZeroIdx);
       Results.push_back(Res);
+      if (IsStrict)
+        Results.push_back(Chain);
+      return;
+    }
+
+    if (VT == MVT::i128 && Subtarget.isTargetWin64()) {
+      SDValue Chain;
+      SDValue V = LowerWin64_FP_TO_INT128(SDValue(N, 0), DAG, Chain);
+      Results.push_back(V);
       if (IsStrict)
         Results.push_back(Chain);
       return;

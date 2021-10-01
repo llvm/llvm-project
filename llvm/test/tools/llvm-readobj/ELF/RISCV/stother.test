@@ -1,0 +1,38 @@
+## Check that we are able to dump RISC-V STO_* flags correctly when dumping symbols.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -s %t.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=GNU
+
+# LLVM:      Name: foo1
+# LLVM:      Other [ (0x80)
+# LLVM-NEXT:   STO_RISCV_VARIANT_CC (0x80)
+# LLVM-NEXT: ]
+# LLVM:      Name: foo2
+# LLVM:      Other [ (0xC0)
+# LLVM-NEXT:   STO_RISCV_VARIANT_CC (0x80)
+# LLVM-NEXT: ]
+# LLVM:      Name: foo3
+# LLVM:      Other [ (0x83)
+# LLVM-NEXT:   STO_RISCV_VARIANT_CC (0x80)
+# LLVM-NEXT:   STV_PROTECTED (0x3)
+# LLVM-NEXT: ]
+
+# GNU:      Symbol table '.symtab' contains 4 entries:
+# GNU:      1: 0000000000000000 0 NOTYPE LOCAL DEFAULT   [VARIANT_CC]      UND foo1
+# GNU-NEXT: 2: 0000000000000000 0 NOTYPE LOCAL DEFAULT   [VARIANT_CC | 40] UND foo2
+# GNU-NEXT: 3: 0000000000000000 0 NOTYPE LOCAL PROTECTED [VARIANT_CC]      UND foo3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Symbols:
+  - Name: foo1
+    Other: [ STO_RISCV_VARIANT_CC ]
+  - Name: foo2
+    Other: [ STO_RISCV_VARIANT_CC, 0x40 ]
+  - Name: foo3
+    Other: [ STO_RISCV_VARIANT_CC, STV_PROTECTED ]

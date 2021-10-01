@@ -130,6 +130,9 @@ public:
   std::vector<ConstString>
   GenerateAlternateFunctionManglings(const ConstString mangled) const override;
 
+  ConstString FindBestAlternateFunctionMangledName(
+      const Mangled mangled, const SymbolContext &sym_ctx) const override;
+
   // PluginInterface protocol
   ConstString GetPluginName() override;
 };

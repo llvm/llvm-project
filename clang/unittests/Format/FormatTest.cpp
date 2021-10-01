@@ -17800,13 +17800,25 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
 TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  /* FIXME: This case gets misformatted.
+  verifyFormat("auto foo = Items{\n"
+               "    Section{0, bar(), },\n"
+               "    Section{1, boo()  }\n"
+               "};\n",
+               Style);
+  */
+  verifyFormat("auto foo = Items{\n"
+               "    Section{\n"
+               "            0, bar(),\n"
+               "            }\n"
+               "};\n",
+               Style);
   verifyFormat("struct test demo[] = {\n"
                "    {56, 23,    \"hello\"},\n"
                "    {-1, 93463, \"world\"},\n"
                "    {7,  5,     \"!!\"   }\n"
                "};\n",
                Style);
-
   verifyFormat("struct test demo[] = {\n"
                "    {56, 23,    \"hello\"}, // first line\n"
                "    {-1, 93463, \"world\"}, // second line\n"

@@ -12,6 +12,10 @@ N: Saleem Abdulrasool
 E: compnerd@compnerd.org
 D: Minor patches and Linux fixes.
 
+N: Muiez Ahmed
+E: muiez@ibm.com
+D: z/OS port.
+
 N: Dan Albert
 E: danalbert@google.com
 D: Android support and test runner improvements.

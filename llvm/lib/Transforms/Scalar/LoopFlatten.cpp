@@ -97,9 +97,17 @@ struct FlattenInfo {
   // Holds the old/narrow induction phis, i.e. the Phis before IV widening has
   // been applied. This bookkeeping is used so we can skip some checks on these
   // phi nodes.
-  SmallPtrSet<PHINode *, 2> OldInductionPHIs;
+  PHINode *NarrowInnerInductionPHI = nullptr;
+  PHINode *NarrowOuterInductionPHI = nullptr;
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
+
+  bool isNarrowInductionPhi(PHINode *Phi) {
+    // This can't be the narrow phi if we haven't widened the IV first.
+    if (!Widened)
+      return false;
+    return NarrowInnerInductionPHI == Phi || NarrowOuterInductionPHI == Phi;
+  }
 };
 
 static bool
@@ -268,7 +276,7 @@ static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
     // them specially when doing the transformation.
     if (&InnerPHI == FI.InnerInductionPHI)
       continue;
-    if (FI.Widened && FI.OldInductionPHIs.count(&InnerPHI))
+    if (FI.isNarrowInductionPhi(&InnerPHI))
       continue;
 
     // Each inner loop PHI node must have two incoming values/blocks - one
@@ -315,7 +323,7 @@ static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
   }
 
   for (PHINode &OuterPHI : FI.OuterLoop->getHeader()->phis()) {
-    if (FI.Widened && FI.OldInductionPHIs.count(&OuterPHI))
+    if (FI.isNarrowInductionPhi(&OuterPHI))
       continue;
     if (!SafeOuterPHIs.count(&OuterPHI)) {
       LLVM_DEBUG(dbgs() << "found unsafe PHI in outer loop: "; OuterPHI.dump());
@@ -708,10 +716,11 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   bool Deleted;
   if (!CreateWideIV({FI.InnerInductionPHI, MaxLegalType, false }, Deleted))
     return false;
-  // If the inner Phi node cannot be trivially deleted, we need to at least
-  // bring it in a consistent state.
+  // Add the narrow phi to list, so that it will be adjusted later when the
+  // the transformation is performed.
   if (!Deleted)
-    FI.InnerInductionPHI->removeIncomingValue(FI.InnerLoop->getLoopLatch());
+    FI.InnerPHIsToTransform.insert(FI.InnerInductionPHI);
+
   if (!CreateWideIV({FI.OuterInductionPHI, MaxLegalType, false }, Deleted))
     return false;
 
@@ -719,8 +728,8 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   FI.Widened = true;
 
   // Save the old/narrow induction phis, which we need to ignore in CheckPHIs.
-  FI.OldInductionPHIs.insert(FI.InnerInductionPHI);
-  FI.OldInductionPHIs.insert(FI.OuterInductionPHI);
+  FI.NarrowInnerInductionPHI = FI.InnerInductionPHI;
+  FI.NarrowOuterInductionPHI = FI.OuterInductionPHI;
 
   // After widening, rediscover all the loop components.
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
@@ -739,12 +748,30 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
 
   // Check if we can widen the induction variables to avoid overflow checks.
-  if (CanWidenIV(FI, DT, LI, SE, AC, TTI))
+  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI);
+
+  // It can happen that after widening of the IV, flattening may not be
+  // possible/happening, e.g. when it is deemed unprofitable. So bail here if
+  // that is the case.
+  // TODO: IV widening without performing the actual flattening transformation
+  // is not ideal. While this codegen change should not matter much, it is an
+  // unnecessary change which is better to avoid. It's unlikely this happens
+  // often, because if it's unprofitibale after widening, it should be
+  // unprofitabe before widening as checked in the first round of checks. But
+  // 'RepeatedInstructionThreshold' is set to only 2, which can probably be
+  // relaxed. Because this is making a code change (the IV widening, but not
+  // the flattening), we return true here.
+  if (FI.Widened && !CanFlatten)
+    return true;
+
+  // If we have widened and can perform the transformation, do that here.
+  if (CanFlatten)
     return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 
-  // Check if the new iteration variable might overflow. In this case, we
-  // need to version the loop, and select the original version at runtime if
-  // the iteration space is too large.
+  // Otherwise, if we haven't widened the IV, check if the new iteration
+  // variable might overflow. In this case, we need to version the loop, and
+  // select the original version at runtime if the iteration space is too
+  // large.
   // TODO: We currently don't version the loop.
   OverflowResult OR = checkOverflow(FI, DT, AC);
   if (OR == OverflowResult::AlwaysOverflowsHigh ||

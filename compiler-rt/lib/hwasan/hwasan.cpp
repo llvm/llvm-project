@@ -141,7 +141,7 @@ static void CheckUnwind() {
 static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   HwasanThreadList &thread_list = hwasanThreadList();
   auto thread_stats = thread_list.GetThreadStats();
-  auto *sds = StackDepotGetStats();
+  auto sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
   s.append(
@@ -151,7 +151,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
       internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
       thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
-      sds->allocated, sds->n_uniq_ids, asc[AllocatorStatMapped]);
+      sds.allocated, sds.n_uniq_ids, asc[AllocatorStatMapped]);
 }
 
 #if SANITIZER_ANDROID

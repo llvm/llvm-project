@@ -906,10 +906,13 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
     } else if (Next.isOneOf(tok::identifier, tok::comma, tok::greater,
                             tok::greatergreater, tok::ellipsis)) {
       Diag(Tok.getLocation(), diag::err_class_on_template_template_param)
-        << (Replace ? FixItHint::CreateReplacement(Tok.getLocation(), "class")
-                    : FixItHint::CreateInsertion(Tok.getLocation(), "class "));
+          << getLangOpts().CPlusPlus17
+          << (Replace
+                  ? FixItHint::CreateReplacement(Tok.getLocation(), "class")
+                  : FixItHint::CreateInsertion(Tok.getLocation(), "class "));
     } else
-      Diag(Tok.getLocation(), diag::err_class_on_template_template_param);
+      Diag(Tok.getLocation(), diag::err_class_on_template_template_param)
+          << getLangOpts().CPlusPlus17;
 
     if (Replace)
       ConsumeToken();

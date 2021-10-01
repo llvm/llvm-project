@@ -238,8 +238,7 @@ MSP430_MCU_FEAT("msp430f4793", "32bit")
 MSP430_MCU_FEAT("msp430f4784", "32bit")
 MSP430_MCU_FEAT("msp430f4794", "32bit")
 
-// Generic MSUs
-MSP430_MCU("msp430")
+// Generic MCUs
 MSP430_MCU("msp430i2xxgeneric")
 
 #undef MSP430_MCU

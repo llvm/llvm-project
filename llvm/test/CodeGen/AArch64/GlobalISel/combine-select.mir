@@ -9,7 +9,7 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: test_combine_select_same_res
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0
     %2:_(s64) = G_SELECT %1, %0, %0
@@ -23,7 +23,7 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: test_combine_select_undef_res0_res1
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s1) = G_IMPLICIT_DEF
@@ -38,12 +38,28 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: test_combine_select_false_res0_res1
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s1) = G_CONSTANT i1 false
     %3:_(s64) = G_SELECT %2, %0, %1
     $x0 = COPY %3(s64)
+...
+---
+# vector select (false, x, y) -> y
+name:            test_combine_vector_select_false_res0_res1
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: test_combine_vector_select_false_res0_res1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x s32>)
+    %0:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = COPY $q1
+    %2:_(s1) = G_CONSTANT i1 false
+    %condvec:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %3:_(<4 x s32>) = G_SELECT %condvec, %0, %1
+    $q0 = COPY %3(<4 x s32>)
 ...
 ---
 # select (true, x, y) -> x
@@ -53,10 +69,26 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: test_combine_select_true_res0_res1
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s1) = G_CONSTANT i1 true
     %3:_(s64) = G_SELECT %2, %0, %1
     $x0 = COPY %3(s64)
+...
+---
+# vector select (true, x, y) -> x
+name:            test_combine_vector_select_true_res0_res1
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: test_combine_vector_select_true_res0_res1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x s32>)
+    %0:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = COPY $q1
+    %2:_(s1) = G_CONSTANT i1 true
+    %condvec:_(<4 x s1>) = G_BUILD_VECTOR %2, %2, %2, %2
+    %3:_(<4 x s32>) = G_SELECT %condvec, %0, %1
+    $q0 = COPY %3(<4 x s32>)
 ...

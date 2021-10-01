@@ -1784,7 +1784,7 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
 
   // Yes. Let's translate it.
   SmallVector<llvm::SrcOp, 4> VRegs;
-  for (auto &Arg : CI.arg_operands())
+  for (auto &Arg : CI.args())
     VRegs.push_back(getOrCreateVReg(*Arg));
 
   MIRBuilder.buildInstr(Op, {getOrCreateVReg(CI)}, VRegs,
@@ -2344,14 +2344,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  if (F && F->hasFnAttribute("dontcall")) {
-    unsigned LocCookie = 0;
-    if (MDNode *MD = CI.getMetadata("srcloc"))
-      LocCookie =
-          mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-    DiagnosticInfoDontCall D(F->getName(), LocCookie);
-    F->getContext().diagnose(D);
-  }
+  diagnoseDontCall(CI);
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   if (F && F->isIntrinsic()) {
@@ -2379,7 +2372,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (isa<FPMathOperator>(CI))
     MIB->copyIRFlags(CI);
 
-  for (auto &Arg : enumerate(CI.arg_operands())) {
+  for (auto &Arg : enumerate(CI.args())) {
     // If this is required to be an immediate, don't materialize it in a
     // register.
     if (CI.paramHasAttr(Arg.index(), Attribute::ImmArg)) {

@@ -1,4 +1,4 @@
-//===- SparseTensorLowering.cpp - Sparse tensor primitives conversion -----===//
+//===- SparseTensorConversion.cpp - Sparse tensor primitives conversion ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -363,7 +363,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     auto encSrc = getSparseTensorEncoding(op.source().getType());
     if (encDst && encSrc) {
       // This is a sparse => sparse conversion, which is handled as follows:
-      //   t = src->asCOO();         ; src to COO in dst order
+      //   t = src->toCOO();         ; src to COO in dst order
       //   dst = newSparseTensor(t)
       // Using the coordinate scheme as an intermediate does not always
       // yield the fastest conversion but avoids the need for a full

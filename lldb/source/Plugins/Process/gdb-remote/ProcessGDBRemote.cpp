@@ -251,8 +251,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
-      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_last_stop_packet_mutex(),
-      m_register_info_sp(nullptr),
+      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_register_info_sp(nullptr),
       m_async_broadcaster(nullptr, "lldb.process.gdb-remote.async-broadcaster"),
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
@@ -603,10 +602,6 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
     if (m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
-      // '?' Packets must be handled differently in non-stop mode
-      if (GetTarget().GetNonStopModeEnabled())
-        HandleStopReplySequence();
-
       Target &target = GetTarget();
       if (!target.GetArchitecture().IsValid()) {
         if (m_gdb_comm.GetProcessArchitecture().IsValid()) {
@@ -846,9 +841,6 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       StringExtractorGDBRemote response;
       if (m_gdb_comm.GetStopReply(response)) {
         SetLastStopPacket(response);
-        // '?' Packets must be handled differently in non-stop mode
-        if (GetTarget().GetNonStopModeEnabled())
-          HandleStopReplySequence();
 
         const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
 
@@ -919,11 +911,6 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
     return error;
   }
 
-  // Start the communications read thread so all incoming data can be parsed
-  // into packets and queued as they arrive.
-  if (GetTarget().GetNonStopModeEnabled())
-    m_gdb_comm.StartReadThread();
-
   // We always seem to be able to open a connection to a local port so we need
   // to make sure we can then send data to it. If we can't then we aren't
   // actually connected to anything, so try and do the handshake with the
@@ -935,10 +922,6 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
     return error;
   }
 
-  // Send $QNonStop:1 packet on startup if required
-  if (GetTarget().GetNonStopModeEnabled())
-    GetTarget().SetNonStopModeEnabled(m_gdb_comm.SetNonStopMode(true));
-
   m_gdb_comm.GetEchoSupported();
   m_gdb_comm.GetThreadSuffixSupported();
   m_gdb_comm.GetListThreadsInStopReplySupported();
@@ -946,10 +929,6 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVContSupported('c');
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
-
-  // Ask the remote server for the default thread id
-  if (GetTarget().GetNonStopModeEnabled())
-    m_gdb_comm.GetDefaultThreadId(m_initial_tid);
 
   size_t num_cmds = GetExtraStartupCommands().GetArgumentCount();
   for (size_t idx = 0; idx < num_cmds; idx++) {
@@ -1210,10 +1189,9 @@ Status ProcessGDBRemote::DoResume() {
     StreamString continue_packet;
     bool continue_packet_error = false;
     if (m_gdb_comm.HasAnyVContSupport()) {
-      if (!GetTarget().GetNonStopModeEnabled() &&
-          (m_continue_c_tids.size() == num_threads ||
-           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
-            m_continue_s_tids.empty() && m_continue_S_tids.empty()))) {
+      if (m_continue_c_tids.size() == num_threads ||
+          (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
+           m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
         // All threads are continuing, just send a "c" packet
         continue_packet.PutCString("c");
       } else {
@@ -1331,14 +1309,7 @@ Status ProcessGDBRemote::DoResume() {
           // All threads are resuming...
           m_gdb_comm.SetCurrentThreadForRun(-1);
 
-          // If in Non-Stop-Mode use vCont when stepping
-          if (GetTarget().GetNonStopModeEnabled()) {
-            if (m_gdb_comm.GetVContSupported('s'))
-              continue_packet.PutCString("vCont;s");
-            else
-              continue_packet.PutChar('s');
-          } else
-            continue_packet.PutChar('s');
+          continue_packet.PutChar('s');
 
           continue_packet_error = false;
         } else if (num_continue_c_tids == 0 && num_continue_C_tids == 0 &&
@@ -1490,40 +1461,30 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
     // See if we can get the thread IDs from the current stop reply packets
     // that might contain a "threads" key/value pair
 
-    // Lock the thread stack while we access it
-    // Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
-    std::unique_lock<std::recursive_mutex> stop_stack_lock(
-        m_last_stop_packet_mutex, std::defer_lock);
-    if (stop_stack_lock.try_lock()) {
-      // Get the number of stop packets on the stack
-      int nItems = m_stop_packet_stack.size();
-      // Iterate over them
-      for (int i = 0; i < nItems; i++) {
-        // Get the thread stop info
-        StringExtractorGDBRemote &stop_info = m_stop_packet_stack[i];
-        const std::string &stop_info_str =
-            std::string(stop_info.GetStringRef());
+    if (m_last_stop_packet) {
+      // Get the thread stop info
+      StringExtractorGDBRemote &stop_info = *m_last_stop_packet;
+      const std::string &stop_info_str = std::string(stop_info.GetStringRef());
 
-        m_thread_pcs.clear();
-        const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
-        if (thread_pcs_pos != std::string::npos) {
-          const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
-          const size_t end = stop_info_str.find(';', start);
-          if (end != std::string::npos) {
-            std::string value = stop_info_str.substr(start, end - start);
-            UpdateThreadPCsFromStopReplyThreadsValue(value);
-          }
+      m_thread_pcs.clear();
+      const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
+      if (thread_pcs_pos != std::string::npos) {
+        const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
+        const size_t end = stop_info_str.find(';', start);
+        if (end != std::string::npos) {
+          std::string value = stop_info_str.substr(start, end - start);
+          UpdateThreadPCsFromStopReplyThreadsValue(value);
         }
+      }
 
-        const size_t threads_pos = stop_info_str.find(";threads:");
-        if (threads_pos != std::string::npos) {
-          const size_t start = threads_pos + strlen(";threads:");
-          const size_t end = stop_info_str.find(';', start);
-          if (end != std::string::npos) {
-            std::string value = stop_info_str.substr(start, end - start);
-            if (UpdateThreadIDsFromStopReplyThreadsValue(value))
-              return true;
-          }
+      const size_t threads_pos = stop_info_str.find(";threads:");
+      if (threads_pos != std::string::npos) {
+        const size_t start = threads_pos + strlen(";threads:");
+        const size_t end = stop_info_str.find(';', start);
+        if (end != std::string::npos) {
+          std::string value = stop_info_str.substr(start, end - start);
+          if (UpdateThreadIDsFromStopReplyThreadsValue(value))
+            return true;
         }
       }
     }
@@ -2348,22 +2309,9 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   // date before we do that or we might overwrite what was computed here.
   UpdateThreadListIfNeeded();
 
-  // Scope for the lock
-  {
-    // Lock the thread stack while we access it
-    std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
-    // Get the number of stop packets on the stack
-    int nItems = m_stop_packet_stack.size();
-    // Iterate over them
-    for (int i = 0; i < nItems; i++) {
-      // Get the thread stop info
-      StringExtractorGDBRemote stop_info = m_stop_packet_stack[i];
-      // Process thread stop info
-      SetThreadStopInfo(stop_info);
-    }
-    // Clear the thread stop stack
-    m_stop_packet_stack.clear();
-  }
+  if (m_last_stop_packet)
+    SetThreadStopInfo(*m_last_stop_packet);
+  m_last_stop_packet.reset();
 
   // If we have queried for a default thread id
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
@@ -2610,20 +2558,7 @@ void ProcessGDBRemote::SetLastStopPacket(
     m_gdb_comm.ResetDiscoverableSettings(did_exec);
   }
 
-  // Scope the lock
-  {
-    // Lock the thread stack while we access it
-    std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
-
-    // We are are not using non-stop mode, there can only be one last stop
-    // reply packet, so clear the list.
-    if (!GetTarget().GetNonStopModeEnabled())
-      m_stop_packet_stack.clear();
-
-    // Add this stop packet to the stop packet stack This stack will get popped
-    // and examined when we switch to the Stopped state
-    m_stop_packet_stack.push_back(response);
-  }
+  m_last_stop_packet = response;
 }
 
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
@@ -3740,88 +3675,72 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
               process->SetPrivateState(eStateRunning);
             StringExtractorGDBRemote response;
 
-            // If in Non-Stop-Mode
-            if (process->GetTarget().GetNonStopModeEnabled()) {
-              // send the vCont packet
-              if (!process->GetGDBRemote().SendvContPacket(
-                      llvm::StringRef(continue_cstr, continue_cstr_len),
-                      process->GetInterruptTimeout(), response)) {
-                // Something went wrong
-                done = true;
-                break;
-              }
-            }
-            // If in All-Stop-Mode
-            else {
-              StateType stop_state =
-                  process->GetGDBRemote().SendContinuePacketAndWaitForResponse(
-                      *process, *process->GetUnixSignals(),
-                      llvm::StringRef(continue_cstr, continue_cstr_len),
-                      process->GetInterruptTimeout(),
-                      response);
+            StateType stop_state =
+                process->GetGDBRemote().SendContinuePacketAndWaitForResponse(
+                    *process, *process->GetUnixSignals(),
+                    llvm::StringRef(continue_cstr, continue_cstr_len),
+                    process->GetInterruptTimeout(), response);
 
-              // We need to immediately clear the thread ID list so we are sure
-              // to get a valid list of threads. The thread ID list might be
-              // contained within the "response", or the stop reply packet that
-              // caused the stop. So clear it now before we give the stop reply
-              // packet to the process using the
-              // process->SetLastStopPacket()...
+            // We need to immediately clear the thread ID list so we are sure
+            // to get a valid list of threads. The thread ID list might be
+            // contained within the "response", or the stop reply packet that
+            // caused the stop. So clear it now before we give the stop reply
+            // packet to the process using the
+            // process->SetLastStopPacket()...
+            process->ClearThreadIDList();
+
+            switch (stop_state) {
+            case eStateStopped:
+            case eStateCrashed:
+            case eStateSuspended:
+              process->SetLastStopPacket(response);
+              process->SetPrivateState(stop_state);
+              break;
+
+            case eStateExited: {
+              process->SetLastStopPacket(response);
               process->ClearThreadIDList();
+              response.SetFilePos(1);
 
-              switch (stop_state) {
-              case eStateStopped:
-              case eStateCrashed:
-              case eStateSuspended:
-                process->SetLastStopPacket(response);
-                process->SetPrivateState(stop_state);
-                break;
-
-              case eStateExited: {
-                process->SetLastStopPacket(response);
-                process->ClearThreadIDList();
-                response.SetFilePos(1);
-
-                int exit_status = response.GetHexU8();
-                std::string desc_string;
-                if (response.GetBytesLeft() > 0 &&
-                    response.GetChar('-') == ';') {
-                  llvm::StringRef desc_str;
-                  llvm::StringRef desc_token;
-                  while (response.GetNameColonValue(desc_token, desc_str)) {
-                    if (desc_token != "description")
-                      continue;
-                    StringExtractor extractor(desc_str);
-                    extractor.GetHexByteString(desc_string);
-                  }
+              int exit_status = response.GetHexU8();
+              std::string desc_string;
+              if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
+                llvm::StringRef desc_str;
+                llvm::StringRef desc_token;
+                while (response.GetNameColonValue(desc_token, desc_str)) {
+                  if (desc_token != "description")
+                    continue;
+                  StringExtractor extractor(desc_str);
+                  extractor.GetHexByteString(desc_string);
                 }
-                process->SetExitStatus(exit_status, desc_string.c_str());
-                done = true;
-                break;
               }
-              case eStateInvalid: {
-                // Check to see if we were trying to attach and if we got back
-                // the "E87" error code from debugserver -- this indicates that
-                // the process is not debuggable.  Return a slightly more
-                // helpful error message about why the attach failed.
-                if (::strstr(continue_cstr, "vAttach") != nullptr &&
-                    response.GetError() == 0x87) {
-                  process->SetExitStatus(-1, "cannot attach to process due to "
-                                             "System Integrity Protection");
-                } else if (::strstr(continue_cstr, "vAttach") != nullptr &&
-                           response.GetStatus().Fail()) {
-                  process->SetExitStatus(-1, response.GetStatus().AsCString());
-                } else {
-                  process->SetExitStatus(-1, "lost connection");
-                }
-                done = true;
-                break;
+              process->SetExitStatus(exit_status, desc_string.c_str());
+              done = true;
+              break;
+            }
+            case eStateInvalid: {
+              // Check to see if we were trying to attach and if we got back
+              // the "E87" error code from debugserver -- this indicates that
+              // the process is not debuggable.  Return a slightly more
+              // helpful error message about why the attach failed.
+              if (::strstr(continue_cstr, "vAttach") != nullptr &&
+                  response.GetError() == 0x87) {
+                process->SetExitStatus(-1, "cannot attach to process due to "
+                                           "System Integrity Protection");
+              } else if (::strstr(continue_cstr, "vAttach") != nullptr &&
+                         response.GetStatus().Fail()) {
+                process->SetExitStatus(-1, response.GetStatus().AsCString());
+              } else {
+                process->SetExitStatus(-1, "lost connection");
               }
+              done = true;
+              break;
+            }
 
-              default:
-                process->SetPrivateState(stop_state);
-                break;
-              } // switch(stop_state)
-            }   // else // if in All-stop-mode
+            default:
+              process->SetPrivateState(stop_state);
+              break;
+            }   // switch(stop_state)
           }     // if (continue_packet)
         }       // case eBroadcastBitAsyncContinue
         break;

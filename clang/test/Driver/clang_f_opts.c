@@ -565,6 +565,8 @@
 // RUN: cp %clang "%t.r/with spaces/clang"
 // RUN: "%t.r/with spaces/clang" -### -S -target x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
 // CHECK-RECORD-GCC-SWITCHES-ESCAPED: "-record-command-line" "{{.+}}with\\ spaces{{.+}}"
+// Clean up copy of large binary copied into temp directory to avoid bloat.
+// RUN: rm -f "%t.r/with spaces/clang" || true
 
 // RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s

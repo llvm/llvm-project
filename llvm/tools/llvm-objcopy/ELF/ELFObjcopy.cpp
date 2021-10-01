@@ -588,14 +588,32 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     return E;
 
   if (!Config.SectionsToRename.empty()) {
+    std::vector<RelocationSectionBase *> RelocSections;
+    DenseSet<SectionBase *> RenamedSections;
     for (SectionBase &Sec : Obj.sections()) {
+      auto *RelocSec = dyn_cast<RelocationSectionBase>(&Sec);
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags.hasValue())
           setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
-      }
+        RenamedSections.insert(&Sec);
+      } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
+        // Postpone processing relocation sections which are not specified in
+        // their explicit '--rename-section' commands until after their target
+        // sections are renamed.
+        // Dynamic relocation sections (i.e. ones with SHF_ALLOC) should be
+        // renamed only explicitly. Otherwise, renaming, for example, '.got.plt'
+        // would affect '.rela.plt', which is not desirable.
+        RelocSections.push_back(RelocSec);
+    }
+
+    // Rename relocation sections according to their target sections.
+    for (RelocationSectionBase *RelocSec : RelocSections) {
+      auto Iter = RenamedSections.find(RelocSec->getSection());
+      if (Iter != RenamedSections.end())
+        RelocSec->Name = (RelocSec->getNamePrefix() + (*Iter)->Name).str();
     }
   }
 

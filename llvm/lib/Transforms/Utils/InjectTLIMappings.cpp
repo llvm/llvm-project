@@ -47,7 +47,7 @@ static void addVariantDeclaration(CallInst &CI, const ElementCount &VF,
   // Add function declaration.
   Type *RetTy = ToVectorTy(CI.getType(), VF);
   SmallVector<Type *, 4> Tys;
-  for (Value *ArgOperand : CI.arg_operands())
+  for (Value *ArgOperand : CI.args())
     Tys.push_back(ToVectorTy(ArgOperand->getType(), VF));
   assert(!CI.getFunctionType()->isVarArg() &&
          "VarArg functions are not supported.");

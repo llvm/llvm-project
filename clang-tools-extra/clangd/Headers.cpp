@@ -67,8 +67,8 @@ public:
         // Treat as if included from the main file.
         IncludingFileEntry = SM.getFileEntryForID(MainFID);
       }
-      auto IncludingID = Out->getOrCreateID(IncludingFileEntry),
-           IncludedID = Out->getOrCreateID(File);
+      auto IncludingID = Out->getOrCreateID(IncludingFileEntry, SM),
+           IncludedID = Out->getOrCreateID(File, SM);
       Out->IncludeChildren[IncludingID].push_back(IncludedID);
     }
   }
@@ -156,21 +156,32 @@ collectIncludeStructureCallback(const SourceManager &SM,
 }
 
 llvm::Optional<IncludeStructure::HeaderID>
-IncludeStructure::getID(const FileEntry *Entry) const {
-  auto It = NameToIndex.find(Entry->getName());
-  if (It == NameToIndex.end())
+IncludeStructure::getID(const FileEntry *Entry,
+                        const SourceManager &SM) const {
+  // HeaderID of the main file is always 0;
+  if (SM.getMainFileID() == SM.translateFile(Entry)) {
+    return static_cast<IncludeStructure::HeaderID>(0u);
+  }
+  auto It = UIDToIndex.find(Entry->getUniqueID());
+  if (It == UIDToIndex.end())
     return llvm::None;
   return It->second;
 }
 
 IncludeStructure::HeaderID
-IncludeStructure::getOrCreateID(const FileEntry *Entry) {
-  auto R = NameToIndex.try_emplace(
-      Entry->getName(),
+IncludeStructure::getOrCreateID(const FileEntry *Entry,
+                                const SourceManager &SM) {
+  // Main file's FileID was not known at IncludeStructure creation time.
+  if (SM.getMainFileID() == SM.translateFile(Entry)) {
+    UIDToIndex[Entry->getUniqueID()] =
+        static_cast<IncludeStructure::HeaderID>(0u);
+  }
+  auto R = UIDToIndex.try_emplace(
+      Entry->getUniqueID(),
       static_cast<IncludeStructure::HeaderID>(RealPathNames.size()));
   if (R.second)
     RealPathNames.emplace_back();
-  IncludeStructure::HeaderID Result = R.first->getValue();
+  IncludeStructure::HeaderID Result = R.first->getSecond();
   std::string &RealPathName = RealPathNames[static_cast<unsigned>(Result)];
   if (RealPathName.empty())
     RealPathName = Entry->tryGetRealPathName().str();

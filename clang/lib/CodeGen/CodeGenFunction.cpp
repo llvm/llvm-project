@@ -988,16 +988,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     // Reconstruct the type from the argument list so that implicit parameters,
     // such as 'this' and 'vtt', show up in the debug info. Preserve the calling
     // convention.
-    CallingConv CC = CallingConv::CC_C;
-    if (FD)
-      if (const auto *SrcFnTy = FD->getType()->getAs<FunctionType>())
-        CC = SrcFnTy->getCallConv();
-    SmallVector<QualType, 16> ArgTypes;
-    for (const VarDecl *VD : Args)
-      ArgTypes.push_back(VD->getType());
-    QualType FnType = getContext().getFunctionType(
-        RetTy, ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
-    DI->emitFunctionStart(GD, Loc, StartLoc, FnType, CurFn, CurFuncIsThunk);
+    DI->emitFunctionStart(GD, Loc, StartLoc,
+                          DI->getFunctionType(FD, RetTy, Args), CurFn,
+                          CurFuncIsThunk);
   }
 
   if (ShouldInstrumentFunction()) {
@@ -1300,6 +1293,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
+
+  // Give a different name to inline builtin to avoid conflict with actual
+  // builtins.
+  if (FD->isInlineBuiltinDeclaration() && Fn)
+    Fn->setName(Fn->getName() + ".inline");
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {
