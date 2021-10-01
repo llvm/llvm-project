@@ -20,6 +20,18 @@ define void @mustalias_overflow_in_32_bit_constants(i8* %ptr) {
   ret void
 }
 
+; FIXME: This should also be MustAlias as in the previous test.
+define void @mustalias_overflow_in_32_with_var_index([1 x i8]* %ptr, i64 %n) {
+; CHECK-LABEL: Function: mustalias_overflow_in_32_with_var_index
+; CHECK:       NoAlias:  i8* %gep.1, i8* %gep.2
+;
+  %gep.1 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 4294967296
+  store i8 0, i8* %gep.1
+  %gep.2 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 0
+  store i8 1, i8* %gep.2
+  ret void
+}
+
 define void @noalias_overflow_in_32_bit_constants(i8* %ptr) {
 ; CHECK-LABEL: Function: noalias_overflow_in_32_bit_constants: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MustAlias: i8* %gep.1, i8* %ptr
