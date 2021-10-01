@@ -4780,16 +4780,22 @@ ExpectedDecl ASTNodeImporter::VisitUsingShadowDecl(UsingShadowDecl *D) {
   UsingShadowDecl *ToShadow;
   if (auto *FromConstructorUsingShadow =
           dyn_cast<ConstructorUsingShadowDecl>(D)) {
+    Error Err = Error::success();
+    ConstructorUsingShadowDecl *Nominated = importChecked(
+        Err, FromConstructorUsingShadow->getNominatedBaseClassShadowDecl());
+    if (Err)
+      return std::move(Err);
+    // The 'Target' parameter of ConstructorUsingShadowDecl constructor
+    // is really the "NominatedBaseClassShadowDecl" value if it exists
+    // (see code of ConstructorUsingShadowDecl::ConstructorUsingShadowDecl).
+    // We should pass the NominatedBaseClassShadowDecl to it (if non-null) to
+    // get the correct values.
     if (GetImportedOrCreateDecl<ConstructorUsingShadowDecl>(
             ToShadow, D, Importer.getToContext(), DC, Loc,
-            cast<UsingDecl>(*ToIntroducerOrErr), *ToTargetOrErr,
+            cast<UsingDecl>(*ToIntroducerOrErr),
+            Nominated ? Nominated : *ToTargetOrErr,
             FromConstructorUsingShadow->constructsVirtualBase()))
       return ToShadow;
-    // FIXME import the below members!
-    // FromConstructorUsingShadow->getNominatedBaseClassShadowDecl();
-    // FromConstructorUsingShadow->getConstructedBaseClassShadowDecl();
-    // FromConstructorUsingShadow->getNominatedBaseClass();
-    // FromConstructorUsingShadow->getConstructedBaseClass();
   } else {
     if (GetImportedOrCreateDecl(ToShadow, D, Importer.getToContext(), DC, Loc,
                                 Name, *ToIntroducerOrErr, *ToTargetOrErr))
