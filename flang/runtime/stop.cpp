@@ -124,4 +124,11 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   CloseAllExternalUnits("END statement");
   std::exit(EXIT_SUCCESS);
 }
+
+[[noreturn]] void RTNAME(Exit)(int status) {
+  CloseAllExternalUnits("CALL EXIT()");
+  std::exit(status);
+}
+
+[[noreturn]] void RTNAME(Abort)() { std::abort(); }
 }

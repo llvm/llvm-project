@@ -1032,6 +1032,7 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 };
 
 static const IntrinsicInterface intrinsicSubroutine[]{
+    {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"cpu_time",
         {{"time", AnyReal, Rank::scalar, Optionality::required,
             common::Intent::Out}},
@@ -1056,6 +1057,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command",
         {{"command", DefaultChar, Rank::scalar, Optionality::optional,
              common::Intent::Out},
