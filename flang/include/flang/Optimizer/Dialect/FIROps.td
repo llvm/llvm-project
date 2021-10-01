@@ -394,43 +394,11 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
 
   let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$refVal),
-    [{
-      if (!refVal) {
-        mlir::emitError($_state.location, "LoadOp has null argument");
-        return;
-      }
-      auto eleTy = fir::dyn_cast_ptrEleTy(refVal.getType());
-      if (!eleTy) {
-        mlir::emitError($_state.location, "not a memory reference type");
-        return;
-      }
-      $_state.addOperands(refVal);
-      $_state.addTypes(eleTy);
-    }]
-  >];
+  let builders = [OpBuilder<(ins "mlir::Value":$refVal)>];
 
-  let parser = [{
-    mlir::Type type;
-    mlir::OpAsmParser::OperandType oper;
-    if (parser.parseOperand(oper) ||
-        parser.parseOptionalAttrDict(result.attributes) ||
-        parser.parseColonType(type) ||
-        parser.resolveOperand(oper, type, result.operands))
-       return mlir::failure();
-    mlir::Type eleTy;
-    if (getElementOf(eleTy, type) ||
-        parser.addTypeToList(eleTy, result.types))
-       return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseLoadOp(parser, result);";
 
-  let printer = [{
-    p << ' ';
-    p.printOperand(memref());
-    p.printOptionalAttrDict((*this)->getAttrs(), {});
-    p << " : " << memref().getType();
-  }];
+  let printer = "::print(p, *this);";
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
@@ -878,60 +846,9 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
 
   let parser = "return parseSelectCase(parser, result);";
 
-  let printer = [{
-    p << ' ';
-    p.printOperand(getSelector());
-    p << " : " << getSelector().getType() << " [";
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumConditions();
-    for (decltype(count) i = 0; i != count; ++i) {
-      if (i)
-        p << ", ";
-      p << cases[i] << ", ";
-      if (!cases[i].isa<mlir::UnitAttr>()) {
-        auto caseArgs = *getCompareOperands(i);
-        p.printOperand(*caseArgs.begin());
-        p << ", ";
-        if (cases[i].isa<fir::ClosedIntervalAttr>()) {
-          p.printOperand(*(++caseArgs.begin()));
-          p << ", ";
-        }
-      }
-      printSuccessorAtIndex(p, i);
-    }
-    p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
-        getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    if (!(getSelector().getType().isa<mlir::IntegerType>() ||
-          getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntegerType>() ||
-          getSelector().getType().isa<fir::LogicalType>() ||
-          getSelector().getType().isa<fir::CharacterType>()))
-      return emitOpError("must be an integer, character, or logical");
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumDest();
-    if (count == 0)
-      return emitOpError("must have at least one successor");
-    if (getNumConditions() != count)
-      return emitOpError("number of conditions and successors don't match");
-    if (compareOffsetSize() != count)
-      return emitOpError("incorrect number of compare operand groups");
-    if (targetOffsetSize() != count)
-      return emitOpError("incorrect number of successor operand groups");
-    for (decltype(count) i = 0; i != count; ++i) {
-      auto &attr = cases[i];
-      if (!(attr.isa<fir::PointIntervalAttr>() ||
-            attr.isa<fir::LowerBoundAttr>() ||
-            attr.isa<fir::UpperBoundAttr>() ||
-            attr.isa<fir::ClosedIntervalAttr>() ||
-            attr.isa<mlir::UnitAttr>()))
-        return emitOpError("incorrect select case attribute type");
-    }
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = extraSwitchClassDeclaration#[{
     unsigned compareOffsetSize();
@@ -994,42 +911,9 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
 
   let parser = "return parseSelectType(parser, result);";
 
-  let printer = [{
-    p << ' ';
-    p.printOperand(getSelector());
-    p << " : " << getSelector().getType() << " [";
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumConditions();
-    for (decltype(count) i = 0; i != count; ++i) {
-      if (i)
-        p << ", ";
-      p << cases[i] << ", ";
-      printSuccessorAtIndex(p, i);
-    }
-    p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
-        getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    if (!(getSelector().getType().isa<fir::BoxType>()))
-      return emitOpError("must be a boxed type");
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
-    auto count = getNumDest();
-    if (count == 0)
-      return emitOpError("must have at least one successor");
-    if (getNumConditions() != count)
-      return emitOpError("number of conditions and successors don't match");
-    if (targetOffsetSize() != count)
-      return emitOpError("incorrect number of successor operand groups");
-    for (decltype(count) i = 0; i != count; ++i) {
-      auto &attr = cases[i];
-      if (!(attr.isa<fir::ExactTypeAttr>() || attr.isa<fir::SubclassAttr>() ||
-            attr.isa<mlir::UnitAttr>()))
-        return emitOpError("invalid type-case alternative");
-    }
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = extraSwitchClassDeclaration;
 }
@@ -1201,7 +1085,7 @@ def fir_ReboxOp : fir_Op<"rebox", [NoSideEffect, AttrSizedOperandSegments]> {
     $box (`(` $shape^ `)`)? (`[` $slice^ `]`)? attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_EmboxCharOp : fir_Op<"emboxchar", [NoSideEffect]> {
@@ -1234,12 +1118,7 @@ def fir_EmboxCharOp : fir_Op<"emboxchar", [NoSideEffect]> {
     $memref `,` $len attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto eleTy = elementTypeOf(memref().getType());
-    if (!eleTy.dyn_cast<CharacterType>())
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
@@ -1271,64 +1150,11 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
 
   let results = (outs fir_BoxProcType);
 
-  let parser = [{
-    mlir::SymbolRefAttr procRef;
-    if (parser.parseAttribute(procRef, "funcname", result.attributes))
-      return mlir::failure();
-    bool hasTuple = false;
-    mlir::OpAsmParser::OperandType tupleRef;
-    if (!parser.parseOptionalComma()) {
-      if (parser.parseOperand(tupleRef))
-        return mlir::failure();
-      hasTuple = true;
-    }
-    mlir::FunctionType type;
-    if (parser.parseColon() ||
-        parser.parseLParen() ||
-        parser.parseType(type))
-      return mlir::failure();
-    result.addAttribute("functype", mlir::TypeAttr::get(type));
-    if (hasTuple) {
-      mlir::Type tupleType;
-      if (parser.parseComma() ||
-          parser.parseType(tupleType) ||
-          parser.resolveOperand(tupleRef, tupleType, result.operands))
-        return mlir::failure();
-    }
-    mlir::Type boxType;
-    if (parser.parseRParen() ||
-        parser.parseArrow() ||
-        parser.parseType(boxType) ||
-        parser.addTypesToList(boxType, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseEmboxProcOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << (*this)->getAttr("funcname");
-    auto h = host();
-    if (h) {
-      p << ", ";
-      p.printOperand(h);
-    }
-    p << " : (" << (*this)->getAttr("functype");
-    if (h)
-      p << ", " << h.getType();
-    p << ") -> " << getType();
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    // host bindings (optional) must be a reference to a tuple
-    if (auto h = host()) {
-      if (auto r = h.getType().dyn_cast<ReferenceType>()) {
-        if (!r.getEleTy().dyn_cast<mlir::TupleType>())
-          return mlir::failure();
-      } else {
-        return mlir::failure();
-      }
-    }
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
@@ -1390,12 +1216,7 @@ def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoSideEffect]> {
     ```
   }];
 
-  let verifier = [{
-    if (auto eleTy = fir::dyn_cast_ptrEleTy(refTuple().getType()))
-      if (eleTy.isa<mlir::TupleType>())
-        return mlir::success();
-    return emitOpError("second output argument has bad type");
-  }];
+  let verifier = "return ::verify(*this);";
 
   let arguments = (ins fir_BoxProcType:$boxproc);
 
@@ -1705,7 +1526,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
         attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     std::vector<mlir::Value> getExtents();
@@ -1935,9 +1756,9 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
 
   let results = (outs fir_ReferenceType);
 
-  let parser =  [{ return parseCoordinateCustom(parser, result); }];
-  let printer = [{ ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
+  let parser =  "return parseCoordinateCustom(parser, result);";
+  let printer = "::print(p, *this);";
+  let verifier = "return ::verify(*this);";
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$resultType,
@@ -2141,18 +1962,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
     operands attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto size = pairs().size();
-    if (size < 2 || size > 16 * 2)
-      return emitOpError("incorrect number of args");
-    if (size % 2 != 0)
-      return emitOpError("requires a multiple of 2 args");
-    auto shapeTy = getType().dyn_cast<fir::ShapeShiftType>();
-    assert(shapeTy && "must be a shape shift type");
-    if (shapeTy.getRank() * 2 != size)
-      return emitOpError("shape type rank mismatch");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     // Logically unzip the origins from the extent values.
@@ -2199,14 +2009,7 @@ def fir_ShiftOp : fir_Op<"shift", [NoSideEffect]> {
     operands attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto size = origins().size();
-    auto shiftTy = getType().dyn_cast<fir::ShiftType>();
-    assert(shiftTy && "must be a shift type");
-    if (shiftTy.getRank() != size)
-      return emitOpError("shift type rank mismatch");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     std::vector<mlir::Value> getOrigins() {
@@ -2253,18 +2056,7 @@ def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
     $triples (`path` $fields^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{
-    auto size = triples().size();
-    if (size < 3 || size > 16 * 3)
-      return emitOpError("incorrect number of args for triple");
-    if (size % 3 != 0)
-      return emitOpError("requires a multiple of 3 args");
-    auto sliceTy = getType().dyn_cast<fir::SliceType>();
-    assert(sliceTy && "must be a slice type");
-    if (sliceTy.getRank() * 3 != size)
-      return emitOpError("slice type rank mismatch");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     unsigned getOutRank() { return getOutputRank(triples()); }
@@ -2363,29 +2155,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 
   let arguments = (ins StrAttr:$field_id, TypeAttr:$on_type);
 
-  let parser = [{
-    llvm::StringRef fieldName;
-    auto &builder = parser.getBuilder();
-    mlir::Type recty;
-    if (parser.parseOptionalKeyword(&fieldName) ||
-        parser.parseComma() ||
-        parser.parseType(recty))
-      return mlir::failure();
-    result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
-    if (!recty.dyn_cast<RecordType>())
-      return mlir::failure();
-    result.addAttribute(typeAttrName(), mlir::TypeAttr::get(recty));
-    mlir::Type lenType = fir::LenType::get(builder.getContext());
-    if (parser.addTypeToList(lenType, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseLenParamIndexOp(parser, result);";
 
-  let printer = [{
-    p << ' '
-      << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue()
-      << ", " << (*this)->getAttr(typeAttrName());
-  }];
+  let printer = "::print(p, *this);";
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
       "mlir::Type":$recTy),
@@ -2425,7 +2197,7 @@ def fir_ResultOp : fir_Op<"result",
 
   let assemblyFormat = "($results^ `:` type($results))? attr-dict";
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
@@ -2433,9 +2205,9 @@ def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
 class region_Op<string mnemonic, list<OpTrait> traits = []> :
     fir_Op<mnemonic,
     !listconcat(traits, [FirRegionTerminator, RecursiveSideEffects])> {
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = "return ::print(p, *this);";
+  let verifier = "return ::verify(*this);";
+  let parser = "return ::parse$cppClass(parser, result);";
 }
 
 def fir_DoLoopOp : region_Op<"do_loop",
@@ -2757,41 +2529,9 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let results = (outs Variadic<AnyType>);
 
-  let parser = [{
-    mlir::FunctionType calleeType;
-    llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> operands;
-    auto calleeLoc = parser.getNameLoc();
-    llvm::StringRef calleeName;
-    if (failed(parser.parseOptionalKeyword(&calleeName))) {
-      mlir::StringAttr calleeAttr;
-      if (parser.parseAttribute(calleeAttr, "method", result.attributes))
-        return mlir::failure();
-    } else {
-      result.addAttribute(methodAttrName(result.name),
-          parser.getBuilder().getStringAttr(calleeName));
-    }
-    if (parser.parseOperandList(operands,
-                                mlir::OpAsmParser::Delimiter::Paren) ||
-        parser.parseOptionalAttrDict(result.attributes) ||
-        parser.parseColonType(calleeType) ||
-        parser.addTypesToList(calleeType.getResults(), result.types) ||
-        parser.resolveOperands(
-            operands, calleeType.getInputs(), calleeLoc, result.operands))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseDispatchOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << methodAttr() << '(';
-    p.printOperand(object());
-    if (!args().empty()) {
-      p << ", ";
-      p.printOperands(args());
-    }
-    p << ") : ";
-    p.printFunctionalType((*this)->getOperandTypes(),
-        (*this)->getResultTypes());
-  }];
+  let printer = "::print(p, *this);";
 
   let extraClassDeclaration = [{
     mlir::FunctionType getFunctionType();
@@ -2804,6 +2544,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     static constexpr llvm::StringRef passArgAttrName() {
       return "pass_arg_pos";
     }
+    static constexpr llvm::StringRef getMethodAttrName() { return "method"; }
     unsigned passArgPos();
   }];
 }
@@ -2912,39 +2653,11 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
 
   let results = (outs fir_ComplexType);
 
-  let parser = [{
-    fir::RealAttr realp;
-    fir::RealAttr imagp;
-    mlir::Type type;
-    if (parser.parseLParen() ||
-        parser.parseAttribute(realp, realAttrName(), result.attributes) ||
-        parser.parseComma() ||
-        parser.parseAttribute(imagp, imagAttrName(), result.attributes) ||
-        parser.parseRParen() ||
-        parser.parseColonType(type) ||
-        parser.addTypesToList(type, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseConstcOp(parser, result);";
 
-  let printer = [{
-    p << " (0x";
-    auto f1 = (*this)->getAttr(realAttrName()).cast<mlir::FloatAttr>();
-    auto i1 = f1.getValue().bitcastToAPInt();
-    p.getStream().write_hex(i1.getZExtValue());
-    p << ", 0x";
-    auto f2 = (*this)->getAttr(imagAttrName()).cast<mlir::FloatAttr>();
-    auto i2 = f2.getValue().bitcastToAPInt();
-    p.getStream().write_hex(i2.getZExtValue());
-    p << ") : ";
-    p.printType(getType());
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    if (!getType().isa<fir::ComplexType>())
-      return emitOpError("must be a !fir.complex type");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef realAttrName() { return "real"; }
@@ -3052,23 +2765,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
 
   let hasFolder = 1;
 
-  let verifier = [{
-    auto inType = value().getType();
-    auto outType = getType();
-    if (inType == outType)
-      return mlir::success();
-    if ((isPointerCompatible(inType) && isPointerCompatible(outType)) ||
-        (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
-        (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
-        (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
-        (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-        (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-        (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
-        (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
-        (fir::isa_complex(inType) && fir::isa_complex(outType)))
-      return mlir::success();
-    return emitOpError("invalid type conversion");
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     static bool isIntegerCompatible(mlir::Type ty);
@@ -3106,34 +2803,13 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
 
   let arguments = (ins FortranTypeAttr:$in_type);
 
-  let parser = [{
-    mlir::Type intype;
-    if (parser.parseType(intype))
-      return mlir::failure();
-    result.addAttribute("in_type", mlir::TypeAttr::get(intype));
-    mlir::Type restype = TypeDescType::get(intype);
-    if (parser.addTypeToList(restype, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseGenTypeDescOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << (*this)->getAttr("in_type");
-    p.printOptionalAttrDict((*this)->getAttrs(), {"in_type"});
-  }];
+  let printer = "::print(p, *this);";
 
   let builders = [OpBuilder<(ins "mlir::TypeAttr":$inty)>];
 
-  let verifier = [{
-    mlir::Type resultTy = getType();
-    if (auto tdesc = resultTy.dyn_cast<TypeDescType>()) {
-      if (tdesc.getOfTy() != getInType())
-        return emitOpError("wrapped type mismatched");
-    } else {
-      return emitOpError("must be !fir.tdesc type");
-    }
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     mlir::Type getInType() {
@@ -3355,44 +3031,11 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     ```
   }];
 
-  let parser = [{
-    // Parse the name as a symbol reference attribute.
-    SymbolRefAttr nameAttr;
-    if (parser.parseAttribute(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                              result.attributes))
-      return failure();
+  let parser = "return parseDispatchTableOp(parser, result);";
 
-    // Convert the parsed name attr into a string attr.
-    result.attributes.set(mlir::SymbolTable::getSymbolAttrName(),
-      nameAttr.getRootReference());
+  let printer = "::print(p, *this);";
 
-    // Parse the optional table body.
-    mlir::Region *body = result.addRegion();
-    OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
-    if (parseResult.hasValue() && failed(*parseResult))
-      return mlir::failure();
-
-    ensureTerminator(*body, parser.getBuilder(), result.location);
-    return mlir::success();
-  }];
-
-  let printer = [{
-    auto tableName = (*this)->getAttrOfType<StringAttr>(
-      mlir::SymbolTable::getSymbolAttrName()).getValue();
-    p << " @" << tableName;
-
-    Region &body = (*this)->getRegion(0);
-    if (!body.empty())
-      p.printRegion(body, /*printEntryBlockArgs=*/false,
-                          /*printBlockTerminators=*/false);
-  }];
-
-  let verifier = [{
-    for (auto &op : getBlock())
-      if (!(isa<fir::DTEntryOp>(op) || isa<fir::FirEndOp>(op)))
-        return emitOpError("dispatch table must contain dt_entry");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -3438,28 +3081,13 @@ def fir_DTEntryOp : fir_Op<"dt_entry", []> {
 
   let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc);
 
-  let parser = [{
-    llvm::StringRef methodName;
-    // allow `methodName` or `"methodName"`
-    if (failed(parser.parseOptionalKeyword(&methodName))) {
-      mlir::StringAttr methodAttr;
-      if (parser.parseAttribute(methodAttr, "method",
-                                result.attributes))
-        return mlir::failure();
-    } else {
-      result.addAttribute(methodAttrName(result.name),
-          parser.getBuilder().getStringAttr(methodName));
-    }
-    mlir::SymbolRefAttr calleeAttr;
-    if (parser.parseComma() ||
-        parser.parseAttribute(calleeAttr, "proc", result.attributes))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseDTEntryOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << methodAttr() << ", "
-      << procAttr();
+  let printer = "::print(p, *this);";
+
+  let extraClassDeclaration = [{
+    static constexpr llvm::StringRef getMethodAttrName() { return "method"; }
+    static constexpr llvm::StringRef getProcAttrName() { return "proc"; }
   }];
 }
 
