@@ -720,34 +720,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
     "llvm::ArrayRef<mlir::Attribute>":$typeOperands,
     "llvm::ArrayRef<mlir::Block *>":$destinations,
     CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
-    [{
-      $_state.addOperands(selector);
-      $_state.addAttribute(getCasesAttr(),
-        $_builder.getArrayAttr(typeOperands));
-      const auto count = destinations.size();
-      for (auto d : destinations)
-        $_state.addSuccessors(d);
-      const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
-      int32_t sumArgs = 0;
-      for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
-        if (i < opCount) {
-          $_state.addOperands(destOperands[i]);
-          const auto argSz = destOperands[i].size();
-          argOffs.push_back(argSz);
-          sumArgs += argSz;
-        } else {
-          argOffs.push_back(0);
-        }
-      }
-      $_state.addAttribute(getOperandSegmentSizeAttr(),
-        $_builder.getI32VectorAttr({1, 0, sumArgs}));
-      $_state.addAttribute(getTargetOffsetAttr(),
-        $_builder.getI32VectorAttr(argOffs));
-      $_state.addAttributes(attributes);
-    }]
-  >];
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let parser = "return parseSelectType(parser, result);";
 
