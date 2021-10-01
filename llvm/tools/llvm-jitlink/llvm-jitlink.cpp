@@ -839,10 +839,8 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
 
   Error Err = Error::success();
   std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
-
-  // FIXME: Errors destroy the session, leaving the SymbolStringPtrs dangling,
-  // so just exit here. We could fix this by having errors keep the pool alive.
-  ExitOnErr(std::move(Err));
+  if (Err)
+    return std::move(Err);
   return std::move(S);
 }
 
