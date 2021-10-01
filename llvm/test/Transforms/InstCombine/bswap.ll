@@ -743,9 +743,9 @@ define i16 @trunc_bswap_i160(i160* %a0) {
 ; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i160 [[LOAD]], 136
 ; CHECK-NEXT:    [[CAST1:%.*]] = trunc i160 [[LSHR1]] to i16
 ; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[CAST1]], 255
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[LOAD]], 120
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i16
-; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TMP2]], -256
+; CHECK-NEXT:    [[SH_DIFF:%.*]] = lshr i160 [[LOAD]], 120
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i160 [[SH_DIFF]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TR_SH_DIFF]], -256
 ; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
