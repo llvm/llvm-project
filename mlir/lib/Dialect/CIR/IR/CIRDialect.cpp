@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -30,6 +31,7 @@ using namespace mlir::cir;
 /// Dialect initialization, the instance will be owned by the context. This is
 /// the point of registration of types and operations for the dialect.
 void cir::CIRDialect::initialize() {
+  registerTypes();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/CIR/IR/CIROps.cpp.inc"
