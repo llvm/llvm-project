@@ -443,6 +443,15 @@ bool isImplicit(const Stmt *S) {
   if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(S))
     if (CTI->isImplicit())
       return true;
+  // Make sure implicit access of anonymous structs don't end up owning tokens.
+  if (auto *ME = llvm::dyn_cast<MemberExpr>(S)) {
+    if (auto *FD = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (FD->isAnonymousStructOrUnion())
+        // If Base is an implicit CXXThis, then the whole MemberExpr has no
+        // tokens. If it's a normal e.g. DeclRef, we treat the MemberExpr like
+        // an implicit cast.
+        return isImplicit(ME->getBase());
+  }
   // Refs to operator() and [] are (almost?) always implicit as part of calls.
   if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(S)) {
     if (auto *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl())) {

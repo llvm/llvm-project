@@ -264,14 +264,9 @@ void __memprof_record_access(void const volatile *addr) {
   __memprof::RecordAccess((uptr)addr);
 }
 
-// We only record the access on the first location in the range,
-// since we will later accumulate the access counts across the
-// full allocation, and we don't want to inflate the hotness from
-// a memory intrinsic on a large range of memory.
-// TODO: Should we do something else so we can better track utilization?
-void __memprof_record_access_range(void const volatile *addr,
-                                   UNUSED uptr size) {
-  __memprof::RecordAccess((uptr)addr);
+void __memprof_record_access_range(void const volatile *addr, uptr size) {
+  for (uptr a = (uptr)addr; a < (uptr)addr + size; a += kWordSize)
+    __memprof::RecordAccess(a);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u16

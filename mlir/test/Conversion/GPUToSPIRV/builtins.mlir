@@ -27,8 +27,10 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
+    %c256 = constant 256 : i32
     gpu.launch_func @kernels::@builtin_workgroup_id_y
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
+        dynamic_shared_memory_size %c256
     return
   }
 

@@ -859,3 +859,25 @@ MVT BPFTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
                                               EVT VT) const {
   return (getHasAlu32() && VT == MVT::i32) ? MVT::i32 : MVT::i64;
 }
+
+bool BPFTargetLowering::isLegalAddressingMode(const DataLayout &DL,
+                                              const AddrMode &AM, Type *Ty,
+                                              unsigned AS,
+                                              Instruction *I) const {
+  // No global is ever allowed as a base.
+  if (AM.BaseGV)
+    return false;
+
+  switch (AM.Scale) {
+  case 0: // "r+i" or just "i", depending on HasBaseReg.
+    break;
+  case 1:
+    if (!AM.HasBaseReg) // allow "r+i".
+      break;
+    return false; // disallow "r+r" or "r+r+i".
+  default:
+    return false;
+  }
+
+  return true;
+}
