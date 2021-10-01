@@ -95,17 +95,15 @@ define void @pointer_iv_nowrap(i8* %startptr, i8* %endptr) local_unnamed_addr {
 ; CHECK-LABEL: 'pointer_iv_nowrap'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_iv_nowrap
 ; CHECK-NEXT:    %init = getelementptr inbounds i8, i8* %startptr, i64 2000
-; CHECK-NEXT:    --> (2000 + %startptr)<nuw> U: [2000,0) S: [2000,0)
+; CHECK-NEXT:    --> (2000 + %startptr) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i8* [ %init, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {(2000 + %startptr)<nuw>,+,1}<nuw><%loop> U: [2000,0) S: [2000,0) Exits: ((-1 * (ptrtoint i8* %startptr to i64)) + ((2000 + (ptrtoint i8* %startptr to i64))<nuw> umax (ptrtoint i8* %endptr to i64)) + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(2000 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i8, i8* %iv, i64 1
-; CHECK-NEXT:    --> {(2001 + %startptr)<nuw>,+,1}<nuw><%loop> U: [2001,0) S: [2001,0) Exits: (1 + (-1 * (ptrtoint i8* %startptr to i64)) + ((2000 + (ptrtoint i8* %startptr to i64))<nuw> umax (ptrtoint i8* %endptr to i64)) + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(2001 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_iv_nowrap
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2000 + (-1 * (ptrtoint i8* %startptr to i64)) + ((2000 + (ptrtoint i8* %startptr to i64))<nuw> umax (ptrtoint i8* %endptr to i64)))
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2001
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-2000 + (-1 * (ptrtoint i8* %startptr to i64)) + ((2000 + (ptrtoint i8* %startptr to i64))<nuw> umax (ptrtoint i8* %endptr to i64)))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %init = getelementptr inbounds i8, i8* %startptr, i64 2000
@@ -125,15 +123,15 @@ define void @pointer_iv_nowrap_guard(i32* %startptr, i32* %endptr) local_unnamed
 ; CHECK-LABEL: 'pointer_iv_nowrap_guard'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_iv_nowrap_guard
 ; CHECK-NEXT:    %init = getelementptr inbounds i32, i32* %startptr, i64 2000
-; CHECK-NEXT:    --> (8000 + %startptr)<nuw> U: [8000,0) S: [8000,0)
+; CHECK-NEXT:    --> (8000 + %startptr) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i32* [ %init, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {(8000 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8000,0) S: [8000,0) Exits: (8000 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8000 + %startptr),+,4}<nuw><%loop> U: full-set S: full-set Exits: (8000 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, i32* %iv, i64 1
-; CHECK-NEXT:    --> {(8004 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8004,0) S: [8004,0) Exits: (8004 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8004 + %startptr),+,4}<nuw><%loop> U: full-set S: full-set Exits: (8004 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_iv_nowrap_guard
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4611686018427385902
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
