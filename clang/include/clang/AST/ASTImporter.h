@@ -379,6 +379,9 @@ class TypeSourceInfo;
       return Import(const_cast<Decl *>(FromD));
     }
 
+    llvm::Expected<InheritedConstructor>
+    Import(const InheritedConstructor &From);
+
     /// Return the copy of the given declaration in the "to" context if
     /// it has already been imported from the "from" context.  Otherwise return
     /// nullptr.
