@@ -1272,7 +1272,8 @@ static const char *getImportFailureString(swift::serialization::Status status) {
     return "The module file was built with a different SDK than the one in use "
            "to build the client.";
   case swift::serialization::Status::RevisionIncompatible:
-    return "The precise revision version doesn't match.";
+    return "The resilient module file was built by a different version of the "
+           "compiler.";
   }
 }
 
