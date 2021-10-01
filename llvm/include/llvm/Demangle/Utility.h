@@ -126,6 +126,16 @@ public:
     return this->operator<<(static_cast<unsigned long long>(N));
   }
 
+  void insert(size_t Pos, const char *S, size_t N) {
+    assert(Pos <= CurrentPosition);
+    if (N == 0)
+      return;
+    grow(N);
+    std::memmove(Buffer + Pos + N, Buffer + Pos, CurrentPosition - Pos);
+    std::memcpy(Buffer + Pos, S, N);
+    CurrentPosition += N;
+  }
+
   size_t getCurrentPosition() const { return CurrentPosition; }
   void setCurrentPosition(size_t NewPos) { CurrentPosition = NewPos; }
 
