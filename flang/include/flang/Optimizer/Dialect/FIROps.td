@@ -212,8 +212,8 @@ class fir_AllocatableOp<string mnemonic, Resource resource,
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp :
-      fir_AllocatableOp<"alloca", AutomaticAllocationScopeResource> {
+def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<AutomaticAllocationScopeResource>]>]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -275,19 +275,46 @@ def fir_AllocaOp :
     whether the procedure is recursive or not.
   }];
 
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape
+  );
+
   let results = (outs fir_ReferenceType);
 
-  let verifier = allocVerify#[{
-    mlir::Type outType = getType();
-    if (!outType.isa<fir::ReferenceType>())
-      return emitOpError("must be a !fir.ref type");
-    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-      return emitOpError("cannot allocate !fir.box of unknown rank or type");
-    return mlir::success();
-  }];
+  let parser =
+      "return parseAllocatableOp(wrapAllocaResultType, parser, result);";
+  let printer = "printAllocatableOp(p, (*this));";
 
-  let extraClassDeclaration = extraAllocClassDeclaration#[{
-    static mlir::Type wrapResultType(mlir::Type intype);
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+      "llvm::StringRef":$bindcName, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let verifier = [{ return ::verify(*this); }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+    bool hasLenParams() { return !typeparams().empty(); }
+    bool hasShapeOperands() { return !shape().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
+    operand_range getLenParams() { return typeparams(); }
+    unsigned numShapeOperands() { return shape().size(); }
+    operand_range getShapeOperands() { return shape(); }
+    static mlir::Type getRefTy(mlir::Type ty);
+    mlir::Type getInType() { return in_type(); }
   }];
 }
 
@@ -3228,9 +3255,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     }
 
     /// The semantic type of the global
-    mlir::Type resultType() {
-      return fir::AllocaOp::wrapResultType(getType());
-    }
+    mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() { return initVal().getValueOr(Attribute()); }
