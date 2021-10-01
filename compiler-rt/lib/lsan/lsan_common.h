@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
@@ -107,12 +108,14 @@ class LeakReport {
   uptr ApplySuppressions();
   uptr UnsuppressedLeakCount();
   uptr IndirectUnsuppressedLeakCount();
+  const StackDepotReverseMap &stack_depot() { return stack_depot_; }
 
  private:
   void PrintReportForLeak(uptr index);
   void PrintLeakedObjectsForLeak(uptr index);
 
   u32 next_id_ = 0;
+  StackDepotReverseMap stack_depot_;
   InternalMmapVector<Leak> leaks_;
   InternalMmapVector<LeakedObject> leaked_objects_;
 };
