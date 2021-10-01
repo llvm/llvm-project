@@ -682,3 +682,12 @@ func @test_save_result(%buffer: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
   fir.save_result %res to %buffer(%shape) typeparams %c50 : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
   return
 }
+
+func @char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  // CHECK: fir.char_convert %{{.*}} for %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  return
+}

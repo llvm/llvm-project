@@ -668,6 +668,24 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// CharConvertOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::CharConvertOp op) {
+  auto unwrap = [&](mlir::Type t) {
+    t = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t));
+    return t.dyn_cast<fir::CharacterType>();
+  };
+  auto inTy = unwrap(op.from().getType());
+  auto outTy = unwrap(op.to().getType());
+  if (!(inTy && outTy))
+    return op.emitOpError("not a reference to a character");
+  if (inTy.getFKind() == outTy.getFKind())
+    return op.emitOpError("buffers must have different KIND values");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // CmpcOp
 //===----------------------------------------------------------------------===//
 
