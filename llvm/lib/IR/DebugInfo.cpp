@@ -909,6 +909,11 @@ void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder) {
   unwrap(Builder)->finalize();
 }
 
+void LLVMDIBuilderFinalizeSubprogram(LLVMDIBuilderRef Builder,
+                                     LLVMMetadataRef subprogram) {
+  unwrap(Builder)->finalizeSubprogram(unwrapDI<DISubprogram>(subprogram));
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
     LLVMMetadataRef FileRef, const char *Producer, size_t ProducerLen,
