@@ -520,6 +520,9 @@ def UALWM_NM : LoadMultipleNM<"ualwm">;
 def SWM_NM : StoreMultipleNM<"swm">;
 def UASWM_NM : StoreMultipleNM<"uaswm">;
 
+def MOVE_NM : InstNM<(outs GPR32NMOpnd:$rt), (ins GPR32NMOpnd:$rs),
+                      "move\t$rt, $rs", []>, InstSize16;
+
 }
 
 // Store zero peephole optimizations.

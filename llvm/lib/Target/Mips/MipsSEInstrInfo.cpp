@@ -171,11 +171,8 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::MOVE_V;
   }
   else if (Mips::GPR32NMRegClass.contains(SrcReg)) {
-    if (Mips::GPR32NMRegClass.contains(DestReg)) {
-      // TODO: Use MOVE_NM instruction when it is added.
-      Opc = Mips::ADDu_NM;
-      ZeroReg = Mips::ZERO_NM;
-    }
+    if (Mips::GPR32NMRegClass.contains(DestReg))
+      Opc = Mips::MOVE_NM;
   }
 
   assert(Opc && "Cannot copy registers");
