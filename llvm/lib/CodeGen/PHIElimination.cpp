@@ -461,6 +461,15 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       assert(MRI->use_empty(SrcReg) &&
              "Expected a single use from UnspillableTerminator");
       SrcRegDef->getOperand(0).setReg(IncomingReg);
+
+      // Update LiveVariables.
+      if (LV) {
+        LiveVariables::VarInfo &SrcVI = LV->getVarInfo(SrcReg);
+        LiveVariables::VarInfo &IncomingVI = LV->getVarInfo(IncomingReg);
+        IncomingVI.AliveBlocks = std::move(SrcVI.AliveBlocks);
+        SrcVI.AliveBlocks.clear();
+      }
+
       continue;
     }
 
