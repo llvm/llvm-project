@@ -178,6 +178,12 @@ if(LLVM_INCLUDE_TESTS)
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
 
+  set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
+  if (MSVC OR XCODE)
+    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+  endif()
+  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
   add_lit_target(check-runtimes
     "Running all regression tests"
     ${RUNTIMES_LIT_TESTSUITES}
