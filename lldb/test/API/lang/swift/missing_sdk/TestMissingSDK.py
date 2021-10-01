@@ -24,20 +24,8 @@ class TestMissingSDK(TestBase):
     @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
     def testMissingSDK(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint in main.c at the source matching
-        # "Set a breakpoint here"
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec("main.swift"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() >= 1,
-                        VALID_BREAKPOINT)
-        process = target.LaunchSimple(None, None, os.getcwd())
+        lldbutil.run_to_source_breakpoint(self, 'break here',
+                                          lldb.SBFileSpec('main.swift'))
         self.expect("p message", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs = ["Hello"])
 
