@@ -27,7 +27,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -66,29 +65,6 @@ MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
   return End;
 }
 
-/// Manage the .debug_line_str section contents, if we use it.
-class llvm::MCDwarfLineStr {
-  MCSymbol *LineStrLabel = nullptr;
-  StringTableBuilder LineStrings{StringTableBuilder::DWARF};
-  bool UseRelocs = false;
-
-public:
-  /// Construct an instance that can emit .debug_line_str (for use in a normal
-  /// v5 line table).
-  explicit MCDwarfLineStr(MCContext &Ctx) {
-    UseRelocs = Ctx.getAsmInfo()->doesDwarfUseRelocationsAcrossSections();
-    if (UseRelocs)
-      LineStrLabel =
-          Ctx.getObjectFileInfo()->getDwarfLineStrSection()->getBeginSymbol();
-  }
-
-  /// Emit a reference to the string.
-  void emitRef(MCStreamer *MCOS, StringRef Path);
-
-  /// Emit the .debug_line_str section if appropriate.
-  void emitSection(MCStreamer *MCOS);
-};
-
 static inline uint64_t ScaleAddrDelta(MCContext &Context, uint64_t AddrDelta) {
   unsigned MinInsnLength = Context.getAsmInfo()->getMinInstAlignment();
   if (MinInsnLength == 1)
@@ -98,6 +74,13 @@ static inline uint64_t ScaleAddrDelta(MCContext &Context, uint64_t AddrDelta) {
     ;
   }
   return AddrDelta / MinInsnLength;
+}
+
+MCDwarfLineStr::MCDwarfLineStr(MCContext &Ctx) {
+  UseRelocs = Ctx.getAsmInfo()->doesDwarfUseRelocationsAcrossSections();
+  if (UseRelocs)
+    LineStrLabel =
+        Ctx.getObjectFileInfo()->getDwarfLineStrSection()->getBeginSymbol();
 }
 
 //
@@ -162,7 +145,7 @@ makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
 // This emits the Dwarf line table for the specified section from the entries
 // in the LineSection.
 //
-static inline void emitDwarfLineTable(
+void MCDwarfLineTable::emitOne(
     MCStreamer *MCOS, MCSection *Section,
     const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
   unsigned FileNum = 1;
@@ -522,7 +505,7 @@ void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Put out the line tables.
   for (const auto &LineSec : MCLineSections.getMCLineEntries())
-    emitDwarfLineTable(MCOS, LineSec.first, LineSec.second);
+    emitOne(MCOS, LineSec.first, LineSec.second);
 
   // This is the end of the section, so set the value of the symbol at the end
   // of this section (that was used in a previous expression).
