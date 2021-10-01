@@ -9,7 +9,7 @@
 // This is the error % threshold. Be generous with the error threshold since
 // this test may be run in parallel with many other tests it may throw off the
 // sleep timing.
-#define THRESHOLD 33.0
+#define THRESHOLD 100.0
 
 double test_omp_get_wtime(double desired_wait_time) {
   double start;
