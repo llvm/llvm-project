@@ -6881,6 +6881,31 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
             ToD->getTemplateSpecializationKind());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIsInheritingConstructorBit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      class a {
+      public:
+        a(int);
+      };
+      struct b : a {
+        using a::a; // Ihnerited ctor.
+      };
+      void c() {
+        (b(0));
+      }
+      )",
+      Lang_CXX11);
+  auto *FromD = FirstDeclMatcher<CXXConstructorDecl>().match(
+      FromTU, cxxConstructorDecl(isInheritingConstructor()));
+  ASSERT_TRUE(FromD);
+  ASSERT_TRUE(FromD->isInheritingConstructor());
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->isInheritingConstructor());
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
