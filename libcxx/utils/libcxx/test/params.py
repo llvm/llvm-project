@@ -91,21 +91,8 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-fno-rtti')
             ]),
 
-  Parameter(name='stdlib', choices=['llvm-libc++', 'apple-libc++', 'libstdc++', 'msvc'], type=str, default='llvm-libc++',
-            help="""The C++ Standard Library implementation being tested.
-
-                 Note that this parameter can also be used to encode different 'flavors' of the same
-                 standard library, such as libc++ as shipped by a different vendor, if it has different
-                 properties worth testing.
-
-                 The Standard libraries currently supported are:
-                 - llvm-libc++: The 'upstream' libc++ as shipped with LLVM.
-                 - apple-libc++: libc++ as shipped by Apple. This is basically like the LLVM one, but
-                                 there are a few differences like installation paths and the use of
-                                 universal dylibs.
-                 - libstdc++: The GNU C++ library typically shipped with GCC.
-                 - msvc: The Microsoft implementation of the C++ Standard Library.
-                """,
+  Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
+            help="The C++ Standard Library implementation being tested.",
             actions=lambda stdlib: [
               AddFeature('stdlib={}'.format(stdlib))
             ]),
