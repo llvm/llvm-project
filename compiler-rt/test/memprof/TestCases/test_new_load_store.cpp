@@ -19,7 +19,7 @@
 // CHECK:  Memory allocation stack id = [[STACKID:[0-9]+]]{{[[:space:]].*}}alloc_count 1, size (ave/min/max) 40.00 / 40 / 40
 // CHECK-NEXT:  access_count (ave/min/max): 20.00 / 20 / 20
 // CHECK-NEXT:  lifetime (ave/min/max): [[AVELIFETIME:[0-9]+]].00 / [[AVELIFETIME]] / [[AVELIFETIME]]
-// CHECK-NEXT:  num migrated: 0, num lifetime overlaps: 0, num same alloc cpu: 0, num same dealloc_cpu: 0
+// CHECK-NEXT:  num migrated: {{[0-1]}}, num lifetime overlaps: 0, num same alloc cpu: 0, num same dealloc_cpu: 0
 // CHECK: Stack for id [[STACKID]]:
 // CHECK-NEXT: #0 {{.*}} in operator new
 // CHECK-NEXT: #1 {{.*}} in main {{.*}}:[[@LINE+6]]
