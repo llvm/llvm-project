@@ -714,7 +714,7 @@ string may be specified as an attribute. The following locations are created:
 *   If no symbol is specified then string must be specified and a NamedLoc is
     created instead;
 
-`location` must be used as the last argument to an op creation. For example,
+`location` must be used as a trailing argument to an op creation. For example,
 
 ```tablegen
 def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
@@ -744,6 +744,34 @@ def : Pat<(Foo $input), (replaceWithValue $input)>;
 
 The above pattern removes the `Foo` and replaces all uses of `Foo` with
 `$input`.
+
+### `returnType`
+
+The `returnType` directive allows patterns to directly specify return types for
+replacement ops that lack return type inference with op traits or user-defined
+builders with return type deduction.
+
+The `returnType` directive must be used as a trailing argument to a node
+describing a replacement op. The directive comes in three forms:
+
+* `(returnType $value)`: copy the type of the operand or result bound to
+  `value`.
+* `(returnType "$_builder.getI32Type()")`: a string literal embedding C++. The
+  embedded snippet is expected to return a `Type` or a `TypeRange`.
+* `(returnType (NativeCodeCall<"myFunc($0)"> $value))`: a DAG node with a native
+  code call that can be passed any bound variables arguments.
+
+Specify multiple return types with a mix of any of the above. Example:
+
+```tablegen
+def : Pat<(SourceOp $arg0, $arg1),
+          (OpA $arg0, (TwoResultOp:$res__1 $arg1,
+                         (returnType $arg1, "$_builder.getI64Type()")))>;
+```
+
+Explicitly-specified return types will take precedence over return types
+inferred from op traits or user-defined builders. The return types of values
+replacing root op results cannot be overridden.
 
 ## Debugging Tips
 
