@@ -349,9 +349,6 @@ protected:
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
-    assert((!BB || !BB->getParent() || BB->getParent() == Parent) &&
-           "A node from another function!");
-
     auto I = DomTreeNodes.find(BB);
     if (I != DomTreeNodes.end())
       return I->second.get();
