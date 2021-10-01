@@ -50,7 +50,7 @@ void StackDepotPrintAll();
 class StackDepotReverseMap {
  public:
   StackDepotReverseMap();
-  StackTrace Get(u32 id);
+  StackTrace Get(u32 id) const;
 
  private:
   struct IdDescPair {

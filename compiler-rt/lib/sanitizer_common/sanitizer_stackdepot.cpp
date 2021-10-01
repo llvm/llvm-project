@@ -139,7 +139,7 @@ StackDepotReverseMap::StackDepotReverseMap() {
   Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
 }
 
-StackTrace StackDepotReverseMap::Get(u32 id) {
+StackTrace StackDepotReverseMap::Get(u32 id) const {
   if (!map_.size())
     return StackTrace();
   IdDescPair pair = {id, nullptr};
