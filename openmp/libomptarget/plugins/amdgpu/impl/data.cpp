@@ -23,14 +23,13 @@ hsa_status_t Runtime::FtnAssignWrapper(void *arg0, void *arg1, void *arg2, void 
 }
 
 hsa_status_t Runtime::HostMalloc(void **ptr, size_t size,
-                                 hsa_amd_memory_pool_t MemoryPool) {
+                        hsa_amd_memory_pool_t MemoryPool) {
   hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, size, 0, ptr);
-  DP("Malloced [CPU] %p\n", *ptr);
-
+  DP("Malloced %p\n", *ptr);
   if (err == HSA_STATUS_SUCCESS) {
     err = core::allow_access_to_all_gpu_agents(*ptr);
   }
-  return (err == HSA_STATUS_SUCCESS) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
+  return err;
 }
 
 hsa_status_t Runtime::Memfree(void *ptr) {

@@ -233,11 +233,17 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
 template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
+  // FIXME: This should be the page size of the system running profiling.
+  // However such info isn't available at post-processing time, assuming
+  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
+  // because we may build the tools on non-linux.
+  uint32_t PageSize = 0x1000;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_flags & ELF::PF_X)) {
         // Segments will always be loaded at a page boundary.
-        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr & ~(Phdr.p_align - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(Phdr.p_align - 1U));
+        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
+                                                ~(PageSize - 1U));
+        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       }
   }
 

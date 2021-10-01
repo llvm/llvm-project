@@ -1237,6 +1237,14 @@ public:
     // Then plus the cost of interleave operation.
     assert(Indices.size() <= Factor &&
            "Interleaved memory op has too many members");
+
+    APInt DemandedLoadStoreElts = APInt::getNullValue(NumElts);
+    for (unsigned Index : Indices) {
+      assert(Index < Factor && "Invalid index for interleaved memory op");
+      for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
+        DemandedLoadStoreElts.setBit(Index + Elm * Factor);
+    }
+
     if (Opcode == Instruction::Load) {
       // The interleave cost is similar to extract sub vectors' elements
       // from the wide vector, and insert them into sub vectors.
@@ -1246,21 +1254,12 @@ public:
       //      %v0 = shuffle %vec, undef, <0, 2, 4, 6>         ; Index 0
       // The cost is estimated as extract elements at 0, 2, 4, 6 from the
       // <8 x i32> vector and insert them into a <4 x i32> vector.
-      for (unsigned Index : Indices) {
-        assert(Index < Factor && "Invalid index for interleaved memory op");
-
-        // Extract elements from loaded vector for each sub vector.
-        for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
-          Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VT,
-                                              Index + Elm * Factor);
-      }
-
-      InstructionCost InsSubCost = 0;
-      for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
-        InsSubCost +=
-            thisT()->getVectorInstrCost(Instruction::InsertElement, SubVT, Elm);
-
+      InstructionCost InsSubCost =
+          getScalarizationOverhead(SubVT, /*Insert*/ true, /*Extract*/ false);
       Cost += Indices.size() * InsSubCost;
+      Cost +=
+          thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
+                                            /*Insert*/ false, /*Extract*/ true);
     } else {
       // The interleave cost is extract elements from sub vectors, and
       // insert them into the wide vector.
@@ -1275,20 +1274,12 @@ public:
       // The cost is estimated as extract all elements (of actual members,
       // excluding gaps) from both <4 x i32> vectors and insert into the <12 x
       // i32> vector.
-      InstructionCost ExtSubCost = 0;
-      for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
-        ExtSubCost += thisT()->getVectorInstrCost(Instruction::ExtractElement,
-                                                  SubVT, Elm);
+      InstructionCost ExtSubCost =
+          getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
       Cost += ExtSubCost * Indices.size();
-
-      for (unsigned Index : Indices) {
-        assert(Index < Factor && "Invalid index for interleaved memory op");
-
-        // Insert elements from loaded vector for each sub vector.
-        for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
-          Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VT,
-                                              Index + Elm * Factor);
-      }
+      Cost += thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
+                                                /*Insert*/ true,
+                                                /*Extract*/ false);
     }
 
     if (!UseMaskForCond)
@@ -1308,13 +1299,9 @@ public:
     // The cost is estimated as extract all mask elements from the <8xi1> mask
     // vector and insert them factor times into the <24xi1> shuffled mask
     // vector.
-    for (unsigned i = 0; i < NumSubElts; i++)
-      Cost +=
-          thisT()->getVectorInstrCost(Instruction::ExtractElement, SubVT, i);
-
-    for (unsigned i = 0; i < NumElts; i++)
-      Cost +=
-          thisT()->getVectorInstrCost(Instruction::InsertElement, MaskVT, i);
+    Cost += getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
+    Cost +=
+        getScalarizationOverhead(MaskVT, /*Insert*/ true, /*Extract*/ false);
 
     // The Gaps mask is invariant and created outside the loop, therefore the
     // cost of creating it is not accounted for here. However if we have both

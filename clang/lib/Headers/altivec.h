@@ -17369,12 +17369,22 @@ vec_vbpermq(vector unsigned char __a, vector unsigned char __b) {
 }
 
 #if defined(__powerpc64__) && defined(__SIZEOF_INT128__)
-static __inline__ vector unsigned long long __attribute__((__always_inline__))
+static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_bperm(vector unsigned __int128 __a, vector unsigned char __b) {
   return __builtin_altivec_vbpermq((vector unsigned char)__a,
                                    (vector unsigned char)__b);
 }
 #endif
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_bperm(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vbpermq(__a, __b);
+}
+#endif // __POWER8_VECTOR__
+#ifdef __POWER9_VECTOR__
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_bperm(vector unsigned long long __a, vector unsigned char __b) {
+  return __builtin_altivec_vbpermd(__a, __b);
+}
 #endif
 
 

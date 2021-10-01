@@ -23,11 +23,10 @@
 
 #include "hsa_api.h"
 
-#include "impl.h"
-#include "rt.h"
 #include "impl_runtime.h"
+
 #ifndef TARGET_NAME
-#error "Missing TARGET_NAME macro"
+#define TARGET_NAME AMDGPU
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #include "Debug.h"

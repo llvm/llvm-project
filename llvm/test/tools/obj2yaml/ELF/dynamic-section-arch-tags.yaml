@@ -297,12 +297,32 @@ Sections:
       - Tag:             DT_AARCH64_PAC_PLT
         Value:           0x0000000000000000
 
+## Check we can handle RISC-V specific tags.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: obj2yaml %t6 | FileCheck %s --check-prefix=RISCV
+
+# RISCV:      - Tag:             DT_RISCV_VARIANT_CC
+# RISCV-NEXT:   Value:           0x0
+
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS64
+  Data:              ELFDATA2LSB
+  Type:              ET_REL
+  Machine:           EM_RISCV
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Entries:
+      - Tag:             DT_RISCV_VARIANT_CC
+        Value:           0x0000000000000000
+
 ## Check we can't use a tag from a different architecture,
 ## even if it has the same numeric value as a valid tag.
 ## Here for EM_PPC64 we are trying to use DT_HEXAGON_SYMSZ
 ## instead of DT_PPC64_GLINK. They both have value of 0x70000000.
 
-# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR:      error: invalid hex64 number
 # ERR-NEXT: - Tag: DT_HEXAGON_SYMSZ
 

@@ -1,4 +1,4 @@
-; RUN: opt -called-value-propagation -S < %s | FileCheck %s
+; RUN: opt -passes=called-value-propagation -S < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnueabi"
 

@@ -1279,6 +1279,26 @@ TEST_F(InMemoryFileSystemTest, RecursiveIterationWithHardLink) {
   EXPECT_THAT(Nodes, testing::UnorderedElementsAre("/a", "/a/b", "/c", "/c/d"));
 }
 
+TEST_F(InMemoryFileSystemTest, UniqueID) {
+  ASSERT_TRUE(FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("text")));
+  ASSERT_TRUE(FS.addFile("/c/d", 0, MemoryBuffer::getMemBuffer("text")));
+  ASSERT_TRUE(FS.addHardLink("/e/f", "/a/b"));
+
+  EXPECT_EQ(FS.status("/a/b")->getUniqueID(), FS.status("/a/b")->getUniqueID());
+  EXPECT_NE(FS.status("/a/b")->getUniqueID(), FS.status("/c/d")->getUniqueID());
+  EXPECT_EQ(FS.status("/a/b")->getUniqueID(), FS.status("/e/f")->getUniqueID());
+  EXPECT_EQ(FS.status("/a")->getUniqueID(), FS.status("/a")->getUniqueID());
+  EXPECT_NE(FS.status("/a")->getUniqueID(), FS.status("/c")->getUniqueID());
+  EXPECT_NE(FS.status("/a")->getUniqueID(), FS.status("/e")->getUniqueID());
+
+  // Recreating the "same" FS yields the same UniqueIDs.
+  vfs::InMemoryFileSystem FS2;
+  ASSERT_TRUE(FS2.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("text")));
+  EXPECT_EQ(FS.status("/a/b")->getUniqueID(),
+            FS2.status("/a/b")->getUniqueID());
+  EXPECT_EQ(FS.status("/a")->getUniqueID(), FS2.status("/a")->getUniqueID());
+}
+
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is
 // a legal *absolute* path on Windows as well as *nix.
 class VFSFromYAMLTest : public ::testing::Test {

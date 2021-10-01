@@ -1,4 +1,4 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 ;
 ; Generated at -O3 from:
 ; g();f(){for(;;){g();}}g(){__builtin___memset_chk(0,0,0,__builtin_object_size(1,0));}

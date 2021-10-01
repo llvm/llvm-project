@@ -594,7 +594,8 @@ def : SchedAlias<WriteVLD, M5WriteL6>;
 def : SchedAlias<WriteVST, M5WriteVST1>;
 
 // ASIMD FP instructions.
-def : SchedAlias<WriteV, M5WriteNALU1>;
+def : SchedAlias<WriteVd, M5WriteNALU1>;
+def : SchedAlias<WriteVq, M5WriteNALU1>;
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }

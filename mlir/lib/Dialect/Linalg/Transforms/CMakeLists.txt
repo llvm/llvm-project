@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  LinalgStrategyPasses.cpp
   Promotion.cpp
   Tiling.cpp
   Transforms.cpp

@@ -6,7 +6,7 @@
 module m
   !ERROR: 'mustbedeferred' is an ALLOCATABLE coarray and must have a deferred coshape
   real, allocatable :: mustBeDeferred[*]  ! C827
-  !ERROR: Component 'mustbeexplicit' is a non-ALLOCATABLE coarray and must have an explicit coshape
+  !ERROR: 'mustbeexplicit' is a non-ALLOCATABLE coarray and must have an explicit coshape
   real :: mustBeExplicit[:]  ! C828
   type :: hasCoarray
     real, allocatable :: coarray[:]

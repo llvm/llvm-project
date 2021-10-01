@@ -1,0 +1,22 @@
+## Check RISC-V st_other extension support.
+
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK: Symbols:
+# CHECK:  - Name:  foo1
+# CHECK:    Other: [ STO_RISCV_VARIANT_CC ]
+# CHECK:  - Name:  foo2
+# CHECK:    Other: [ STO_RISCV_VARIANT_CC, 64 ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Symbols:
+  - Name:  foo1
+    Other: [ STO_RISCV_VARIANT_CC ]
+  - Name:  foo2
+    Other: [ STO_RISCV_VARIANT_CC, 0x40 ]

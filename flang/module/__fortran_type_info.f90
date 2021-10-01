@@ -13,17 +13,11 @@
 
 module __Fortran_type_info
 
+  use __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
+
   private
 
   integer, parameter :: int64 = selected_int_kind(18)
-
-  type, public :: __builtin_c_ptr
-    integer(kind=int64) :: __address
-  end type
-
-  type, public :: __builtin_c_funptr
-    integer(kind=int64) :: __address
-  end type
 
   type :: DerivedType
     ! "TBP" bindings appear first.  Inherited bindings, with overrides already

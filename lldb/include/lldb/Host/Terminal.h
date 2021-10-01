@@ -124,59 +124,6 @@ protected:
   lldb::pid_t m_process_group = -1; ///< Cached process group information.
 };
 
-/// \class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
-/// A TTY state switching class.
-///
-/// This class can be used to remember 2 TTY states for a given file
-/// descriptor and switch between the two states.
-class TerminalStateSwitcher {
-public:
-  /// Constructor
-  TerminalStateSwitcher();
-
-  /// Destructor
-  ~TerminalStateSwitcher();
-
-  /// Get the number of possible states to save.
-  ///
-  /// \return
-  ///     The number of states that this TTY switcher object contains.
-  uint32_t GetNumberOfStates() const;
-
-  /// Restore the TTY state for state at index \a idx.
-  ///
-  /// \return
-  ///     Returns \b true if the TTY state was successfully restored,
-  ///     \b false otherwise.
-  bool Restore(uint32_t idx) const;
-
-  /// Save the TTY state information for the state at index \a idx. The TTY
-  /// state is saved for the file descriptor \a fd and the process group
-  /// information will also be saved if requested by \a save_process_group.
-  ///
-  /// \param[in] idx
-  ///     The index into the state array where the state should be
-  ///     saved.
-  ///
-  /// \param[in] fd
-  ///     The file descriptor for which to save the settings.
-  ///
-  /// \param[in] save_process_group
-  ///     If \b true, save the process group information for the TTY.
-  ///
-  /// \return
-  ///     Returns \b true if the save was successful, \b false
-  ///     otherwise.
-  bool Save(uint32_t idx, int fd, bool save_process_group);
-
-protected:
-  // Member variables
-  mutable uint32_t m_currentState =
-      UINT32_MAX; ///< The currently active TTY state index.
-  TerminalState
-      m_ttystates[2]; ///< The array of TTY states that holds saved TTY info.
-};
-
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)

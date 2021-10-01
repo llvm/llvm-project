@@ -790,14 +790,6 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     return genInvariantValue(merger, codegen, rewriter, exp);
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
-  if (merger.exp(exp).kind == Kind::kNegI) {
-    // TODO: no negi in std, need to make zero explicit.
-    Type tp = op.getOutputTensorTypes()[0].getElementType();
-    v1 = v0;
-    v0 = rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
-    if (codegen.curVecLength > 1)
-      v0 = genVectorInvariantValue(codegen, rewriter, v0);
-  }
   return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 

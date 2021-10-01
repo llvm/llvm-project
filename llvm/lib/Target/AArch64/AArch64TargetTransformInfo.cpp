@@ -289,13 +289,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     const auto LegalisationCost = TLI->getTypeLegalizationCost(DL, RetTy);
     const auto *Entry =
         CostTableLookup(BitreverseTbl, ICA.getID(), LegalisationCost.second);
-    // Cost Model is using the legal type(i32) that i8 and i16 will be converted
-    // to +1 so that we match the actual lowering cost
-    if (TLI->getValueType(DL, RetTy, true) == MVT::i8 ||
-        TLI->getValueType(DL, RetTy, true) == MVT::i16)
-      return LegalisationCost.first * Entry->Cost + 1;
-    if (Entry)
+    if (Entry) {
+      // Cost Model is using the legal type(i32) that i8 and i16 will be
+      // converted to +1 so that we match the actual lowering cost
+      if (TLI->getValueType(DL, RetTy, true) == MVT::i8 ||
+          TLI->getValueType(DL, RetTy, true) == MVT::i16)
+        return LegalisationCost.first * Entry->Cost + 1;
+
       return LegalisationCost.first * Entry->Cost;
+    }
     break;
   }
   case Intrinsic::ctpop: {

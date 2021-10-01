@@ -1,12 +1,12 @@
 ; This testcase contains a entire loop that should be removed.  The only thing
 ; left is the store instruction in BB0.  The problem this testcase was running
-; into was that when the reg109 PHI was getting zero predecessors, it was 
+; into was that when the reg109 PHI was getting zero predecessors, it was
 ; removed even though there were uses still around.  Now the uses are filled
 ; in with a dummy value before the PHI is deleted.
 ;
-; RUN: opt < %s -S -adce | grep bb1
-; RUN: opt < %s -S -adce -adce-remove-loops | FileCheck %s
-	
+; RUN: opt < %s -S -passes=adce | grep bb1
+; RUN: opt < %s -S -passes=adce -adce-remove-loops | FileCheck %s
+
         %node_t = type { double*, %node_t*, %node_t**, double**, double*, i32, i32 }
 
 define void @localize_local(%node_t* %nodelist) {

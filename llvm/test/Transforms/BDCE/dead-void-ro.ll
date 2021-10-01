@@ -1,4 +1,4 @@
-; RUN: opt -S -bdce < %s | FileCheck %s
+; RUN: opt -S -passes=bdce < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -63,7 +63,7 @@ endif()
 
 add_library(omptarget.rtl.amdgpu SHARED
       impl/impl.cpp
-      impl/impl_interop_hsa.cpp
+      impl/interop_hsa.cpp
       impl/data.cpp
       impl/get_elf_mach_gfx_name.cpp
       impl/system.cpp

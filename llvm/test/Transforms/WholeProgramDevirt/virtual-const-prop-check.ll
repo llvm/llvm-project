@@ -1,12 +1,12 @@
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
 ; Skipping vf0i1 is identical to setting public LTO visibility. We don't devirtualize vf0i1 and all other
 ; virtual call targets.
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 ; We have two set of call targets {vf0i1, vf1i1} and {vf1i32, vf2i32, vf3i32, vf4i32}.
 ; The command below prevents both of them from devirtualization.
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1,vf1i32 %s 2>&1 | FileCheck %s --check-prefix=SKIP-ALL
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1,vf1i32 %s 2>&1 | FileCheck %s --check-prefix=SKIP-ALL
 ; Check wildcard
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
