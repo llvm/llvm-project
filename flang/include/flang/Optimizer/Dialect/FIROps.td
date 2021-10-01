@@ -294,6 +294,46 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   }];
 }
 
+def fir_CharConvertOp : fir_Op<"char_convert", []> {
+  let summary = [{
+    Primitive to convert an entity of type CHARACTER from one KIND to a
+    different KIND.
+  }];
+
+  let description = [{
+    Copy a CHARACTER (must be in memory) of KIND _k1_ to a CHARACTER (also must
+    be in memory) of KIND _k2_ where _k1_ != _k2_ and the buffers do not
+    overlap. This latter restriction is unchecked, as the Fortran language
+    definition eliminates the overlapping in memory case.
+
+    The number of code points copied is specified explicitly as the second
+    argument. The length of the !fir.char type is ignored.
+
+    ```mlir
+      fir.char_convert %1 for %2 to %3 : !fir.ref<!fir.char<1,?>>, i32, 
+          !fir.ref<!fir.char<2,20>>
+    ```
+
+    Should future support for encodings other than ASCII be supported, codegen
+    can generate a call to a runtime helper routine which will map the code
+    points from UTF-8 to UCS-2, for example. Such remappings may not always
+    be possible as they may involve the creation of more code points than the
+    `count` limit. These details are left as future to-dos.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemRead]>:$from,
+    AnyIntegerType:$count,
+    Arg<AnyReferenceLike, "", [MemWrite]>:$to
+  );
+
+  let assemblyFormat = [{
+    $from `for` $count `to` $to attr-dict `:` type(operands)
+  }];
+
+  let verifier = "return ::verify(*this);";
+}
+
 def fir_StoreOp : fir_Op<"store", []> {
   let summary = "store an SSA-value to a memory location";
 
