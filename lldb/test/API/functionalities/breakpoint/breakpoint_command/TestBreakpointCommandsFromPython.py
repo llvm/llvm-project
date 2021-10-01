@@ -18,13 +18,11 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_step_out_python(self):
         """Test stepping out using a python breakpoint command."""
         self.build()
         self.do_set_python_command_from_python()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_bkpt_cmd_bad_arguments(self):
         """Test what happens when pass structured data to a command:"""
         self.build()

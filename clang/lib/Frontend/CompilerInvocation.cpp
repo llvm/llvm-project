@@ -1201,6 +1201,8 @@ ParseOptimizationRemark(DiagnosticsEngine &Diags, ArgList &Args,
         Result.Kind = CodeGenOptions::RK_Disabled;
       else if (Value == "no-everything")
         Result.Kind = CodeGenOptions::RK_DisabledEverything;
+      else
+        continue;
 
       if (Result.Kind == CodeGenOptions::RK_Disabled ||
           Result.Kind == CodeGenOptions::RK_DisabledEverything) {

@@ -135,13 +135,6 @@ def HasStdExtZbbOrZbp
                                    "'Zbb' (Base 'B' Instructions) or "
                                    "'Zbp' (Permutation 'B' Instructions)">;
 
-def FeatureStdExtZbproposedc
-    : SubtargetFeature<"experimental-zbproposedc", "HasStdExtZbproposedc", "true",
-                       "'Zbproposedc' (Proposed Compressed 'B' Instructions)">;
-def HasStdExtZbproposedc : Predicate<"Subtarget->hasStdExtZbproposedc()">,
-                           AssemblerPredicate<(all_of FeatureStdExtZbproposedc),
-                           "'Zbproposedc' (Proposed Compressed 'B' Instructions)">;
-
 def FeatureStdExtB
     : SubtargetFeature<"experimental-b", "HasStdExtB", "true",
                        "'B' (Bit Manipulation Instructions)",

@@ -853,15 +853,13 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
     }
 
-    // Fold shl(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
-    // If 'shift2' is an ashr, we would have to get the sign bit into a funny
-    // place.  Don't try to do this transformation in this case.  Also, we
-    // require that the input operand is a non-poison shift-by-constant so that
+    // Fold shl(trunc(shr(x,c1)),c2) -> trunc(and(shl(shr(x,c1),c2),c2'))
+    // Require that the input operand is a non-poison shift-by-constant so that
     // we have confidence that the shifts will get folded together.
     Instruction *TrOp;
     const APInt *TrShiftAmt;
     if (match(Op0, m_OneUse(m_Trunc(m_Instruction(TrOp)))) &&
-        match(TrOp, m_OneUse(m_Shift(m_Value(), m_APInt(TrShiftAmt)))) &&
+        match(TrOp, m_OneUse(m_Shr(m_Value(), m_APInt(TrShiftAmt)))) &&
         TrShiftAmt->ult(TrOp->getType()->getScalarSizeInBits())) {
       Type *SrcTy = TrOp->getType();
 

@@ -115,7 +115,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_profile_generate, false) ||
        Args.hasArg(options::OPT_fcreate_profile) ||
        Args.hasArg(options::OPT_coverage)))
-    CmdArgs.push_back("-bdbg:namedcsects");
+    CmdArgs.push_back("-bdbg:namedsects");
 
   // Specify linker output file.
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");

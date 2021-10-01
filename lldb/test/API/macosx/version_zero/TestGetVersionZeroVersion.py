@@ -19,7 +19,6 @@ class TestGetVersionForZero(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test_get_version_zero(self):
         """Read in a library with a version of 0.0.0.  Test SBModule::GetVersion"""
         self.yaml2obj("libDylib.dylib.yaml", self.getBuildArtifact("libDylib.dylib"))

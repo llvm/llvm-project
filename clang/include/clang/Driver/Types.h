@@ -114,7 +114,7 @@ namespace types {
   /// getCompilationPhases - Get the list of compilation phases ('Phases') to be
   /// done for type 'Id' up until including LastPhase.
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
-  getCompilationPhases(ID Id, phases::ID LastPhase = phases::LastPhase);
+  getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(const clang::driver::Driver &Driver,
                        llvm::opt::DerivedArgList &DAL, ID Id);

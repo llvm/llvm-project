@@ -366,15 +366,10 @@ Pass *llvm::createLoopPredicationPass() {
 PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
-  Function *F = L.getHeader()->getParent();
-  // For the new PM, we also can't use BranchProbabilityInfo as an analysis
-  // pass. Function analyses need to be preserved across loop transformations
-  // but BPI is not preserved, hence a newly built one is needed.
-  BranchProbabilityInfo BPI(*F, AR.LI, &AR.TLI, &AR.DT, nullptr);
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, &BPI,
+  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, AR.BPI,
                      MSSAU ? MSSAU.get() : nullptr);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();

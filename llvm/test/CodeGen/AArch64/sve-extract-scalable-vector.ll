@@ -440,6 +440,39 @@ define <vscale x 4 x i8> @extract_nxv4i8_nxv12i8_8(<vscale x 12 x i8> %in) {
 declare <vscale x 4 x i8> @llvm.experimental.vector.extract.nxv4i8.nxv12i8(<vscale x 12 x i8>, i64)
 
 ;
+; Extract i8 vector that needs both widening + promotion from one that needs widening.
+; (nxv6i8 -> nxv8i8 -> nxv8i16)
+;
+define <vscale x 6 x i8> @extract_nxv6i8_nxv12i8_0(<vscale x 12 x i8> %in) {
+; CHECK-LABEL: extract_nxv6i8_nxv12i8_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 6 x i8> @llvm.experimental.vector.extract.nxv6i8.nxv12i8(<vscale x 12 x i8> %in, i64 0)
+  ret <vscale x 6 x i8> %res
+}
+
+define <vscale x 6 x i8> @extract_nxv6i8_nxv12i8_6(<vscale x 12 x i8> %in) {
+; CHECK-LABEL: extract_nxv6i8_nxv12i8_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    uunpkhi z2.d, z1.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 6 x i8> @llvm.experimental.vector.extract.nxv6i8.nxv12i8(<vscale x 12 x i8> %in, i64 6)
+  ret <vscale x 6 x i8> %res
+}
+
+declare <vscale x 6 x i8> @llvm.experimental.vector.extract.nxv6i8.nxv12i8(<vscale x 12 x i8>, i64)
+
+;
 ; Extract half i8 vector that needs promotion from one that needs splitting.
 ;
 define <vscale x 8 x i8> @extract_nxv8i8_nxv32i8_0(<vscale x 32 x i8> %in) {
