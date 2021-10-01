@@ -854,9 +854,9 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
-      CArg<"mlir::ValueRange", "{}">:$lenParams),
+      CArg<"mlir::ValueRange", "{}">:$typeparams),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    lenParams, mlir::AffineMapAttr{}); }]>
+                    typeparams, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
@@ -864,7 +864,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
       (`map` $accessMap^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     mlir::Value getShape() { return shape(); }
