@@ -113,7 +113,8 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
     return false;
   // Ignore implicit casts, since enums implicitly cast to integer types.
   Cond = Cond->IgnoreParenImpCasts();
-  EnumT = Cond->getType()->getAsAdjusted<EnumType>();
+  // Get the canonical type to handle typedefs.
+  EnumT = Cond->getType().getCanonicalType()->getAsAdjusted<EnumType>();
   if (!EnumT)
     return false;
   EnumD = EnumT->getDecl();
@@ -152,14 +153,30 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
     if (CS->caseStmtIsGNURange())
       return false;
 
+    // Support for direct references to enum constants. This is required to
+    // support C and ObjC which don't contain values in their ConstantExprs.
+    // The general way to get the value of a case is EvaluateAsRValue, but we'd
+    // rather not deal with that in case the AST is broken.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(CS->getLHS()->IgnoreParenCasts())) {
+      if (auto *Enumerator = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+        auto Iter = ExpectedCases.find(Normalize(Enumerator->getInitVal()));
+        if (Iter != ExpectedCases.end())
+          Iter->second.setCovered();
+        continue;
+      }
+    }
+
+    // ConstantExprs with values are expected for C++, otherwise the storage
+    // kind will be None.
+
     // Case expression is not a constant expression or is value-dependent,
     // so we may not be able to work out which cases are covered.
     const ConstantExpr *CE = dyn_cast<ConstantExpr>(CS->getLHS());
     if (!CE || CE->isValueDependent())
       return false;
 
-    // Unsure if this case could ever come up, but prevents an unreachable
-    // executing in getResultAsAPSInt.
+    // We need a stored value in order to continue; currently both C and ObjC
+    // enums won't have one.
     if (CE->getResultStorageKind() == ConstantExpr::RSK_None)
       return false;
     auto Iter = ExpectedCases.find(Normalize(CE->getResultAsAPSInt()));
