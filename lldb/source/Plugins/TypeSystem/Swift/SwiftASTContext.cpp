@@ -2131,29 +2131,32 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     handled_sdk_path = true;
   }
 
-  if (target.GetSwiftCreateModuleContextsInParallel()) {
-    // The first call to GetTypeSystemForLanguage() on a module will
-    // trigger the import (and thus most likely the rebuild) of all
-    // the Clang modules that were imported in this module. This can
-    // be a lot of work (potentially ten seconds per module), but it
-    // can be performed in parallel.
-    const unsigned threads =
-        repro::Reproducer::Instance().IsReplaying() ? 1 : 0;
-    llvm::ThreadPool pool(llvm::hardware_concurrency(threads));
-    for (size_t mi = 0; mi != num_images; ++mi) {
-      auto module_sp = target.GetImages().GetModuleAtIndex(mi);
-      pool.async([=] {
-        auto val_or_err =
-            module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-        if (!val_or_err) {
-          llvm::consumeError(val_or_err.takeError());
-        }
-      });
+  auto warmup_astcontexts = [&]() {
+    if (target.GetSwiftCreateModuleContextsInParallel()) {
+      // The first call to GetTypeSystemForLanguage() on a module will
+      // trigger the import (and thus most likely the rebuild) of all
+      // the Clang modules that were imported in this module. This can
+      // be a lot of work (potentially ten seconds per module), but it
+      // can be performed in parallel.
+      const unsigned threads =
+          repro::Reproducer::Instance().IsReplaying() ? 1 : 0;
+      llvm::ThreadPool pool(llvm::hardware_concurrency(threads));
+      for (size_t mi = 0; mi != num_images; ++mi) {
+        auto module_sp = target.GetImages().GetModuleAtIndex(mi);
+        pool.async([=] {
+          auto val_or_err =
+              module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+          if (!val_or_err) {
+            llvm::consumeError(val_or_err.takeError());
+          }
+        });
+      }
+      pool.wait();
     }
-    pool.wait();
-  }
+  };
 
   if (!handled_sdk_path) {
+    warmup_astcontexts();
     for (size_t mi = 0; mi != num_images; ++mi) {
       ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
       if (!HasSwiftModules(*module_sp))
@@ -2268,6 +2271,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
 
+  warmup_astcontexts();
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<std::string> extra_clang_args;
     ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
