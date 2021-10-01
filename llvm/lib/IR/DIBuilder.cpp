@@ -287,17 +287,16 @@ DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
                             0, 0, None, DINode::FlagZero);
 }
 
-DIDerivedType *DIBuilder::createPointerType(
-    DIType *PointeeTy,
-    uint64_t SizeInBits,
-    uint32_t AlignInBits,
-    Optional<unsigned> DWARFAddressSpace,
-    StringRef Name) {
+DIDerivedType *
+DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
+                             uint32_t AlignInBits,
+                             Optional<unsigned> DWARFAddressSpace,
+                             StringRef Name, DINodeArray Annotations) {
   // FIXME: Why is there a name here?
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, DWARFAddressSpace,
-                            DINode::FlagZero);
+                            AlignInBits, 0, DWARFAddressSpace, DINode::FlagZero,
+                            nullptr, Annotations);
 }
 
 DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
