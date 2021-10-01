@@ -1,24 +1,19 @@
-; RUN: opt -mtriple=x86_64 -passes='require<scalar-evolution>,require<branch-prob>,loop-mssa(loop-predication,licm,simple-loop-unswitch<nontrivial>,loop-simplifycfg)' -debug-pass-manager -debug-only=branch-prob -S < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=x86_64 -passes='loop-mssa(loop-predication,licm,simple-loop-unswitch<nontrivial>,loop-simplifycfg)' -debug-pass-manager -debug-only=branch-prob -S < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
+; This test is to solely check that we do not run BPI every single time loop
+; predication is invoked (since BPI is preserved as part of
+; LoopStandardAnalysisResults).
 declare void @llvm.experimental.guard(i1, ...)
 
-; CHECK: Running pass: RequireAnalysisPass<{{.*}}BranchProbabilityAnalysis
-; CHECK-NEXT: Running analysis: BranchProbabilityAnalysis on unsigned_loop_0_to_n_ult_check
-; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on unsigned_loop_0_to_n_ult_check
-; CHECK-NEXT: ---- Branch Probability Info : unsigned_loop_0_to_n_ult_check ----
-; CHECK: Running pass: LoopSimplifyPass on unsigned_loop_0_to_n_ult_check
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: ---- Branch Probability Info : unsigned_loop_0_to_n_ult_check ----
-; CHECK: Running pass: LICMPass on Loop at depth 1
+; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: ---- Branch Probability Info : unsigned_loop_0_to_n_ult_check ----
-; CHECK: Running pass: LICMPass on Loop at depth 1
+; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: LoopSimplifyCFGPass on Loop at depth 1
-; CHECK-NEXT: Invalidating analysis: BranchProbabilityAnalysis on unsigned_loop_0_to_n_ult_check
 
 
 define i32 @unsigned_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
