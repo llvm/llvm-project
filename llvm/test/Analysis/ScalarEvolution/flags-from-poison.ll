@@ -142,9 +142,9 @@ define void @test-add-scope-bound(i32* %input, i32 %needle) {
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
-; CHECK-NEXT:    --> ({1,+,1}<nuw><%loop> + %offset) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ({1,+,1}<nuw><%loop> + %offset)<nuw><nsw> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %of_interest
-; CHECK-NEXT:    --> ((4 * (sext i32 ({1,+,1}<nuw><%loop> + %offset) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((4 * ((sext i32 {1,+,1}<nuw><%loop> to i64) + (sext i32 %offset to i64))<nsw>)<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
