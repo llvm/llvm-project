@@ -1336,8 +1336,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK)) {
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
     // MinMax reduction have the start value as their identify.
     if (ScalarPHI) {
       Iden = StartV;
@@ -1348,11 +1347,12 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
           Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
     }
   } else {
-    Iden = RdxDesc.getRecurrenceIdentity(RK, VecTy->getScalarType(),
-                                         RdxDesc.getFastMathFlags());
+    Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
+        RK, VecTy->getScalarType(), RdxDesc.getFastMathFlags());
+    Iden = IdenC;
 
     if (!ScalarPHI) {
-      Iden = Builder.CreateVectorSplat(State.VF, Iden);
+      Iden = ConstantVector::getSplat(State.VF, IdenC);
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
       Constant *Zero = Builder.getInt32(0);
