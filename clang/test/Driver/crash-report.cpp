@@ -7,7 +7,7 @@
 // RUN:  -Xclang -internal-isystem -Xclang /tmp/                         \
 // RUN:  -Xclang -internal-externc-isystem -Xclang /tmp/                 \
 // RUN:  -Xclang -main-file-name -Xclang foo.cpp                         \
-// RUN:  -DFOO=BAR -DBAR="BAZ QUX"' > %t.rsp
+// RUN:  -DFOO=BAR -DBAR="BAZ QUX"' --target=x86_64-linux-gnu > %t.rsp
 
 // RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
 // RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
