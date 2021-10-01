@@ -220,15 +220,85 @@ uint64_t XCOFFObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
   return toSymbolRef(Symb).getValue();
 }
 
+uint32_t XCOFFObjectFile::getSymbolAlignment(DataRefImpl Symb) const {
+  uint64_t Result = 0;
+  XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
+  if (XCOFFSym.isCsectSymbol()) {
+    Expected<XCOFFCsectAuxRef> CsectAuxRefOrError =
+        XCOFFSym.getXCOFFCsectAuxRef();
+    if (!CsectAuxRefOrError)
+      // TODO: report the error up the stack.
+      consumeError(CsectAuxRefOrError.takeError());
+    else
+      Result = 1 << CsectAuxRefOrError.get().getAlignmentLog2();
+  }
+  return Result;
+}
+
 uint64_t XCOFFObjectFile::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
   uint64_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
+  XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
+  if (XCOFFSym.isCsectSymbol()) {
+    Expected<XCOFFCsectAuxRef> CsectAuxRefOrError =
+        XCOFFSym.getXCOFFCsectAuxRef();
+    if (!CsectAuxRefOrError)
+      // TODO: report the error up the stack.
+      consumeError(CsectAuxRefOrError.takeError());
+    else {
+      XCOFFCsectAuxRef CsectAuxRef = CsectAuxRefOrError.get();
+      assert(CsectAuxRef.getSymbolType() == XCOFF::XTY_CM);
+      Result = CsectAuxRef.getSectionOrLength();
+    }
+  }
   return Result;
 }
 
 Expected<SymbolRef::Type>
 XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
-  // TODO: Return the correct symbol type.
+  XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
+
+  if (XCOFFSym.isFunction())
+    return SymbolRef::ST_Function;
+
+  if (XCOFF::C_FILE == XCOFFSym.getStorageClass())
+    return SymbolRef::ST_File;
+
+  int16_t SecNum = XCOFFSym.getSectionNumber();
+  if (SecNum <= 0)
+    return SymbolRef::ST_Other;
+
+  Expected<DataRefImpl> SecDRIOrErr =
+      getSectionByNum(XCOFFSym.getSectionNumber());
+
+  if (!SecDRIOrErr)
+    return SecDRIOrErr.takeError();
+
+  DataRefImpl SecDRI = SecDRIOrErr.get();
+
+  Expected<StringRef> SymNameOrError = XCOFFSym.getName();
+  if (SymNameOrError) {
+    // The "TOC" symbol is treated as SymbolRef::ST_Other.
+    if (SymNameOrError.get() == "TOC")
+      return SymbolRef::ST_Other;
+
+    // The symbol for a section name is treated as SymbolRef::ST_Other.
+    StringRef SecName;
+    if (is64Bit())
+      SecName = XCOFFObjectFile::toSection64(SecDRIOrErr.get())->getName();
+    else
+      SecName = XCOFFObjectFile::toSection32(SecDRIOrErr.get())->getName();
+
+    if (SecName == SymNameOrError.get())
+      return SymbolRef::ST_Other;
+  } else
+    return SymNameOrError.takeError();
+
+  if (isSectionData(SecDRI) || isSectionBSS(SecDRI))
+    return SymbolRef::ST_Data;
+
+  if (isDebugSection(SecDRI))
+    return SymbolRef::ST_Debug;
+
   return SymbolRef::ST_Other;
 }
 
@@ -500,8 +570,32 @@ void XCOFFObjectFile::getRelocationTypeName(
 }
 
 Expected<uint32_t> XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
-  uint32_t Result = 0;
-  // TODO: Return correct symbol flags.
+  XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
+  uint32_t Result = SymbolRef::SF_None;
+
+  if (XCOFFSym.getSectionNumber() == XCOFF::N_ABS)
+    Result |= SymbolRef::SF_Absolute;
+
+  XCOFF::StorageClass SC = XCOFFSym.getStorageClass();
+  if (XCOFF::C_EXT == SC || XCOFF::C_WEAKEXT == SC)
+    Result |= SymbolRef::SF_Global;
+
+  if (XCOFF::C_WEAKEXT == SC)
+    Result |= SymbolRef::SF_Weak;
+
+  if (XCOFFSym.isCsectSymbol()) {
+    Expected<XCOFFCsectAuxRef> CsectAuxEntOrErr =
+        XCOFFSym.getXCOFFCsectAuxRef();
+    if (CsectAuxEntOrErr) {
+      if (CsectAuxEntOrErr.get().getSymbolType() == XCOFF::XTY_CM)
+        Result |= SymbolRef::SF_Common;
+    } else
+      return CsectAuxEntOrErr.takeError();
+  }
+
+  if (XCOFFSym.getSectionNumber() == XCOFF::N_UNDEF)
+    Result |= SymbolRef::SF_Undefined;
+
   return Result;
 }
 
@@ -700,6 +794,25 @@ uint32_t XCOFFObjectFile::getSymbolIndex(uintptr_t SymbolEntPtr) const {
   return (reinterpret_cast<const char *>(SymbolEntPtr) -
           reinterpret_cast<const char *>(SymbolTblPtr)) /
          XCOFF::SymbolTableEntrySize;
+}
+
+uint64_t XCOFFObjectFile::getSymbolSize(DataRefImpl Symb) const {
+  uint64_t Result = 0;
+  XCOFFSymbolRef XCOFFSym = toSymbolRef(Symb);
+  if (XCOFFSym.isCsectSymbol()) {
+    Expected<XCOFFCsectAuxRef> CsectAuxRefOrError =
+        XCOFFSym.getXCOFFCsectAuxRef();
+    if (!CsectAuxRefOrError)
+      // TODO: report the error up the stack.
+      consumeError(CsectAuxRefOrError.takeError());
+    else {
+      XCOFFCsectAuxRef CsectAuxRef = CsectAuxRefOrError.get();
+      uint8_t SymType = CsectAuxRef.getSymbolType();
+      if (SymType == XCOFF::XTY_SD || SymType == XCOFF::XTY_CM)
+        Result = CsectAuxRef.getSectionOrLength();
+    }
+  }
+  return Result;
 }
 
 uintptr_t XCOFFObjectFile::getSymbolEntryAddressByIndex(uint32_t Index) const {
