@@ -1827,66 +1827,15 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   let arguments = (ins
     StrAttr:$field_id,
     TypeAttr:$on_type,
-    Variadic<AnyIntegerType>:$lenparams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
-  let parser = [{
-    llvm::StringRef fieldName;
-    auto &builder = parser.getBuilder();
-    mlir::Type recty;
-    if (parser.parseOptionalKeyword(&fieldName) ||
-        parser.parseComma() ||
-        parser.parseType(recty))
-      return mlir::failure();
-    result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
-    if (!recty.dyn_cast<RecordType>())
-      return mlir::failure();
-    result.addAttribute(typeAttrName(), mlir::TypeAttr::get(recty));
-    if (!parser.parseOptionalLParen()) {
-      llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> operands;
-      llvm::SmallVector<mlir::Type, 8> types;
-      auto loc = parser.getNameLoc();
-      if (parser.parseOperandList(operands,
-                                  mlir::OpAsmParser::Delimiter::None) ||
-          parser.parseColonTypeList(types) ||
-          parser.parseRParen() ||
-          parser.resolveOperands(operands, types, loc, result.operands))
-        return mlir::failure();
-    }
-    mlir::Type fieldType = fir::FieldType::get(builder.getContext());
-    if (parser.addTypeToList(fieldType, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseFieldIndexOp(parser, result);";
 
-  let printer = [{
-    p << ' '
-      << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue()
-      << ", " << (*this)->getAttr(typeAttrName());
-    if (getNumOperands()) {
-      p << '(';
-      p.printOperands(lenparams());
-      auto sep = ") : ";
-      for (auto op : lenparams()) {
-        p << sep;
-        if (op)
-          p.printType(op.getType());
-        else
-          p << "()";
-        sep = ", ";
-      }
-    }
-  }];
+  let printer = "::print(p, *this);";
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
-      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands),
-    [{
-      $_state.addAttribute(fieldAttrName(),
-        $_builder.getStringAttr(fieldName));
-      $_state.addAttribute(typeAttrName(), TypeAttr::get(recTy));
-      $_state.addOperands(operands);
-    }]
-  >];
+      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }

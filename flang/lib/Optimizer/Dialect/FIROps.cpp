@@ -1226,6 +1226,69 @@ void fir::ExtractValueOp::build(mlir::OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// FieldIndexOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseFieldIndexOp(mlir::OpAsmParser &parser,
+                                           mlir::OperationState &result) {
+  llvm::StringRef fieldName;
+  auto &builder = parser.getBuilder();
+  mlir::Type recty;
+  if (parser.parseOptionalKeyword(&fieldName) || parser.parseComma() ||
+      parser.parseType(recty))
+    return mlir::failure();
+  result.addAttribute(fir::FieldIndexOp::fieldAttrName(),
+                      builder.getStringAttr(fieldName));
+  if (!recty.dyn_cast<RecordType>())
+    return mlir::failure();
+  result.addAttribute(fir::FieldIndexOp::typeAttrName(),
+                      mlir::TypeAttr::get(recty));
+  if (!parser.parseOptionalLParen()) {
+    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::Type> types;
+    auto loc = parser.getNameLoc();
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(types) || parser.parseRParen() ||
+        parser.resolveOperands(operands, types, loc, result.operands))
+      return mlir::failure();
+  }
+  mlir::Type fieldType = fir::FieldType::get(builder.getContext());
+  if (parser.addTypeToList(fieldType, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+static void print(mlir::OpAsmPrinter &p, fir::FieldIndexOp &op) {
+  p << ' '
+    << op.getOperation()
+           ->getAttrOfType<mlir::StringAttr>(fir::FieldIndexOp::fieldAttrName())
+           .getValue()
+    << ", " << op.getOperation()->getAttr(fir::FieldIndexOp::typeAttrName());
+  if (op.getNumOperands()) {
+    p << '(';
+    p.printOperands(op.typeparams());
+    const auto *sep = ") : ";
+    for (auto op : op.typeparams()) {
+      p << sep;
+      if (op)
+        p.printType(op.getType());
+      else
+        p << "()";
+      sep = ", ";
+    }
+  }
+}
+
+void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result,
+                              llvm::StringRef fieldName, mlir::Type recTy,
+                              mlir::ValueRange operands) {
+  result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
+  result.addAttribute(typeAttrName(), TypeAttr::get(recTy));
+  result.addOperands(operands);
+}
+
+//===----------------------------------------------------------------------===//
 // InsertOnRangeOp
 //===----------------------------------------------------------------------===//
 
