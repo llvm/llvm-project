@@ -308,17 +308,6 @@ func @generic(%arg0: memref<?x?xi4>) {
 
 // -----
 
-func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
-                            %arg1: memref<2x3xf32>,
-                            %arg2: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
-  linalg.pooling_max(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
-    memref<?x?x?xf32>, memref<2x3xf32>, memref<?x?x?xf32>
-  return
-}
-
-// -----
-
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?xf32>)
