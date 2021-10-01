@@ -45,7 +45,7 @@ protected:
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
 class TerminalState {
-  class Data;
+  struct Data;
 
 public:
   /// Construct a new instance and optionally save terminal state.
