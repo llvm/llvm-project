@@ -5090,7 +5090,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {3, MVT::v4i8, 3},   // (load 12i8 and) deinterleave into 3 x 4i8
       {3, MVT::v8i8, 6},   // (load 24i8 and) deinterleave into 3 x 8i8
       {3, MVT::v16i8, 11}, // (load 48i8 and) deinterleave into 3 x 16i8
-      {3, MVT::v32i8, 13}, // (load 96i8 and) deinterleave into 3 x 32i8
+      {3, MVT::v32i8, 14}, // (load 96i8 and) deinterleave into 3 x 32i8
 
       {3, MVT::v8i32, 17}, // (load 24i32 and) deinterleave into 3 x 8i32
 
