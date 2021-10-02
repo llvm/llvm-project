@@ -89,9 +89,11 @@ static StringRef twineToStrRef(const Twine &val,
   // Allocate memory to hold this string.
   SmallString<64> data;
   auto strRef = val.toStringRef(data);
+  if (strRef.empty())
+    return strRef;
+
   strings.push_back(std::unique_ptr<char[]>(new char[strRef.size()]));
   memcpy(&strings.back()[0], strRef.data(), strRef.size());
-
   // Return a reference to the new string.
   return StringRef(&strings.back()[0], strRef.size());
 }
