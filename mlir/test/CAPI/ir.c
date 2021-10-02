@@ -1525,6 +1525,7 @@ int registerOnlyStd() {
               ctx, mlirStringRefCreateFromCString(
                        "not_existing_dialect.not_existing_op")));
 
+  mlirContextDestroy(ctx);
   return 0;
 }
 
@@ -1666,6 +1667,9 @@ int testClone() {
   // CHECK: constant 0 : index
   // CHECK: constant 1 : index
 
+  mlirOperationDestroy(constZero);
+  mlirOperationDestroy(constOne);
+  mlirContextDestroy(ctx);
   return 0;
 }
 
@@ -1737,6 +1741,7 @@ void testDiagnostics() {
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
+  mlirContextDestroy(ctx);
 }
 
 int testTypeID(MlirContext ctx) {
