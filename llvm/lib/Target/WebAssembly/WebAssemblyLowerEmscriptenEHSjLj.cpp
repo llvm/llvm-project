@@ -549,7 +549,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   // No attributes for the callee pointer.
   ArgAttributes.push_back(AttributeSet());
   // Copy the argument attributes from the original
-  for (unsigned I = 0, E = CI->getNumArgOperands(); I < E; ++I)
+  for (unsigned I = 0, E = CI->arg_size(); I < E; ++I)
     ArgAttributes.push_back(InvokeAL.getParamAttrs(I));
 
   AttrBuilder FnAttrs(InvokeAL.getFnAttrs());
