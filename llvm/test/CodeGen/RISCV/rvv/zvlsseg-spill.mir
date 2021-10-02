@@ -30,10 +30,10 @@ body: |
     ; CHECK-NEXT: $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 renamable $x10, $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: dead renamable $x11 = PseudoVSPILL7_M1 killed renamable $v0_v1_v2_v3_v4_v5_v6, killed $x11, killed $x12
+    ; CHECK-NEXT: PseudoVSPILL7_M1 killed renamable $v0_v1_v2_v3_v4_v5_v6, killed $x11, killed $x12
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: dead renamable $v7_v8_v9_v10_v11_v12_v13, dead renamable $x11 = PseudoVRELOAD7_M1 killed $x11, killed $x12, implicit-def $v8
+    ; CHECK-NEXT: dead renamable $v7_v8_v9_v10_v11_v12_v13 = PseudoVRELOAD7_M1 killed $x11, killed $x12, implicit-def $v8
     ; CHECK-NEXT: VS1R_V killed $v8, killed renamable $x10
     ; CHECK-NEXT: $x10 = frame-destroy PseudoReadVLENB
     ; CHECK-NEXT: $x10 = frame-destroy SLLI killed $x10, 3
@@ -43,8 +43,8 @@ body: |
     %0:gpr = COPY $x10
     %1:gprnox0 = COPY $x11
     $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 %0, %1, 6
-    %2:gpr = PseudoVSPILL7_M1 killed renamable $v0_v1_v2_v3_v4_v5_v6, %stack.0, $x0
-    renamable $v7_v8_v9_v10_v11_v12_v13, %3:gpr = PseudoVRELOAD7_M1 %stack.0, $x0
+    PseudoVSPILL7_M1 killed renamable $v0_v1_v2_v3_v4_v5_v6, %stack.0, $x0
+    renamable $v7_v8_v9_v10_v11_v12_v13 = PseudoVRELOAD7_M1 %stack.0, $x0
     VS1R_V killed $v8, %0:gpr
     PseudoRET
 ...
