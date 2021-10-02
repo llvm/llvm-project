@@ -39,8 +39,7 @@ class TestProcessConnect(GDBRemoteTestBase):
             self.dbg.SetAsync(False)
             self.expect("platform select remote-gdb-server",
                         substrs=['Platform: remote-gdb-server', 'Connected: no'])
-            self.expect("process connect connect://" +
-                        self.server.get_connect_address(),
+            self.expect("process connect " + self.server.get_connect_url(),
                         substrs=['Process', 'stopped'])
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
@@ -52,8 +51,7 @@ class TestProcessConnect(GDBRemoteTestBase):
             self.dbg.SetAsync(True)
             self.expect("platform select remote-gdb-server",
                         substrs=['Platform: remote-gdb-server', 'Connected: no'])
-            self.expect("process connect connect://" +
-                        self.server.get_connect_address(),
+            self.expect("process connect " + self.server.get_connect_url(),
                         matching=False,
                         substrs=['Process', 'stopped'])
             lldbutil.expect_state_changes(self, self.dbg.GetListener(),

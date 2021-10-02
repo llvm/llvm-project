@@ -20,6 +20,18 @@ define void @mustalias_overflow_in_32_bit_constants(i8* %ptr) {
   ret void
 }
 
+; FIXME: This should also be MustAlias as in the previous test.
+define void @mustalias_overflow_in_32_with_var_index([1 x i8]* %ptr, i64 %n) {
+; CHECK-LABEL: Function: mustalias_overflow_in_32_with_var_index
+; CHECK:       NoAlias:  i8* %gep.1, i8* %gep.2
+;
+  %gep.1 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 4294967296
+  store i8 0, i8* %gep.1
+  %gep.2 = getelementptr [1 x i8], [1 x i8]* %ptr, i64 %n, i64 0
+  store i8 1, i8* %gep.2
+  ret void
+}
+
 define void @noalias_overflow_in_32_bit_constants(i8* %ptr) {
 ; CHECK-LABEL: Function: noalias_overflow_in_32_bit_constants: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MustAlias: i8* %gep.1, i8* %ptr
@@ -51,6 +63,35 @@ define void @mustalias_overflow_in_32_bit_add_mul_gep(i8* %ptr, i64 %i) {
   %gep.1 = getelementptr i8, i8* %ptr, i64 %add
   store i8 0, i8* %gep.1
   %gep.2 = getelementptr i8, i8* %ptr, i64 %i
+  store i8 1, i8* %gep.2
+  ret void
+}
+
+; FIXME: While %n is non-zero, its low 32 bits may not be.
+define void @mayalias_overflow_in_32_bit_non_zero(i8* %ptr, i64 %n) {
+; CHECK-LABEL: Function: mayalias_overflow_in_32_bit_non_zero
+; CHECK:    NoAlias: i8* %gep, i8* %ptr
+;
+  %c = icmp ne i64 %n, 0
+  call void @llvm.assume(i1 %c)
+  store i8 0, i8* %ptr
+  %gep = getelementptr i8, i8* %ptr, i64 %n
+  store i8 1, i8* %gep
+  ret void
+}
+
+; FIXME: While %n is positive, its low 32 bits may not be.
+define void @mayalias_overflow_in_32_bit_positive(i8* %ptr, i64 %n) {
+; CHECK-LABEL: Function: mayalias_overflow_in_32_bit_positive
+; CHECK:    NoAlias: i8* %gep.1, i8* %ptr
+; CHECK:    NoAlias: i8* %gep.2, i8* %ptr
+; CHECK:    NoAlias: i8* %gep.1, i8* %gep.2
+;
+  %c = icmp sgt i64 %n, 0
+  call void @llvm.assume(i1 %c)
+  %gep.1 = getelementptr i8, i8* %ptr, i64 -1
+  store i8 0, i8* %gep.1
+  %gep.2 = getelementptr i8, i8* %ptr, i64 %n
   store i8 1, i8* %gep.2
   ret void
 }

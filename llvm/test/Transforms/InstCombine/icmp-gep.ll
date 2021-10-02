@@ -174,6 +174,30 @@ define i1 @eq_base_inbounds_commute_use(i64 %y) {
   ret i1 %r
 }
 
+define i1 @eq_bitcast_base([2 x i8]* %p, i64 %x) {
+; CHECK-LABEL: @eq_bitcast_base(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i8], [2 x i8]* [[P:%.*]], i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[B:%.*]] = getelementptr [2 x i8], [2 x i8]* [[P]], i64 0, i64 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[GEP]], [[B]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %gep = getelementptr [2 x i8], [2 x i8]* %p, i64 %x, i64 0
+  %b = bitcast [2 x i8]* %p to i8*
+  %r = icmp eq i8* %gep, %b
+  ret i1 %r
+}
+
+define i1 @eq_bitcast_base_inbounds([2 x i8]* %p, i64 %x) {
+; CHECK-LABEL: @eq_bitcast_base_inbounds(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %gep = getelementptr inbounds [2 x i8], [2 x i8]* %p, i64 %x, i64 0
+  %b = bitcast [2 x i8]* %p to i8*
+  %r = icmp eq i8* %gep, %b
+  ret i1 %r
+}
+
 @X = global [1000 x i32] zeroinitializer
 
 define i1 @PR8882(i64 %i) {

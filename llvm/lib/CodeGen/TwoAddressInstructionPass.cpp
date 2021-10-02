@@ -1335,7 +1335,6 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
 // Return true if any tied operands where found, including the trivial ones.
 bool TwoAddressInstructionPass::
 collectTiedOperands(MachineInstr *MI, TiedOperandMap &TiedOperands) {
-  const MCInstrDesc &MCID = MI->getDesc();
   bool AnyOps = false;
   unsigned NumOps = MI->getNumOperands();
 
@@ -1357,10 +1356,10 @@ collectTiedOperands(MachineInstr *MI, TiedOperandMap &TiedOperands) {
     // Deal with undef uses immediately - simply rewrite the src operand.
     if (SrcMO.isUndef() && !DstMO.getSubReg()) {
       // Constrain the DstReg register class if required.
-      if (DstReg.isVirtual())
-        if (const TargetRegisterClass *RC = TII->getRegClass(MCID, SrcIdx,
-                                                             TRI, *MF))
-          MRI->constrainRegClass(DstReg, RC);
+      if (DstReg.isVirtual()) {
+        const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
+        MRI->constrainRegClass(DstReg, RC);
+      }
       SrcMO.setReg(DstReg);
       SrcMO.setSubReg(0);
       LLVM_DEBUG(dbgs() << "\t\trewrite undef:\t" << *MI);

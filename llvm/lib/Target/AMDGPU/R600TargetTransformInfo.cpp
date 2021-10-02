@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600TargetTransformInfo.h"
+#include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "R600Subtarget.h"
 

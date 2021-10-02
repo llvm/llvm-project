@@ -649,3 +649,58 @@
 // CHECK-LD64-SHARED-NOT: "--no-as-needed"
 // CHECK-LD64-SHARED:     "-lm"
 // CHECK-LD64-SHARED:     "-lc"
+
+// Check powerpc-ibm-aix7.3.0.0, -fprofile-generate
+// RUN: %clang -no-canonical-prefixes %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        -static \
+// RUN:        -fprofile-generate\
+// RUN:        -target powerpc-ibm-aix7.3.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-PGO-NON-LTO %s
+// CHECK-PGO-NON-LTO-NOT: warning:
+// CHECK-PGO-NON-LTO:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.3.0.0"
+// CHECK-PGO-NON-LTO:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-PGO-NON-LTO:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-PGO-NON-LTO:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-PGO-NON-LTO:     "-bdbg:namedsects"
+// CHECK-PGO-NON-LTO:     "-b32"
+// CHECK-PGO-NON-LTO:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-PGO-NON-LTO:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-PGO-NON-LTO-NOT: "-lc++"
+// CHECK-PGO-NON-LTO-NOT: "-lc++abi"
+// CHECK-PGO-NON-LTO:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-PGO-NON-LTO-NOT: "--as-needed"
+// CHECK-PGO-NON-LTO-NOT: "-lunwind"
+// CHECK-PGO-NON-LTO-NOT: "--no-as-needed"
+// CHECK-PGO-NON-LTO-NOT: "-lm"
+// CHECK-PGO-NON-LTO:     "-lc"
+
+// Check powerpc-ibm-aix7.2.5.3, -fprofile-generate, -flto
+// RUN: %clang -no-canonical-prefixes %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        -static \
+// RUN:        -fprofile-generate\
+// RUN:        -flto\
+// RUN:        -target powerpc-ibm-aix7.2.5.3 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-PGO-LTO %s
+// CHECK-PGO-LTO-NOT: warning:
+// CHECK-PGO-LTO:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.2.5.3"
+// CHECK-PGO-LTO:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-PGO-LTO:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-PGO-LTO:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-PGO-LTO-NOT: "-bdbg:namedsects"
+// CHECK-PGO-LTO:     "-b32"
+// CHECK-PGO-LTO:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-PGO-LTO:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-PGO-LTO-NOT: "-lc++"
+// CHECK-PGO-LTO-NOT: "-lc++abi"
+// CHECK-PGO-LTO:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-PGO-LTO-NOT: "--as-needed"
+// CHECK-PGO-LTO-NOT: "-lunwind"
+// CHECK-PGO-LTO-NOT: "--no-as-needed"
+// CHECK-PGO-LTO-NOT: "-lm"
+// CHECK-PGO-LTO:     "-lc"

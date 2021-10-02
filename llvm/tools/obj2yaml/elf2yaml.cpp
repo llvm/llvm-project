@@ -201,7 +201,8 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
     if (const ELFYAML::RawContentSection *RawSec =
             dyn_cast<const ELFYAML::RawContentSection>(&S)) {
       if (RawSec->Type != ELF::SHT_PROGBITS || RawSec->Link || RawSec->Info ||
-          RawSec->AddressAlign != 1 || RawSec->Address || RawSec->EntSize)
+          RawSec->AddressAlign != yaml::Hex64{1} || RawSec->Address ||
+          RawSec->EntSize)
         return true;
 
       ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
@@ -209,7 +210,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
       if (SecName == "debug_str")
         return ShFlags != ELFYAML::ELF_SHF(ELF::SHF_MERGE | ELF::SHF_STRINGS);
 
-      return ShFlags != 0;
+      return ShFlags != ELFYAML::ELF_SHF{0};
     }
   }
 

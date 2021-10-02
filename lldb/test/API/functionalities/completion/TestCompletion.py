@@ -233,7 +233,7 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_log_file(self):
         # Complete in our source directory which contains a 'main.cpp' file.
-        src_dir =  os.path.dirname(os.path.realpath(__file__)) + '/'
+        src_dir =  self.getSourceDir() + '/'
         self.complete_from_to('log enable lldb expr -f ' + src_dir,
                               ['main.cpp'])
 

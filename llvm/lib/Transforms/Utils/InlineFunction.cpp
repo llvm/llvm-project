@@ -2110,7 +2110,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   SmallVector<Value*,4> VarArgsToForward;
   SmallVector<AttributeSet, 4> VarArgsAttrs;
   for (unsigned i = CalledFunc->getFunctionType()->getNumParams();
-       i < CB.getNumArgOperands(); i++) {
+       i < CB.arg_size(); i++) {
     VarArgsToForward.push_back(CB.getArgOperand(i));
     VarArgsAttrs.push_back(CB.getAttributes().getParamAttrs(i));
   }

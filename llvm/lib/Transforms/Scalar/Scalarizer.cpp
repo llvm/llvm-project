@@ -530,7 +530,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     return false;
 
   unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
-  unsigned NumArgs = CI.getNumArgOperands();
+  unsigned NumArgs = CI.arg_size();
 
   ValueVector ScalarOperands(NumArgs);
   SmallVector<Scatterer, 8> Scattered(NumArgs);

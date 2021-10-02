@@ -2589,32 +2589,46 @@ void test_p8overloads_backwards_compat() {
   /* ----------------------- predicates --------------------------- */
   /* vec_all_eq */
   res_i = vec_all_eq(vsll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vsll, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vull, vull);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vull, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vbll, vull);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   res_i = vec_all_eq(vbll, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
 
   /* vec_all_ne */
   res_i = vec_all_ne(vsll, vsll);
@@ -2679,32 +2693,60 @@ void test_p8overloads_backwards_compat() {
 
   /* vec_any_ne */
   res_i = vec_any_ne(vsll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vsll, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vull, vull);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vull, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vbll, vull);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   res_i = vec_any_ne(vbll, vbll);
-  // CHECK: @llvm.ppc.altivec.vcmpequd.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK: xor <2 x i64>
+  // CHECK: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK: xor i1
+  // CHECK-LE: xor <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequw.p
+  // CHECK-LE: xor i1
 
   /* vec_all_ge */
   res_i = vec_all_ge(vsll, vsll);

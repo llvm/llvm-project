@@ -36,9 +36,6 @@ namespace linalg {
 
 class ConvOp;
 class LinalgOp;
-class PoolingMaxOp;
-class PoolingMinOp;
-class PoolingSumOp;
 
 // TOFO: allow an extra ValueRange to specify an indexing and allow
 // non-hyperrectangular shapes.

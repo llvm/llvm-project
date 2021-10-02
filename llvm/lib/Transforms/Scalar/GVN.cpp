@@ -421,13 +421,12 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
       // a normal load or store instruction.
       CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
 
-      if (!local_cdep ||
-          local_cdep->getNumArgOperands() != C->getNumArgOperands()) {
+      if (!local_cdep || local_cdep->arg_size() != C->arg_size()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
 
-      for (unsigned i = 0, e = C->getNumArgOperands(); i < e; ++i) {
+      for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
         uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
         uint32_t cd_vn = lookupOrAdd(local_cdep->getArgOperand(i));
         if (c_vn != cd_vn) {
@@ -477,11 +476,11 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
       return nextValueNumber++;
     }
 
-    if (cdep->getNumArgOperands() != C->getNumArgOperands()) {
+    if (cdep->arg_size() != C->arg_size()) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
-    for (unsigned i = 0, e = C->getNumArgOperands(); i < e; ++i) {
+    for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
       uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
       uint32_t cd_vn = lookupOrAdd(cdep->getArgOperand(i));
       if (c_vn != cd_vn) {

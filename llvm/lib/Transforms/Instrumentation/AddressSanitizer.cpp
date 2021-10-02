@@ -1535,7 +1535,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
       Value *Mask = CI->getOperand(2 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
     } else {
-      for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
+      for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(CI->getArgOperand(ArgNo)))
           continue;
@@ -2982,7 +2982,8 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   if (LongSize != 32) return false;
   CallInst *CI = dyn_cast<CallInst>(I);
   if (!CI || !CI->isInlineAsm()) return false;
-  if (CI->getNumArgOperands() <= 5) return false;
+  if (CI->arg_size() <= 5)
+    return false;
   // We have inline assembly with quite a few arguments.
   return true;
 }

@@ -182,19 +182,8 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
 
-  // FIXME: These exclude directives were added as a workaround for
-  //        <rdar://problem/29247092> and should be removed once it is fixed.
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
-  exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
-
   // Exclude headers from LLVM_OrcSupport.
   exclude header "ExecutionEngine/Orc/Shared/OrcError.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
-
 }
 
 module LLVM_FileCheck {
@@ -220,9 +209,6 @@ module LLVM_OrcSupport {
   requires cplusplus
 
   header "ExecutionEngine/Orc/Shared/OrcError.h"
-  header "ExecutionEngine/Orc/Shared/RPCUtils.h"
-  header "ExecutionEngine/Orc/Shared/Serialization.h"
-  header "ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
   export *
 }

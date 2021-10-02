@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
@@ -65,9 +64,6 @@ int main(int argc, char *argv[]) {
           InFD, OutFD));
 
   ExitOnErr(Server->waitForDisconnect());
-
-  close(InFD);
-  close(OutFD);
 
   return 0;
 

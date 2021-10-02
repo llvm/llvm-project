@@ -1527,7 +1527,7 @@ unsigned AttributeList::getNumAttrSets() const {
 void AttributeList::print(raw_ostream &O) const {
   O << "AttributeList[\n";
 
-  for (unsigned i = index_begin(), e = index_end(); i != e; ++i) {
+  for (unsigned i : indexes()) {
     if (!getAttributes(i).hasAttributes())
       continue;
     O << "  { ";

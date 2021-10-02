@@ -845,47 +845,32 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       }
     }
 
+    // Similar to above, but look through an intermediate trunc instruction.
+    BinaryOperator *Shr;
+    if (match(Op0, m_OneUse(m_Trunc(m_OneUse(m_BinOp(Shr))))) &&
+        match(Shr, m_Shr(m_Value(X), m_APInt(C1)))) {
+      // The larger shift direction survives through the transform.
+      unsigned ShrAmtC = C1->getZExtValue();
+      unsigned ShDiff = ShrAmtC > ShAmtC ? ShrAmtC - ShAmtC : ShAmtC - ShrAmtC;
+      Constant *ShiftDiffC = ConstantInt::get(X->getType(), ShDiff);
+      auto ShiftOpc = ShrAmtC > ShAmtC ? Shr->getOpcode() : Instruction::Shl;
+
+      // If C1 > C:
+      // (trunc (X >> C1)) << C --> (trunc (X >> (C1 - C))) && (-1 << C)
+      // If C > C1:
+      // (trunc (X >> C1)) << C --> (trunc (X << (C - C1))) && (-1 << C)
+      Value *NewShift = Builder.CreateBinOp(ShiftOpc, X, ShiftDiffC, "sh.diff");
+      Value *Trunc = Builder.CreateTrunc(NewShift, Ty, "tr.sh.diff");
+      APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
+      return BinaryOperator::CreateAnd(Trunc, ConstantInt::get(Ty, Mask));
+    }
+
     if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
       unsigned AmtSum = ShAmtC + C1->getZExtValue();
       // Oversized shifts are simplified to zero in InstSimplify.
       if (AmtSum < BitWidth)
         // (X << C1) << C2 --> X << (C1 + C2)
         return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
-    }
-
-    // Fold shl(trunc(shr(x,c1)),c2) -> trunc(and(shl(shr(x,c1),c2),c2'))
-    // Require that the input operand is a non-poison shift-by-constant so that
-    // we have confidence that the shifts will get folded together.
-    Instruction *TrOp;
-    const APInt *TrShiftAmt;
-    if (match(Op0, m_OneUse(m_Trunc(m_Instruction(TrOp)))) &&
-        match(TrOp, m_OneUse(m_Shr(m_Value(), m_APInt(TrShiftAmt)))) &&
-        TrShiftAmt->ult(TrOp->getType()->getScalarSizeInBits())) {
-      Type *SrcTy = TrOp->getType();
-
-      // Okay, we'll do this xform.  Make the shift of shift.
-      unsigned SrcSize = SrcTy->getScalarSizeInBits();
-      Constant *ShAmt = ConstantInt::get(SrcTy, C->zext(SrcSize));
-
-      // (shift2 (shift1 & 0x00FF), c2)
-      Value *NSh = Builder.CreateBinOp(I.getOpcode(), TrOp, ShAmt, I.getName());
-
-      // For logical shifts, the truncation has the effect of making the high
-      // part of the register be zeros.  Emulate this by inserting an AND to
-      // clear the top bits as needed.  This 'and' will usually be zapped by
-      // other xforms later if dead.
-      Constant *MaskV =
-          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, BitWidth));
-
-      // The mask we constructed says what the trunc would do if occurring
-      // between the shifts.  We want to know the effect *after* the second
-      // shift.  We know that it is a logical shift by a constant, so adjust the
-      // mask as appropriate.
-      MaskV = ConstantExpr::get(I.getOpcode(), MaskV, ShAmt);
-      // shift1 & 0x00FF
-      Value *And = Builder.CreateAnd(NSh, MaskV, Op0->getName());
-      // Return the value truncated to the interesting size.
-      return new TruncInst(And, Ty);
     }
 
     // If we have an opposite shift by the same amount, we may be able to

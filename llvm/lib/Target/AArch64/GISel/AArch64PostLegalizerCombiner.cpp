@@ -262,6 +262,33 @@ void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changedInstr(MI);
 }
 
+/// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
+/// instruction.
+static bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  // If this is coming from a scalar compare then we can use a G_ZEXT instead of
+  // a G_ANYEXT:
+  //
+  // %cmp:_(s32) = G_[I|F]CMP ... <-- produces 0/1.
+  // %ext:_(s64) = G_ANYEXT %cmp(s32)
+  //
+  // By doing this, we can leverage more KnownBits combines.
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  return MRI.getType(Dst).isScalar() &&
+         mi_match(Src, MRI,
+                  m_any_of(m_GICmp(m_Pred(), m_Reg(), m_Reg()),
+                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
+}
+
+static void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B,
+                              GISelChangeObserver &Observer) {
+  Observer.changingInstr(MI);
+  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
+  Observer.changedInstr(MI);
+}
+
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGICombiner.inc"
 #undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
