@@ -28,6 +28,7 @@ void detail::InterfaceMap::insert(
     });
     if (it != interfaces.end() && it->first == id) {
       LLVM_DEBUG(llvm::dbgs() << "Ignoring repeated interface registration");
+      free(element.second);
       continue;
     }
     interfaces.insert(it, element);
