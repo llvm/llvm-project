@@ -2,7 +2,7 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-dwarf.perfscript --binary=%S/Inputs/unique-linkage-name-dwarf.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DWARF-FNAME
 
-; CHECK-DWARF-FNAME:[main:1 @ foo]:309:0
+; CHECK-DWARF-FNAME:[main:1 @ foo]:225:0
 ; CHECK-DWARF-FNAME: 2: 14
 ; CHECK-DWARF-FNAME: 3: 29 bar.__uniq.26267048767521081047744692097241227776:14
 ; CHECK-DWARF-FNAME:[main:1 @ foo:3 @ bar.__uniq.26267048767521081047744692097241227776]:84:0

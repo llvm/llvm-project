@@ -3,15 +3,15 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
-CHECK: main:836:0
+CHECK: main:669:0
 CHECK:  0: 0
 CHECK:  2: 0
-CHECK:  1: foo:836
+CHECK:  1: foo:669
 CHECK:   2.1: 42
 CHECK:   3: 62
 CHECK:   3.2: 21
 CHECK:   4: 0
-CHECK:   3.1: bar:252
+CHECK:   3.1: bar:210
 CHECK:    1: 42
 CHECK:   3.2: bar:63
 CHECK:    1: 21
