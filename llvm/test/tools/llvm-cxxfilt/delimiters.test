@@ -27,6 +27,7 @@ RUN:      "\"_Z3Foo{\"" \
 RUN:      '_Z3Foo|'   \
 RUN:      '_Z3Foo}'   \
 RUN:      '_Z3Foo~,,' \
+RUN:      '_Z3Foo⦙_Z3Bar' \
 RUN:      '_Z3Foo,,_Z3Bar::_Z3Baz  _Z3Foo,_Z3Bar:_Z3Baz' \
 RUN:      '_Z3Foo$ ._Z3Foo' | llvm-cxxfilt -n | FileCheck %s
 
@@ -59,5 +60,6 @@ CHECK: Foo{
 CHECK: Foo|
 CHECK: Foo}
 CHECK: Foo~,,
+CHECK: Foo⦙Bar
 CHECK: Foo,,Bar::Baz  Foo,Bar:Baz
 CHECK: _Z3Foo$ ._Z3Foo

@@ -128,7 +128,7 @@ static void SplitStringDelims(
 static bool IsLegalItaniumChar(char C) {
   // Itanium CXX ABI [External Names]p5.1.1:
   // '$' and '.' in mangled names are reserved for private implementations.
-  return isalnum(C) || C == '.' || C == '$' || C == '_';
+  return isAlnum(C) || C == '.' || C == '$' || C == '_';
 }
 
 // If 'Split' is true, then 'Mangled' is broken into individual words and each
