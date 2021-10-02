@@ -1380,8 +1380,9 @@ public:
       const auto &SM = Recorder->CCSema->getSourceManager();
       llvm::StringMap<SourceParams> ProxSources;
       auto MainFileID =
-          Includes.getOrCreateID(SM.getFileEntryForID(SM.getMainFileID()));
-      for (auto &HeaderIDAndDepth : Includes.includeDepth(MainFileID)) {
+          Includes.getID(SM.getFileEntryForID(SM.getMainFileID()), SM);
+      assert(MainFileID);
+      for (auto &HeaderIDAndDepth : Includes.includeDepth(*MainFileID)) {
         auto &Source =
             ProxSources[Includes.getRealPath(HeaderIDAndDepth.getFirst())];
         Source.Cost = HeaderIDAndDepth.getSecond() * ProxOpts.IncludeCost;

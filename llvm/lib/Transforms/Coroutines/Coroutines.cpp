@@ -126,6 +126,7 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.alloc",
       "llvm.coro.async.context.alloc",
       "llvm.coro.async.context.dealloc",
+      "llvm.coro.async.resume",
       "llvm.coro.async.size.replace",
       "llvm.coro.async.store_resume",
       "llvm.coro.begin",
@@ -721,7 +722,7 @@ void CoroAsyncEndInst::checkWellFormed() const {
     return;
   auto *FnTy =
       cast<FunctionType>(MustTailCallFunc->getType()->getPointerElementType());
-  if (FnTy->getNumParams() != (getNumArgOperands() - 3))
+  if (FnTy->getNumParams() != (arg_size() - 3))
     fail(this,
          "llvm.coro.end.async must tail call function argument type must "
          "match the tail arguments",

@@ -34,8 +34,8 @@
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -105,14 +105,6 @@ hsa_status_t amd_agent_iterate_memory_pools(hsa_agent_t Agent, C cb) {
 struct FuncOrGblEntryTy {
   __tgt_target_table Table;
   std::vector<__tgt_offload_entry> Entries;
-};
-
-enum ExecutionModeType {
-  SPMD,         // constructors, destructors,
-                // combined constructs (`teams distribute parallel for [simd]`)
-  GENERIC,      // everything else
-  SPMD_GENERIC, // Generic kernel with SPMD execution
-  NONE
 };
 
 struct KernelArgPool {
@@ -219,18 +211,14 @@ std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
 
 /// Use a single entity to encode a kernel and a set of flags
 struct KernelTy {
-  // execution mode of kernel
-  // 0 - SPMD mode (without master warp)
-  // 1 - Generic mode (with master warp)
-  // 2 - SPMD mode execution with Generic mode semantics.
-  int8_t ExecutionMode;
+  llvm::omp::OMPTgtExecModeFlags ExecutionMode;
   int16_t ConstWGSize;
   int32_t device_id;
   void *CallStackAddr = nullptr;
   const char *Name;
 
-  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
-           void *_CallStackAddr, const char *_Name,
+  KernelTy(llvm::omp::OMPTgtExecModeFlags _ExecutionMode, int16_t _ConstWGSize,
+           int32_t _device_id, void *_CallStackAddr, const char *_Name,
            uint32_t _kernarg_segment_size,
            hsa_amd_memory_pool_t &KernArgMemoryPool)
       : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
@@ -326,7 +314,7 @@ hsa_status_t isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   return (AllocAllowed && Size > 0) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
 }
 
-hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
+hsa_status_t addMemoryPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   std::vector<hsa_amd_memory_pool_t> *Result =
       static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
 
@@ -335,64 +323,8 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
     return err;
   }
 
-  uint32_t GlobalFlags = 0;
-  err = hsa_amd_memory_pool_get_info(
-      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Get memory pool info failed: %s\n", get_error_string(err));
-    return err;
-  }
-
-  if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
-      (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)) {
-    Result->push_back(MemoryPool);
-  }
-
+  Result->push_back(MemoryPool);
   return HSA_STATUS_SUCCESS;
-}
-
-template <typename AccumulatorFunc>
-hsa_status_t collectMemoryPools(const std::vector<hsa_agent_t> &Agents,
-                                AccumulatorFunc Func) {
-  for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
-    hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
-        Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
-          hsa_status_t Err;
-          if ((Err = isValidMemoryPool(MemoryPool)) != HSA_STATUS_SUCCESS) {
-            DP("Skipping memory pool: %s\n", get_error_string(Err));
-          } else
-            Func(MemoryPool, DeviceId);
-          return HSA_STATUS_SUCCESS;
-        });
-
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-         "Iterate all memory pools", get_error_string(Err));
-      return Err;
-    }
-  }
-
-  return HSA_STATUS_SUCCESS;
-}
-
-std::pair<hsa_status_t, hsa_amd_memory_pool_t>
-FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
-  std::vector<hsa_amd_memory_pool_t> KernArgPools;
-  for (const auto &Agent : HSAAgents) {
-    hsa_status_t err = HSA_STATUS_SUCCESS;
-    err = hsa_amd_agent_iterate_memory_pools(
-        Agent, addKernArgPool, static_cast<void *>(&KernArgPools));
-    if (err != HSA_STATUS_SUCCESS) {
-      DP("addKernArgPool returned %s, continuing\n", get_error_string(err));
-    }
-  }
-
-  if (KernArgPools.empty()) {
-    DP("Unable to find any valid kernarg pool\n");
-    return {HSA_STATUS_ERROR, hsa_amd_memory_pool_t{}};
-  }
-
-  return {HSA_STATUS_SUCCESS, KernArgPools[0]};
 }
 
 } // namespace
@@ -632,49 +564,71 @@ public:
     return HSA_STATUS_SUCCESS;
   }
 
-  hsa_status_t addHostMemoryPool(hsa_amd_memory_pool_t MemoryPool,
-                                 int DeviceId) {
-    uint32_t GlobalFlags = 0;
-    hsa_status_t Err = hsa_amd_memory_pool_get_info(
-        MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
+  hsa_status_t setupDevicePools(const std::vector<hsa_agent_t> &Agents) {
+    for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
+      hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
+          Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
+            hsa_status_t ValidStatus = core::isValidMemoryPool(MemoryPool);
+            if (ValidStatus != HSA_STATUS_SUCCESS) {
+              DP("Alloc allowed in memory pool check failed: %s\n",
+                 get_error_string(ValidStatus));
+              return HSA_STATUS_SUCCESS;
+            }
+            return addDeviceMemoryPool(MemoryPool, DeviceId);
+          });
 
-    if (Err != HSA_STATUS_SUCCESS) {
-      return Err;
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Iterate all memory pools", get_error_string(Err));
+        return Err;
+      }
     }
-
-    uint32_t Size;
-    Err = hsa_amd_memory_pool_get_info(MemoryPool,
-                                       HSA_AMD_MEMORY_POOL_INFO_SIZE, &Size);
-    if (Err != HSA_STATUS_SUCCESS) {
-      return Err;
-    }
-
-    if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED &&
-        Size > 0) {
-      HostFineGrainedMemoryPool = MemoryPool;
-    }
-
     return HSA_STATUS_SUCCESS;
   }
 
-  hsa_status_t setupMemoryPools() {
-    using namespace std::placeholders;
-    hsa_status_t Err;
-    Err = core::collectMemoryPools(
-        CPUAgents, std::bind(&RTLDeviceInfoTy::addHostMemoryPool, this, _1, _2));
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("HSA error in collecting memory pools for CPU: %s\n",
-         get_error_string(Err));
-      return Err;
+  hsa_status_t setupHostMemoryPools(std::vector<hsa_agent_t> &Agents) {
+    std::vector<hsa_amd_memory_pool_t> HostPools;
+
+    // collect all the "valid" pools for all the given agents.
+    for (const auto &Agent : Agents) {
+      hsa_status_t Err = hsa_amd_agent_iterate_memory_pools(
+          Agent, core::addMemoryPool, static_cast<void *>(&HostPools));
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Iterate all memory pools", get_error_string(Err));
+        return Err;
+      }
     }
-    Err = core::collectMemoryPools(
-        HSAAgents, std::bind(&RTLDeviceInfoTy::addDeviceMemoryPool, this, _1, _2));
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("HSA error in collecting memory pools for offload devices: %s\n",
-         get_error_string(Err));
-      return Err;
+
+    // We need two fine-grained pools.
+    //  1. One with kernarg flag set for storing kernel arguments
+    //  2. Second for host allocations
+    bool FineGrainedMemoryPoolSet = false;
+    bool KernArgPoolSet = false;
+    for (const auto &MemoryPool : HostPools) {
+      hsa_status_t Err = HSA_STATUS_SUCCESS;
+      uint32_t GlobalFlags = 0;
+      Err = hsa_amd_memory_pool_get_info(
+          MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("Get memory pool info failed: %s\n", get_error_string(Err));
+        return Err;
+      }
+
+      if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) {
+        if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
+          KernArgPool = MemoryPool;
+          KernArgPoolSet = true;
+        }
+        HostFineGrainedMemoryPool = MemoryPool;
+        FineGrainedMemoryPoolSet = true;
+      }
     }
-    return HSA_STATUS_SUCCESS;
+
+    if (FineGrainedMemoryPoolSet && KernArgPoolSet)
+      return HSA_STATUS_SUCCESS;
+
+    return HSA_STATUS_ERROR;
   }
 
   hsa_amd_memory_pool_t getDeviceMemoryPool(int DeviceId) {
@@ -743,11 +697,6 @@ public:
     } else {
       DP("There are %d devices supporting HSA.\n", NumberOfDevices);
     }
-    std::tie(err, KernArgPool) = core::FindKernargPool(CPUAgents);
-    if (err != HSA_STATUS_SUCCESS) {
-      DP("Error when reading memory pools\n");
-      return;
-    }
 
     // Init the device info
     HSAQueues.resize(NumberOfDevices);
@@ -765,9 +714,15 @@ public:
     DeviceCoarseGrainedMemoryPools.resize(NumberOfDevices);
     DeviceFineGrainedMemoryPools.resize(NumberOfDevices);
 
-    err = setupMemoryPools();
+    err = setupDevicePools(HSAAgents);
     if (err != HSA_STATUS_SUCCESS) {
-      DP("Error when setting up memory pools");
+      DP("Setup for Device Memory Pools failed\n");
+      return;
+    }
+
+    err = setupHostMemoryPools(CPUAgents);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Setup for Host Memory Pools failed\n");
       return;
     }
 
@@ -1694,7 +1649,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     // default value GENERIC (in case symbol is missing from cubin file)
-    int8_t ExecModeVal = ExecutionModeType::GENERIC;
+    llvm::omp::OMPTgtExecModeFlags ExecModeVal =
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
     // get flat group size if present, else Default_WG_Size
     int16_t WGSizeVal = RTLDeviceInfoTy::Default_WG_Size;
@@ -1705,7 +1661,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       uint16_t Version;
       uint16_t TSize;
       uint16_t WG_Size;
-      uint8_t Mode;
     };
     struct KernDescValType KernDescVal;
     std::string KernDescNameStr(e->name);
@@ -1735,11 +1690,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       DP("KernDesc: Version: %d\n", KernDescVal.Version);
       DP("KernDesc: TSize: %d\n", KernDescVal.TSize);
       DP("KernDesc: WG_Size: %d\n", KernDescVal.WG_Size);
-      DP("KernDesc: Mode: %d\n", KernDescVal.Mode);
 
-      // Get ExecMode
-      ExecModeVal = KernDescVal.Mode;
-      DP("ExecModeVal %d\n", ExecModeVal);
       if (KernDescVal.WG_Size == 0) {
         KernDescVal.WG_Size = RTLDeviceInfoTy::Default_WG_Size;
         DP("Setting KernDescVal.WG_Size to default %d\n", KernDescVal.WG_Size);
@@ -1749,43 +1700,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       check("Loading KernDesc computation property", err);
     } else {
       DP("Warning: Loading KernDesc '%s' - symbol not found, ", KernDescName);
-
-      // Generic
-      std::string ExecModeNameStr(e->name);
-      ExecModeNameStr += "_exec_mode";
-      const char *ExecModeName = ExecModeNameStr.c_str();
-
-      void *ExecModePtr;
-      uint32_t varsize;
-      err = interop_get_symbol_info((char *)image->ImageStart, img_size,
-                                    ExecModeName, &ExecModePtr, &varsize);
-
-      if (err == HSA_STATUS_SUCCESS) {
-        if ((size_t)varsize != sizeof(int8_t)) {
-          DP("Loading global computation properties '%s' - size mismatch(%u != "
-             "%lu)\n",
-             ExecModeName, varsize, sizeof(int8_t));
-          return NULL;
-        }
-
-        memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
-
-        DP("After loading global for %s ExecMode = %d\n", ExecModeName,
-           ExecModeVal);
-
-        if (ExecModeVal < 0 || ExecModeVal > 2) {
-          DP("Error wrong exec_mode value specified in HSA code object file: "
-             "%d\n",
-             ExecModeVal);
-          return NULL;
-        }
-      } else {
-        DP("Loading global exec_mode '%s' - symbol missing, using default "
-           "value "
-           "GENERIC (1)\n",
-           ExecModeName);
-      }
-      check("Loading computation property", err);
 
       // Flat group size
       std::string WGSizeNameStr(e->name);
@@ -1825,6 +1739,44 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       check("Loading WGSize computation property", err);
     }
+
+    // Read execution mode from global in binary
+    std::string ExecModeNameStr(e->name);
+    ExecModeNameStr += "_exec_mode";
+    const char *ExecModeName = ExecModeNameStr.c_str();
+
+    void *ExecModePtr;
+    uint32_t varsize;
+    err = interop_get_symbol_info((char *)image->ImageStart, img_size,
+                                  ExecModeName, &ExecModePtr, &varsize);
+
+    if (err == HSA_STATUS_SUCCESS) {
+      if ((size_t)varsize != sizeof(llvm::omp::OMPTgtExecModeFlags)) {
+        DP("Loading global computation properties '%s' - size mismatch(%u != "
+           "%lu)\n",
+           ExecModeName, varsize, sizeof(llvm::omp::OMPTgtExecModeFlags));
+        return NULL;
+      }
+
+      memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
+
+      DP("After loading global for %s ExecMode = %d\n", ExecModeName,
+         ExecModeVal);
+
+      if (ExecModeVal < 0 ||
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
+        DP("Error wrong exec_mode value specified in HSA code object file: "
+           "%d\n",
+           ExecModeVal);
+        return NULL;
+      }
+    } else {
+      DP("Loading global exec_mode '%s' - symbol missing, using default "
+         "value "
+         "GENERIC (1)\n",
+         ExecModeName);
+    }
+    check("Loading computation property", err);
 
     KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, device_id,
                                    CallStackAddr, e->name, kernarg_segment_size,
@@ -1916,9 +1868,10 @@ struct launchVals {
   int GridSize;
 };
 launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
-                         int ConstWGSize, int ExecutionMode, int num_teams,
-                         int thread_limit, uint64_t loop_tripcount,
-                         int DeviceNumTeams) {
+                         int ConstWGSize,
+                         llvm::omp::OMPTgtExecModeFlags ExecutionMode,
+                         int num_teams, int thread_limit,
+                         uint64_t loop_tripcount, int DeviceNumTeams) {
 
   int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
   int num_groups = 0;
@@ -1943,7 +1896,9 @@ launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
   if (thread_limit > 0) {
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
-    if (ExecutionMode == GENERIC) { // Add master warp for GENERIC
+    // Add master warp for GENERIC
+    if (ExecutionMode ==
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
       threadsPerGroup += WarpSize;
       DP("Adding master wavefront: +%d threads\n", WarpSize);
     }
@@ -2004,12 +1959,14 @@ launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
   } else {
     if (num_teams <= 0) {
       if (loop_tripcount > 0) {
-        if (ExecutionMode == SPMD) {
+        if (ExecutionMode ==
+            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD) {
           // round up to the nearest integer
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-        } else if (ExecutionMode == GENERIC) {
+        } else if (ExecutionMode ==
+                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
           num_groups = loop_tripcount;
-        } else /* ExecutionMode == SPMD_GENERIC */ {
+        } else /* OMP_TGT_EXEC_MODE_GENERIC_SPMD */ {
           // This is a generic kernel that was transformed to use SPMD-mode
           // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;

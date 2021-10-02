@@ -510,15 +510,16 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
   // Ensure file proximity signals are correct.
-  auto &FM = PatchedAST->getSourceManager().getFileManager();
+  auto &SM = PatchedAST->getSourceManager();
+  auto &FM = SM.getFileManager();
   // Copy so that we can use operator[] to get the children.
   IncludeStructure Includes = PatchedAST->getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(MainFE);
-  auto MainID = Includes.getID(*MainFE);
+  auto MainID = Includes.getID(*MainFE, SM);
   auto AuxFE = FM.getFile(testPath("sub/aux.h"));
   ASSERT_TRUE(AuxFE);
-  auto AuxID = Includes.getID(*AuxFE);
+  auto AuxID = Includes.getID(*AuxFE, SM);
   EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID));
 }
 
@@ -553,17 +554,18 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
   // Ensure file proximity signals are correct.
-  auto &FM = ExpectedAST.getSourceManager().getFileManager();
+  auto &SM = ExpectedAST.getSourceManager();
+  auto &FM = SM.getFileManager();
   // Copy so that we can getOrCreateID().
   IncludeStructure Includes = ExpectedAST.getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(MainFE);
-  auto MainID = Includes.getOrCreateID(*MainFE);
+  auto MainID = Includes.getOrCreateID(*MainFE, SM);
   auto &PatchedFM = PatchedAST->getSourceManager().getFileManager();
   IncludeStructure PatchedIncludes = PatchedAST->getIncludeStructure();
   auto PatchedMainFE = PatchedFM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(PatchedMainFE);
-  auto PatchedMainID = PatchedIncludes.getOrCreateID(*PatchedMainFE);
+  auto PatchedMainID = PatchedIncludes.getOrCreateID(*PatchedMainFE, SM);
   EXPECT_EQ(Includes.includeDepth(MainID)[MainID],
             PatchedIncludes.includeDepth(PatchedMainID)[PatchedMainID]);
 }

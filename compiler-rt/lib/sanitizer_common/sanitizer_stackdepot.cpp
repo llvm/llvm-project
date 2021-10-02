@@ -125,7 +125,9 @@ bool StackDepotReverseMap::IdDescPair::IdComparator(
   return a.id < b.id;
 }
 
-StackDepotReverseMap::StackDepotReverseMap() {
+void StackDepotReverseMap::Init() const {
+  if (LIKELY(map_.capacity()))
+    return;
   map_.reserve(StackDepotGetStats().n_uniq_ids + 100);
   for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
     atomic_uintptr_t *p = &theDepot.tab[idx];
@@ -139,7 +141,8 @@ StackDepotReverseMap::StackDepotReverseMap() {
   Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
 }
 
-StackTrace StackDepotReverseMap::Get(u32 id) {
+StackTrace StackDepotReverseMap::Get(u32 id) const {
+  Init();
   if (!map_.size())
     return StackTrace();
   IdDescPair pair = {id, nullptr};

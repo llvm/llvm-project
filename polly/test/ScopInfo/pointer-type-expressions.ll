@@ -35,7 +35,7 @@ return:
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT:   {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT:   {  :  false }
+; CHECK-NEXT:   { : N >= 1152921504606846977 and (P < 0 or P > 0) }
 
 ; CHECK:  Stmt_store
 ; CHECK:        Domain :=

@@ -266,14 +266,10 @@ class TestMembersAndLocalsWithSameName(TestBase):
 
     def enable_expression_log(self):
         log_file = self.getBuildArtifact("expr.log")
-        if configuration.is_reproducer_replay():
-            log_file = self.getReproducerRemappedPath(log_file)
         self.runCmd("log enable  -f '%s' lldb expr" % (log_file))
 
     def disable_expression_log_and_check_for_locals(self, variables):
         log_file = self.getBuildArtifact("expr.log")
-        if configuration.is_reproducer_replay():
-            log_file = self.getReproducerRemappedPath(log_file)
         self.runCmd("log disable lldb expr")
         local_var_regex = re.compile(r".*__lldb_local_vars::(.*);")
         matched = []

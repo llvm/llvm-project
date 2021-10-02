@@ -746,14 +746,6 @@ class Base(unittest2.TestCase):
         return os.path.join(configuration.test_build_dir, self.mydir,
                             self.getBuildDirBasename())
 
-    def getReproducerDir(self):
-        """Return the full path to the reproducer if enabled."""
-        if configuration.capture_path:
-            return configuration.capture_path
-        if configuration.replay_path:
-            return configuration.replay_path
-        return None
-
     def makeBuildDir(self):
         """Create the test-specific working directory, deleting any previous
         contents."""
@@ -769,16 +761,6 @@ class Base(unittest2.TestCase):
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
-
-    def getReproducerArtifact(self, name):
-        lldbutil.mkdir_p(self.getReproducerDir())
-        return os.path.join(self.getReproducerDir(), name)
-
-    def getReproducerRemappedPath(self, path):
-        assert configuration.replay_path
-        assert os.path.isabs(path)
-        path = os.path.relpath(path, '/')
-        return os.path.join(configuration.replay_path, 'root', path)
 
     @classmethod
     def setUpCommands(cls):
@@ -1097,11 +1079,8 @@ class Base(unittest2.TestCase):
         # the shared module cache.
         lldb.SBModule.GarbageCollectAllocatedModules()
 
-        # Modules are not orphaned during reproducer replay because they're
-        # leaked on purpose.
-        if not configuration.is_reproducer():
-            # Assert that the global module cache is empty.
-            self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+        # Assert that the global module cache is empty.
+        self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
 
 
     # =========================================================
@@ -2101,9 +2080,8 @@ class TestBase(Base):
         for target in targets:
             self.dbg.DeleteTarget(target)
 
-        if not configuration.is_reproducer():
-            # Assert that all targets are deleted.
-            self.assertEqual(self.dbg.GetNumTargets(), 0)
+        # Assert that all targets are deleted.
+        self.assertEqual(self.dbg.GetNumTargets(), 0)
 
         # Do this last, to make sure it's in reverse order from how we setup.
         Base.tearDown(self)

@@ -284,7 +284,7 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
     return false;
 
   auto *FTy = F->getFunctionType();
-  if (FTy->getNumParams() > CB.getNumArgOperands()) {
+  if (FTy->getNumParams() > CB.arg_size()) {
     LLVM_DEBUG(dbgs() << "Too few arguments for function.\n");
     return false;
   }

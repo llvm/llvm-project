@@ -102,9 +102,4 @@ class SetWatchpointAPITestCase(TestBase):
             PROCESS_EXITED)
 
         self.dbg.DeleteTarget(target)
-
-        # The next check relies on the watchpoint being destructed, which does
-        # not happen during replay because objects are intentionally kept alive
-        # forever.
-        if not configuration.is_reproducer():
-            self.assertFalse(watchpoint.IsValid())
+        self.assertFalse(watchpoint.IsValid())

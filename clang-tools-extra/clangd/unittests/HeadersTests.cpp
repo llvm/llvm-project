@@ -69,9 +69,10 @@ private:
 protected:
   IncludeStructure::HeaderID getID(StringRef Filename,
                                    IncludeStructure &Includes) {
-    auto Entry = Clang->getSourceManager().getFileManager().getFile(Filename);
+    auto &SM = Clang->getSourceManager();
+    auto Entry = SM.getFileManager().getFile(Filename);
     EXPECT_TRUE(Entry);
-    return Includes.getOrCreateID(*Entry);
+    return Includes.getOrCreateID(*Entry, SM);
   }
 
   IncludeStructure collectIncludes() {

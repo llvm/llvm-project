@@ -16,42 +16,36 @@ class BreakpointSerialization(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_resolvers(self):
         """Use Python APIs to test that we serialize resolvers."""
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_resolvers()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_filters(self):
         """Use Python APIs to test that we serialize search filters correctly."""
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_filters()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_options(self):
         """Use Python APIs to test that we serialize breakpoint options correctly."""
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_options()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_appending(self):
         """Use Python APIs to test that we serialize breakpoint options correctly."""
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_appending()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_name_filters(self):
         """Use python APIs to test that reading in by name works correctly."""
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_names()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_scripted_extra_args(self):
         self.build()
         self.setup_targets_and_cleanup()

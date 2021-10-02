@@ -208,7 +208,8 @@ MaybeExtentExpr GetSize(Shape &&shape) {
 
 ConstantSubscript GetSize(const ConstantSubscripts &shape) {
   ConstantSubscript size{1};
-  for (auto dim : std::move(shape)) {
+  for (auto dim : shape) {
+    CHECK(dim >= 0);
     size *= dim;
   }
   return size;
@@ -652,14 +653,15 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           }
         }
       }
-    } else if (intrinsic->name == "maxloc" || intrinsic->name == "minloc") {
-      // TODO: FINDLOC
-      if (call.arguments().size() >= 2) {
+    } else if (intrinsic->name == "findloc" || intrinsic->name == "maxloc" ||
+        intrinsic->name == "minloc") {
+      std::size_t dimIndex{intrinsic->name == "findloc" ? 2u : 1u};
+      if (call.arguments().size() > dimIndex) {
         if (auto arrayShape{
                 (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))}) {
           auto rank{static_cast<int>(arrayShape->size())};
           if (const auto *dimArg{
-                  UnwrapExpr<Expr<SomeType>>(call.arguments()[1])}) {
+                  UnwrapExpr<Expr<SomeType>>(call.arguments()[dimIndex])}) {
             auto dim{ToInt64(*dimArg)};
             if (dim && *dim >= 1 && *dim <= rank) {
               arrayShape->erase(arrayShape->begin() + (*dim - 1));

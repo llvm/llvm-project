@@ -24,7 +24,6 @@ class SessionSaveTestCase(TestBase):
 
 
     @skipIfWindows
-    @skipIfReproducer
     @no_debug_info_test
     def test_session_save(self):
         raw = ""
@@ -92,7 +91,6 @@ class SessionSaveTestCase(TestBase):
             self.assertIn(line, content)
 
     @skipIfWindows
-    @skipIfReproducer
     @no_debug_info_test
     def test_session_save_on_quit(self):
         raw = ""

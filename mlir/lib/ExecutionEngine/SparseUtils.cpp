@@ -674,7 +674,6 @@ IMPL3(addEltI32, int32_t)
 IMPL3(addEltI16, int16_t)
 IMPL3(addEltI8, int8_t)
 
-#undef TEMPLATE
 #undef CASE
 #undef IMPL1
 #undef IMPL2

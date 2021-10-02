@@ -139,9 +139,9 @@ define <2 x i32> @lshr_lshr_vec(<2 x i32> %A) {
 
 define i8 @shl_trunc_bigger_lshr(i32 %x) {
 ; CHECK-LABEL: @shl_trunc_bigger_lshr(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TMP2]], -8
+; CHECK-NEXT:    [[SH_DIFF:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i32 [[SH_DIFF]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TR_SH_DIFF]], -8
 ; CHECK-NEXT:    ret i8 [[LT]]
 ;
   %rt = lshr i32 %x, 5
@@ -153,13 +153,63 @@ define i8 @shl_trunc_bigger_lshr(i32 %x) {
 define i8 @shl_trunc_smaller_lshr(i32 %x) {
 ; CHECK-LABEL: @shl_trunc_smaller_lshr(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X_TR]], 2
-; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TMP1]], -32
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = shl i8 [[X_TR]], 2
+; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TR_SH_DIFF]], -32
 ; CHECK-NEXT:    ret i8 [[LT]]
 ;
   %rt = lshr i32 %x, 3
   %tr = trunc i32 %rt to i8
   %lt = shl i8 %tr, 5
+  ret i8 %lt
+}
+
+define i24 @shl_trunc_bigger_ashr(i32 %x) {
+; CHECK-LABEL: @shl_trunc_bigger_ashr(
+; CHECK-NEXT:    [[SH_DIFF:%.*]] = ashr i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i32 [[SH_DIFF]] to i24
+; CHECK-NEXT:    [[LT:%.*]] = and i24 [[TR_SH_DIFF]], -8
+; CHECK-NEXT:    ret i24 [[LT]]
+;
+  %rt = ashr i32 %x, 12
+  %tr = trunc i32 %rt to i24
+  %lt = shl i24 %tr, 3
+  ret i24 %lt
+}
+
+define i24 @shl_trunc_smaller_ashr(i32 %x) {
+; CHECK-LABEL: @shl_trunc_smaller_ashr(
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i24
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = shl i24 [[X_TR]], 3
+; CHECK-NEXT:    [[LT:%.*]] = and i24 [[TR_SH_DIFF]], -8192
+; CHECK-NEXT:    ret i24 [[LT]]
+;
+  %rt = ashr i32 %x, 10
+  %tr = trunc i32 %rt to i24
+  %lt = shl i24 %tr, 13
+  ret i24 %lt
+}
+
+define i8 @shl_trunc_bigger_shl(i32 %x) {
+; CHECK-LABEL: @shl_trunc_bigger_shl(
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TR:%.*]] = shl i8 [[X_TR]], 6
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %rt = shl i32 %x, 4
+  %tr = trunc i32 %rt to i8
+  %lt = shl i8 %tr, 2
+  ret i8 %lt
+}
+
+define i8 @shl_trunc_smaller_shl(i32 %x) {
+; CHECK-LABEL: @shl_trunc_smaller_shl(
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TR:%.*]] = shl i8 [[X_TR]], 6
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %rt = shl i32 %x, 2
+  %tr = trunc i32 %rt to i8
+  %lt = shl i8 %tr, 4
   ret i8 %lt
 }
 

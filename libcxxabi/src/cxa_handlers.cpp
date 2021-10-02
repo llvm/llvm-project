@@ -6,7 +6,7 @@
 //
 //
 // This file implements the functionality associated with the terminate_handler,
-//   unexpected_handler, and new_handler.
+// unexpected_handler, and new_handler.
 //===----------------------------------------------------------------------===//
 
 #include <stdexcept>
@@ -90,16 +90,6 @@ terminate() noexcept
     }
 #endif
     __terminate(get_terminate());
-}
-
-extern "C" {
-new_handler __cxa_new_handler = 0;
-}
-
-new_handler
-set_new_handler(new_handler handler) noexcept
-{
-    return __libcpp_atomic_exchange(&__cxa_new_handler, handler, _AO_Acq_Rel);
 }
 
 new_handler

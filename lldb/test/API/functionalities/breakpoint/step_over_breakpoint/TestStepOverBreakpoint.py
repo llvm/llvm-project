@@ -51,7 +51,6 @@ class StepOverBreakpointsTestCase(TestBase):
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint1)
         self.assertIsNotNone(self.thread, "Didn't stop at breakpoint 1.")
 
-    @skipIfReproducer
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions('main', lldb.eFunctionNameTypeAuto)

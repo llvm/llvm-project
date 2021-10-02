@@ -26,6 +26,10 @@ void RTNAME(PauseStatementText)(const char *, size_t);
 NORETURN void RTNAME(FailImageStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
+// Extensions
+NORETURN void RTNAME(Exit)(int status = EXIT_SUCCESS);
+NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
+
 FORTRAN_EXTERN_C_END
 
 #endif // FORTRAN_RUNTIME_STOP_H_

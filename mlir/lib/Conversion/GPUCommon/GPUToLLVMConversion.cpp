@@ -745,13 +745,15 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
   auto nullpointer = rewriter.create<LLVM::NullOp>(loc, llvmPointerPointerType);
-  launchKernelCallBuilder.create(loc, rewriter,
-                                 {function.getResult(0), adaptor.gridSizeX(),
-                                  adaptor.gridSizeY(), adaptor.gridSizeZ(),
-                                  adaptor.blockSizeX(), adaptor.blockSizeY(),
-                                  adaptor.blockSizeZ(),
-                                  /*sharedMemBytes=*/zero, stream, kernelParams,
-                                  /*extra=*/nullpointer});
+  Value dynamicSharedMemorySize = launchOp.dynamicSharedMemorySize()
+                                      ? launchOp.dynamicSharedMemorySize()
+                                      : zero;
+  launchKernelCallBuilder.create(
+      loc, rewriter,
+      {function.getResult(0), adaptor.gridSizeX(), adaptor.gridSizeY(),
+       adaptor.gridSizeZ(), adaptor.blockSizeX(), adaptor.blockSizeY(),
+       adaptor.blockSizeZ(), dynamicSharedMemorySize, stream, kernelParams,
+       /*extra=*/nullpointer});
 
   if (launchOp.asyncToken()) {
     // Async launch: make dependent ops use the same stream.

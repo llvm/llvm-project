@@ -15,10 +15,10 @@ Section,Description,Dependencies,Assignee,Patch,Status,First released version
 `[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - integral types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103433 <https://reviews.llvm.org/D103433>`__",|Review|,
 `[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - floating-point types",`D70631 <https://llvm.org/D70631>`__,Mark de Wever,,|In Progress|,
 `[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - pointer types",,Unassigned,,|Not Started|,
-`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - character types",,Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Review|,
-`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - string types",`D103379 <https://reviews.llvm.org/D103379>`__,Mark de Wever,"`D103368 <https://reviews.llvm.org/D103368>`__ `D103413 <https://reviews.llvm.org/D103413>`__",|Review|,
-`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - boolean type",`D103379 <https://reviews.llvm.org/D103379>`__,Mark de Wever,"`D103368 <https://reviews.llvm.org/D103368>`__ `D103413 <https://reviews.llvm.org/D103413>`__",|Review|,
-`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - integral types",,Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Review|,
+`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - character types",,Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
+`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - string types",`D103379 <https://reviews.llvm.org/D103379>`__,Mark de Wever,"`D103368 <https://reviews.llvm.org/D103368>`__ `D103413 <https://reviews.llvm.org/D103413>`__",|Complete|,Clang 14
+`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - boolean type",`D103379 <https://reviews.llvm.org/D103379>`__,Mark de Wever,"`D103368 <https://reviews.llvm.org/D103368>`__ `D103413 <https://reviews.llvm.org/D103413>`__",|Complete|,Clang 14
+`[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - integral types",,Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
 `[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - floating-point types",,Mark de Wever,,|Not Started|,
 `[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - pointer types",,Mark de Wever,,|Not Started|,
 `[format.functions] <https://wg21.link/format.functions>`_,"Format functions - format(string_view fmt, const Args&... args);",,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,|Complete|,Clang 14
@@ -43,6 +43,7 @@ Section,Description,Dependencies,Assignee,Patch,Status,First released version
 `[format.functions] <https://wg21.link/format.functions>`_,"Format functions - formatted_size(wstring_view fmt, const Args&... args);",,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,|Complete|,Clang 14
 `[format.functions] <https://wg21.link/format.functions>`_,"Format functions - formatted_size(const locale& loc, string_view fmt, const Args&... args);",,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,|Complete|,Clang 14
 `[format.functions] <https://wg21.link/format.functions>`_,"Format functions - formatted_size(const locale& loc, wstring_view fmt, const Args&... args);",,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,|Complete|,Clang 14
-`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Implement locale support",,Mark de Wever,,|In Progress|,
-`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance format_to_n",,Mark de Wever,,|Not Started|,
-`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance formatted size",,Mark de Wever,,|Not Started|,
+`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance format_to_n",,Mark de Wever,`D110499 <https://llvm.org/D110499>`__,|Review|,
+`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance formatted size",,Mark de Wever,`D110500 <https://llvm.org/D110500>`__,|Review|,
+`[format.functions] <https://wg21.link/format.functions>`_,"`P2216 <https://wg21.link/P2216>`_ - Compile-time checks",,Mark de Wever,,|In Progress|,
+`[format.functions] <https://wg21.link/format.functions>`_,"`P2216 <https://wg21.link/P2216>`_ - Binary size",,Mark de Wever,`D110494 <https://llvm.org/D110494>`__,|Review|,

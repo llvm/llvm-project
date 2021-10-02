@@ -39,7 +39,6 @@ protected:
   bool HasZbf = false;
   bool HasZbm = false;
   bool HasZbp = false;
-  bool HasZbproposedc = false;
   bool HasZbr = false;
   bool HasZbs = false;
   bool HasZbt = false;

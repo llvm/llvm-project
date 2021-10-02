@@ -148,6 +148,57 @@ It is a recent addition to LLVM and the implementation differs from that which
 has been shipping in ROCm and AOMP for some time. Early adopters will encounter
 bugs.
 
+Q: What are the LLVM components used in offloading and how are they found?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The libraries used by an executable compiled for target offloading are:
+- ``libomp.so`` (or similar), the host openmp runtime
+- ``libomptarget.so``, the target-agnostic target offloading openmp runtime
+- plugins loaded by libomptarget.so:
+  - ``libomptarget.rtl.amdgpu.so``
+  - ``libomptarget.rtl.cuda.so``
+  - ``libomptarget.rtl.x86_64.so``
+  - ``libomptarget.rtl.ve.so``
+  - and others
+- dependencies of those plugins, e.g. cuda/rocr for nvptx/amdgpu
+
+The compiled executable is dynamically linked against a host runtime, e.g.
+``libomp.so``, and against the target offloading runtime, ``libomptarget.so``. These
+are found like any other dynamic library, by setting rpath or runpath on the
+executable, by setting ``LD_LIBRARY_PATH``, or by adding them to the system search.
+
+``libomptarget.so`` has rpath or runpath (whichever the system default is) set to
+``$ORIGIN``, and the plugins are located next to it, so it will find the plugins
+without any environment variables set. If ``LD_LIBRARY_PATH`` is set, whether it
+overrides which plugin is found depends on whether your system treats ``-Wl,-rpath``
+as RPATH or RUNPATH.
+
+The plugins will try to find their dependencies in plugin-dependent fashion.
+
+The cuda plugin is dynamically linked against libcuda if cmake found it at
+compiler build time. Otherwise it will attempt to dlopen ``libcuda.so``. It does
+not have rpath set.
+
+The amdgpu plugin is linked against ROCr if cmake found it at compiler build
+time. Otherwise it will attempt to dlopen ``libhsa-runtime64.so``. It has rpath
+set to ``$ORIGIN``, so installing ``libhsa-runtime64.so`` in the same directory is a
+way to locate it without environment variables.
+
+In addition to those, there is a compiler runtime library called deviceRTL.
+This is compiled from mostly common code into an architecture specific
+bitcode library, e.g. ``libomptarget-nvptx-sm_70.bc``.
+
+Clang and the deviceRTL need to match closely as the interface between them
+changes frequently. Using both from the same monorepo checkout is strongly
+recommended.
+
+Unlike the host side which lets environment variables select components, the
+deviceRTL that is located in the clang lib directory is preferred. Only if
+it is absent, the ``LIBRARY_PATH`` environment variable is searched to find a
+bitcode file with the right name. This can be overridden by passing a clang
+flag, ``--libomptarget-nvptx-bc-path`` or ``--libomptarget-amdgcn-bc-path``. That
+can specify a directory or an exact bitcode file to use.
+
+
 Q: Does OpenMP offloading support work in pre-packaged LLVM releases?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_compiler`.

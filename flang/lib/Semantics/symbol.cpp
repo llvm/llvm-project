@@ -535,6 +535,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Symbol &symbol) {
   return os;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void Symbol::dump() const { llvm::errs() << *this << '\n'; }
+#endif
+
 // Output a unique name for a scope by qualifying it with the names of
 // parent scopes. For scopes without corresponding symbols, use the kind
 // with an index (e.g. Block1, Block2, etc.).

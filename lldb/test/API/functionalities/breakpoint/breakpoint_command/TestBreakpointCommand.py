@@ -17,14 +17,12 @@ class BreakpointCommandTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
         self.breakpoint_command_sequence()
 
     @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_script_parameters(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()

@@ -215,9 +215,12 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
                                   gpu::GPUFuncOp kernelFunc,
                                   ValueRange operands) {
   OpBuilder builder(launchOp);
+  // The launch op has an optional dynamic shared memory size. If it doesn't
+  // exist, we use zero.
   builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(), operands);
+      launchOp.getBlockSizeOperandValues(), launchOp.dynamicSharedMemorySize(),
+      operands);
   launchOp.erase();
 }
 

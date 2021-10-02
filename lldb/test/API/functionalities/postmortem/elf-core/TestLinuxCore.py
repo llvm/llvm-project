@@ -33,41 +33,35 @@ class LinuxCoreTestCase(TestBase):
     _ppc64le_regions = 2
 
     @skipIfLLVMTargetMissing("AArch64")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_aarch64(self):
         """Test that lldb can read the process information from an aarch64 linux core file."""
         self.do_test("linux-aarch64", self._aarch64_pid,
                      self._aarch64_regions, "a.out")
 
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
     @skipIfLLVMTargetMissing("PowerPC")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_ppc64le(self):
         """Test that lldb can read the process information from an ppc64le linux core file."""
         self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
                      "linux-ppc64le.ou")
 
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
                      "a.out")
 
     @skipIfLLVMTargetMissing("SystemZ")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions,
                      "a.out")
 
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
@@ -95,7 +89,6 @@ class LinuxCoreTestCase(TestBase):
                      self._x86_64_regions, "a.out")
 
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID
         around"""
@@ -127,7 +120,6 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
-    @skipIfReproducer
     def test_read_memory(self):
         """Test that we are able to read as many bytes as available"""
         target = self.dbg.CreateTarget("linux-x86_64.out")
@@ -192,7 +184,6 @@ class LinuxCoreTestCase(TestBase):
                         substrs=["{} = {}".format(regname, value)])
 
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386_sysroot(self):
         """Test that lldb can find the exe for an i386 linux core file using the sysroot."""
 
@@ -219,7 +210,6 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64_sysroot(self):
         """Test that sysroot has more priority then local filesystem."""
 

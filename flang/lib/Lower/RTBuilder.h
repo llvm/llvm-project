@@ -27,6 +27,13 @@
 // List the runtime headers we want to be able to dissect
 #include "flang/Runtime/io-api.h"
 
+// Incomplete type indicating C99 complex ABI in interfaces. Beware, _Complex
+// and std::complex are layout compatible, but not compatible in all ABI call
+// interface (e.g. X86 32 bits). _Complex is not standard C++, so do not use
+// it here.
+struct c_float_complex_t;
+struct c_double_complex_t;
+
 namespace Fortran::lower {
 
 using TypeBuilderFunc = mlir::Type (*)(mlir::MLIRContext *);
@@ -156,7 +163,18 @@ constexpr TypeBuilderFunc getModel<bool &>() {
     return fir::ReferenceType::get(f(context));
   };
 }
-
+template <>
+constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ComplexType::get(context, sizeof(float));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<c_double_complex_t>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ComplexType::get(context, sizeof(double));
+  };
+}
 template <>
 constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {

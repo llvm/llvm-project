@@ -54,9 +54,8 @@ TEST(DWARFDie, manualExtractDump) {
   uint64_t NextCUOffset = CU->getNextUnitOffset();
   DWARFDebugInfoEntry DieInfo;
   DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
-  uint32_t Depth = 0;
-  ASSERT_TRUE(
-      DieInfo.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset, Depth));
+  ASSERT_TRUE(DieInfo.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
+                                  UINT32_MAX));
   DWARFDie Die(CU, &DieInfo);
   ASSERT_TRUE(Die.isValid());
   ASSERT_TRUE(Die.hasChildren());

@@ -17,8 +17,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:  -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:  -mcpu=pwr9 < %s | FileCheck %s --check-prefix=CHECK-BE-P9
-; xscvdpsxws and uxws is only available on Power7 and above
-; Codgen is different for LE Power7 and Power8
+; xscvdpsxws and xscvdpsxws is only available on Power7 and above
+; Codgen is different for Power7, Power8, and Power9.
 
 define dso_local <4 x i32> @test(<4 x i32> %a, double %b) {
 ; CHECK-LE-P7-LABEL: test:
@@ -38,20 +38,16 @@ define dso_local <4 x i32> @test(<4 x i32> %a, double %b) {
 ;
 ; CHECK-LE-P8-LABEL: test:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    xscvdpsxws f0, f1
+; CHECK-LE-P8-NEXT:    xscvdpsxws v3, f1
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-LE-P8-NEXT:    lvx v3, 0, r3
-; CHECK-LE-P8-NEXT:    mffprwz r4, f0
-; CHECK-LE-P8-NEXT:    mtvsrwz v4, r4
-; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-LE-P8-NEXT:    lvx v4, 0, r3
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    xscvdpsxws f0, f1
-; CHECK-LE-P9-NEXT:    mffprwz r3, f0
-; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxinsertw v2, vs0, 0
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -70,9 +66,7 @@ define dso_local <4 x i32> @test(<4 x i32> %a, double %b) {
 ;
 ; CHECK-BE-P8-LABEL: test:
 ; CHECK-BE-P8:       # %bb.0: # %entry
-; CHECK-BE-P8-NEXT:    xscvdpsxws f0, f1
-; CHECK-BE-P8-NEXT:    mffprwz r3, f0
-; CHECK-BE-P8-NEXT:    mtvsrwz v3, r3
+; CHECK-BE-P8-NEXT:    xscvdpsxws v3, f1
 ; CHECK-BE-P8-NEXT:    vmrghw v3, v2, v3
 ; CHECK-BE-P8-NEXT:    xxsldwi vs0, v3, v2, 3
 ; CHECK-BE-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -81,8 +75,6 @@ define dso_local <4 x i32> @test(<4 x i32> %a, double %b) {
 ; CHECK-BE-P9-LABEL: test:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    xscvdpsxws f0, f1
-; CHECK-BE-P9-NEXT:    mffprwz r3, f0
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxinsertw v2, vs0, 12
 ; CHECK-BE-P9-NEXT:    blr
 entry:
@@ -109,20 +101,16 @@ define dso_local <4 x i32> @test2(<4 x i32> %a, float %b) {
 ;
 ; CHECK-LE-P8-LABEL: test2:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    xscvdpsxws f0, f1
+; CHECK-LE-P8-NEXT:    xscvdpsxws v3, f1
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-LE-P8-NEXT:    lvx v3, 0, r3
-; CHECK-LE-P8-NEXT:    mffprwz r4, f0
-; CHECK-LE-P8-NEXT:    mtvsrwz v4, r4
-; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-LE-P8-NEXT:    lvx v4, 0, r3
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test2:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    xscvdpsxws f0, f1
-; CHECK-LE-P9-NEXT:    mffprwz r3, f0
-; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxinsertw v2, vs0, 0
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -141,9 +129,7 @@ define dso_local <4 x i32> @test2(<4 x i32> %a, float %b) {
 ;
 ; CHECK-BE-P8-LABEL: test2:
 ; CHECK-BE-P8:       # %bb.0: # %entry
-; CHECK-BE-P8-NEXT:    xscvdpsxws f0, f1
-; CHECK-BE-P8-NEXT:    mffprwz r3, f0
-; CHECK-BE-P8-NEXT:    mtvsrwz v3, r3
+; CHECK-BE-P8-NEXT:    xscvdpsxws v3, f1
 ; CHECK-BE-P8-NEXT:    vmrghw v3, v2, v3
 ; CHECK-BE-P8-NEXT:    xxsldwi vs0, v3, v2, 3
 ; CHECK-BE-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -152,8 +138,6 @@ define dso_local <4 x i32> @test2(<4 x i32> %a, float %b) {
 ; CHECK-BE-P9-LABEL: test2:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    xscvdpsxws f0, f1
-; CHECK-BE-P9-NEXT:    mffprwz r3, f0
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxinsertw v2, vs0, 12
 ; CHECK-BE-P9-NEXT:    blr
 entry:
@@ -180,20 +164,16 @@ define dso_local <4 x i32> @test3(<4 x i32> %a, double %b) {
 ;
 ; CHECK-LE-P8-LABEL: test3:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    xscvdpuxws f0, f1
+; CHECK-LE-P8-NEXT:    xscvdpuxws v3, f1
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-LE-P8-NEXT:    lvx v3, 0, r3
-; CHECK-LE-P8-NEXT:    mffprwz r4, f0
-; CHECK-LE-P8-NEXT:    mtvsrwz v4, r4
-; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-LE-P8-NEXT:    lvx v4, 0, r3
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test3:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    xscvdpuxws f0, f1
-; CHECK-LE-P9-NEXT:    mffprwz r3, f0
-; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxinsertw v2, vs0, 0
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -212,9 +192,7 @@ define dso_local <4 x i32> @test3(<4 x i32> %a, double %b) {
 ;
 ; CHECK-BE-P8-LABEL: test3:
 ; CHECK-BE-P8:       # %bb.0: # %entry
-; CHECK-BE-P8-NEXT:    xscvdpuxws f0, f1
-; CHECK-BE-P8-NEXT:    mffprwz r3, f0
-; CHECK-BE-P8-NEXT:    mtvsrwz v3, r3
+; CHECK-BE-P8-NEXT:    xscvdpuxws v3, f1
 ; CHECK-BE-P8-NEXT:    vmrghw v3, v2, v3
 ; CHECK-BE-P8-NEXT:    xxsldwi vs0, v3, v2, 3
 ; CHECK-BE-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -223,8 +201,6 @@ define dso_local <4 x i32> @test3(<4 x i32> %a, double %b) {
 ; CHECK-BE-P9-LABEL: test3:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    xscvdpuxws f0, f1
-; CHECK-BE-P9-NEXT:    mffprwz r3, f0
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxinsertw v2, vs0, 12
 ; CHECK-BE-P9-NEXT:    blr
 entry:
@@ -251,20 +227,16 @@ define dso_local <4 x i32> @test4(<4 x i32> %a, float %b) {
 ;
 ; CHECK-LE-P8-LABEL: test4:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    xscvdpuxws f0, f1
+; CHECK-LE-P8-NEXT:    xscvdpuxws v3, f1
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-LE-P8-NEXT:    lvx v3, 0, r3
-; CHECK-LE-P8-NEXT:    mffprwz r4, f0
-; CHECK-LE-P8-NEXT:    mtvsrwz v4, r4
-; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-LE-P8-NEXT:    lvx v4, 0, r3
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test4:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    xscvdpuxws f0, f1
-; CHECK-LE-P9-NEXT:    mffprwz r3, f0
-; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxinsertw v2, vs0, 0
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -283,9 +255,7 @@ define dso_local <4 x i32> @test4(<4 x i32> %a, float %b) {
 ;
 ; CHECK-BE-P8-LABEL: test4:
 ; CHECK-BE-P8:       # %bb.0: # %entry
-; CHECK-BE-P8-NEXT:    xscvdpuxws f0, f1
-; CHECK-BE-P8-NEXT:    mffprwz r3, f0
-; CHECK-BE-P8-NEXT:    mtvsrwz v3, r3
+; CHECK-BE-P8-NEXT:    xscvdpuxws v3, f1
 ; CHECK-BE-P8-NEXT:    vmrghw v3, v2, v3
 ; CHECK-BE-P8-NEXT:    xxsldwi vs0, v3, v2, 3
 ; CHECK-BE-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -294,8 +264,6 @@ define dso_local <4 x i32> @test4(<4 x i32> %a, float %b) {
 ; CHECK-BE-P9-LABEL: test4:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    xscvdpuxws f0, f1
-; CHECK-BE-P9-NEXT:    mffprwz r3, f0
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxinsertw v2, vs0, 12
 ; CHECK-BE-P9-NEXT:    blr
 entry:

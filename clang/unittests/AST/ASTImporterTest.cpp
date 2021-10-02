@@ -6881,6 +6881,244 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
             ToD->getTemplateSpecializationKind());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIsInheritingConstructorBit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        A(int);
+      };
+      struct B : A {
+        using A::A; // Inherited ctor.
+      };
+      void f() {
+        (B(0));
+      }
+      )",
+      Lang_CXX11);
+  auto *FromD = FirstDeclMatcher<CXXConstructorDecl>().match(
+      FromTU, cxxConstructorDecl(isInheritingConstructor()));
+  ASSERT_TRUE(FromD);
+  ASSERT_TRUE(FromD->isInheritingConstructor());
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->isInheritingConstructor());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportConstructorUsingShadow) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        A(int, int);
+      };
+      struct B : A {
+        using A::A;
+      };
+      struct C : B {
+        using B::B;
+      };
+      )",
+      Lang_CXX11);
+
+  auto CheckAST = [](TranslationUnitDecl *TU, CXXRecordDecl *RecordC) {
+    auto *RecordA = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("A")));
+    auto *RecordB = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("B")));
+    auto *ConstrA = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordA)),
+                               parameterCountIs(2)));
+    auto *ShadowBA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordB)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowCA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordC)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    EXPECT_EQ(ShadowBA->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowBA->getNominatedBaseClass(), RecordA);
+    EXPECT_EQ(ShadowBA->getConstructedBaseClass(), RecordA);
+    EXPECT_EQ(ShadowBA->getNominatedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowBA->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_FALSE(ShadowBA->constructsVirtualBase());
+    EXPECT_EQ(ShadowCA->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowCA->getNominatedBaseClass(), RecordB);
+    EXPECT_EQ(ShadowCA->getConstructedBaseClass(), RecordB);
+    EXPECT_EQ(ShadowCA->getNominatedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowCA->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_FALSE(ShadowCA->constructsVirtualBase());
+  };
+
+  auto *FromC = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("C")));
+
+  auto *ToC = Import(FromC, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToC->getTranslationUnitDecl();
+
+  CheckAST(FromTU, FromC);
+  CheckAST(ToTU, ToC);
+}
+
+AST_MATCHER_P(UsingShadowDecl, hasIntroducerDecl, internal::Matcher<NamedDecl>,
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.getIntroducer(), Finder, Builder);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportConstructorUsingShadowVirtualBase) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A { A(int, int); };
+      struct B : A { using A::A; };
+
+      struct V1 : virtual B { using B::B; };
+      struct V2 : virtual B { using B::B; };
+
+      struct D2 : V1, V2 {
+        using V1::V1;
+        using V2::V2;
+      };
+      )",
+      Lang_CXX11);
+
+  auto CheckAST = [](TranslationUnitDecl *TU, CXXRecordDecl *RecordD2) {
+    auto *RecordA = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("A")));
+    auto *RecordB = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("B")));
+    auto *RecordV1 = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("V1")));
+    auto *RecordV2 = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("V2")));
+    auto *ConstrA = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordA)),
+                               parameterCountIs(2)));
+    auto *ConstrB = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordB)),
+                               isCopyConstructor()));
+    auto *UsingD2V1 = FirstDeclMatcher<UsingDecl>().match(
+        TU, usingDecl(hasParent(equalsNode(RecordD2))));
+    auto *UsingD2V2 = LastDeclMatcher<UsingDecl>().match(
+        TU, usingDecl(hasParent(equalsNode(RecordD2))));
+    auto *ShadowBA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordB)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV1A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV1)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV1B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV1)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowV2A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV2)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV2B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV2)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowD2V1A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V1)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowD2V1B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V1)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowD2V2A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V2)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowD2V2B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V2)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+
+    EXPECT_EQ(ShadowD2V1A->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowD2V1A->getNominatedBaseClassShadowDecl(), ShadowV1A);
+    EXPECT_EQ(ShadowD2V1A->getNominatedBaseClass(), RecordV1);
+    EXPECT_EQ(ShadowD2V1A->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowD2V1A->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V1A->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V1B->getTargetDecl(), ConstrB);
+    EXPECT_EQ(ShadowD2V1B->getNominatedBaseClassShadowDecl(), ShadowV1B);
+    EXPECT_EQ(ShadowD2V1B->getNominatedBaseClass(), RecordV1);
+    EXPECT_EQ(ShadowD2V1B->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowD2V1B->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V1B->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V2A->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowD2V2A->getNominatedBaseClassShadowDecl(), ShadowV2A);
+    EXPECT_EQ(ShadowD2V2A->getNominatedBaseClass(), RecordV2);
+    EXPECT_EQ(ShadowD2V2A->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowD2V2A->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V2A->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V2B->getTargetDecl(), ConstrB);
+    EXPECT_EQ(ShadowD2V2B->getNominatedBaseClassShadowDecl(), ShadowV2B);
+    EXPECT_EQ(ShadowD2V2B->getNominatedBaseClass(), RecordV2);
+    EXPECT_EQ(ShadowD2V2B->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowD2V2B->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V2B->constructsVirtualBase());
+
+    EXPECT_TRUE(ShadowV1A->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV1B->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV2A->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV2B->constructsVirtualBase());
+    EXPECT_FALSE(ShadowBA->constructsVirtualBase());
+  };
+
+  auto *FromD2 = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("D2")));
+
+  auto *ToD2 = Import(FromD2, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToD2->getTranslationUnitDecl();
+
+  CheckAST(FromTU, FromD2);
+  CheckAST(ToTU, ToD2);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingShadowList) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        void f();
+        void f(int);
+      };
+      struct B : A {
+        using A::f;
+      };
+      )",
+      Lang_CXX11);
+
+  auto *FromB = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("B")));
+
+  auto *ToB = Import(FromB, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToB->getTranslationUnitDecl();
+
+  auto *ToUsing = FirstDeclMatcher<UsingDecl>().match(
+      ToTU, usingDecl(hasParent(equalsNode(ToB))));
+  auto *ToUsingShadowF1 = FirstDeclMatcher<UsingShadowDecl>().match(
+      ToTU, usingShadowDecl(hasTargetDecl(
+                functionDecl(hasName("f"), parameterCountIs(0)))));
+  auto *ToUsingShadowF2 = FirstDeclMatcher<UsingShadowDecl>().match(
+      ToTU, usingShadowDecl(hasTargetDecl(
+                functionDecl(hasName("f"), parameterCountIs(1)))));
+
+  EXPECT_EQ(ToUsing->shadow_size(), 2u);
+  auto ShadowI = ToUsing->shadow_begin();
+  EXPECT_EQ(*ShadowI, ToUsingShadowF1);
+  ++ShadowI;
+  EXPECT_EQ(*ShadowI, ToUsingShadowF2);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 

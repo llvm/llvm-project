@@ -9,3 +9,9 @@ template <class C> class A2 {};
 template <class C> class B2;
 B2<int> *b2;
 A2<int> *a2 = b2; // expected-error{{cannot initialize a variable of type 'A2<int> *' with an lvalue of type 'B2<int> *'}}
+
+typedef struct S s;
+const s *f();
+s *g1() { return f(); } // expected-error{{cannot initialize return object of type 's *' (aka 'S *') with an rvalue of type 'const s *' (aka 'const S *')}}
+
+B1 *g2() { return f(); } // expected-error{{cannot initialize return object of type 'B1 *' with an rvalue of type 'const s *' (aka 'const S *')}}
