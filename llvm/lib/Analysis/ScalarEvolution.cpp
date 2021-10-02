@@ -6569,6 +6569,31 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
+const Instruction *ScalarEvolution::getDefinedScopeRoot(const SCEV *S) {
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return &*AddRec->getLoop()->getHeader()->begin();
+  // TODO: add SCEVConstant and SCEVUnknown caxes here
+  return nullptr;
+}
+
+static bool
+isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
+                                           BasicBlock::const_iterator End) {
+  return llvm::all_of( make_range(Begin, End), [](const Instruction &I) {
+    return isGuaranteedToTransferExecutionToSuccessor(&I);
+  });
+}
+
+bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
+                                                        const Instruction *B) {
+  if (A->getParent() == B->getParent() &&
+      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                   B->getIterator()))
+    return true;
+  return false;
+}
+
+
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // Here we check that I is in the header of the innermost loop containing I,
   // since we only deal with instructions in the loop header. The actual loop we
@@ -6600,11 +6625,9 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     // TODO: We can do better here in some cases.
     if (!isSCEVable(Op->getType()))
       return false;
-    const SCEV *OpS = getSCEV(Op);
-    if (auto *AddRecS = dyn_cast<SCEVAddRecExpr>(OpS)) {
-      if (isGuaranteedToExecuteForEveryIteration(I, AddRecS->getLoop()))
+    if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
+      if (isGuaranteedToTransferExecutionTo(DefI, I))
         return true;
-    }
   }
   return false;
 }
