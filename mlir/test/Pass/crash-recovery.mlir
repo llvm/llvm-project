@@ -11,6 +11,9 @@
 // RUN: mlir-opt %s -pass-pipeline='test-module-pass,test-dynamic-pipeline{op-name=inner_mod1 run-on-nested-operations=1 dynamic-pipeline=test-pass-crash}' -pass-pipeline-crash-reproducer=%t -verify-diagnostics -pass-pipeline-local-reproducer --mlir-disable-threading
 // RUN: cat %t | FileCheck -check-prefix=REPRO_LOCAL_DYNAMIC %s
 
+// The crash recovery mechanism will leak memory allocated in the crashing thread.
+// UNSUPPORTED: asan
+
 // expected-error@below {{Failures have been detected while processing an MLIR pass pipeline}}
 // expected-note@below {{Pipeline failed while executing}}
 module @inner_mod1 {
