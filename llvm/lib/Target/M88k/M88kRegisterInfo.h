@@ -34,10 +34,10 @@ struct M88kRegisterInfo : public M88kGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
-#if 0
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override;
 
+#if 0
   const uint32_t* getRTCallPreservedMask(CallingConv::ID CC) const;
 
   const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,

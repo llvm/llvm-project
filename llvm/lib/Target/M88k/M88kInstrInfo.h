@@ -44,6 +44,17 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
+  virtual void
+  storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                      Register SrcReg, bool isKill, int FrameIndex,
+                      const TargetRegisterClass *RC,
+                      const TargetRegisterInfo *TRI) const override;
+  virtual void
+  loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                       Register DestReg, int FrameIndex,
+                       const TargetRegisterClass *RC,
+                       const TargetRegisterInfo *TRI) const override;
+
   // Return the M88kRegisterInfo, which this class owns.
   const M88kRegisterInfo &getRegisterInfo() const { return RI; }
 };

@@ -79,6 +79,7 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
                                        const M88kSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
   addRegisterClass(MVT::i32, &M88k::GPRRegClass);
+  addRegisterClass(MVT::f32, &M88k::GPRRegClass);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -249,31 +250,71 @@ SDValue M88kTargetLowering::PerformDAGCombine(SDNode *N,
 
 #include "M88kGenCallingConv.inc"
 
+static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
+                                   CCValAssign &VA, SDValue Chain,
+                                   SDValue Value) {
+  // If the argument has been promoted from a smaller type, insert an
+  // assertion to capture this.
+  if (VA.getLocInfo() == CCValAssign::SExt)
+    Value = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Value,
+                        DAG.getValueType(VA.getValVT()));
+  else if (VA.getLocInfo() == CCValAssign::ZExt)
+    Value = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Value,
+                        DAG.getValueType(VA.getValVT()));
+
+  if (VA.isExtInLoc())
+    Value = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Value);
+  else if (VA.getLocInfo() == CCValAssign::BCvt) {
+    Value = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Value);
+  } else
+    assert(VA.getLocInfo() == CCValAssign::Full && "Unsupported getLocInfo");
+  return Value;
+}
+
+static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
+                                   CCValAssign &VA, SDValue Value) {
+  switch (VA.getLocInfo()) {
+  case CCValAssign::SExt:
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Value);
+  case CCValAssign::ZExt:
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Value);
+  case CCValAssign::AExt:
+    return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
+  case CCValAssign::Full:
+    return Value;
+  default:
+    llvm_unreachable("Unhandled getLocInfo()");
+  }
+}
+
 SDValue M88kTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
-
   MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_M88k);
 
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
+  for (CCValAssign &VA : ArgLocs) {
     SDValue ArgValue;
-    CCValAssign &VA = ArgLocs[I];
     EVT LocVT = VA.getLocVT();
     if (VA.isRegLoc()) {
-      // Arguments passed in registers
+      // Arguments passed in registers.
       const TargetRegisterClass *RC;
       switch (LocVT.getSimpleVT().SimpleTy) {
       default:
-        // Integers smaller than i64 should be promoted to i32.
+        // Integers smaller than i32 should be promoted to i32.
         llvm_unreachable("Unexpected argument type");
       case MVT::i32:
+        RC = &M88k::GPRRegClass;
+        break;
+      case MVT::f32:
         RC = &M88k::GPRRegClass;
         break;
       }
@@ -281,26 +322,21 @@ SDValue M88kTargetLowering::LowerFormalArguments(
       Register VReg = MRI.createVirtualRegister(RC);
       MRI.addLiveIn(VA.getLocReg(), VReg);
       ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
-
-      // If this is an 8/16-bit value, it is really passed promoted to 32
-      // bits. Insert an assert[sz]ext to capture this, then truncate to the
-      // right size.
-      if (VA.getLocInfo() == CCValAssign::SExt)
-        ArgValue = DAG.getNode(ISD::AssertSext, DL, LocVT, ArgValue,
-                               DAG.getValueType(VA.getValVT()));
-      else if (VA.getLocInfo() == CCValAssign::ZExt)
-        ArgValue = DAG.getNode(ISD::AssertZext, DL, LocVT, ArgValue,
-                               DAG.getValueType(VA.getValVT()));
-
-      if (VA.getLocInfo() != CCValAssign::Full)
-        ArgValue = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), ArgValue);
-
-      InVals.push_back(ArgValue);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      llvm_unreachable(
-          "M88k - LowerFormalArguments - Memory argument not implemented");
+
+      // Create the frame index object for this incoming parameter.
+      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
+
+      // Create the SelectionDAG nodes corresponding to a load
+      // from this parameter.
+      SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+      ArgValue = DAG.getLoad(LocVT, DL, Chain, FIN,
+                             MachinePointerInfo::getFixedStack(MF, FI));
     }
+
+    InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
   if (IsVarArg) {
@@ -339,22 +375,7 @@ M88kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     // Promote the value as required.
-    // TODO: Refactor into own method?
-    switch (VA.getLocInfo()) {
-    case CCValAssign::SExt:
-      RetValue = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), RetValue);
-      break;
-    case CCValAssign::ZExt:
-      RetValue = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), RetValue);
-      break;
-    case CCValAssign::AExt:
-      RetValue = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), RetValue);
-      break;
-    case CCValAssign::Full:
-      break;
-    default:
-      llvm_unreachable("Unhandled VA.getLocInfo()");
-    }
+    RetValue = convertValVTToLocVT(DAG, DL, VA, RetValue);
 
     // Chain and glue the copies together.
     Register Reg = VA.getLocReg();
@@ -373,7 +394,141 @@ M88kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue M88kTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                       SmallVectorImpl<SDValue> &InVals) const {
-  llvm_unreachable("M88k - LowerCall - Not Implemented");
+
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = CLI.IsVarArg;
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
+  LLVMContext &Ctx = *DAG.getContext();
+
+  // Analyze the operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
+  ArgCCInfo.AnalyzeCallOperands(Outs, CC_M88k);
+
+  // Get a count of how many bytes are to be pushed on the stack.
+  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
+
+  // Copy argument values to their designated locations.
+  SmallVector<std::pair<unsigned, SDValue>, 9> RegsToPass;
+  SmallVector<SDValue, 8> MemOpChains;
+  SDValue StackPtr;
+  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
+    CCValAssign &VA = ArgLocs[I];
+    SDValue ArgValue = OutVals[I];
+
+    assert(VA.getLocInfo() != CCValAssign::Indirect &&
+           "Indirect args not yet supported");
+    ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
+
+    if (VA.isRegLoc())
+      // Queue up the argument copies and emit them at the end.
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+    else {
+      assert(VA.isMemLoc() && "Argument not register or memory");
+
+      if (!StackPtr.getNode())
+        StackPtr = DAG.getCopyFromReg(Chain, DL, M88k::R31, PtrVT);
+
+      SDValue Address =
+          DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
+                      DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
+
+      // Emit the store.
+      MemOpChains.push_back(
+          DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
+    }
+  }
+
+  // Transform all store nodes into one single node because all store nodes are
+  // independent of each other.
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+
+  // If the callee is a GlobalAddress node (quite common, every direct call is)
+  // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
+  // Likewise ExternalSymbol -> TargetExternalSymbol.
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
+  } else if (auto *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
+  }
+
+  // Build a sequence of copy-to-reg nodes chained together with token chain and
+  // flag operands which copy the outgoing args into registers.The Glue in
+  // necessary since all emitted instructions must be stuck together.
+  SDValue Glue;
+  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
+    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[I].first,
+                             RegsToPass[I].second, Glue);
+    Glue = Chain.getValue(1);
+  }
+
+  // The first call operand is the chain and the second is the target address.
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  // Add argument registers to the end of the list so that they are
+  // known live into the call.
+  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I)
+    Ops.push_back(DAG.getRegister(RegsToPass[I].first,
+                                  RegsToPass[I].second.getValueType()));
+
+  // Glue the call to the argument copies, if any.
+  if (Glue.getNode())
+    Ops.push_back(Glue);
+
+  // Emit the call.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  Chain = DAG.getNode(M88kISD::CALL, DL, NodeTys, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  Glue = Chain.getValue(1);
+
+  // Mark the end of the call, which is glued to the call itself.
+  Chain = DAG.getCALLSEQ_END(Chain,
+                             DAG.getConstant(NumBytes, DL, PtrVT, true),
+                             DAG.getConstant(0, DL, PtrVT, true),
+                             Glue, DL);
+  Glue = Chain.getValue(1);
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RetLocs;
+  CCState RetCCInfo(CallConv, IsVarArg, MF, RetLocs, Ctx);
+  RetCCInfo.AnalyzeCallResult(Ins, RetCC_M88k);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (unsigned I = 0, E = RetLocs.size(); I != E; ++I) {
+    CCValAssign &VA = RetLocs[I];
+
+    // Copy the value out, gluing the copy to the end of the call sequence.
+    SDValue RetValue = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(),
+                                          VA.getLocVT(), Glue);
+    Chain = RetValue.getValue(1);
+    Glue = RetValue.getValue(2);
+
+    // Convert the value of the return register into the value that's
+    // being returned.
+    InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, RetValue));
+  }
+  return Chain;
+
+//  llvm_unreachable("Not yet implemented");
 }
 
 const char *M88kTargetLowering::getTargetNodeName(unsigned Opcode) const {

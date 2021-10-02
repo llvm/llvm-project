@@ -52,6 +52,12 @@ BitVector M88kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+const uint32_t *
+M88kRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const {
+  return CSR_M88k_RegMask;
+}
+
 void M88kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            int SPAdj, unsigned FIOperandNum,
                                            RegScavenger *RS) const {}

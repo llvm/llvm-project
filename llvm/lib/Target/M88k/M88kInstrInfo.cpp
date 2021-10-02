@@ -59,13 +59,56 @@ M88kInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
   return std::make_pair(TF, 0u);
 }
 
-ArrayRef<std::pair<unsigned, const char*>>
+ArrayRef<std::pair<unsigned, const char *>>
 M88kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
- using namespace M88kII;
+  using namespace M88kII;
 
- static const std::pair<unsigned, const char*> Flags[] = {
-    {MO_ABS_HI,       "m88k-abs-hi"},
-    {MO_ABS_LO,       "m88k-abs-lo"},
+  static const std::pair<unsigned, const char *> Flags[] = {
+      {MO_ABS_HI, "m88k-abs-hi"},
+      {MO_ABS_LO, "m88k-abs-lo"},
   };
   return makeArrayRef(Flags);
+}
+
+static MachineMemOperand *getMachineMemOperand(MachineBasicBlock &MBB, int FI,
+                                               MachineMemOperand::Flags Flags) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
+                                 Flags, MFI.getObjectSize(FI),
+                                 MFI.getObjectAlign(FI));
+}
+
+void M88kInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        Register SrcReg, bool isKill,
+                                        int FrameIndex,
+                                        const TargetRegisterClass *RC,
+                                        const TargetRegisterInfo *TRI) const {
+  DebugLoc DL;
+  MachineMemOperand *MMO =
+      getMachineMemOperand(MBB, FrameIndex, MachineMemOperand::MOStore);
+
+  // Build an STriw instruction.
+  BuildMI(MBB, MBBI, DL, get(M88k::STriw))
+      .addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FrameIndex)
+      .addMemOperand(MMO);
+}
+
+void M88kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         Register DestReg, int FrameIndex,
+                                         const TargetRegisterClass *RC,
+                                         const TargetRegisterInfo *TRI) const {
+  DebugLoc DL;
+  MachineMemOperand *MMO =
+      getMachineMemOperand(MBB, FrameIndex, MachineMemOperand::MOStore);
+
+  // Build an LDriw instruction.
+  BuildMI(MBB, MBBI, DL, get(M88k::LDriw))
+      .addReg(DestReg)
+      .addFrameIndex(FrameIndex)
+      .addMemOperand(MMO);
 }

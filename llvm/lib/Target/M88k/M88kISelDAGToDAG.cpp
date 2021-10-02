@@ -90,6 +90,15 @@ bool M88kDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &Base,
 
 bool M88kDAGToDAGISel::selectAddrRi(SDValue Addr, SDValue &Base,
                                     SDValue &Offset) {
+  if (Addr.getOpcode() == ISD::FrameIndex) {
+    // Match frame index.
+    int FI = cast<FrameIndexSDNode>(Addr)->getIndex();
+    Base = CurDAG->getTargetFrameIndex(
+        FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+    return true;
+  }
+
   // Operand is a result from an OR.
   if (Addr.getOpcode() == ISD::OR) {
     if (Addr.getOperand(1).getOpcode() == M88kISD::Lo16) {

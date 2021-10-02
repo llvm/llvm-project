@@ -12,6 +12,12 @@ class M88kReg<bits<5> Enc, string n> : Register<n> {
   let Namespace = "M88k";
 }
 
+class M88kRegisterClass<list<ValueType> regTypes, int alignment,
+                        bits<1> regFile, dag regList>
+  : RegisterClass<"M88k", regTypes, alignment, regList> {
+  bits<1> HWRegFile = regFile; // HW register file: 0 = GPR, 1 = XPR    
+}
+
 // General register
 class GRi<bits<5> Enc, string n> : M88kReg<Enc, n>;
 
@@ -20,17 +26,20 @@ foreach I = 0-31 in {
   def R#I : GRi<I, "r"#I>;
 }
 
-def GPR : RegisterClass<"M88k", [i32], 32,
+def GPR : M88kRegisterClass<[i32], 32, 0,
                             (add (sequence "R%u", 0, 31))>;
+//def GPR64 : RegisterClass<"M88k", [i64], 32,
+//                            (decimate GPR, 2)>;
 
 def GPROpnd : RegisterOperand<GPR>;
+//def GPR64Opnd : RegisterOperand<GPR64>;
 
 // Experimental: GPR with floating point types.
-def GPRF32 : RegisterClass<"M88k", [f32], 32,
-                            (add (sequence "R%u", 0, 31))>;
+def GPRF32 : M88kRegisterClass<[f32], 32, 0,
+                            (add GPR)>;
 // TODO Only even registers.
-def GPRF64 : RegisterClass<"M88k", [f64], 32,
-                            (add (sequence "R%u", 0, 31))>;
+def GPRF64 : M88kRegisterClass<[f64], 32, 0,
+                            (add GPRF32)>;
 
 def GPRF32Opnd : RegisterOperand<GPRF32>;
 def GPRF64Opnd : RegisterOperand<GPRF64>;
@@ -43,7 +52,7 @@ foreach I = 0-31 in {
   def X#I : XRi<I, "x"#I>;
 }
 
-def XR : RegisterClass<"M88k", [f32, f64], 32,
+def XR : M88kRegisterClass<[f32, f64], 32, 1,
                             (add (sequence "X%u", 0, 31))>;
 
 def XROpnd : RegisterOperand<XR>;
