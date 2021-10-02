@@ -68,7 +68,7 @@ static void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 
   AffineMap tripCountMap;
   SmallVector<Value, 4> tripCountOperands;
-  buildTripCountMapAndOperands(forOp, &tripCountMap, &tripCountOperands);
+  getTripCountMapAndOperands(forOp, &tripCountMap, &tripCountOperands);
 
   // Sometimes the trip count cannot be expressed as an affine expression.
   if (!tripCountMap) {
