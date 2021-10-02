@@ -1067,7 +1067,18 @@ public:
   CommandObjectPlatformPutFile(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "platform put-file",
-            "Transfer a file from this system to the remote end.", nullptr, 0) {
+            "Transfer a file from this system to the remote end.",
+            "platform put-file <source> [<destination>]", 0) {
+    SetHelpLong(
+        R"(Examples:
+
+(lldb) platform put-file /source/foo.txt /destination/bar.txt
+
+(lldb) platform put-file /source/foo.txt
+
+    Relative source file paths are resolved against lldb's local working directory.
+
+    Omitting the destination places the file in the platform working directory.)");
   }
 
   ~CommandObjectPlatformPutFile() override = default;
