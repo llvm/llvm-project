@@ -45,6 +45,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+
 using namespace clang;
 using namespace CodeGen;
 
@@ -1294,10 +1295,22 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
 
-  // Give a different name to inline builtin to avoid conflict with actual
-  // builtins.
-  if (FD->isInlineBuiltinDeclaration() && Fn)
-    Fn->setName(Fn->getName() + ".inline");
+  // When generating code for a builtin with an inline declaration, use a
+  // mangled name to hold the actual body, while keeping an external definition
+  // in case the function pointer is referenced somewhere.
+  if (FD->isInlineBuiltinDeclaration() && Fn) {
+    std::string FDInlineName = (Fn->getName() + ".inline").str();
+    llvm::Module *M = Fn->getParent();
+    llvm::Function *Clone = M->getFunction(FDInlineName);
+    if (!Clone) {
+      Clone = llvm::Function::Create(Fn->getFunctionType(),
+                                     llvm::GlobalValue::InternalLinkage,
+                                     Fn->getAddressSpace(), FDInlineName, M);
+      Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
+    Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    Fn = Clone;
+  }
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {

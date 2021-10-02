@@ -4891,12 +4891,28 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (auto builtinID = FD->getBuiltinID()) {
-    // Replaceable builtin provide their own implementation of a builtin. Unless
-    // we are in the builtin implementation itself, don't call the actual
-    // builtin. If we are in the builtin implementation, avoid trivial infinite
+    std::string FDInlineName = (FD->getName() + ".inline").str();
+    // When directing calling an inline builtin, call it through it's mangled
+    // name to make it clear it's not the actual builtin.
+    if (FD->isInlineBuiltinDeclaration() &&
+        CGF.CurFn->getName() != FDInlineName) {
+      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
+      llvm::Module *M = Fn->getParent();
+      llvm::Function *Clone = M->getFunction(FDInlineName);
+      if (!Clone) {
+        Clone = llvm::Function::Create(Fn->getFunctionType(),
+                                       llvm::GlobalValue::InternalLinkage,
+                                       Fn->getAddressSpace(), FDInlineName, M);
+        Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+      }
+      return CGCallee::forDirect(Clone, GD);
+    }
+
+    // Replaceable builtins provide their own implementation of a builtin. If we
+    // are in an inline builtin implementation, avoid trivial infinite
     // recursion.
-    if (!FD->isInlineBuiltinDeclaration() ||
-        CGF.CurFn->getName() == FD->getName())
+    else
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
@@ -4905,6 +4921,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
         cast<llvm::GlobalValue>(CalleePtr->stripPointerCasts()));
+
   return CGCallee::forDirect(CalleePtr, GD);
 }
 
