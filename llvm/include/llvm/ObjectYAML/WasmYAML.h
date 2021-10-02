@@ -77,12 +77,6 @@ struct Global {
   wasm::WasmInitExpr InitExpr;
 };
 
-struct Tag {
-  uint32_t Index;
-  uint32_t Attribute;
-  uint32_t SigIndex;
-};
-
 struct Import {
   StringRef Module;
   StringRef Field;
@@ -92,7 +86,7 @@ struct Import {
     Global GlobalImport;
     Table TableImport;
     Limits Memory;
-    Tag TagImport;
+    uint32_t TagIndex;
   };
 };
 
@@ -329,7 +323,7 @@ struct TagSection : Section {
     return S->Type == wasm::WASM_SEC_TAG;
   }
 
-  std::vector<Tag> Tags;
+  std::vector<uint32_t> TagTypes;
 };
 
 struct GlobalSection : Section {
@@ -431,7 +425,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Tag)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkExport)
 
 namespace llvm {
@@ -575,10 +568,6 @@ template <> struct ScalarEnumerationTraits<WasmYAML::Opcode> {
 
 template <> struct ScalarEnumerationTraits<WasmYAML::RelocType> {
   static void enumeration(IO &IO, WasmYAML::RelocType &Kind);
-};
-
-template <> struct MappingTraits<WasmYAML::Tag> {
-  static void mapping(IO &IO, WasmYAML::Tag &Tag);
 };
 
 template <> struct MappingTraits<WasmYAML::DylinkExport> {

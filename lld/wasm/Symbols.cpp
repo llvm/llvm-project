@@ -369,7 +369,6 @@ bool TagSymbol::hasTagIndex() const {
 DefinedTag::DefinedTag(StringRef name, uint32_t flags, InputFile *file,
                        InputTag *tag)
     : TagSymbol(name, DefinedTagKind, flags, file,
-                tag ? &tag->getType() : nullptr,
                 tag ? &tag->signature : nullptr),
       tag(tag) {}
 

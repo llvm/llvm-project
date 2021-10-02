@@ -336,10 +336,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
-  const WasmTagType *tagType = nullptr;
   const WasmSignature *signature = nullptr;
-  auto *wasmSym = make<WasmSymbol>(*info, globalType, &tableImport->Table,
-                                   tagType, signature);
+  auto *wasmSym =
+      make<WasmSymbol>(*info, globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())
@@ -516,7 +515,7 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Tags`.
   for (const WasmTag &t : wasmObj->tags())
-    tags.emplace_back(make<InputTag>(types[t.Type.SigIndex], t, this));
+    tags.emplace_back(make<InputTag>(types[t.SigIndex], t, this));
 
   // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());

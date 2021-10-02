@@ -29,10 +29,7 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:         ReturnTypes:      []
 
 ; CHECK:        - Type:            TAG
-; CHECK-NEXT:     Tags:
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Attribute:       0
-; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:     TagTypes:        [ 1 ]
 
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:

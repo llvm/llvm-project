@@ -55,10 +55,6 @@ void writeLimits(raw_ostream &os, const llvm::wasm::WasmLimits &limits);
 
 void writeGlobalType(raw_ostream &os, const llvm::wasm::WasmGlobalType &type);
 
-void writeTagType(raw_ostream &os, const llvm::wasm::WasmTagType &type);
-
-void writeTag(raw_ostream &os, const llvm::wasm::WasmTag &tag);
-
 void writeTableType(raw_ostream &os, const llvm::wasm::WasmTableType &type);
 
 void writeImport(raw_ostream &os, const llvm::wasm::WasmImport &import);
@@ -70,7 +66,6 @@ void writeExport(raw_ostream &os, const llvm::wasm::WasmExport &export_);
 std::string toString(llvm::wasm::ValType type);
 std::string toString(const llvm::wasm::WasmSignature &sig);
 std::string toString(const llvm::wasm::WasmGlobalType &type);
-std::string toString(const llvm::wasm::WasmTagType &type);
 std::string toString(const llvm::wasm::WasmTableType &type);
 
 } // namespace lld

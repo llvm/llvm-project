@@ -238,10 +238,6 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   SmallVector<wasm::ValType, 4> Params;
   if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
-    // We can't confirm its signature index for now because there can be
-    // imported exceptions. Set it to be 0 for now.
-    WasmSym->setTagType(
-        {wasm::WASM_TAG_ATTRIBUTE_EXCEPTION, /* SigIndex */ 0});
     // We may have multiple C++ compilation units to be linked together, each of
     // which defines the exception symbol. To resolve them, we declare them as
     // weak.

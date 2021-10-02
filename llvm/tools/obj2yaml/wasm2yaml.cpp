@@ -241,8 +241,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
           Im.GlobalImport.Mutable = Import.Global.Mutable;
           break;
         case wasm::WASM_EXTERNAL_TAG:
-          Im.TagImport.Attribute = Import.Tag.Attribute;
-          Im.TagImport.SigIndex = Import.Tag.SigIndex;
+          Im.SigIndex = Import.SigIndex;
           break;
         case wasm::WASM_EXTERNAL_TABLE:
           // FIXME: Currently we always output an index of 0 for any imported
@@ -285,11 +284,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_TAG: {
       auto TagSec = std::make_unique<WasmYAML::TagSection>();
       for (auto &Tag : Obj.tags()) {
-        WasmYAML::Tag T;
-        T.Index = Tag.Index;
-        T.Attribute = Tag.Type.Attribute;
-        T.SigIndex = Tag.Type.SigIndex;
-        TagSec->Tags.push_back(T);
+        TagSec->TagTypes.push_back(Tag.SigIndex);
       }
       S = std::move(TagSec);
       break;

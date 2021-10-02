@@ -317,7 +317,7 @@ private:
   uint32_t writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
                             ArrayRef<WasmFunction> Functions);
   uint32_t writeDataSection(const MCAsmLayout &Layout);
-  void writeTagSection(ArrayRef<wasm::WasmTagType> Tags);
+  void writeTagSection(ArrayRef<uint32_t> TagTypes);
   void writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals);
   void writeTableSection(ArrayRef<wasm::WasmTable> Tables);
   void writeRelocSection(uint32_t SectionIndex, StringRef Name,
@@ -831,8 +831,8 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
       encodeULEB128(NumElements, W->OS); // initial
       break;
     case wasm::WASM_EXTERNAL_TAG:
-      W->OS << char(Import.Tag.Attribute);
-      encodeULEB128(Import.Tag.SigIndex, W->OS);
+      W->OS << char(0); // Reserved 'attribute' field
+      encodeULEB128(Import.SigIndex, W->OS);
       break;
     default:
       llvm_unreachable("unsupported import kind");
@@ -856,17 +856,17 @@ void WasmObjectWriter::writeFunctionSection(ArrayRef<WasmFunction> Functions) {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeTagSection(ArrayRef<wasm::WasmTagType> Tags) {
-  if (Tags.empty())
+void WasmObjectWriter::writeTagSection(ArrayRef<uint32_t> TagTypes) {
+  if (TagTypes.empty())
     return;
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_TAG);
 
-  encodeULEB128(Tags.size(), W->OS);
-  for (const wasm::WasmTagType &Tag : Tags) {
-    W->OS << char(Tag.Attribute);
-    encodeULEB128(Tag.SigIndex, W->OS);
+  encodeULEB128(TagTypes.size(), W->OS);
+  for (uint32_t Index : TagTypes) {
+    W->OS << char(0); // Reserved 'attribute' field
+    encodeULEB128(Index, W->OS);
   }
 
   endSection(Section);
@@ -1346,8 +1346,7 @@ void WasmObjectWriter::prepareImports(
         Import.Module = WS.getImportModule();
         Import.Field = WS.getImportName();
         Import.Kind = wasm::WASM_EXTERNAL_TAG;
-        Import.Tag.Attribute = wasm::WASM_TAG_ATTRIBUTE_EXCEPTION;
-        Import.Tag.SigIndex = getTagType(WS);
+        Import.SigIndex = getTagType(WS);
         Imports.push_back(Import);
         assert(WasmIndices.count(&WS) == 0);
         WasmIndices[&WS] = NumTagImports++;
@@ -1415,7 +1414,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
   SmallVector<uint32_t, 4> TableElems;
   SmallVector<wasm::WasmImport, 4> Imports;
   SmallVector<wasm::WasmExport, 4> Exports;
-  SmallVector<wasm::WasmTagType, 1> Tags;
+  SmallVector<uint32_t, 2> TagTypes;
   SmallVector<wasm::WasmGlobal, 1> Globals;
   SmallVector<wasm::WasmTable, 1> Tables;
   SmallVector<wasm::WasmSymbolInfo, 4> SymbolInfos;
@@ -1654,13 +1653,11 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         // (__c_longjmp)
         unsigned Index;
         if (WS.isDefined()) {
-          Index = NumTagImports + Tags.size();
-          wasm::WasmTagType Tag;
-          Tag.SigIndex = getTagType(WS);
-          Tag.Attribute = wasm::WASM_TAG_ATTRIBUTE_EXCEPTION;
+          Index = NumTagImports + TagTypes.size();
+          uint32_t SigIndex = getTagType(WS);
           assert(WasmIndices.count(&WS) == 0);
           WasmIndices[&WS] = Index;
-          Tags.push_back(Tag);
+          TagTypes.push_back(SigIndex);
         } else {
           // An import; the index was assigned above.
           assert(WasmIndices.count(&WS) > 0);
@@ -1878,7 +1875,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeFunctionSection(Functions);
     writeTableSection(Tables);
     // Skip the "memory" section; we import the memory instead.
-    writeTagSection(Tags);
+    writeTagSection(TagTypes);
     writeGlobalSection(Globals);
     writeExportSection(Exports);
     const MCSymbol *IndirectFunctionTable =

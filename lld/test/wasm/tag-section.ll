@@ -30,10 +30,7 @@ define void @_start() {
 ; CHECK-NEXT:         ReturnTypes:     []
 
 ; CHECK:        - Type:            TAG
-; CHECK-NEXT:     Tags:
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Attribute:       0
-; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:     TagTypes:        [ 1 ]
 
 ; Global section has to come after tag section
 ; CHECK:        - Type:            GLOBAL

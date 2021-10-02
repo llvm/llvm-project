@@ -397,8 +397,8 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       NumImportedGlobals++;
       break;
     case wasm::WASM_EXTERNAL_TAG:
-      writeUint32(OS, Import.TagImport.Attribute);
-      writeUint32(OS, Import.TagImport.SigIndex);
+      writeUint8(OS, 0); // Reserved 'attribute' field
+      encodeULEB128(Import.SigIndex, OS);
       NumImportedTags++;
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
@@ -462,16 +462,10 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
                                      WasmYAML::TagSection &Section) {
-  encodeULEB128(Section.Tags.size(), OS);
-  uint32_t ExpectedIndex = NumImportedTags;
-  for (auto &Tag : Section.Tags) {
-    if (Tag.Index != ExpectedIndex) {
-      reportError("unexpected tag index: " + Twine(Tag.Index));
-      return;
-    }
-    ++ExpectedIndex;
-    encodeULEB128(Tag.Attribute, OS);
-    encodeULEB128(Tag.SigIndex, OS);
+  encodeULEB128(Section.TagTypes.size(), OS);
+  for (uint32_t TagType : Section.TagTypes) {
+    writeUint8(OS, 0); // Reserved 'attribute' field
+    encodeULEB128(TagType, OS);
   }
 }
 
