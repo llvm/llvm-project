@@ -3608,13 +3608,21 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
   Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
-  // FIXME(PR23527): Don't blindly transfer the inbounds flag from the GEP
-  // instruction to its SCEV, because the Instruction may be guarded by control
-  // flow and the no-overflow bits may not be valid for the expression in any
-  // context. This can be fixed similarly to how these flags are handled for
-  // adds.
+  const bool AssumeInBoundsFlags = [&]() {
+    if (!GEP->isInBounds())
+      return false;
+
+    // We'd like to propagate flags from the IR to the corresponding SCEV nodes,
+    // but to do that, we have to ensure that said flag is valid in the entire
+    // defined scope of the SCEV.
+    auto *GEPI = dyn_cast<Instruction>(GEP);
+    // TODO: non-instructions have global scope.  We might be able to prove
+    // some global scope cases
+    return GEPI && isSCEVExprNeverPoison(GEPI);
+  }();
+
   SCEV::NoWrapFlags OffsetWrap =
-      GEP->isInBounds() ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+    AssumeInBoundsFlags ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
@@ -3660,7 +3668,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  SCEV::NoWrapFlags BaseWrap = GEP->isInBounds() && isKnownNonNegative(Offset)
+  SCEV::NoWrapFlags BaseWrap = AssumeInBoundsFlags && isKnownNonNegative(Offset)
                                    ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
@@ -6582,15 +6590,11 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // instructions can map to the same SCEV. If we apply NSW or NUW from I to
   // the SCEV, we must guarantee no wrapping for that SCEV also when it is
   // derived from other instructions that map to the same SCEV. We cannot make
-  // that guarantee for cases where I is not executed. So we need to find the
-  // loop that I is considered in relation to and prove that I is executed for
-  // every iteration of that loop. That implies that the value that I
-  // calculates does not wrap anywhere in the loop, so then we can apply the
-  // flags to the SCEV.
-  //
-  // We check isLoopInvariant to disambiguate in case we are adding recurrences
-  // from different loops, so that we know which loop to prove that I is
-  // executed in.
+  // that guarantee for cases where I is not executed. So we need to find a
+  // upper bound on the defining scope for the SCEV, and prove that I is
+  // executed every time we enter that scope.  When the bounding scope is a
+  // loop (the common case), this is equivalent to proving I executes on every
+  // iteration of that loop.
   for (const Use &Op : I->operands()) {
     // I could be an extractvalue from a call to an overflow intrinsic.
     // TODO: We can do better here in some cases.
@@ -6598,15 +6602,7 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
       return false;
     const SCEV *OpS = getSCEV(Op);
     if (auto *AddRecS = dyn_cast<SCEVAddRecExpr>(OpS)) {
-      const bool AllOtherOpsLoopInvariant =
-        llvm::all_of(I->operands(), [&](const Use &Op2) -> bool {
-          if (Op.getOperandNo() == Op2.getOperandNo())
-            return true;
-          const SCEV *OtherOp = getSCEV(Op2);
-          return isLoopInvariant(OtherOp, AddRecS->getLoop());
-        });
-      if (AllOtherOpsLoopInvariant &&
-          isGuaranteedToExecuteForEveryIteration(I, AddRecS->getLoop()))
+      if (isGuaranteedToExecuteForEveryIteration(I, AddRecS->getLoop()))
         return true;
     }
   }

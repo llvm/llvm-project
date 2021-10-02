@@ -911,7 +911,7 @@ define void @crash(i8* %ptr) {
 ; CHECK-NEXT:    %lastout.2271 = phi i8* [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
 ; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + (-1 * (ptrtoint i8* %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, i8* %lastout.2271, i64 1
-; CHECK-NEXT:    --> {(1 + %ptr)<nuw>,+,1}<nuw><%while.body125> U: [1,0) S: [1,0) Exits: {(-1 + (-1 * (ptrtoint i8* %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {(1 + %ptr),+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-1 + (-1 * (ptrtoint i8* %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @crash
 ; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * (ptrtoint i8* %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: max backedge-taken count is -2
