@@ -49,6 +49,10 @@ func @main() -> () {
   %copy_empty = memref.alloc() : memref<3x0x1xf32>
   // Copying an empty shape should do nothing (and should not crash).
   memref.copy %input_empty, %copy_empty : memref<3x0x1xf32> to memref<3x0x1xf32>
-
+  memref.dealloc %copy_empty : memref<3x0x1xf32>
+  memref.dealloc %input_empty : memref<3x0x1xf32>
+  memref.dealloc %copy_two : memref<3x2xf32>
+  memref.dealloc %copy : memref<2x3xf32>
+  memref.dealloc %input : memref<2x3xf32>
   return
 }

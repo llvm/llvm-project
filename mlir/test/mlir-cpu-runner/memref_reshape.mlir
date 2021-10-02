@@ -43,6 +43,8 @@ func @main() -> () {
     : (memref<2x3xf32>, memref<2xindex>) -> ()
   call @reshape_unranked_memref_to_unranked(%input, %shape)
     : (memref<2x3xf32>, memref<2xindex>) -> ()
+  memref.dealloc %input : memref<2x3xf32>
+  memref.dealloc %shape : memref<2xindex>
   return
 }
 
