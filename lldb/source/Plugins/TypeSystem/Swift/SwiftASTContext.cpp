@@ -1836,11 +1836,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // Add Swift interfaces in the .dSYM at the end of the search paths.
   // .swiftmodules win over .swiftinterfaces, when they are loaded
   // directly from the .swift_ast section.
-  //
-  // FIXME: Since these paths also end up in the scratch context, we
-  //        would need a mechanism to ensure that and newer versions
-  //        (in the library evolution sense, not the date on disk) win
-  //        over older versions of the same .swiftinterface.
   if (auto dsym = GetDSYMBundle(module)) {
     llvm::SmallString<256> path(*dsym);
     llvm::Triple triple(swift_ast_sp->GetTriple());
@@ -1949,7 +1944,7 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
-/// Scan a newly added lldb::Module fdor Swift modules and report any errors in
+/// Scan a newly added lldb::Module for Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
 static void
 ProcessModule(ModuleSP module_sp, std::string m_description,
@@ -2068,20 +2063,60 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
 
   if (ast_context->HasErrors())
     return;
-  if (use_all_compiler_flags ||
-      target.GetExecutableModulePointer() == module_sp.get()) {
 
-    const auto &opts = ast_context->GetSearchPathOptions();
-    module_search_paths.insert(module_search_paths.end(),
-                               opts.ImportSearchPaths.begin(),
-                               opts.ImportSearchPaths.end());
-    for (const auto &fwsp : opts.FrameworkSearchPaths)
-      framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-    for (const std::string &arg : ast_context->GetClangArguments()) {
-      extra_clang_args.push_back(arg);
-      LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES, "adding Clang argument \"%s\".",
-                         arg.c_str());
-    }
+  // Load search path options from the module.
+  if (!use_all_compiler_flags &&
+      target.GetExecutableModulePointer() != module_sp.get())
+    return;
+
+  // Add Swift interfaces in the .dSYM at the end of the search paths.
+  // .swiftmodules win over .swiftinterfaces, when they are loaded
+  // directly from the .swift_ast section.
+  //
+  // FIXME: Since these paths end up in the scratch context, we would
+  //        need a mechanism to ensure that and newer versions (in the
+  //        library evolution sense, not the date on disk) win over
+  //        older versions of the same .swiftinterface.
+  if (auto dsym = GetDSYMBundle(*module_sp)) {
+    llvm::SmallString<256> path(*dsym);
+    llvm::Triple triple(ast_context->GetTriple());
+    StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
+    llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
+    bool exists = false;
+    llvm::sys::fs::is_directory(path, exists);
+    if (exists)
+      module_search_paths.push_back(std::string(path));
+  }
+
+  // Create a one-off CompilerInvocation as a place to load the
+  // deserialized search path options into.
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return;
+  bool found_swift_modules = false;
+  bool got_serialized_options = false;
+  llvm::SmallString<0> error;
+  llvm::raw_svector_ostream errs(error);
+  swift::CompilerInvocation invocation;
+  if (DeserializeAllCompilerFlags(invocation, *module_sp, m_description, errs,
+                                  got_serialized_options,
+                                  found_swift_modules)) {
+    // TODO: After removing DeserializeAllCompilerFlags from
+    //       CreateInstance(per-Module), errs will need to be
+    //       collected here and surfaced.
+  }
+
+  const auto &opts = invocation.getSearchPathOptions();
+  module_search_paths.insert(module_search_paths.end(),
+                             opts.ImportSearchPaths.begin(),
+                             opts.ImportSearchPaths.end());
+  for (const auto &fwsp : opts.FrameworkSearchPaths)
+    framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+  auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
+  for (const std::string &arg : clang_opts) {
+    extra_clang_args.push_back(arg);
+    LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES, "adding Clang argument \"%s\".",
+                       arg.c_str());
   }
 }
 
