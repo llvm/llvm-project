@@ -9,6 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
+// TODO FMT Investigate AppleClang ICE
+// UNSUPPORTED: apple-clang-13
 
 // <format>
 
@@ -25,29 +27,30 @@
 
 #include "test_macros.h"
 #include "format_tests.h"
+#include "string_literal.h"
 
-auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
-                                           const Args&... args) {
+auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
+                                                               const Args&... args) constexpr {
   {
     std::basic_string<CharT> out(expected.size(), CharT(' '));
-    auto it = std::format_to(out.begin(), fmt, args...);
+    auto it = std::format_to(out.begin(), fmt.template sv<CharT>(), args...);
     assert(it == out.end());
     assert(out == expected);
   }
   {
     std::list<CharT> out;
-    std::format_to(std::back_inserter(out), fmt, args...);
+    std::format_to(std::back_inserter(out), fmt.template sv<CharT>(), args...);
     assert(std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
   {
     std::vector<CharT> out;
-    std::format_to(std::back_inserter(out), fmt, args...);
+    std::format_to(std::back_inserter(out), fmt.template sv<CharT>(), args...);
     assert(std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
   {
     assert(expected.size() < 4096 && "Update the size of the buffer.");
     CharT out[4096];
-    CharT* it = std::format_to(out, fmt, args...);
+    CharT* it = std::format_to(out, fmt.template sv<CharT>(), args...);
     assert(std::distance(out, it) == int(expected.size()));
     // Convert to std::string since output contains '\0' for boolean tests.
     assert(std::basic_string<CharT>(out, it) == expected);
