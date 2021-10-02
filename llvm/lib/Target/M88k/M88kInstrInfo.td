@@ -380,9 +380,9 @@ multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                   [(truncstorei16 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
   def rid  : F_LS<Func, /*ty=*/ 0b00,
-                  (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
+                  (outs), (ins GPR64Opnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".d"),
-                  [],
+                  [(store (i64 GPR64Opnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
 }
 
