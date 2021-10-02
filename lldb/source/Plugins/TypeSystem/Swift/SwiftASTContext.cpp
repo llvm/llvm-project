@@ -1379,8 +1379,6 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
       invocation.setSDKPath("");
     }
   }
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
-             invocation.getSDKPath().str().c_str());
   return found_validation_errors;
 }
 
