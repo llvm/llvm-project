@@ -130,6 +130,7 @@ namespace std {
 #include <__format/concepts.h>
 #include <__format/enable_insertable.h>
 #include <__format/format_arg.h>
+#include <__format/format_arg_store.h>
 #include <__format/format_args.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
@@ -176,22 +177,25 @@ using format_args = basic_format_args<format_context>;
 using wformat_args = basic_format_args<wformat_context>;
 #endif
 
+// TODO FMT This helper wrapper can probably be removed after P2418 has been
+// implemented.
 template <class _Context, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
-  // TODO FMT Use a built-in array.
-  array<basic_format_arg<_Context>, sizeof...(_Args)> __args;
-};
-
-template <class _Context = format_context, class... _Args>
 _LIBCPP_HIDE_FROM_ABI __format_arg_store<_Context, _Args...>
-make_format_args(const _Args&... __args) {
-  return {basic_format_arg<_Context>(__args)...};
+__make_format_args(_Args&&... __args) {
+  return _VSTD::__format_arg_store<_Context, _Args...>(
+      _VSTD::forward<_Args>(__args)...);
+}
+
+// TODO FMT After P2418 specify the return type instead of using auto.
+template <class _Context = format_context, class... _Args>
+_LIBCPP_HIDE_FROM_ABI auto make_format_args(const _Args&... __args) {
+  return _VSTD::__make_format_args<_Context>(__args...);
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+// TODO FMT After P2418 specify the return type instead of using auto.
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI __format_arg_store<wformat_context, _Args...>
-make_wformat_args(const _Args&... __args) {
+_LIBCPP_HIDE_FROM_ABI auto make_wformat_args(const _Args&... __args) {
   return _VSTD::make_format_args<wformat_context>(__args...);
 }
 #endif

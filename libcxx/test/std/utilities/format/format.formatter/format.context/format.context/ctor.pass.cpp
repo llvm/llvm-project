@@ -121,22 +121,11 @@ void test() {
 #endif
 }
 
-void test() {
+int main(int, char**) {
   test<std::back_insert_iterator<std::basic_string<char>>, char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>();
 #endif
-#ifndef TEST_HAS_NO_CHAR8_T
-  test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
-#endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
-  test<std::back_insert_iterator<std::basic_string<char16_t>>, char16_t>();
-  test<std::back_insert_iterator<std::basic_string<char32_t>>, char32_t>();
-#endif
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }

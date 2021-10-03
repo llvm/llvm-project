@@ -25,9 +25,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Context>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_arg;
 
-template <class _Context, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS __format_arg_store;
-
 template <class _OutIt, class _CharT>
   requires output_iterator<_OutIt, const _CharT&>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_context;

@@ -43,7 +43,7 @@
 "`3466 <https://wg21.link/LWG3466>`__","Specify the requirements for ``promise``/``future``/``shared_future`` consistently","November 2020","|Nothing To Do|",""
 "`3467 <https://wg21.link/LWG3467>`__","``bool`` can't be an integer-like type","November 2020","|Complete|","14.0"
 "`3472 <https://wg21.link/LWG3472>`__","``counted_iterator`` is missing preconditions","November 2020","|Complete|","14.0","|ranges|"
-"`3473 <https://wg21.link/LWG3473>`__","Normative encouragement in non-normative note","November 2020","|Nothing To Do|","","|format|"
+"`3473 <https://wg21.link/LWG3473>`__","Normative encouragement in non-normative note","November 2020","|Complete|","15.0","|format|"
 "`3474 <https://wg21.link/LWG3474>`__","Nesting ``join_views`` is broken because of CTAD","November 2020","|Complete|","15.0","|ranges|"
 "`3476 <https://wg21.link/LWG3476>`__","``thread`` and ``jthread`` constructors require that the parameters be move-constructible but never move construct the parameters","November 2020","",""
 "`3477 <https://wg21.link/LWG3477>`__","Simplify constraints for ``semiregular-box``","November 2020","","","|ranges|"

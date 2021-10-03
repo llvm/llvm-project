@@ -22,18 +22,10 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  using Context [[maybe_unused]] = std::basic_format_context<
-      std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>;
+  using Context [[maybe_unused]] =
+      std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>;
 
-  [[maybe_unused]] auto value = std::make_wformat_args(42, nullptr, false, 1.0);
-
-  LIBCPP_ASSERT(value.__args.size() == 4);
-  LIBCPP_ASSERT(test_basic_format_arg(value.__args[0], 42));
-  // Note [format.arg]/11 specifies a nullptr is stored as a const void*.
-  LIBCPP_ASSERT(test_basic_format_arg(value.__args[1],
-                                      static_cast<const void*>(nullptr)));
-  LIBCPP_ASSERT(test_basic_format_arg(value.__args[2], false));
-  LIBCPP_ASSERT(test_basic_format_arg(value.__args[3], 1.0));
+  std::make_wformat_args(42, nullptr, false, 1.0);
 
   return 0;
 }

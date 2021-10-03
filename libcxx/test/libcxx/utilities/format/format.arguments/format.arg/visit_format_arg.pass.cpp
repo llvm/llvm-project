@@ -27,9 +27,11 @@
 
 template <class Context, class To, class From>
 void test(From value) {
-  auto format_args = std::make_format_args<Context>(value);
-  assert(format_args.__args.size() == 1);
-  assert(format_args.__args[0]);
+  auto store = std::make_format_args<Context>(value);
+  std::basic_format_args<Context> format_args{store};
+
+  assert(format_args.__size() == 1);
+  assert(format_args.get(0));
 
   auto result = std::visit_format_arg(
       [v = To(value)](auto a) -> To {
@@ -41,7 +43,7 @@ void test(From value) {
           return {};
         }
       },
-      format_args.__args[0]);
+      format_args.get(0));
 
   using ct = std::common_type_t<From, To>;
   assert(static_cast<ct>(result) == static_cast<ct>(value));
@@ -53,9 +55,11 @@ void test(From value) {
 // template argument.
 template <class Context, class From>
 void test_string_view(From value) {
-  auto format_args = std::make_format_args<Context>(value);
-  assert(format_args.__args.size() == 1);
-  assert(format_args.__args[0]);
+  auto store = std::make_format_args<Context>(value);
+  std::basic_format_args<Context> format_args{store};
+
+  assert(format_args.__size() == 1);
+  assert(format_args.get(0));
 
   using CharT = typename Context::char_type;
   using To = std::basic_string_view<CharT>;
@@ -70,7 +74,7 @@ void test_string_view(From value) {
           return {};
         }
       },
-      format_args.__args[0]);
+      format_args.get(0));
 
   assert(std::equal(value.begin(), value.end(), result.begin(), result.end()));
 }
@@ -351,15 +355,11 @@ void test() {
   test<Context, const void*>(static_cast<const void*>(&ci));
 }
 
-void test() {
+int main(int, char**) {
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
 #endif
-}
-
-int main(int, char**) {
-  test();
 
   return 0;
 }
