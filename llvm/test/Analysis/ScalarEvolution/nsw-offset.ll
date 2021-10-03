@@ -27,13 +27,13 @@ define void @foo(i32 %no, double* nocapture %d, double* nocapture %q) nounwind {
 ; CHECK-NEXT:    %8 = sext i32 %7 to i64
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %9 = getelementptr inbounds double, double* %q, i64 %8
-; CHECK-NEXT:    --> {(8 + %q)<nuw>,+,16}<nuw><%bb> U: [8,0) S: [8,0) Exits: (8 + (16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {(8 + %q),+,16}<nuw><%bb> U: full-set S: full-set Exits: (8 + (16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t7 = add nsw i32 %i.01, 1
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t8 = sext i32 %t7 to i64
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t9 = getelementptr inbounds double, double* %q, i64 %t8
-; CHECK-NEXT:    --> {(8 + %q)<nuw>,+,16}<nuw><%bb> U: [8,0) S: [8,0) Exits: (8 + (16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {(8 + %q),+,16}<nuw><%bb> U: full-set S: full-set Exits: (8 + (16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %14 = sext i32 %i.01 to i64
 ; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%bb> U: [0,2147483645) S: [0,2147483645) Exits: (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %15 = getelementptr inbounds double, double* %d, i64 %14

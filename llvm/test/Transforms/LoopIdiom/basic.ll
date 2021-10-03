@@ -809,28 +809,26 @@ define noalias i32* @test17(i32* nocapture readonly %a, i32 %c) {
 ; CHECK-NEXT:    [[TOBOOL_9:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_9]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[C]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[CALL]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[C]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[CALL]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = bitcast i32* [[SCEVGEP1]] to i8*
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[C]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[TMP10]], 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[SCEVGEP]], i8* align 4 [[SCEVGEP12]], i64 [[TMP11]], i1 false)
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[C]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP8]], 2
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[SCEVGEP]], i8* align 4 [[SCEVGEP12]], i64 [[TMP9]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[DEC10_IN:%.*]] = phi i32 [ [[DEC10:%.*]], [[WHILE_BODY]] ], [ [[C]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[DEC10]] = add nsw i32 [[DEC10_IN]], -1
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[DEC10]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[DEC10]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
