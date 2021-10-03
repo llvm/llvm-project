@@ -423,6 +423,67 @@ TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
   ModuleSlotTracker MST(&M);
   EXPECT_PRINTER_EQ("!0 = distinct !{}", N0->print(OS, MST));
 }
+
+TEST_F(MDNodeTest, PrintTree) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  {
+    DIType *Type = getDerivedType();
+    auto *Var = DILocalVariable::get(Context, Scope, "foo", File,
+                                     /*LineNo=*/8, Type, /*ArgNo=*/2, Flags,
+                                     /*Align=*/8, nullptr);
+    std::string Expected;
+    {
+      raw_string_ostream SS(Expected);
+      Var->print(SS);
+      // indent level 1
+      Scope->print((SS << "\n").indent(2));
+      File->print((SS << "\n").indent(2));
+      Type->print((SS << "\n").indent(2));
+      // indent level 2
+      auto *BaseType = cast<DIDerivedType>(Type)->getBaseType();
+      BaseType->print((SS << "\n").indent(4));
+    }
+
+    EXPECT_PRINTER_EQ(Expected, Var->printTree(OS));
+  }
+
+  {
+    // Test if printTree works correctly when there is
+    // a cycle in the MDNode and its dependencies.
+    //
+    // We're trying to create type like this:
+    // struct LinkedList {
+    //   LinkedList *Head;
+    // };
+    auto *StructTy = cast<DICompositeType>(getCompositeType());
+    DIType *PointerTy = DIDerivedType::getDistinct(
+        Context, dwarf::DW_TAG_pointer_type, "", nullptr, 0, nullptr, StructTy,
+        1, 2, 0, None, DINode::FlagZero);
+    StructTy->replaceElements(MDTuple::get(Context, PointerTy));
+
+    auto *Var = DILocalVariable::get(Context, Scope, "foo", File,
+                                     /*LineNo=*/8, StructTy, /*ArgNo=*/2, Flags,
+                                     /*Align=*/8, nullptr);
+    std::string Expected;
+    {
+      raw_string_ostream SS(Expected);
+      Var->print(SS);
+      // indent level 1
+      Scope->print((SS << "\n").indent(2));
+      File->print((SS << "\n").indent(2));
+      StructTy->print((SS << "\n").indent(2));
+      // indent level 2
+      StructTy->getRawElements()->print((SS << "\n").indent(4));
+      // indent level 3
+      auto Elements = StructTy->getElements();
+      Elements[0]->print((SS << "\n").indent(6));
+    }
+
+    EXPECT_PRINTER_EQ(Expected, Var->printTree(OS));
+  }
+}
 #undef EXPECT_PRINTER_EQ
 
 TEST_F(MDNodeTest, NullOperand) {
