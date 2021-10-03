@@ -5,7 +5,6 @@
 
 #include <riscv_vector.h>
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfrec7.nxv1f32.i64(<vscale x 1 x float> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -15,7 +14,6 @@ vfloat32mf2_t test_vfrec7_v_f32mf2(vfloat32mf2_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32.i64(<vscale x 2 x float> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -25,7 +23,6 @@ vfloat32m1_t test_vfrec7_v_f32m1(vfloat32m1_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vfrec7.nxv4f32.i64(<vscale x 4 x float> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -35,7 +32,6 @@ vfloat32m2_t test_vfrec7_v_f32m2(vfloat32m2_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vfrec7.nxv8f32.i64(<vscale x 8 x float> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -45,7 +41,6 @@ vfloat32m4_t test_vfrec7_v_f32m4(vfloat32m4_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vfrec7.nxv16f32.i64(<vscale x 16 x float> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -55,7 +50,6 @@ vfloat32m8_t test_vfrec7_v_f32m8(vfloat32m8_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vfrec7.nxv1f64.i64(<vscale x 1 x double> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -65,7 +59,6 @@ vfloat64m1_t test_vfrec7_v_f64m1(vfloat64m1_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vfrec7.nxv2f64.i64(<vscale x 2 x double> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -75,7 +68,6 @@ vfloat64m2_t test_vfrec7_v_f64m2(vfloat64m2_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vfrec7.nxv4f64.i64(<vscale x 4 x double> [[OP1:%.*]], i64 [[VL:%.*]])
@@ -85,7 +77,6 @@ vfloat64m4_t test_vfrec7_v_f64m4(vfloat64m4_t op1, size_t vl) {
   return vfrec7(op1, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vfrec7_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vfrec7.nxv8f64.i64(<vscale x 8 x double> [[OP1:%.*]], i64 [[VL:%.*]])

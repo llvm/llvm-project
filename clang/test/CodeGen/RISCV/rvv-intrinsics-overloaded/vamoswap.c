@@ -5,7 +5,6 @@
 
 #include <riscv_vector.h>
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -17,7 +16,6 @@ vint32mf2_t test_vamoswapei8_v_i32mf2(int32_t *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -29,7 +27,6 @@ vint32m1_t test_vamoswapei8_v_i32m1(int32_t *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -41,7 +38,6 @@ vint32m2_t test_vamoswapei8_v_i32m2(int32_t *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -53,7 +49,6 @@ vint32m4_t test_vamoswapei8_v_i32m4(int32_t *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -65,7 +60,6 @@ vint32m8_t test_vamoswapei8_v_i32m8(int32_t *base, vuint8m2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -77,7 +71,6 @@ vint32mf2_t test_vamoswapei16_v_i32mf2(int32_t *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -89,7 +82,6 @@ vint32m1_t test_vamoswapei16_v_i32m1(int32_t *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -101,7 +93,6 @@ vint32m2_t test_vamoswapei16_v_i32m2(int32_t *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -113,7 +104,6 @@ vint32m4_t test_vamoswapei16_v_i32m4(int32_t *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -125,7 +115,6 @@ vint32m8_t test_vamoswapei16_v_i32m8(int32_t *base, vuint16m4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -137,7 +126,6 @@ vint32mf2_t test_vamoswapei32_v_i32mf2(int32_t *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -149,7 +137,6 @@ vint32m1_t test_vamoswapei32_v_i32m1(int32_t *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -161,7 +148,6 @@ vint32m2_t test_vamoswapei32_v_i32m2(int32_t *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -173,7 +159,6 @@ vint32m4_t test_vamoswapei32_v_i32m4(int32_t *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -185,7 +170,6 @@ vint32m8_t test_vamoswapei32_v_i32m8(int32_t *base, vuint32m8_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -197,7 +181,6 @@ vint32mf2_t test_vamoswapei64_v_i32mf2(int32_t *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -209,7 +192,6 @@ vint32m1_t test_vamoswapei64_v_i32m1(int32_t *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -221,7 +203,6 @@ vint32m2_t test_vamoswapei64_v_i32m2(int32_t *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -233,7 +214,6 @@ vint32m4_t test_vamoswapei64_v_i32m4(int32_t *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -245,7 +225,6 @@ vint64m1_t test_vamoswapei8_v_i64m1(int64_t *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -257,7 +236,6 @@ vint64m2_t test_vamoswapei8_v_i64m2(int64_t *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -269,7 +247,6 @@ vint64m4_t test_vamoswapei8_v_i64m4(int64_t *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -281,7 +258,6 @@ vint64m8_t test_vamoswapei8_v_i64m8(int64_t *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -293,7 +269,6 @@ vint64m1_t test_vamoswapei16_v_i64m1(int64_t *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -305,7 +280,6 @@ vint64m2_t test_vamoswapei16_v_i64m2(int64_t *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -317,7 +291,6 @@ vint64m4_t test_vamoswapei16_v_i64m4(int64_t *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -329,7 +302,6 @@ vint64m8_t test_vamoswapei16_v_i64m8(int64_t *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -341,7 +313,6 @@ vint64m1_t test_vamoswapei32_v_i64m1(int64_t *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -353,7 +324,6 @@ vint64m2_t test_vamoswapei32_v_i64m2(int64_t *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -365,7 +335,6 @@ vint64m4_t test_vamoswapei32_v_i64m4(int64_t *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -377,7 +346,6 @@ vint64m8_t test_vamoswapei32_v_i64m8(int64_t *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -389,7 +357,6 @@ vint64m1_t test_vamoswapei64_v_i64m1(int64_t *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -401,7 +368,6 @@ vint64m2_t test_vamoswapei64_v_i64m2(int64_t *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -413,7 +379,6 @@ vint64m4_t test_vamoswapei64_v_i64m4(int64_t *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -425,7 +390,6 @@ vint64m8_t test_vamoswapei64_v_i64m8(int64_t *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -437,7 +401,6 @@ vuint32mf2_t test_vamoswapei8_v_u32mf2(uint32_t *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -449,7 +412,6 @@ vuint32m1_t test_vamoswapei8_v_u32m1(uint32_t *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -461,7 +423,6 @@ vuint32m2_t test_vamoswapei8_v_u32m2(uint32_t *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -473,7 +434,6 @@ vuint32m4_t test_vamoswapei8_v_u32m4(uint32_t *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -485,7 +445,6 @@ vuint32m8_t test_vamoswapei8_v_u32m8(uint32_t *base, vuint8m2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -497,7 +456,6 @@ vuint32mf2_t test_vamoswapei16_v_u32mf2(uint32_t *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -509,7 +467,6 @@ vuint32m1_t test_vamoswapei16_v_u32m1(uint32_t *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -521,7 +478,6 @@ vuint32m2_t test_vamoswapei16_v_u32m2(uint32_t *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -533,7 +489,6 @@ vuint32m4_t test_vamoswapei16_v_u32m4(uint32_t *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -545,7 +500,6 @@ vuint32m8_t test_vamoswapei16_v_u32m8(uint32_t *base, vuint16m4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -557,7 +511,6 @@ vuint32mf2_t test_vamoswapei32_v_u32mf2(uint32_t *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -569,7 +522,6 @@ vuint32m1_t test_vamoswapei32_v_u32m1(uint32_t *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -581,7 +533,6 @@ vuint32m2_t test_vamoswapei32_v_u32m2(uint32_t *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -593,7 +544,6 @@ vuint32m4_t test_vamoswapei32_v_u32m4(uint32_t *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -605,7 +555,6 @@ vuint32m8_t test_vamoswapei32_v_u32m8(uint32_t *base, vuint32m8_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -617,7 +566,6 @@ vuint32mf2_t test_vamoswapei64_v_u32mf2(uint32_t *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -629,7 +577,6 @@ vuint32m1_t test_vamoswapei64_v_u32m1(uint32_t *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -641,7 +588,6 @@ vuint32m2_t test_vamoswapei64_v_u32m2(uint32_t *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -653,7 +599,6 @@ vuint32m4_t test_vamoswapei64_v_u32m4(uint32_t *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -665,7 +610,6 @@ vuint64m1_t test_vamoswapei8_v_u64m1(uint64_t *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -677,7 +621,6 @@ vuint64m2_t test_vamoswapei8_v_u64m2(uint64_t *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -689,7 +632,6 @@ vuint64m4_t test_vamoswapei8_v_u64m4(uint64_t *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -701,7 +643,6 @@ vuint64m8_t test_vamoswapei8_v_u64m8(uint64_t *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -713,7 +654,6 @@ vuint64m1_t test_vamoswapei16_v_u64m1(uint64_t *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -725,7 +665,6 @@ vuint64m2_t test_vamoswapei16_v_u64m2(uint64_t *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -737,7 +676,6 @@ vuint64m4_t test_vamoswapei16_v_u64m4(uint64_t *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -749,7 +687,6 @@ vuint64m8_t test_vamoswapei16_v_u64m8(uint64_t *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -761,7 +698,6 @@ vuint64m1_t test_vamoswapei32_v_u64m1(uint64_t *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -773,7 +709,6 @@ vuint64m2_t test_vamoswapei32_v_u64m2(uint64_t *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -785,7 +720,6 @@ vuint64m4_t test_vamoswapei32_v_u64m4(uint64_t *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -797,7 +731,6 @@ vuint64m8_t test_vamoswapei32_v_u64m8(uint64_t *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -809,7 +742,6 @@ vuint64m1_t test_vamoswapei64_v_u64m1(uint64_t *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -821,7 +753,6 @@ vuint64m2_t test_vamoswapei64_v_u64m2(uint64_t *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -833,7 +764,6 @@ vuint64m4_t test_vamoswapei64_v_u64m4(uint64_t *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -845,7 +775,6 @@ vuint64m8_t test_vamoswapei64_v_u64m8(uint64_t *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -857,7 +786,6 @@ vfloat32mf2_t test_vamoswapei8_v_f32mf2(float *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -869,7 +797,6 @@ vfloat32m1_t test_vamoswapei8_v_f32m1(float *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -881,7 +808,6 @@ vfloat32m2_t test_vamoswapei8_v_f32m2(float *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -893,7 +819,6 @@ vfloat32m4_t test_vamoswapei8_v_f32m4(float *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -905,7 +830,6 @@ vfloat32m8_t test_vamoswapei8_v_f32m8(float *base, vuint8m2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -917,7 +841,6 @@ vfloat32mf2_t test_vamoswapei16_v_f32mf2(float *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -929,7 +852,6 @@ vfloat32m1_t test_vamoswapei16_v_f32m1(float *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -941,7 +863,6 @@ vfloat32m2_t test_vamoswapei16_v_f32m2(float *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -953,7 +874,6 @@ vfloat32m4_t test_vamoswapei16_v_f32m4(float *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -965,7 +885,6 @@ vfloat32m8_t test_vamoswapei16_v_f32m8(float *base, vuint16m4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -977,7 +896,6 @@ vfloat32mf2_t test_vamoswapei32_v_f32mf2(float *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -989,7 +907,6 @@ vfloat32m1_t test_vamoswapei32_v_f32m1(float *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -1001,7 +918,6 @@ vfloat32m2_t test_vamoswapei32_v_f32m2(float *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -1013,7 +929,6 @@ vfloat32m4_t test_vamoswapei32_v_f32m4(float *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -1025,7 +940,6 @@ vfloat32m8_t test_vamoswapei32_v_f32m8(float *base, vuint32m8_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -1037,7 +951,6 @@ vfloat32mf2_t test_vamoswapei64_v_f32mf2(float *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -1049,7 +962,6 @@ vfloat32m1_t test_vamoswapei64_v_f32m1(float *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -1061,7 +973,6 @@ vfloat32m2_t test_vamoswapei64_v_f32m2(float *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -1073,7 +984,6 @@ vfloat32m4_t test_vamoswapei64_v_f32m4(float *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -1085,7 +995,6 @@ vfloat64m1_t test_vamoswapei8_v_f64m1(double *base, vuint8mf8_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -1097,7 +1006,6 @@ vfloat64m2_t test_vamoswapei8_v_f64m2(double *base, vuint8mf4_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -1109,7 +1017,6 @@ vfloat64m4_t test_vamoswapei8_v_f64m4(double *base, vuint8mf2_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -1121,7 +1028,6 @@ vfloat64m8_t test_vamoswapei8_v_f64m8(double *base, vuint8m1_t bindex,
   return vamoswapei8(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -1133,7 +1039,6 @@ vfloat64m1_t test_vamoswapei16_v_f64m1(double *base, vuint16mf4_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -1145,7 +1050,6 @@ vfloat64m2_t test_vamoswapei16_v_f64m2(double *base, vuint16mf2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -1157,7 +1061,6 @@ vfloat64m4_t test_vamoswapei16_v_f64m4(double *base, vuint16m1_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -1169,7 +1072,6 @@ vfloat64m8_t test_vamoswapei16_v_f64m8(double *base, vuint16m2_t bindex,
   return vamoswapei16(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -1181,7 +1083,6 @@ vfloat64m1_t test_vamoswapei32_v_f64m1(double *base, vuint32mf2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -1193,7 +1094,6 @@ vfloat64m2_t test_vamoswapei32_v_f64m2(double *base, vuint32m1_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -1205,7 +1105,6 @@ vfloat64m4_t test_vamoswapei32_v_f64m4(double *base, vuint32m2_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -1217,7 +1116,6 @@ vfloat64m8_t test_vamoswapei32_v_f64m8(double *base, vuint32m4_t bindex,
   return vamoswapei32(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -1229,7 +1127,6 @@ vfloat64m1_t test_vamoswapei64_v_f64m1(double *base, vuint64m1_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -1241,7 +1138,6 @@ vfloat64m2_t test_vamoswapei64_v_f64m2(double *base, vuint64m2_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -1253,7 +1149,6 @@ vfloat64m4_t test_vamoswapei64_v_f64m4(double *base, vuint64m4_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -1265,7 +1160,6 @@ vfloat64m8_t test_vamoswapei64_v_f64m8(double *base, vuint64m8_t bindex,
   return vamoswapei64(base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1278,7 +1172,6 @@ vint32mf2_t test_vamoswapei8_v_i32mf2_m(vbool64_t mask, int32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1291,7 +1184,6 @@ vint32m1_t test_vamoswapei8_v_i32m1_m(vbool32_t mask, int32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1304,7 +1196,6 @@ vint32m2_t test_vamoswapei8_v_i32m2_m(vbool16_t mask, int32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1317,7 +1208,6 @@ vint32m4_t test_vamoswapei8_v_i32m4_m(vbool8_t mask, int32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1330,7 +1220,6 @@ vint32m8_t test_vamoswapei8_v_i32m8_m(vbool4_t mask, int32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1343,7 +1232,6 @@ vint32mf2_t test_vamoswapei16_v_i32mf2_m(vbool64_t mask, int32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1356,7 +1244,6 @@ vint32m1_t test_vamoswapei16_v_i32m1_m(vbool32_t mask, int32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1369,7 +1256,6 @@ vint32m2_t test_vamoswapei16_v_i32m2_m(vbool16_t mask, int32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1382,7 +1268,6 @@ vint32m4_t test_vamoswapei16_v_i32m4_m(vbool8_t mask, int32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1395,7 +1280,6 @@ vint32m8_t test_vamoswapei16_v_i32m8_m(vbool4_t mask, int32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1408,7 +1292,6 @@ vint32mf2_t test_vamoswapei32_v_i32mf2_m(vbool64_t mask, int32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1421,7 +1304,6 @@ vint32m1_t test_vamoswapei32_v_i32m1_m(vbool32_t mask, int32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1434,7 +1316,6 @@ vint32m2_t test_vamoswapei32_v_i32m2_m(vbool16_t mask, int32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1447,7 +1328,6 @@ vint32m4_t test_vamoswapei32_v_i32m4_m(vbool8_t mask, int32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1460,7 +1340,6 @@ vint32m8_t test_vamoswapei32_v_i32m8_m(vbool4_t mask, int32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1473,7 +1352,6 @@ vint32mf2_t test_vamoswapei64_v_i32mf2_m(vbool64_t mask, int32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1486,7 +1364,6 @@ vint32m1_t test_vamoswapei64_v_i32m1_m(vbool32_t mask, int32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1499,7 +1376,6 @@ vint32m2_t test_vamoswapei64_v_i32m2_m(vbool16_t mask, int32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1512,7 +1388,6 @@ vint32m4_t test_vamoswapei64_v_i32m4_m(vbool8_t mask, int32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -1525,7 +1400,6 @@ vint64m1_t test_vamoswapei8_v_i64m1_m(vbool64_t mask, int64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -1538,7 +1412,6 @@ vint64m2_t test_vamoswapei8_v_i64m2_m(vbool32_t mask, int64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -1551,7 +1424,6 @@ vint64m4_t test_vamoswapei8_v_i64m4_m(vbool16_t mask, int64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -1564,7 +1436,6 @@ vint64m8_t test_vamoswapei8_v_i64m8_m(vbool8_t mask, int64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -1577,7 +1448,6 @@ vint64m1_t test_vamoswapei16_v_i64m1_m(vbool64_t mask, int64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -1590,7 +1460,6 @@ vint64m2_t test_vamoswapei16_v_i64m2_m(vbool32_t mask, int64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -1603,7 +1472,6 @@ vint64m4_t test_vamoswapei16_v_i64m4_m(vbool16_t mask, int64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -1616,7 +1484,6 @@ vint64m8_t test_vamoswapei16_v_i64m8_m(vbool8_t mask, int64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -1629,7 +1496,6 @@ vint64m1_t test_vamoswapei32_v_i64m1_m(vbool64_t mask, int64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -1642,7 +1508,6 @@ vint64m2_t test_vamoswapei32_v_i64m2_m(vbool32_t mask, int64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -1655,7 +1520,6 @@ vint64m4_t test_vamoswapei32_v_i64m4_m(vbool16_t mask, int64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -1668,7 +1532,6 @@ vint64m8_t test_vamoswapei32_v_i64m8_m(vbool8_t mask, int64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -1681,7 +1544,6 @@ vint64m1_t test_vamoswapei64_v_i64m1_m(vbool64_t mask, int64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -1694,7 +1556,6 @@ vint64m2_t test_vamoswapei64_v_i64m2_m(vbool32_t mask, int64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -1707,7 +1568,6 @@ vint64m4_t test_vamoswapei64_v_i64m4_m(vbool16_t mask, int64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -1720,7 +1580,6 @@ vint64m8_t test_vamoswapei64_v_i64m8_m(vbool8_t mask, int64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1733,7 +1592,6 @@ vuint32mf2_t test_vamoswapei8_v_u32mf2_m(vbool64_t mask, uint32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1746,7 +1604,6 @@ vuint32m1_t test_vamoswapei8_v_u32m1_m(vbool32_t mask, uint32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1759,7 +1616,6 @@ vuint32m2_t test_vamoswapei8_v_u32m2_m(vbool16_t mask, uint32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1772,7 +1628,6 @@ vuint32m4_t test_vamoswapei8_v_u32m4_m(vbool8_t mask, uint32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1785,7 +1640,6 @@ vuint32m8_t test_vamoswapei8_v_u32m8_m(vbool4_t mask, uint32_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1798,7 +1652,6 @@ vuint32mf2_t test_vamoswapei16_v_u32mf2_m(vbool64_t mask, uint32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1811,7 +1664,6 @@ vuint32m1_t test_vamoswapei16_v_u32m1_m(vbool32_t mask, uint32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1824,7 +1676,6 @@ vuint32m2_t test_vamoswapei16_v_u32m2_m(vbool16_t mask, uint32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1837,7 +1688,6 @@ vuint32m4_t test_vamoswapei16_v_u32m4_m(vbool8_t mask, uint32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1850,7 +1700,6 @@ vuint32m8_t test_vamoswapei16_v_u32m8_m(vbool4_t mask, uint32_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1863,7 +1712,6 @@ vuint32mf2_t test_vamoswapei32_v_u32mf2_m(vbool64_t mask, uint32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1876,7 +1724,6 @@ vuint32m1_t test_vamoswapei32_v_u32m1_m(vbool32_t mask, uint32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1889,7 +1736,6 @@ vuint32m2_t test_vamoswapei32_v_u32m2_m(vbool16_t mask, uint32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1902,7 +1748,6 @@ vuint32m4_t test_vamoswapei32_v_u32m4_m(vbool8_t mask, uint32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
@@ -1915,7 +1760,6 @@ vuint32m8_t test_vamoswapei32_v_u32m8_m(vbool4_t mask, uint32_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
@@ -1928,7 +1772,6 @@ vuint32mf2_t test_vamoswapei64_v_u32mf2_m(vbool64_t mask, uint32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
@@ -1941,7 +1784,6 @@ vuint32m1_t test_vamoswapei64_v_u32m1_m(vbool32_t mask, uint32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
@@ -1954,7 +1796,6 @@ vuint32m2_t test_vamoswapei64_v_u32m2_m(vbool16_t mask, uint32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
@@ -1967,7 +1808,6 @@ vuint32m4_t test_vamoswapei64_v_u32m4_m(vbool8_t mask, uint32_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -1980,7 +1820,6 @@ vuint64m1_t test_vamoswapei8_v_u64m1_m(vbool64_t mask, uint64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -1993,7 +1832,6 @@ vuint64m2_t test_vamoswapei8_v_u64m2_m(vbool32_t mask, uint64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -2006,7 +1844,6 @@ vuint64m4_t test_vamoswapei8_v_u64m4_m(vbool16_t mask, uint64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -2019,7 +1856,6 @@ vuint64m8_t test_vamoswapei8_v_u64m8_m(vbool8_t mask, uint64_t *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -2032,7 +1868,6 @@ vuint64m1_t test_vamoswapei16_v_u64m1_m(vbool64_t mask, uint64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -2045,7 +1880,6 @@ vuint64m2_t test_vamoswapei16_v_u64m2_m(vbool32_t mask, uint64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -2058,7 +1892,6 @@ vuint64m4_t test_vamoswapei16_v_u64m4_m(vbool16_t mask, uint64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -2071,7 +1904,6 @@ vuint64m8_t test_vamoswapei16_v_u64m8_m(vbool8_t mask, uint64_t *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -2084,7 +1916,6 @@ vuint64m1_t test_vamoswapei32_v_u64m1_m(vbool64_t mask, uint64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -2097,7 +1928,6 @@ vuint64m2_t test_vamoswapei32_v_u64m2_m(vbool32_t mask, uint64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -2110,7 +1940,6 @@ vuint64m4_t test_vamoswapei32_v_u64m4_m(vbool16_t mask, uint64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -2123,7 +1952,6 @@ vuint64m8_t test_vamoswapei32_v_u64m8_m(vbool8_t mask, uint64_t *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
@@ -2136,7 +1964,6 @@ vuint64m1_t test_vamoswapei64_v_u64m1_m(vbool64_t mask, uint64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
@@ -2149,7 +1976,6 @@ vuint64m2_t test_vamoswapei64_v_u64m2_m(vbool32_t mask, uint64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
@@ -2162,7 +1988,6 @@ vuint64m4_t test_vamoswapei64_v_u64m4_m(vbool16_t mask, uint64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
@@ -2175,7 +2000,6 @@ vuint64m8_t test_vamoswapei64_v_u64m8_m(vbool8_t mask, uint64_t *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -2188,7 +2012,6 @@ vfloat32mf2_t test_vamoswapei8_v_f32mf2_m(vbool64_t mask, float *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -2201,7 +2024,6 @@ vfloat32m1_t test_vamoswapei8_v_f32m1_m(vbool32_t mask, float *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -2214,7 +2036,6 @@ vfloat32m2_t test_vamoswapei8_v_f32m2_m(vbool16_t mask, float *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -2227,7 +2048,6 @@ vfloat32m4_t test_vamoswapei8_v_f32m4_m(vbool8_t mask, float *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -2240,7 +2060,6 @@ vfloat32m8_t test_vamoswapei8_v_f32m8_m(vbool4_t mask, float *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -2253,7 +2072,6 @@ vfloat32mf2_t test_vamoswapei16_v_f32mf2_m(vbool64_t mask, float *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -2266,7 +2084,6 @@ vfloat32m1_t test_vamoswapei16_v_f32m1_m(vbool32_t mask, float *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -2279,7 +2096,6 @@ vfloat32m2_t test_vamoswapei16_v_f32m2_m(vbool16_t mask, float *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -2292,7 +2108,6 @@ vfloat32m4_t test_vamoswapei16_v_f32m4_m(vbool8_t mask, float *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -2305,7 +2120,6 @@ vfloat32m8_t test_vamoswapei16_v_f32m8_m(vbool4_t mask, float *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -2318,7 +2132,6 @@ vfloat32mf2_t test_vamoswapei32_v_f32mf2_m(vbool64_t mask, float *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -2331,7 +2144,6 @@ vfloat32m1_t test_vamoswapei32_v_f32m1_m(vbool32_t mask, float *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -2344,7 +2156,6 @@ vfloat32m2_t test_vamoswapei32_v_f32m2_m(vbool16_t mask, float *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -2357,7 +2168,6 @@ vfloat32m4_t test_vamoswapei32_v_f32m4_m(vbool8_t mask, float *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
@@ -2370,7 +2180,6 @@ vfloat32m8_t test_vamoswapei32_v_f32m8_m(vbool4_t mask, float *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -2383,7 +2192,6 @@ vfloat32mf2_t test_vamoswapei64_v_f32mf2_m(vbool64_t mask, float *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
@@ -2396,7 +2204,6 @@ vfloat32m1_t test_vamoswapei64_v_f32m1_m(vbool32_t mask, float *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
@@ -2409,7 +2216,6 @@ vfloat32m2_t test_vamoswapei64_v_f32m2_m(vbool16_t mask, float *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
@@ -2422,7 +2228,6 @@ vfloat32m4_t test_vamoswapei64_v_f32m4_m(vbool8_t mask, float *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -2435,7 +2240,6 @@ vfloat64m1_t test_vamoswapei8_v_f64m1_m(vbool64_t mask, double *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -2448,7 +2252,6 @@ vfloat64m2_t test_vamoswapei8_v_f64m2_m(vbool32_t mask, double *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -2461,7 +2264,6 @@ vfloat64m4_t test_vamoswapei8_v_f64m4_m(vbool16_t mask, double *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -2474,7 +2276,6 @@ vfloat64m8_t test_vamoswapei8_v_f64m8_m(vbool8_t mask, double *base,
   return vamoswapei8(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -2487,7 +2288,6 @@ vfloat64m1_t test_vamoswapei16_v_f64m1_m(vbool64_t mask, double *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -2500,7 +2300,6 @@ vfloat64m2_t test_vamoswapei16_v_f64m2_m(vbool32_t mask, double *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -2513,7 +2312,6 @@ vfloat64m4_t test_vamoswapei16_v_f64m4_m(vbool16_t mask, double *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -2526,7 +2324,6 @@ vfloat64m8_t test_vamoswapei16_v_f64m8_m(vbool8_t mask, double *base,
   return vamoswapei16(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -2539,7 +2336,6 @@ vfloat64m1_t test_vamoswapei32_v_f64m1_m(vbool64_t mask, double *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -2552,7 +2348,6 @@ vfloat64m2_t test_vamoswapei32_v_f64m2_m(vbool32_t mask, double *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -2565,7 +2360,6 @@ vfloat64m4_t test_vamoswapei32_v_f64m4_m(vbool16_t mask, double *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
@@ -2578,7 +2372,6 @@ vfloat64m8_t test_vamoswapei32_v_f64m8_m(vbool8_t mask, double *base,
   return vamoswapei32(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
@@ -2591,7 +2384,6 @@ vfloat64m1_t test_vamoswapei64_v_f64m1_m(vbool64_t mask, double *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
@@ -2604,7 +2396,6 @@ vfloat64m2_t test_vamoswapei64_v_f64m2_m(vbool32_t mask, double *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
@@ -2617,7 +2408,6 @@ vfloat64m4_t test_vamoswapei64_v_f64m4_m(vbool16_t mask, double *base,
   return vamoswapei64(mask, base, bindex, value, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*

@@ -5,7 +5,6 @@
 
 #include <riscv_vector.h>
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgather.vv.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -16,7 +15,6 @@ vint8mf8_t test_vrgather_vv_i8mf8(vint8mf8_t op1, vuint8mf8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgather.vx.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -26,7 +24,6 @@ vint8mf8_t test_vrgather_vx_i8mf8(vint8mf8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgather.vv.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -37,7 +34,6 @@ vint8mf4_t test_vrgather_vv_i8mf4(vint8mf4_t op1, vuint8mf4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgather.vx.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -47,7 +43,6 @@ vint8mf4_t test_vrgather_vx_i8mf4(vint8mf4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgather.vv.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -58,7 +53,6 @@ vint8mf2_t test_vrgather_vv_i8mf2(vint8mf2_t op1, vuint8mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgather.vx.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -68,7 +62,6 @@ vint8mf2_t test_vrgather_vx_i8mf2(vint8mf2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgather.vv.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -78,7 +71,6 @@ vint8m1_t test_vrgather_vv_i8m1(vint8m1_t op1, vuint8m1_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgather.vx.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -88,7 +80,6 @@ vint8m1_t test_vrgather_vx_i8m1(vint8m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgather.vv.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -98,7 +89,6 @@ vint8m2_t test_vrgather_vv_i8m2(vint8m2_t op1, vuint8m2_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgather.vx.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -108,7 +98,6 @@ vint8m2_t test_vrgather_vx_i8m2(vint8m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgather.vv.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -118,7 +107,6 @@ vint8m4_t test_vrgather_vv_i8m4(vint8m4_t op1, vuint8m4_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgather.vx.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -128,7 +116,6 @@ vint8m4_t test_vrgather_vx_i8m4(vint8m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vrgather.vv.nxv64i8.i64(<vscale x 64 x i8> [[OP1:%.*]], <vscale x 64 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -138,7 +125,6 @@ vint8m8_t test_vrgather_vv_i8m8(vint8m8_t op1, vuint8m8_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vrgather.vx.nxv64i8.i64(<vscale x 64 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -148,7 +134,6 @@ vint8m8_t test_vrgather_vx_i8m8(vint8m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgather.vv.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -159,7 +144,6 @@ vint16mf4_t test_vrgather_vv_i16mf4(vint16mf4_t op1, vuint16mf4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgather.vx.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -169,7 +153,6 @@ vint16mf4_t test_vrgather_vx_i16mf4(vint16mf4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgather.vv.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -180,7 +163,6 @@ vint16mf2_t test_vrgather_vv_i16mf2(vint16mf2_t op1, vuint16mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgather.vx.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -190,7 +172,6 @@ vint16mf2_t test_vrgather_vx_i16mf2(vint16mf2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgather.vv.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -201,7 +182,6 @@ vint16m1_t test_vrgather_vv_i16m1(vint16m1_t op1, vuint16m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgather.vx.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -211,7 +191,6 @@ vint16m1_t test_vrgather_vx_i16m1(vint16m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgather.vv.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -222,7 +201,6 @@ vint16m2_t test_vrgather_vv_i16m2(vint16m2_t op1, vuint16m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgather.vx.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -232,7 +210,6 @@ vint16m2_t test_vrgather_vx_i16m2(vint16m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgather.vv.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -243,7 +220,6 @@ vint16m4_t test_vrgather_vv_i16m4(vint16m4_t op1, vuint16m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgather.vx.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -253,7 +229,6 @@ vint16m4_t test_vrgather_vx_i16m4(vint16m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgather.vv.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -264,7 +239,6 @@ vint16m8_t test_vrgather_vv_i16m8(vint16m8_t op1, vuint16m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgather.vx.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -274,7 +248,6 @@ vint16m8_t test_vrgather_vx_i16m8(vint16m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgather.vv.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -285,7 +258,6 @@ vint32mf2_t test_vrgather_vv_i32mf2(vint32mf2_t op1, vuint32mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgather.vx.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -295,7 +267,6 @@ vint32mf2_t test_vrgather_vx_i32mf2(vint32mf2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgather.vv.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -306,7 +277,6 @@ vint32m1_t test_vrgather_vv_i32m1(vint32m1_t op1, vuint32m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgather.vx.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -316,7 +286,6 @@ vint32m1_t test_vrgather_vx_i32m1(vint32m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -327,7 +296,6 @@ vint32m2_t test_vrgather_vv_i32m2(vint32m2_t op1, vuint32m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -337,7 +305,6 @@ vint32m2_t test_vrgather_vx_i32m2(vint32m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgather.vv.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -348,7 +315,6 @@ vint32m4_t test_vrgather_vv_i32m4(vint32m4_t op1, vuint32m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgather.vx.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -358,7 +324,6 @@ vint32m4_t test_vrgather_vx_i32m4(vint32m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgather.vv.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -369,7 +334,6 @@ vint32m8_t test_vrgather_vv_i32m8(vint32m8_t op1, vuint32m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgather.vx.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -379,7 +343,6 @@ vint32m8_t test_vrgather_vx_i32m8(vint32m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgather.vv.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -390,7 +353,6 @@ vint64m1_t test_vrgather_vv_i64m1(vint64m1_t op1, vuint64m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgather.vx.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -400,7 +362,6 @@ vint64m1_t test_vrgather_vx_i64m1(vint64m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgather.vv.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -411,7 +372,6 @@ vint64m2_t test_vrgather_vv_i64m2(vint64m2_t op1, vuint64m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgather.vx.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -421,7 +381,6 @@ vint64m2_t test_vrgather_vx_i64m2(vint64m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgather.vv.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -432,7 +391,6 @@ vint64m4_t test_vrgather_vv_i64m4(vint64m4_t op1, vuint64m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgather.vx.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -442,7 +400,6 @@ vint64m4_t test_vrgather_vx_i64m4(vint64m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgather.vv.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -453,7 +410,6 @@ vint64m8_t test_vrgather_vv_i64m8(vint64m8_t op1, vuint64m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgather.vx.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -463,7 +419,6 @@ vint64m8_t test_vrgather_vx_i64m8(vint64m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgather.vv.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -474,7 +429,6 @@ vuint8mf8_t test_vrgather_vv_u8mf8(vuint8mf8_t op1, vuint8mf8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgather.vx.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -484,7 +438,6 @@ vuint8mf8_t test_vrgather_vx_u8mf8(vuint8mf8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgather.vv.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -495,7 +448,6 @@ vuint8mf4_t test_vrgather_vv_u8mf4(vuint8mf4_t op1, vuint8mf4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgather.vx.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -505,7 +457,6 @@ vuint8mf4_t test_vrgather_vx_u8mf4(vuint8mf4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgather.vv.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -516,7 +467,6 @@ vuint8mf2_t test_vrgather_vv_u8mf2(vuint8mf2_t op1, vuint8mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgather.vx.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -526,7 +476,6 @@ vuint8mf2_t test_vrgather_vx_u8mf2(vuint8mf2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgather.vv.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -536,7 +485,6 @@ vuint8m1_t test_vrgather_vv_u8m1(vuint8m1_t op1, vuint8m1_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgather.vx.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -546,7 +494,6 @@ vuint8m1_t test_vrgather_vx_u8m1(vuint8m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgather.vv.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -556,7 +503,6 @@ vuint8m2_t test_vrgather_vv_u8m2(vuint8m2_t op1, vuint8m2_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgather.vx.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -566,7 +512,6 @@ vuint8m2_t test_vrgather_vx_u8m2(vuint8m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgather.vv.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -576,7 +521,6 @@ vuint8m4_t test_vrgather_vv_u8m4(vuint8m4_t op1, vuint8m4_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgather.vx.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -586,7 +530,6 @@ vuint8m4_t test_vrgather_vx_u8m4(vuint8m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vrgather.vv.nxv64i8.i64(<vscale x 64 x i8> [[OP1:%.*]], <vscale x 64 x i8> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -596,7 +539,6 @@ vuint8m8_t test_vrgather_vv_u8m8(vuint8m8_t op1, vuint8m8_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vrgather.vx.nxv64i8.i64(<vscale x 64 x i8> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -606,7 +548,6 @@ vuint8m8_t test_vrgather_vx_u8m8(vuint8m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgather.vv.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -617,7 +558,6 @@ vuint16mf4_t test_vrgather_vv_u16mf4(vuint16mf4_t op1, vuint16mf4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgather.vx.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -628,7 +568,6 @@ vuint16mf4_t test_vrgather_vx_u16mf4(vuint16mf4_t op1, size_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgather.vv.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -639,7 +578,6 @@ vuint16mf2_t test_vrgather_vv_u16mf2(vuint16mf2_t op1, vuint16mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgather.vx.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -650,7 +588,6 @@ vuint16mf2_t test_vrgather_vx_u16mf2(vuint16mf2_t op1, size_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgather.vv.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -661,7 +598,6 @@ vuint16m1_t test_vrgather_vv_u16m1(vuint16m1_t op1, vuint16m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgather.vx.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -671,7 +607,6 @@ vuint16m1_t test_vrgather_vx_u16m1(vuint16m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgather.vv.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -682,7 +617,6 @@ vuint16m2_t test_vrgather_vv_u16m2(vuint16m2_t op1, vuint16m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgather.vx.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -692,7 +626,6 @@ vuint16m2_t test_vrgather_vx_u16m2(vuint16m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgather.vv.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -703,7 +636,6 @@ vuint16m4_t test_vrgather_vv_u16m4(vuint16m4_t op1, vuint16m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgather.vx.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -713,7 +645,6 @@ vuint16m4_t test_vrgather_vx_u16m4(vuint16m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgather.vv.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -724,7 +655,6 @@ vuint16m8_t test_vrgather_vv_u16m8(vuint16m8_t op1, vuint16m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgather.vx.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -734,7 +664,6 @@ vuint16m8_t test_vrgather_vx_u16m8(vuint16m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgather.vv.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -745,7 +674,6 @@ vuint32mf2_t test_vrgather_vv_u32mf2(vuint32mf2_t op1, vuint32mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgather.vx.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -756,7 +684,6 @@ vuint32mf2_t test_vrgather_vx_u32mf2(vuint32mf2_t op1, size_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgather.vv.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -767,7 +694,6 @@ vuint32m1_t test_vrgather_vv_u32m1(vuint32m1_t op1, vuint32m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgather.vx.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -777,7 +703,6 @@ vuint32m1_t test_vrgather_vx_u32m1(vuint32m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -788,7 +713,6 @@ vuint32m2_t test_vrgather_vv_u32m2(vuint32m2_t op1, vuint32m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -798,7 +722,6 @@ vuint32m2_t test_vrgather_vx_u32m2(vuint32m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgather.vv.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -809,7 +732,6 @@ vuint32m4_t test_vrgather_vv_u32m4(vuint32m4_t op1, vuint32m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgather.vx.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -819,7 +741,6 @@ vuint32m4_t test_vrgather_vx_u32m4(vuint32m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgather.vv.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -830,7 +751,6 @@ vuint32m8_t test_vrgather_vv_u32m8(vuint32m8_t op1, vuint32m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgather.vx.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -840,7 +760,6 @@ vuint32m8_t test_vrgather_vx_u32m8(vuint32m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgather.vv.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -851,7 +770,6 @@ vuint64m1_t test_vrgather_vv_u64m1(vuint64m1_t op1, vuint64m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgather.vx.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -861,7 +779,6 @@ vuint64m1_t test_vrgather_vx_u64m1(vuint64m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgather.vv.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -872,7 +789,6 @@ vuint64m2_t test_vrgather_vv_u64m2(vuint64m2_t op1, vuint64m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgather.vx.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -882,7 +798,6 @@ vuint64m2_t test_vrgather_vx_u64m2(vuint64m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgather.vv.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -893,7 +808,6 @@ vuint64m4_t test_vrgather_vv_u64m4(vuint64m4_t op1, vuint64m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgather.vx.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -903,7 +817,6 @@ vuint64m4_t test_vrgather_vx_u64m4(vuint64m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgather.vv.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -914,7 +827,6 @@ vuint64m8_t test_vrgather_vv_u64m8(vuint64m8_t op1, vuint64m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgather.vx.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -924,7 +836,6 @@ vuint64m8_t test_vrgather_vx_u64m8(vuint64m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vrgather.vv.nxv1f32.i64(<vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -935,7 +846,6 @@ vfloat32mf2_t test_vrgather_vv_f32mf2(vfloat32mf2_t op1, vuint32mf2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vrgather.vx.nxv1f32.i64(<vscale x 1 x float> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -946,7 +856,6 @@ vfloat32mf2_t test_vrgather_vx_f32mf2(vfloat32mf2_t op1, size_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vrgather.vv.nxv2f32.i64(<vscale x 2 x float> [[OP1:%.*]], <vscale x 2 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -957,7 +866,6 @@ vfloat32m1_t test_vrgather_vv_f32m1(vfloat32m1_t op1, vuint32m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -967,7 +875,6 @@ vfloat32m1_t test_vrgather_vx_f32m1(vfloat32m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vrgather.vv.nxv4f32.i64(<vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -978,7 +885,6 @@ vfloat32m2_t test_vrgather_vv_f32m2(vfloat32m2_t op1, vuint32m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vrgather.vx.nxv4f32.i64(<vscale x 4 x float> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -988,7 +894,6 @@ vfloat32m2_t test_vrgather_vx_f32m2(vfloat32m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vrgather.vv.nxv8f32.i64(<vscale x 8 x float> [[OP1:%.*]], <vscale x 8 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -999,7 +904,6 @@ vfloat32m4_t test_vrgather_vv_f32m4(vfloat32m4_t op1, vuint32m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vrgather.vx.nxv8f32.i64(<vscale x 8 x float> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1009,7 +913,6 @@ vfloat32m4_t test_vrgather_vx_f32m4(vfloat32m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vrgather.vv.nxv16f32.i64(<vscale x 16 x float> [[OP1:%.*]], <vscale x 16 x i32> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1020,7 +923,6 @@ vfloat32m8_t test_vrgather_vv_f32m8(vfloat32m8_t op1, vuint32m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vrgather.vx.nxv16f32.i64(<vscale x 16 x float> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1030,7 +932,6 @@ vfloat32m8_t test_vrgather_vx_f32m8(vfloat32m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vrgather.vv.nxv1f64.i64(<vscale x 1 x double> [[OP1:%.*]], <vscale x 1 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1041,7 +942,6 @@ vfloat64m1_t test_vrgather_vv_f64m1(vfloat64m1_t op1, vuint64m1_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vrgather.vx.nxv1f64.i64(<vscale x 1 x double> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1051,7 +951,6 @@ vfloat64m1_t test_vrgather_vx_f64m1(vfloat64m1_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vrgather.vv.nxv2f64.i64(<vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1062,7 +961,6 @@ vfloat64m2_t test_vrgather_vv_f64m2(vfloat64m2_t op1, vuint64m2_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vrgather.vx.nxv2f64.i64(<vscale x 2 x double> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1072,7 +970,6 @@ vfloat64m2_t test_vrgather_vx_f64m2(vfloat64m2_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vrgather.vv.nxv4f64.i64(<vscale x 4 x double> [[OP1:%.*]], <vscale x 4 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1083,7 +980,6 @@ vfloat64m4_t test_vrgather_vv_f64m4(vfloat64m4_t op1, vuint64m4_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vrgather.vx.nxv4f64.i64(<vscale x 4 x double> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1093,7 +989,6 @@ vfloat64m4_t test_vrgather_vx_f64m4(vfloat64m4_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vv_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vrgather.vv.nxv8f64.i64(<vscale x 8 x double> [[OP1:%.*]], <vscale x 8 x i64> [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1104,7 +999,6 @@ vfloat64m8_t test_vrgather_vv_f64m8(vfloat64m8_t op1, vuint64m8_t index,
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgather_vx_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vrgather.vx.nxv8f64.i64(<vscale x 8 x double> [[OP1:%.*]], i64 [[INDEX:%.*]], i64 [[VL:%.*]])
@@ -1114,7 +1008,6 @@ vfloat64m8_t test_vrgather_vx_f64m8(vfloat64m8_t op1, size_t index, size_t vl) {
   return vrgather(op1, index, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgatherei16.vv.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1125,7 +1018,6 @@ vint8mf8_t test_vrgatherei16_vv_i8mf8(vint8mf8_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgatherei16.vv.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1136,7 +1028,6 @@ vint8mf4_t test_vrgatherei16_vv_i8mf4(vint8mf4_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgatherei16.vv.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1147,7 +1038,6 @@ vint8mf2_t test_vrgatherei16_vv_i8mf2(vint8mf2_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1157,7 +1047,6 @@ vint8m1_t test_vrgatherei16_vv_i8m1(vint8m1_t op1, vuint16m2_t op2, size_t vl) {
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgatherei16.vv.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1167,7 +1056,6 @@ vint8m2_t test_vrgatherei16_vv_i8m2(vint8m2_t op1, vuint16m4_t op2, size_t vl) {
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgatherei16.vv.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1177,7 +1065,6 @@ vint8m4_t test_vrgatherei16_vv_i8m4(vint8m4_t op1, vuint16m8_t op2, size_t vl) {
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgatherei16.vv.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1188,7 +1075,6 @@ vint16mf4_t test_vrgatherei16_vv_i16mf4(vint16mf4_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgatherei16.vv.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1199,7 +1085,6 @@ vint16mf2_t test_vrgatherei16_vv_i16mf2(vint16mf2_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgatherei16.vv.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1210,7 +1095,6 @@ vint16m1_t test_vrgatherei16_vv_i16m1(vint16m1_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgatherei16.vv.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1221,7 +1105,6 @@ vint16m2_t test_vrgatherei16_vv_i16m2(vint16m2_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgatherei16.vv.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1232,7 +1115,6 @@ vint16m4_t test_vrgatherei16_vv_i16m4(vint16m4_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgatherei16.vv.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1243,7 +1125,6 @@ vint16m8_t test_vrgatherei16_vv_i16m8(vint16m8_t op1, vuint16m8_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgatherei16.vv.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1254,7 +1135,6 @@ vint32mf2_t test_vrgatherei16_vv_i32mf2(vint32mf2_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgatherei16.vv.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1265,7 +1145,6 @@ vint32m1_t test_vrgatherei16_vv_i32m1(vint32m1_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgatherei16.vv.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1276,7 +1155,6 @@ vint32m2_t test_vrgatherei16_vv_i32m2(vint32m2_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgatherei16.vv.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1287,7 +1165,6 @@ vint32m4_t test_vrgatherei16_vv_i32m4(vint32m4_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgatherei16.vv.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1298,7 +1175,6 @@ vint32m8_t test_vrgatherei16_vv_i32m8(vint32m8_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgatherei16.vv.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1309,7 +1185,6 @@ vint64m1_t test_vrgatherei16_vv_i64m1(vint64m1_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgatherei16.vv.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1320,7 +1195,6 @@ vint64m2_t test_vrgatherei16_vv_i64m2(vint64m2_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgatherei16.vv.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1331,7 +1205,6 @@ vint64m4_t test_vrgatherei16_vv_i64m4(vint64m4_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgatherei16.vv.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1342,7 +1215,6 @@ vint64m8_t test_vrgatherei16_vv_i64m8(vint64m8_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vrgatherei16.vv.nxv1i8.i64(<vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1353,7 +1225,6 @@ vuint8mf8_t test_vrgatherei16_vv_u8mf8(vuint8mf8_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vrgatherei16.vv.nxv2i8.i64(<vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1364,7 +1235,6 @@ vuint8mf4_t test_vrgatherei16_vv_u8mf4(vuint8mf4_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vrgatherei16.vv.nxv4i8.i64(<vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1375,7 +1245,6 @@ vuint8mf2_t test_vrgatherei16_vv_u8mf2(vuint8mf2_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1386,7 +1255,6 @@ vuint8m1_t test_vrgatherei16_vv_u8m1(vuint8m1_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vrgatherei16.vv.nxv16i8.i64(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1397,7 +1265,6 @@ vuint8m2_t test_vrgatherei16_vv_u8m2(vuint8m2_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vrgatherei16.vv.nxv32i8.i64(<vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1408,7 +1275,6 @@ vuint8m4_t test_vrgatherei16_vv_u8m4(vuint8m4_t op1, vuint16m8_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vrgatherei16.vv.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1419,7 +1285,6 @@ vuint16mf4_t test_vrgatherei16_vv_u16mf4(vuint16mf4_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vrgatherei16.vv.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1430,7 +1295,6 @@ vuint16mf2_t test_vrgatherei16_vv_u16mf2(vuint16mf2_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vrgatherei16.vv.nxv4i16.i64(<vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1441,7 +1305,6 @@ vuint16m1_t test_vrgatherei16_vv_u16m1(vuint16m1_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vrgatherei16.vv.nxv8i16.i64(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1452,7 +1315,6 @@ vuint16m2_t test_vrgatherei16_vv_u16m2(vuint16m2_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vrgatherei16.vv.nxv16i16.i64(<vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1463,7 +1325,6 @@ vuint16m4_t test_vrgatherei16_vv_u16m4(vuint16m4_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vrgatherei16.vv.nxv32i16.i64(<vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1474,7 +1335,6 @@ vuint16m8_t test_vrgatherei16_vv_u16m8(vuint16m8_t op1, vuint16m8_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vrgatherei16.vv.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1485,7 +1345,6 @@ vuint32mf2_t test_vrgatherei16_vv_u32mf2(vuint32mf2_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vrgatherei16.vv.nxv2i32.i64(<vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1496,7 +1355,6 @@ vuint32m1_t test_vrgatherei16_vv_u32m1(vuint32m1_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vrgatherei16.vv.nxv4i32.i64(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1507,7 +1365,6 @@ vuint32m2_t test_vrgatherei16_vv_u32m2(vuint32m2_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vrgatherei16.vv.nxv8i32.i64(<vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1518,7 +1375,6 @@ vuint32m4_t test_vrgatherei16_vv_u32m4(vuint32m4_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vrgatherei16.vv.nxv16i32.i64(<vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1529,7 +1385,6 @@ vuint32m8_t test_vrgatherei16_vv_u32m8(vuint32m8_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vrgatherei16.vv.nxv1i64.i64(<vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1540,7 +1395,6 @@ vuint64m1_t test_vrgatherei16_vv_u64m1(vuint64m1_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vrgatherei16.vv.nxv2i64.i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1551,7 +1405,6 @@ vuint64m2_t test_vrgatherei16_vv_u64m2(vuint64m2_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vrgatherei16.vv.nxv4i64.i64(<vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1562,7 +1415,6 @@ vuint64m4_t test_vrgatherei16_vv_u64m4(vuint64m4_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vrgatherei16.vv.nxv8i64.i64(<vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1573,7 +1425,6 @@ vuint64m8_t test_vrgatherei16_vv_u64m8(vuint64m8_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vrgatherei16.vv.nxv1f32.i64(<vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1584,7 +1435,6 @@ vfloat32mf2_t test_vrgatherei16_vv_f32mf2(vfloat32mf2_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vrgatherei16.vv.nxv2f32.i64(<vscale x 2 x float> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1595,7 +1445,6 @@ vfloat32m1_t test_vrgatherei16_vv_f32m1(vfloat32m1_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vrgatherei16.vv.nxv4f32.i64(<vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1606,7 +1455,6 @@ vfloat32m2_t test_vrgatherei16_vv_f32m2(vfloat32m2_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vrgatherei16.vv.nxv8f32.i64(<vscale x 8 x float> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1617,7 +1465,6 @@ vfloat32m4_t test_vrgatherei16_vv_f32m4(vfloat32m4_t op1, vuint16m2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vrgatherei16.vv.nxv16f32.i64(<vscale x 16 x float> [[OP1:%.*]], <vscale x 16 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1628,7 +1475,6 @@ vfloat32m8_t test_vrgatherei16_vv_f32m8(vfloat32m8_t op1, vuint16m4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vrgatherei16.vv.nxv1f64.i64(<vscale x 1 x double> [[OP1:%.*]], <vscale x 1 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1639,7 +1485,6 @@ vfloat64m1_t test_vrgatherei16_vv_f64m1(vfloat64m1_t op1, vuint16mf4_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vrgatherei16.vv.nxv2f64.i64(<vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1650,7 +1495,6 @@ vfloat64m2_t test_vrgatherei16_vv_f64m2(vfloat64m2_t op1, vuint16mf2_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vrgatherei16.vv.nxv4f64.i64(<vscale x 4 x double> [[OP1:%.*]], <vscale x 4 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -1661,7 +1505,6 @@ vfloat64m4_t test_vrgatherei16_vv_f64m4(vfloat64m4_t op1, vuint16m1_t op2,
   return vrgatherei16(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vrgatherei16_vv_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vrgatherei16.vv.nxv8f64.i64(<vscale x 8 x double> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], i64 [[VL:%.*]])
