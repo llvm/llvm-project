@@ -2208,8 +2208,8 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
     // TODO: We could propagate nsz/ninf from fdiv alone?
     FastMathFlags FMF = I.getFastMathFlags();
     FastMathFlags OpFMF = FNegOp->getFastMathFlags();
-    FDiv->setHasNoSignedZeros(FMF.noSignedZeros() & OpFMF.noSignedZeros());
-    FDiv->setHasNoInfs(FMF.noInfs() & OpFMF.noInfs());
+    FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
+    FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
     return FDiv;
   }
   // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
