@@ -662,7 +662,7 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
     case tok::ampamp:         // Logical && does not do UACs.
       break;                  // No UAC
     default:
-      Res.setIsUnsigned(LHS.isUnsigned()|RHS.isUnsigned());
+      Res.setIsUnsigned(LHS.isUnsigned() || RHS.isUnsigned());
       // If this just promoted something from signed to unsigned, and if the
       // value was negative, warn about it.
       if (ValueLive && Res.isUnsigned()) {
@@ -822,7 +822,7 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 
       // Usual arithmetic conversions (C99 6.3.1.8p1): result is unsigned if
       // either operand is unsigned.
-      Res.setIsUnsigned(RHS.isUnsigned() | AfterColonVal.isUnsigned());
+      Res.setIsUnsigned(RHS.isUnsigned() || AfterColonVal.isUnsigned());
 
       // Figure out the precedence of the token after the : part.
       PeekPrec = getPrecedence(PeekTok.getKind());
