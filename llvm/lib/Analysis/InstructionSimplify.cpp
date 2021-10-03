@@ -5811,7 +5811,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
 static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 
-  unsigned NumOperands = Call->getNumArgOperands();
+  unsigned NumOperands = Call->arg_size();
   Function *F = cast<Function>(Call->getCalledFunction());
   Intrinsic::ID IID = F->getIntrinsicID();
 
@@ -6006,7 +6006,7 @@ static Value *tryConstantFoldCall(CallBase *Call, const SimplifyQuery &Q) {
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
-  unsigned NumArgs = Call->getNumArgOperands();
+  unsigned NumArgs = Call->arg_size();
   ConstantArgs.reserve(NumArgs);
   for (auto &Arg : Call->args()) {
     Constant *C = dyn_cast<Constant>(&Arg);
