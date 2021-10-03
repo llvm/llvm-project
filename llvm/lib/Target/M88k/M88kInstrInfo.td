@@ -237,6 +237,13 @@ def : Pat<(or GPR:$rs1, uimm32:$imm),
 def : Pat<(xor GPR:$rs1, uimm32:$imm),
           (XORri (XORriu GPR:$rs1, (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
+// Arbitrary constants.
+// 16-bit immediate.
+def : Pat<(i32 imm32lo16:$imm), (ORri (i32 R0), imm32lo16:$imm)>;
+
+// Arbitrary immediate.
+def : Pat<(i32 imm:$imm),
+          (ORri (ORriu (i32 R0), (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
 // Multiclass for bit-field instructions with triadic registers or immediates.
 multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp,
