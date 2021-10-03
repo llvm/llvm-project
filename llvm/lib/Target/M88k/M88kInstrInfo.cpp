@@ -112,3 +112,34 @@ void M88kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FrameIndex)
       .addMemOperand(MMO);
 }
+
+void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL, MCRegister DestReg,
+                                   MCRegister SrcReg, bool KillSrc) const {
+  // Split 64-bit GPR moves into two 64-bit moves. Add implicit uses of the
+  // super register in case one of the subregs is undefined.
+  if (M88k::GPR64RegClass.contains(DestReg, SrcReg)) {
+    copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, M88k::sub_hi),
+                RI.getSubReg(SrcReg, M88k::sub_hi), KillSrc);
+    MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
+      .addReg(SrcReg, RegState::Implicit);
+    copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, M88k::sub_lo),
+                RI.getSubReg(SrcReg, M88k::sub_lo), KillSrc);
+    MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
+      .addReg(SrcReg, (getKillRegState(KillSrc) | RegState::Implicit));
+    return;
+  }
+
+  // TODO
+  // - f64 moves
+  // - moves between GPR and XPR
+  if (M88k::GPRRegClass.contains(DestReg, SrcReg) ||
+      M88k::GPRF32RegClass.contains(DestReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(M88k::ORrr), DestReg)
+        .addReg(M88k::R0)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+  }
+  else
+    llvm_unreachable("m88: Impossible reg-to-reg copy");
+}
