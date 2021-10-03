@@ -24,6 +24,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include <fstream>
 
 using namespace llvm;
 using clang::tooling::Replacements;
@@ -111,6 +112,10 @@ static cl::opt<std::string> QualifierAlignment(
         "If set, overrides the qualifier alignment style determined by the "
         "QualifierAlignment style flag"),
     cl::init(""), cl::cat(ClangFormatCategory));
+
+static cl::opt<std::string>
+    Files("files", cl::desc("Provide a list of files to run clang-format"),
+          cl::init(""), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),
@@ -563,6 +568,17 @@ int main(int argc, const char **argv) {
     return dumpConfig();
   }
 
+  if (!Files.empty()) {
+    std::ifstream ExternalFileOfFiles{std::string(Files)};
+    std::string Line;
+    unsigned LineNo = 1;
+    while (std::getline(ExternalFileOfFiles, Line)) {
+      FileNames.push_back(Line);
+      LineNo++;
+    }
+    errs() << "Clang-formating " << LineNo << " files\n";
+  }
+
   bool Error = false;
   if (FileNames.empty()) {
     Error = clang::format::format("-");
@@ -574,9 +590,12 @@ int main(int argc, const char **argv) {
               "single file.\n";
     return 1;
   }
+
+  unsigned FileNo = 1;
   for (const auto &FileName : FileNames) {
     if (Verbose)
-      errs() << "Formatting " << FileName << "\n";
+      errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
+             << FileName << "\n";
     Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;
