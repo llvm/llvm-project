@@ -93,5 +93,6 @@ func @entry() {
   vector.print %e7 : vector<16xf32>
   // CHECK-NEXT: ( 8, 9, 10, 11, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7 )
 
+  memref.dealloc %A : memref<?xf32>
   return
 }
