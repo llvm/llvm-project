@@ -37,7 +37,7 @@ struct TestOpaqueLoc
     std::vector<std::unique_ptr<MyLocation>> myLocs;
     int last_it = 0;
 
-    getOperation().walk([&](Operation *op) {
+    getOperation().getBody()->walk([&](Operation *op) {
       myLocs.push_back(std::make_unique<MyLocation>(last_it++));
 
       Location loc = op->getLoc();

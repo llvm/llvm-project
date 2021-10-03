@@ -1,5 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+// See http://llvm.org/pr52045
+// UNSUPPORTED: asan
+
 // Check different error cases.
 // -----
 

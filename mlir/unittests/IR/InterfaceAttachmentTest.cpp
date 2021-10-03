@@ -20,6 +20,7 @@
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
+#include "mlir/IR/OwningOpRef.h"
 
 using namespace mlir;
 using namespace test;
@@ -291,12 +292,12 @@ TEST(InterfaceAttachment, Operation) {
   MLIRContext context;
 
   // Initially, the operation doesn't have the interface.
-  auto moduleOp = ModuleOp::create(UnknownLoc::get(&context));
-  ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp.getOperation()));
+  OwningOpRef<ModuleOp> moduleOp = ModuleOp::create(UnknownLoc::get(&context));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp->getOperation()));
 
   // We can attach an external interface and now the operaiton has it.
   ModuleOp::attachInterface<TestExternalOpModel>(context);
-  auto iface = dyn_cast<TestExternalOpInterface>(moduleOp.getOperation());
+  auto iface = dyn_cast<TestExternalOpInterface>(moduleOp->getOperation());
   ASSERT_TRUE(iface != nullptr);
   EXPECT_EQ(iface.getNameLengthPlusArg(10), 24u);
   EXPECT_EQ(iface.getNameLengthTimesArg(3), 42u);
@@ -304,11 +305,12 @@ TEST(InterfaceAttachment, Operation) {
   EXPECT_EQ(iface.getNameLengthMinusArg(5), 9u);
 
   // Default implementation can be overridden.
-  auto funcOp = FuncOp::create(UnknownLoc::get(&context), "function",
-                               FunctionType::get(&context, {}, {}));
-  ASSERT_FALSE(isa<TestExternalOpInterface>(funcOp.getOperation()));
+  OwningOpRef<FuncOp> funcOp =
+      FuncOp::create(UnknownLoc::get(&context), "function",
+                     FunctionType::get(&context, {}, {}));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(funcOp->getOperation()));
   FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
-  iface = dyn_cast<TestExternalOpInterface>(funcOp.getOperation());
+  iface = dyn_cast<TestExternalOpInterface>(funcOp->getOperation());
   ASSERT_TRUE(iface != nullptr);
   EXPECT_EQ(iface.getNameLengthPlusArg(10), 22u);
   EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
@@ -317,8 +319,9 @@ TEST(InterfaceAttachment, Operation) {
 
   // Another context doesn't have the interfaces registered.
   MLIRContext other;
-  auto otherModuleOp = ModuleOp::create(UnknownLoc::get(&other));
-  ASSERT_FALSE(isa<TestExternalOpInterface>(otherModuleOp.getOperation()));
+  OwningOpRef<ModuleOp> otherModuleOp =
+      ModuleOp::create(UnknownLoc::get(&other));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(otherModuleOp->getOperation()));
 }
 
 template <class ConcreteOp>
@@ -346,8 +349,8 @@ TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
   MLIRContext context(registry);
   context.loadDialect<test::TestDialect>();
 
-  ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
-  OpBuilder builder(module);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
+  OpBuilder builder(module->getBody(), module->getBody()->begin());
   auto opJ =
       builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
   auto opH =
@@ -355,7 +358,7 @@ TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
   auto opI =
       builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
 
-  EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(module->getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opH.getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
@@ -373,8 +376,8 @@ TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
 
-  ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
-  OpBuilder builder(module);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
+  OpBuilder builder(module->getBody(), module->getBody()->begin());
   auto opJ =
       builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
   auto opH =
@@ -382,14 +385,14 @@ TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   auto opI =
       builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
 
-  EXPECT_FALSE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(module->getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opJ.getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opH.getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
 
   context.appendDialectRegistry(registry);
 
-  EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(module->getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opH.getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));

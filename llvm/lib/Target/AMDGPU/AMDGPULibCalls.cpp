@@ -567,7 +567,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   auto *M = Callee->getParent();
   auto &Ctx = M->getContext();
   std::string Name = std::string(Callee->getName());
-  auto NumArg = CI->getNumArgOperands();
+  auto NumArg = CI->arg_size();
   if (NumArg != 4 && NumArg != 6)
     return false;
   auto *PacketSize = CI->getArgOperand(NumArg - 2);
@@ -584,7 +584,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
     PtrElemTy = Type::getIntNTy(Ctx, Size * 8);
   else
     PtrElemTy = FixedVectorType::get(Type::getInt64Ty(Ctx), Size / 8);
-  unsigned PtrArgLoc = CI->getNumArgOperands() - 3;
+  unsigned PtrArgLoc = CI->arg_size() - 3;
   auto PtrArg = CI->getArgOperand(PtrArgLoc);
   unsigned PtrArgAS = PtrArg->getType()->getPointerAddressSpace();
   auto *PtrTy = llvm::PointerType::get(PtrElemTy, PtrArgAS);
@@ -648,7 +648,7 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
     return false;
 
   // Further check the number of arguments to see if they match.
-  if (CI->getNumArgOperands() != FInfo.getNumArgs())
+  if (CI->arg_size() != FInfo.getNumArgs())
     return false;
 
   if (TDOFold(CI, FInfo))
@@ -1606,7 +1606,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(FuncInfo &FInfo,
 }
 
 bool AMDGPULibCalls::evaluateCall(CallInst *aCI, FuncInfo &FInfo) {
-  int numArgs = (int)aCI->getNumArgOperands();
+  int numArgs = (int)aCI->arg_size();
   if (numArgs > 3)
     return false;
 

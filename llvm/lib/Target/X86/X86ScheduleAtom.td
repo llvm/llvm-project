@@ -139,8 +139,8 @@ defm : X86WriteRes<WriteBitTestSet,      [AtomPort1],  1, [1], 1>;
 def : WriteRes<WriteLEA, [AtomPort1]>;
 
 // Bit counts.
-defm : AtomWriteResPair<WriteBSF, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
-defm : AtomWriteResPair<WriteBSR, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
+defm : AtomWriteResPair<WriteBSF, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 16, 16, [16,16], [16,16], 10, 10>;
+defm : AtomWriteResPair<WriteBSR, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 16, 16, [16,16], [16,16], 10, 10>;
 defm : X86WriteResPairUnsupported<WritePOPCNT>;
 defm : X86WriteResPairUnsupported<WriteLZCNT>;
 defm : X86WriteResPairUnsupported<WriteTZCNT>;

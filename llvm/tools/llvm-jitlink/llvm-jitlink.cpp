@@ -813,10 +813,6 @@ public:
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
 
-  auto PageSize = sys::Process::getPageSize();
-  if (!PageSize)
-    return PageSize.takeError();
-
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
     /// If -oop-executor is passed then launch the executor.
@@ -832,6 +828,9 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
       return REPC.takeError();
   } else {
     /// Otherwise use SelfExecutorProcessControl to target the current process.
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize)
+      return PageSize.takeError();
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(TT), *PageSize,
         createMemoryManager());

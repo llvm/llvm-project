@@ -99,5 +99,6 @@ func @entry() {
   call @printmem16(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
 
+  memref.dealloc %A : memref<?xf32>
   return
 }

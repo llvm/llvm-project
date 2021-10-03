@@ -11323,7 +11323,7 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
   // memVT is `NumVecs * VT`.
   Info.memVT = EVT::getVectorVT(CI.getType()->getContext(), VT.getScalarType(),
                                 EC * NumVecs);
-  Info.ptrVal = CI.getArgOperand(CI.getNumArgOperands() - 1);
+  Info.ptrVal = CI.getArgOperand(CI.arg_size() - 1);
   Info.offset = 0;
   Info.align.reset();
   Info.flags = MachineMemOperand::MOStore;
@@ -11361,7 +11361,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Conservatively set memVT to the entire set of vectors loaded.
     uint64_t NumElts = DL.getTypeSizeInBits(I.getType()) / 64;
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
-    Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
+    Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
     Info.align.reset();
     // volatile loads with NEON intrinsics not supported
@@ -11380,14 +11380,14 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_VOID;
     // Conservatively set memVT to the entire set of vectors stored.
     unsigned NumElts = 0;
-    for (unsigned ArgI = 0, ArgE = I.getNumArgOperands(); ArgI < ArgE; ++ArgI) {
-      Type *ArgTy = I.getArgOperand(ArgI)->getType();
+    for (const Value *Arg : I.args()) {
+      Type *ArgTy = Arg->getType();
       if (!ArgTy->isVectorTy())
         break;
       NumElts += DL.getTypeSizeInBits(ArgTy) / 64;
     }
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
-    Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
+    Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
     Info.align.reset();
     // volatile stores with NEON intrinsics not supported

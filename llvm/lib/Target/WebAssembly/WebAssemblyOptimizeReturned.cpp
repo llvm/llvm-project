@@ -56,7 +56,7 @@ FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
 }
 
 void OptimizeReturned::visitCallBase(CallBase &CB) {
-  for (unsigned I = 0, E = CB.getNumArgOperands(); I < E; ++I)
+  for (unsigned I = 0, E = CB.arg_size(); I < E; ++I)
     if (CB.paramHasAttr(I, Attribute::Returned)) {
       Value *Arg = CB.getArgOperand(I);
       // Ignore constants, globals, undef, etc.

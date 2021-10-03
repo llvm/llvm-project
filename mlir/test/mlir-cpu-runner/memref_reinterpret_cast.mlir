@@ -31,6 +31,7 @@ func @main() -> () {
   call @cast_ranked_memref_to_dynamic_shape(%input) : (memref<2x3xf32>) -> ()
   call @cast_unranked_memref_to_static_shape(%input) : (memref<2x3xf32>) -> ()
   call @cast_unranked_memref_to_dynamic_shape(%input) : (memref<2x3xf32>) -> ()
+  memref.dealloc %input : memref<2x3xf32>
   return
 }
 
