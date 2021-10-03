@@ -6,7 +6,7 @@
 
 define i32 @crash_on_zeroinit() {
 ; CHECK-LABEL: @crash_on_zeroinit(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 undef
 ;
   %load = load i32, i32* bitcast ({}* @zeroinit to i32*)
   ret i32 %load
