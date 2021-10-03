@@ -1114,7 +1114,7 @@ bool Vectorizer::vectorizeStoreChain(
   std::tie(First, Last) = getBoundaryInstrs(Chain);
   Builder.SetInsertPoint(&*Last);
 
-  Value *Vec = UndefValue::get(VecTy);
+  Value *Vec = PoisonValue::get(VecTy);
 
   if (VecStoreTy) {
     unsigned VecWidth = VecStoreTy->getNumElements();
