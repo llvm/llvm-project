@@ -73,7 +73,7 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %n.01 = phi %struct.ListNode* [ bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node5 to %struct.ListNode*), %entry ], [ %1, %for.body ]
 ; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %i = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 1
-; CHECK-NEXT:    --> (4 + %n.01) U: full-set S: full-set Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> (4 + %n.01)<nuw> U: [4,0) S: [4,0) Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %0 = load i32, i32* %i, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add nsw i32 %0, %sum.02

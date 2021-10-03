@@ -20,7 +20,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; for the delinearization is simplified such that conditions that would not
 ; cause any code to be executed are not generated.
 
-; CHECK: if (((o >= 1 && q <= 0 && m + q >= 0) || (o <= 0 && m + q >= 100 && q <= 100)) && 0 == ((m >= 1 && n + p >= 9223372036854775809) || (o <= 0 && n >= 1 && m + q >= 9223372036854775909) || (o <= 0 && m >= 1 && n >= 1 && q <= -9223372036854775709)))
+; CHECK: if (((o >= 1 && q <= 0 && m + q >= 0) || (o <= 0 && m + q >= 100 && q <= 100)) && 0 == ((o <= 0 && n >= 1 && m + q >= 9223372036854775909) || (o <= 0 && m >= 1 && n >= 1 && q <= -9223372036854775709)))
 
 ; CHECK:     if (o <= 0) {
 ; CHECK:       for (int c0 = 0; c0 < n; c0 += 1)

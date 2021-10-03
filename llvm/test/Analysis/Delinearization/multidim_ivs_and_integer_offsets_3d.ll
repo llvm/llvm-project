@@ -11,7 +11,7 @@
 ; AddRec: {{{(56 + (8 * (-4 + (3 * %m)) * %o) + %A),+,(8 * %m * %o)}<%for.i>,+,(8 * %o)}<%for.j>,+,8}<%for.k>
 ; CHECK: Base offset: %A
 ; CHECK: ArrayDecl[UnknownSize][%m][%o] with elements of 8 bytes.
-; CHECK: ArrayRef[{3,+,1}<nuw><%for.i>][{-4,+,1}<nw><%for.j>][{7,+,1}<nuw><nsw><%for.k>]
+; CHECK: ArrayRef[{3,+,1}<nuw><%for.i>][{-4,+,1}<nsw><%for.j>][{7,+,1}<nuw><nsw><%for.k>]
 
 define void @foo(i64 %n, i64 %m, i64 %o, double* %A) {
 entry:
