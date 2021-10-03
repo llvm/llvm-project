@@ -4,6 +4,7 @@ RUN: FileCheck --input-file=%t %s
      CHECK:-Wall
 CHECK-NEXT:  -Wmost
 CHECK-NEXT:    -Wbool-operation
+CHECK-NEXT:    -Wbitwise-instead-of-logical
 CHECK-NEXT:    -Wchar-subscripts
 CHECK-NEXT:    -Wcomment
 CHECK-NEXT:    -Wdelete-non-virtual-dtor
