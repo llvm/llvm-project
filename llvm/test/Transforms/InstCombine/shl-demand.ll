@@ -98,3 +98,20 @@ define i8 @must_drop_poison(i32 %x, i32 %y)  {
   %t = trunc i32 %s to i8
   ret i8 %t
 }
+
+; This would infinite loop with D110170 / bb9333c3504a
+
+define i32 @f_t15_t01_t09(i40 %t2) {
+; CHECK-LABEL: @f_t15_t01_t09(
+; CHECK-NEXT:    [[SH_DIFF:%.*]] = ashr i40 [[T2:%.*]], 15
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i40 [[SH_DIFF]] to i32
+; CHECK-NEXT:    [[SHL1:%.*]] = and i32 [[TR_SH_DIFF]], -65536
+; CHECK-NEXT:    ret i32 [[SHL1]]
+;
+  %downscale = ashr i40 %t2, 31
+  %resize = trunc i40 %downscale to i32
+  %shl1 = shl i32 %resize, 16
+  %resize1 = ashr i32 %shl1, 16
+  %r = shl i32 %resize1, 31
+  ret i32 %shl1
+}
