@@ -2502,6 +2502,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function can be "readnone/argmemonly/inaccessiblememonly/...".
   getOrCreateAAFor<AAMemoryLocation>(FPos);
 
+  // Every function can track active assumptions.
+  getOrCreateAAFor<AAAssumptionInfo>(FPos);
+
   // Every function might be applicable for Heap-To-Stack conversion.
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
@@ -2587,6 +2590,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   auto CallSitePred = [&](Instruction &I) -> bool {
     auto &CB = cast<CallBase>(I);
     IRPosition CBRetPos = IRPosition::callsite_returned(CB);
+    IRPosition CBFnPos = IRPosition::callsite_function(CB);
 
     // Call sites might be dead if they do not have side effects and no live
     // users. The return value might be dead if there are no live users.
@@ -2597,6 +2601,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     //       the call/callee.
     if (!Callee)
       return true;
+
+    // Every call site can track active assumptions.
+    getOrCreateAAFor<AAAssumptionInfo>(CBFnPos);
 
     // Skip declarations except if annotations on their call sites were
     // explicitly requested.

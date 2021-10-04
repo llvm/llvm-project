@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -28,6 +29,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Assumptions.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -146,6 +148,7 @@ PIPE_OPERATOR(AANoUndef)
 PIPE_OPERATOR(AACallEdges)
 PIPE_OPERATOR(AAFunctionReachability)
 PIPE_OPERATOR(AAPointerInfo)
+PIPE_OPERATOR(AAAssumptionInfo)
 
 #undef PIPE_OPERATOR
 
@@ -9626,6 +9629,7 @@ public:
   }
 
   void trackStatistics() const override {}
+
 private:
   bool canReachUnknownCallee() const override {
     return WholeFunction.CanReachUnknownCallee;
@@ -9637,6 +9641,140 @@ private:
   /// Used to answer if a call base inside this function can reach a specific
   /// function.
   DenseMap<CallBase *, QuerySet> CBQueries;
+};
+
+/// ---------------------- Assumption Propagation ------------------------------
+struct AAAssumptionInfoImpl : public AAAssumptionInfo {
+  AAAssumptionInfoImpl(const IRPosition &IRP, Attributor &A,
+                       const DenseSet<StringRef> &Known)
+      : AAAssumptionInfo(IRP, A, Known) {}
+
+  bool hasAssumption(const StringRef Assumption) const override {
+    return isValidState() && setContains(Assumption);
+  }
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    const SetContents &Known = getKnown();
+    const SetContents &Assumed = getAssumed();
+
+    const std::string KnownStr =
+        llvm::join(Known.getSet().begin(), Known.getSet().end(), ",");
+    const std::string AssumedStr =
+        (Assumed.isUniversal())
+            ? "Universal"
+            : llvm::join(Assumed.getSet().begin(), Assumed.getSet().end(), ",");
+
+    return "Known [" + KnownStr + "]," + " Assumed [" + AssumedStr + "]";
+  }
+};
+
+/// Propagates assumption information from parent functions to all of their
+/// successors. An assumption can be propagated if the containing function
+/// dominates the called function.
+///
+/// We start with a "known" set of assumptions already valid for the associated
+/// function and an "assumed" set that initially contains all possible
+/// assumptions. The assumed set is inter-procedurally updated by narrowing its
+/// contents as concrete values are known. The concrete values are seeded by the
+/// first nodes that are either entries into the call graph, or contains no
+/// assumptions. Each node is updated as the intersection of the assumed state
+/// with all of its predecessors.
+struct AAAssumptionInfoFunction final : AAAssumptionInfoImpl {
+  AAAssumptionInfoFunction(const IRPosition &IRP, Attributor &A)
+      : AAAssumptionInfoImpl(IRP, A,
+                             getAssumptions(*IRP.getAssociatedFunction())) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    const auto &Assumptions = getKnown();
+
+    // Don't manifest a universal set if it somehow made it here.
+    if (Assumptions.isUniversal())
+      return ChangeStatus::UNCHANGED;
+
+    Function *AssociatedFunction = getAssociatedFunction();
+
+    bool Changed = addAssumptions(*AssociatedFunction, Assumptions.getSet());
+
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    bool Changed = false;
+
+    auto CallSitePred = [&](AbstractCallSite ACS) {
+      const auto &AssumptionAA = A.getAAFor<AAAssumptionInfo>(
+          *this, IRPosition::callsite_function(*ACS.getInstruction()),
+          DepClassTy::REQUIRED);
+      // Get the set of assumptions shared by all of this function's callers.
+      Changed |= getIntersection(AssumptionAA.getAssumed());
+      return !getAssumed().empty() || !getKnown().empty();
+    };
+
+    bool AllCallSitesKnown;
+    // Get the intersection of all assumptions held by this node's predecessors.
+    // If we don't know all the call sites then this is either an entry into the
+    // call graph or an empty node. This node is known to only contain its own
+    // assumptions and can be propagated to its successors.
+    if (!A.checkForAllCallSites(CallSitePred, *this, true, AllCallSitesKnown))
+      return indicatePessimisticFixpoint();
+
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  void trackStatistics() const override {}
+};
+
+/// Assumption Info defined for call sites.
+struct AAAssumptionInfoCallSite final : AAAssumptionInfoImpl {
+
+  AAAssumptionInfoCallSite(const IRPosition &IRP, Attributor &A)
+      : AAAssumptionInfoImpl(IRP, A, getInitialAssumptions(IRP)) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
+    A.getAAFor<AAAssumptionInfo>(*this, FnPos, DepClassTy::REQUIRED);
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    // Don't manifest a universal set if it somehow made it here.
+    if (getKnown().isUniversal())
+      return ChangeStatus::UNCHANGED;
+
+    CallBase &AssociatedCall = cast<CallBase>(getAssociatedValue());
+    bool Changed = addAssumptions(AssociatedCall, getAssumed().getSet());
+
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
+    auto &AssumptionAA =
+        A.getAAFor<AAAssumptionInfo>(*this, FnPos, DepClassTy::REQUIRED);
+    bool Changed = getIntersection(AssumptionAA.getAssumed());
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+
+private:
+  /// Helper to initialized the known set as all the assumptions this call and
+  /// the callee contain.
+  DenseSet<StringRef> getInitialAssumptions(const IRPosition &IRP) {
+    const CallBase &CB = cast<CallBase>(IRP.getAssociatedValue());
+    auto Assumptions = getAssumptions(CB);
+    if (Function *F = IRP.getAssociatedFunction())
+      set_union(Assumptions, getAssumptions(*F));
+    if (Function *F = IRP.getAssociatedFunction())
+      set_union(Assumptions, getAssumptions(*F));
+    return Assumptions;
+  }
 };
 
 } // namespace
@@ -9674,6 +9812,7 @@ const char AANoUndef::ID = 0;
 const char AACallEdges::ID = 0;
 const char AAFunctionReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
+const char AAAssumptionInfo::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -9776,6 +9915,7 @@ CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReturnedValues)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryLocation)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
+CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAssumptionInfo)
 
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonNull)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAlias)
