@@ -38,12 +38,9 @@ define void @test_minsize() minsize {
 ; CHECK-NEXT:    bl return_in_block
 ; CHECK-NEXT:    adrp x8, in_block_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_block_store
-; CHECK-NEXT:    str d0, [x8]
-; CHECK-NEXT:    str d1, [x8, #8]
-; CHECK-NEXT:    str d2, [x8, #16]
-; CHECK-NEXT:    str d3, [x8, #24]
-; CHECK-NEXT:    str d4, [x8, #32]
-; CHECK-NEXT:    str d5, [x8, #40]
+; CHECK-NEXT:    stp d0, d1, [x8]
+; CHECK-NEXT:    stp d2, d3, [x8, #16]
+; CHECK-NEXT:    stp d4, d5, [x8, #32]
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_BLOCK @return_in_block()
@@ -60,12 +57,9 @@ define void @test_optsize() optsize {
 ; CHECK-NEXT:    bl return_in_block
 ; CHECK-NEXT:    adrp x8, in_block_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_block_store
-; CHECK-NEXT:    str d0, [x8]
-; CHECK-NEXT:    str d1, [x8, #8]
-; CHECK-NEXT:    str d2, [x8, #16]
-; CHECK-NEXT:    str d3, [x8, #24]
-; CHECK-NEXT:    str d4, [x8, #32]
-; CHECK-NEXT:    str d5, [x8, #40]
+; CHECK-NEXT:    stp d0, d1, [x8]
+; CHECK-NEXT:    stp d2, d3, [x8, #16]
+; CHECK-NEXT:    stp d4, d5, [x8, #32]
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_BLOCK @return_in_block()
