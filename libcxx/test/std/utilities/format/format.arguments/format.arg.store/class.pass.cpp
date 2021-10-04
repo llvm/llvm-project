@@ -22,6 +22,7 @@
 
 #include <format>
 #include <cassert>
+#include <cstddef>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -61,7 +62,7 @@ void test() {
     auto store = std::make_format_args<Context>(1, 'c', nullptr);
     LIBCPP_STATIC_ASSERT(
         std::is_same_v<decltype(store),
-                       std::__format_arg_store<Context, int, char, nullptr_t>>);
+                       std::__format_arg_store<Context, int, char, std::nullptr_t>>);
     LIBCPP_STATIC_ASSERT(
         std::is_same_v<decltype(store.__args),
                        std::array<std::basic_format_arg<Context>, 3>>);
