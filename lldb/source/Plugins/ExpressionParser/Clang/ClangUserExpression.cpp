@@ -685,15 +685,22 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     SetupCppModuleImports(exe_ctx);
     // If we did load any modules, then retry parsing.
     if (!m_imported_cpp_modules.empty()) {
+      // Create a dedicated diagnostic manager for the second parse attempt.
+      // These diagnostics are only returned to the caller if using the fallback
+      // actually succeeded in getting the expression to parse. This prevents
+      // that module-specific issues regress diagnostic quality with the
+      // fallback mode.
+      DiagnosticManager retry_manager;
       // The module imports are injected into the source code wrapper,
       // so recreate those.
-      CreateSourceCode(diagnostic_manager, exe_ctx, m_imported_cpp_modules,
+      CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
                        /*for_completion*/ false);
-      // Clear the error diagnostics from the previous parse attempt.
-      diagnostic_manager.Clear();
-      parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
+      parse_success = TryParse(retry_manager, exe_scope, exe_ctx,
                                execution_policy, keep_result_in_memory,
                                generate_debug_info);
+      // Return the parse diagnostics if we were successful.
+      if (parse_success)
+        diagnostic_manager = std::move(retry_manager);
     }
   }
   if (!parse_success)

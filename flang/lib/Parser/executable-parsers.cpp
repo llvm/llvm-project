@@ -310,7 +310,7 @@ TYPE_CONTEXT_PARSER("IF construct"_en_US,
         many(construct<IfConstruct::ElseIfBlock>(
             unambiguousStatement(construct<ElseIfStmt>(
                 "ELSE IF" >> parenthesized(scalarLogicalExpr),
-                "THEN" >> maybe(name))),
+                recovery("THEN"_tok, ok) >> maybe(name))),
             block)),
         maybe(construct<IfConstruct::ElseBlock>(
             statement(construct<ElseStmt>("ELSE" >> maybe(name))), block)),
