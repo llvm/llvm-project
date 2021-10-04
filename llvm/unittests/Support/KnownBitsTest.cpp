@@ -166,7 +166,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           KnownMulHU.One &= Res;
           KnownMulHU.Zero &= ~Res;
 
-          if (!N2.isNullValue()) {
+          if (!N2.isZero()) {
             Res = N1.udiv(N2);
             KnownUDiv.One &= Res;
             KnownUDiv.Zero &= ~Res;

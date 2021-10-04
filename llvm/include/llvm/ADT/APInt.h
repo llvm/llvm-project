@@ -183,13 +183,11 @@ public:
   static APInt getZeroWidth() { return getZero(0); }
 
   /// Gets maximum unsigned value of APInt for specific bit width.
-  static APInt getMaxValue(unsigned numBits) {
-    return getAllOnesValue(numBits);
-  }
+  static APInt getMaxValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Gets maximum signed value of APInt for a specific bit width.
   static APInt getSignedMaxValue(unsigned numBits) {
-    APInt API = getAllOnesValue(numBits);
+    APInt API = getAllOnes(numBits);
     API.clearBit(numBits - 1);
     return API;
   }

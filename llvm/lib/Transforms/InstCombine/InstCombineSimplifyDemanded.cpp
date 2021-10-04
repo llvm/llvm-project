@@ -124,7 +124,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   }
 
   Known.resetAll();
-  if (DemandedMask.isNullValue())     // Not demanding any bits from V.
+  if (DemandedMask.isZero()) // Not demanding any bits from V.
     return UndefValue::get(VTy);
 
   if (Depth == MaxAnalysisRecursionDepth)
@@ -274,8 +274,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // constant because that's a canonical 'not' op, and that is better for
     // combining, SCEV, and codegen.
     const APInt *C;
-    if (match(I->getOperand(1), m_APInt(C)) && !C->isAllOnesValue()) {
-      if ((*C | ~DemandedMask).isAllOnesValue()) {
+    if (match(I->getOperand(1), m_APInt(C)) && !C->isAllOnes()) {
+      if ((*C | ~DemandedMask).isAllOnes()) {
         // Force bits to 1 to create a 'not' op.
         I->setOperand(1, ConstantInt::getAllOnesValue(VTy));
         return I;
@@ -534,8 +534,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I->getOperand(0);
     // We can't do this with the LHS for subtraction, unless we are only
     // demanding the LSB.
-    if ((I->getOpcode() == Instruction::Add ||
-         DemandedFromOps.isOneValue()) &&
+    if ((I->getOpcode() == Instruction::Add || DemandedFromOps.isOne()) &&
         DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
@@ -633,7 +632,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
     // the shift amount is >= the size of the datatype, which is undefined.
-    if (DemandedMask.isOneValue()) {
+    if (DemandedMask.isOne()) {
       // Perform the logical shift right.
       Instruction *NewVal = BinaryOperator::CreateLShr(
                         I->getOperand(0), I->getOperand(1), I->getName());
@@ -1138,7 +1137,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     return nullptr;
   }
 
-  if (DemandedElts.isNullValue()) { // If nothing is demanded, provide poison.
+  if (DemandedElts.isZero()) { // If nothing is demanded, provide poison.
     UndefElts = EltMask;
     return PoisonValue::get(V->getType());
   }
@@ -1148,7 +1147,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   if (auto *C = dyn_cast<Constant>(V)) {
     // Check if this is identity. If so, return 0 since we are not simplifying
     // anything.
-    if (DemandedElts.isAllOnesValue())
+    if (DemandedElts.isAllOnes())
       return nullptr;
 
     Type *EltTy = cast<VectorType>(V->getType())->getElementType();
@@ -1301,7 +1300,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // Handle trivial case of a splat. Only check the first element of LHS
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
-        DemandedElts.isAllOnesValue()) {
+        DemandedElts.isAllOnes()) {
       if (!match(I->getOperand(1), m_Undef())) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
@@ -1609,7 +1608,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 
   // If we've proven all of the lanes undef, return an undef value.
   // TODO: Intersect w/demanded lanes
-  if (UndefElts.isAllOnesValue())
+  if (UndefElts.isAllOnes())
     return UndefValue::get(I->getType());;
 
   return MadeChange ? I : nullptr;

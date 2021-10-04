@@ -2804,10 +2804,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       // in the outer scope.
       const bool CanPropagateFlags = llvm::any_of(LIOps, [&](const SCEV *S) {
         auto *ReachI = &*AddRecLoop->getHeader()->begin();
-        if (auto *DefI = getDefinedScopeRoot(S))
-          if (isGuaranteedToTransferExecutionTo(DefI, ReachI))
-            return true;
-        return false;
+        auto *DefI = getDefiningScopeBound(S);
+        return isGuaranteedToTransferExecutionTo(DefI, ReachI);
       });
       auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
       AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
@@ -6146,7 +6144,7 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     // initial value.
     if (AddRec->hasNoUnsignedWrap()) {
       APInt UnsignedMinValue = getUnsignedRangeMin(AddRec->getStart());
-      if (!UnsignedMinValue.isNullValue())
+      if (!UnsignedMinValue.isZero())
         ConservativeResult = ConservativeResult.intersectWith(
             ConstantRange(UnsignedMinValue, APInt(BitWidth, 0)), RangeType);
     }
@@ -6248,9 +6246,9 @@ ScalarEvolution::getRangeRef(const SCEV *S,
 
     if (NS > 1) {
       // If we know any of the sign bits, we know all of the sign bits.
-      if (!Known.Zero.getHiBits(NS).isNullValue())
+      if (!Known.Zero.getHiBits(NS).isZero())
         Known.Zero.setHighBits(NS);
-      if (!Known.One.getHiBits(NS).isNullValue())
+      if (!Known.One.getHiBits(NS).isZero())
         Known.One.setHighBits(NS);
     }
 
@@ -6586,25 +6584,32 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
-const Instruction *ScalarEvolution::getDefinedScopeRoot(const SCEV *S) {
+const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     return &*AddRec->getLoop()->getHeader()->begin();
-  if (isa<SCEVConstant>(S))
-    return &*F.getEntryBlock().begin();
-  if (auto *U = dyn_cast<SCEVUnknown>(S)) {
+  if (auto *U = dyn_cast<SCEVUnknown>(S))
     if (auto *I = dyn_cast<Instruction>(U->getValue()))
       return I;
-    return &*F.getEntryBlock().begin();
-  }
-  return nullptr;
+  // All SCEVs are bound by the entry to F
+  return &*F.getEntryBlock().begin();
 }
 
 static bool
 isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
                                            BasicBlock::const_iterator End) {
-  return llvm::all_of( make_range(Begin, End), [](const Instruction &I) {
-    return isGuaranteedToTransferExecutionToSuccessor(&I);
-  });
+  // Limit number of instructions we look at, to avoid scanning through large
+  // blocks. The current limit is chosen arbitrarily.
+  unsigned ScanLimit = 32;
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (isa<DbgInfoIntrinsic>(I))
+        continue;
+    if (--ScanLimit == 0)
+      return false;
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      return false;
+  }
+  return true;
 }
 
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
@@ -6657,9 +6662,9 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     // TODO: We can do better here in some cases.
     if (!isSCEVable(Op->getType()))
       return false;
-    if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
-      if (isGuaranteedToTransferExecutionTo(DefI, I))
-        return true;
+    auto *DefI = getDefiningScopeBound(getSCEV(Op));
+    if (isGuaranteedToTransferExecutionTo(DefI, I))
+      return true;
   }
   return false;
 }
@@ -9225,7 +9230,7 @@ GetQuadraticEquation(const SCEVAddRecExpr *AddRec) {
   APInt L = LC->getAPInt();
   APInt M = MC->getAPInt();
   APInt N = NC->getAPInt();
-  assert(!N.isNullValue() && "This is not a quadratic addrec");
+  assert(!N.isZero() && "This is not a quadratic addrec");
 
   unsigned BitWidth = LC->getAPInt().getBitWidth();
   unsigned NewWidth = BitWidth + 1;

@@ -1766,7 +1766,7 @@ void MDFieldPrinter::printInt(StringRef Name, IntTy Int, bool ShouldSkipZero) {
 
 void MDFieldPrinter::printAPInt(StringRef Name, const APInt &Int,
                                 bool IsUnsigned, bool ShouldSkipZero) {
-  if (ShouldSkipZero && Int.isNullValue())
+  if (ShouldSkipZero && Int.isZero())
     return;
 
   Out << FS << Name << ": ";

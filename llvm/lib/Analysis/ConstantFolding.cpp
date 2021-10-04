@@ -795,11 +795,11 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
   if (Opc == Instruction::And) {
     KnownBits Known0 = computeKnownBits(Op0, DL);
     KnownBits Known1 = computeKnownBits(Op1, DL);
-    if ((Known1.One | Known0.Zero).isAllOnesValue()) {
+    if ((Known1.One | Known0.Zero).isAllOnes()) {
       // All the bits of Op0 that the 'and' could be masking are already zero.
       return Op0;
     }
-    if ((Known0.One | Known1.Zero).isAllOnesValue()) {
+    if ((Known0.One | Known1.Zero).isAllOnes()) {
       // All the bits of Op1 that the 'and' could be masking are already zero.
       return Op1;
     }
@@ -2651,7 +2651,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       assert(C1 && "Must be constant int");
 
       // cttz(0, 1) and ctlz(0, 1) are undef.
-      if (C1->isOneValue() && (!C0 || C0->isNullValue()))
+      if (C1->isOne() && (!C0 || C0->isZero()))
         return UndefValue::get(Ty);
       if (!C0)
         return Constant::getNullValue(Ty);
@@ -2663,11 +2663,11 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::abs:
       // Undef or minimum val operand with poison min --> undef
       assert(C1 && "Must be constant int");
-      if (C1->isOneValue() && (!C0 || C0->isMinSignedValue()))
+      if (C1->isOne() && (!C0 || C0->isMinSignedValue()))
         return UndefValue::get(Ty);
 
       // Undef operand with no poison min --> 0 (sign bit must be clear)
-      if (C1->isNullValue() && !C0)
+      if (C1->isZero() && !C0)
         return Constant::getNullValue(Ty);
 
       return ConstantInt::get(Ty, C0->abs());

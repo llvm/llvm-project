@@ -204,13 +204,13 @@ static ConstantRange makeExactMulNSWRegion(const APInt &V) {
   // Handle special case for 0, -1 and 1. See the last for reason why we
   // specialize -1 and 1.
   unsigned BitWidth = V.getBitWidth();
-  if (V == 0 || V.isOneValue())
+  if (V == 0 || V.isOne())
     return ConstantRange::getFull(BitWidth);
 
   APInt MinValue = APInt::getSignedMinValue(BitWidth);
   APInt MaxValue = APInt::getSignedMaxValue(BitWidth);
   // e.g. Returning [-127, 127], represented as [-127, -128).
-  if (V.isAllOnesValue())
+  if (V.isAllOnes())
     return ConstantRange(-MaxValue, MinValue);
 
   APInt Lower, Upper;
@@ -1161,9 +1161,9 @@ ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
     if (NegL.Lower.isMinSignedValue() && NegR.Upper.isZero()) {
       // Remove -1 from the LHS. Skip if it's the only element, as this would
       // leave us with an empty set.
-      if (!NegR.Lower.isAllOnesValue()) {
+      if (!NegR.Lower.isAllOnes()) {
         APInt AdjNegRUpper;
-        if (RHS.Lower.isAllOnesValue())
+        if (RHS.Lower.isAllOnes())
           // Negative part of [-1, X] without -1 is [SignedMin, X].
           AdjNegRUpper = RHS.Upper;
         else
@@ -1332,9 +1332,9 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
     return {*getSingleElement() ^ *Other.getSingleElement()};
 
   // Special-case binary complement, since we can give a precise answer.
-  if (Other.isSingleElement() && Other.getSingleElement()->isAllOnesValue())
+  if (Other.isSingleElement() && Other.getSingleElement()->isAllOnes())
     return binaryNot();
-  if (isSingleElement() && getSingleElement()->isAllOnesValue())
+  if (isSingleElement() && getSingleElement()->isAllOnes())
     return Other.binaryNot();
 
   // TODO: replace this with something less conservative

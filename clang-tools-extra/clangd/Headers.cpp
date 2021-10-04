@@ -67,8 +67,8 @@ public:
         // Treat as if included from the main file.
         IncludingFileEntry = SM.getFileEntryForID(MainFID);
       }
-      auto IncludingID = Out->getOrCreateID(IncludingFileEntry, SM),
-           IncludedID = Out->getOrCreateID(File, SM);
+      auto IncludingID = Out->getOrCreateID(IncludingFileEntry),
+           IncludedID = Out->getOrCreateID(File);
       Out->IncludeChildren[IncludingID].push_back(IncludedID);
     }
   }
@@ -150,16 +150,15 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
 }
 
 std::unique_ptr<PPCallbacks>
-collectIncludeStructureCallback(const SourceManager &SM,
-                                IncludeStructure *Out) {
-  return std::make_unique<RecordHeaders>(SM, Out);
+IncludeStructure::collect(const SourceManager &SM) {
+  MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
+  return std::make_unique<RecordHeaders>(SM, this);
 }
 
 llvm::Optional<IncludeStructure::HeaderID>
-IncludeStructure::getID(const FileEntry *Entry,
-                        const SourceManager &SM) const {
+IncludeStructure::getID(const FileEntry *Entry) const {
   // HeaderID of the main file is always 0;
-  if (SM.getMainFileID() == SM.translateFile(Entry)) {
+  if (Entry == MainFileEntry) {
     return static_cast<IncludeStructure::HeaderID>(0u);
   }
   auto It = UIDToIndex.find(Entry->getUniqueID());
@@ -169,12 +168,12 @@ IncludeStructure::getID(const FileEntry *Entry,
 }
 
 IncludeStructure::HeaderID
-IncludeStructure::getOrCreateID(const FileEntry *Entry,
-                                const SourceManager &SM) {
-  // Main file's FileID was not known at IncludeStructure creation time.
-  if (SM.getMainFileID() == SM.translateFile(Entry)) {
-    UIDToIndex[Entry->getUniqueID()] =
-        static_cast<IncludeStructure::HeaderID>(0u);
+IncludeStructure::getOrCreateID(const FileEntry *Entry) {
+  // Main file's FileEntry was not known at IncludeStructure creation time.
+  if (Entry == MainFileEntry) {
+    if (RealPathNames.front().empty())
+      RealPathNames.front() = MainFileEntry->tryGetRealPathName().str();
+    return MainFileID;
   }
   auto R = UIDToIndex.try_emplace(
       Entry->getUniqueID(),

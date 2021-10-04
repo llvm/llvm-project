@@ -72,7 +72,7 @@ protected:
     auto &SM = Clang->getSourceManager();
     auto Entry = SM.getFileManager().getFile(Filename);
     EXPECT_TRUE(Entry);
-    return Includes.getOrCreateID(*Entry, SM);
+    return Includes.getOrCreateID(*Entry);
   }
 
   IncludeStructure collectIncludes() {
@@ -82,7 +82,7 @@ protected:
         Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]));
     IncludeStructure Includes;
     Clang->getPreprocessor().addPPCallbacks(
-        collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+        Includes.collect(Clang->getSourceManager()));
     EXPECT_FALSE(Action.Execute());
     Action.EndSourceFile();
     return Includes;
@@ -180,9 +180,9 @@ TEST_F(HeadersTest, OnlyCollectInclusionsInMain) {
 #include "bar.h"
 )cpp";
   auto Includes = collectIncludes();
-  EXPECT_THAT(Includes.MainFileIncludes,
-              UnorderedElementsAre(
-                  AllOf(Written("\"bar.h\""), Resolved(BarHeader))));
+  EXPECT_THAT(
+      Includes.MainFileIncludes,
+      UnorderedElementsAre(AllOf(Written("\"bar.h\""), Resolved(BarHeader))));
   EXPECT_THAT(Includes.includeDepth(getID(MainFile, Includes)),
               UnorderedElementsAre(Distance(getID(MainFile, Includes), 0u),
                                    Distance(getID(BarHeader, Includes), 1u),
