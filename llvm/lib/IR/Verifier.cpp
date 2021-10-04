@@ -2742,7 +2742,7 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
     Assert(CBI.getSuccessor(i)->getType()->isLabelTy(),
            "Callbr successors must all have pointer type!", &CBI);
   for (unsigned i = 0, e = CBI.getNumOperands(); i != e; ++i) {
-    Assert(i >= CBI.getNumArgOperands() || !isa<BasicBlock>(CBI.getOperand(i)),
+    Assert(i >= CBI.arg_size() || !isa<BasicBlock>(CBI.getOperand(i)),
            "Using an unescaped label as a callbr argument!", &CBI);
     if (isa<BasicBlock>(CBI.getOperand(i)))
       for (unsigned j = i + 1; j != e; ++j)
@@ -4826,7 +4826,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                            "llvm.call.preallocated.setup");
         FoundCall = true;
         size_t NumPreallocatedArgs = 0;
-        for (unsigned i = 0; i < UseCall->getNumArgOperands(); i++) {
+        for (unsigned i = 0; i < UseCall->arg_size(); i++) {
           if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
             ++NumPreallocatedArgs;
           }
@@ -4924,7 +4924,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(AI && AI->isStaticAlloca(),
              "llvm.localescape only accepts static allocas", Call);
     }
-    FrameEscapeInfo[BB->getParent()].first = Call.getNumArgOperands();
+    FrameEscapeInfo[BB->getParent()].first = Call.arg_size();
     SawFrameEscape = true;
     break;
   }
@@ -4973,7 +4973,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_gc_relocate: {
-    Assert(Call.getNumArgOperands() == 3, "wrong number of arguments", Call);
+    Assert(Call.arg_size() == 3, "wrong number of arguments", Call);
 
     Assert(isa<PointerType>(Call.getType()->getScalarType()),
            "gc.relocate must return a pointer or a vector of pointers", Call);
@@ -5430,7 +5430,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   // Compare intrinsics carry an extra predicate metadata operand.
   if (isa<ConstrainedFPCmpIntrinsic>(FPI))
     NumOperands += 1;
-  Assert((FPI.getNumArgOperands() == NumOperands),
+  Assert((FPI.arg_size() == NumOperands),
          "invalid arguments for constrained FP intrinsic", &FPI);
 
   switch (FPI.getIntrinsicID()) {

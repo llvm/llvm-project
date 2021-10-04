@@ -339,7 +339,7 @@ Value *CallBase::getReturnedArgOperand() const {
 
 /// Determine whether the argument or parameter has the given attribute.
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
-  assert(ArgNo < getNumArgOperands() && "Param index out of bounds!");
+  assert(ArgNo < arg_size() && "Param index out of bounds!");
 
   if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;
@@ -944,7 +944,7 @@ void CallBrInst::updateArgBlockAddresses(unsigned i, BasicBlock *B) {
   if (BasicBlock *OldBB = getIndirectDest(i)) {
     BlockAddress *Old = BlockAddress::get(OldBB);
     BlockAddress *New = BlockAddress::get(B);
-    for (unsigned ArgNo = 0, e = getNumArgOperands(); ArgNo != e; ++ArgNo)
+    for (unsigned ArgNo = 0, e = arg_size(); ArgNo != e; ++ArgNo)
       if (dyn_cast<BlockAddress>(getArgOperand(ArgNo)) == Old)
         setArgOperand(ArgNo, New);
   }
