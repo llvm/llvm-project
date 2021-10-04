@@ -50,3 +50,10 @@ API Changes
 -----------
 
 - ...
+
+Build System Changes
+--------------------
+
+- Building the libc++ shared or static library requires a C++ 20 capable compiler.
+  Use ``-DLLVM_ENABLE_PROJECTS='clang;compiler-rt' -DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'``
+  to build libc++ using a fresh build of Clang.
