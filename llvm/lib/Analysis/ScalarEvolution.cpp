@@ -6597,9 +6597,19 @@ const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
 static bool
 isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
                                            BasicBlock::const_iterator End) {
-  return llvm::all_of( make_range(Begin, End), [](const Instruction &I) {
-    return isGuaranteedToTransferExecutionToSuccessor(&I);
-  });
+  // Limit number of instructions we look at, to avoid scanning through large
+  // blocks. The current limit is chosen arbitrarily.
+  unsigned ScanLimit = 32;
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (isa<DbgInfoIntrinsic>(I))
+        continue;
+    if (--ScanLimit == 0)
+      return false;
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      return false;
+  }
+  return true;
 }
 
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
