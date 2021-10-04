@@ -19298,6 +19298,78 @@ TEST_F(FormatTest, BreakConstructorInitializersBeforeComma) {
                Style);
 }
 
+TEST_F(FormatTest, ConstructorInitializersWithPreprocessorDirective) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+  Style.ConstructorInitializerIndentWidth = 4;
+  verifyFormat("SomeClass::Constructor()\n"
+               "    : a{a}\n"
+               "    , b{b} {}",
+               Style);
+  verifyFormat("SomeClass::Constructor()\n"
+               "    : a{a}\n"
+               "#if CONDITION\n"
+               "    , b{b}\n"
+               "#endif\n"
+               "{\n}",
+               Style);
+  Style.ConstructorInitializerIndentWidth = 2;
+  verifyFormat("SomeClass::Constructor()\n"
+               "#if CONDITION\n"
+               "  : a{a}\n"
+               "#endif\n"
+               "  , b{b}\n"
+               "  , c{c} {\n}",
+               Style);
+  Style.ConstructorInitializerIndentWidth = 0;
+  verifyFormat("SomeClass::Constructor()\n"
+               ": a{a}\n"
+               "#ifdef CONDITION\n"
+               ", b{b}\n"
+               "#else\n"
+               ", c{c}\n"
+               "#endif\n"
+               ", d{d} {\n}",
+               Style);
+  Style.ConstructorInitializerIndentWidth = 4;
+  verifyFormat("SomeClass::Constructor()\n"
+               "    : a{a}\n"
+               "#if WINDOWS\n"
+               "#if DEBUG\n"
+               "    , b{0}\n"
+               "#else\n"
+               "    , b{1}\n"
+               "#endif\n"
+               "#else\n"
+               "#if DEBUG\n"
+               "    , b{2}\n"
+               "#else\n"
+               "    , b{3}\n"
+               "#endif\n"
+               "#endif\n"
+               "{\n}",
+               Style);
+  verifyFormat("SomeClass::Constructor()\n"
+               "    : a{a}\n"
+               "#if WINDOWS\n"
+               "    , b{0}\n"
+               "#if DEBUG\n"
+               "    , c{0}\n"
+               "#else\n"
+               "    , c{1}\n"
+               "#endif\n"
+               "#else\n"
+               "#if DEBUG\n"
+               "    , c{2}\n"
+               "#else\n"
+               "    , c{3}\n"
+               "#endif\n"
+               "    , b{1}\n"
+               "#endif\n"
+               "{\n}",
+               Style);
+}
+
 TEST_F(FormatTest, Destructors) {
   verifyFormat("void F(int &i) { i.~int(); }");
   verifyFormat("void F(int &i) { i->~int(); }");
