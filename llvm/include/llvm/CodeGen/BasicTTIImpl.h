@@ -1238,7 +1238,7 @@ public:
     assert(Indices.size() <= Factor &&
            "Interleaved memory op has too many members");
 
-    APInt DemandedLoadStoreElts = APInt::getNullValue(NumElts);
+    APInt DemandedLoadStoreElts = APInt::getZero(NumElts);
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
       for (unsigned Elm = 0; Elm < NumSubElts; Elm++)

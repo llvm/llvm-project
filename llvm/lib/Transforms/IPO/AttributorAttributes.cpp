@@ -8729,25 +8729,25 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     case Instruction::Mul:
       return LHS * RHS;
     case Instruction::UDiv:
-      if (RHS.isNullValue()) {
+      if (RHS.isZero()) {
         SkipOperation = true;
         return LHS;
       }
       return LHS.udiv(RHS);
     case Instruction::SDiv:
-      if (RHS.isNullValue()) {
+      if (RHS.isZero()) {
         SkipOperation = true;
         return LHS;
       }
       return LHS.sdiv(RHS);
     case Instruction::URem:
-      if (RHS.isNullValue()) {
+      if (RHS.isZero()) {
         SkipOperation = true;
         return LHS;
       }
       return LHS.urem(RHS);
     case Instruction::SRem:
-      if (RHS.isNullValue()) {
+      if (RHS.isZero()) {
         SkipOperation = true;
         return LHS;
       }

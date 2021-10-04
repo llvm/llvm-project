@@ -1943,7 +1943,7 @@ APInt APInt::usub_ov(const APInt &RHS, bool &Overflow) const {
 
 APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
   // MININT/-1  -->  overflow.
-  Overflow = isMinSignedValue() && RHS.isAllOnesValue();
+  Overflow = isMinSignedValue() && RHS.isAllOnes();
   return sdiv(RHS);
 }
 
@@ -2970,10 +2970,10 @@ APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth) {
   if (OldBitWidth == NewBitWidth)
     return A;
 
-  APInt NewA = APInt::getNullValue(NewBitWidth);
+  APInt NewA = APInt::getZero(NewBitWidth);
 
   // Check for null input.
-  if (A.isNullValue())
+  if (A.isZero())
     return NewA;
 
   if (NewBitWidth > OldBitWidth) {
@@ -2986,7 +2986,7 @@ APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth) {
     // Merge bits - if any old bit is set, then set scale equivalent new bit.
     unsigned Scale = OldBitWidth / NewBitWidth;
     for (unsigned i = 0; i != NewBitWidth; ++i)
-      if (!A.extractBits(Scale, i * Scale).isNullValue())
+      if (!A.extractBits(Scale, i * Scale).isZero())
         NewA.setBit(i);
   }
 

@@ -1141,7 +1141,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return ConstantInt::get(CI1->getContext(), C1V.udiv(C2V));
       case Instruction::SDiv:
         assert(!CI2->isZero() && "Div by zero handled above");
-        if (C2V.isAllOnesValue() && C1V.isMinSignedValue())
+        if (C2V.isAllOnes() && C1V.isMinSignedValue())
           return PoisonValue::get(CI1->getType());   // MIN_INT / -1 -> poison
         return ConstantInt::get(CI1->getContext(), C1V.sdiv(C2V));
       case Instruction::URem:
@@ -1149,7 +1149,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return ConstantInt::get(CI1->getContext(), C1V.urem(C2V));
       case Instruction::SRem:
         assert(!CI2->isZero() && "Div by zero handled above");
-        if (C2V.isAllOnesValue() && C1V.isMinSignedValue())
+        if (C2V.isAllOnes() && C1V.isMinSignedValue())
           return PoisonValue::get(CI1->getType());   // MIN_INT % -1 -> poison
         return ConstantInt::get(CI1->getContext(), C1V.srem(C2V));
       case Instruction::And:
