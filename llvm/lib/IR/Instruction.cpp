@@ -178,7 +178,7 @@ void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
   if (AL.isEmpty())
     return;
   AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
-  for (unsigned ArgNo = 0; ArgNo < CB->getNumArgOperands(); ArgNo++)
+  for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
     CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
   CB->removeRetAttrs(UBImplyingAttributes);
 }
