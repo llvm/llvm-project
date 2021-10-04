@@ -8,9 +8,9 @@
 define i32 @foo() {
 ; CHECK-LABEL: foo
 
-; CHECK-PWR8: Setting best plan to VF=16, UF=4
+; CHECK-PWR8: Executing best plan with VF=16, UF=4
 
-; CHECK-PWR9: Setting best plan to VF=8, UF=8
+; CHECK-PWR9: Executing best plan with VF=8, UF=8
 
 
 entry:
@@ -46,7 +46,7 @@ define i32 @goo() {
 
 ; CHECK-LABEL: goo
 
-; CHECK: Setting best plan to VF=16, UF=4
+; CHECK: Executing best plan with VF=16, UF=4
 
 entry:
   br label %for.body
@@ -79,7 +79,7 @@ for.body:                                         ; preds = %for.body, %entry
 define i64 @bar(i64* nocapture %a) {
 ; CHECK-LABEL: bar
 
-; CHECK: Setting best plan to VF=2, UF=12
+; CHECK: Executing best plan with VF=2, UF=12
 
 entry:
   br label %for.body
@@ -107,7 +107,7 @@ for.body:
 
 define void @hoo(i32 %n) {
 ; CHECK-LABEL: hoo
-; CHECK: Setting best plan to VF=1, UF=12
+; CHECK: Executing best plan with VF=1, UF=12
 
 entry:
   br label %for.body
