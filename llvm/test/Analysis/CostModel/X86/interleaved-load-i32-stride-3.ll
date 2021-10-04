@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX1: LV: Found an estimated cost of 138 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX2: LV: Found an estimated cost of 17 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX2: LV: Found an estimated cost of 6 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 30 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 20 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 138 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
