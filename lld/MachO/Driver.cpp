@@ -1436,12 +1436,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   if (config->timeTraceEnabled) {
-    if (auto E = timeTraceProfilerWrite(
-            args.getLastArgValue(OPT_time_trace_file_eq).str(),
-            config->outputFile)) {
-      handleAllErrors(std::move(E),
-                      [&](const StringError &SE) { error(SE.getMessage()); });
-    }
+    checkError(timeTraceProfilerWrite(
+        args.getLastArgValue(OPT_time_trace_file_eq).str(),
+        config->outputFile));
 
     timeTraceProfilerCleanup();
   }
