@@ -3608,13 +3608,21 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
   Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
-  // FIXME(PR23527): Don't blindly transfer the inbounds flag from the GEP
-  // instruction to its SCEV, because the Instruction may be guarded by control
-  // flow and the no-overflow bits may not be valid for the expression in any
-  // context. This can be fixed similarly to how these flags are handled for
-  // adds.
+  const bool AssumeInBoundsFlags = [&]() {
+    if (!GEP->isInBounds())
+      return false;
+
+    // We'd like to propagate flags from the IR to the corresponding SCEV nodes,
+    // but to do that, we have to ensure that said flag is valid in the entire
+    // defined scope of the SCEV.
+    auto *GEPI = dyn_cast<Instruction>(GEP);
+    // TODO: non-instructions have global scope.  We might be able to prove
+    // some global scope cases
+    return GEPI && isSCEVExprNeverPoison(GEPI);
+  }();
+
   SCEV::NoWrapFlags OffsetWrap =
-      GEP->isInBounds() ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+    AssumeInBoundsFlags ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
@@ -3660,7 +3668,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  SCEV::NoWrapFlags BaseWrap = GEP->isInBounds() && isKnownNonNegative(Offset)
+  SCEV::NoWrapFlags BaseWrap = AssumeInBoundsFlags && isKnownNonNegative(Offset)
                                    ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
