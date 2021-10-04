@@ -1,5 +1,4 @@
-// RUN: %clang_dfsan                         %s -o %t && %run %t | FileCheck %s
-// RUN: %clang_dfsan  -mllvm -dfsan-args-abi %s -o %t && %run %t | FileCheck %s
+// RUN: %clang_dfsan %s -o %t && %run %t | FileCheck %s
 //
 // REQUIRES: x86_64-target-arch
 
