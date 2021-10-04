@@ -1499,7 +1499,7 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string>& source,
   }
 }
 
-void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
+void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &ExtraArgs) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
 }
