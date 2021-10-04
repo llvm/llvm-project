@@ -496,12 +496,11 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Functions`.
   ArrayRef<WasmFunction> funcs = wasmObj->functions();
-  ArrayRef<uint32_t> funcTypes = wasmObj->functionTypes();
   ArrayRef<WasmSignature> types = wasmObj->types();
   functions.reserve(funcs.size());
 
-  for (size_t i = 0, e = funcs.size(); i != e; ++i) {
-    auto* func = make<InputFunction>(types[funcTypes[i]], &funcs[i], this);
+  for (auto &f : funcs) {
+    auto *func = make<InputFunction>(types[f.SigIndex], &f, this);
     func->discarded = isExcludedByComdat(func);
     functions.emplace_back(func);
   }
@@ -541,7 +540,7 @@ void ObjFile::parse(bool ignoreComdats) {
   addLegacyIndirectFunctionTableIfNeeded(tableSymbolCount);
 }
 
-bool ObjFile::isExcludedByComdat(InputChunk *chunk) const {
+bool ObjFile::isExcludedByComdat(const InputChunk *chunk) const {
   uint32_t c = chunk->getComdat();
   if (c == UINT32_MAX)
     return false;

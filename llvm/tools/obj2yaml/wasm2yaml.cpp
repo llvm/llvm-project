@@ -260,8 +260,8 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     }
     case wasm::WASM_SEC_FUNCTION: {
       auto FuncSec = std::make_unique<WasmYAML::FunctionSection>();
-      for (const auto &Func : Obj.functionTypes()) {
-        FuncSec->FunctionTypes.push_back(Func);
+      for (const auto &Func : Obj.functions()) {
+        FuncSec->FunctionTypes.push_back(Func.SigIndex);
       }
       S = std::move(FuncSec);
       break;
