@@ -68,7 +68,6 @@ tools = [
 
 # The following tools are optional
 tools.extend([
-    ToolSubst('%PYTHON', config.python_executable, unresolved='ignore'),
     ToolSubst('toy-ch1', unresolved='ignore'),
     ToolSubst('toy-ch2', unresolved='ignore'),
     ToolSubst('toy-ch3', unresolved='ignore'),
@@ -80,6 +79,16 @@ tools.extend([
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%mlir_integration_test_dir', config.mlir_integration_test_dir, unresolved='ignore'),
 ])
+
+python_executable = config.python_executable
+# Python configuration with sanitizer requires some magic preloading. This will only work on clang/linux.
+# TODO: detect Darwin/Windows situation (or mark these tests as unsupported on these platforms).
+if "asan" in config.available_features and "Linux" in config.host_os:
+  python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
+tools.extend([
+  ToolSubst('%PYTHON', python_executable, unresolved='ignore'),
+])
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 
