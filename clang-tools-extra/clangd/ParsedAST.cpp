@@ -439,7 +439,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Clang->getPreprocessor().addPPCallbacks(
-      collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+      Includes.collect(Clang->getSourceManager()));
   // Copy over the macros in the preamble region of the main file, and combine
   // with non-preamble macros below.
   MainFileMacros Macros;

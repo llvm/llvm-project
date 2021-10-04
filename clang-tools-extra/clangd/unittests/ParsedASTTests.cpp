@@ -516,10 +516,10 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   IncludeStructure Includes = PatchedAST->getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(MainFE);
-  auto MainID = Includes.getID(*MainFE, SM);
+  auto MainID = Includes.getID(*MainFE);
   auto AuxFE = FM.getFile(testPath("sub/aux.h"));
   ASSERT_TRUE(AuxFE);
-  auto AuxID = Includes.getID(*AuxFE, SM);
+  auto AuxID = Includes.getID(*AuxFE);
   EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID));
 }
 
@@ -560,12 +560,12 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
   IncludeStructure Includes = ExpectedAST.getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(MainFE);
-  auto MainID = Includes.getOrCreateID(*MainFE, SM);
+  auto MainID = Includes.getOrCreateID(*MainFE);
   auto &PatchedFM = PatchedAST->getSourceManager().getFileManager();
   IncludeStructure PatchedIncludes = PatchedAST->getIncludeStructure();
   auto PatchedMainFE = PatchedFM.getFile(testPath("foo.cpp"));
   ASSERT_TRUE(PatchedMainFE);
-  auto PatchedMainID = PatchedIncludes.getOrCreateID(*PatchedMainFE, SM);
+  auto PatchedMainID = PatchedIncludes.getOrCreateID(*PatchedMainFE);
   EXPECT_EQ(Includes.includeDepth(MainID)[MainID],
             PatchedIncludes.includeDepth(PatchedMainID)[PatchedMainID]);
 }

@@ -104,7 +104,7 @@ public:
            "SourceMgr and LangOpts must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        collectIncludeStructureCallback(*SourceMgr, &Includes),
+        Includes.collect(*SourceMgr),
         std::make_unique<PPChainedCallbacks>(
             std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
             collectPragmaMarksCallback(*SourceMgr, Marks)));
@@ -285,7 +285,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   const auto &SM = Clang->getSourceManager();
   Preprocessor &PP = Clang->getPreprocessor();
   IncludeStructure Includes;
-  PP.addPPCallbacks(collectIncludeStructureCallback(SM, &Includes));
+  PP.addPPCallbacks(Includes.collect(SM));
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(

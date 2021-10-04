@@ -1203,7 +1203,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   loadMainFilePreambleMacros(Clang->getPreprocessor(), Input.Preamble);
   if (Includes)
     Clang->getPreprocessor().addPPCallbacks(
-        collectIncludeStructureCallback(Clang->getSourceManager(), Includes));
+        Includes->collect(Clang->getSourceManager()));
   if (llvm::Error Err = Action.Execute()) {
     log("Execute() failed when running codeComplete for {0}: {1}",
         Input.FileName, toString(std::move(Err)));
@@ -1380,7 +1380,7 @@ public:
       const auto &SM = Recorder->CCSema->getSourceManager();
       llvm::StringMap<SourceParams> ProxSources;
       auto MainFileID =
-          Includes.getID(SM.getFileEntryForID(SM.getMainFileID()), SM);
+          Includes.getID(SM.getFileEntryForID(SM.getMainFileID()));
       assert(MainFileID);
       for (auto &HeaderIDAndDepth : Includes.includeDepth(*MainFileID)) {
         auto &Source =
