@@ -1,4 +1,4 @@
-; RUN: llc -march=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=nanomips -asm-show-inst -verify-machineinstrs -mload-store-unaligned < %s | FileCheck %s
 ; Tests store zero peephole optimization for all store instructions.
 
 define void @zeroint0(i32* %num) {

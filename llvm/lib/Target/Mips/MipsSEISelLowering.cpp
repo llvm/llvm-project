@@ -208,8 +208,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Custom);
-  setOperationAction(ISD::LOAD,               MVT::i32, Custom);
-  setOperationAction(ISD::STORE,              MVT::i32, Custom);
+
+  if (Subtarget.hasNanoMips()) {
+    if (Subtarget.useUnalignedLoadStore()) {
+      setOperationAction(ISD::LOAD, MVT::i32, Custom);
+      setOperationAction(ISD::STORE, MVT::i32, Custom);
+      // TODO: Fix halfword unaligned loads and stores.
+      // setOperationAction(ISD::LOAD, MVT::i16, Custom);
+      // setOperationAction(ISD::STORE, MVT::i16, Custom);
+    }
+  } else {
+    setOperationAction(ISD::LOAD, MVT::i32, Custom);
+    setOperationAction(ISD::STORE, MVT::i32, Custom);
+  }
 
   setTargetDAGCombine(ISD::MUL);
 
@@ -440,6 +451,21 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
+
+  if (Subtarget.hasNanoMips()) {
+    if (Subtarget.useUnalignedLoadStore())
+      switch (SVT) {
+      case MVT::i32:
+      // TODO: Fix halfword unaligned loads and stores.
+      // case MVT::i16:
+        if (Fast)
+          *Fast = true;
+        return true;
+      default:
+        return false;
+      }
+    return false;
+  }
 
   if (Subtarget.systemSupportsUnalignedAccess()) {
     // MIPS32r6/MIPS64r6 is required to support unaligned access. It's

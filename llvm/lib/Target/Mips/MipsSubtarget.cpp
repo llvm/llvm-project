@@ -59,6 +59,10 @@ static cl::opt<bool>
     GPOpt("mgpopt", cl::Hidden,
           cl::desc("Enable gp-relative addressing of mips small data items"));
 
+static cl::opt<bool>
+    UnalignedLS("mload-store-unaligned", cl::Hidden,
+                cl::desc("Enable unaligned loads and stores (nanoMIPS only)"));
+
 bool MipsSubtarget::DspWarningPrinted = false;
 bool MipsSubtarget::MSAWarningPrinted = false;
 bool MipsSubtarget::VirtWarningPrinted = false;
@@ -83,6 +87,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasEVA(false), DisableMadd4(false), HasMT(false), HasCRC(false),
       HasVirt(false), HasGINV(false), UseIndirectJumpsHazard(false),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
+      UseUnalignedLoadStore(UnalignedLS),
       TSInfo(), InstrInfo(MipsInstrInfo::create(
                     initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
@@ -151,6 +156,10 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   if (hasNanoMips())
     NoABICalls = true;
+  
+  if (!hasNanoMips() && UnalignedLS)
+    errs() << "warning: '-mload-store-unaligned' is supported only for nanoMIPS"
+           << "\n";
 
   if (NoABICalls && TM.isPositionIndependent() && !hasNanoMips())
     report_fatal_error("position-independent code requires '-mabicalls'");
@@ -165,6 +174,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
            << "\n";
     UseSmallSection = false;
   }
+
 
   if (hasDSPR2() && !DspWarningPrinted) {
     if (hasMips64() && !hasMips64r2()) {

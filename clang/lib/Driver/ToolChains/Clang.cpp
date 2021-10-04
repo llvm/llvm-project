@@ -1904,6 +1904,9 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
   // is in use, as -fno-pic for N64 implies -mno-abicalls.
   bool NoABICalls =
       ABICalls && ABICalls->getOption().matches(options::OPT_mno_abicalls);
+  if (Triple.isNanoMips() &&
+      Args.getLastArg(options::OPT_mload_store_unaligned))
+    CmdArgs.push_back("-mload-store-unaligned");
 
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;

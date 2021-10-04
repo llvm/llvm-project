@@ -3556,6 +3556,9 @@ def mabicalls : Flag<["-"], "mabicalls">, Group<m_mips_Features_Group>,
   HelpText<"Enable SVR4-style position-independent code (Mips only)">;
 def mno_abicalls : Flag<["-"], "mno-abicalls">, Group<m_mips_Features_Group>,
   HelpText<"Disable SVR4-style position-independent code (Mips only)">;
+def mload_store_unaligned : Flag<["-"], "mload-store-unaligned">,
+  Group<m_mips_Features_Group>,
+  HelpText<"Allow unaligned loads and stores (Mips only)">;
 def mno_crc : Flag<["-"], "mno-crc">, Group<m_mips_Features_Group>,
   HelpText<"Disallow use of CRC instructions (Mips only)">;
 def mvirt : Flag<["-"], "mvirt">, Group<m_mips_Features_Group>;

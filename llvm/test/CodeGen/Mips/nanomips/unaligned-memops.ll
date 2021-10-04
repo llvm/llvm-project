@@ -1,4 +1,4 @@
-; RUN: llc -march=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=nanomips -asm-show-inst -verify-machineinstrs -mload-store-unaligned < %s | FileCheck %s
 
 define i32 @ualw_1(i32* %a) {
 ; CHECK: ualw $a0, 0($a0)
