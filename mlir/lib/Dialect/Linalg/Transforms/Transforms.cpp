@@ -182,7 +182,7 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
   result = linalg::PadTensorOp::createPadHighOp(
       staticTensorType, opOperand->get(), paddingValue.getValue(),
-      /*packing=*/true, opToPad->getLoc(), rewriter);
+      /*nofold=*/true, opToPad->getLoc(), rewriter);
   return success();
 }
 
