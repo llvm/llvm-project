@@ -18,7 +18,7 @@ class TestPty(GDBRemoteTestBase):
             self.expect("process connect " + self.server.get_connect_url(),
                         substrs=['Process', 'stopped'])
         finally:
-            self.dbg.GetSelectedPlatform().DisconnectRemote()
+            self.dbg.GetSelectedTarget().GetProcess().Kill()
 
     def test_process_connect_async(self):
         """Test the process connect command in asynchronous mode"""
@@ -32,4 +32,6 @@ class TestPty(GDBRemoteTestBase):
             lldbutil.expect_state_changes(self, self.dbg.GetListener(),
                                           self.process(), [lldb.eStateStopped])
         finally:
-            self.dbg.GetSelectedPlatform().DisconnectRemote()
+            self.dbg.GetSelectedTarget().GetProcess().Kill()
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(),
+                                      self.process(), [lldb.eStateExited])
