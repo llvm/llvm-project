@@ -26,9 +26,9 @@ define i32 @call_use_s128(i32 %p1, i128 %p2, i32 %p3, i32 %p4, i32 %p5, i128 %p6
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV]](s128)
+  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV1]](s128)
   ; CHECK-NEXT:   $x0 = COPY [[UV]](s64)
   ; CHECK-NEXT:   $x1 = COPY [[UV1]](s64)
-  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV1]](s128)
   ; CHECK-NEXT:   $x2 = COPY [[UV2]](s64)
   ; CHECK-NEXT:   $x3 = COPY [[UV3]](s64)
   ; CHECK-NEXT:   BL @use_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3

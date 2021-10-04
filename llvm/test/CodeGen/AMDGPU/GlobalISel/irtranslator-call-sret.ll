@@ -49,12 +49,12 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C5]](s32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX1]](p5)
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; GCN-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C6]](s32)
   ; GCN-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN-NEXT:   G_MEMCPY [[PTR_ADD2]](p5), [[FRAME_INDEX]](p5), [[C7]](s32), 0 :: (dereferenceable store (s64) into stack, align 4, addrspace 5), (dereferenceable load (s64) from %ir.in.val, align 4, addrspace 5)
+  ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX1]](p5)
   ; GCN-NEXT:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
   ; GCN-NEXT:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)

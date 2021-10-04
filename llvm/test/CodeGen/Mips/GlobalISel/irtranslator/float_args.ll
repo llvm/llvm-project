@@ -204,8 +204,8 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
   ; FP32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; FP32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; FP32-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP32-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; FP32-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP32-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP32-NEXT:   $a3 = COPY [[UV1]](s32)
   ; FP32-NEXT:   JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
@@ -222,8 +222,8 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
   ; FP64-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; FP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; FP64-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP64-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; FP64-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP64-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP64-NEXT:   $a3 = COPY [[UV1]](s32)
   ; FP64-NEXT:   JAL @double_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0_64
