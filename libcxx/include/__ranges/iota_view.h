@@ -9,6 +9,16 @@
 #ifndef _LIBCPP___RANGES_IOTA_VIEW_H
 #define _LIBCPP___RANGES_IOTA_VIEW_H
 
+#include <__compare/three_way_comparable.h>
+#include <__concepts/arithmetic.h>
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/copyable.h>
+#include <__concepts/equality_comparable.h>
+#include <__concepts/invocable.h>
+#include <__concepts/same_as.h>
+#include <__concepts/semiregular.h>
+#include <__concepts/totally_ordered.h>
 #include <__config>
 #include <__debug>
 #include <__functional/ranges_operations.h>
@@ -21,7 +31,6 @@
 #include <__ranges/view_interface.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -212,11 +221,11 @@ namespace ranges {
         return !(__x < __y);
       }
 
-//       friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
-//         requires totally_ordered<_Start> && three_way_comparable<_Start>
-//       {
-//         return __x.__value_ <=> __y.__value_;
-//       }
+      friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+        requires totally_ordered<_Start> && three_way_comparable<_Start>
+      {
+        return __x.__value_ <=> __y.__value_;
+      }
 
       _LIBCPP_HIDE_FROM_ABI
       friend constexpr __iterator operator+(__iterator __i, difference_type __n)
