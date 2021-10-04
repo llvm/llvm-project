@@ -23,6 +23,14 @@ namespace fuzzer {
 
 static FILE *OutputFile = stderr;
 
+FILE *GetOutputFile() {
+  return OutputFile;
+}
+
+void SetOutputFile(FILE *NewOutputFile) {
+  OutputFile = NewOutputFile;
+}
+
 long GetEpoch(const std::string &Path) {
   struct stat St;
   if (stat(Path.c_str(), &St))

@@ -591,6 +591,42 @@ TEST(FuzzerUtil, Base64) {
   EXPECT_EQ("YWJjeHl6", Base64({'a', 'b', 'c', 'x', 'y', 'z'}));
 }
 
+#ifdef __GLIBC__
+class PrintfCapture {
+ public:
+  PrintfCapture() {
+    OldOutputFile = GetOutputFile();
+    SetOutputFile(open_memstream(&Buffer, &Size));
+  }
+  ~PrintfCapture() {
+    fclose(GetOutputFile());
+    SetOutputFile(OldOutputFile);
+    free(Buffer);
+  }
+  std::string str() { return std::string(Buffer, Size); }
+
+ private:
+  char *Buffer;
+  size_t Size;
+  FILE *OldOutputFile;
+};
+
+TEST(FuzzerUtil, PrintASCII) {
+  auto f = [](const char *Str, const char *PrintAfter = "") {
+    PrintfCapture Capture;
+    PrintASCII(reinterpret_cast<const uint8_t*>(Str), strlen(Str), PrintAfter);
+    return Capture.str();
+  };
+  EXPECT_EQ("hello", f("hello"));
+  EXPECT_EQ("c:\\\\", f("c:\\"));
+  EXPECT_EQ("\\\"hi\\\"", f("\"hi\""));
+  EXPECT_EQ("\\011a", f("\ta"));
+  EXPECT_EQ("\\0111", f("\t1"));
+  EXPECT_EQ("hello\\012", f("hello\n"));
+  EXPECT_EQ("hello\n", f("hello", "\n"));
+}
+#endif
+
 TEST(Corpus, Distribution) {
   DataFlowTrace DFT;
   Random Rand(0);
