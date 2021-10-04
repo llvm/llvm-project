@@ -522,7 +522,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
 
-  setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
+  auto Alignment = Subtarget.isGP64bit()
+                       ? Align(8)
+                       : Subtarget.hasNanoMips() ? Align(2) : Align(4);
+  setMinFunctionAlignment(Alignment);
 
   // The arguments on the stack are defined in terms of 4-byte slots on O32
   // and 8-byte slots on N32/N64.
