@@ -199,5 +199,41 @@ TEST(DynTypedNode, QualType) {
   EXPECT_FALSE(Node < Node);
 }
 
+TEST(DynTypedNode, TypeLoc) {
+  std::string code = R"cc(void example() { int abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(code);
+  auto matches =
+      match(traverse(TK_AsIs,
+                     varDecl(hasName("abc"), hasTypeLoc(typeLoc().bind("tl")))),
+            AST->getASTContext());
+  EXPECT_EQ(matches.size(), 1u);
+
+  const auto &tl = *matches[0].getNodeAs<TypeLoc>("tl");
+  DynTypedNode Node = DynTypedNode::create(tl);
+  EXPECT_TRUE(Node == Node);
+  EXPECT_FALSE(Node < Node);
+}
+
+TEST(DynTypedNode, PointerTypeLoc) {
+  std::string code = R"cc(void example() { int *abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(code);
+  auto matches =
+      match(traverse(TK_AsIs, varDecl(hasName("abc"),
+                                      hasTypeLoc(typeLoc().bind("ptl")))),
+            AST->getASTContext());
+  EXPECT_EQ(matches.size(), 1u);
+
+  const auto &tl = *matches[0].getNodeAs<TypeLoc>("ptl");
+  DynTypedNode TypeLocNode = DynTypedNode::create(tl);
+  EXPECT_TRUE(TypeLocNode == TypeLocNode);
+  EXPECT_FALSE(TypeLocNode < TypeLocNode);
+
+  const auto &ptl = *matches[0].getNodeAs<PointerTypeLoc>("ptl");
+  EXPECT_EQ(&tl, &ptl);
+  DynTypedNode PointerTypeLocNode = DynTypedNode::create(ptl);
+  EXPECT_TRUE(PointerTypeLocNode == PointerTypeLocNode);
+  EXPECT_FALSE(PointerTypeLocNode < PointerTypeLocNode);
+}
+
 } // namespace
 }  // namespace clang
