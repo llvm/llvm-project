@@ -43,7 +43,7 @@ struct ConditionInfo {
   /// Bound llvm value
   Value *BoundValue;
   /// AddRec SCEV
-  const SCEV *AddRecSCEV;
+  const SCEVAddRecExpr *AddRecSCEV;
   /// Bound SCEV
   const SCEV *BoundSCEV;
 
@@ -59,15 +59,19 @@ static void analyzeICmp(ScalarEvolution &SE, ICmpInst *ICmp,
   Cond.ICmp = ICmp;
   if (match(ICmp, m_ICmp(Cond.Pred, m_Value(Cond.AddRecValue),
                          m_Value(Cond.BoundValue)))) {
-    Cond.AddRecSCEV = SE.getSCEV(Cond.AddRecValue);
-    Cond.BoundSCEV = SE.getSCEV(Cond.BoundValue);
+    const SCEV *AddRecSCEV = SE.getSCEV(Cond.AddRecValue);
+    const SCEV *BoundSCEV = SE.getSCEV(Cond.BoundValue);
+    const SCEVAddRecExpr *LHSAddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
+    const SCEVAddRecExpr *RHSAddRecSCEV = dyn_cast<SCEVAddRecExpr>(BoundSCEV);
     // Locate AddRec in LHSSCEV and Bound in RHSSCEV.
-    if (isa<SCEVAddRecExpr>(Cond.BoundSCEV) &&
-        !isa<SCEVAddRecExpr>(Cond.AddRecSCEV)) {
+    if (!LHSAddRecSCEV && RHSAddRecSCEV) {
       std::swap(Cond.AddRecValue, Cond.BoundValue);
-      std::swap(Cond.AddRecSCEV, Cond.BoundSCEV);
+      std::swap(AddRecSCEV, BoundSCEV);
       Cond.Pred = ICmpInst::getSwappedPredicate(Cond.Pred);
     }
+
+    Cond.AddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
+    Cond.BoundSCEV = BoundSCEV;
   }
 }
 
@@ -125,15 +129,14 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
   if (!SE.isAvailableAtLoopEntry(Cond.BoundSCEV, &L))
     return false;
 
-  const SCEVAddRecExpr *AddRecSCEV = dyn_cast<SCEVAddRecExpr>(Cond.AddRecSCEV);
   // Allowed AddRec as induction variable.
-  if (!AddRecSCEV)
+  if (!Cond.AddRecSCEV)
     return false;
 
-  if (!AddRecSCEV->isAffine())
+  if (!Cond.AddRecSCEV->isAffine())
     return false;
 
-  const SCEV *StepRecSCEV = AddRecSCEV->getStepRecurrence(SE);
+  const SCEV *StepRecSCEV = Cond.AddRecSCEV->getStepRecurrence(SE);
   // Allowed constant step.
   if (!isa<SCEVConstant>(StepRecSCEV))
     return false;
@@ -268,10 +271,9 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
     // After transformation, we assume the split condition of the pre-loop is
     // always true. In order to guarantee it, we need to check the start value
     // of the split cond AddRec satisfies the split condition.
-    const SCEV *SplitAddRecStartSCEV =
-        cast<SCEVAddRecExpr>(SplitCandidateCond.AddRecSCEV)->getStart();
-    if (!SE.isKnownPredicate(SplitCandidateCond.Pred, SplitAddRecStartSCEV,
-                             SplitCandidateCond.BoundSCEV))
+    if (!SE.isLoopEntryGuardedByCond(&L, SplitCandidateCond.Pred,
+                                     SplitCandidateCond.AddRecSCEV->getStart(),
+                                     SplitCandidateCond.BoundSCEV))
       continue;
 
     SplitCandidateCond.BI = BI;

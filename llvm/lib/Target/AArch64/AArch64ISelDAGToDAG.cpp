@@ -2167,7 +2167,7 @@ static bool isBitfieldDstMask(uint64_t DstMask, const APInt &BitsToBeInserted,
   APInt SignificantBitsToBeInserted = BitsToBeInserted.zextOrTrunc(BitWidth);
 
   return (SignificantDstMask & SignificantBitsToBeInserted) == 0 &&
-         (SignificantDstMask | SignificantBitsToBeInserted).isAllOnesValue();
+         (SignificantDstMask | SignificantBitsToBeInserted).isAllOnes();
 }
 
 // Look for bits that will be useful for later uses.
