@@ -42,6 +42,9 @@ func @main() {
   %flops = divf %num_flops_f, %t : f64
   call @print_flops(%flops) : (f64) -> ()
 
+  memref.dealloc %A : memref<16x16xf32>
+  memref.dealloc %B : memref<16x16xf32>
+  memref.dealloc %C : memref<16x16xf32>
   return
 }
 // CHECK: 17
