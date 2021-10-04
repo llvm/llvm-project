@@ -209,51 +209,10 @@ Value getPaddedInput(OpBuilder &b, Location loc, Value input,
 namespace {
 
 /// The padding value for a given Op depends on the semantics of the Op.
-/// The identity value for ConvOp and PoolingSumOp is 0, for PoolingMaxOp is
-/// -inf or minInt and for PoolingMinOp is inf or maxInt.
+/// The identity value for ConvOp is 0.
 template <typename OpType> Attribute getPadValueAttr(Type type) {
   llvm_unreachable("Unexpected op type for getPadValueAttr");
   return {};
-}
-
-template <> Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
-  if (auto floatType = type.dyn_cast<FloatType>()) {
-    return OpBuilder(type.getContext())
-        .getFloatAttr(floatType, APFloat::getInf(floatType.getFloatSemantics(),
-                                                 /*Negative*/ true));
-  }
-  if (auto intType = type.dyn_cast<IntegerType>()) {
-    unsigned width = intType.getWidth();
-    // The select instruction used to lower the PoolingMin uses a signed
-    // comparison, use a signed constant irrespective of the signedness of the
-    // integer type.
-    return OpBuilder(type.getContext())
-        .getIntegerAttr(intType, APInt::getSignedMinValue(width));
-  }
-  llvm_unreachable("Unsupported data type for PoolingMaxOp");
-  return {};
-}
-
-template <> Attribute getPadValueAttr<PoolingMinOp>(Type type) {
-  if (auto floatType = type.dyn_cast<FloatType>()) {
-    return OpBuilder(type.getContext())
-        .getFloatAttr(floatType,
-                      APFloat::getInf(floatType.getFloatSemantics()));
-  }
-  if (auto intType = type.dyn_cast<IntegerType>()) {
-    unsigned width = intType.getWidth();
-    // The select instruction used to lower the PoolingMin uses a signed
-    // comparison, use a signed constant irrespective of the signedness of the
-    // integer type.
-    return OpBuilder(type.getContext())
-        .getIntegerAttr(intType, APInt::getSignedMaxValue(width));
-  }
-  llvm_unreachable("Unsupported data type for PoolingMinOp");
-  return {};
-}
-
-template <> Attribute getPadValueAttr<PoolingSumOp>(Type type) {
-  return OpBuilder(type.getContext()).getZeroAttr(type);
 }
 
 template <> Attribute getPadValueAttr<ConvOp>(Type type) {
@@ -309,72 +268,6 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
     Value addVal = ArithBuilder(b, loc).add(mulVal, outputVal);
     b.create<StoreOpTy>(loc, addVal, output, oIdx);
   }
-}
-
-template <typename PoolingOp> static bool hasPadding(PoolingOp poolingOp) {
-  for (unsigned i = 0, e = poolingOp.getNumWindowLoops(); i < e; ++i) {
-    if (poolingOp.getLowPad(i) > 0 || poolingOp.getHighPad(i) > 0)
-      return true;
-  }
-  return false;
-}
-
-template <typename LoadOpTy, typename StoreOpTy, typename PoolingOp>
-static Value getPoolingInput(OpBuilder &b, Location loc, PoolingOp op,
-                             ArrayRef<Value> inputIndices) {
-  if (hasPadding(op)) {
-    Type type =
-        op.input().getType().template cast<MemRefType>().getElementType();
-    Value padValue =
-        b.create<ConstantOp>(loc, type, getPadValueAttr<PoolingOp>(type));
-    return getPaddedInput(b, loc, op.input(), inputIndices,
-                          /*Pad every dimension*/ {}, padValue);
-  }
-  return b.create<LoadOpTy>(loc, op.input(), inputIndices);
-}
-
-template <typename LoadOpTy, typename StoreOpTy, typename OpType>
-void emitPoolingMinMaxScalarImplementation(OpBuilder &b, Location loc,
-                                           ArrayRef<Value> allIvs, OpType op) {
-  InputAndOutputIndices indices = getInputAndOutputIndices(b, loc, allIvs, op);
-  Value lhs = b.create<LoadOpTy>(loc, op.output(), indices.outputs);
-  Value rhs = getPoolingInput<LoadOpTy, StoreOpTy>(b, loc, op, indices.inputs);
-  Value value = llvm::TypeSwitch<Operation *, Value>(op)
-                    .Case([&](PoolingMinOp poolingOp) {
-                      return ArithBuilder(b, loc).select(
-                          ArithBuilder(b, loc).slt(lhs, rhs), lhs, rhs);
-                    })
-                    .Case([&](PoolingMaxOp poolingOp) {
-                      return ArithBuilder(b, loc).select(
-                          ArithBuilder(b, loc).sgt(lhs, rhs), lhs, rhs);
-                    })
-                    .Default([&](auto) { return Value(); });
-  b.create<StoreOpTy>(loc, value, op.output(), indices.outputs);
-}
-
-template <typename LoadOpTy, typename StoreOpTy>
-static void emitScalarImplementation(OpBuilder &b, Location loc,
-                                     ArrayRef<Value> allIvs, PoolingMaxOp op) {
-  emitPoolingMinMaxScalarImplementation<LoadOpTy, StoreOpTy, PoolingMaxOp>(
-      b, loc, allIvs, op);
-}
-
-template <typename LoadOpTy, typename StoreOpTy>
-static void emitScalarImplementation(OpBuilder &b, Location loc,
-                                     ArrayRef<Value> allIvs, PoolingMinOp op) {
-  emitPoolingMinMaxScalarImplementation<LoadOpTy, StoreOpTy, PoolingMinOp>(
-      b, loc, allIvs, op);
-}
-
-template <typename LoadOpTy, typename StoreOpTy>
-static void emitScalarImplementation(OpBuilder &b, Location loc,
-                                     ArrayRef<Value> allIvs, PoolingSumOp op) {
-  auto indices = getInputAndOutputIndices(b, loc, allIvs, op);
-  Value inputVal =
-      getPoolingInput<LoadOpTy, StoreOpTy>(b, loc, op, indices.inputs);
-  Value outputVal = b.create<LoadOpTy>(loc, op.output(), indices.outputs);
-  Value added = ArithBuilder(b, loc).add(outputVal, inputVal);
-  b.create<StoreOpTy>(loc, added, op.output(), indices.outputs);
 }
 
 /// Replace the index operations in the body of the loop nest by the matching
@@ -436,11 +329,9 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
                "expect operands are captured and not passed by loop argument");
         allIvs.append(ivs.begin(), ivs.end());
         llvm::TypeSwitch<Operation *>(linalgOp)
-            .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp, LinalgOp>(
-                [&](auto op) {
-                  emitScalarImplementation<LoadOpTy, StoreOpTy>(b, loc, allIvs,
-                                                                op);
-                })
+            .Case<ConvOp, LinalgOp>([&](auto op) {
+              emitScalarImplementation<LoadOpTy, StoreOpTy>(b, loc, allIvs, op);
+            })
             .Default([&](Operation *op) { assert(false && "unexpected op"); });
         return scf::ValueVector{};
       });
@@ -724,9 +615,6 @@ LogicalResult mlir::linalg::peelAndCanonicalizeTiledLoop(RewriterBase &rewriter,
                                                          TiledLoopOp &result) {
   int64_t numLoops = loopOp.iterator_types().size();
   if (idx < 0 || numLoops <= idx)
-    return failure();
-  // Only parallel iterator supported.
-  if (!isParallelIterator(loopOp.iterator_types()[idx]))
     return failure();
 
   Value ub = loopOp.upperBound()[idx];

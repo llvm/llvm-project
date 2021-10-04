@@ -491,23 +491,21 @@ func @arith_real(%a : f128, %b : f128) -> f128 {
 
 // CHECK: [[VAL_171:%.*]] = constant 1.0
 // CHECK: [[VAL_172:%.*]] = fir.convert [[VAL_171]] : (f32) -> f128
-// CHECK: [[VAL_173:%.*]] = fir.negf [[VAL_169]] : f128
+// CHECK: [[VAL_173:%.*]] = negf [[VAL_169]] : f128
 // CHECK: [[VAL_174:%.*]] = addf [[VAL_172]], [[VAL_173]] : f128
 // CHECK: [[VAL_175:%.*]] = subf [[VAL_174]], [[VAL_170]] : f128
 // CHECK: [[VAL_176:%.*]] = mulf [[VAL_173]], [[VAL_175]] : f128
 // CHECK: [[VAL_177:%.*]] = divf [[VAL_176]], [[VAL_169]] : f128
-// CHECK: [[VAL_178:%.*]] = fir.modf [[VAL_177]], [[VAL_170]] : f128
   %c1 = constant 1.0 : f32
   %0 = fir.convert %c1 : (f32) -> f128
-  %1 = fir.negf %a : f128
+  %1 = negf %a : f128
   %2 = addf %0, %1 : f128
   %3 = subf %2, %b : f128
   %4 = mulf %1, %3 : f128
   %5 = divf %4, %a : f128
-  %6 = fir.modf %5, %b : f128
-// CHECK: return [[VAL_178]] : f128
+// CHECK: return [[VAL_177]] : f128
 // CHECK: }
-  return %6 : f128
+  return %5 : f128
 }
 
 // CHECK-LABEL: func @arith_complex(
@@ -680,5 +678,14 @@ func @test_save_result(%buffer: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
   %res = fir.call @array_func() : () -> !fir.array<?x!fir.char<1,?>>
   // CHECK: fir.save_result %{{.*}} to %{{.*}}(%{{.*}}) typeparams %{{.*}} : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
   fir.save_result %res to %buffer(%shape) typeparams %c50 : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
+  return
+}
+
+func @char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  // CHECK: fir.char_convert %{{.*}} for %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
   return
 }

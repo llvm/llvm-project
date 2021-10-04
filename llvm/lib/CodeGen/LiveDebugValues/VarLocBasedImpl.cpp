@@ -618,7 +618,7 @@ private:
     unsigned getRegIdx(Register Reg) const {
       for (unsigned Idx = 0; Idx < Locs.size(); ++Idx)
         if (Locs[Idx].Kind == MachineLocKind::RegisterKind &&
-            Locs[Idx].Value.RegNo == Reg)
+            Register{static_cast<unsigned>(Locs[Idx].Value.RegNo)} == Reg)
           return Idx;
       llvm_unreachable("Could not find given Reg in Locs");
     }

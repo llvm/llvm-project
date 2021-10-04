@@ -2211,8 +2211,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     if (MO->isKill())
       addRegWithSubRegs(regsKilled, Reg);
 
-    // Check that LiveVars knows this kill.
-    if (LiveVars && Register::isVirtualRegister(Reg) && MO->isKill()) {
+    // Check that LiveVars knows this kill (unless we are inside a bundle, in
+    // which case we have already checked that LiveVars knows any kills on the
+    // bundle header instead).
+    if (LiveVars && Register::isVirtualRegister(Reg) && MO->isKill() &&
+        !MI->isBundledWithPred()) {
       LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
       if (!is_contained(VI.Kills, MI))
         report("Kill missing from LiveVariables", MO, MONum);

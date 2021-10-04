@@ -171,7 +171,7 @@ def testFuncArgumentAccess():
     f32 = F32Type.get()
     f64 = F64Type.get()
     with InsertionPoint(module.body):
-      func = builtin.FuncOp("some_func", ([f32, f32], [f64, f64]))
+      func = builtin.FuncOp("some_func", ([f32, f32], [f32, f32]))
       with InsertionPoint(func.add_entry_block()):
         std.ReturnOp(func.arguments)
       func.arg_attrs = ArrayAttr.get([
@@ -186,6 +186,14 @@ def testFuncArgumentAccess():
           DictAttr.get({"res2": FloatAttr.get(f64, 256.0)})
       ])
 
+      other = builtin.FuncOp("other_func", ([f32, f32], []))
+      with InsertionPoint(other.add_entry_block()):
+        std.ReturnOp([])
+      other.arg_attrs = [
+          DictAttr.get({"foo": StringAttr.get("qux")}),
+          DictAttr.get()
+      ]
+
   # CHECK: [{baz, foo = "bar"}, {qux = []}]
   print(func.arg_attrs)
 
@@ -195,7 +203,11 @@ def testFuncArgumentAccess():
   # CHECK: func @some_func(
   # CHECK: %[[ARG0:.*]]: f32 {baz, foo = "bar"},
   # CHECK: %[[ARG1:.*]]: f32 {qux = []}) ->
-  # CHECK: f64 {res1 = 4.200000e+01 : f32},
-  # CHECK: f64 {res2 = 2.560000e+02 : f64})
+  # CHECK: f32 {res1 = 4.200000e+01 : f32},
+  # CHECK: f32 {res2 = 2.560000e+02 : f64})
   # CHECK: return %[[ARG0]], %[[ARG1]] : f32, f32
+  #
+  # CHECK: func @other_func(
+  # CHECK: %{{.*}}: f32 {foo = "qux"},
+  # CHECK: %{{.*}}: f32)
   print(module)

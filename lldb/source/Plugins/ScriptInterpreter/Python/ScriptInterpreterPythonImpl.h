@@ -430,11 +430,9 @@ public:
       int stdin_fd = GetInputFD();
       if (stdin_fd >= 0) {
         Terminal terminal(stdin_fd);
-        TerminalState terminal_state;
-        const bool is_a_tty = terminal.IsATerminal();
+        TerminalState terminal_state(terminal);
 
-        if (is_a_tty) {
-          terminal_state.Save(stdin_fd, false);
+        if (terminal.IsATerminal()) {
           terminal.SetCanonical(false);
           terminal.SetEcho(true);
         }
@@ -464,9 +462,6 @@ public:
         run_string.Printf("run_python_interpreter (%s)",
                           m_python->GetDictionaryName());
         PyRun_SimpleString(run_string.GetData());
-
-        if (is_a_tty)
-          terminal_state.Restore();
       }
     }
     SetIsDone(true);

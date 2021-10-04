@@ -123,6 +123,9 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     allocated as stack space can often be limited. A legal implementation can
     convert these large stack allocations to heap allocations regardless of
     whether the procedure is recursive or not.
+
+    The pinned attribute is used to flag fir.alloca operation in a specific
+    region and avoid them being hoisted in an alloca hoisting pass.
   }];
 
   let arguments = (ins
@@ -289,6 +292,46 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
   }];
+}
+
+def fir_CharConvertOp : fir_Op<"char_convert", []> {
+  let summary = [{
+    Primitive to convert an entity of type CHARACTER from one KIND to a
+    different KIND.
+  }];
+
+  let description = [{
+    Copy a CHARACTER (must be in memory) of KIND _k1_ to a CHARACTER (also must
+    be in memory) of KIND _k2_ where _k1_ != _k2_ and the buffers do not
+    overlap. This latter restriction is unchecked, as the Fortran language
+    definition eliminates the overlapping in memory case.
+
+    The number of code points copied is specified explicitly as the second
+    argument. The length of the !fir.char type is ignored.
+
+    ```mlir
+      fir.char_convert %1 for %2 to %3 : !fir.ref<!fir.char<1,?>>, i32, 
+          !fir.ref<!fir.char<2,20>>
+    ```
+
+    Should future support for encodings other than ASCII be supported, codegen
+    can generate a call to a runtime helper routine which will map the code
+    points from UTF-8 to UCS-2, for example. Such remappings may not always
+    be possible as they may involve the creation of more code points than the
+    `count` limit. These details are left as future to-dos.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemRead]>:$from,
+    AnyIntegerType:$count,
+    Arg<AnyReferenceLike, "", [MemWrite]>:$to
+  );
+
+  let assemblyFormat = [{
+    $from `for` $count `to` $to attr-dict `:` type(operands)
+  }];
+
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_StoreOp : fir_Op<"store", []> {
@@ -486,7 +529,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
-      llvm::SmallVector<mlir::Attribute, 8> ivalues;
+      llvm::SmallVector<mlir::Attribute> ivalues;
       for (auto iv : compareOperands)
         ivalues.push_back($_builder.getI64IntegerAttr(iv));
       ivalues.push_back($_builder.getUnitAttr());
@@ -495,7 +538,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       for (auto d : destinations)
         $_state.addSuccessors(d);
       const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
+      llvm::SmallVector<int32_t> argOffs;
       int32_t sumArgs = 0;
       for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
         if (i < opCount) {
@@ -521,13 +564,13 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     if (parseSelector(parser, result, selector, type))
       return mlir::failure();
 
-    llvm::SmallVector<mlir::Attribute, 8> ivalues;
-    llvm::SmallVector<mlir::Block *, 8> dests;
-    llvm::SmallVector<llvm::SmallVector<mlir::Value, 8>, 8> destArgs;
+    llvm::SmallVector<mlir::Attribute> ivalues;
+    llvm::SmallVector<mlir::Block *> dests;
+    llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
     while (true) {
       mlir::Attribute ivalue; // Integer or Unit
       mlir::Block *dest;
-      llvm::SmallVector<mlir::Value, 8> destArg;
+      llvm::SmallVector<mlir::Value> destArg;
       mlir::NamedAttrList temp;
       if (parser.parseAttribute(ivalue, "i", temp) ||
           parser.parseComma() ||
@@ -543,7 +586,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     }
     auto &bld = parser.getBuilder();
     result.addAttribute(getCasesAttr(), bld.getArrayAttr(ivalues));
-    llvm::SmallVector<int32_t, 8> argOffs;
+    llvm::SmallVector<int32_t> argOffs;
     int32_t sumArgs = 0;
     const auto count = dests.size();
     for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
@@ -717,34 +760,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
     "llvm::ArrayRef<mlir::Attribute>":$typeOperands,
     "llvm::ArrayRef<mlir::Block *>":$destinations,
     CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
-    [{
-      $_state.addOperands(selector);
-      $_state.addAttribute(getCasesAttr(),
-        $_builder.getArrayAttr(typeOperands));
-      const auto count = destinations.size();
-      for (auto d : destinations)
-        $_state.addSuccessors(d);
-      const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
-      int32_t sumArgs = 0;
-      for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
-        if (i < opCount) {
-          $_state.addOperands(destOperands[i]);
-          const auto argSz = destOperands[i].size();
-          argOffs.push_back(argSz);
-          sumArgs += argSz;
-        } else {
-          argOffs.push_back(0);
-        }
-      }
-      $_state.addAttribute(getOperandSegmentSizeAttr(),
-        $_builder.getI32VectorAttr({1, 0, sumArgs}));
-      $_state.addAttribute(getTargetOffsetAttr(),
-        $_builder.getI32VectorAttr(argOffs));
-      $_state.addAttributes(attributes);
-    }]
-  >];
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let parser = "return parseSelectType(parser, result);";
 
@@ -2409,18 +2425,6 @@ class fir_UnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{ return printUnaryOp(this->getOperation(), p); }];
 }
 
-class RealUnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$operand)>;
-
-def fir_NegfOp : RealUnaryArithmeticOp<"negf">;
-
-class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$lhs, AnyRealLike:$rhs)>;
-
-def fir_ModfOp : RealArithmeticOp<"modf">;
-
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   let summary = "create a complex constant";
 
@@ -2662,21 +2666,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let parser = "return parseGlobalOp(parser, result);";
 
-  let printer = [{
-    if (linkName().hasValue())
-      p << ' ' << linkName().getValue();
-    p << ' ';
-    p.printAttributeWithoutType((*this)->getAttr(symbolAttrName()));
-    if (auto val = getValueOrNull())
-      p << '(' << val << ')';
-    if (constantAttr())
-      p << " constant";
-    p << " : ";
-    p.printType(getType());
-    if (hasInitializationBody())
-      p.printRegion((*this)->getRegion(0), /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/true);
-  }];
+  let printer = "::print(p, *this);";
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -2702,6 +2692,9 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef symbolAttrName() { return "symref"; }
+    static constexpr llvm::StringRef getConstantAttrName() {
+      return "constant";
+    }
     static constexpr llvm::StringRef linkageAttrName() { return "linkName"; }
 
     /// The printable type of the global

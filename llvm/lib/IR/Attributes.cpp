@@ -812,42 +812,13 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     if (!B.contains(Kind))
       continue;
 
-    if (Attribute::isTypeAttrKind(Kind)) {
-      Attrs.push_back(Attribute::get(C, Kind, B.getTypeAttr(Kind)));
-      continue;
-    }
-
     Attribute Attr;
-    switch (Kind) {
-    case Attribute::Alignment:
-      assert(B.getAlignment() && "Alignment must be set");
-      Attr = Attribute::getWithAlignment(C, *B.getAlignment());
-      break;
-    case Attribute::StackAlignment:
-      assert(B.getStackAlignment() && "StackAlignment must be set");
-      Attr = Attribute::getWithStackAlignment(C, *B.getStackAlignment());
-      break;
-    case Attribute::Dereferenceable:
-      Attr = Attribute::getWithDereferenceableBytes(
-          C, B.getDereferenceableBytes());
-      break;
-    case Attribute::DereferenceableOrNull:
-      Attr = Attribute::getWithDereferenceableOrNullBytes(
-          C, B.getDereferenceableOrNullBytes());
-      break;
-    case Attribute::AllocSize: {
-      auto A = B.getAllocSizeArgs();
-      Attr = Attribute::getWithAllocSizeArgs(C, A.first, A.second);
-      break;
-    }
-    case Attribute::VScaleRange: {
-      auto A = B.getVScaleRangeArgs();
-      Attr = Attribute::getWithVScaleRangeArgs(C, A.first, A.second);
-      break;
-    }
-    default:
+    if (Attribute::isTypeAttrKind(Kind))
+      Attr = Attribute::get(C, Kind, B.getTypeAttr(Kind));
+    else if (Attribute::isIntAttrKind(Kind))
+      Attr = Attribute::get(C, Kind, B.getRawIntAttr(Kind));
+    else
       Attr = Attribute::get(C, Kind);
-    }
     Attrs.push_back(Attr);
   }
 
@@ -1527,7 +1498,7 @@ unsigned AttributeList::getNumAttrSets() const {
 void AttributeList::print(raw_ostream &O) const {
   O << "AttributeList[\n";
 
-  for (unsigned i = index_begin(), e = index_end(); i != e; ++i) {
+  for (unsigned i : indexes()) {
     if (!getAttributes(i).hasAttributes())
       continue;
     O << "  { ";
@@ -1570,12 +1541,15 @@ AttrBuilder::AttrBuilder(AttributeSet AS) {
 void AttrBuilder::clear() {
   Attrs.reset();
   TargetDepAttrs.clear();
-  Alignment.reset();
-  StackAlignment.reset();
-  DerefBytes = DerefOrNullBytes = 0;
-  AllocSizeArgs = 0;
-  VScaleRangeArgs = 0;
+  IntAttrs = {};
   TypeAttrs = {};
+}
+
+Optional<unsigned>
+AttrBuilder::kindToIntIndex(Attribute::AttrKind Kind) const {
+  if (Attribute::isIntAttrKind(Kind))
+    return Kind - Attribute::FirstIntAttr;
+  return None;
 }
 
 Optional<unsigned>
@@ -1596,18 +1570,8 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
 
   if (Optional<unsigned> TypeIndex = kindToTypeIndex(Kind))
     TypeAttrs[*TypeIndex] = Attr.getValueAsType();
-  else if (Kind == Attribute::Alignment)
-    Alignment = Attr.getAlignment();
-  else if (Kind == Attribute::StackAlignment)
-    StackAlignment = Attr.getStackAlignment();
-  else if (Kind == Attribute::Dereferenceable)
-    DerefBytes = Attr.getDereferenceableBytes();
-  else if (Kind == Attribute::DereferenceableOrNull)
-    DerefOrNullBytes = Attr.getDereferenceableOrNullBytes();
-  else if (Kind == Attribute::AllocSize)
-    AllocSizeArgs = Attr.getValueAsInt();
-  else if (Kind == Attribute::VScaleRange)
-    VScaleRangeArgs = Attr.getValueAsInt();
+  else if (Optional<unsigned> IntIndex = kindToIntIndex(Kind))
+    IntAttrs[*IntIndex] = Attr.getValueAsInt();
 
   return *this;
 }
@@ -1623,18 +1587,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
 
   if (Optional<unsigned> TypeIndex = kindToTypeIndex(Val))
     TypeAttrs[*TypeIndex] = nullptr;
-  else if (Val == Attribute::Alignment)
-    Alignment.reset();
-  else if (Val == Attribute::StackAlignment)
-    StackAlignment.reset();
-  else if (Val == Attribute::Dereferenceable)
-    DerefBytes = 0;
-  else if (Val == Attribute::DereferenceableOrNull)
-    DerefOrNullBytes = 0;
-  else if (Val == Attribute::AllocSize)
-    AllocSizeArgs = 0;
-  else if (Val == Attribute::VScaleRange)
-    VScaleRangeArgs = 0;
+  else if (Optional<unsigned> IntIndex = kindToIntIndex(Val))
+    IntAttrs[*IntIndex] = 0;
 
   return *this;
 }
@@ -1651,12 +1605,28 @@ AttrBuilder &AttrBuilder::removeAttribute(StringRef A) {
   return *this;
 }
 
+uint64_t AttrBuilder::getRawIntAttr(Attribute::AttrKind Kind) const {
+  Optional<unsigned> IntIndex = kindToIntIndex(Kind);
+  assert(IntIndex && "Not an int attribute");
+  return IntAttrs[*IntIndex];
+}
+
+AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
+                                        uint64_t Value) {
+  Optional<unsigned> IntIndex = kindToIntIndex(Kind);
+  assert(IntIndex && "Not an int attribute");
+  assert(Value && "Value cannot be zero");
+  Attrs[Kind] = true;
+  IntAttrs[*IntIndex] = Value;
+  return *this;
+}
+
 std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
-  return unpackAllocSizeArgs(AllocSizeArgs);
+  return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize));
 }
 
 std::pair<unsigned, unsigned> AttrBuilder::getVScaleRangeArgs() const {
-  return unpackVScaleRangeArgs(VScaleRangeArgs);
+  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange));
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
@@ -1664,10 +1634,7 @@ AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
     return *this;
 
   assert(*Align <= llvm::Value::MaximumAlignment && "Alignment too large.");
-
-  Attrs[Attribute::Alignment] = true;
-  Alignment = Align;
-  return *this;
+  return addRawIntAttr(Attribute::Alignment, Align->value());
 }
 
 AttrBuilder &AttrBuilder::addStackAlignmentAttr(MaybeAlign Align) {
@@ -1676,27 +1643,20 @@ AttrBuilder &AttrBuilder::addStackAlignmentAttr(MaybeAlign Align) {
     return *this;
 
   assert(*Align <= 0x100 && "Alignment too large.");
-
-  Attrs[Attribute::StackAlignment] = true;
-  StackAlignment = Align;
-  return *this;
+  return addRawIntAttr(Attribute::StackAlignment, Align->value());
 }
 
 AttrBuilder &AttrBuilder::addDereferenceableAttr(uint64_t Bytes) {
   if (Bytes == 0) return *this;
 
-  Attrs[Attribute::Dereferenceable] = true;
-  DerefBytes = Bytes;
-  return *this;
+  return addRawIntAttr(Attribute::Dereferenceable, Bytes);
 }
 
 AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
   if (Bytes == 0)
     return *this;
 
-  Attrs[Attribute::DereferenceableOrNull] = true;
-  DerefOrNullBytes = Bytes;
-  return *this;
+  return addRawIntAttr(Attribute::DereferenceableOrNull, Bytes);
 }
 
 AttrBuilder &AttrBuilder::addAllocSizeAttr(unsigned ElemSize,
@@ -1707,12 +1667,7 @@ AttrBuilder &AttrBuilder::addAllocSizeAttr(unsigned ElemSize,
 AttrBuilder &AttrBuilder::addAllocSizeAttrFromRawRepr(uint64_t RawArgs) {
   // (0, 0) is our "not present" value, so we need to check for it here.
   assert(RawArgs && "Invalid allocsize arguments -- given allocsize(0, 0)");
-
-  Attrs[Attribute::AllocSize] = true;
-  // Reuse existing machinery to store this as a single 64-bit integer so we can
-  // save a few bytes over using a pair<unsigned, Optional<unsigned>>.
-  AllocSizeArgs = RawArgs;
-  return *this;
+  return addRawIntAttr(Attribute::AllocSize, RawArgs);
 }
 
 AttrBuilder &AttrBuilder::addVScaleRangeAttr(unsigned MinValue,
@@ -1725,11 +1680,7 @@ AttrBuilder &AttrBuilder::addVScaleRangeAttrFromRawRepr(uint64_t RawArgs) {
   if (RawArgs == 0)
     return *this;
 
-  Attrs[Attribute::VScaleRange] = true;
-  // Reuse existing machinery to store this as a single 64-bit integer so we can
-  // save a few bytes over using a pair<unsigned, unsigned>.
-  VScaleRangeArgs = RawArgs;
-  return *this;
+  return addRawIntAttr(Attribute::VScaleRange, RawArgs);
 }
 
 Type *AttrBuilder::getTypeAttr(Attribute::AttrKind Kind) const {
@@ -1767,24 +1718,10 @@ AttrBuilder &AttrBuilder::addInAllocaAttr(Type *Ty) {
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
-  // FIXME: What if both have alignments, but they don't match?!
-  if (!Alignment)
-    Alignment = B.Alignment;
-
-  if (!StackAlignment)
-    StackAlignment = B.StackAlignment;
-
-  if (!DerefBytes)
-    DerefBytes = B.DerefBytes;
-
-  if (!DerefOrNullBytes)
-    DerefOrNullBytes = B.DerefOrNullBytes;
-
-  if (!AllocSizeArgs)
-    AllocSizeArgs = B.AllocSizeArgs;
-
-  if (!VScaleRangeArgs)
-    VScaleRangeArgs = B.VScaleRangeArgs;
+  // FIXME: What if both have an int/type attribute, but they don't match?!
+  for (unsigned Index = 0; Index < Attribute::NumIntAttrKinds; ++Index)
+    if (!IntAttrs[Index])
+      IntAttrs[Index] = B.IntAttrs[Index];
 
   for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (!TypeAttrs[Index])
@@ -1799,24 +1736,10 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 }
 
 AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
-  // FIXME: What if both have alignments, but they don't match?!
-  if (B.Alignment)
-    Alignment.reset();
-
-  if (B.StackAlignment)
-    StackAlignment.reset();
-
-  if (B.DerefBytes)
-    DerefBytes = 0;
-
-  if (B.DerefOrNullBytes)
-    DerefOrNullBytes = 0;
-
-  if (B.AllocSizeArgs)
-    AllocSizeArgs = 0;
-
-  if (B.VScaleRangeArgs)
-    VScaleRangeArgs = 0;
+  // FIXME: What if both have an int/type attribute, but they don't match?!
+  for (unsigned Index = 0; Index < Attribute::NumIntAttrKinds; ++Index)
+    if (B.IntAttrs[Index])
+      IntAttrs[Index] = 0;
 
   for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (B.TypeAttrs[Index])
@@ -1868,7 +1791,7 @@ bool AttrBuilder::hasAttributes(AttributeList AL, uint64_t Index) const {
 }
 
 bool AttrBuilder::hasAlignmentAttr() const {
-  return Alignment != 0;
+  return getRawIntAttr(Attribute::Alignment) != 0;
 }
 
 bool AttrBuilder::operator==(const AttrBuilder &B) const {
@@ -1879,9 +1802,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
     if (B.TargetDepAttrs.find(TDA.first) == B.TargetDepAttrs.end())
       return false;
 
-  return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
-         DerefBytes == B.DerefBytes && TypeAttrs == B.TypeAttrs &&
-         VScaleRangeArgs == B.VScaleRangeArgs;
+  return IntAttrs == B.IntAttrs && TypeAttrs == B.TypeAttrs;
 }
 
 //===----------------------------------------------------------------------===//

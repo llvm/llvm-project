@@ -26,11 +26,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX1: LV: Found an estimated cost of 152 for VF 32 For instruction:   store float %v1, float* %out1, align 4
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store float %v1, float* %out1, align 4
-; AVX2: LV: Found an estimated cost of 6 for VF 2 For instruction:   store float %v1, float* %out1, align 4
-; AVX2: LV: Found an estimated cost of 15 for VF 4 For instruction:   store float %v1, float* %out1, align 4
-; AVX2: LV: Found an estimated cost of 38 for VF 8 For instruction:   store float %v1, float* %out1, align 4
-; AVX2: LV: Found an estimated cost of 76 for VF 16 For instruction:   store float %v1, float* %out1, align 4
-; AVX2: LV: Found an estimated cost of 152 for VF 32 For instruction:   store float %v1, float* %out1, align 4
+; AVX2: LV: Found an estimated cost of 2 for VF 2 For instruction:   store float %v1, float* %out1, align 4
+; AVX2: LV: Found an estimated cost of 3 for VF 4 For instruction:   store float %v1, float* %out1, align 4
+; AVX2: LV: Found an estimated cost of 6 for VF 8 For instruction:   store float %v1, float* %out1, align 4
+; AVX2: LV: Found an estimated cost of 12 for VF 16 For instruction:   store float %v1, float* %out1, align 4
+; AVX2: LV: Found an estimated cost of 24 for VF 32 For instruction:   store float %v1, float* %out1, align 4
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   store float %v1, float* %out1, align 4
 ; AVX512: LV: Found an estimated cost of 2 for VF 2 For instruction:   store float %v1, float* %out1, align 4

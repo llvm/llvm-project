@@ -26,6 +26,10 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
   const auto &Users = OldF.users();
   for (auto I = Users.begin(), E = Users.end(); I != E; )
     if (auto *CI = dyn_cast<CallInst>(*I++)) {
+      // Skip uses in call instructions where OldF isn't the called function
+      // (e.g. if OldF is an argument of the call).
+      if (CI->getCalledFunction() != &OldF)
+        continue;
       SmallVector<Value *, 8> Args;
       for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI)
         if (ArgIndexesToKeep.count(ArgI - CI->arg_begin()))

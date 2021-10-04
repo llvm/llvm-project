@@ -52,12 +52,28 @@ declare void @llvm.ppc.store4r(i32, i8*)
 define dso_local zeroext i16 @test_builtin_ppc_load2r() {
 ; CHECK-64B-LABEL: test_builtin_ppc_load2r:
 ; CHECK-64B:         lhbrx 3, 0, 3
-; CHECK-64B-NEXT:    clrldi 3, 3, 48
 ; CHECK-64B-NEXT:    blr
 
 ; CHECK-32B-LABEL: test_builtin_ppc_load2r:
 ; CHECK-32B:         lhbrx 3, 0, 3
-; CHECK-32B-NEXT:    clrlwi 3, 3, 16
+; CHECK-32B-NEXT:    blr
+entry:
+  %0 = load i16*, i16** @us_addr, align 8
+  %1 = bitcast i16* %0 to i8*
+  %2 = call i32 @llvm.ppc.load2r(i8* %1)
+  %conv = trunc i32 %2 to i16
+  ret i16 %conv
+}
+
+define dso_local signext i16 @test_builtin_ppc_load2r_signext() {
+; CHECK-64B-LABEL: test_builtin_ppc_load2r_signext:
+; CHECK-64B:         lhbrx 3, 0, 3
+; CHECK-64B-NEXT:    extsh 3, 3
+; CHECK-64B-NEXT:    blr
+
+; CHECK-32B-LABEL: test_builtin_ppc_load2r_signext:
+; CHECK-32B:         lhbrx 3, 0, 3
+; CHECK-32B-NEXT:    extsh 3, 3
 ; CHECK-32B-NEXT:    blr
 entry:
   %0 = load i16*, i16** @us_addr, align 8

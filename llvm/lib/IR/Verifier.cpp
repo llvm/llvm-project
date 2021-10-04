@@ -3314,7 +3314,7 @@ static bool isTypeCongruent(Type *L, Type *R) {
   return PL->getAddressSpace() == PR->getAddressSpace();
 }
 
-static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
+static AttrBuilder getParameterABIAttributes(unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
       Attribute::InReg,      Attribute::StackAlignment, Attribute::SwiftSelf,
@@ -3382,12 +3382,12 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
     // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
     //   are allowed in swifttailcc call
-    for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+    for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
       AttrBuilder ABIAttrs = getParameterABIAttributes(I, CallerAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail caller")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
-    for (int I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
+    for (unsigned I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
       AttrBuilder ABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail callee")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
@@ -3405,7 +3405,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     Assert(CallerTy->getNumParams() == CalleeTy->getNumParams(),
            "cannot guarantee tail call due to mismatched parameter counts",
            &CI);
-    for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+    for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
       Assert(
           isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
           "cannot guarantee tail call due to mismatched parameter types", &CI);
@@ -3414,7 +3414,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
   // - All ABI-impacting function attributes, such as sret, byval, inreg,
   //   returned, preallocated, and inalloca, must match.
-  for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
+  for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
     AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
     AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
     Assert(CallerABIAttrs == CalleeABIAttrs,
@@ -5070,14 +5070,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::masked_gather: {
     const APInt &Alignment =
         cast<ConstantInt>(Call.getArgOperand(1))->getValue();
-    Assert(Alignment.isNullValue() || Alignment.isPowerOf2(),
+    Assert(Alignment.isZero() || Alignment.isPowerOf2(),
            "masked_gather: alignment must be 0 or a power of 2", Call);
     break;
   }
   case Intrinsic::masked_scatter: {
     const APInt &Alignment =
         cast<ConstantInt>(Call.getArgOperand(2))->getValue();
-    Assert(Alignment.isNullValue() || Alignment.isPowerOf2(),
+    Assert(Alignment.isZero() || Alignment.isPowerOf2(),
            "masked_scatter: alignment must be 0 or a power of 2", Call);
     break;
   }

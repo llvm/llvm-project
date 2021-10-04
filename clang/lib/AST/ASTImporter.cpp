@@ -464,6 +464,9 @@ namespace clang {
     Error ImportDefaultArgOfParmVarDecl(const ParmVarDecl *FromParam,
                                         ParmVarDecl *ToParam);
 
+    Expected<InheritedConstructor>
+    ImportInheritedConstructor(const InheritedConstructor &From);
+
     template <typename T>
     bool hasSameVisibilityContextAndLinkage(T *Found, T *From);
 
@@ -3479,13 +3482,19 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         importExplicitSpecifier(Err, FromConstructor->getExplicitSpecifier());
     if (Err)
       return std::move(Err);
+    auto ToInheritedConstructor = InheritedConstructor();
+    if (FromConstructor->isInheritingConstructor()) {
+      Expected<InheritedConstructor> ImportedInheritedCtor =
+          import(FromConstructor->getInheritedConstructor());
+      if (!ImportedInheritedCtor)
+        return ImportedInheritedCtor.takeError();
+      ToInheritedConstructor = *ImportedInheritedCtor;
+    }
     if (GetImportedOrCreateDecl<CXXConstructorDecl>(
             ToFunction, D, Importer.getToContext(), cast<CXXRecordDecl>(DC),
             ToInnerLocStart, NameInfo, T, TInfo, ESpec, D->UsesFPIntrin(),
             D->isInlineSpecified(), D->isImplicit(), D->getConstexprKind(),
-            InheritedConstructor(), // FIXME: Properly import inherited
-                                    // constructor info
-            TrailingRequiresClause))
+            ToInheritedConstructor, TrailingRequiresClause))
       return ToFunction;
   } else if (CXXDestructorDecl *FromDtor = dyn_cast<CXXDestructorDecl>(D)) {
 
@@ -4219,6 +4228,17 @@ Error ASTNodeImporter::ImportDefaultArgOfParmVarDecl(
   return Error::success();
 }
 
+Expected<InheritedConstructor>
+ASTNodeImporter::ImportInheritedConstructor(const InheritedConstructor &From) {
+  Error Err = Error::success();
+  CXXConstructorDecl *ToBaseCtor = importChecked(Err, From.getConstructor());
+  ConstructorUsingShadowDecl *ToShadow =
+      importChecked(Err, From.getShadowDecl());
+  if (Err)
+    return std::move(Err);
+  return InheritedConstructor(ToShadow, ToBaseCtor);
+}
+
 ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
   // Parameters are created in the translation unit's context, then moved
   // into the function declaration's context afterward.
@@ -4758,9 +4778,29 @@ ExpectedDecl ASTNodeImporter::VisitUsingShadowDecl(UsingShadowDecl *D) {
     return ToTargetOrErr.takeError();
 
   UsingShadowDecl *ToShadow;
-  if (GetImportedOrCreateDecl(ToShadow, D, Importer.getToContext(), DC, Loc,
-                              Name, *ToIntroducerOrErr, *ToTargetOrErr))
-    return ToShadow;
+  if (auto *FromConstructorUsingShadow =
+          dyn_cast<ConstructorUsingShadowDecl>(D)) {
+    Error Err = Error::success();
+    ConstructorUsingShadowDecl *Nominated = importChecked(
+        Err, FromConstructorUsingShadow->getNominatedBaseClassShadowDecl());
+    if (Err)
+      return std::move(Err);
+    // The 'Target' parameter of ConstructorUsingShadowDecl constructor
+    // is really the "NominatedBaseClassShadowDecl" value if it exists
+    // (see code of ConstructorUsingShadowDecl::ConstructorUsingShadowDecl).
+    // We should pass the NominatedBaseClassShadowDecl to it (if non-null) to
+    // get the correct values.
+    if (GetImportedOrCreateDecl<ConstructorUsingShadowDecl>(
+            ToShadow, D, Importer.getToContext(), DC, Loc,
+            cast<UsingDecl>(*ToIntroducerOrErr),
+            Nominated ? Nominated : *ToTargetOrErr,
+            FromConstructorUsingShadow->constructsVirtualBase()))
+      return ToShadow;
+  } else {
+    if (GetImportedOrCreateDecl(ToShadow, D, Importer.getToContext(), DC, Loc,
+                                Name, *ToIntroducerOrErr, *ToTargetOrErr))
+      return ToShadow;
+  }
 
   ToShadow->setLexicalDeclContext(LexicalDC);
   ToShadow->setAccess(D->getAccess());
@@ -8759,6 +8799,11 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   updateFlags(FromD, ToD);
   SavedImportPaths.erase(FromD);
   return ToDOrErr;
+}
+
+llvm::Expected<InheritedConstructor>
+ASTImporter::Import(const InheritedConstructor &From) {
+  return ASTNodeImporter(*this).ImportInheritedConstructor(From);
 }
 
 Expected<DeclContext *> ASTImporter::ImportContext(DeclContext *FromDC) {

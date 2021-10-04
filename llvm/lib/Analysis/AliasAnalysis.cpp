@@ -745,7 +745,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
     if (!(*CI)->getType()->isPointerTy() ||
-        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->getNumArgOperands() &&
+        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->arg_size() &&
          !Call->isByValArgument(ArgNo)))
       continue;
 

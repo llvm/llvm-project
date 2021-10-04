@@ -269,48 +269,6 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 
 // -----
 
-func @pooling_max(%arg0: memref<?x?x?xf32>,
-                  %arg1: memref<?x?x?xi32>,
-                  %arg2: memref<?x?x?xf32>) {
-  linalg.pooling_max(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
-    memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-  return
-}
-// CHECK-LABEL: func @pooling_max
-//       CHECK:   linalg.pooling_max(%{{.*}}, %{{.*}}, %{{.*}})
-//  CHECK-SAME:   {strides = [2, 1, 2]}
-//  CHECK-SAME:   memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-
-// -----
-
-func @pooling_min(%arg0: memref<?x?x?xf32>,
-                  %arg1: memref<?x?x?xi32>,
-                  %arg2: memref<?x?x?xf32>) {
-  linalg.pooling_min(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
-    memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-  return
-}
-// CHECK-LABEL: func @pooling_min
-//       CHECK:   linalg.pooling_min(%{{.*}}, %{{.*}}, %{{.*}})
-//  CHECK-SAME:   {strides = [2, 1, 2]}
-//  CHECK-SAME:   memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-
-// -----
-
-func @pooling_sum(%arg0: memref<?x?x?xf32>,
-                  %arg1: memref<?x?x?xi32>,
-                  %arg2: memref<?x?x?xf32>) {
-  linalg.pooling_sum(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
-    memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-  return
-}
-// CHECK-LABEL: func @pooling_sum
-//       CHECK:   linalg.pooling_sum(%{{.*}}, %{{.*}}, %{{.*}})
-//  CHECK-SAME:   {strides = [2, 1, 2]}
-//  CHECK-SAME:   memref<?x?x?xf32>, memref<?x?x?xi32>, memref<?x?x?xf32>
-
-// -----
-
 #accesses_0 = [
   affine_map<(i, j, k) -> (j, i)>,
   affine_map<(i, j, k) -> ()>,

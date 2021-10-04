@@ -3202,13 +3202,13 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func) {
 static void __kmp_init_indirect_lock(kmp_dyna_lock_t *lock,
                                      kmp_dyna_lockseq_t seq) {
 #if KMP_USE_ADAPTIVE_LOCKS
-  if (seq == lockseq_adaptive && !__kmp_cpuinfo.rtm) {
+  if (seq == lockseq_adaptive && !__kmp_cpuinfo.flags.rtm) {
     KMP_WARNING(AdaptiveNotSupported, "kmp_lockseq_t", "adaptive");
     seq = lockseq_queuing;
   }
 #endif
 #if KMP_USE_TSX
-  if (seq == lockseq_rtm_queuing && !__kmp_cpuinfo.rtm) {
+  if (seq == lockseq_rtm_queuing && !__kmp_cpuinfo.flags.rtm) {
     seq = lockseq_queuing;
   }
 #endif

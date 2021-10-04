@@ -2330,9 +2330,9 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
     Src1Identity &= (M == (i + NumSrcElts));
     continue;
   }
-  assert((Src0Elts | Src1Elts | UndefElts).isAllOnesValue() &&
+  assert((Src0Elts | Src1Elts | UndefElts).isAllOnes() &&
          "unknown shuffle elements");
-  assert(!Src0Elts.isNullValue() && !Src1Elts.isNullValue() &&
+  assert(!Src0Elts.isZero() && !Src1Elts.isZero() &&
          "2-source shuffle not found");
 
   // Determine lo/hi span ranges.

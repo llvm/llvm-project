@@ -453,8 +453,6 @@ static void InitializeLongjmpXorKey() {
 }
 #endif
 
-extern "C" void __tsan_tls_initialization() {}
-
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // Check that the thr object is in tls;
   const uptr thr_beg = (uptr)thr;
@@ -464,10 +462,9 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   CHECK_GE(thr_end, tls_addr);
   CHECK_LE(thr_end, tls_addr + tls_size);
   // Since the thr object is huge, skip it.
-  const uptr pc = StackTrace::GetNextInstructionPc(
-      reinterpret_cast<uptr>(__tsan_tls_initialization));
-  MemoryRangeImitateWrite(thr, pc, tls_addr, thr_beg - tls_addr);
-  MemoryRangeImitateWrite(thr, pc, thr_end, tls_addr + tls_size - thr_end);
+  MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, thr_beg - tls_addr);
+  MemoryRangeImitateWrite(thr, /*pc=*/2, thr_end,
+                          tls_addr + tls_size - thr_end);
 }
 
 // Note: this function runs with async signals enabled,

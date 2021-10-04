@@ -21,7 +21,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %idxprom20 = zext i32 %storemerge1921 to i64
 ; CHECK-NEXT:    --> {3,+,4294967295}<nuw><nsw><%for.cond6> U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %arrayidx7 = getelementptr inbounds [1 x [4 x i16]], [1 x [4 x i16]]* @__const.f.g, i64 0, i64 0, i64 %idxprom20
-; CHECK-NEXT:    --> {(6 + @__const.f.g)<nuw>,+,8589934590}<nuw><%for.cond6> U: [6,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {(6 + @__const.f.g),+,8589934590}<nuw><%for.cond6> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %i = load i16, i16* %arrayidx7, align 2
 ; CHECK-NEXT:    --> %i U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond6: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %storemerge1822.lcssa.ph = phi i32 [ 0, %for.cond6 ]
@@ -45,7 +45,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %idxprom20.3 = zext i32 %storemerge1921.3 to i64
 ; CHECK-NEXT:    --> {3,+,4294967295}<nuw><nsw><%inner.loop> U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %arrayidx7.3 = getelementptr inbounds [1 x [4 x i16]], [1 x [4 x i16]]* @__const.f.g, i64 0, i64 0, i64 %idxprom20.3
-; CHECK-NEXT:    --> {(6 + @__const.f.g)<nuw>,+,8589934590}<nuw><%inner.loop> U: [6,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {(6 + @__const.f.g),+,8589934590}<nuw><%inner.loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %i7 = load i16, i16* %arrayidx7.3, align 2
 ; CHECK-NEXT:    --> %i7 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %i8 = load volatile i32, i32* @b, align 4

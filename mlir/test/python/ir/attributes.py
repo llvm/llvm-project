@@ -343,6 +343,9 @@ def testDictAttr():
     else:
       assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
+    # CHECK "empty: {}"
+    print("empty: ", DictAttr.get())
+
 
 # CHECK-LABEL: TEST: testTypeAttr
 @run
@@ -404,3 +407,9 @@ def testArrayAttr():
     except RuntimeError as e:
       # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute
       print("Error: ", e)
+
+  with Context():
+    array = ArrayAttr.get([StringAttr.get("a"), StringAttr.get("b")])
+    array = array + [StringAttr.get("c")]
+    # CHECK: concat: ["a", "b", "c"]
+    print("concat: ", array)

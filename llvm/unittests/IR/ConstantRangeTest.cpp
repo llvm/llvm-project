@@ -643,8 +643,8 @@ TEST_F(ConstantRangeTest, losslessUnsignedTruncationZeroext) {
   EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
     unsigned MinBitWidth = CR.getActiveBits();
     if (MinBitWidth == 0) {
-      EXPECT_TRUE(CR.isEmptySet() || (CR.isSingleElement() &&
-                                      CR.getSingleElement()->isNullValue()));
+      EXPECT_TRUE(CR.isEmptySet() ||
+                  (CR.isSingleElement() && CR.getSingleElement()->isZero()));
       return;
     }
     if (MinBitWidth == Bits)
@@ -1225,7 +1225,7 @@ TEST_F(ConstantRangeTest, SDiv) {
           return;
 
         // SignedMin / -1 is UB.
-        if (N1.isMinSignedValue() && N2.isAllOnesValue())
+        if (N1.isMinSignedValue() && N2.isAllOnes())
           return;
 
         APInt N = N1.sdiv(N2);
@@ -1298,7 +1298,7 @@ TEST_F(ConstantRangeTest, URem) {
         return CR1.urem(CR2);
       },
       [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
-        if (N2.isNullValue())
+        if (N2.isZero())
           return None;
         return N1.urem(N2);
       });
@@ -1372,7 +1372,7 @@ TEST_F(ConstantRangeTest, SRem) {
         return CR1.srem(CR2);
       },
       [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
-        if (N2.isNullValue())
+        if (N2.isZero())
           return None;
         return N1.srem(N2);
       });
