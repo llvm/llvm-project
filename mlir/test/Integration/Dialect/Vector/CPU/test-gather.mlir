@@ -86,5 +86,6 @@ func @entry() {
   vector.print %g5 : vector<8xf32>
   // CHECK: ( 0, 6, 1, 3, 5, 4, 9, 2 )
 
+  memref.dealloc %A : memref<?xf32>
   return
 }

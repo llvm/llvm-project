@@ -82,6 +82,9 @@ func @entry() {
   call @transfer_read_inbounds_4(%A, %c1) : (memref<?xf32>, index) -> ()
   // Read in-bounds with mask.
   call @transfer_read_mask_inbounds_4(%A, %c1) : (memref<?xf32>, index) -> ()
+
+  memref.dealloc %A : memref<?xf32>
+
   return
 }
 

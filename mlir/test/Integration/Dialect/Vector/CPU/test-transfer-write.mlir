@@ -89,6 +89,7 @@ func @entry() {
   %6 = call @transfer_read_1d(%A) : (memref<?xf32>) -> (vector<32xf32>)
   vector.print %6 : vector<32xf32>
 
+  memref.dealloc %A : memref<?xf32>
   return
 }
 
