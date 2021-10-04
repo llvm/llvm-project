@@ -119,6 +119,24 @@ define <2 x float> @fadd_vec_x_n0_towardzero(<2 x float> %a) #0 {
   ret <2 x float> %ret
 }
 
+define float @fadd_nnan_x_n0_ebmaytrap(float %a) #0 {
+; CHECK-LABEL: @fadd_nnan_x_n0_ebmaytrap(
+; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %ret = call nnan float @llvm.experimental.constrained.fadd.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret float %ret
+}
+
+define <2 x float> @fadd_vec_nnan_x_n0_ebmaytrap(<2 x float> %a) #0 {
+; CHECK-LABEL: @fadd_vec_nnan_x_n0_ebmaytrap(
+; CHECK-NEXT:    [[RET:%.*]] = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    ret <2 x float> [[RET]]
+;
+  %ret = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float><float -0.0, float -0.0>, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret <2 x float> %ret
+}
+
 define float @fadd_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fadd_nnan_x_n0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
@@ -228,6 +246,24 @@ define <2 x float> @fold_fadd_vec_nsz_x_0_ebmaytrap(<2 x float> %a) #0 {
 ; CHECK-NEXT:    ret <2 x float> [[ADD]]
 ;
   %add = call nsz <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float> zeroinitializer, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret <2 x float> %add
+}
+
+define float @fold_fadd_nnan_nsz_x_0_ebmaytrap(float %a) #0 {
+; CHECK-LABEL: @fold_fadd_nnan_nsz_x_0_ebmaytrap(
+; CHECK-NEXT:    [[ADD:%.*]] = call nnan nsz float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = call nnan nsz float @llvm.experimental.constrained.fadd.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret float %add
+}
+
+define <2 x float> @fold_fadd_vec_nnan_nsz_x_0_ebmaytrap(<2 x float> %a) #0 {
+; CHECK-LABEL: @fold_fadd_vec_nnan_nsz_x_0_ebmaytrap(
+; CHECK-NEXT:    [[ADD:%.*]] = call nnan nsz <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> zeroinitializer, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    ret <2 x float> [[ADD]]
+;
+  %add = call nnan nsz <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float> zeroinitializer, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret <2 x float> %add
 }
 
