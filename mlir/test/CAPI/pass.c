@@ -189,6 +189,8 @@ void testParsePassPipeline() {
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
   fprintf(stderr, "\n");
+  mlirPassManagerDestroy(pm);
+  mlirContextDestroy(ctx);
 }
 
 int main() {
