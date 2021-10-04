@@ -2,7 +2,6 @@ add_llvm_component_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
   Binary.cpp
-  CodeSignatureSection.cpp
   COFFImportFile.cpp
   COFFModuleDefinition.cpp
   COFFObjectFile.cpp
