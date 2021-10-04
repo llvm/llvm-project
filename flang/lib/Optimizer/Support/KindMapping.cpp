@@ -49,8 +49,8 @@ static constexpr const char *kwPPCFP128 = "PPC_FP128";
 /// Integral types default to the kind value being the size of the value in
 /// bytes. The default is to scale from bytes to bits.
 static Bitsize defaultScalingKind(KindTy kind) {
-  const unsigned BITS_IN_BYTE = 8;
-  return kind * BITS_IN_BYTE;
+  const unsigned bitsInByte = 8;
+  return kind * bitsInByte;
 }
 
 /// Floating-point types default to the kind value being the size of the value

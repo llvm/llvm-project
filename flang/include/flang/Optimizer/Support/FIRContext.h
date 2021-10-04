@@ -22,7 +22,7 @@
 
 namespace mlir {
 class ModuleOp;
-}
+} // namespace mlir
 
 namespace fir {
 class KindMapping;
