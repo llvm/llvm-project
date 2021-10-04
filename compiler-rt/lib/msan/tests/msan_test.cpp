@@ -413,7 +413,7 @@ TEST(MemorySanitizer, AndOr) {
   EXPECT_POISONED(*p | 0x0000ffff);
   EXPECT_POISONED(*p | 0xffff0000);
 
-  EXPECT_POISONED(*GetPoisoned<bool>() & *GetPoisoned<bool>());
+  EXPECT_POISONED((int)*GetPoisoned<bool>() & (int)*GetPoisoned<bool>());
 }
 
 template<class T>
