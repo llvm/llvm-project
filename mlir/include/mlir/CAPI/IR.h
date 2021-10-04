@@ -33,6 +33,7 @@ DEFINE_C_API_METHODS(MlirIdentifier, mlir::Identifier)
 DEFINE_C_API_METHODS(MlirLocation, mlir::Location)
 DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
 DEFINE_C_API_METHODS(MlirType, mlir::Type)
+DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
 DEFINE_C_API_METHODS(MlirValue, mlir::Value)
 
 #endif // MLIR_CAPI_IR_H
