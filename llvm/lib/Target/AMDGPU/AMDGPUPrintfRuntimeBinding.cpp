@@ -153,7 +153,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   const char NonLiteralStr[4] = "???";
 
   for (auto CI : Printfs) {
-    unsigned NumOps = CI->getNumArgOperands();
+    unsigned NumOps = CI->arg_size();
 
     SmallString<16> OpConvSpecifiers;
     Value *Op = CI->getArgOperand(0);
@@ -201,10 +201,10 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       std::string AStreamHolder;
       raw_string_ostream Sizes(AStreamHolder);
       int Sum = DWORD_ALIGN;
-      Sizes << CI->getNumArgOperands() - 1;
+      Sizes << CI->arg_size() - 1;
       Sizes << ':';
-      for (unsigned ArgCount = 1; ArgCount < CI->getNumArgOperands() &&
-                                  ArgCount <= OpConvSpecifiers.size();
+      for (unsigned ArgCount = 1;
+           ArgCount < CI->arg_size() && ArgCount <= OpConvSpecifiers.size();
            ArgCount++) {
         Value *Arg = CI->getArgOperand(ArgCount);
         Type *ArgType = Arg->getType();
@@ -389,8 +389,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
       Type *Int32Ty = Type::getInt32Ty(Ctx);
       Type *Int64Ty = Type::getInt64Ty(Ctx);
-      for (unsigned ArgCount = 1; ArgCount < CI->getNumArgOperands() &&
-                                  ArgCount <= OpConvSpecifiers.size();
+      for (unsigned ArgCount = 1;
+           ArgCount < CI->arg_size() && ArgCount <= OpConvSpecifiers.size();
            ArgCount++) {
         Value *Arg = CI->getArgOperand(ArgCount);
         Type *ArgType = Arg->getType();
@@ -524,7 +524,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                             << *StBuff << '\n');
           (void)StBuff;
-          if (I + 1 == E && ArgCount + 1 == CI->getNumArgOperands())
+          if (I + 1 == E && ArgCount + 1 == CI->arg_size())
             break;
           BufferIdx = GetElementPtrInst::Create(I8Ty, BufferIdx, BuffOffset,
                                                 "PrintBuffNextPtr", Brnch);
