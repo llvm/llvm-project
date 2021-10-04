@@ -385,8 +385,26 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     Known = KnownBits::commonBits(LHSKnown, RHSKnown);
     break;
   }
-  case Instruction::ZExt:
   case Instruction::Trunc: {
+    // If we do not demand the high bits of a right-shifted and truncated value,
+    // then we may be able to truncate it before the shift.
+    Value *X;
+    const APInt *C;
+    if (match(I->getOperand(0), m_OneUse(m_LShr(m_Value(X), m_APInt(C))))) {
+      // The shift amount must be valid (not poison) in the narrow type, and
+      // it must not be greater than the high bits demanded of the result.
+      if (C->ult(I->getType()->getScalarSizeInBits()) &&
+          C->ule(DemandedMask.countLeadingZeros())) {
+        // trunc (lshr X, C) --> lshr (trunc X), C
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        Value *Trunc = Builder.CreateTrunc(X, I->getType());
+        return Builder.CreateLShr(Trunc, C->getZExtValue());
+      }
+    }
+  }
+    LLVM_FALLTHROUGH;
+  case Instruction::ZExt: {
     unsigned SrcBitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
 
     APInt InputDemandedMask = DemandedMask.zextOrTrunc(SrcBitWidth);
