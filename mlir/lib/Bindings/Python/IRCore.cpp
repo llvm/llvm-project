@@ -1590,6 +1590,19 @@ public:
   }
 };
 
+/// Returns the list of types of the values held by container.
+template <typename Container>
+static std::vector<PyType> getValueTypes(Container &container,
+                                         PyMlirContextRef &context) {
+  std::vector<PyType> result;
+  result.reserve(container.getNumElements());
+  for (int i = 0, e = container.getNumElements(); i < e; ++i) {
+    result.push_back(
+        PyType(context, mlirValueGetType(container.getElement(i).get())));
+  }
+  return result;
+}
+
 /// A list of block arguments. Internally, these are stored as consecutive
 /// elements, random access is cheap. The argument list is associated with the
 /// operation that contains the block (detached blocks are not allowed in
@@ -1623,6 +1636,12 @@ public:
   PyBlockArgumentList slice(intptr_t startIndex, intptr_t length,
                             intptr_t step) {
     return PyBlockArgumentList(operation, block, startIndex, length, step);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("types", [](PyBlockArgumentList &self) {
+      return getValueTypes(self, self.operation->getContext());
+    });
   }
 
 private:
@@ -1710,6 +1729,12 @@ public:
 
   PyOpResultList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
     return PyOpResultList(operation, startIndex, length, step);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("types", [](PyOpResultList &self) {
+      return getValueTypes(self, self.operation->getContext());
+    });
   }
 
 private:

@@ -145,6 +145,12 @@ def testBlockArgumentList():
     print("Length: ",
           len(entry_block.arguments[:2] + entry_block.arguments[1:]))
 
+    # CHECK: Type: i8
+    # CHECK: Type: i16
+    # CHECK: Type: i24
+    for t in entry_block.arguments.types:
+      print("Type: ", t)
+
 
 run(testBlockArgumentList)
 
@@ -379,6 +385,12 @@ def testOperationResultList():
   # CHECK: Result 2, type index
   for res in call.results:
     print(f"Result {res.result_number}, type {res.type}")
+
+  # CHECK: Result type i32
+  # CHECK: Result type f64
+  # CHECK: Result type index
+  for t in call.results.types:
+    print(f"Result type {t}")
 
 
 run(testOperationResultList)
