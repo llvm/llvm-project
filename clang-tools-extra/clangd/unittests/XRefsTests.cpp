@@ -1780,11 +1780,13 @@ void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
         AllOf(RangeIs(R), AttrsAre(ReferencesResult::Declaration |
                                    ReferencesResult::Definition |
                                    ReferencesResult::Override)));
-  EXPECT_THAT(
-      findReferences(AST, T.point(), 0, UseIndex ? TU.index().get() : nullptr)
-          .References,
-      UnorderedElementsAreArray(ExpectedLocations))
-      << Test;
+  for (const auto &P : T.points()) {
+    EXPECT_THAT(findReferences(AST, P, 0, UseIndex ? TU.index().get() : nullptr)
+                    .References,
+                UnorderedElementsAreArray(ExpectedLocations))
+        << "Failed for Refs at " << P << "\n"
+        << Test;
+  }
 }
 
 TEST(FindReferences, WithinAST) {
@@ -1961,7 +1963,7 @@ TEST(FindReferences, IncludeOverrides) {
       R"cpp(
         class Base {
         public:
-          virtual void $decl[[f^unc]]() = 0;
+          virtu^al void $decl[[f^unc]]() ^= ^0;
         };
         class Derived : public Base {
         public:
@@ -1990,13 +1992,13 @@ TEST(FindReferences, RefsToBaseMethod) {
         };
         class Derived : public Base {
         public:
-          void $decl[[fu^nc]]() override;
+          void $decl[[fu^nc]]() over^ride;
         };
         void test(BaseBase* BB, Base* B, Derived* D) {
           // refs to overridden methods in complete type hierarchy are reported.
           BB->[[func]]();
           B->[[func]]();
-          D->[[func]]();
+          D->[[fu^nc]]();
         })cpp";
   checkFindRefs(Test, /*UseIndex=*/true);
 }
