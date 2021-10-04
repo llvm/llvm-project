@@ -2083,8 +2083,7 @@ class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>;
 // declarations should be generated. This class takes an optional set of methods
 // that should have declarations generated even if the method has a default
 // implementation.
-class DeclareInterfaceMethods<Interface interface,
-                              list<string> overridenMethods = []> {
+class DeclareInterfaceMethods<list<string> overridenMethods = []> {
     // This field contains a set of method names that should always have their
     // declarations generated. This allows for generating declarations for
     // methods with default implementations that need to be overridden.
@@ -2092,7 +2091,7 @@ class DeclareInterfaceMethods<Interface interface,
 }
 class DeclareAttrInterfaceMethods<AttrInterface interface,
                                   list<string> overridenMethods = []>
-      : DeclareInterfaceMethods<interface, overridenMethods>,
+      : DeclareInterfaceMethods<overridenMethods>,
         AttrInterface<interface.cppClassName> {
     let description = interface.description;
     let cppClassName = interface.cppClassName;
@@ -2101,7 +2100,7 @@ class DeclareAttrInterfaceMethods<AttrInterface interface,
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
-      : DeclareInterfaceMethods<interface, overridenMethods>,
+      : DeclareInterfaceMethods<overridenMethods>,
         OpInterface<interface.cppClassName> {
     let description = interface.description;
     let cppClassName = interface.cppClassName;
@@ -2110,7 +2109,7 @@ class DeclareOpInterfaceMethods<OpInterface interface,
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
-      : DeclareInterfaceMethods<interface, overridenMethods>,
+      : DeclareInterfaceMethods<overridenMethods>,
         TypeInterface<interface.cppClassName> {
     let description = interface.description;
     let cppClassName = interface.cppClassName;
