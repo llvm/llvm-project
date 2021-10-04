@@ -5533,10 +5533,13 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     VT = getTypeToTransformTo(Context, VT);
 
   // If vector multiply is legal, assume that's faster than shl + add/sub.
-  // TODO: Multiply is a complex op with higher latency and lower throughput in
-  //       most implementations, so this check could be loosened based on type
-  //       and/or a CPU attribute.
-  if (isOperationLegal(ISD::MUL, VT))
+  // Multiply is a complex op with higher latency and lower throughput in
+  // most implementations, sub-vXi32 vector multiplies are always fast,
+  // vXi32 mustn't have a SlowMULLD implementation, and anything larger (vXi64)
+  // is always going to be slow.
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (isOperationLegal(ISD::MUL, VT) && EltSizeInBits <= 32 &&
+      (EltSizeInBits != 32 || !Subtarget.isPMULLDSlow()))
     return false;
 
   // shl+add, shl+sub, shl+add+neg
