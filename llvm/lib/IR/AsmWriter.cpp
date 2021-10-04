@@ -23,6 +23,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1292,6 +1293,12 @@ struct AsmWriterContext {
     static AsmWriterContext EmptyCtx(nullptr, nullptr);
     return EmptyCtx;
   }
+
+  /// A callback that will be triggered when the underlying printer
+  /// prints a Metadata as operand.
+  virtual void onWriteMetadataAsOperand(const Metadata *) {}
+
+  virtual ~AsmWriterContext() {}
 };
 } // end anonymous namespace
 
@@ -1636,6 +1643,7 @@ static void writeMDTuple(raw_ostream &Out, const MDTuple *Node,
       WriteAsOperandInternal(Out, V, WriterCtx);
     } else {
       WriteAsOperandInternal(Out, MD, WriterCtx);
+      WriterCtx.onWriteMetadataAsOperand(MD);
     }
     if (mi + 1 != me)
       Out << ", ";
@@ -1736,6 +1744,7 @@ static void writeMetadataAsOperand(raw_ostream &Out, const Metadata *MD,
     return;
   }
   WriteAsOperandInternal(Out, MD, WriterCtx);
+  WriterCtx.onWriteMetadataAsOperand(MD);
 }
 
 void MDFieldPrinter::printMetadata(StringRef Name, const Metadata *MD,
@@ -4664,22 +4673,87 @@ void Value::printAsOperand(raw_ostream &O, bool PrintType,
   printAsOperandImpl(*this, O, PrintType, MST);
 }
 
+/// Recursive version of printMetadataImpl.
+static void printMetadataImplRec(raw_ostream &ROS, const Metadata &MD,
+                                 AsmWriterContext &WriterCtx) {
+  formatted_raw_ostream OS(ROS);
+  WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
+
+  auto *N = dyn_cast<MDNode>(&MD);
+  if (!N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+    return;
+
+  OS << " = ";
+  WriteMDNodeBodyInternal(OS, N, WriterCtx);
+}
+
+namespace {
+struct MDTreeAsmWriterContext : public AsmWriterContext {
+  unsigned Level;
+  // {Level, Printed string}
+  using EntryTy = std::pair<unsigned, std::string>;
+  SmallVector<EntryTy, 4> Buffer;
+
+  // Used to break the cycle in case there is any.
+  SmallPtrSet<const Metadata *, 4> Visited;
+
+  raw_ostream &MainOS;
+
+  MDTreeAsmWriterContext(TypePrinting *TP, SlotTracker *ST, const Module *M,
+                         raw_ostream &OS, const Metadata *InitMD)
+      : AsmWriterContext(TP, ST, M), Level(0U), Visited({InitMD}), MainOS(OS) {}
+
+  void onWriteMetadataAsOperand(const Metadata *MD) override {
+    if (Visited.count(MD))
+      return;
+    Visited.insert(MD);
+
+    std::string Str;
+    raw_string_ostream SS(Str);
+    ++Level;
+    // A placeholder entry to memorize the correct
+    // position in buffer.
+    Buffer.emplace_back(std::make_pair(Level, ""));
+    unsigned InsertIdx = Buffer.size() - 1;
+
+    printMetadataImplRec(SS, *MD, *this);
+    Buffer[InsertIdx].second = std::move(SS.str());
+    --Level;
+  }
+
+  ~MDTreeAsmWriterContext() {
+    for (const auto &Entry : Buffer) {
+      MainOS << "\n";
+      unsigned NumIndent = Entry.first * 2U;
+      MainOS.indent(NumIndent) << Entry.second;
+    }
+  }
+};
+} // end anonymous namespace
+
 static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
                               ModuleSlotTracker &MST, const Module *M,
-                              bool OnlyAsOperand) {
+                              bool OnlyAsOperand, bool PrintAsTree = false) {
   formatted_raw_ostream OS(ROS);
 
   TypePrinting TypePrinter(M);
 
-  AsmWriterContext WriterCtx(&TypePrinter, MST.getMachine(), M);
-  WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
+  std::unique_ptr<AsmWriterContext> WriterCtx;
+  if (PrintAsTree && !OnlyAsOperand)
+    WriterCtx = std::make_unique<MDTreeAsmWriterContext>(
+        &TypePrinter, MST.getMachine(), M, OS, &MD);
+  else
+    WriterCtx =
+        std::make_unique<AsmWriterContext>(&TypePrinter, MST.getMachine(), M);
+
+  WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
   if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
     return;
 
   OS << " = ";
-  WriteMDNodeBodyInternal(OS, N, WriterCtx);
+  WriteMDNodeBodyInternal(OS, N, *WriterCtx);
 }
 
 void Metadata::printAsOperand(raw_ostream &OS, const Module *M) const {
@@ -4701,6 +4775,18 @@ void Metadata::print(raw_ostream &OS, const Module *M,
 void Metadata::print(raw_ostream &OS, ModuleSlotTracker &MST,
                      const Module *M, bool /*IsForDebug*/) const {
   printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ false);
+}
+
+void MDNode::printTree(raw_ostream &OS, const Module *M) const {
+  ModuleSlotTracker MST(M, true);
+  printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ false,
+                    /*PrintAsTree=*/true);
+}
+
+void MDNode::printTree(raw_ostream &OS, ModuleSlotTracker &MST,
+                       const Module *M) const {
+  printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ false,
+                    /*PrintAsTree=*/true);
 }
 
 void ModuleSummaryIndex::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -4751,6 +4837,15 @@ void Metadata::dump() const { dump(nullptr); }
 LLVM_DUMP_METHOD
 void Metadata::dump(const Module *M) const {
   print(dbgs(), M, /*IsForDebug=*/true);
+  dbgs() << '\n';
+}
+
+LLVM_DUMP_METHOD
+void MDNode::dumpTree() const { dumpTree(nullptr); }
+
+LLVM_DUMP_METHOD
+void MDNode::dumpTree(const Module *M) const {
+  printTree(dbgs(), M);
   dbgs() << '\n';
 }
 
