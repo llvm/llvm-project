@@ -1268,6 +1268,12 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::TargetTooNew:
     return "The module file was built for a target newer than the current "
            "target.";
+  case swift::serialization::Status::SDKMismatch:
+    return "The module file was built with a different SDK than the one in use "
+           "to build the client.";
+  case swift::serialization::Status::RevisionIncompatible:
+    return "The module file was built with library evolution enabled by a "
+           "different version of the compiler.";
   }
 }
 
