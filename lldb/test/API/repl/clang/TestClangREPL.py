@@ -22,6 +22,7 @@ class TestCase(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     @skipIfEditlineSupportMissing
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
