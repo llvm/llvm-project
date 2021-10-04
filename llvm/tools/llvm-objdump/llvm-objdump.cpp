@@ -2092,7 +2092,7 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   }
 
   if (Common)
-    outs() << '\t' << format(Fmt, Symbol.getAlignment());
+    outs() << '\t' << format(Fmt, static_cast<uint64_t>(Symbol.getAlignment()));
   else if (O->isXCOFF())
     outs() << '\t'
            << format(Fmt, dyn_cast<const XCOFFObjectFile>(O)->getSymbolSize(
