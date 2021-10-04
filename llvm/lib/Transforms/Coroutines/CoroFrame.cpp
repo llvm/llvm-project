@@ -1240,8 +1240,10 @@ namespace {
 struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   using Base = PtrUseVisitor<AllocaUseVisitor>;
   AllocaUseVisitor(const DataLayout &DL, const DominatorTree &DT,
-                   const CoroBeginInst &CB, const SuspendCrossingInfo &Checker)
-      : PtrUseVisitor(DL), DT(DT), CoroBegin(CB), Checker(Checker) {}
+                   const CoroBeginInst &CB, const SuspendCrossingInfo &Checker,
+                   bool ShouldUseLifetimeStartInfo)
+      : PtrUseVisitor(DL), DT(DT), CoroBegin(CB), Checker(Checker),
+        ShouldUseLifetimeStartInfo(ShouldUseLifetimeStartInfo) {}
 
   void visit(Instruction &I) {
     Users.insert(&I);
@@ -1389,6 +1391,7 @@ private:
   SmallPtrSet<Instruction *, 4> Users{};
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   bool MayWriteBeforeCoroBegin{false};
+  bool ShouldUseLifetimeStartInfo{true};
 
   mutable llvm::Optional<bool> ShouldLiveOnFrame{};
 
@@ -1397,7 +1400,7 @@ private:
     // more precise. We look at every pair of lifetime.start intrinsic and
     // every basic block that uses the pointer to see if they cross suspension
     // points. The uses cover both direct uses as well as indirect uses.
-    if (!LifetimeStarts.empty()) {
+    if (ShouldUseLifetimeStartInfo && !LifetimeStarts.empty()) {
       for (auto *I : Users)
         for (auto *S : LifetimeStarts)
           if (Checker.isDefinitionAcrossSuspend(*S, I))
@@ -2489,8 +2492,15 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
       continue;
     }
     DominatorTree DT(F);
+    // The code that uses lifetime.start intrinsic does not work for functions
+    // with loops without exit. Disable it on ABIs we know to generate such
+    // code.
+    bool ShouldUseLifetimeStartInfo =
+        (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
+         Shape.ABI != coro::ABI::RetconOnce);
     AllocaUseVisitor Visitor{F.getParent()->getDataLayout(), DT,
-                             *Shape.CoroBegin, Checker};
+                             *Shape.CoroBegin, Checker,
+                             ShouldUseLifetimeStartInfo};
     Visitor.visitPtr(*AI);
     if (!Visitor.getShouldLiveOnFrame())
       continue;
@@ -2679,7 +2689,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     }
   }
 
-  sinkLifetimeStartMarkers(F, Shape, Checker);
+  if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
+      Shape.ABI != coro::ABI::RetconOnce)
+    sinkLifetimeStartMarkers(F, Shape, Checker);
+
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     collectFrameAllocas(F, Shape, Checker, FrameData.Allocas);
   LLVM_DEBUG(dumpAllocas(FrameData.Allocas));
