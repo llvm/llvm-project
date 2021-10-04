@@ -5,6 +5,7 @@ unittest("DemangleTests") {
   sources = [
     "DemangleTest.cpp",
     "ItaniumDemangleTest.cpp",
+    "OutputStreamTest.cpp",
     "PartialDemangleTest.cpp",
     "RustDemangleTest.cpp",
     "StringViewTest.cpp",

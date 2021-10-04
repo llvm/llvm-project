@@ -70,7 +70,7 @@ inline static unsigned makePostOp(unsigned AluOp) {
 }
 
 inline static bool modifiesOp(unsigned AluOp) {
-  return isPreOp(AluOp) | isPostOp(AluOp);
+  return isPreOp(AluOp) || isPostOp(AluOp);
 }
 
 inline static const char *lanaiAluCodeToString(unsigned AluOp) {

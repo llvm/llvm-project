@@ -126,7 +126,7 @@ static ValueLatticeElement intersect(const ValueLatticeElement &A,
   // Note: An empty range is implicitly converted to unknown or undef depending
   // on MayIncludeUndef internally.
   return ValueLatticeElement::getRange(
-      std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() |
+      std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() ||
                             B.isConstantRangeIncludingUndef());
 }
 
@@ -832,7 +832,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
         };
       }();
       return ValueLatticeElement::getRange(
-          ResultCR, TrueVal.isConstantRangeIncludingUndef() |
+          ResultCR, TrueVal.isConstantRangeIncludingUndef() ||
                         FalseVal.isConstantRangeIncludingUndef());
     }
 

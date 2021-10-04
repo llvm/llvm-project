@@ -21,7 +21,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -477,15 +476,24 @@ public:
 // The code signature comes at the very end of the linked output file.
 class CodeSignatureSection final : public LinkEditSection {
 public:
+  static constexpr uint8_t blockSizeShift = 12;
+  static constexpr size_t blockSize = (1 << blockSizeShift); // 4 KiB
+  static constexpr size_t hashSize = 256 / 8;
+  static constexpr size_t blobHeadersSize = llvm::alignTo<8>(
+      sizeof(llvm::MachO::CS_SuperBlob) + sizeof(llvm::MachO::CS_BlobIndex));
+  static constexpr uint32_t fixedHeadersSize =
+      blobHeadersSize + sizeof(llvm::MachO::CS_CodeDirectory);
+
+  uint32_t fileNamePad = 0;
+  uint32_t allHeadersSize = 0;
+  StringRef fileName;
+
   CodeSignatureSection();
   uint64_t getRawSize() const override;
   bool isNeeded() const override { return true; }
   void writeTo(uint8_t *buf) const override;
+  uint32_t getBlockCount() const;
   void writeHashes(uint8_t *buf) const;
-  void finalize() override;
-
-private:
-  std::unique_ptr<llvm::object::CodeSignatureSection> sectionBuilder;
 };
 
 class BitcodeBundleSection final : public SyntheticSection {

@@ -568,7 +568,7 @@ void IRPromoter::TruncateSinks() {
 
     // Handle calls separately as we need to iterate over arg operands.
     if (auto *Call = dyn_cast<CallInst>(I)) {
-      for (unsigned i = 0; i < Call->getNumArgOperands(); ++i) {
+      for (unsigned i = 0; i < Call->arg_size(); ++i) {
         Value *Arg = Call->getArgOperand(i);
         Type *Ty = TruncTysMap[Call][i];
         if (Instruction *Trunc = InsertTrunc(Arg, Ty)) {
@@ -671,10 +671,8 @@ void IRPromoter::Mutate() {
   // Cache original types of the values that will likely need truncating
   for (auto *I : Sinks) {
     if (auto *Call = dyn_cast<CallInst>(I)) {
-      for (unsigned i = 0; i < Call->getNumArgOperands(); ++i) {
-        Value *Arg = Call->getArgOperand(i);
+      for (Value *Arg : Call->args())
         TruncTysMap[Call].push_back(Arg->getType());
-      }
     } else if (auto *Switch = dyn_cast<SwitchInst>(I))
       TruncTysMap[I].push_back(Switch->getCondition()->getType());
     else {

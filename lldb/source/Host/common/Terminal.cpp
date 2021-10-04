@@ -110,7 +110,7 @@ bool TerminalState::Save(Terminal term, bool save_process_group) {
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #if LLDB_ENABLE_TERMIOS
     std::unique_ptr<Data> new_data{new Data()};
-    if (::tcgetattr(fd, &new_data->m_termios) != 0)
+    if (::tcgetattr(fd, &new_data->m_termios) == 0)
       m_data = std::move(new_data);
 #endif // LLDB_ENABLE_TERMIOS
     if (save_process_group)

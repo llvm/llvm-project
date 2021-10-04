@@ -63,18 +63,51 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; AVX2:       vector.body:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[TMP0]]
-; AVX2-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to <16 x i32>*
-; AVX2-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[TMP2]], align 4
+; AVX2-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
+; AVX2-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 16
+; AVX2-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 1
+; AVX2-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], 32
+; AVX2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 1
+; AVX2-NEXT:    [[TMP6:%.*]] = or i64 [[TMP5]], 48
+; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[TMP0]]
+; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP2]]
+; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP4]]
+; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP6]]
+; AVX2-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP7]] to <16 x i32>*
+; AVX2-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP8]] to <16 x i32>*
+; AVX2-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP9]] to <16 x i32>*
+; AVX2-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP10]] to <16 x i32>*
+; AVX2-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[TMP11]], align 4
+; AVX2-NEXT:    [[WIDE_VEC1:%.*]] = load <16 x i32>, <16 x i32>* [[TMP12]], align 4
+; AVX2-NEXT:    [[WIDE_VEC2:%.*]] = load <16 x i32>, <16 x i32>* [[TMP13]], align 4
+; AVX2-NEXT:    [[WIDE_VEC3:%.*]] = load <16 x i32>, <16 x i32>* [[TMP14]], align 4
 ; AVX2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; AVX2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; AVX2-NEXT:    [[TMP3:%.*]] = add nsw <8 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC]]
-; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
-; AVX2-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <8 x i32>*
-; AVX2-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* [[TMP5]], align 4
-; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; AVX2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; AVX2-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; AVX2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i32> [[WIDE_VEC1]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; AVX2-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i32> [[WIDE_VEC2]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; AVX2-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i32> [[WIDE_VEC3]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; AVX2-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; AVX2-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <16 x i32> [[WIDE_VEC1]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; AVX2-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <16 x i32> [[WIDE_VEC2]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; AVX2-NEXT:    [[STRIDED_VEC10:%.*]] = shufflevector <16 x i32> [[WIDE_VEC3]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; AVX2-NEXT:    [[TMP15:%.*]] = add nsw <8 x i32> [[STRIDED_VEC7]], [[STRIDED_VEC]]
+; AVX2-NEXT:    [[TMP16:%.*]] = add nsw <8 x i32> [[STRIDED_VEC8]], [[STRIDED_VEC4]]
+; AVX2-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
+; AVX2-NEXT:    [[TMP18:%.*]] = add nsw <8 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC6]]
+; AVX2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <8 x i32>*
+; AVX2-NEXT:    store <8 x i32> [[TMP15]], <8 x i32>* [[TMP20]], align 4
+; AVX2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i64 8
+; AVX2-NEXT:    [[TMP22:%.*]] = bitcast i32* [[TMP21]] to <8 x i32>*
+; AVX2-NEXT:    store <8 x i32> [[TMP16]], <8 x i32>* [[TMP22]], align 4
+; AVX2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i64 16
+; AVX2-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <8 x i32>*
+; AVX2-NEXT:    store <8 x i32> [[TMP17]], <8 x i32>* [[TMP24]], align 4
+; AVX2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i64 24
+; AVX2-NEXT:    [[TMP26:%.*]] = bitcast i32* [[TMP25]] to <8 x i32>*
+; AVX2-NEXT:    store <8 x i32> [[TMP18]], <8 x i32>* [[TMP26]], align 4
+; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; AVX2-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; AVX2-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       middle.block:
 ; AVX2-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; AVX2:       scalar.ph:

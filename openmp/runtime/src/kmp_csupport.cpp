@@ -683,7 +683,7 @@ void __kmpc_flush(ident_t *loc) {
   if (!__kmp_cpuinfo.initialized) {
     __kmp_query_cpuid(&__kmp_cpuinfo);
   }
-  if (!__kmp_cpuinfo.sse2) {
+  if (!__kmp_cpuinfo.flags.sse2) {
     // CPU cannot execute SSE2 instructions.
   } else {
 #if KMP_COMPILER_ICC
@@ -1356,7 +1356,7 @@ static __forceinline kmp_dyna_lockseq_t __kmp_map_hint_to_lock(uintptr_t hint) {
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-#define KMP_CPUINFO_RTM (__kmp_cpuinfo.rtm)
+#define KMP_CPUINFO_RTM (__kmp_cpuinfo.flags.rtm)
 #else
 #define KMP_CPUINFO_RTM 0
 #endif

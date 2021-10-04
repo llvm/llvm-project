@@ -638,7 +638,7 @@ public:
   void checkWellFormed() const;
 
   Function *getMustTailCallFunction() const {
-    if (getNumArgOperands() < 3)
+    if (arg_size() < 3)
       return nullptr;
 
     return cast<Function>(

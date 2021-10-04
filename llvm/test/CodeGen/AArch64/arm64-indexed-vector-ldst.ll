@@ -9143,18 +9143,12 @@ define i32 @load_single_extract_variable_index_i32(<4 x i32>* %A, i32 %idx) {
 define i32 @load_single_extract_variable_index_v3i32_small_align(<3 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_v3i32_small_align:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ld1.s { v0 }[2], [x8]
-; CHECK-NEXT:    and x8, x1, #0x3
-; CHECK-NEXT:    bfi x9, x8, #2, #2
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldr w0, [x9]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    cmp x8, #2
+; CHECK-NEXT:    mov w9, #2
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %lv = load <3 x i32>, <3 x i32>* %A, align 2
   %e = extractelement <3 x i32> %lv, i32 %idx

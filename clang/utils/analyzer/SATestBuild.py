@@ -856,7 +856,8 @@ def normalize_reference_results(directory: str, output_dir: str,
                 continue
 
             plist = os.path.join(dir_path, filename)
-            data = plistlib.readPlist(plist)
+            with open(plist, "rb") as plist_file:
+                data = plistlib.load(plist_file)
             path_prefix = directory
 
             if build_mode == 1:
@@ -875,7 +876,8 @@ def normalize_reference_results(directory: str, output_dir: str,
             if 'clang_version' in data:
                 data.pop('clang_version')
 
-            plistlib.writePlist(data, plist)
+            with open(plist, "wb") as plist_file:
+                plistlib.dump(data, plist_file)
 
 
 def get_build_log_path(output_dir: str) -> str:

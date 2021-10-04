@@ -1169,18 +1169,18 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            andq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *      *            lock		andq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   andq	(%rax), %rdi
-# CHECK-NEXT:  1      16    8.00                        bsfw	%si, %di
-# CHECK-NEXT:  1      16    8.00                        bsrw	%si, %di
-# CHECK-NEXT:  1      16    8.00    *                   bsfw	(%rax), %di
-# CHECK-NEXT:  1      16    8.00    *                   bsrw	(%rax), %di
-# CHECK-NEXT:  1      16    8.00                        bsfl	%esi, %edi
-# CHECK-NEXT:  1      16    8.00                        bsrl	%esi, %edi
-# CHECK-NEXT:  1      16    8.00    *                   bsfl	(%rax), %edi
-# CHECK-NEXT:  1      16    8.00    *                   bsrl	(%rax), %edi
-# CHECK-NEXT:  1      16    8.00                        bsfq	%rsi, %rdi
-# CHECK-NEXT:  1      16    8.00                        bsrq	%rsi, %rdi
-# CHECK-NEXT:  1      16    8.00    *                   bsfq	(%rax), %rdi
-# CHECK-NEXT:  1      16    8.00    *                   bsrq	(%rax), %rdi
+# CHECK-NEXT:  10     16    16.00                       bsfw	%si, %di
+# CHECK-NEXT:  10     16    16.00                       bsrw	%si, %di
+# CHECK-NEXT:  10     16    16.00   *                   bsfw	(%rax), %di
+# CHECK-NEXT:  10     16    16.00   *                   bsrw	(%rax), %di
+# CHECK-NEXT:  10     16    16.00                       bsfl	%esi, %edi
+# CHECK-NEXT:  10     16    16.00                       bsrl	%esi, %edi
+# CHECK-NEXT:  10     16    16.00   *                   bsfl	(%rax), %edi
+# CHECK-NEXT:  10     16    16.00   *                   bsrl	(%rax), %edi
+# CHECK-NEXT:  10     16    16.00                       bsfq	%rsi, %rdi
+# CHECK-NEXT:  10     16    16.00                       bsrq	%rsi, %rdi
+# CHECK-NEXT:  10     16    16.00   *                   bsfq	(%rax), %rdi
+# CHECK-NEXT:  10     16    16.00   *                   bsrq	(%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        bswapl	%eax
 # CHECK-NEXT:  1      1     1.00                        bswapq	%rax
 # CHECK-NEXT:  1      1     1.00                        btw	%si, %di
@@ -1947,7 +1947,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 3616.50 3163.50
+# CHECK-NEXT: 3712.50 3259.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -2090,18 +2090,18 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 1.00    -     andq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     lock		andq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     andq	(%rax), %rdi
-# CHECK-NEXT: 8.00   8.00   bsfw	%si, %di
-# CHECK-NEXT: 8.00   8.00   bsrw	%si, %di
-# CHECK-NEXT: 8.00   8.00   bsfw	(%rax), %di
-# CHECK-NEXT: 8.00   8.00   bsrw	(%rax), %di
-# CHECK-NEXT: 8.00   8.00   bsfl	%esi, %edi
-# CHECK-NEXT: 8.00   8.00   bsrl	%esi, %edi
-# CHECK-NEXT: 8.00   8.00   bsfl	(%rax), %edi
-# CHECK-NEXT: 8.00   8.00   bsrl	(%rax), %edi
-# CHECK-NEXT: 8.00   8.00   bsfq	%rsi, %rdi
-# CHECK-NEXT: 8.00   8.00   bsrq	%rsi, %rdi
-# CHECK-NEXT: 8.00   8.00   bsfq	(%rax), %rdi
-# CHECK-NEXT: 8.00   8.00   bsrq	(%rax), %rdi
+# CHECK-NEXT: 16.00  16.00  bsfw	%si, %di
+# CHECK-NEXT: 16.00  16.00  bsrw	%si, %di
+# CHECK-NEXT: 16.00  16.00  bsfw	(%rax), %di
+# CHECK-NEXT: 16.00  16.00  bsrw	(%rax), %di
+# CHECK-NEXT: 16.00  16.00  bsfl	%esi, %edi
+# CHECK-NEXT: 16.00  16.00  bsrl	%esi, %edi
+# CHECK-NEXT: 16.00  16.00  bsfl	(%rax), %edi
+# CHECK-NEXT: 16.00  16.00  bsrl	(%rax), %edi
+# CHECK-NEXT: 16.00  16.00  bsfq	%rsi, %rdi
+# CHECK-NEXT: 16.00  16.00  bsrq	%rsi, %rdi
+# CHECK-NEXT: 16.00  16.00  bsfq	(%rax), %rdi
+# CHECK-NEXT: 16.00  16.00  bsrq	(%rax), %rdi
 # CHECK-NEXT: 1.00    -     bswapl	%eax
 # CHECK-NEXT: 1.00    -     bswapq	%rax
 # CHECK-NEXT:  -     1.00   btw	%si, %di

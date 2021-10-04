@@ -2425,18 +2425,6 @@ class fir_UnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{ return printUnaryOp(this->getOperation(), p); }];
 }
 
-class RealUnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$operand)>;
-
-def fir_NegfOp : RealUnaryArithmeticOp<"negf">;
-
-class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$lhs, AnyRealLike:$rhs)>;
-
-def fir_ModfOp : RealArithmeticOp<"modf">;
-
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   let summary = "create a complex constant";
 
@@ -2678,21 +2666,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let parser = "return parseGlobalOp(parser, result);";
 
-  let printer = [{
-    if (linkName().hasValue())
-      p << ' ' << linkName().getValue();
-    p << ' ';
-    p.printAttributeWithoutType((*this)->getAttr(symbolAttrName()));
-    if (auto val = getValueOrNull())
-      p << '(' << val << ')';
-    if (constantAttr())
-      p << " constant";
-    p << " : ";
-    p.printType(getType());
-    if (hasInitializationBody())
-      p.printRegion((*this)->getRegion(0), /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/true);
-  }];
+  let printer = "::print(p, *this);";
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -2718,6 +2692,9 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef symbolAttrName() { return "symref"; }
+    static constexpr llvm::StringRef getConstantAttrName() {
+      return "constant";
+    }
     static constexpr llvm::StringRef linkageAttrName() { return "linkName"; }
 
     /// The printable type of the global

@@ -237,6 +237,11 @@ CHECK: function::<extern "cdecl" fn()>
 CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
        _RIC8functionFUK21C_cmse_nonsecure_callEuE
 
+; Invalid ABI with punycode.
+
+CHECK: _RIC8functionFKu3n3hEuE
+       _RIC8functionFKu3n3hEuE
+
 ; Trait objects
 
 CHECK: trait::<dyn >
@@ -455,6 +460,44 @@ CHECK: dot (.llvm.1234)
 
 CHECK: dot (.llvm.6789)
        _RC3dotC5crate.llvm.6789
+
+; Punycode
+
+CHECK: punycode::東京
+       _RNvC8punycodeu7_1lqs71d
+
+CHECK: punycode::zażółć_gęślą_jaźń
+       _RNvC8punycodeu29za_gl_ja_w3a7psa2tqtgb10airva
+
+CHECK: punycode::საჭმელად_გემრიელი_სადილი
+       _RNvC8punycodeu30____7hkackfecea1cbdathfdh9hlq6y
+
+CHECK: Gödel::Escher::Bach
+       _RNtNvCu8Gdel_5qa6Escher4Bach
+
+CHECK: punycode::🦁🐅
+       _RNvC8punycodeu7wn8hx1g
+
+; Punycode - invalid code point
+
+CHECK: _RCu5r731r
+       _RCu5r731r
+
+CHECK: _RCu8b44444yy
+       _RCu8b44444yy
+
+CHECK: _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+       _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+
+; Punycode - early EOF
+
+CHECK: _RCu8_CCCAR_u4
+       _RCu8_CCCAR_u4
+
+; Punycode - overflow
+
+CHECK: _RNvC1au21p18888888888888888888
+       _RNvC1au21p18888888888888888888
 
 ; Invalid mangled characters
 

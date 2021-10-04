@@ -189,6 +189,13 @@ def fold_merge_to_zext : GICombineRule<
   (apply [{ applyFoldMergeToZext(*${d}, MRI, B, Observer); }])
 >;
 
+def mutate_anyext_to_zext : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_ANYEXT):$d,
+          [{ return matchMutateAnyExtToZExt(*${d}, MRI); }]),
+  (apply [{ applyMutateAnyExtToZExt(*${d}, MRI, B, Observer); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -204,7 +211,7 @@ def AArch64PostLegalizerLoweringHelper
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
                        [copy_prop, erase_undef_store, combines_for_extload,
-                        sext_trunc_sextload,
+                        sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,

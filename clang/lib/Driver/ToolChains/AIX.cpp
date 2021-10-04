@@ -98,8 +98,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bnoentry");
   }
 
-  // Specify PGO linker option
-  if ((Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
+  // Specify PGO linker option without LTO
+  if (!D.isUsingLTO() &&
+      (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
                     false) ||
        Args.hasFlag(options::OPT_fprofile_generate,
                     options::OPT_fno_profile_generate, false) ||

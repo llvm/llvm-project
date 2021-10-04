@@ -2674,7 +2674,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           RetTy->isX86_MMXTy()))
       return false;
 
-    unsigned NumArgOperands = I.getNumArgOperands();
+    unsigned NumArgOperands = I.arg_size();
     for (unsigned i = 0; i < NumArgOperands; ++i) {
       Type *Ty = I.getArgOperand(i)->getType();
       if (Ty != RetTy)
@@ -2701,7 +2701,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// We special-case intrinsics where this approach fails. See llvm.bswap
   /// handling as an example of that.
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
-    unsigned NumArgOperands = I.getNumArgOperands();
+    unsigned NumArgOperands = I.arg_size();
     if (NumArgOperands == 0)
       return false;
 
@@ -2775,10 +2775,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *CopyOp, *ConvertOp;
 
     assert((!HasRoundingMode ||
-            isa<ConstantInt>(I.getArgOperand(I.getNumArgOperands() - 1))) &&
+            isa<ConstantInt>(I.getArgOperand(I.arg_size() - 1))) &&
            "Invalid rounding mode");
 
-    switch (I.getNumArgOperands() - HasRoundingMode) {
+    switch (I.arg_size() - HasRoundingMode) {
     case 2:
       CopyOp = I.getArgOperand(0);
       ConvertOp = I.getArgOperand(1);
@@ -2867,7 +2867,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // size, and the rest is ignored. Behavior is defined even if shift size is
   // greater than register (or field) width.
   void handleVectorShiftIntrinsic(IntrinsicInst &I, bool Variable) {
-    assert(I.getNumArgOperands() == 2);
+    assert(I.arg_size() == 2);
     IRBuilder<> IRB(&I);
     // If any of the S2 bits are poisoned, the whole thing is poisoned.
     // Otherwise perform the same shift on S1.
@@ -2932,7 +2932,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // to sext(Sa != zeroinitializer), sext(Sb != zeroinitializer).
   // EltSizeInBits is used only for x86mmx arguments.
   void handleVectorPackIntrinsic(IntrinsicInst &I, unsigned EltSizeInBits = 0) {
-    assert(I.getNumArgOperands() == 2);
+    assert(I.arg_size() == 2);
     bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
     IRBuilder<> IRB(&I);
     Value *S1 = getShadow(&I, 0);

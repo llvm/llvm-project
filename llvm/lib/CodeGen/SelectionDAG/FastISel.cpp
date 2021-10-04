@@ -623,7 +623,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
 
 bool FastISel::addStackMapLiveVars(SmallVectorImpl<MachineOperand> &Ops,
                                    const CallInst *CI, unsigned StartIdx) {
-  for (unsigned i = StartIdx, e = CI->getNumArgOperands(); i != e; ++i) {
+  for (unsigned i = StartIdx, e = CI->arg_size(); i != e; ++i) {
     Value *Val = CI->getArgOperand(i);
     // Check for constants and encode them with a StackMaps::ConstantOp prefix.
     if (const auto *C = dyn_cast<ConstantInt>(Val)) {
@@ -785,7 +785,7 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   // Skip the four meta args: <id>, <numNopBytes>, <target>, <numArgs>
   // This includes all meta-operands up to but not including CC.
   unsigned NumMetaOpers = PatchPointOpers::CCPos;
-  assert(I->getNumArgOperands() >= NumMetaOpers + NumArgs &&
+  assert(I->arg_size() >= NumMetaOpers + NumArgs &&
          "Not enough arguments provided to the patchpoint intrinsic");
 
   // For AnyRegCC the arguments are lowered later on manually.

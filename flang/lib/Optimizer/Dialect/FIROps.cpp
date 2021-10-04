@@ -1175,6 +1175,24 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   return mlir::success();
 }
 
+static void print(mlir::OpAsmPrinter &p, fir::GlobalOp &op) {
+  if (op.linkName().hasValue())
+    p << ' ' << op.linkName().getValue();
+  p << ' ';
+  p.printAttributeWithoutType(
+      op.getOperation()->getAttr(fir::GlobalOp::symbolAttrName()));
+  if (auto val = op.getValueOrNull())
+    p << '(' << val << ')';
+  if (op.getOperation()->getAttr(fir::GlobalOp::getConstantAttrName()))
+    p << " constant";
+  p << " : ";
+  p.printType(op.getType());
+  if (op.hasInitializationBody())
+    p.printRegion(op.getOperation()->getRegion(0),
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/true);
+}
+
 void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
   getBlock().getOperations().push_back(op);
 }

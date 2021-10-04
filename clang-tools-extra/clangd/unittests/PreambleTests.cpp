@@ -83,7 +83,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   }
   IncludeStructure Includes;
   Clang->getPreprocessor().addPPCallbacks(
-      collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+      Includes.collect(Clang->getSourceManager()));
   if (llvm::Error Err = Action.Execute()) {
     ADD_FAILURE() << "failed to execute action: " << std::move(Err);
     return {};

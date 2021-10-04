@@ -962,14 +962,14 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
            "Expected constant-foldable intrinsic");
     Intrinsic::ID IID = II->getIntrinsicID();
-    if (II->getNumArgOperands() == 1)
+    if (II->arg_size() == 1)
       return Builder.CreateUnaryIntrinsic(IID, SO);
 
     // This works for real binary ops like min/max (where we always expect the
     // constant operand to be canonicalized as op1) and unary ops with a bonus
     // constant argument like ctlz/cttz.
     // TODO: Handle non-commutative binary intrinsics as below for binops.
-    assert(II->getNumArgOperands() == 2 && "Expected binary intrinsic");
+    assert(II->arg_size() == 2 && "Expected binary intrinsic");
     assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
     return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
