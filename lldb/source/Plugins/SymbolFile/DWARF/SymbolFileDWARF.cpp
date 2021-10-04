@@ -1971,8 +1971,6 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  const FileSpec &file_spec = src_location_spec.GetFileSpec();
-  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();
   const uint32_t prev_size = sc_list.GetSize();
   if (resolve_scope & eSymbolContextCompUnit) {
@@ -1985,72 +1983,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(
       bool file_spec_matches_cu_file_spec = FileSpec::Match(
           src_location_spec.GetFileSpec(), dc_cu->GetPrimaryFile());
       if (check_inlines || file_spec_matches_cu_file_spec) {
-        SymbolContext sc(m_objfile_sp->GetModule());
-        sc.comp_unit = dc_cu;
-        uint32_t file_idx = UINT32_MAX;
-
-        // If we are looking for inline functions only and we don't find it
-        // in the support files, we are done.
-        if (check_inlines) {
-          file_idx =
-              sc.comp_unit->GetSupportFiles().FindFileIndex(1, file_spec, true);
-          if (file_idx == UINT32_MAX)
-            continue;
-        }
-
-        if (line != 0) {
-          LineTable *line_table = sc.comp_unit->GetLineTable();
-
-          if (line_table != nullptr && line != 0) {
-            // We will have already looked up the file index if we are
-            // searching for inline entries.
-            if (!check_inlines)
-              file_idx = sc.comp_unit->GetSupportFiles().FindFileIndex(
-                  1, file_spec, true);
-
-            if (file_idx != UINT32_MAX) {
-              uint32_t found_line;
-              uint16_t found_column;
-              uint32_t line_idx = line_table->FindLineEntryIndexByFileIndex(
-                  0, file_idx, src_location_spec, &sc.line_entry);
-              found_line = sc.line_entry.line;
-              found_column = sc.line_entry.column;
-
-              while (line_idx != UINT32_MAX) {
-                sc.function = nullptr;
-                sc.block = nullptr;
-                if (resolve_scope &
-                    (eSymbolContextFunction | eSymbolContextBlock)) {
-                  const lldb::addr_t file_vm_addr =
-                      sc.line_entry.range.GetBaseAddress().GetFileAddress();
-                  if (file_vm_addr != LLDB_INVALID_ADDRESS) {
-                    ResolveFunctionAndBlock(
-                        file_vm_addr, resolve_scope & eSymbolContextBlock, sc);
-                  }
-                }
-
-                SourceLocationSpec found_location_spec(
-                    file_spec, found_line, found_column,
-                    /*check_inlines=*/false, /*exact=*/true);
-                sc_list.Append(sc);
-                line_idx = line_table->FindLineEntryIndexByFileIndex(
-                    line_idx + 1, file_idx, found_location_spec,
-                    &sc.line_entry);
-              }
-            }
-          } else if (file_spec_matches_cu_file_spec && !check_inlines) {
-            // only append the context if we aren't looking for inline call
-            // sites by file and line and if the file spec matches that of
-            // the compile unit
-            sc_list.Append(sc);
-          }
-        } else if (file_spec_matches_cu_file_spec && !check_inlines) {
-          // only append the context if we aren't looking for inline call
-          // sites by file and line and if the file spec matches that of
-          // the compile unit
-          sc_list.Append(sc);
-        }
-
+        dc_cu->ResolveSymbolContext(src_location_spec, resolve_scope, sc_list);
         if (!check_inlines)
           break;
       }
