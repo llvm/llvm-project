@@ -153,7 +153,7 @@ public:
   /// Return the number of parameters of the callee.
   unsigned getNumArgOperands() const {
     if (isDirectCall())
-      return CB->getNumArgOperands();
+      return CB->arg_size();
     // Subtract 1 for the callee encoding.
     return CI.ParameterEncoding.size() - 1;
   }
