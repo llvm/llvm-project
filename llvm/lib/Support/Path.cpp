@@ -37,13 +37,15 @@ namespace {
   using llvm::sys::path::Style;
 
   inline Style real_style(Style style) {
+    if (style != Style::native)
+      return style;
     if (is_style_posix(style))
       return Style::posix;
     return Style::windows;
   }
 
   inline const char *separators(Style style) {
-    if (real_style(style) == Style::windows)
+    if (is_style_windows(style))
       return "\\/";
     return "/";
   }
@@ -547,7 +549,9 @@ void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;
   if (is_style_windows(style)) {
-    std::replace(Path.begin(), Path.end(), '/', '\\');
+    for (char &Ch : Path)
+      if (is_separator(Ch, style))
+        Ch = preferred_separator(style);
     if (Path[0] == '~' && (Path.size() == 1 || is_separator(Path[1], style))) {
       SmallString<128> PathHome;
       home_directory(PathHome);
@@ -601,7 +605,7 @@ bool is_separator(char value, Style style) {
 }
 
 StringRef get_separator(Style style) {
-  if (is_style_windows(style))
+  if (real_style(style) == Style::windows)
     return "\\";
   return "/";
 }
