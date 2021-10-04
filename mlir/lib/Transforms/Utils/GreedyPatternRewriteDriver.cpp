@@ -222,7 +222,9 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
     // is kept up to date.
     if (config.enableRegionSimplification)
       changed |= succeeded(simplifyRegions(*this, regions));
-  } while (changed && ++iteration < config.maxIterations);
+  } while (changed &&
+           (++iteration < config.maxIterations ||
+            config.maxIterations == GreedyRewriteConfig::kNoIterationLimit));
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
@@ -345,7 +347,9 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
     changed |= succeeded(matcher.matchAndRewrite(op, *this));
     if ((erased = opErasedViaPatternRewrites))
       return success();
-  } while (changed && ++iterations < maxIterations);
+  } while (changed &&
+           (++iterations < maxIterations ||
+            maxIterations == GreedyRewriteConfig::kNoIterationLimit));
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return failure(changed);
