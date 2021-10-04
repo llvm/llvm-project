@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
+from mlir.dialects import builtin
 from mlir.dialects import std
 
 
@@ -62,3 +63,27 @@ def testConstantIndexOp():
   print(c1.literal_value)
 
 # CHECK: = constant 10 : index
+
+# CHECK-LABEL: TEST: testFunctionCalls
+@constructAndPrintInModule
+def testFunctionCalls():
+  foo = builtin.FuncOp("foo", ([], []))
+  bar = builtin.FuncOp("bar", ([], [IndexType.get()]))
+  qux = builtin.FuncOp("qux", ([], [F32Type.get()]))
+
+  with InsertionPoint(builtin.FuncOp("caller", ([], [])).add_entry_block()):
+    std.CallOp(foo, [])
+    std.CallOp([IndexType.get()], "bar", [])
+    std.CallOp([F32Type.get()], FlatSymbolRefAttr.get("qux"), [])
+    std.ReturnOp([])
+
+# CHECK: func @foo()
+# CHECK: func @bar() -> index
+# CHECK: func @qux() -> f32
+# CHECK: func @caller() {
+# CHECK:   call @foo() : () -> ()
+# CHECK:   %0 = call @bar() : () -> index
+# CHECK:   %1 = call @qux() : () -> f32
+# CHECK:   return
+# CHECK: }
+
