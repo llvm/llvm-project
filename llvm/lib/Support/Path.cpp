@@ -557,9 +557,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       Path = PathHome;
     }
   } else {
-    for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI)
-      if (*PI == '\\')
-        *PI = '/';
+    std::replace(Path.begin(), Path.end(), '\\', '/');
   }
 }
 

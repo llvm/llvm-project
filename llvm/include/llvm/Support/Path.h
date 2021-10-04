@@ -212,7 +212,7 @@ void append(SmallVectorImpl<char> &path, const_iterator begin,
 
 /// Convert path to the native form. This is used to give paths to users and
 /// operating system calls in the platform's normal way. For example, on Windows
-/// all '/' are converted to '\'.
+/// all '/' are converted to '\'. On Unix, it converts all '\' to '/'.
 ///
 /// @param path A path that is transformed to native format.
 /// @param result Holds the result of the transformation.
