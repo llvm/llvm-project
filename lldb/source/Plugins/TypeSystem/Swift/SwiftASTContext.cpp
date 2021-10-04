@@ -1953,6 +1953,13 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
               std::vector<std::string> &extra_clang_args) {
+  {
+    llvm::raw_string_ostream ss(m_description);
+    ss << "ProcessModule(" << '"';
+    module_sp->GetDescription(ss, eDescriptionLevelBrief);
+    ss << '"' << ')';
+  }
+
   const FileSpec &module_file = module_sp->GetFileSpec();
   std::string module_path = module_file.GetPath();
 
@@ -1985,9 +1992,8 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
 
       if (!add_it) {
         LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                   "ProcessModule(\"%s\") rejecting framework path \"%s\" "
-                   "as it has no \"Headers\" or \"Modules\" subdirectories.",
-                   module_file.GetFilename().AsCString(""),
+                   "rejecting framework path \"%s\" as it has no \"Headers\" "
+                   "or \"Modules\" subdirectories.",
                    framework_path.c_str());
       }
 
@@ -2005,9 +2011,7 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
           // SDK instead.
           if (!StringRef(parent_path).startswith("/System/Library") &&
               !IsDeviceSupport(parent_path.c_str())) {
-            LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                       "ProcessModule(\"%s\") adding framework path \"%s\".",
-                       module_file.GetFilename().AsCString(""),
+            LOG_PRINTF(LIBLLDB_LOG_TYPES, "adding framework path \"%s\".",
                        framework_path.c_str());
             framework_search_paths.push_back(
                 {std::move(parent_path), /*system*/ false});
@@ -2071,9 +2075,8 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
       framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
     for (const std::string &arg : ast_context->GetClangArguments()) {
       extra_clang_args.push_back(arg);
-      LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES,
-                         "ProcessModule(\"%s\") adding Clang argument \"%s\".",
-                         module_file.GetFilename().AsCString(""), arg.c_str());
+      LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES, "adding Clang argument \"%s\".",
+                         arg.c_str());
     }
   }
 }
