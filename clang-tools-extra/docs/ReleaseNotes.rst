@@ -86,6 +86,8 @@ Improvements to clang-tidy
 - Eliminated false positives for `cppcoreguidelines-macro-usage` by restricting
   the warning about using constants to only macros that expand to literals.
 
+- Added support for external plugin checks with `-load`.
+
 New checks
 ^^^^^^^^^^
 

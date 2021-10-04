@@ -218,6 +218,15 @@ An overview of all the command-line options:
     --list-checks                  -
                                      List all enabled checks and exit. Use with
                                      -checks=* to list all available checks.
+    -load=<plugin>                 -
+                                     Load the dynamic object ``plugin``. This
+                                     object should register new static analyzer
+                                     or clang-tidy passes. Once loaded, the
+                                     object will add new command line options
+                                     to run various analyses. To see the new
+                                     complete list of passes, use the
+                                     :option:`--list-checks` and
+                                     :option:`-load` options together.
     -p=<string>                    - Build path
     --quiet                        -
                                      Run clang-tidy in quiet mode. This suppresses
