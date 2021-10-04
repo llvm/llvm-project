@@ -370,14 +370,6 @@ x86_64-apple-system)
                    -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
     check-runtimes
 ;;
-x86_64-apple-system-noexceptions)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
-    check-runtimes
-;;
 x86_64-apple-system-backdeployment-*)
     clean
 
