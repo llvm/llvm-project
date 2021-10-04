@@ -8,6 +8,14 @@ func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
 
 // -----
 
+func @invalid_release_dense(%arg0: tensor<4xi32>) {
+  // expected-error@+1 {{expected a sparse tensor to release}}
+  sparse_tensor.release %arg0 : tensor<4xi32>
+  return
+}
+
+// -----
+
 func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
   %c = constant 0 : index
   // expected-error@+1 {{expected a sparse tensor to get pointers}}

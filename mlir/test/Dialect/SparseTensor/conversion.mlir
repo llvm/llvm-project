@@ -112,6 +112,15 @@ func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor> {
   return %0 : tensor<?x?x?xf32, #SparseTensor>
 }
 
+// CHECK-LABEL: func @sparse_release(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//       CHECK: call @delSparseTensor(%[[A]]) : (!llvm.ptr<i8>) -> ()
+//       CHECK: return
+func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
+  sparse_tensor.release %arg0 : tensor<128xf64, #SparseVector>
+  return
+}
+
 // CHECK-LABEL: func @sparse_nop_convert(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //       CHECK: return %[[A]] : !llvm.ptr<i8>

@@ -245,7 +245,17 @@ module {
     call @dumpf64(%v2) : (memref<?xf64>) -> ()
     call @dumpf64(%v3) : (memref<?xf64>) -> ()
 
+    // Release the resources.
+    sparse_tensor.release %1 : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %2 : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %3 : tensor<2x3x4xf64, #Tensor3>
+    sparse_tensor.release %b : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %c : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %d : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %f : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %g : tensor<2x3x4xf64, #Tensor3>
+    sparse_tensor.release %h : tensor<2x3x4xf64, #Tensor3>
+
     return
   }
 }
-

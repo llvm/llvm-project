@@ -125,16 +125,14 @@ module {
     return %0 : tensor<i32>
   }
 
-  func @dump_i32(%arg0 : tensor<i32>) {
-    %m = memref.buffer_cast %arg0 : memref<i32>
-    %v = memref.load %m[] : memref<i32>
+  func @dump_i32(%arg0 : memref<i32>) {
+    %v = memref.load %arg0[] : memref<i32>
     vector.print %v : i32
     return
   }
 
-  func @dump_f32(%arg0 : tensor<f32>) {
-    %m = memref.buffer_cast %arg0 : memref<f32>
-    %v = memref.load %m[] : memref<f32>
+  func @dump_f32(%arg0 : memref<f32>) {
+    %v = memref.load %arg0[] : memref<f32>
     vector.print %v : f32
     return
   }
@@ -203,13 +201,33 @@ module {
     // CHECK: 15
     // CHECK: 10
     //
-    call @dump_i32(%0) : (tensor<i32>) -> ()
-    call @dump_f32(%1) : (tensor<f32>) -> ()
-    call @dump_i32(%2) : (tensor<i32>) -> ()
-    call @dump_f32(%3) : (tensor<f32>) -> ()
-    call @dump_i32(%4) : (tensor<i32>) -> ()
-    call @dump_i32(%5) : (tensor<i32>) -> ()
-    call @dump_i32(%6) : (tensor<i32>) -> ()
+    %m0 = memref.buffer_cast %0 : memref<i32>
+    call @dump_i32(%m0) : (memref<i32>) -> ()
+    %m1 = memref.buffer_cast %1 : memref<f32>
+    call @dump_f32(%m1) : (memref<f32>) -> ()
+    %m2 = memref.buffer_cast %2 : memref<i32>
+    call @dump_i32(%m2) : (memref<i32>) -> ()
+    %m3 = memref.buffer_cast %3 : memref<f32>
+    call @dump_f32(%m3) : (memref<f32>) -> ()
+    %m4 = memref.buffer_cast %4 : memref<i32>
+    call @dump_i32(%m4) : (memref<i32>) -> ()
+    %m5 = memref.buffer_cast %5 : memref<i32>
+    call @dump_i32(%m5) : (memref<i32>) -> ()
+    %m6 = memref.buffer_cast %6 : memref<i32>
+    call @dump_i32(%m6) : (memref<i32>) -> ()
+
+    // Release the resources.
+    sparse_tensor.release %sparse_input_i32 : tensor<32xi32, #SV>
+    sparse_tensor.release %sparse_input_f32 : tensor<32xf32, #SV>
+    sparse_tensor.release %dense_input_i32  : tensor<32xi32, #DV>
+    sparse_tensor.release %dense_input_f32  : tensor<32xf32, #DV>
+    memref.dealloc %m0 : memref<i32>
+    memref.dealloc %m1 : memref<f32>
+    memref.dealloc %m2 : memref<i32>
+    memref.dealloc %m3 : memref<f32>
+    memref.dealloc %m4 : memref<i32>
+    memref.dealloc %m5 : memref<i32>
+    memref.dealloc %m6 : memref<i32>
 
     return
   }

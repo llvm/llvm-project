@@ -95,6 +95,10 @@ module {
     %v = vector.load %m[%c0] : memref<?xf64>, vector<25xf64>
     vector.print %v : vector<25xf64>
 
+    // Release the resources.
+    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    sparse_tensor.release %x : tensor<?x?xf64, #DenseMatrix>
+
     return
   }
 }

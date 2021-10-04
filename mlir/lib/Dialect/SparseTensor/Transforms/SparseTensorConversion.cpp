@@ -99,8 +99,8 @@ static Value getTensor(ConversionPatternRewriter &rewriter, unsigned width,
 /// the "_emit_c_interface" on the function declaration when requested,
 /// so that LLVM lowering generates a wrapper function that takes care
 /// of ABI complications with passing in and returning MemRefs to C functions.
-static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type resultType,
-                                 ValueRange operands,
+static FlatSymbolRefAttr getFunc(Operation *op, StringRef name,
+                                 TypeRange resultType, ValueRange operands,
                                  bool emitCInterface = false) {
   MLIRContext *context = op->getContext();
   auto module = op->getParentOfType<ModuleOp>();
@@ -471,6 +471,23 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
   }
 };
 
+/// Sparse conversion rule for the release operator.
+class SparseTensorReleaseConverter : public OpConversionPattern<ReleaseOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ReleaseOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    StringRef name = "delSparseTensor";
+    TypeRange none;
+    rewriter.create<CallOp>(op.getLoc(), none,
+                            getFunc(op, name, none, adaptor.getOperands()),
+                            adaptor.getOperands());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Sparse conversion rule for pointer accesses.
 class SparseTensorToPointersConverter
     : public OpConversionPattern<ToPointersOp> {
@@ -483,7 +500,7 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex())
-      name = "sparsePointers";
+      name = "sparsePointers"; // 64-bit, but its own name for unique signature
     else if (eltType.isInteger(64))
       name = "sparsePointers64";
     else if (eltType.isInteger(32))
@@ -514,7 +531,7 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex())
-      name = "sparseIndices";
+      name = "sparseIndices"; // 64-bit, but its own name for unique signature
     else if (eltType.isInteger(64))
       name = "sparseIndices64";
     else if (eltType.isInteger(32))
@@ -609,7 +626,8 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                                                   RewritePatternSet &patterns) {
   patterns.add<SparseReturnConverter, SparseTensorToDimSizeConverter,
                SparseTensorNewConverter, SparseTensorConvertConverter,
-               SparseTensorToPointersConverter, SparseTensorToIndicesConverter,
-               SparseTensorToValuesConverter, SparseTensorToTensorConverter>(
-      typeConverter, patterns.getContext());
+               SparseTensorReleaseConverter, SparseTensorToPointersConverter,
+               SparseTensorToIndicesConverter, SparseTensorToValuesConverter,
+               SparseTensorToTensorConverter>(typeConverter,
+                                              patterns.getContext());
 }

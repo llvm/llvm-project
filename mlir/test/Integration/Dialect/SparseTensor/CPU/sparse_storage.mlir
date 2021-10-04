@@ -250,6 +250,15 @@ module {
     %50 = vector.transfer_read %49[%c0], %d0: memref<?xf64>, vector<70xf64>
     vector.print %50 : vector<70xf64>
 
+    // Release the resources.
+    sparse_tensor.release %0 : tensor<10x8xf64, #Dense>
+    sparse_tensor.release %1 : tensor<10x8xf64, #CSR>
+    sparse_tensor.release %2 : tensor<10x8xf64, #DCSR>
+    sparse_tensor.release %3 : tensor<10x8xf64, #CSC>
+    sparse_tensor.release %4 : tensor<10x8xf64, #DCSC>
+    sparse_tensor.release %x : tensor<10x8xf64, #BlockRow>
+    sparse_tensor.release %y : tensor<10x8xf64, #BlockCol>
+
     return
   }
 }
