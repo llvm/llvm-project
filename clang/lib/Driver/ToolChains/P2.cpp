@@ -71,6 +71,13 @@ void P2ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, sys_root + std::string("/libc/include"));
 }
 
+void P2ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            Action::OffloadKind) const {
+    CC1Args.push_back("-fno-rtti");
+    CC1Args.push_back("-fno-jump-tables");
+}
+
 std::string P2ToolChain::computeSysRoot() const {
     if (!getDriver().SysRoot.empty())
         return getDriver().SysRoot;

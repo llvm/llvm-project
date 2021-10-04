@@ -110,10 +110,14 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     LLVM_DEBUG(errs() << "masked value is: " << CurVal << "\n");
 
     // Write out the fixed up bytes back to the code/data bits.
-    for (unsigned i = 0; i != NumBytes; ++i) {
+    LLVM_DEBUG(errs() << "Fixing up " << NumBytes << " bytes\n");
+
+    for (unsigned i = 0; i < NumBytes; i++) {
         Data[Offset + i] = (uint8_t)((CurVal >> (i*8)) & 0xff);
-        LLVM_DEBUG(errs() << "set data offset by " << Offset + i << " to " << ((CurVal >> (i*8)) & 0xff) << "\n");
+        LLVM_DEBUG(errs() << "Byte " << i << ": set data offset by " << Offset + i << " to " << ((CurVal >> (i*8)) & 0xff) << "\n");
     }
+
+    LLVM_DEBUG(errs() << "-- done with fixup\n");
 }
 
 const MCFixupKindInfo &P2AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {

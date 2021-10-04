@@ -159,13 +159,6 @@ void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &Saved
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Determining callee saves\n");
 
-    // hack for now: if this is the __start, __entry, or main function, skip saving anything since we have no stack to save to,
-    // or in the case of main, there's no reason to save it since main should never return
-    // maybe we should instead make this a separate pass to just remove the prologue/epilogue for these functions
-    // auto fn_name = MF.getName();
-    // if (fn_name == "__start" || fn_name == "__entry" || fn_name == "main")
-    //     return;
-
     if (MF.getFunction().hasFnAttribute(Attribute::Cogmain)) {
         return;
     }
@@ -357,15 +350,31 @@ MachineBasicBlock::iterator P2FrameLowering::eliminateCallFramePseudoInstr(Machi
     LLVM_DEBUG(errs() << "=== eliminate call frame pseudo\n");
 
     if (!hasReservedCallFrame(MF)) {
-        int64_t Amount = I->getOperand(0).getImm();
 
-        if (I->getOpcode() == P2::ADJCALLSTACKDOWN)
-            Amount = -Amount;
+        int64_t adjust = I->getOperand(0).getImm();
 
-        if (Amount)
-            tm.getInstrInfo()->adjustStackPtr(P2::PTRA, Amount, MBB, I);
+
+        if (I->getOpcode() == P2::ADJCALLSTACKDOWN) {
+            adjust = -adjust;
+            I = MBB.erase(I);
+        } else {
+            I = MBB.erase(I); // first erase our psuedo instruction.
+
+            auto op = I->getOpcode();
+            while (op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
+                LLVM_DEBUG(errs() << "instruction to skip: \n");
+                LLVM_DEBUG(I->dump());
+                LLVM_DEBUG(errs() << "op code is " << op << "\n");
+                I++; // skip ahead to the call instruction.
+
+                op = I->getOpcode();
+            }
+        }
+
+        // adjust the stack pointer, if necessary
+        if (adjust)
+            tm.getInstrInfo()->adjustStackPtr(P2::PTRA, adjust, MBB, I);
     }
 
-
-    return MBB.erase(I);
+    return I;
 }

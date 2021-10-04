@@ -28,6 +28,9 @@ namespace clang {
         void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const override;
         std::string computeSysRoot() const override;
+        void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args,
+                             Action::OffloadKind) const override;
 
       protected:
         Tool *buildLinker() const override;

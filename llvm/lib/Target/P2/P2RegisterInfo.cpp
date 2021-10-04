@@ -91,13 +91,13 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
     int frame_idx = MI.getOperand(FIOperandNum).getIndex();
     uint64_t stack_size = MFI.getStackSize();
     int64_t fi_offset = MFI.getObjectOffset(frame_idx); // offset from the start of the frame (low address)
-    int local_frame_size = MF.getFrameInfo().getLocalFrameSize();
+    // int local_frame_size = MF.getFrameInfo().getLocalFrameSize();
     int64_t offset = stack_size-fi_offset;
 
     LLVM_DEBUG(errs() << "frame_idx : " << frame_idx << "\n"
                         << "stack size  : " << stack_size << "\n"
                         << "fi offset : " << fi_offset << "\n");
-    LLVM_DEBUG(dbgs() << "LocalFrameSize : " << local_frame_size << "\n");
+    // LLVM_DEBUG(dbgs() << "LocalFrameSize : " << local_frame_size << "\n");
 
     LLVM_DEBUG(errs() << "Offset     : " << offset << "\n" << "<--------->\n");
 

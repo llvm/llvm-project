@@ -218,7 +218,7 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     bool &isTailCall                      = CLI.IsTailCall;
 
     MachineFunction &MF = DAG.getMachineFunction();
-    //MachineFrameInfo *MFI = &MF.getFrameInfo();
+    // MachineFrameInfo *MFI = &MF.getFrameInfo();
     const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
     //P2FunctionInfo *FuncInfo = MF.getInfo<P2FunctionInfo>();
     //P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
@@ -245,6 +245,9 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Chain is the output chain of the last Load/Store or CopyToReg node.
     unsigned StackAlignment = TFL->getStackAlignment();
     NextStackOffset = alignTo(NextStackOffset, StackAlignment);
+
+    // // save the offset we will add to the local from size so that we properly offset the stack later
+    // MFI->setLocalFrameSize(NextStackOffset);
 
     // start the call sequence.
     Chain = DAG.getCALLSEQ_START(Chain, NextStackOffset, 0, DL);
@@ -290,18 +293,20 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             // Register can't get to this point...
             assert(VA.isMemLoc());
 
-            SDValue PtrOff;
-            //int off = NextStackOffset-(VA.getLocMemOffset());
-            int off = VA.getLocMemOffset()+4;
+            LLVM_DEBUG(errs() << "Stack argument offset is " << VA.getLocMemOffset() << "\n");
+            LLVM_DEBUG(errs() << "argument: ");
+            LLVM_DEBUG(Arg.dump());
+
+            SDValue mem_op;
+            ISD::ArgFlagsTy Flags = Outs[i].Flags;
+
+            int off = (NextStackOffset-VA.getLocMemOffset()-4);
             LLVM_DEBUG(errs() << "stack offset for argument: " << off << "\n");
             EVT vt = getPointerTy(DAG.getDataLayout());
             SDValue cond = DAG.getTargetConstant(P2::ALWAYS, DL, MVT::i32);
             SDValue eff = DAG.getTargetConstant(P2::NOEFF, DL, MVT::i32);
             SDValue ops[] = {StackPtr, DAG.getConstant(off, DL, MVT::i32, true), cond, eff};
-            PtrOff = SDValue(DAG.getMachineNode(P2::SUBri, DL, vt, ops), 0);
-
-            SDValue mem_op;
-            ISD::ArgFlagsTy Flags = Outs[i].Flags;
+            SDValue PtrOff = SDValue(DAG.getMachineNode(P2::ADDri, DL, vt, ops), 0);
 
             if (Flags.isByVal()) {
                 SDValue size_val = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
@@ -318,6 +323,8 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         }
     }
 
+    LLVM_DEBUG(errs() << "Finished processing arguments\n");
+
     // Transform all store nodes into one single node because all store
     // nodes are independent of each other.
     if (!MemOpChains.empty())
@@ -327,7 +334,7 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
     // node so that legalize doesn't hack it.
     bool GlobalOrExternal = false, InternalLinkage = false;
-    SDValue CalleeLo;
+    // SDValue CalleeLo;
 
     if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
         Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, getPointerTy(DAG.getDataLayout()), 0);
@@ -489,35 +496,48 @@ SDValue P2TargetLowering::LowerFormalArguments(SDValue Chain,
                 ArgValue = DAG.getNode(ISD::TRUNCATE, DL, ValVT, ArgValue);
             }
             InVals.push_back(ArgValue);
-        } else {
+        } else { // values stored on the stack
             // sanity check
             assert(VA.isMemLoc());
 
             SDValue ArgValue;
             ISD::ArgFlagsTy Flags = Ins[i].Flags;
 
+            last_formal_arg_offset = stack_size-VA.getLocMemOffset()-4;
+
             if (Flags.isByVal()) {
-                fi = MFI->CreateFixedObject(Flags.getByValSize(), VA.getLocMemOffset(), true);
+                LLVM_DEBUG(errs() << "byval mem offset: " << VA.getLocMemOffset() << "\n");
+
+                auto byval_size = Flags.getByValSize();
+                // SDValue size_val = DAG.getConstant(byval_size, DL, MVT::i32);
+
+                int fi = MFI->CreateFixedObject(byval_size, last_formal_arg_offset, true);
                 ArgValue = DAG.getFrameIndex(fi, getPointerTy(DAG.getDataLayout()));
+
+                // int dest_fi = MFI->CreateStackObject(byval_size, Flags.getNonZeroByValAlign(), false);
+                // SDValue dest_fin = DAG.getFrameIndex(dest_fi, getPointerTy(DAG.getDataLayout()));
+
+                // ArgValue = DAG.getMemcpy(Chain, DL, dest_fin, fin, size_val, Flags.getNonZeroByValAlign(), false, false, false, MachinePointerInfo(), MachinePointerInfo());
+                OutChains.push_back(ArgValue.getValue(0));
             } else {
                 // Load the argument to a virtual register
-                unsigned ObjSize = VA.getLocVT().getStoreSize();
-                assert((ObjSize <= 4) && "Unhandled argument--object size > stack slot size (4 bytes)");
+                auto obj_size = VA.getLocVT().getStoreSize();
+                assert((obj_size <= 4) && "Unhandled argument--object size > stack slot size (4 bytes) for non-byval argument");
                 LLVM_DEBUG(errs() << " - location offset: " << VA.getLocMemOffset() << "\n");
 
                 // Create the frame index object for this incoming parameter
-                last_formal_arg_offset = stack_size-VA.getLocMemOffset()-4;
-                fi = MFI->CreateFixedObject(ObjSize, last_formal_arg_offset, true);
+                fi = MFI->CreateFixedObject(obj_size, last_formal_arg_offset, true);
 
                 LLVM_DEBUG(errs() << " - Loading argument from index " << fi << "\n");
 
                 // Create the SelectionDAG nodes corresponding to a load from this parameter
                 SDValue FIN = DAG.getFrameIndex(fi, MVT::i32);
                 ArgValue = DAG.getLoad(VA.getLocVT(), DL, Chain, FIN, MachinePointerInfo::getFixedStack(MF, fi));
+                OutChains.push_back(ArgValue.getValue(1));
             }
-
+            
+            LLVM_DEBUG(ArgValue.dump());
             InVals.push_back(ArgValue);
-            OutChains.push_back(ArgValue.getValue(1));
         }
     }
 

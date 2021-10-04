@@ -438,7 +438,6 @@ class P2InstN<bits<5> op, dag outs, dag inputs, string asmstr> :
     let Inst{22-0} = n;
 }
 
-// 7 bit opcode, CZI flags, and two 9-bit operands (D/S). S can be immediate
 class P2InstNOP : P2Inst<0, (outs), (ins), "nop"> {
     let Inst{31-0} = 0b00000000000000000000000000000000;
 }
