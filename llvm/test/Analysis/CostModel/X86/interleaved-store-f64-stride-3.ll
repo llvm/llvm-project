@@ -26,7 +26,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store double %v2, double* %out2, align 8
 ; AVX2: LV: Found an estimated cost of 6 for VF 2 For instruction:   store double %v2, double* %out2, align 8
 ; AVX2: LV: Found an estimated cost of 9 for VF 4 For instruction:   store double %v2, double* %out2, align 8
-; AVX2: LV: Found an estimated cost of 54 for VF 8 For instruction:   store double %v2, double* %out2, align 8
+; AVX2: LV: Found an estimated cost of 18 for VF 8 For instruction:   store double %v2, double* %out2, align 8
 ; AVX2: LV: Found an estimated cost of 108 for VF 16 For instruction:   store double %v2, double* %out2, align 8
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   store double %v2, double* %out2, align 8
