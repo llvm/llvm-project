@@ -156,6 +156,13 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   if (thread_type != ThreadType::Fiber)
     GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
                          &tls_size);
+
+  if (tid != kMainTid) {
+    if (stk_addr && stk_size)
+      MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
+
+    if (tls_addr && tls_size) ImitateTlsWrite(thr, tls_addr, tls_size);
+  }
 #endif
 
   ThreadRegistry *tr = &ctx->thread_registry;
@@ -169,16 +176,6 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
     thr->ignore_interceptors++;
     ThreadIgnoreBegin(thr, 0);
     ThreadIgnoreSyncBegin(thr, 0);
-  }
-#endif
-
-#if !SANITIZER_GO
-  if (tid != kMainTid) {
-    if (stk_addr && stk_size)
-      MemoryRangeImitateWrite(thr, /*pc=*/1, stk_addr, stk_size);
-
-    if (tls_addr && tls_size)
-      ImitateTlsWrite(thr, tls_addr, tls_size);
   }
 #endif
 }
