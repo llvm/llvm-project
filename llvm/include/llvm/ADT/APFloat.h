@@ -961,9 +961,7 @@ public:
   /// Returns a float which is bitcasted from an all one value int.
   ///
   /// \param Semantics - type float semantics
-  /// \param BitWidth - Select float type
-  static APFloat getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth);
+  static APFloat getAllOnesValue(const fltSemantics &Semantics);
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.
