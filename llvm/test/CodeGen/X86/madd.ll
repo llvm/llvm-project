@@ -2060,8 +2060,7 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[1,3]

@@ -39641,6 +39641,26 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero | RHSZero;
     break;
   }
+  case X86ISD::VPMADDWD: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, 2 * NumElts);
+
+    APInt DemandedRHSElts = DemandedSrcElts;
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHSElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
+    // If RHS elements are known zero then we don't need the LHS equivalent.
+    APInt DemandedLHSElts = DemandedSrcElts & ~RHSZero;
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHSElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    // TODO: Multiply by zero.
+    break;
+  }
   case X86ISD::PSADBW: {
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
