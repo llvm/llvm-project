@@ -241,6 +241,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
   case spirv::Decoration::Restrict:
+  case spirv::Decoration::RelaxedPrecision:
     // For unit attributes, the args list has no values so we do nothing
     if (auto unitAttr = attr.second.dyn_cast<UnitAttr>())
       break;

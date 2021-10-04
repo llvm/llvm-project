@@ -733,17 +733,22 @@ public:
     // required by SPIR-V runner.
     // This is okay because multiple invocations are not supported yet.
     auto storageClass = srcType.getStorageClass();
-    if (storageClass != spirv::StorageClass::Input &&
-        storageClass != spirv::StorageClass::Private &&
-        storageClass != spirv::StorageClass::Output &&
-        storageClass != spirv::StorageClass::StorageBuffer) {
+    switch (storageClass) {
+    case spirv::StorageClass::Input:
+    case spirv::StorageClass::Private:
+    case spirv::StorageClass::Output:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::UniformConstant:
+      break;
+    default:
       return failure();
     }
 
     // LLVM dialect spec: "If the global value is a constant, storing into it is
-    // not allowed.". This corresponds to SPIR-V 'Input' storage class that is
-    // read-only.
-    bool isConstant = storageClass == spirv::StorageClass::Input;
+    // not allowed.". This corresponds to SPIR-V 'Input' and 'UniformConstant'
+    // storage class that is read-only.
+    bool isConstant = (storageClass == spirv::StorageClass::Input) ||
+                      (storageClass == spirv::StorageClass::UniformConstant);
     // SPIR-V spec: "By default, functions and global variables are private to a
     // module and cannot be accessed by other modules. However, a module may be
     // written to export or import functions and global (module scope)
@@ -752,9 +757,14 @@ public:
     auto linkage = storageClass == spirv::StorageClass::Private
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
-    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+    auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.sym_name(), Attribute(),
         /*alignment=*/0);
+
+    // Attach location attribute if applicable
+    if (op.locationAttr())
+      newGlobalOp->setAttr(op.locationAttrName(), op.locationAttr());
+
     return success();
   }
 };
