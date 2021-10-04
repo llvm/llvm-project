@@ -1920,10 +1920,10 @@ private:
   /// would trigger undefined behavior on overflow.
   SCEV::NoWrapFlags getNoWrapFlagsFromUB(const Value *V);
 
-  /// If S trivially defines a scope (without needing to recurse through
-  /// operands), return the first instruction in it.  Else, return nullptr.
+  /// Return a scope which provides an upper bound on the defining scope of
+  /// 'S'.  Specifically, return the first instruction in said bounding scope.
   /// (See scope definition rules associated with flag discussion above)
-  const Instruction *getDefinedScopeRoot(const SCEV *S);
+  const Instruction *getDefiningScopeBound(const SCEV *S);
 
   /// Given two instructions in the same function, return true if we can
   /// prove B must execute given A executes.
