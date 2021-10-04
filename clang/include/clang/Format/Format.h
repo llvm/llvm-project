@@ -1898,7 +1898,11 @@ struct FormatStyle {
 
   /// Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
   /// \warning
-  ///  ``QualifierAlignment`` COULD lead to incorrect code generation.
+  ///  Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+  ///  lead to incorrect code formatting due to incorrect decisions made due to
+  ///  clang-formats lack of complete semantic information.
+  ///  As such extra care should be taken to review code changes made by the use
+  ///  of this option.
   /// \endwarning
   /// \version 14
   QualifierAlignmentStyle QualifierAlignment;

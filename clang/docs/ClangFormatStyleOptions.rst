@@ -3238,7 +3238,11 @@ the configuration (without a prefix: ``Auto``).
 
   .. warning:: 
 
-   ``QualifierAlignment`` COULD lead to incorrect code generation.
+   Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+   lead to incorrect code formatting due to incorrect decisions made due to
+   clang-formats lack of complete semantic information.
+   As such extra care should be taken to review code changes made by the use
+   of this option.
 
   Possible values:
 
