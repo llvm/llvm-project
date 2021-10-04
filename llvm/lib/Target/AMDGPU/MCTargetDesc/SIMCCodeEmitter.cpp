@@ -233,6 +233,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   switch (OpInfo.OperandType) {
   case AMDGPU::OPERAND_REG_IMM_INT32:
   case AMDGPU::OPERAND_REG_IMM_FP32:
+  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
@@ -255,6 +256,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     // FIXME Is this correct? What do inline immediates do on SI for f16 src
@@ -277,6 +279,9 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     uint32_t Encoding = getLit16Encoding(Lo16, STI);
     return Encoding;
   }
+  case AMDGPU::OPERAND_KIMM32:
+  case AMDGPU::OPERAND_KIMM16:
+    return MO.getImm();
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -341,7 +346,13 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       (bytes > 4 && !STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal]))
     return;
 
-  // Check for additional literals in SRC0/1/2 (Op 1/2/3)
+  // Do not print literals from SISrc Operands for insts with mandatory literals
+  int ImmLitIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
+  if (ImmLitIdx != -1)
+    return;
+
+  // Check for additional literals
   for (unsigned i = 0, e = Desc.getNumOperands(); i < e; ++i) {
 
     // Check if this operand should be encoded as [SV]Src
