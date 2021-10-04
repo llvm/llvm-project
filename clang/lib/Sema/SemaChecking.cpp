@@ -3314,7 +3314,7 @@ bool Sema::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
       unsigned M = 1 << A.Align;
       Min *= M;
       Max *= M;
-      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max) |
+      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max) ||
                SemaBuiltinConstantArgMultiple(TheCall, A.OpNum, M);
     }
   }
