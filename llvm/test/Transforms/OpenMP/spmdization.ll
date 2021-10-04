@@ -199,13 +199,11 @@ define weak void @__omp_offloading_14_a34ca11_sequential_loop_l5() #0 {
 ; AMDGPU-DISABLED:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq void (i16, i32)* [[WORKER_WORK_FN_ADDR_CAST]], bitcast (i8* @__omp_outlined__1_wrapper.ID to void (i16, i32)*)
-; AMDGPU-DISABLED-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -247,13 +245,11 @@ define weak void @__omp_offloading_14_a34ca11_sequential_loop_l5() #0 {
 ; NVPTX-DISABLED:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq void (i16, i32)* [[WORKER_WORK_FN_ADDR_CAST]], bitcast (i8* @__omp_outlined__1_wrapper.ID to void (i16, i32)*)
-; NVPTX-DISABLED-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -322,7 +318,7 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; AMDGPU-NEXT:    store i32 [[INC]], i32* [[I]], align 4
 ; AMDGPU-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 ; AMDGPU:       for.end:
-; AMDGPU-NEXT:    call void @spmd_amenable() #[[ATTR7:[0-9]+]]
+; AMDGPU-NEXT:    call void @indirection() #[[ATTR7:[0-9]+]]
 ; AMDGPU-NEXT:    ret void
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__
@@ -350,7 +346,7 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; NVPTX-NEXT:    store i32 [[INC]], i32* [[I]], align 4
 ; NVPTX-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 ; NVPTX:       for.end:
-; NVPTX-NEXT:    call void @spmd_amenable() #[[ATTR7:[0-9]+]]
+; NVPTX-NEXT:    call void @indirection() #[[ATTR7:[0-9]+]]
 ; NVPTX-NEXT:    ret void
 ;
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__
@@ -378,7 +374,7 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; AMDGPU-DISABLED-NEXT:    store i32 [[INC]], i32* [[I]], align 4
 ; AMDGPU-DISABLED-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 ; AMDGPU-DISABLED:       for.end:
-; AMDGPU-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR7:[0-9]+]]
+; AMDGPU-DISABLED-NEXT:    call void @indirection() #[[ATTR7:[0-9]+]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__
@@ -406,7 +402,7 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; NVPTX-DISABLED-NEXT:    store i32 [[INC]], i32* [[I]], align 4
 ; NVPTX-DISABLED-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 ; NVPTX-DISABLED:       for.end:
-; NVPTX-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR7:[0-9]+]]
+; NVPTX-DISABLED-NEXT:    call void @indirection() #[[ATTR7:[0-9]+]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -438,7 +434,32 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond, !llvm.loop !13
 
 for.end:                                          ; preds = %for.cond
-  call void @spmd_amenable() #4
+  call void @indirection() #4
+  ret void
+}
+
+define internal void @indirection() {
+; AMDGPU-LABEL: define {{[^@]+}}@indirection
+; AMDGPU-SAME: () #[[ATTR1:[0-9]+]] {
+; AMDGPU-NEXT:    call void @spmd_amenable() #[[ATTR1]]
+; AMDGPU-NEXT:    ret void
+;
+; NVPTX-LABEL: define {{[^@]+}}@indirection
+; NVPTX-SAME: () #[[ATTR1:[0-9]+]] {
+; NVPTX-NEXT:    call void @spmd_amenable() #[[ATTR1]]
+; NVPTX-NEXT:    ret void
+;
+; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@indirection
+; AMDGPU-DISABLED-SAME: () #[[ATTR1:[0-9]+]] {
+; AMDGPU-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR1]]
+; AMDGPU-DISABLED-NEXT:    ret void
+;
+; NVPTX-DISABLED-LABEL: define {{[^@]+}}@indirection
+; NVPTX-DISABLED-SAME: () #[[ATTR1:[0-9]+]] {
+; NVPTX-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR1]]
+; NVPTX-DISABLED-NEXT:    ret void
+;
+  call void @spmd_amenable()
   ret void
 }
 
@@ -564,7 +585,7 @@ declare void @__kmpc_get_shared_variables(i8***)
 
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)
 
-declare void @spmd_amenable() #2
+declare void @spmd_amenable()
 
 declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #3
 
@@ -887,7 +908,7 @@ for.end:                                          ; preds = %for.cond
 
 declare i8* @__kmpc_alloc_shared(i64) #3
 
-declare void @use(i32* nocapture) #2
+declare void @use(i32* nocapture)
 
 define internal void @__omp_outlined__3(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
 ;
@@ -2257,9 +2278,9 @@ attributes #5 = { convergent }
 !17 = distinct !{!17, !14}
 ;.
 ; AMDGPU: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; AMDGPU: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; AMDGPU: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
-; AMDGPU: attributes #[[ATTR3:[0-9]+]] = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; AMDGPU: attributes #[[ATTR1]] = { "llvm.assume"="ompx_spmd_amenable" }
+; AMDGPU: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; AMDGPU: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
 ; AMDGPU: attributes #[[ATTR4]] = { nounwind }
 ; AMDGPU: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
 ; AMDGPU: attributes #[[ATTR6:[0-9]+]] = { convergent nounwind }
@@ -2267,9 +2288,9 @@ attributes #5 = { convergent }
 ; AMDGPU: attributes #[[ATTR8]] = { convergent }
 ;.
 ; NVPTX: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; NVPTX: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; NVPTX: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
-; NVPTX: attributes #[[ATTR3:[0-9]+]] = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; NVPTX: attributes #[[ATTR1]] = { "llvm.assume"="ompx_spmd_amenable" }
+; NVPTX: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; NVPTX: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
 ; NVPTX: attributes #[[ATTR4]] = { nounwind }
 ; NVPTX: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
 ; NVPTX: attributes #[[ATTR6:[0-9]+]] = { convergent nounwind }
@@ -2277,9 +2298,9 @@ attributes #5 = { convergent }
 ; NVPTX: attributes #[[ATTR8]] = { convergent }
 ;.
 ; AMDGPU-DISABLED: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; AMDGPU-DISABLED: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; AMDGPU-DISABLED: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
-; AMDGPU-DISABLED: attributes #[[ATTR3:[0-9]+]] = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; AMDGPU-DISABLED: attributes #[[ATTR1]] = { "llvm.assume"="ompx_spmd_amenable" }
+; AMDGPU-DISABLED: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; AMDGPU-DISABLED: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
 ; AMDGPU-DISABLED: attributes #[[ATTR4]] = { nounwind }
 ; AMDGPU-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
 ; AMDGPU-DISABLED: attributes #[[ATTR6:[0-9]+]] = { convergent nounwind }
@@ -2287,9 +2308,9 @@ attributes #5 = { convergent }
 ; AMDGPU-DISABLED: attributes #[[ATTR8]] = { convergent }
 ;.
 ; NVPTX-DISABLED: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; NVPTX-DISABLED: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
-; NVPTX-DISABLED: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
-; NVPTX-DISABLED: attributes #[[ATTR3:[0-9]+]] = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; NVPTX-DISABLED: attributes #[[ATTR1]] = { "llvm.assume"="ompx_spmd_amenable" }
+; NVPTX-DISABLED: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; NVPTX-DISABLED: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
 ; NVPTX-DISABLED: attributes #[[ATTR4]] = { nounwind }
 ; NVPTX-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
 ; NVPTX-DISABLED: attributes #[[ATTR6:[0-9]+]] = { convergent nounwind }
