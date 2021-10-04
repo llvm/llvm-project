@@ -5112,6 +5112,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {3, MVT::v16i32, 14}, // (load 48i32 and) deinterleave into 3 x 16i32
 
       {3, MVT::v2i64, 1},  // (load 6i64 and) deinterleave into 3 x 2i64
+      {3, MVT::v4i64, 5},  // (load 12i64 and) deinterleave into 3 x 4i64
 
       {4, MVT::v2i8, 4},  // (load 8i8 and) deinterleave into 4 x 2i8
       {4, MVT::v4i8, 4},   // (load 16i8 and) deinterleave into 4 x 4i8
@@ -5181,6 +5182,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {3, MVT::v16i32, 22},   // interleave 3 x 16i32 into 48i32 (and store)
 
       {3, MVT::v2i64, 4},   // interleave 3 x 2i64 into 6i64 (and store)
+      {3, MVT::v4i64, 6},   // interleave 3 x 4i64 into 12i64 (and store)
 
       {4, MVT::v2i8, 4},  // interleave 4 x 2i8 into 8i8 (and store)
       {4, MVT::v4i8, 4},   // interleave 4 x 4i8 into 16i8 (and store)
