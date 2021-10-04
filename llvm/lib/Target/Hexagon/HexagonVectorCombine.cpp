@@ -1348,7 +1348,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   KnownBits Known0 = computeKnownBits(Idx0, DL, 0, &AC, Gep0, &DT);
   KnownBits Known1 = computeKnownBits(Idx1, DL, 0, &AC, Gep1, &DT);
   APInt Unknown = ~(Known0.Zero | Known0.One) | ~(Known1.Zero | Known1.One);
-  if (Unknown.isAllOnesValue())
+  if (Unknown.isAllOnes())
     return None;
 
   Value *MaskU = ConstantInt::get(Idx0->getType(), Unknown);

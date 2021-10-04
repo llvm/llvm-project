@@ -2768,14 +2768,14 @@ bool CombinerHelper::matchRedundantOr(MachineInstr &MI, Register &Replacement) {
   //
   // Check if we can replace OrDst with the LHS of the G_OR
   if (canReplaceReg(OrDst, LHS, MRI) &&
-      (LHSBits.One | RHSBits.Zero).isAllOnesValue()) {
+      (LHSBits.One | RHSBits.Zero).isAllOnes()) {
     Replacement = LHS;
     return true;
   }
 
   // Check if we can replace OrDst with the RHS of the G_OR
   if (canReplaceReg(OrDst, RHS, MRI) &&
-      (LHSBits.Zero | RHSBits.One).isAllOnesValue()) {
+      (LHSBits.Zero | RHSBits.One).isAllOnes()) {
     Replacement = RHS;
     return true;
   }

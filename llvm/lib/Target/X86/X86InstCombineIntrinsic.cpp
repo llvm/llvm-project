@@ -239,7 +239,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     KnownBits KnownUpperBits = llvm::computeKnownBits(
         Amt, DemandedUpper, II.getModule()->getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
-        (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
+        (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
       Amt = Builder.CreateShuffleVector(Amt, ZeroSplat);
       return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
@@ -269,7 +269,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   }
 
   // If shift-by-zero then just return the original value.
-  if (Count.isNullValue())
+  if (Count.isZero())
     return Vec;
 
   // Handle cases when Shift >= BitWidth.
@@ -1764,7 +1764,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     // we know that DemandedMask is non-zero already.
     APInt DemandedElts = DemandedMask.zextOrTrunc(ArgWidth);
     Type *VTy = II.getType();
-    if (DemandedElts.isNullValue()) {
+    if (DemandedElts.isZero()) {
       return ConstantInt::getNullValue(VTy);
     }
 
