@@ -24,14 +24,14 @@ define i16 @test_int() {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[I]], 3
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY]], label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    [[CALL_LCSSA1:%.*]] = phi i16 [ [[CALL]], [[COND_END]] ]
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i16 [ [[I]], [[COND_END]] ]
+; CHECK-NEXT:    [[CALL_LCSSA_LCSSA:%.*]] = phi i16 [ [[CALL]], [[COND_END]] ]
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i16 [ [[ADD]], [[COND_END]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i16 [[I_LCSSA]], 11
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_SPLIT_PREHEADER:%.*]], label [[END:%.*]]
 ; CHECK:       for.body.split.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_SPLIT:%.*]]
 ; CHECK:       for.body.split:
-; CHECK-NEXT:    [[I_SPLIT:%.*]] = phi i16 [ [[ADD_SPLIT:%.*]], [[COND_END_SPLIT:%.*]] ], [ 0, [[FOR_BODY_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[I_SPLIT:%.*]] = phi i16 [ [[ADD_SPLIT:%.*]], [[COND_END_SPLIT:%.*]] ], [ [[I_LCSSA]], [[FOR_BODY_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[CMP1_SPLIT:%.*]] = icmp ult i16 [[I_SPLIT]], 3
 ; CHECK-NEXT:    br i1 false, label [[COND_TRUE_SPLIT:%.*]], label [[COND_FALSE_SPLIT:%.*]]
 ; CHECK:       cond.false.split:
@@ -47,7 +47,7 @@ define i16 @test_int() {
 ; CHECK-NEXT:    [[CALL_LCSSA_PH:%.*]] = phi i16 [ [[CALL_SPLIT]], [[COND_END_SPLIT]] ]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi i16 [ [[CALL_LCSSA1]], [[ENTRY_SPLIT_SPLIT]] ], [ [[CALL_LCSSA_PH]], [[END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi i16 [ [[CALL_LCSSA_LCSSA]], [[ENTRY_SPLIT_SPLIT]] ], [ [[CALL_LCSSA_PH]], [[END_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i16 [[CALL_LCSSA]]
 ;
 entry:
