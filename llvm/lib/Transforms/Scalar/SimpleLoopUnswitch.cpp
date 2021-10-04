@@ -2370,7 +2370,9 @@ static void unswitchNontrivialInvariants(
     ConstantInt *ContinueReplacement =
         Direction ? ConstantInt::getFalse(BI->getContext())
                   : ConstantInt::getTrue(BI->getContext());
-    for (Value *Invariant : Invariants)
+    for (Value *Invariant : Invariants) {
+      assert(!isa<Constant>(Invariant) &&
+             "Should not be replacing constant values!");
       // Use make_early_inc_range here as set invalidates the iterator.
       for (Use &U : llvm::make_early_inc_range(Invariant->uses())) {
         Instruction *UserI = dyn_cast<Instruction>(U.getUser());
@@ -2385,6 +2387,7 @@ static void unswitchNontrivialInvariants(
                  DT.dominates(ClonedPH, UserI->getParent()))
           U.set(UnswitchedReplacement);
       }
+    }
   }
 
   // We can change which blocks are exit blocks of all the cloned sibling
@@ -2726,6 +2729,9 @@ static bool unswitchBestCondition(
     while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
       Cond = CondNext;
     BI->setCondition(Cond);
+
+    if (isa<Constant>(Cond))
+      continue;
 
     if (L.isLoopInvariant(BI->getCondition())) {
       UnswitchCandidates.push_back({BI, {BI->getCondition()}});
