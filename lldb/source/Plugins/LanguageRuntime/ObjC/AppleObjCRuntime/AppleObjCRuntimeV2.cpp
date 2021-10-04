@@ -292,6 +292,7 @@ struct objc_clsopt_v16_t {
    uint32_t occupied;
    uint32_t shift;
    uint32_t mask;
+   uint32_t zero;
    uint64_t salt;
    uint32_t scramble[256];
    uint8_t  tab[0]; // tab[mask+1]
