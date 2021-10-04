@@ -4864,9 +4864,8 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
   llvm_unreachable("Unexpected semantics");
 }
 
-APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth) {
-  return APFloat(Semantics, APInt::getAllOnes(BitWidth));
+APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
+  return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
 }
 
 void APFloat::print(raw_ostream &OS) const {
