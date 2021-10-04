@@ -3498,11 +3498,11 @@ foreach lmul = MxList.m in {
     defvar vreg = SegRegClass<lmul, nf>.RC;
     let hasSideEffects = 0, mayLoad = 0, mayStore = 1, isCodeGenOnly = 1 in {
       def "PseudoVSPILL" # nf # "_" # lmul.MX :
-        Pseudo<(outs GPR:$addrinc), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
     }
     let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 1 in {
       def "PseudoVRELOAD" # nf # "_" # lmul.MX :
-        Pseudo<(outs vreg:$rs1, GPR:$addrinc), (ins GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs vreg:$rs1), (ins GPR:$rs2, GPR:$vlenb), []>;
     }
   }
 }
