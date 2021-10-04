@@ -592,3 +592,17 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
   fir.array_merge_store %av2, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   return
 }
+
+// -----
+
+func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
+  %i10 = constant 10 : index
+  %j20 = constant 20 : index
+  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
+  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  // expected-error@+1 {{'fir.array_modify' op number of indices must match array dimension}}
+  %addr, %av2 = fir.array_modify %av1, %i10 : (!fir.array<?x?xf32>, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
+  fir.store %f to %addr : !fir.ref<f32>
+  fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  return
+}

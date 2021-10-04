@@ -636,6 +636,16 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
   %av2 = fir.array_update %av1, %f, %i10, %j20 : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
   fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
 
+  // CHECK: [[AV3:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  // CHECK: [[FVAL2:%.*]] = fir.array_fetch [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
+  // CHECK: [[AV4:%.*]]:2 = fir.array_modify [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
+  // CHECK: fir.store [[FVAL2]] to [[AV4]]#0 : !fir.ref<f32>
+  // CHECK: fir.array_merge_store [[AV3]], [[AV4]]#1 to [[ARR1]] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  %av3 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  %f2 = fir.array_fetch %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
+  %addr, %av4 = fir.array_modify %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
+  fir.store %f2 to %addr : !fir.ref<f32>
+  fir.array_merge_store %av3, %av4 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   return
 }
 
