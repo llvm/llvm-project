@@ -97,99 +97,80 @@ else:
 define i32 @icmp64_sgt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-LABEL: icmp64_sgt_m1:
 ; CHECKV6M:       @ %bb.0:
-; CHECKV6M-NEXT:    .save {r4, r5, r6, lr}
-; CHECKV6M-NEXT:    push {r4, r5, r6, lr}
-; CHECKV6M-NEXT:    mov r4, r0
-; CHECKV6M-NEXT:    movs r0, #0
-; CHECKV6M-NEXT:    mvns r6, r0
-; CHECKV6M-NEXT:    ldr r0, [sp, #24]
+; CHECKV6M-NEXT:    ldr r0, [sp, #8]
 ; CHECKV6M-NEXT:    lsls r0, r0, #31
-; CHECKV6M-NEXT:    ldr r5, [sp, #20]
-; CHECKV6M-NEXT:    ldr r0, [sp, #16]
-; CHECKV6M-NEXT:    beq .LBB1_6
+; CHECKV6M-NEXT:    ldr r2, [sp, #4]
+; CHECKV6M-NEXT:    ldr r0, [sp]
+; CHECKV6M-NEXT:    beq .LBB1_4
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
-; CHECKV6M-NEXT:    subs r2, r6, r2
-; CHECKV6M-NEXT:    mov r2, r6
-; CHECKV6M-NEXT:    sbcs r2, r3
-; CHECKV6M-NEXT:    mov r2, r0
-; CHECKV6M-NEXT:    blt .LBB1_3
+; CHECKV6M-NEXT:    cmp r3, #0
+; CHECKV6M-NEXT:    mov r3, r0
+; CHECKV6M-NEXT:    blt .LBB1_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
-; CHECKV6M-NEXT:    mov r2, r5
-; CHECKV6M-NEXT:  .LBB1_3: @ %then
-; CHECKV6M-NEXT:    subs r3, r6, r4
-; CHECKV6M-NEXT:    sbcs r6, r1
-; CHECKV6M-NEXT:    blt .LBB1_5
-; CHECKV6M-NEXT:  @ %bb.4: @ %then
-; CHECKV6M-NEXT:    mov r0, r5
-; CHECKV6M-NEXT:  .LBB1_5: @ %then
-; CHECKV6M-NEXT:    adds r0, r0, r2
-; CHECKV6M-NEXT:    pop {r4, r5, r6, pc}
-; CHECKV6M-NEXT:  .LBB1_6: @ %else
-; CHECKV6M-NEXT:    subs r1, r6, r2
-; CHECKV6M-NEXT:    sbcs r6, r3
+; CHECKV6M-NEXT:    cmp r1, #0
 ; CHECKV6M-NEXT:    blt .LBB1_8
-; CHECKV6M-NEXT:  @ %bb.7: @ %else
-; CHECKV6M-NEXT:    mov r0, r5
-; CHECKV6M-NEXT:  .LBB1_8: @ %else
-; CHECKV6M-NEXT:    pop {r4, r5, r6, pc}
+; CHECKV6M-NEXT:  .LBB1_3: @ %then
+; CHECKV6M-NEXT:    adds r0, r0, r3
+; CHECKV6M-NEXT:    bx lr
+; CHECKV6M-NEXT:  .LBB1_4: @ %else
+; CHECKV6M-NEXT:    cmp r3, #0
+; CHECKV6M-NEXT:    bge .LBB1_6
+; CHECKV6M-NEXT:  @ %bb.5: @ %else
+; CHECKV6M-NEXT:    mov r0, r2
+; CHECKV6M-NEXT:  .LBB1_6: @ %else
+; CHECKV6M-NEXT:    bx lr
+; CHECKV6M-NEXT:  .LBB1_7: @ %then
+; CHECKV6M-NEXT:    mov r3, r2
+; CHECKV6M-NEXT:    cmp r1, #0
+; CHECKV6M-NEXT:    bge .LBB1_3
+; CHECKV6M-NEXT:  .LBB1_8: @ %then
+; CHECKV6M-NEXT:    mov r0, r2
+; CHECKV6M-NEXT:    adds r0, r0, r3
+; CHECKV6M-NEXT:    bx lr
 ;
 ; CHECKV7M-LABEL: icmp64_sgt_m1:
 ; CHECKV7M:       @ %bb.0:
-; CHECKV7M-NEXT:    .save {r4, lr}
-; CHECKV7M-NEXT:    push {r4, lr}
-; CHECKV7M-NEXT:    mov r12, r0
-; CHECKV7M-NEXT:    ldr r0, [sp, #16]
-; CHECKV7M-NEXT:    mov.w r4, #-1
+; CHECKV7M-NEXT:    ldr r0, [sp, #8]
 ; CHECKV7M-NEXT:    lsls r0, r0, #31
-; CHECKV7M-NEXT:    ldrd lr, r0, [sp, #8]
+; CHECKV7M-NEXT:    ldrd r2, r0, [sp]
 ; CHECKV7M-NEXT:    beq .LBB1_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    subs r2, r4, r2
-; CHECKV7M-NEXT:    sbcs.w r2, r4, r3
-; CHECKV7M-NEXT:    mov r2, r0
-; CHECKV7M-NEXT:    it lt
-; CHECKV7M-NEXT:    movlt r2, lr
-; CHECKV7M-NEXT:    subs.w r3, r4, r12
-; CHECKV7M-NEXT:    sbcs.w r1, r4, r1
-; CHECKV7M-NEXT:    it lt
-; CHECKV7M-NEXT:    movlt r0, lr
-; CHECKV7M-NEXT:    add r0, r2
-; CHECKV7M-NEXT:    pop {r4, pc}
+; CHECKV7M-NEXT:    cmp.w r3, #-1
+; CHECKV7M-NEXT:    mov r3, r0
+; CHECKV7M-NEXT:    it gt
+; CHECKV7M-NEXT:    movgt r3, r2
+; CHECKV7M-NEXT:    cmp.w r1, #-1
+; CHECKV7M-NEXT:    it gt
+; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    add r0, r3
+; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB1_2: @ %else
-; CHECKV7M-NEXT:    subs r1, r4, r2
-; CHECKV7M-NEXT:    sbcs.w r1, r4, r3
-; CHECKV7M-NEXT:    it lt
-; CHECKV7M-NEXT:    movlt r0, lr
-; CHECKV7M-NEXT:    pop {r4, pc}
+; CHECKV7M-NEXT:    cmp.w r3, #-1
+; CHECKV7M-NEXT:    it gt
+; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    bx lr
 ;
 ; CHECKV7A-LABEL: icmp64_sgt_m1:
 ; CHECKV7A:       @ %bb.0:
-; CHECKV7A-NEXT:    .save {r4, lr}
-; CHECKV7A-NEXT:    push {r4, lr}
-; CHECKV7A-NEXT:    ldr r4, [sp, #16]
-; CHECKV7A-NEXT:    mov r12, r0
-; CHECKV7A-NEXT:    ldrd lr, r0, [sp, #8]
-; CHECKV7A-NEXT:    lsls r4, r4, #31
-; CHECKV7A-NEXT:    mov.w r4, #-1
+; CHECKV7A-NEXT:    ldr r2, [sp, #8]
+; CHECKV7A-NEXT:    ldrd r12, r0, [sp]
+; CHECKV7A-NEXT:    lsls r2, r2, #31
 ; CHECKV7A-NEXT:    beq .LBB1_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    subs r2, r4, r2
-; CHECKV7A-NEXT:    sbcs.w r2, r4, r3
+; CHECKV7A-NEXT:    cmp.w r3, #-1
 ; CHECKV7A-NEXT:    mov r2, r0
-; CHECKV7A-NEXT:    it lt
-; CHECKV7A-NEXT:    movlt r2, lr
-; CHECKV7A-NEXT:    subs.w r3, r4, r12
-; CHECKV7A-NEXT:    sbcs.w r1, r4, r1
-; CHECKV7A-NEXT:    it lt
-; CHECKV7A-NEXT:    movlt r0, lr
+; CHECKV7A-NEXT:    it gt
+; CHECKV7A-NEXT:    movgt r2, r12
+; CHECKV7A-NEXT:    cmp.w r1, #-1
+; CHECKV7A-NEXT:    it gt
+; CHECKV7A-NEXT:    movgt r0, r12
 ; CHECKV7A-NEXT:    add r0, r2
-; CHECKV7A-NEXT:    pop {r4, pc}
+; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB1_2: @ %else
-; CHECKV7A-NEXT:    subs r1, r4, r2
-; CHECKV7A-NEXT:    sbcs.w r1, r4, r3
-; CHECKV7A-NEXT:    it lt
-; CHECKV7A-NEXT:    movlt r0, lr
-; CHECKV7A-NEXT:    pop {r4, pc}
+; CHECKV7A-NEXT:    cmp.w r3, #-1
+; CHECKV7A-NEXT:    it gt
+; CHECKV7A-NEXT:    movgt r0, r12
+; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
 then:
   %c1 = icmp sgt i64 %x, -1
@@ -395,99 +376,80 @@ else:
 define i32 @icmp64_sle_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-LABEL: icmp64_sle_m1:
 ; CHECKV6M:       @ %bb.0:
-; CHECKV6M-NEXT:    .save {r4, r5, r6, lr}
-; CHECKV6M-NEXT:    push {r4, r5, r6, lr}
-; CHECKV6M-NEXT:    mov r4, r0
-; CHECKV6M-NEXT:    movs r0, #0
-; CHECKV6M-NEXT:    mvns r6, r0
-; CHECKV6M-NEXT:    ldr r0, [sp, #24]
+; CHECKV6M-NEXT:    ldr r0, [sp, #8]
 ; CHECKV6M-NEXT:    lsls r0, r0, #31
-; CHECKV6M-NEXT:    ldr r5, [sp, #20]
-; CHECKV6M-NEXT:    ldr r0, [sp, #16]
-; CHECKV6M-NEXT:    beq .LBB4_6
+; CHECKV6M-NEXT:    ldr r2, [sp, #4]
+; CHECKV6M-NEXT:    ldr r0, [sp]
+; CHECKV6M-NEXT:    beq .LBB4_4
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
-; CHECKV6M-NEXT:    subs r2, r6, r2
-; CHECKV6M-NEXT:    mov r2, r6
-; CHECKV6M-NEXT:    sbcs r2, r3
-; CHECKV6M-NEXT:    mov r2, r0
-; CHECKV6M-NEXT:    bge .LBB4_3
+; CHECKV6M-NEXT:    cmp r3, #0
+; CHECKV6M-NEXT:    mov r3, r0
+; CHECKV6M-NEXT:    bpl .LBB4_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
-; CHECKV6M-NEXT:    mov r2, r5
+; CHECKV6M-NEXT:    cmp r1, #0
+; CHECKV6M-NEXT:    bpl .LBB4_8
 ; CHECKV6M-NEXT:  .LBB4_3: @ %then
-; CHECKV6M-NEXT:    subs r3, r6, r4
-; CHECKV6M-NEXT:    sbcs r6, r1
-; CHECKV6M-NEXT:    bge .LBB4_5
-; CHECKV6M-NEXT:  @ %bb.4: @ %then
-; CHECKV6M-NEXT:    mov r0, r5
-; CHECKV6M-NEXT:  .LBB4_5: @ %then
-; CHECKV6M-NEXT:    adds r0, r0, r2
-; CHECKV6M-NEXT:    pop {r4, r5, r6, pc}
+; CHECKV6M-NEXT:    adds r0, r0, r3
+; CHECKV6M-NEXT:    bx lr
+; CHECKV6M-NEXT:  .LBB4_4: @ %else
+; CHECKV6M-NEXT:    cmp r3, #0
+; CHECKV6M-NEXT:    bmi .LBB4_6
+; CHECKV6M-NEXT:  @ %bb.5: @ %else
+; CHECKV6M-NEXT:    mov r0, r2
 ; CHECKV6M-NEXT:  .LBB4_6: @ %else
-; CHECKV6M-NEXT:    subs r1, r6, r2
-; CHECKV6M-NEXT:    sbcs r6, r3
-; CHECKV6M-NEXT:    bge .LBB4_8
-; CHECKV6M-NEXT:  @ %bb.7: @ %else
-; CHECKV6M-NEXT:    mov r0, r5
-; CHECKV6M-NEXT:  .LBB4_8: @ %else
-; CHECKV6M-NEXT:    pop {r4, r5, r6, pc}
+; CHECKV6M-NEXT:    bx lr
+; CHECKV6M-NEXT:  .LBB4_7: @ %then
+; CHECKV6M-NEXT:    mov r3, r2
+; CHECKV6M-NEXT:    cmp r1, #0
+; CHECKV6M-NEXT:    bmi .LBB4_3
+; CHECKV6M-NEXT:  .LBB4_8: @ %then
+; CHECKV6M-NEXT:    mov r0, r2
+; CHECKV6M-NEXT:    adds r0, r0, r3
+; CHECKV6M-NEXT:    bx lr
 ;
 ; CHECKV7M-LABEL: icmp64_sle_m1:
 ; CHECKV7M:       @ %bb.0:
-; CHECKV7M-NEXT:    .save {r4, lr}
-; CHECKV7M-NEXT:    push {r4, lr}
-; CHECKV7M-NEXT:    mov r12, r0
-; CHECKV7M-NEXT:    ldr r0, [sp, #16]
-; CHECKV7M-NEXT:    mov.w r4, #-1
+; CHECKV7M-NEXT:    ldr r0, [sp, #8]
 ; CHECKV7M-NEXT:    lsls r0, r0, #31
-; CHECKV7M-NEXT:    ldrd lr, r0, [sp, #8]
+; CHECKV7M-NEXT:    ldrd r2, r0, [sp]
 ; CHECKV7M-NEXT:    beq .LBB4_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    subs r2, r4, r2
-; CHECKV7M-NEXT:    sbcs.w r2, r4, r3
-; CHECKV7M-NEXT:    mov r2, r0
-; CHECKV7M-NEXT:    it ge
-; CHECKV7M-NEXT:    movge r2, lr
-; CHECKV7M-NEXT:    subs.w r3, r4, r12
-; CHECKV7M-NEXT:    sbcs.w r1, r4, r1
-; CHECKV7M-NEXT:    it ge
-; CHECKV7M-NEXT:    movge r0, lr
-; CHECKV7M-NEXT:    add r0, r2
-; CHECKV7M-NEXT:    pop {r4, pc}
+; CHECKV7M-NEXT:    cmp r3, #0
+; CHECKV7M-NEXT:    mov r3, r0
+; CHECKV7M-NEXT:    it mi
+; CHECKV7M-NEXT:    movmi r3, r2
+; CHECKV7M-NEXT:    cmp r1, #0
+; CHECKV7M-NEXT:    it mi
+; CHECKV7M-NEXT:    movmi r0, r2
+; CHECKV7M-NEXT:    add r0, r3
+; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB4_2: @ %else
-; CHECKV7M-NEXT:    subs r1, r4, r2
-; CHECKV7M-NEXT:    sbcs.w r1, r4, r3
-; CHECKV7M-NEXT:    it ge
-; CHECKV7M-NEXT:    movge r0, lr
-; CHECKV7M-NEXT:    pop {r4, pc}
+; CHECKV7M-NEXT:    cmp r3, #0
+; CHECKV7M-NEXT:    it mi
+; CHECKV7M-NEXT:    movmi r0, r2
+; CHECKV7M-NEXT:    bx lr
 ;
 ; CHECKV7A-LABEL: icmp64_sle_m1:
 ; CHECKV7A:       @ %bb.0:
-; CHECKV7A-NEXT:    .save {r4, lr}
-; CHECKV7A-NEXT:    push {r4, lr}
-; CHECKV7A-NEXT:    ldr r4, [sp, #16]
-; CHECKV7A-NEXT:    mov r12, r0
-; CHECKV7A-NEXT:    ldrd lr, r0, [sp, #8]
-; CHECKV7A-NEXT:    lsls r4, r4, #31
-; CHECKV7A-NEXT:    mov.w r4, #-1
+; CHECKV7A-NEXT:    ldr r2, [sp, #8]
+; CHECKV7A-NEXT:    ldrd r12, r0, [sp]
+; CHECKV7A-NEXT:    lsls r2, r2, #31
 ; CHECKV7A-NEXT:    beq .LBB4_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    subs r2, r4, r2
-; CHECKV7A-NEXT:    sbcs.w r2, r4, r3
+; CHECKV7A-NEXT:    cmp r3, #0
 ; CHECKV7A-NEXT:    mov r2, r0
-; CHECKV7A-NEXT:    it ge
-; CHECKV7A-NEXT:    movge r2, lr
-; CHECKV7A-NEXT:    subs.w r3, r4, r12
-; CHECKV7A-NEXT:    sbcs.w r1, r4, r1
-; CHECKV7A-NEXT:    it ge
-; CHECKV7A-NEXT:    movge r0, lr
+; CHECKV7A-NEXT:    it mi
+; CHECKV7A-NEXT:    movmi r2, r12
+; CHECKV7A-NEXT:    cmp r1, #0
+; CHECKV7A-NEXT:    it mi
+; CHECKV7A-NEXT:    movmi r0, r12
 ; CHECKV7A-NEXT:    add r0, r2
-; CHECKV7A-NEXT:    pop {r4, pc}
+; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB4_2: @ %else
-; CHECKV7A-NEXT:    subs r1, r4, r2
-; CHECKV7A-NEXT:    sbcs.w r1, r4, r3
-; CHECKV7A-NEXT:    it ge
-; CHECKV7A-NEXT:    movge r0, lr
-; CHECKV7A-NEXT:    pop {r4, pc}
+; CHECKV7A-NEXT:    cmp r3, #0
+; CHECKV7A-NEXT:    it mi
+; CHECKV7A-NEXT:    movmi r0, r12
+; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
 then:
   %c1 = icmp sle i64 %x, -1
