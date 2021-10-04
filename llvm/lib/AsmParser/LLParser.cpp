@@ -8539,8 +8539,8 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
   Lex.Lex();
 
-  if (parseToken(lltok::colon, "expected ':' in funcFlags") |
-      parseToken(lltok::lparen, "expected '(' in funcFlags"))
+  if ((int)parseToken(lltok::colon, "expected ':' in funcFlags") |
+      (int)parseToken(lltok::lparen, "expected '(' in funcFlags"))
     return true;
 
   do {
@@ -8711,8 +8711,8 @@ bool LLParser::parseOptionalVTableFuncs(VTableFuncList &VTableFuncs) {
   assert(Lex.getKind() == lltok::kw_vTableFuncs);
   Lex.Lex();
 
-  if (parseToken(lltok::colon, "expected ':' in vTableFuncs") |
-      parseToken(lltok::lparen, "expected '(' in vTableFuncs"))
+  if ((int)parseToken(lltok::colon, "expected ':' in vTableFuncs") |
+      (int)parseToken(lltok::lparen, "expected '(' in vTableFuncs"))
     return true;
 
   IdToIndexMapType IdToIndexMap;
