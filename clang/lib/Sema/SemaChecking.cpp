@@ -2988,8 +2988,8 @@ bool Sema::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
       unsigned M = 1 << A.Align;
       Min *= M;
       Max *= M;
-      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max) |
-               SemaBuiltinConstantArgMultiple(TheCall, A.OpNum, M);
+      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max);
+      Error |= SemaBuiltinConstantArgMultiple(TheCall, A.OpNum, M);
     }
   }
   return Error;
@@ -13258,6 +13258,20 @@ static void AnalyzeImplicitConversions(
       S.Diag(UO->getBeginLoc(), diag::warn_bitwise_negation_bool)
           << OrigE->getSourceRange() << T->isBooleanType()
           << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
+    if ((BO->getOpcode() == BO_And || BO->getOpcode() == BO_Or) &&
+        BO->getLHS()->isKnownToHaveBooleanValue() &&
+        BO->getRHS()->isKnownToHaveBooleanValue() &&
+        BO->getLHS()->HasSideEffects(S.Context) &&
+        BO->getRHS()->HasSideEffects(S.Context)) {
+      S.Diag(BO->getBeginLoc(), diag::warn_bitwise_instead_of_logical)
+          << (BO->getOpcode() == BO_And ? "&" : "|") << OrigE->getSourceRange()
+          << FixItHint::CreateReplacement(
+                 BO->getOperatorLoc(),
+                 (BO->getOpcode() == BO_And ? "&&" : "||"));
+      S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
+    }
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.

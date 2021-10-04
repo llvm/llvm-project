@@ -3795,7 +3795,7 @@ struct AAMemoryLocation
   /// Return true if we assume that the associated functions has no observable
   /// accesses.
   bool isAssumedReadNone() const {
-    return isAssumed(NO_LOCATIONS) | isAssumedStackOnly();
+    return isAssumed(NO_LOCATIONS) || isAssumedStackOnly();
   }
 
   /// Return true if we know that the associated functions has at most

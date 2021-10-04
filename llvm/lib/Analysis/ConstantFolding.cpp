@@ -3171,7 +3171,7 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
   if (!TLI || !TLI->getLibFunc(*F, Func))
     return false;
 
-  if (Call->getNumArgOperands() == 1) {
+  if (Call->arg_size() == 1) {
     if (ConstantFP *OpC = dyn_cast<ConstantFP>(Call->getArgOperand(0))) {
       const APFloat &Op = OpC->getValueAPF();
       switch (Func) {
@@ -3260,7 +3260,7 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
     }
   }
 
-  if (Call->getNumArgOperands() == 2) {
+  if (Call->arg_size() == 2) {
     ConstantFP *Op0C = dyn_cast<ConstantFP>(Call->getArgOperand(0));
     ConstantFP *Op1C = dyn_cast<ConstantFP>(Call->getArgOperand(1));
     if (Op0C && Op1C) {

@@ -502,7 +502,7 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X32-NEXT:    %i11 = ashr exact i64 %i10, 2
 ; X32-NEXT:    --> %i11 U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
-; X32-NEXT:    --> ((4 * (trunc i64 %i11 to i32)) + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> ((4 * (trunc i64 %i11 to i32))<nsw> + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = load i32, i32* %i12, align 4
 ; X32-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i14 = add nsw i32 %i13, %i8

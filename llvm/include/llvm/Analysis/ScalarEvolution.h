@@ -1920,6 +1920,16 @@ private:
   /// would trigger undefined behavior on overflow.
   SCEV::NoWrapFlags getNoWrapFlagsFromUB(const Value *V);
 
+  /// If S trivially defines a scope (without needing to recurse through
+  /// operands), return the first instruction in it.  Else, return nullptr.
+  /// (See scope definition rules associated with flag discussion above)
+  const Instruction *getDefinedScopeRoot(const SCEV *S);
+
+  /// Given two instructions in the same function, return true if we can
+  /// prove B must execute given A executes.
+  bool isGuaranteedToTransferExecutionTo(const Instruction *A,
+                                         const Instruction *B);
+
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases

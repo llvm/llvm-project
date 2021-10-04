@@ -20081,7 +20081,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Value *AlignArg = I.getArgOperand(I.getNumArgOperands() - 1);
+    Value *AlignArg = I.getArgOperand(I.arg_size() - 1);
     Info.align = cast<ConstantInt>(AlignArg)->getMaybeAlignValue();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
@@ -20095,7 +20095,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
     uint64_t NumElts = DL.getTypeSizeInBits(I.getType()) / 64;
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
-    Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
+    Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
     Info.align.reset();
     // volatile loads with NEON intrinsics not supported
@@ -20113,7 +20113,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Conservatively set memVT to the entire set of vectors stored.
     auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
     unsigned NumElts = 0;
-    for (unsigned ArgI = 1, ArgE = I.getNumArgOperands(); ArgI < ArgE; ++ArgI) {
+    for (unsigned ArgI = 1, ArgE = I.arg_size(); ArgI < ArgE; ++ArgI) {
       Type *ArgTy = I.getArgOperand(ArgI)->getType();
       if (!ArgTy->isVectorTy())
         break;
@@ -20122,7 +20122,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Value *AlignArg = I.getArgOperand(I.getNumArgOperands() - 1);
+    Value *AlignArg = I.getArgOperand(I.arg_size() - 1);
     Info.align = cast<ConstantInt>(AlignArg)->getMaybeAlignValue();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
@@ -20135,7 +20135,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Conservatively set memVT to the entire set of vectors stored.
     auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
     unsigned NumElts = 0;
-    for (unsigned ArgI = 1, ArgE = I.getNumArgOperands(); ArgI < ArgE; ++ArgI) {
+    for (unsigned ArgI = 1, ArgE = I.arg_size(); ArgI < ArgE; ++ArgI) {
       Type *ArgTy = I.getArgOperand(ArgI)->getType();
       if (!ArgTy->isVectorTy())
         break;

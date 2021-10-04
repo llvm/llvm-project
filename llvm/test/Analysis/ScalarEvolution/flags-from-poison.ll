@@ -273,9 +273,9 @@ define void @test-add-scope-bound-unkn-header(i32* %input, i32 %needle) {
 ; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
 ; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
-; CHECK-NEXT:    --> (%offset + %i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
@@ -307,9 +307,9 @@ define void @test-add-scope-bound-unkn-header2(i32* %input, i32 %needle) {
 ; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
 ; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
-; CHECK-NEXT:    --> (%offset + %i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header2
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
@@ -1328,7 +1328,7 @@ define void @test-sub-no-nsw(float* %input, i32 %start, i32 %sub, i32 %numIterat
 ; CHECK-NEXT:    %index32 = sub nsw i32 %i, %sub
 ; CHECK-NEXT:    --> {((-1 * %sub) + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + (-1 * %sub) + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {((sext i32 %start to i64) + (-1 * (sext i32 %sub to i64))<nsw>)<nsw>,+,1}<nsw><%loop> U: [-4294967295,8589934591) S: [-4294967295,8589934591) Exits: ((zext i32 (-1 + (-1 * %start) + %numIterations) to i64) + (sext i32 %start to i64) + (-1 * (sext i32 %sub to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((sext i32 %start to i64) + (-1 * (sext i32 %sub to i64))<nsw>),+,1}<nsw><%loop> U: [-4294967295,8589934591) S: [-4294967295,8589934591) Exits: ((zext i32 (-1 + (-1 * %start) + %numIterations) to i64) + (sext i32 %start to i64) + (-1 * (sext i32 %sub to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, float* %input, i64 %index64
 ; CHECK-NEXT:    --> {((4 * (sext i32 %start to i64))<nsw> + (-4 * (sext i32 %sub to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw><nsw> + (4 * (sext i32 %start to i64))<nsw> + (-4 * (sext i32 %sub to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
@@ -1369,7 +1369,7 @@ define void @test-sub-nsw(float* %input, i32 %start, i32 %sub, i32 %numIteration
 ; CHECK-NEXT:    %index32 = sub nsw i32 %i, %halfsub
 ; CHECK-NEXT:    --> {((-1 * %halfsub)<nsw> + %start)<nsw>,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + (-1 * %halfsub)<nsw> + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {((sext i32 %start to i64) + (-1 * (sext i32 %halfsub to i64))<nsw>)<nsw>,+,1}<nsw><%loop> U: [-3221225471,7516192767) S: [-3221225471,7516192767) Exits: ((zext i32 (-1 + (-1 * %start) + %numIterations) to i64) + (sext i32 %start to i64) + (-1 * (sext i32 %halfsub to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((sext i32 %start to i64) + (-1 * (sext i32 %halfsub to i64))<nsw>),+,1}<nsw><%loop> U: [-3221225471,7516192767) S: [-3221225471,7516192767) Exits: ((zext i32 (-1 + (-1 * %start) + %numIterations) to i64) + (sext i32 %start to i64) + (-1 * (sext i32 %halfsub to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, float* %input, i64 %index64
 ; CHECK-NEXT:    --> {((4 * (sext i32 %start to i64))<nsw> + (-4 * (sext i32 %halfsub to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw><nsw> + (4 * (sext i32 %start to i64))<nsw> + (-4 * (sext i32 %halfsub to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1

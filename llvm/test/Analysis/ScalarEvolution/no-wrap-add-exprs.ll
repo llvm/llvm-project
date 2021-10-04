@@ -297,11 +297,11 @@ define i1 @test2_a(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
-; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%a + %b),+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
-; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (%a /u {(%a + %b),+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = add i32 %a, %b
-; CHECK-NEXT:    --> (%a + %b)<nuw><nsw> U: full-set S: full-set
+; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_a
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
@@ -335,9 +335,9 @@ define i1 @test2_b(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
-; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%a + %b),+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
-; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (%a /u {(%a + %b),+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_b
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.

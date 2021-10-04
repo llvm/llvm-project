@@ -2781,7 +2781,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     // If we found some loop invariants, fold them into the recurrence.
     if (!LIOps.empty()) {
       // Compute nowrap flags for the addition of the loop-invariant ops and
-      // the addrec. Temporarily push it as an operand for that purpose.
+      // the addrec. Temporarily push it as an operand for that purpose. These
+      // flags are valid in the scope of the addrec only.
       LIOps.push_back(AddRec);
       SCEV::NoWrapFlags Flags = ComputeFlags(LIOps);
       LIOps.pop_back();
@@ -2790,10 +2791,26 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       LIOps.push_back(AddRec->getStart());
 
       SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
-      // This follows from the fact that the no-wrap flags on the outer add
-      // expression are applicable on the 0th iteration, when the add recurrence
-      // will be equal to its start value.
-      AddRecOps[0] = getAddExpr(LIOps, Flags, Depth + 1);
+
+      // It is not in general safe to propagate flags valid on an add within
+      // the addrec scope to one outside it.  We must prove that the inner
+      // scope is guaranteed to execute if the outer one does to be able to
+      // safely propagate.  We know the program is undefined if poison is
+      // produced on the inner scoped addrec.  We also know that *for this use*
+      // the outer scoped add can't overflow (because of the flags we just
+      // computed for the inner scoped add) without the program being undefined.
+      // Proving that entry to the outer scope neccesitates entry to the inner
+      // scope, thus proves the program undefined if the flags would be violated
+      // in the outer scope.
+      const bool CanPropagateFlags = llvm::any_of(LIOps, [&](const SCEV *S) {
+        auto *ReachI = &*AddRecLoop->getHeader()->begin();
+        if (auto *DefI = getDefinedScopeRoot(S))
+          if (isGuaranteedToTransferExecutionTo(DefI, ReachI))
+            return true;
+        return false;
+      });
+      auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
+      AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
       // Build the new addrec. Propagate the NUW and NSW flags if both the
       // outer add and the inner addrec are guaranteed to have no overflow.
@@ -6569,6 +6586,46 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
+const Instruction *ScalarEvolution::getDefinedScopeRoot(const SCEV *S) {
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return &*AddRec->getLoop()->getHeader()->begin();
+  if (isa<SCEVConstant>(S))
+    return &*F.getEntryBlock().begin();
+  if (auto *U = dyn_cast<SCEVUnknown>(S)) {
+    if (auto *I = dyn_cast<Instruction>(U->getValue()))
+      return I;
+    return &*F.getEntryBlock().begin();
+  }
+  return nullptr;
+}
+
+static bool
+isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
+                                           BasicBlock::const_iterator End) {
+  return llvm::all_of( make_range(Begin, End), [](const Instruction &I) {
+    return isGuaranteedToTransferExecutionToSuccessor(&I);
+  });
+}
+
+bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
+                                                        const Instruction *B) {
+  if (A->getParent() == B->getParent() &&
+      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                   B->getIterator()))
+    return true;
+
+  auto *BLoop = LI.getLoopFor(B->getParent());
+  if (BLoop && BLoop->getHeader() == B->getParent() &&
+      BLoop->getLoopPreheader() == A->getParent() &&
+      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                   A->getParent()->end()) &&
+      ::isGuaranteedToTransferExecutionToSuccessor(B->getParent()->begin(),
+                                                   B->getIterator()))
+    return true;
+  return false;
+}
+
+
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // Here we check that I is in the header of the innermost loop containing I,
   // since we only deal with instructions in the loop header. The actual loop we
@@ -6600,11 +6657,9 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     // TODO: We can do better here in some cases.
     if (!isSCEVable(Op->getType()))
       return false;
-    const SCEV *OpS = getSCEV(Op);
-    if (auto *AddRecS = dyn_cast<SCEVAddRecExpr>(OpS)) {
-      if (isGuaranteedToExecuteForEveryIteration(I, AddRecS->getLoop()))
+    if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
+      if (isGuaranteedToTransferExecutionTo(DefI, I))
         return true;
-    }
   }
   return false;
 }
