@@ -4,7 +4,6 @@
 
 #include <riscv_vector.h>
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.riscv.vmxor.nxv64i1.i64(<vscale x 64 x i1> [[OP1:%.*]], <vscale x 64 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -14,7 +13,6 @@ vbool1_t test_vmxor_mm_b1(vbool1_t op1, vbool1_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i1> @llvm.riscv.vmxor.nxv32i1.i64(<vscale x 32 x i1> [[OP1:%.*]], <vscale x 32 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -24,7 +22,6 @@ vbool2_t test_vmxor_mm_b2(vbool2_t op1, vbool2_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmxor.nxv16i1.i64(<vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -34,7 +31,6 @@ vbool4_t test_vmxor_mm_b4(vbool4_t op1, vbool4_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.riscv.vmxor.nxv8i1.i64(<vscale x 8 x i1> [[OP1:%.*]], <vscale x 8 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -44,7 +40,6 @@ vbool8_t test_vmxor_mm_b8(vbool8_t op1, vbool8_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b16(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.riscv.vmxor.nxv4i1.i64(<vscale x 4 x i1> [[OP1:%.*]], <vscale x 4 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -54,7 +49,6 @@ vbool16_t test_vmxor_mm_b16(vbool16_t op1, vbool16_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b32(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.riscv.vmxor.nxv2i1.i64(<vscale x 2 x i1> [[OP1:%.*]], <vscale x 2 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
@@ -64,7 +58,6 @@ vbool32_t test_vmxor_mm_b32(vbool32_t op1, vbool32_t op2, size_t vl) {
   return vmxor(op1, op2, vl);
 }
 
-//
 // CHECK-RV64-LABEL: @test_vmxor_mm_b64(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmxor.nxv1i1.i64(<vscale x 1 x i1> [[OP1:%.*]], <vscale x 1 x i1> [[OP2:%.*]], i64 [[VL:%.*]])
