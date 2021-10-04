@@ -6657,14 +6657,8 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     // TODO: We can do better here in some cases.
     if (!isSCEVable(Op->getType()))
       return false;
-    // TODO: the following two lines should be:
-    // if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
-    //   if (isGuaranteedToTransferExecutionTo(DefI, I))
-    // We use the following instead for the purposes of seperating a bugfix
-    // change from an optimization change.  Once pr51817 is fully addressed,
-    // we should unlock this power.
-    if (auto *AddRecS = dyn_cast<SCEVAddRecExpr>(getSCEV(Op)))
-      if (isGuaranteedToExecuteForEveryIteration(I, AddRecS->getLoop()))
+    if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
+      if (isGuaranteedToTransferExecutionTo(DefI, I))
         return true;
   }
   return false;
