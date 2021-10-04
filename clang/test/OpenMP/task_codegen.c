@@ -150,10 +150,12 @@ for (int i = 0; i < 10; ++i)
   // CHECK: [[EB_SUB_2_ADD_1_SUB:%.+]] = sub i32 [[EB_SUB_2_ADD]], 1
   // CHECK: [[EB_SUB_2_ADD_1_SUB_2_DIV:%.+]] = udiv i32 [[EB_SUB_2_ADD_1_SUB]], 2
   // CHECK: [[ELEMS:%.+]] = zext i32 [[EB_SUB_2_ADD_1_SUB_2_DIV]] to i64
-  // CHECK: [[NELEMS:%.+]] = mul nuw i64 1, [[ELEMS]]
+  // CHECK: [[NELEMS:%.+]] = mul nuw i64 [[ELEMS]], 1
 
-  // TOTAL_NUMBER_OF_ELEMENTS = NELEMS + 0;
-  // CHECK: [[TOTAL:%.+]] = add nuw i64 [[NELEMS]], 0
+  // ITERATOR_TOTAL = NELEMS + 0;
+  // CHECK: [[ITERATOR_TOTAL:%.+]] = add nuw i64 0, [[NELEMS]]
+  // NELEMS = ITERATOR_TOTAL + non-iterator-deps (=0)
+  // CHECK: [[TOTAL:%.+]] = add nuw i64 [[ITERATOR_TOTAL]], 0
 
   // %struct.kmp_depend_info DEPS[TOTAL];
   // CHECK: [[DEPS:%.+]] = alloca %struct.kmp_depend_info, i64 [[TOTAL]],
