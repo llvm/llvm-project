@@ -1330,7 +1330,7 @@ void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
-static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
+static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                         Module &module,
                                         const std::string &m_description,
                                         llvm::raw_ostream &error,
@@ -1338,7 +1338,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         bool &found_swift_modules) {
   bool found_validation_errors = false;
   got_serialized_options = false;
-  auto &invocation = swift_ast.GetCompilerInvocation();
   auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found %d AST file data entries.",
              (int)ast_file_datas.size());
@@ -1739,9 +1738,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     bool got_serialized_options = false;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-    if (DeserializeAllCompilerFlags(*swift_ast_sp, module, m_description, errs,
-                                    got_serialized_options,
-                                    found_swift_modules)) {
+    if (DeserializeAllCompilerFlags(
+            swift_ast_sp->GetCompilerInvocation(), module, m_description, errs,
+            got_serialized_options, found_swift_modules)) {
       // Validation errors are not fatal for the context.
       swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
     }
