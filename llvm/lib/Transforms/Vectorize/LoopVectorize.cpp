@@ -6249,9 +6249,9 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
 
   if (EpilogueVectorizationForceVF > 1) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n";);
-    if (LVP.hasPlanWithVFs(
-            {MainLoopVF, ElementCount::getFixed(EpilogueVectorizationForceVF)}))
-      return {ElementCount::getFixed(EpilogueVectorizationForceVF), 0};
+    ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
+    if (LVP.hasPlanWithVFs({MainLoopVF, ForcedEC}))
+      return {ForcedEC, 0};
     else {
       LLVM_DEBUG(
           dbgs()
