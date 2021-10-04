@@ -630,14 +630,14 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 
 // -----
 
-// CHECK-LABEL: func @pad_tensor_packing_same_static_shape(
+// CHECK-LABEL: func @pad_tensor_nofold_same_static_shape(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
 //       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
 //       CHECK:   return %[[PAD]]
-func @pad_tensor_packing_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
+func @pad_tensor_nofold_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
     -> tensor<5x6xf32> {
   %cst = constant 0.000000e+00 : f32
-  %0 = linalg.pad_tensor %arg0 packing low[%a, 0] high[0, %a] {
+  %0 = linalg.pad_tensor %arg0 nofold low[%a, 0] high[0, %a] {
         ^bb0(%arg1: index, %arg2: index):
           linalg.yield %cst : f32
   } : tensor<5x6xf32> to tensor<5x6xf32>
@@ -937,13 +937,13 @@ func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<
 
 // -----
 
-// CHECK-LABEL: func @pad_packing_static_zero(
+// CHECK-LABEL: func @pad_nofold_static_zero(
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<?x?x?xf32>
 //       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
 //       CHECK:   return %[[PAD]]
-func @pad_packing_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
+func @pad_nofold_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
   %c0 = constant 0 : index
-  %0 = linalg.pad_tensor %arg0 packing low[0, %c0, 0] high[0, 0, %c0] {
+  %0 = linalg.pad_tensor %arg0 nofold low[0, %c0, 0] high[0, 0, %c0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
       linalg.yield %pad_value : f32
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
