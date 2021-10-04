@@ -91,9 +91,10 @@ inline bool systemDetectsMemoryTagFaultsTestOnly() {
 #ifndef PR_MTE_TCF_MASK
 #define PR_MTE_TCF_MASK (3UL << PR_MTE_TCF_SHIFT)
 #endif
-  return (static_cast<unsigned long>(
-              prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0)) &
-          PR_MTE_TCF_MASK) != PR_MTE_TCF_NONE;
+  int res = prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0);
+  if (res == -1)
+    return false;
+  return (static_cast<unsigned long>(res) & PR_MTE_TCF_MASK) != PR_MTE_TCF_NONE;
 }
 
 inline void enableSystemMemoryTaggingTestOnly() {
