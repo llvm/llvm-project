@@ -243,7 +243,10 @@ std::error_code llvm::mapWindowsError(unsigned EV) {
   switch (EV) {
     MAP_ERR_TO_COND(ERROR_ACCESS_DENIED, permission_denied);
     MAP_ERR_TO_COND(ERROR_ALREADY_EXISTS, file_exists);
+    MAP_ERR_TO_COND(ERROR_BAD_NETPATH, no_such_file_or_directory);
+    MAP_ERR_TO_COND(ERROR_BAD_PATHNAME, no_such_file_or_directory);
     MAP_ERR_TO_COND(ERROR_BAD_UNIT, no_such_device);
+    MAP_ERR_TO_COND(ERROR_BROKEN_PIPE, broken_pipe);
     MAP_ERR_TO_COND(ERROR_BUFFER_OVERFLOW, filename_too_long);
     MAP_ERR_TO_COND(ERROR_BUSY, device_or_resource_busy);
     MAP_ERR_TO_COND(ERROR_BUSY_DRIVE, device_or_resource_busy);
@@ -265,18 +268,20 @@ std::error_code llvm::mapWindowsError(unsigned EV) {
     MAP_ERR_TO_COND(ERROR_INVALID_FUNCTION, function_not_supported);
     MAP_ERR_TO_COND(ERROR_INVALID_HANDLE, invalid_argument);
     MAP_ERR_TO_COND(ERROR_INVALID_NAME, invalid_argument);
+    MAP_ERR_TO_COND(ERROR_INVALID_PARAMETER, invalid_argument);
     MAP_ERR_TO_COND(ERROR_LOCK_VIOLATION, no_lock_available);
     MAP_ERR_TO_COND(ERROR_LOCKED, no_lock_available);
     MAP_ERR_TO_COND(ERROR_NEGATIVE_SEEK, invalid_argument);
     MAP_ERR_TO_COND(ERROR_NOACCESS, permission_denied);
     MAP_ERR_TO_COND(ERROR_NOT_ENOUGH_MEMORY, not_enough_memory);
     MAP_ERR_TO_COND(ERROR_NOT_READY, resource_unavailable_try_again);
+    MAP_ERR_TO_COND(ERROR_NOT_SUPPORTED, not_supported);
     MAP_ERR_TO_COND(ERROR_OPEN_FAILED, io_error);
     MAP_ERR_TO_COND(ERROR_OPEN_FILES, device_or_resource_busy);
     MAP_ERR_TO_COND(ERROR_OUTOFMEMORY, not_enough_memory);
     MAP_ERR_TO_COND(ERROR_PATH_NOT_FOUND, no_such_file_or_directory);
-    MAP_ERR_TO_COND(ERROR_BAD_NETPATH, no_such_file_or_directory);
     MAP_ERR_TO_COND(ERROR_READ_FAULT, io_error);
+    MAP_ERR_TO_COND(ERROR_REPARSE_TAG_INVALID, invalid_argument);
     MAP_ERR_TO_COND(ERROR_RETRY, resource_unavailable_try_again);
     MAP_ERR_TO_COND(ERROR_SEEK, io_error);
     MAP_ERR_TO_COND(ERROR_SHARING_VIOLATION, permission_denied);
