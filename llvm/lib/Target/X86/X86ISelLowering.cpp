@@ -45118,17 +45118,18 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
     // HOP(HOP'(X,X),HOP'(Y,Y)) -> HOP(PERMUTE(HOP'(X,Y)),PERMUTE(HOP'(X,Y)).
     if (LHS != RHS && LHS.getOpcode() == N->getOpcode() &&
         LHS.getOpcode() == RHS.getOpcode() &&
-        LHS.getValueType() == RHS.getValueType()) {
+        LHS.getValueType() == RHS.getValueType() &&
+        N->isOnlyUserOf(LHS.getNode()) && N->isOnlyUserOf(RHS.getNode())) {
       SDValue LHS0 = LHS.getOperand(0);
-      SDValue RHS0 = LHS.getOperand(1);
-      SDValue LHS1 = RHS.getOperand(0);
+      SDValue LHS1 = LHS.getOperand(1);
+      SDValue RHS0 = RHS.getOperand(0);
       SDValue RHS1 = RHS.getOperand(1);
-      if ((LHS0 == RHS0 || LHS0.isUndef() || RHS0.isUndef()) &&
-          (LHS1 == RHS1 || LHS1.isUndef() || RHS1.isUndef())) {
+      if ((LHS0 == LHS1 || LHS0.isUndef() || LHS1.isUndef()) &&
+          (RHS0 == RHS1 || RHS0.isUndef() || RHS1.isUndef())) {
         SDLoc DL(N);
         SDValue Res = DAG.getNode(LHS.getOpcode(), DL, LHS.getValueType(),
-                                  LHS0.isUndef() ? RHS0 : LHS0,
-                                  LHS1.isUndef() ? RHS1 : LHS1);
+                                  LHS0.isUndef() ? LHS1 : LHS0,
+                                  RHS0.isUndef() ? RHS1 : RHS0);
         MVT ShufVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
         Res = DAG.getBitcast(ShufVT, Res);
         SDValue NewLHS =
@@ -45137,9 +45138,8 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
         SDValue NewRHS =
             DAG.getNode(X86ISD::PSHUFD, DL, ShufVT, Res,
                         getV4X86ShuffleImm8ForMask({2, 3, 2, 3}, DL, DAG));
-        DAG.ReplaceAllUsesOfValueWith(LHS, DAG.getBitcast(VT, NewLHS));
-        DAG.ReplaceAllUsesOfValueWith(RHS, DAG.getBitcast(VT, NewRHS));
-        return SDValue(N, 0);
+        return DAG.getNode(N->getOpcode(), DL, VT, DAG.getBitcast(VT, NewLHS),
+                           DAG.getBitcast(VT, NewRHS));
       }
     }
   }
