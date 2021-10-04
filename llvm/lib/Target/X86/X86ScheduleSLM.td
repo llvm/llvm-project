@@ -156,8 +156,8 @@ defm : X86WriteRes<WriteBitTestSetRegLd, [SLM_IEC_RSV01, SLM_MEC_RSV], 3, [1,1],
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
 // Bit counts.
-defm : SLMWriteResPair<WriteBSF, [SLM_IEC_RSV01], 10, [20], 10>;
-defm : SLMWriteResPair<WriteBSR, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteBSF, [SLM_IEC_RSV0, SLM_IEC_RSV1], 10, [10,10], 10>;
+defm : SLMWriteResPair<WriteBSR, [SLM_IEC_RSV0, SLM_IEC_RSV1], 10, [10,10], 10>;
 defm : SLMWriteResPair<WriteLZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WriteTZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WritePOPCNT,         [SLM_IEC_RSV0], 3>;

@@ -80,7 +80,7 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                Register PhysReg,
-                                               CCValAssign &VA) {
+                                               CCValAssign VA) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
