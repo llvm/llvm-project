@@ -588,8 +588,8 @@ let HasNoMaskedOverloaded = false,
       Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
     }] in {
   class RVVVLEMaskBuiltin : RVVBuiltin<"m", "mPCUe", "c"> {
-    let Name = "vle1_v";
-    let IRName = "vle1";
+    let Name = "vlm_v";
+    let IRName = "vlm";
     let HasMask = false;
   }
 }
@@ -735,8 +735,8 @@ let HasMaskedOffOperand = false,
       IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
     }] in {
   class RVVVSEMaskBuiltin : RVVBuiltin<"m", "0PUem", "c"> {
-    let Name = "vse1_v";
-    let IRName = "vse1";
+    let Name = "vsm_v";
+    let IRName = "vsm";
     let HasMask = false;
   }
 }
@@ -1553,13 +1553,13 @@ let HasVL = false,
 
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
-def vle1: RVVVLEMaskBuiltin;
+def vlm: RVVVLEMaskBuiltin;
 defm vle8: RVVVLEBuiltin<["c"]>;
 defm vle16: RVVVLEBuiltin<["s","x"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
-def vse1 : RVVVSEMaskBuiltin;
+def vsm : RVVVSEMaskBuiltin;
 defm vse8 : RVVVSEBuiltin<["c"]>;
 defm vse16: RVVVSEBuiltin<["s","x"]>;
 defm vse32: RVVVSEBuiltin<["i","f"]>;

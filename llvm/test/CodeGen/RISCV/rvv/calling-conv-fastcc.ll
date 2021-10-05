@@ -49,7 +49,7 @@ define fastcc <vscale x 8 x i1> @ret_mask_nxv8i1(<vscale x 8 x i1>* %p) {
 ; CHECK-LABEL: ret_mask_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <vscale x 8 x i1>, <vscale x 8 x i1>* %p
   ret <vscale x 8 x i1> %v
@@ -59,7 +59,7 @@ define fastcc <vscale x 32 x i1> @ret_mask_nxv32i1(<vscale x 32 x i1>* %p) {
 ; CHECK-LABEL: ret_mask_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <vscale x 32 x i1>, <vscale x 32 x i1>* %p
   ret <vscale x 32 x i1> %v

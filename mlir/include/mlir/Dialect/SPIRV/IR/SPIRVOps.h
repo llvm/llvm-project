@@ -22,15 +22,15 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
+// TableGen'erated operation interfaces for querying versions, extensions, and
+// capabilities.
+#include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.h.inc"
+
 namespace mlir {
 class OpBuilder;
 
 namespace spirv {
 class VerCapExtAttr;
-
-// TableGen'erated operation interfaces for querying versions, extensions, and
-// capabilities.
-#include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.h.inc"
 } // namespace spirv
 } // namespace mlir
 

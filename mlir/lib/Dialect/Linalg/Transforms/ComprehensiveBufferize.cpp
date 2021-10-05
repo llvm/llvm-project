@@ -2110,8 +2110,16 @@ static LogicalResult bufferize(OpBuilder &b, scf::YieldOp yieldOp,
   // Cannot create IR past a yieldOp.
   b.setInsertionPoint(yieldOp);
 
+  if (auto execOp = dyn_cast<scf::ExecuteRegionOp>(yieldOp->getParentOp())) {
+    if (execOp->getNumResults() != 0)
+      return execOp->emitError(
+          "expected result-less scf.execute_region containing op");
+    return success();
+  }
+
   scf::ForOp forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
-  assert(forOp && "only support scf::ForOp parent for scf::YieldOp");
+  if (!forOp)
+    return yieldOp->emitError("expected scf::ForOp parent for scf::YieldOp");
   for (OpOperand &operand : yieldOp->getOpOperands()) {
     auto tensorType = operand.get().getType().dyn_cast<TensorType>();
     if (!tensorType)

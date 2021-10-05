@@ -30,6 +30,7 @@ protected:
 
   void SetUp() override {
     StringRef Assembly = "@g = global i32 0\n"
+                         "@g_alias = alias i32, i32* @g\n"
                          "define i32 @f() {\n"
                          "  %1 = load i32, i32* @g\n"
                          "  ret i32 %1\n"
@@ -63,6 +64,9 @@ protected:
     G = M->getGlobalVariable("g");
     if (!G)
       report_fatal_error("G?");
+    AliasedG = M->getNamedAlias("g_alias");
+    if (!AliasedG)
+      report_fatal_error("AliasedG?");
 
     MachineModuleInfo MMI(TM.get());
 
@@ -89,6 +93,7 @@ protected:
   std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *G;
+  GlobalAlias *AliasedG;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<SelectionDAG> DAG;
 };
@@ -114,6 +119,31 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
 
   EXPECT_TRUE(IsValid);
   EXPECT_TRUE(IsAlias);
+}
+
+TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObjectUnknownSize) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, Int8VT, 4);
+  SDValue FIPtr = DAG->CreateStackTemporary(VecVT);
+  int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
+  TypeSize Offset = TypeSize::Fixed(0);
+  SDValue Value = DAG->getConstant(0, Loc, VecVT);
+  SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
+  SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
+                                PtrInfo.getWithOffset(Offset));
+
+  // Maybe unlikely that BaseIndexOffset::computeAliasing is used with the
+  // optional NumBytes being unset like in this test, but it would be confusing
+  // if that function determined IsAlias=false here.
+  Optional<int64_t> NumBytes;
+
+  bool IsAlias;
+  bool IsValid = BaseIndexOffset::computeAliasing(
+      Store.getNode(), NumBytes, Store.getNode(), NumBytes, *DAG, IsAlias);
+
+  EXPECT_FALSE(IsValid);
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
@@ -207,6 +237,35 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithFrameObject) {
 
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
+}
+
+TEST_F(SelectionDAGAddressAnalysisTest, globalWithAliasedGlobal) {
+  SDLoc Loc;
+
+  EVT GTy = DAG->getTargetLoweringInfo().getValueType(DAG->getDataLayout(),
+                                                      G->getType());
+  SDValue GValue = DAG->getConstant(0, Loc, GTy);
+  SDValue GAddr = DAG->getGlobalAddress(G, Loc, GTy);
+  SDValue GStore = DAG->getStore(DAG->getEntryNode(), Loc, GValue, GAddr,
+                                 MachinePointerInfo(G, 0));
+  Optional<int64_t> GNumBytes = MemoryLocation::getSizeOrUnknown(
+      cast<StoreSDNode>(GStore)->getMemoryVT().getStoreSize());
+
+  SDValue AliasedGValue = DAG->getConstant(1, Loc, GTy);
+  SDValue AliasedGAddr = DAG->getGlobalAddress(AliasedG, Loc, GTy);
+  SDValue AliasedGStore =
+      DAG->getStore(DAG->getEntryNode(), Loc, AliasedGValue, AliasedGAddr,
+                    MachinePointerInfo(AliasedG, 0));
+
+  bool IsAlias;
+  bool IsValid = BaseIndexOffset::computeAliasing(GStore.getNode(), GNumBytes,
+                                                  AliasedGStore.getNode(),
+                                                  GNumBytes, *DAG, IsAlias);
+
+  // With some deeper analysis we could detect if G and AliasedG is aliasing or
+  // not. But computeAliasing is currently defensive and assumes that a
+  // GlobalAlias might alias with any global variable.
+  EXPECT_FALSE(IsValid);
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsWithinDiff) {
