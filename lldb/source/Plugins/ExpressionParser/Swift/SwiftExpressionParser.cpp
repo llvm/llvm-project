@@ -1037,6 +1037,14 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
   bool is_error =
       variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataError>();
 
+  auto compiler_type = variable.GetType();
+  // Add the persistent variable as a typeref compiler type.
+  if (auto *swift_ast_ctx =
+          llvm::dyn_cast<SwiftASTContext>(compiler_type.GetTypeSystem())) {
+    variable.SetType(
+        swift_ast_ctx->GetTypeRefType(compiler_type.GetOpaqueQualType()));
+  }
+
   if (is_result || is_error) {
     needs_init = true;
 
@@ -1155,6 +1163,15 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           variable.GetType(), variable.GetDecl(),
           &user_expression.GetPersistentVariableDelegate(), error);
     } else {
+      // Transform the variable metadata to a typeref type if necessary.
+      auto compiler_type =
+          variable_metadata->m_persistent_variable_sp->GetCompilerType();
+      if (auto *swift_ast_ctx =
+              llvm::dyn_cast<SwiftASTContext>(compiler_type.GetTypeSystem())) {
+        variable_metadata->m_persistent_variable_sp->SetCompilerType(
+            swift_ast_ctx->GetTypeRefType(compiler_type.GetOpaqueQualType()));
+      }
+
       offset = materializer.AddPersistentVariable(
           variable_metadata->m_persistent_variable_sp,
           &user_expression.GetPersistentVariableDelegate(), error);
