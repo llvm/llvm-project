@@ -57,9 +57,9 @@ public:
   void insertNewBufferEquivalence(Value newValue, Value alias);
 
   /// Return true if the buffer to which `operand` would bufferize aliases a
-  /// buffer that is known to not be writeable. This implies that the matching
+  /// buffer that is known to not be writable. This implies that the matching
   /// OpResult cannot be bufferized inplace.
-  bool aliasesNonWriteableBuffer(OpOperand &operand) const;
+  bool aliasesNonWritableBuffer(OpOperand &operand) const;
 
   /// Return true if the buffer to which `operand` would bufferize is equivalent
   /// to some buffer write.
@@ -123,6 +123,12 @@ public:
 
   /// Apply `fun` to all the members of the equivalence class of `v`.
   void applyOnEquivalenceClass(Value v, function_ref<void(Value)> fun) const;
+
+  /// Return true if the value is known to bufferize to writable memory.
+  bool bufferizesToWritableMemory(Value v) const;
+
+  /// Specify that the value is known to bufferize to writable memory.
+  void setBufferizesToWritableMemory(Value v);
 
   /// Print to `os`.
   void printAliases(raw_ostream &os) const;
@@ -209,6 +215,9 @@ private:
                                   OpOperand &aliasingRead,
                                   OpOperand &aliasingWrite,
                                   const DominanceInfo &domInfo) const;
+
+  /// Set of tensors that are known to bufferize to writable memory.
+  llvm::DenseSet<Value> bufferizeToWritableMemory;
 
   /// Auxiliary structure to store all the values a given value aliases with.
   /// These are the conservative cases that can further decompose into
