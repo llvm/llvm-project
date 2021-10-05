@@ -533,7 +533,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
-  setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
+  if (Subtarget.getTargetTriple().isPS4CPU())
+    setOperationAction(ISD::UBSANTRAP, MVT::Other, Expand);
+  else
+    setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
 
   // VASTART needs to be custom lowered to use the VarArgsFrameIndex
   setOperationAction(ISD::VASTART           , MVT::Other, Custom);
