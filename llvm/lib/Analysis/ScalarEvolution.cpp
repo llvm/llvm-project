@@ -2802,11 +2802,13 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       // Proving that entry to the outer scope neccesitates entry to the inner
       // scope, thus proves the program undefined if the flags would be violated
       // in the outer scope.
-      auto *DefI = getDefiningScopeBound(LIOps);
-      auto *ReachI = &*AddRecLoop->getHeader()->begin();
-      const bool CanPropagateFlags =
-        isGuaranteedToTransferExecutionTo(DefI, ReachI);
-      auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
+      SCEV::NoWrapFlags AddFlags = Flags;
+      if (AddFlags != SCEV::FlagAnyWrap) {
+        auto *DefI = getDefiningScopeBound(LIOps);
+        auto *ReachI = &*AddRecLoop->getHeader()->begin();
+        if (!isGuaranteedToTransferExecutionTo(DefI, ReachI))
+          AddFlags = SCEV::FlagAnyWrap;
+      }
       AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
       // Build the new addrec. Propagate the NUW and NSW flags if both the
