@@ -8634,6 +8634,174 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
       return ToAttrOrErr.takeError();
     break;
   }
+  case attr::AcquireCapability: {
+    const auto *From = cast<AcquireCapabilityAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::TryAcquireCapability: {
+    const auto *From = cast<TryAcquireCapabilityAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArg(From->getSuccessValue()).value(),
+        AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::ReleaseCapability: {
+    const auto *From = cast<ReleaseCapabilityAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::RequiresCapability: {
+    const auto *From = cast<RequiresCapabilityAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::GuardedBy: {
+    const auto *From = cast<GuardedByAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr =
+        AI.createImportedAttr(From, AI.importArg(From->getArg()).value());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::PtGuardedBy: {
+    const auto *From = cast<PtGuardedByAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr =
+        AI.createImportedAttr(From, AI.importArg(From->getArg()).value());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::AcquiredAfter: {
+    const auto *From = cast<AcquiredAfterAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::AcquiredBefore: {
+    const auto *From = cast<AcquiredBeforeAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::AssertExclusiveLock: {
+    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::AssertSharedLock: {
+    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::ExclusiveTrylockFunction: {
+    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArg(From->getSuccessValue()).value(),
+        AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::SharedTrylockFunction: {
+    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArg(From->getSuccessValue()).value(),
+        AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::LockReturned: {
+    const auto *From = cast<LockReturnedAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr =
+        AI.createImportedAttr(From, AI.importArg(From->getArg()).value());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
+  case attr::LocksExcluded: {
+    const auto *From = cast<LocksExcludedAttr>(FromAttr);
+    AttrImporter AI(*this);
+    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
+        From, AI.importArrayArg(From->args(), From->args_size()).value(),
+        From->args_size());
+    if (ToAttrOrErr)
+      ToAttr = *ToAttrOrErr;
+    else
+      return ToAttrOrErr.takeError();
+    break;
+  }
 
   default:
     // FIXME: 'clone' copies every member but some of them should be imported.
