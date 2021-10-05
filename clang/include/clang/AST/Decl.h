@@ -4589,7 +4589,7 @@ public:
 /// into a diagnostic with <<.
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
                                              const NamedDecl *ND) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(ND),
+  PD.AddTaggedVal(reinterpret_cast<uint64_t>(ND),
                   DiagnosticsEngine::ak_nameddecl);
   return PD;
 }
