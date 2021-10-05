@@ -25,6 +25,7 @@
 #include "ParsedAST.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseSet.h"
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -45,6 +46,22 @@ using ReferencedLocations = llvm::DenseSet<SourceLocation>;
 ///   ambiguous cases (e.g. implicitly used symbols, multiple declarations)
 /// - err on the side of reporting all possible locations
 ReferencedLocations findReferencedLocations(ParsedAST &AST);
+
+/// Retrieves IDs of all files containing SourceLocations from \p Locs.
+llvm::DenseSet<FileID> findReferencedFiles(const ReferencedLocations &Locs,
+                                           const SourceManager &SM);
+
+/// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).
+llvm::DenseSet<IncludeStructure::HeaderID>
+translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
+                     const IncludeStructure &Includes, const SourceManager &SM);
+
+/// Retrieves headers that are referenced from the main file but not used.
+std::vector<const Inclusion *>
+getUnused(const IncludeStructure &Includes,
+          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles);
+
+std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
 
 } // namespace clangd
 } // namespace clang
