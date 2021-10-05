@@ -827,14 +827,10 @@ bool mlir::shape::ConstShapeOp::isCompatibleReturnTypes(TypeRange l,
   Type lhs = l.front();
   Type rhs = r.front();
 
-  if (lhs == rhs)
-    return true;
-
   if (lhs.isa<ShapeType>() || rhs.isa<ShapeType>())
     // Shape type is compatible with all other valid return types.
     return true;
-
-  return succeeded(verifyCompatibleShapes(lhs, rhs));
+  return lhs == rhs;
 }
 
 //===----------------------------------------------------------------------===//
