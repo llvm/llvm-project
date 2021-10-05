@@ -7,6 +7,10 @@
 
 #if !defined NO_BLIT
 
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+
+
 static const uint SplitCount = 3;
 
 __attribute__((always_inline)) void
@@ -418,6 +422,56 @@ __amd_fillBuffer(
 }
 
 __attribute__((always_inline)) void
+__amd_fillBufferAligned(
+    __global uchar* bufUChar,
+    __global ushort* bufUShort,
+    __global uint* bufUInt,
+    __global ulong* bufULong,
+    __constant uchar* pattern,
+    uint patternSize,
+    ulong offset,
+    ulong size)
+{
+    ulong id = get_global_id(0);
+
+    if (id >= size) {
+        return;
+    }
+
+    if (bufULong) {
+        __global ulong* element = &bufULong[offset + id * patternSize];
+        __constant ulong*  pt = (__constant ulong*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else if (bufUInt) {
+        __global uint* element = &bufUInt[offset + id * patternSize];
+        __constant uint*  pt = (__constant uint*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else if (bufUShort) {
+        __global ushort* element = &bufUShort[offset + id * patternSize];
+        __constant ushort*  pt = (__constant ushort*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else {
+        __global uchar* element = &bufUChar[offset + id * patternSize];
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pattern[i];
+        }
+    }
+}
+
+__attribute__((always_inline)) void
 __amd_fillImage(
     __write_only image2d_array_t image,
     float4 patternFLOAT4,
@@ -463,5 +517,95 @@ __amd_fillImage(
     }
 }
 
+
+__attribute__((always_inline)) void
+__amd_streamOpsWrite(
+    __global atomic_uint* ptrInt,
+    __global atomic_ulong* ptrUlong,
+    ulong value) {
+
+  // The launch parameters for this shader is a 1 grid work-item
+
+  // 32-bit write
+  if (ptrInt) {
+    atomic_store_explicit(ptrInt, (uint)value, memory_order_relaxed, memory_scope_all_svm_devices);
+  }
+  // 64-bit write
+  else {
+    atomic_store_explicit(ptrUlong, value, memory_order_relaxed, memory_scope_all_svm_devices);
+  }
+}
+
+
+__attribute__((always_inline)) void
+__amd_streamOpsWait(
+    __global atomic_uint* ptrInt,
+    __global atomic_ulong* ptrUlong,
+    ulong value, ulong compareOp, ulong mask) {
+
+    // The launch parameters for this shader is a 1 grid work-item
+
+    switch (compareOp) {
+    case 0: //GEQ
+      if (ptrInt) {
+        while (!((((atomic_load_explicit(ptrInt, memory_order_relaxed,
+                    memory_scope_all_svm_devices)) & (uint)mask) - (uint)value) >= 0)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      else {
+        while (!((((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                    memory_scope_all_svm_devices)) & mask) - value) >= 0)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      break;
+
+    case 1: // EQ
+      if (ptrInt) {
+        while (!(((atomic_load_explicit(ptrInt, memory_order_relaxed,
+                   memory_scope_all_svm_devices)) & (uint)mask) == (uint)value)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      else {
+        while (!(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                   memory_scope_all_svm_devices)) & mask) == value)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      break;
+
+    case 2: //AND
+      if (ptrInt) {
+        while (!(((atomic_load_explicit(ptrInt, memory_order_relaxed,
+                   memory_scope_all_svm_devices)) & (uint)mask) & (uint)value)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      else {
+        while (!(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                   memory_scope_all_svm_devices)) & mask) & value)) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      break;
+
+    case 3: //NOR
+      if (ptrInt) {
+        while (!(~(((atomic_load_explicit(ptrInt, memory_order_relaxed,
+                     memory_scope_all_svm_devices)) & (uint)mask) | (uint)value))) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      else {
+        while (!(~(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                     memory_scope_all_svm_devices)) & mask) | value))) {
+          __builtin_amdgcn_s_sleep(1);
+        }
+      }
+      break;
+    }
+}
 #endif
 

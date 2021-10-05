@@ -81,11 +81,11 @@ MATH_MANGLE(j1)(double x)
               p[7]), p[6]), p[5]), p[4]),
               p[3]), p[2]), p[1]), p[0]);
     } else {
-        double r = MATH_RCP(x);
+        double r = MATH_RCP(ax);
         double r2 = r*r;
         double p = MATH_PRIVATE(bp1)(r2) * r;
-        ret = 0x1.9884533d43651p-1 * MATH_FAST_SQRT(r) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(x, 1, p);
-        ret = BUILTIN_CLASS_F64(x, CLASS_PINF) ? 0.0 : ret;
+        ret = 0x1.9884533d43651p-1 * MATH_FAST_SQRT(r) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(ax, 1, p);
+        ret = BUILTIN_CLASS_F64(ax, CLASS_PINF) ? 0.0 : ret;
     }
 
     if (x < 0.0)

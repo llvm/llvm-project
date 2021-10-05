@@ -24,14 +24,13 @@ MATH_MANGLE(log)(double a)
     m = BUILTIN_FLDEXP_F64(m, b);
     int e = BUILTIN_FREXP_EXP_F64(a) - b;
 
-    double2 x = div(m - 1.0, add(m, 1.0));
-    double2 s = sqr(x);
-    double t = s.hi;
-    double p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
-               MATH_MAD(t, MATH_MAD(t,
+    double2 x = div(m - 1.0, fadd(1.0, m));
+    double s = x.hi * x.hi;
+    double p = MATH_MAD(s, MATH_MAD(s, MATH_MAD(s, MATH_MAD(s,
+               MATH_MAD(s, MATH_MAD(s,
                    0x1.3ab76bf559e2bp-3, 0x1.385386b47b09ap-3), 0x1.7474dd7f4df2ep-3), 0x1.c71c016291751p-3),
                    0x1.249249b27acf1p-2), 0x1.99999998ef7b6p-2), 0x1.5555555555780p-1);
-    double2 r = add(ldx(x,1), mul(mul(x,s), p));
+    double2 r = fadd(ldx(x,1), s*x.hi*p);
 
 #if defined COMPILING_LOG2
     r = add((double)e, mul(con(0x1.71547652b82fep+0,0x1.777d0ffda0d24p-56), r));

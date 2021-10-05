@@ -299,7 +299,7 @@ mul(T2 a, T2 b)
 {
     T2 p = mul(a.hi, b.hi);
     if (USE_FMA) {
-        p.lo += FMA(a.hi, b.lo, a.lo*b.hi);
+        p.lo = FMA(a.lo, b.hi, FMA(a.hi, b.lo, p.lo));
     } else {
         p.lo += a.hi*b.lo + a.lo*b.hi;
     }
@@ -420,11 +420,11 @@ sqr(T2 a)
 {
     T2 p = sqr(a.hi);
     if (USE_FMA) {
-        p.lo = FMA(a.lo, a.lo, FMA(a.hi, (T)2*a.lo, p.lo));
+        p.lo = FMA(a.hi, (T)2 * a.lo, p.lo);
     } else {
-        p.lo = p.lo + a.hi * a.lo * (T)2 + a.lo * a.lo;
+        p.lo = p.lo + (T)2 * a.lo * a.hi;
     }
-    return fadd(p.hi, p.lo);
+    return nrm(p);
 }
 
 static ATTR T2

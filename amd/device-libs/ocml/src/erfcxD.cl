@@ -1,5 +1,79 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 #include "mathD.h"
+
+CONSTATTR double
+MATH_PRIVATE(erfcx)(double x)
+{
+    double n = x - 4.0;
+    double d = x + 4.0;
+    double r = MATH_FAST_RCP(d);
+    double q = n * r;
+    double e = MATH_MAD(-q, x, MATH_MAD(q + 1.0, -4.0, x));
+    q = BUILTIN_FMA_F64(r, e, q);
+    
+    double p = MATH_MAD(q, MATH_MAD(q, MATH_MAD(q, MATH_MAD(q,
+               MATH_MAD(q, MATH_MAD(q, MATH_MAD(q, MATH_MAD(q,
+               MATH_MAD(q, MATH_MAD(q, MATH_MAD(q, MATH_MAD(q,
+               MATH_MAD(q, MATH_MAD(q, MATH_MAD(q, MATH_MAD(q,
+               MATH_MAD(q, MATH_MAD(q, MATH_MAD(q, MATH_MAD(q,
+               MATH_MAD(q,
+                   -0x1.1f39d54df3c0ep-27, -0x1.1166337cfa789p-27),
+                   0x1.b45f1d9802b82p-24), 0x1.d90488a03dcdbp-25),
+                   -0x1.b87b02eba62d8p-21), 0x1.5104ba56e15f1p-22),
+                   0x1.7f29f71c907dep-18), -0x1.78f5c2cd770fbp-17),
+                   -0x1.995fb76d0a51ap-16), 0x1.3be2ec022d0edp-13),
+                   -0x1.a1deb2fdbf62ep-13), -0x1.8d4ac3689fc43p-11),
+                   0x1.49c67192d909bp-8), -0x1.09623852ff07p-6),
+                   0x1.3079edfadea8fp-5), -0x1.0fb06dff6591p-4),
+                   0x1.7fee004de8f32p-4), -0x1.9ddb23c3dbeb3p-4),
+                   0x1.16ecefcfa693p-4), 0x1.f7f5df66fb8a3p-7),
+                   -0x1.1df1ad154a2a8p-3), 0x1.dd2c8b74febf8p-3);
+
+    double tx = x + x;
+    d = 1.0 + tx;
+    r = MATH_FAST_RCP(d);
+    q = MATH_MAD(p, r, r);
+    e = MATH_MAD(-q, tx, 1.0) + (p - q);
+    q = MATH_MAD(r, e, q);
+    return q;
+}
+
+#if !defined EXTRA_ACCURACY
+
+CONSTATTR double
+MATH_MANGLE(erfcx)(double x)
+{
+    double ax = BUILTIN_ABS_F64(x);
+    double ret;
+    
+    if (ax < 0x1.b39dc41e48bfcp+4) {
+        ret = MATH_PRIVATE(erfcx)(ax);
+    } else {
+        double r = MATH_RCP(ax);
+        double t = r*r;
+        double p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
+                      -29.53125, 6.5625), -1.875), 0.75), -0.5), 1.0);
+        ret = 0x1.20dd750429b6dp-1 * r * p;
+    }
+
+    if (x < 0.0) {
+        double x2h = x*x;
+        double x2l = MATH_MAD(x, x, -x2h);
+        double e = MATH_MANGLE(exp)(x2h);
+        ret = MATH_MAD(2.0, MATH_MAD(e, x2l, e), -ret);
+        ret = x < -0x1.aa0f4d2e063cep+4 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+    }
+
+    return ret;
+}
+
+#else
 
 CONSTATTR double
 MATH_MANGLE(erfcx)(double x)
@@ -63,4 +137,6 @@ MATH_MANGLE(erfcx)(double x)
 
     return ret;
 }
+
+#endif
 

@@ -11,7 +11,7 @@
 CONSTATTR struct redret
 MATH_PRIVATE(trigred)(double x)
 {
-    if (x < 0x1.0p+21)
+    if (x < 0x1.0p+30)
         return MATH_PRIVATE(trigredsmall)(x);
     else
         return MATH_PRIVATE(trigredlarge)(x);

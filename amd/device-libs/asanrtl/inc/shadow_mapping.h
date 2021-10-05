@@ -26,11 +26,11 @@ NO_SANITIZE_ADDR
 static bool
 is_address_poisoned(uptr addr)
 {
-    u8 *shadow_address = (u8*)MEM_TO_SHADOW(addr);
-    s8 shadow_value = *shadow_address;
+    uptr shadow_addr = MEM_TO_SHADOW(addr);
+    s8 shadow_value = *(__global s8 *)shadow_addr;
     if (shadow_value) {
         //compute index of the given address within 8-byte range
-        return ((s8)(addr & (SHADOW_GRANULARITY -1 )) >= shadow_value);
+        return (s8)(addr & (SHADOW_GRANULARITY - 1)) >= shadow_value;
     }
     return false;
 }

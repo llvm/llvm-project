@@ -271,13 +271,17 @@ MATH_MANGLE(lgamma_r_impl)(double x)
         ret = (x == 1.0 | x == 2.0) ? 0.0 : ret;
         s = x == 0.0 ? 0 : 1;
     } else if (hax < 0x43300000) { // x > -0x1.0p+52
-        double t = MATH_MANGLE(sinpi)(x);
-        double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
-        ret = negadj - ret;
-        bool z = BUILTIN_FRACTION_F64(x) == 0.0;
-        ret = z ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
-        s = t < 0.0 ? -1 : 1;
-        s = z ? 0 : s;
+        if (hax > 0x3cd00000) { // x < -0x1.0p-50
+            double t = MATH_MANGLE(sinpi)(x);
+            double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
+            ret = negadj - ret;
+            bool z = BUILTIN_FRACTION_F64(x) == 0.0;
+            ret = z ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+            s = t < 0.0 ? -1 : 1;
+            s = z ? 0 : s;
+        } else {
+            s = -1;
+        }
     }
 
     if (!FINITE_ONLY_OPT()) {

@@ -7,9 +7,6 @@
 
 #include "mathD.h"
 
-#define DOUBLE_SPECIALIZATION
-#include "ep.h"
-
 CONSTATTR double
 #if defined COMPILING_EXP2
 MATH_MANGLE(exp2)(double x)
@@ -21,28 +18,26 @@ MATH_MANGLE(exp)(double x)
 {
 #if defined(COMPILING_EXP2)
     double dn = BUILTIN_RINT_F64(x);
-    double2 t = mul(x - dn, con(0x1.62e42fefa39efp-1, 0x1.abc9e3b39803fp-56));
+    double f = x - dn;
+    double t = MATH_MAD(f, 0x1.62e42fefa39efp-1, f * 0x1.abc9e3b39803fp-56);
 #elif defined(COMPILING_EXP10)
     double dn = BUILTIN_RINT_F64(x * 0x1.a934f0979a371p+1);
-    double2 t = fsub(sub(mul(x, con(0x1.26bb1bbb55516p+1, -0x1.f48ad494ea3e9p-53)),
-                         dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278ece6p-42);
+    double f = MATH_MAD(-dn, -0x1.9dc1da994fd21p-59, MATH_MAD(-dn, 0x1.34413509f79ffp-2, x));
+    double t = MATH_MAD(f, 0x1.26bb1bbb55516p+1, f * -0x1.f48ad494ea3e9p-53);
 #else
     double dn = BUILTIN_RINT_F64(x * 0x1.71547652b82fep+0);
-    double2 t = fsub(MATH_MAD(dn, -0x1.62e42fefa3000p-1, x), dn*0x1.3de6af278ece6p-42);
+    double t = MATH_MAD(-dn, 0x1.abc9e3b39803fp-56, MATH_MAD(-dn, 0x1.62e42fefa39efp-1, x));
 #endif
 
-    double th = t.hi;
-    double p = MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, 
-               MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, 
-               MATH_MAD(th, 
+    double p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
+               MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
+               MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
                    0x1.ade156a5dcb37p-26, 0x1.28af3fca7ab0cp-22), 0x1.71dee623fde64p-19), 0x1.a01997c89e6b0p-16),
                    0x1.a01a014761f6ep-13), 0x1.6c16c1852b7b0p-10), 0x1.1111111122322p-7), 0x1.55555555502a1p-5),
-                   0x1.5555555555511p-3), 0x1.000000000000bp-1);
+                   0x1.5555555555511p-3), 0x1.000000000000bp-1), 1.0), 1.0);
 
-    double2 r = fadd(t, mul(sqr(t), p));
-    double z = 1.0 + r.hi;
 
-    z = BUILTIN_FLDEXP_F64(z, (int)dn);
+    double z = BUILTIN_FLDEXP_F64(p, (int)dn);
 
     if (!FINITE_ONLY_OPT()) {
         z = x > 1024.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;

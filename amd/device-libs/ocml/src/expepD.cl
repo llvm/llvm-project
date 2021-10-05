@@ -13,6 +13,7 @@
 CONSTATTR double
 MATH_PRIVATE(expep)(double2 x)
 {
+#if defined EXTRA_ACCURACY
     double dn = BUILTIN_RINT_F64(x.hi * 0x1.71547652b82fep+0);
     double2 t = fsub(fsub(sub(x, dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278e000p-42), dn*0x1.9cc01f97b57a0p-83);
 
@@ -31,6 +32,11 @@ MATH_PRIVATE(expep)(double2 x)
 
     z = x.hi > 710.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
     z = x.hi < -745.0 ? 0.0 : z;
+#else
+    double z = MATH_MANGLE(exp)(x.hi);
+    double zz = MATH_MAD(z, x.lo, z);
+    z = BUILTIN_ISINF_F64(z)? z : zz;
+#endif
 
     return z;
 }

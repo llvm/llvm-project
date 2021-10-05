@@ -13,6 +13,7 @@
 CONSTATTR float
 MATH_PRIVATE(expep)(float2 x)
 {
+#if defined EXTRA_ACCURACY
     float fn = BUILTIN_RINT_F32(x.hi * 0x1.715476p+0f);
     float2 t = fsub(fsub(sub(x, fn*0x1.62e400p-1f), fn*0x1.7f7800p-20f), fn*0x1.473de6p-34f);
 
@@ -28,6 +29,14 @@ MATH_PRIVATE(expep)(float2 x)
 
     z = x.hi > 89.0f ? AS_FLOAT(PINFBITPATT_SP32) : z;
     z = x.hi < -104.0f ? 0.0f : z;
+#else
+    float d = x.hi == 0x1.62e430p+6f ? 0x1.0p-17f : 0.0f;
+    x.hi -= d;
+    x.lo += d;
+    float z = MATH_MANGLE(exp)(x.hi);
+    float zz = BUILTIN_FMA_F32(z, x.lo, z);
+    z = BUILTIN_ISINF_F32(z) ? z : zz;
+#endif
 
     return z;
 }

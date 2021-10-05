@@ -9,6 +9,9 @@
 #include "irif.h"
 #include "ockl.h"
 
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+
 extern ulong __ockl_devmem_request(ulong addr, ulong size);
 
 // XXX from llvm/include/llvm/IR/InstrTypes.h

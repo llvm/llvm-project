@@ -142,7 +142,7 @@ MATH_MANGLE(y1)(double x)
         if (x < b0) {
             const double twobypi = 0x1.45f306dc9c883p-1;
             if (x < 0x1.0p-33)
-                ret = MATH_DIV(-twobypi, x);
+                ret = MATH_DIV(-twobypi, BUILTIN_ABS_F64(x));
             else
                 ret = MATH_MAD(ret, x, twobypi*(MATH_MANGLE(j1)(x) * MATH_MANGLE(log)(x) - MATH_RCP(x)));
             ret = x < 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;

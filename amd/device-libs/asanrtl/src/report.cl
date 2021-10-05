@@ -63,16 +63,16 @@ ASAN_REPORT_ERROR_N(load,0)
 
 NO_SANITIZE_ADDR
 static bool
-asan_map_check(uptr addr, uptr size)
+is_invalid_access(uptr addr, uptr size)
 {
-    uptr shadowptr = MEM_TO_SHADOW(addr);
-    if (size <= SHADOW_GRANULARITY){
-        u8 shadowvalue = *(u8*) shadowptr;
-        return (((s8)((addr & ((SHADOW_GRANULARITY)-1)) + size - 1)) >=
-        (s8)shadowvalue);
-    } else {
-      u16 shadowvalue = *(u16*) shadowptr;
-      return shadowvalue != 0;
+    uptr shadow_addr = MEM_TO_SHADOW(addr);
+    if (size <= SHADOW_GRANULARITY) {
+      s8 shadow_value = *(__global s8*) shadow_addr;
+      return shadow_value != 0 && ((s8)((addr & (SHADOW_GRANULARITY-1)) + size - 1) >= shadow_value);
+    }
+    else {
+      s16 shadow_value = *(__global s16*) shadow_addr;
+      return shadow_value != 0;
     }
 }
 
@@ -80,14 +80,14 @@ asan_map_check(uptr addr, uptr size)
 OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## size(uptr addr) {                    \
     uptr caller_pc = GET_CALLER_PC();                        \
-    if (asan_map_check(addr, size)) {                        \
+    if (is_invalid_access(addr, size)) {                     \
         REPORT_IMPL(caller_pc, addr, is_write, size, false)  \
     }                                                        \
 }                                                            \
 OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## size ## _noabort(uptr addr) {        \
     uptr caller_pc = GET_CALLER_PC();                        \
-    if (asan_map_check(addr, size)) {                        \
+    if (is_invalid_access(addr, size)) {                     \
         REPORT_IMPL(caller_pc, addr, is_write, size, true)   \
     }                                                        \
 }                                                            \
