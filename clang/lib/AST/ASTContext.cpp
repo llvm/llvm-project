@@ -1445,13 +1445,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
-  if (Target.getTriple().isPPC64() &&
-      Target.hasFeature("paired-vector-memops")) {
-    if (Target.hasFeature("mma")) {
+  if (Target.getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
       InitBuiltinType(Id##Ty, BuiltinType::Id);
 #include "clang/Basic/PPCTypes.def"
-    }
 #define PPC_VECTOR_VSX_TYPE(Name, Id, Size) \
     InitBuiltinType(Id##Ty, BuiltinType::Id);
 #include "clang/Basic/PPCTypes.def"

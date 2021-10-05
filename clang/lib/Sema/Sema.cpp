@@ -409,13 +409,10 @@ void Sema::Initialize() {
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isPPC64() &&
-      Context.getTargetInfo().hasFeature("paired-vector-memops")) {
-    if (Context.getTargetInfo().hasFeature("mma")) {
+  if (Context.getTargetInfo().getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
       addImplicitTypedef(#Name, Context.Id##Ty);
 #include "clang/Basic/PPCTypes.def"
-    }
 #define PPC_VECTOR_VSX_TYPE(Name, Id, Size) \
     addImplicitTypedef(#Name, Context.Id##Ty);
 #include "clang/Basic/PPCTypes.def"
