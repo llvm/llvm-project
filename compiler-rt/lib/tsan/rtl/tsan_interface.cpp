@@ -20,10 +20,7 @@
 
 using namespace __tsan;
 
-void __tsan_init() {
-  cur_thread_init();
-  Initialize(cur_thread());
-}
+void __tsan_init() { Initialize(cur_thread_init()); }
 
 void __tsan_flush_memory() {
   FlushShadowMemory();
