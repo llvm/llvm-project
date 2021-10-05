@@ -242,7 +242,7 @@ public:
 
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
-  void AddExtraClangArgs(std::vector<std::string> ExtraArgs);
+  void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs);
   static void AddExtraClangArgs(const std::vector<std::string>& source,
                                 std::vector<std::string>& dest);
 
