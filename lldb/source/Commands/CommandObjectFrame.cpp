@@ -105,7 +105,7 @@ public:
 
   CommandObjectFrameDiagnose(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame diagnose",
-                            "Try to determine what path path the current stop "
+                            "Try to determine what path the current stop "
                             "location used to get to a register or address",
                             nullptr,
                             eCommandRequiresThread | eCommandTryTargetAPILock |
