@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
@@ -143,13 +144,31 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
   bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
 
-  // If of mismatched base types or checkable indices we can check
-  // they do not alias.
-  if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
-       (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
-      (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1)) {
-    IsAlias = false;
-    return true;
+  if ((IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1)) {
+    // We can derive NoAlias In case of mismatched base types.
+    if (IsFI0 != IsFI1 || IsGV0 != IsGV1 || IsCV0 != IsCV1) {
+      IsAlias = false;
+      return true;
+    }
+    // We cannot safely determine whether the pointers alias if we compare two
+    // global values and at least one is a GlobalAlias.
+    if (IsGV0 && IsGV1 &&
+        (isa<GlobalAlias>(
+             cast<GlobalAddressSDNode>(BasePtr0.getBase())->getGlobal()) ||
+         isa<GlobalAlias>(
+             cast<GlobalAddressSDNode>(BasePtr1.getBase())->getGlobal())))
+      return false;
+    // If checkable indices we can check they do not alias.
+    // FIXME: Please describe this a bit better. Looks weird to say that there
+    // is no alias if the indices are the same. Is this code assuming that
+    // someone has checked that the base isn't the same as a precondition? And
+    // what about offsets? And what about NumBytes0 and NumBytest1 (can we
+    // really derive NoAlias here if we do not even know how many bytes that are
+    // dereferenced)?
+    if (BasePtr0.getIndex() == BasePtr1.getIndex()) {
+      IsAlias = false;
+      return true;
+    }
   }
   return false; // Cannot determine whether the pointers alias.
 }
