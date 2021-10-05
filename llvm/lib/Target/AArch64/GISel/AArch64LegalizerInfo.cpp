@@ -169,7 +169,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
-      .lowerFor({s1, s8, s16, s32, s64});
+      .lowerFor({s1, s8, s16, s32, s64, v2s64, v4s32, v2s32})
+      .widenScalarOrEltToNextPow2(0)
+      .clampScalarOrElt(0, s32, s64)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
+
 
   getActionDefinitionsBuilder({G_SMULO, G_UMULO})
       .widenScalarToNextPow2(0, /*Min = */ 32)
