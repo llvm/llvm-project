@@ -28,7 +28,6 @@
 #ifndef _OMPTARGET_NVPTX_DEBUG_H_
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
-#include "common/device_environment.h"
 #include "target_interface.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,14 +188,14 @@ NOINLINE static void check(bool cond) {
 
 #define PRINT0(_flag, _str)                                                    \
   {                                                                            \
-    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
+    if (omptarget_device_environment.DebugKind && DON(_flag)) {              \
       log("<b %2d, t %4d, w %2d, l %2d>: " _str);                              \
     }                                                                          \
   }
 
 #define PRINT(_flag, _str, _args...)                                           \
   {                                                                            \
-    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
+    if (omptarget_device_environment.DebugKind && DON(_flag)) {              \
       log("<b %2d, t %4d, w %2d, l %2d>: " _str, _args);                       \
     }                                                                          \
   }
