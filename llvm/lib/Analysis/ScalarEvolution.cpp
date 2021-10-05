@@ -6585,25 +6585,24 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
-const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
+const Instruction *
+ScalarEvolution::getNonTrivialDefiningScopeBound(const SCEV *S) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     return &*AddRec->getLoop()->getHeader()->begin();
   if (auto *U = dyn_cast<SCEVUnknown>(S))
     if (auto *I = dyn_cast<Instruction>(U->getValue()))
       return I;
-  // All SCEVs are bound by the entry to F
-  return &*F.getEntryBlock().begin();
+  return nullptr;
 }
 
 const Instruction *
 ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
-  const Instruction *Bound = &*F.getEntryBlock().begin();
-  for (auto *S : Ops) {
-    auto *DefI = getDefiningScopeBound(S);
-    if (DT.dominates(Bound, DefI))
-      Bound = DefI;
-  }
-  return Bound;
+  const Instruction *Bound = nullptr;
+  for (auto *S : Ops)
+    if (auto *DefI = getNonTrivialDefiningScopeBound(S))
+      if (!Bound || DT.dominates(Bound, DefI))
+        Bound = DefI;
+  return Bound ? Bound : &*F.getEntryBlock().begin();
 }
 
 
