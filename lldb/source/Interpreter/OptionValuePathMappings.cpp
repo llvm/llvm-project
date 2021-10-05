@@ -15,13 +15,12 @@
 
 using namespace lldb;
 using namespace lldb_private;
-namespace {
+
 static bool VerifyPathExists(const char *path) {
   if (path && path[0])
     return FileSystem::Instance().Exists(path);
   else
     return false;
-}
 }
 
 void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
