@@ -17,13 +17,10 @@ using namespace llvm;
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractInstrFromModule(std::vector<Chunk> ChunksToKeep,
-                                   Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractInstrFromModule(Oracle &O, Module &Program) {
   std::set<Instruction *> InstToKeep;
 
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F) {
       // Removing the terminator would make the block invalid. Only iterate over
       // instructions before the terminator.
@@ -34,7 +31,7 @@ static void extractInstrFromModule(std::vector<Chunk> ChunksToKeep,
     }
 
   std::vector<Instruction *> InstToDelete;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F)
       for (auto &Inst : BB)
         if (!InstToKeep.count(&Inst)) {
@@ -47,11 +44,11 @@ static void extractInstrFromModule(std::vector<Chunk> ChunksToKeep,
 }
 
 /// Counts the amount of basic blocks and prints their name & respective index
-static unsigned countInstructions(Module *Program) {
+static unsigned countInstructions(Module &Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   int InstCount = 0;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F)
       // Well-formed blocks have terminators, which we cannot remove.
       InstCount += BB.getInstList().size() - 1;

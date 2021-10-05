@@ -87,19 +87,16 @@ static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
-                                         Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   std::set<BasicBlock *> BBsToKeep;
 
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F)
       if (O.shouldKeep())
         BBsToKeep.insert(&BB);
 
   std::vector<BasicBlock *> BBsToDelete;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F) {
       if (!BBsToKeep.count(&BB)) {
         BBsToDelete.push_back(&BB);
@@ -110,7 +107,7 @@ static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
     }
 
   // Replace terminators that reference out-of-chunk BBs
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F) {
       if (auto *SwInst = dyn_cast<SwitchInst>(BB.getTerminator()))
         removeUninterestingBBsFromSwitch(*SwInst, BBsToKeep);
@@ -128,11 +125,11 @@ static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
 }
 
 /// Counts the amount of basic blocks and prints their name & respective index
-static int countBasicBlocks(Module *Program) {
+static int countBasicBlocks(Module &Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   int BBCount = 0;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F) {
       if (BB.hasName())
         outs() << "\t" << ++BBCount << ": " << BB.getName() << "\n";

@@ -22,13 +22,10 @@ using namespace llvm;
 
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
-static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                      Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractMetadataFromModule(Oracle &O, Module &Program) {
   // Get out-of-chunk Named metadata nodes
   SmallVector<NamedMDNode *> NamedNodesToDelete;
-  for (NamedMDNode &MD : Program->named_metadata())
+  for (NamedMDNode &MD : Program.named_metadata())
     if (!O.shouldKeep())
       NamedNodesToDelete.push_back(&MD);
 
@@ -40,14 +37,14 @@ static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
 
   // Delete out-of-chunk metadata attached to globals.
   SmallVector<std::pair<unsigned, MDNode *>> MDs;
-  for (GlobalVariable &GV : Program->globals()) {
+  for (GlobalVariable &GV : Program.globals()) {
     GV.getAllMetadata(MDs);
     for (std::pair<unsigned, MDNode *> &MD : MDs)
       if (!O.shouldKeep())
         GV.setMetadata(MD.first, NULL);
   }
 
-  for (Function &F : *Program) {
+  for (Function &F : Program) {
     // Delete out-of-chunk metadata attached to functions.
     F.getAllMetadata(MDs);
     for (std::pair<unsigned, MDNode *> &MD : MDs)
@@ -64,13 +61,13 @@ static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
   }
 }
 
-static int countMetadataTargets(Module *Program) {
-  int NamedMetadataNodes = Program->named_metadata_size();
+static int countMetadataTargets(Module &Program) {
+  int NamedMetadataNodes = Program.named_metadata_size();
 
   // Get metadata attached to globals.
   int GlobalMetadataArgs = 0;
   SmallVector<std::pair<unsigned, MDNode *>> MDs;
-  for (GlobalVariable &GV : Program->globals()) {
+  for (GlobalVariable &GV : Program.globals()) {
     GV.getAllMetadata(MDs);
     GlobalMetadataArgs += MDs.size();
   }
@@ -78,7 +75,7 @@ static int countMetadataTargets(Module *Program) {
   // Get metadata attached to functions & instructions.
   int FunctionMetadataArgs = 0;
   int InstructionMetadataArgs = 0;
-  for (Function &F : *Program) {
+  for (Function &F : Program) {
     F.getAllMetadata(MDs);
     FunctionMetadataArgs += MDs.size();
 

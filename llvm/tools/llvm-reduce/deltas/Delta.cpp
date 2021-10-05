@@ -27,7 +27,7 @@ static cl::opt<bool> AbortOnInvalidReduction(
     "abort-on-invalid-reduction",
     cl::desc("Abort if any reduction results in invalid IR"));
 
-void writeOutput(llvm::Module *M, llvm::StringRef Message);
+void writeOutput(llvm::Module &M, llvm::StringRef Message);
 
 bool isReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
   // Write Module to tmp file
@@ -97,24 +97,21 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 /// given test.
 void llvm::runDeltaPass(
     TestRunner &Test, int Targets,
-    std::function<void(const std::vector<Chunk> &, Module *)>
-        ExtractChunksFromModule) {
+    function_ref<void(Oracle &, Module &)> ExtractChunksFromModule) {
   assert(Targets >= 0);
   if (!Targets) {
     errs() << "\nNothing to reduce\n";
     return;
   }
 
-  if (Module *Program = Test.getProgram()) {
-    SmallString<128> CurrentFilepath;
-    if (!isReduced(*Program, Test, CurrentFilepath)) {
-      errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-      exit(1);
-    }
-
-    assert(!verifyModule(*Program, &errs()) &&
-           "input module is broken before making changes");
+  SmallString<128> CurrentFilepath;
+  if (!isReduced(Test.getProgram(), Test, CurrentFilepath)) {
+    errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
+    exit(1);
   }
+
+  assert(!verifyModule(Test.getProgram(), &errs()) &&
+         "input module is broken before making changes");
 
   std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
   std::unique_ptr<Module> ReducedProgram;
@@ -140,12 +137,13 @@ void llvm::runDeltaPass(
               });
 
       // Clone module before hacking it up..
-      std::unique_ptr<Module> Clone = CloneModule(*Test.getProgram());
+      std::unique_ptr<Module> Clone = CloneModule(Test.getProgram());
       // Generate Module with only Targets inside Current Chunks
-      ExtractChunksFromModule(CurrentChunks, Clone.get());
+      Oracle O(CurrentChunks);
+      ExtractChunksFromModule(O, *Clone);
 
       // Some reductions may result in invalid IR. Skip such reductions.
-      if (verifyModule(*Clone.get(), &errs())) {
+      if (verifyModule(*Clone, &errs())) {
         if (AbortOnInvalidReduction) {
           errs() << "Invalid reduction\n";
           exit(1);
@@ -171,7 +169,7 @@ void llvm::runDeltaPass(
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Clone);
       errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
-      writeOutput(ReducedProgram.get(), "Saved new best reduction to ");
+      writeOutput(*ReducedProgram, "Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,
