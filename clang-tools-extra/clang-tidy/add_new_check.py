@@ -323,13 +323,13 @@ def update_checks_list(clang_tidy_path):
   def has_auto_fix(check_name):
     dirname, _, check_name = check_name.partition("-")
 
-    checkerCode = get_actual_filename(dirname,
-                                      get_camel_name(check_name) + '.cpp')
+    checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                       get_camel_name(check_name) + '.cpp')
 
-    if not os.path.isfile(checkerCode):
+    if not os.path.isfile(checker_code):
       return ""
 
-    with io.open(checkerCode, encoding='utf8') as f:
+    with io.open(checker_code, encoding='utf8') as f:
       code = f.read()
       if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
         # Some simple heuristics to figure out if a checker has an autofix or not.
