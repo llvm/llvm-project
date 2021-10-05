@@ -1177,10 +1177,10 @@ OpFoldResult IsBroadcastableOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// JoinOp
+// MeetOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult mlir::shape::JoinOp::inferReturnTypes(
+LogicalResult mlir::shape::MeetOp::inferReturnTypes(
     MLIRContext *context, Optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
@@ -1188,7 +1188,7 @@ LogicalResult mlir::shape::JoinOp::inferReturnTypes(
   return success();
 }
 
-bool mlir::shape::JoinOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+bool mlir::shape::MeetOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   if (l.size() != 1 || r.size() != 1)
     return false;
   if (l == r)
