@@ -51,11 +51,11 @@ static timespec toTimeSpec(sys::TimePoint<> tp) {
 // Fatal error handling
 //===----------------------------------------------------------------------===//
 
-static void fatal_error_handler(void *user_data, const std::string& reason,
+static void fatal_error_handler(void *user_data, const char *reason,
                                 bool gen_crash_diag) {
   // Write the result out to stderr avoiding errs() because raw_ostreams can
   // call report_fatal_error.
-  fprintf(stderr, "INDEXSTORE FATAL ERROR: %s\n", reason.c_str());
+  fprintf(stderr, "INDEXSTORE FATAL ERROR: %s\n", reason);
   ::abort();
 }
 
