@@ -412,18 +412,18 @@ enum ContextAttributeMask {
   ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
 };
 
-// Represents a callsite with caller function name and line location
+// Represents a context frame with function name and line location
 struct SampleContextFrame {
-  StringRef CallerName;
-  LineLocation Callsite;
+  StringRef FuncName;
+  LineLocation Location;
 
-  SampleContextFrame() : Callsite(0, 0) {}
+  SampleContextFrame() : Location(0, 0) {}
 
-  SampleContextFrame(StringRef CallerName, LineLocation Callsite)
-      : CallerName(CallerName), Callsite(Callsite) {}
+  SampleContextFrame(StringRef FuncName, LineLocation Location)
+      : FuncName(FuncName), Location(Location) {}
 
   bool operator==(const SampleContextFrame &That) const {
-    return Callsite == That.Callsite && CallerName == That.CallerName;
+    return Location == That.Location && FuncName == That.FuncName;
   }
 
   bool operator!=(const SampleContextFrame &That) const {
@@ -432,19 +432,19 @@ struct SampleContextFrame {
 
   std::string toString(bool OutputLineLocation) const {
     std::ostringstream OContextStr;
-    OContextStr << CallerName.str();
+    OContextStr << FuncName.str();
     if (OutputLineLocation) {
-      OContextStr << ":" << Callsite.LineOffset;
-      if (Callsite.Discriminator)
-        OContextStr << "." << Callsite.Discriminator;
+      OContextStr << ":" << Location.LineOffset;
+      if (Location.Discriminator)
+        OContextStr << "." << Location.Discriminator;
     }
     return OContextStr.str();
   }
 };
 
 static inline hash_code hash_value(const SampleContextFrame &arg) {
-  return hash_combine(arg.CallerName, arg.Callsite.LineOffset,
-                      arg.Callsite.Discriminator);
+  return hash_combine(arg.FuncName, arg.Location.LineOffset,
+                      arg.Location.Discriminator);
 }
 
 using SampleContextFrameVector = SmallVector<SampleContextFrame, 10>;
@@ -598,7 +598,7 @@ public:
                   ContextStateMask CState = RawContext) {
     assert(CState != UnknownContext);
     FullContext = Context;
-    Name = Context.back().CallerName;
+    Name = Context.back().FuncName;
     State = CState;
   }
 
@@ -621,11 +621,11 @@ public:
     while (I < std::min(FullContext.size(), That.FullContext.size())) {
       auto &Context1 = FullContext[I];
       auto &Context2 = That.FullContext[I];
-      auto V = Context1.CallerName.compare(Context2.CallerName);
+      auto V = Context1.FuncName.compare(Context2.FuncName);
       if (V)
         return V == -1;
-      if (Context1.Callsite != Context2.Callsite)
-        return Context1.Callsite < Context2.Callsite;
+      if (Context1.Location != Context2.Location)
+        return Context1.Location < Context2.Location;
       I++;
     }
 
@@ -645,7 +645,7 @@ public:
       return false;
     ThatContext = ThatContext.take_front(ThisContext.size());
     // Compare Leaf frame first
-    if (ThisContext.back().CallerName != ThatContext.back().CallerName)
+    if (ThisContext.back().FuncName != ThatContext.back().FuncName)
       return false;
     // Compare leading context
     return ThisContext.drop_back() == ThatContext.drop_back();

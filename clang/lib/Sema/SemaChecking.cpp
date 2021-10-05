@@ -1729,7 +1729,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // value so we bail out.
     if (SizeOp->isValueDependent())
       break;
-    if (!SizeOp->EvaluateKnownConstInt(Context).isNullValue()) {
+    if (!SizeOp->EvaluateKnownConstInt(Context).isZero()) {
       CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
       CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
     }
@@ -3297,6 +3297,11 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_addex:
   case PPC::BI__builtin_darn:
   case PPC::BI__builtin_darn_raw:
+  case PPC::BI__builtin_ppc_compare_and_swaplp:
+  case PPC::BI__builtin_ppc_fetch_and_addlp:
+  case PPC::BI__builtin_ppc_fetch_and_andlp:
+  case PPC::BI__builtin_ppc_fetch_and_orlp:
+  case PPC::BI__builtin_ppc_fetch_and_swaplp:
     return true;
   }
   return false;
@@ -6776,7 +6781,7 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
                        << TheCall->getArg(i)->getSourceRange());
 
     // Allow -1 which will be translated to undef in the IR.
-    if (Result->isSigned() && Result->isAllOnesValue())
+    if (Result->isSigned() && Result->isAllOnes())
       continue;
 
     if (Result->getActiveBits() > 64 ||

@@ -779,7 +779,7 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
 
   // Special case: get the ordering right when the values wrap around zero.
   // Ie, we assumed the constants were unsigned when swapping earlier.
-  if (C1->isNullValue() && C2->isAllOnesValue())
+  if (C1->isZero() && C2->isAllOnes())
     std::swap(C1, C2);
 
   if (*C1 == *C2 - 1) {
@@ -923,7 +923,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
   if (!tryToDecompose(OtherICmp, X0, UnsetBitsMask))
     return nullptr;
 
-  assert(!UnsetBitsMask.isNullValue() && "empty mask makes no sense.");
+  assert(!UnsetBitsMask.isZero() && "empty mask makes no sense.");
 
   // Are they working on the same value?
   Value *X;
@@ -1310,8 +1310,8 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
       // Check that the low bits are zero.
       APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & AndC->getValue()).isNullValue() &&
-          (Low & BigC->getValue()).isNullValue()) {
+      if ((Low & AndC->getValue()).isZero() &&
+          (Low & BigC->getValue()).isZero()) {
         Value *NewAnd = Builder.CreateAnd(V, Low | AndC->getValue());
         APInt N = SmallC->getValue().zext(BigBitSize) | BigC->getValue();
         Value *NewVal = ConstantInt::get(AndC->getType()->getContext(), N);
@@ -1883,7 +1883,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       // (X + AddC) & LowMaskC --> X & LowMaskC
       unsigned Ctlz = C->countLeadingZeros();
       APInt LowMask(APInt::getLowBitsSet(Width, Width - Ctlz));
-      if ((*AddC & LowMask).isNullValue())
+      if ((*AddC & LowMask).isZero())
         return BinaryOperator::CreateAnd(X, Op1);
 
       // If we are masking the result of the add down to exactly one bit and
@@ -2677,7 +2677,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   Value *X, *Y;
   const APInt *CV;
   if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
-      !CV->isAllOnesValue() && MaskedValueIsZero(Y, *CV, 0, &I)) {
+      !CV->isAllOnes() && MaskedValueIsZero(Y, *CV, 0, &I)) {
     // (X ^ C) | Y -> (X | Y) ^ C iff Y & C == 0
     // The check for a 'not' op is for efficiency (if Y is known zero --> ~X).
     Value *Or = Builder.CreateOr(X, Y);
@@ -2692,7 +2692,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     ConstantInt *C1, *C2;
     if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
       Value *V1 = nullptr, *V2 = nullptr;
-      if ((C1->getValue() & C2->getValue()).isNullValue()) {
+      if ((C1->getValue() & C2->getValue()).isZero()) {
         // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
         // iff (C1&C2) == 0 and (N&~C1) == 0
         if (match(A, m_Or(m_Value(V1), m_Value(V2))) &&
@@ -2715,9 +2715,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         // iff (C1&C2) == 0 and (C3&~C1) == 0 and (C4&~C2) == 0.
         ConstantInt *C3 = nullptr, *C4 = nullptr;
         if (match(A, m_Or(m_Value(V1), m_ConstantInt(C3))) &&
-            (C3->getValue() & ~C1->getValue()).isNullValue() &&
+            (C3->getValue() & ~C1->getValue()).isZero() &&
             match(B, m_Or(m_Specific(V1), m_ConstantInt(C4))) &&
-            (C4->getValue() & ~C2->getValue()).isNullValue()) {
+            (C4->getValue() & ~C2->getValue()).isZero()) {
           V2 = Builder.CreateOr(V1, ConstantExpr::getOr(C3, C4), "bitfield");
           return BinaryOperator::CreateAnd(V2,
                                  Builder.getInt(C1->getValue()|C2->getValue()));

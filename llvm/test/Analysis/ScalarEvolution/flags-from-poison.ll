@@ -273,9 +273,9 @@ define void @test-add-scope-bound-unkn-header(i32* %input, i32 %needle) {
 ; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
 ; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
-; CHECK-NEXT:    --> (%offset + %i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
@@ -307,9 +307,9 @@ define void @test-add-scope-bound-unkn-header2(i32* %input, i32 %needle) {
 ; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
 ; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
-; CHECK-NEXT:    --> (%offset + %i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header2
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.

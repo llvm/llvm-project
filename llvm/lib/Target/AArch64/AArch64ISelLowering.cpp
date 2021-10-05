@@ -10224,7 +10224,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         unsigned BitSize = VT.getVectorElementType().getSizeInBits();
         APInt Val(BitSize,
                   Const->getAPIntValue().zextOrTrunc(BitSize).getZExtValue());
-        if (Val.isNullValue() || Val.isAllOnesValue())
+        if (Val.isZero() || Val.isAllOnes())
           return Op;
       }
   }
@@ -16151,7 +16151,7 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
                           MVT::v2i32, MVT::v4i32, MVT::v2i64}),
             VT.getSimpleVT().SimpleTy) &&
         ISD::isConstantSplatVector(SplatLHS, SplatLHSVal) &&
-        SplatLHSVal.isOneValue() && ISD::isConstantSplatVectorAllOnes(CmpRHS) &&
+        SplatLHSVal.isOne() && ISD::isConstantSplatVectorAllOnes(CmpRHS) &&
         ISD::isConstantSplatVectorAllOnes(SplatRHS)) {
       unsigned NumElts = VT.getVectorNumElements();
       SmallVector<SDValue, 8> Ops(

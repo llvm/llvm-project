@@ -18,7 +18,6 @@ using namespace mlir;
 using namespace mlir::python;
 
 using llvm::SmallVector;
-using llvm::StringRef;
 using llvm::Twine;
 
 namespace {
@@ -43,6 +42,24 @@ public:
         py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
   }
 };
+
+template <typename T>
+static T pyTryCast(py::handle object) {
+  try {
+    return object.cast<T>();
+  } catch (py::cast_error &err) {
+    std::string msg =
+        std::string(
+            "Invalid attribute when attempting to create an ArrayAttribute (") +
+        err.what() + ")";
+    throw py::cast_error(msg);
+  } catch (py::reference_cast_error &err) {
+    std::string msg = std::string("Invalid attribute (None?) when attempting "
+                                  "to create an ArrayAttribute (") +
+                      err.what() + ")";
+    throw py::cast_error(msg);
+  }
+}
 
 class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
 public:
@@ -76,6 +93,10 @@ public:
     int nextIndex = 0;
   };
 
+  PyAttribute getItem(intptr_t i) {
+    return PyAttribute(getContext(), mlirArrayAttrGetElement(*this, i));
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
@@ -83,21 +104,7 @@ public:
           SmallVector<MlirAttribute> mlirAttributes;
           mlirAttributes.reserve(py::len(attributes));
           for (auto attribute : attributes) {
-            try {
-              mlirAttributes.push_back(attribute.cast<PyAttribute>());
-            } catch (py::cast_error &err) {
-              std::string msg = std::string("Invalid attribute when attempting "
-                                            "to create an ArrayAttribute (") +
-                                err.what() + ")";
-              throw py::cast_error(msg);
-            } catch (py::reference_cast_error &err) {
-              // This exception seems thrown when the value is "None".
-              std::string msg =
-                  std::string("Invalid attribute (None?) when attempting to "
-                              "create an ArrayAttribute (") +
-                  err.what() + ")";
-              throw py::cast_error(msg);
-            }
+            mlirAttributes.push_back(pyTryCast<PyAttribute>(attribute));
           }
           MlirAttribute attr = mlirArrayAttrGet(
               context->get(), mlirAttributes.size(), mlirAttributes.data());
@@ -109,8 +116,7 @@ public:
           [](PyArrayAttribute &arr, intptr_t i) {
             if (i >= mlirArrayAttrGetNumElements(arr))
               throw py::index_error("ArrayAttribute index out of range");
-            return PyAttribute(arr.getContext(),
-                               mlirArrayAttrGetElement(arr, i));
+            return arr.getItem(i);
           })
         .def("__len__",
              [](const PyArrayAttribute &arr) {
@@ -119,6 +125,18 @@ public:
         .def("__iter__", [](const PyArrayAttribute &arr) {
           return PyArrayAttributeIterator(arr);
         });
+    c.def("__add__", [](PyArrayAttribute arr, py::list extras) {
+      std::vector<MlirAttribute> attributes;
+      intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
+      attributes.reserve(numOldElements + py::len(extras));
+      for (intptr_t i = 0; i < numOldElements; ++i)
+        attributes.push_back(arr.getItem(i));
+      for (py::handle attr : extras)
+        attributes.push_back(pyTryCast<PyAttribute>(attr));
+      MlirAttribute arrayAttr = mlirArrayAttrGet(
+          arr.getContext()->get(), attributes.size(), attributes.data());
+      return PyArrayAttribute(arr.getContext(), arrayAttr);
+    });
   }
 };
 
@@ -602,7 +620,7 @@ public:
                                     mlirNamedAttributes.data());
           return PyDictAttribute(context->getRef(), attr);
         },
-        py::arg("value"), py::arg("context") = py::none(),
+        py::arg("value") = py::dict(), py::arg("context") = py::none(),
         "Gets an uniqued dict attribute");
     c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
       MlirAttribute attr =

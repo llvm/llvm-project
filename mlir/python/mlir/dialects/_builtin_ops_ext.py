@@ -3,7 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 try:
-  from typing import Optional, Sequence
+  from typing import Optional, Sequence, Union
 
   import inspect
 
@@ -82,8 +82,8 @@ class FuncOp:
     return self.attributes["sym_visibility"]
 
   @property
-  def name(self):
-    return self.attributes["sym_name"]
+  def name(self) -> StringAttr:
+    return StringAttr(self.attributes["sym_name"])
 
   @property
   def entry_block(self):
@@ -104,11 +104,15 @@ class FuncOp:
 
   @property
   def arg_attrs(self):
-    return self.attributes[ARGUMENT_ATTRIBUTE_NAME]
+    return ArrayAttr(self.attributes[ARGUMENT_ATTRIBUTE_NAME])
 
   @arg_attrs.setter
-  def arg_attrs(self, attribute: ArrayAttr):
-    self.attributes[ARGUMENT_ATTRIBUTE_NAME] = attribute
+  def arg_attrs(self, attribute: Union[ArrayAttr, list]):
+    if isinstance(attribute, ArrayAttr):
+      self.attributes[ARGUMENT_ATTRIBUTE_NAME] = attribute
+    else:
+      self.attributes[ARGUMENT_ATTRIBUTE_NAME] = ArrayAttr.get(
+          attribute, context=self.context)
 
   @property
   def arguments(self):

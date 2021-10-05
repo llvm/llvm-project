@@ -202,23 +202,37 @@ Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
   return llvm::EmitGEPOffset(&Builder, DL, GEP);
 }
 
+/// Legal integers and common types are considered desirable. This is used to
+/// avoid creating instructions with types that may not be supported well by the
+/// the backend.
+/// NOTE: This treats i8, i16 and i32 specially because they are common
+///       types in frontend languages.
+bool InstCombinerImpl::isDesirableIntType(unsigned BitWidth) const {
+  switch (BitWidth) {
+  case 8:
+  case 16:
+  case 32:
+    return true;
+  default:
+    return DL.isLegalInteger(BitWidth);
+  }
+}
+
 /// Return true if it is desirable to convert an integer computation from a
 /// given bit width to a new bit width.
 /// We don't want to convert from a legal to an illegal type or from a smaller
-/// to a larger illegal type. A width of '1' is always treated as a legal type
-/// because i1 is a fundamental type in IR, and there are many specialized
-/// optimizations for i1 types. Widths of 8, 16 or 32 are equally treated as
+/// to a larger illegal type. A width of '1' is always treated as a desirable
+/// type because i1 is a fundamental type in IR, and there are many specialized
+/// optimizations for i1 types. Common/desirable widths are equally treated as
 /// legal to convert to, in order to open up more combining opportunities.
-/// NOTE: this treats i8, i16 and i32 specially, due to them being so common
-/// from frontend languages.
 bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
                                         unsigned ToWidth) const {
   bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
   bool ToLegal = ToWidth == 1 || DL.isLegalInteger(ToWidth);
 
-  // Convert to widths of 8, 16 or 32 even if they are not legal types. Only
-  // shrink types, to prevent infinite loops.
-  if (ToWidth < FromWidth && (ToWidth == 8 || ToWidth == 16 || ToWidth == 32))
+  // Convert to desirable widths even if they are not legal types.
+  // Only shrink types, to prevent infinite loops.
+  if (ToWidth < FromWidth && isDesirableIntType(ToWidth))
     return true;
 
   // If this is a legal integer from type, and the result would be an illegal
@@ -1059,7 +1073,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op,
         // Compare for equality including undefs as equal.
         auto *Cmp = ConstantExpr::getCompare(ICmpInst::ICMP_EQ, ConstA, ConstB);
         const APInt *C;
-        return match(Cmp, m_APIntAllowUndef(C)) && C->isOneValue();
+        return match(Cmp, m_APIntAllowUndef(C)) && C->isOne();
       };
 
       if ((areLooselyEqual(TV, Op0) && areLooselyEqual(FV, Op1)) ||

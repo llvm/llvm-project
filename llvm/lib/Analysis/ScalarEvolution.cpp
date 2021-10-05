@@ -2781,7 +2781,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     // If we found some loop invariants, fold them into the recurrence.
     if (!LIOps.empty()) {
       // Compute nowrap flags for the addition of the loop-invariant ops and
-      // the addrec. Temporarily push it as an operand for that purpose.
+      // the addrec. Temporarily push it as an operand for that purpose. These
+      // flags are valid in the scope of the addrec only.
       LIOps.push_back(AddRec);
       SCEV::NoWrapFlags Flags = ComputeFlags(LIOps);
       LIOps.pop_back();
@@ -2790,10 +2791,24 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       LIOps.push_back(AddRec->getStart());
 
       SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
-      // This follows from the fact that the no-wrap flags on the outer add
-      // expression are applicable on the 0th iteration, when the add recurrence
-      // will be equal to its start value.
-      AddRecOps[0] = getAddExpr(LIOps, Flags, Depth + 1);
+
+      // It is not in general safe to propagate flags valid on an add within
+      // the addrec scope to one outside it.  We must prove that the inner
+      // scope is guaranteed to execute if the outer one does to be able to
+      // safely propagate.  We know the program is undefined if poison is
+      // produced on the inner scoped addrec.  We also know that *for this use*
+      // the outer scoped add can't overflow (because of the flags we just
+      // computed for the inner scoped add) without the program being undefined.
+      // Proving that entry to the outer scope neccesitates entry to the inner
+      // scope, thus proves the program undefined if the flags would be violated
+      // in the outer scope.
+      const bool CanPropagateFlags = llvm::any_of(LIOps, [&](const SCEV *S) {
+        auto *ReachI = &*AddRecLoop->getHeader()->begin();
+        auto *DefI = getDefiningScopeBound(S);
+        return isGuaranteedToTransferExecutionTo(DefI, ReachI);
+      });
+      auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
+      AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
       // Build the new addrec. Propagate the NUW and NSW flags if both the
       // outer add and the inner addrec are guaranteed to have no overflow.
@@ -6129,7 +6144,7 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     // initial value.
     if (AddRec->hasNoUnsignedWrap()) {
       APInt UnsignedMinValue = getUnsignedRangeMin(AddRec->getStart());
-      if (!UnsignedMinValue.isNullValue())
+      if (!UnsignedMinValue.isZero())
         ConservativeResult = ConservativeResult.intersectWith(
             ConstantRange(UnsignedMinValue, APInt(BitWidth, 0)), RangeType);
     }
@@ -6231,9 +6246,9 @@ ScalarEvolution::getRangeRef(const SCEV *S,
 
     if (NS > 1) {
       // If we know any of the sign bits, we know all of the sign bits.
-      if (!Known.Zero.getHiBits(NS).isNullValue())
+      if (!Known.Zero.getHiBits(NS).isZero())
         Known.Zero.setHighBits(NS);
-      if (!Known.One.getHiBits(NS).isNullValue())
+      if (!Known.One.getHiBits(NS).isZero())
         Known.One.setHighBits(NS);
     }
 
@@ -6569,25 +6584,47 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
-const Instruction *ScalarEvolution::getDefinedScopeRoot(const SCEV *S) {
+const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     return &*AddRec->getLoop()->getHeader()->begin();
-  // TODO: add SCEVConstant and SCEVUnknown caxes here
-  return nullptr;
+  if (auto *U = dyn_cast<SCEVUnknown>(S))
+    if (auto *I = dyn_cast<Instruction>(U->getValue()))
+      return I;
+  // All SCEVs are bound by the entry to F
+  return &*F.getEntryBlock().begin();
 }
 
 static bool
 isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
                                            BasicBlock::const_iterator End) {
-  return llvm::all_of( make_range(Begin, End), [](const Instruction &I) {
-    return isGuaranteedToTransferExecutionToSuccessor(&I);
-  });
+  // Limit number of instructions we look at, to avoid scanning through large
+  // blocks. The current limit is chosen arbitrarily.
+  unsigned ScanLimit = 32;
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (isa<DbgInfoIntrinsic>(I))
+        continue;
+    if (--ScanLimit == 0)
+      return false;
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      return false;
+  }
+  return true;
 }
 
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
                                                         const Instruction *B) {
   if (A->getParent() == B->getParent() &&
       ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                   B->getIterator()))
+    return true;
+
+  auto *BLoop = LI.getLoopFor(B->getParent());
+  if (BLoop && BLoop->getHeader() == B->getParent() &&
+      BLoop->getLoopPreheader() == A->getParent() &&
+      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                   A->getParent()->end()) &&
+      ::isGuaranteedToTransferExecutionToSuccessor(B->getParent()->begin(),
                                                    B->getIterator()))
     return true;
   return false;
@@ -6625,9 +6662,9 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     // TODO: We can do better here in some cases.
     if (!isSCEVable(Op->getType()))
       return false;
-    if (auto *DefI = getDefinedScopeRoot(getSCEV(Op)))
-      if (isGuaranteedToTransferExecutionTo(DefI, I))
-        return true;
+    auto *DefI = getDefiningScopeBound(getSCEV(Op));
+    if (isGuaranteedToTransferExecutionTo(DefI, I))
+      return true;
   }
   return false;
 }
@@ -9193,7 +9230,7 @@ GetQuadraticEquation(const SCEVAddRecExpr *AddRec) {
   APInt L = LC->getAPInt();
   APInt M = MC->getAPInt();
   APInt N = NC->getAPInt();
-  assert(!N.isNullValue() && "This is not a quadratic addrec");
+  assert(!N.isZero() && "This is not a quadratic addrec");
 
   unsigned BitWidth = LC->getAPInt().getBitWidth();
   unsigned NewWidth = BitWidth + 1;

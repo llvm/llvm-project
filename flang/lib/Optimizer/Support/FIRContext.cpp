@@ -33,14 +33,14 @@ static constexpr const char *kindMapName = "fir.kindmap";
 static constexpr const char *defKindName = "fir.defaultkind";
 
 void fir::setKindMapping(mlir::ModuleOp mod, fir::KindMapping &kindMap) {
-  auto ctx = mod.getContext();
+  auto *ctx = mod.getContext();
   mod->setAttr(kindMapName, mlir::StringAttr::get(ctx, kindMap.mapToString()));
   auto defs = kindMap.defaultsToString();
   mod->setAttr(defKindName, mlir::StringAttr::get(ctx, defs));
 }
 
 fir::KindMapping fir::getKindMapping(mlir::ModuleOp mod) {
-  auto ctx = mod.getContext();
+  auto *ctx = mod.getContext();
   if (auto defs = mod->getAttrOfType<mlir::StringAttr>(defKindName)) {
     auto defVals = fir::KindMapping::toDefaultKinds(defs.getValue());
     if (auto maps = mod->getAttrOfType<mlir::StringAttr>(kindMapName))

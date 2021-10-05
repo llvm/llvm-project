@@ -1629,8 +1629,7 @@ let TargetPrefix = "ppc" in {
         Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
   // load
   def int_ppc_load2r
-      : GCCBuiltin<"__builtin_ppc_load2r">,
-        Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+      : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
   def int_ppc_load4r
       : GCCBuiltin<"__builtin_ppc_load4r">,
         Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;

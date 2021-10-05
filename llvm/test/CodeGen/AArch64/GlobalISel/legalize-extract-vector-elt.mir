@@ -28,11 +28,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[ASHR]](<2 x s64>), [[COPY2]](s64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[ICMP]](<2 x s64>), [[COPY2]](s64)
     ; CHECK-NEXT: $x0 = COPY [[EVEC]](s64)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<2 x s64>) = COPY $q0
@@ -54,11 +50,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ASHR]](<4 x s32>), [[COPY2]](s64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ICMP]](<4 x s32>), [[COPY2]](s64)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[EVEC]](s32)
     ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: RET_ReallyLR
@@ -81,11 +73,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(eq), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<8 x s16>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<8 x s16>)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<8 x s16>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<8 x s16>)
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[ASHR]](<8 x s16>), [[COPY2]](s64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[ICMP]](<8 x s16>), [[COPY2]](s64)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[EVEC]](s16)
     ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: RET_ReallyLR
@@ -108,11 +96,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(eq), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 7
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<16 x s8>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<16 x s8>)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<16 x s8>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<16 x s8>)
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[ASHR]](<16 x s8>), [[COPY2]](s64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[ICMP]](<16 x s8>), [[COPY2]](s64)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[EVEC]](s8)
     ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: RET_ReallyLR

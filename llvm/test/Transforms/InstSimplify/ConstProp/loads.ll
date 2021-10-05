@@ -261,3 +261,14 @@ define i32* @test_undef_aggregate() {
   %v = load i32*, i32** bitcast ({i128}* @g10 to i32**)
   ret i32* %v
 }
+
+@g11 = constant <{ [8 x i8], [8 x i8] }> <{ [8 x i8] undef, [8 x i8] zeroinitializer }>, align 4
+
+define {}* @test_trailing_zero_gep_index() {
+; CHECK-LABEL: @test_trailing_zero_gep_index(
+; CHECK-NEXT:    [[V:%.*]] = load {}*, {}** bitcast (i8* getelementptr inbounds (<{ [8 x i8], [8 x i8] }>, <{ [8 x i8], [8 x i8] }>* @g11, i64 0, i32 1, i64 0) to {}**), align 4
+; CHECK-NEXT:    ret {}* [[V]]
+;
+  %v = load {}*, {}** bitcast (i8* getelementptr inbounds (<{ [8 x i8], [8 x i8] }>, <{ [8 x i8], [8 x i8] }>* @g11, i32 0, i32 1, i32 0) to {}**), align 4
+  ret {}* %v
+}

@@ -5954,7 +5954,7 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
   // Here we do not set undef elements as zeroable.
   SmallVector<int, 64> ZeroableMask(Mask.begin(), Mask.end());
   if (V2IsZero) {
-    assert(!Zeroable.isNullValue() && "V2's non-undef elements are used?!");
+    assert(!Zeroable.isZero() && "V2's non-undef elements are used?!");
     for (int i = 0, Size = Mask.size(); i != Size; ++i)
       if (Mask[i] != SM_SentinelUndef && Zeroable[i])
         ZeroableMask[i] = SM_SentinelZero;
@@ -6793,7 +6793,7 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       APInt UndefEltBits = UndefBits.extractBits(EltSizeInBits, BitOffset);
 
       // Only treat an element as UNDEF if all bits are UNDEF.
-      if (UndefEltBits.isAllOnesValue()) {
+      if (UndefEltBits.isAllOnes()) {
         if (!AllowWholeUndefs)
           return false;
         UndefElts.setBit(i);
@@ -7995,9 +7995,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     // lanes), we can treat this as a truncation shuffle.
     bool Offset0 = false, Offset1 = false;
     if (Opcode == X86ISD::PACKSS) {
-      if ((!(N0.isUndef() || EltsLHS.isNullValue()) &&
+      if ((!(N0.isUndef() || EltsLHS.isZero()) &&
            DAG.ComputeNumSignBits(N0, EltsLHS, Depth + 1) <= NumBitsPerElt) ||
-          (!(N1.isUndef() || EltsRHS.isNullValue()) &&
+          (!(N1.isUndef() || EltsRHS.isZero()) &&
            DAG.ComputeNumSignBits(N1, EltsRHS, Depth + 1) <= NumBitsPerElt))
         return false;
       // We can't easily fold ASHR into a shuffle, but if it was feeding a
@@ -8015,9 +8015,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     } else {
       APInt ZeroMask = APInt::getHighBitsSet(2 * NumBitsPerElt, NumBitsPerElt);
-      if ((!(N0.isUndef() || EltsLHS.isNullValue()) &&
+      if ((!(N0.isUndef() || EltsLHS.isZero()) &&
            !DAG.MaskedValueIsZero(N0, ZeroMask, EltsLHS, Depth + 1)) ||
-          (!(N1.isUndef() || EltsRHS.isNullValue()) &&
+          (!(N1.isUndef() || EltsRHS.isZero()) &&
            !DAG.MaskedValueIsZero(N1, ZeroMask, EltsRHS, Depth + 1)))
         return false;
     }
@@ -8906,7 +8906,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // If the upper half of a ymm/zmm load is undef then just load the lower half.
   if (VT.is256BitVector() || VT.is512BitVector()) {
     unsigned HalfNumElems = NumElems / 2;
-    if (UndefMask.extractBits(HalfNumElems, HalfNumElems).isAllOnesValue()) {
+    if (UndefMask.extractBits(HalfNumElems, HalfNumElems).isAllOnes()) {
       EVT HalfVT =
           EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), HalfNumElems);
       SDValue HalfLD =
@@ -8945,7 +8945,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // BROADCAST - match the smallest possible repetition pattern, load that
   // scalar/subvector element and then broadcast to the entire vector.
-  if (ZeroMask.isNullValue() && isPowerOf2_32(NumElems) && Subtarget.hasAVX() &&
+  if (ZeroMask.isZero() && isPowerOf2_32(NumElems) && Subtarget.hasAVX() &&
       (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector())) {
     for (unsigned SubElems = 1; SubElems < NumElems; SubElems *= 2) {
       unsigned RepeatSize = SubElems * BaseSizeInBits;
@@ -10608,7 +10608,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   // All undef vector. Return an UNDEF. All zero vectors were handled above.
   if (NonZeroMask == 0) {
-    assert(UndefMask.isAllOnesValue() && "Fully undef mask expected");
+    assert(UndefMask.isAllOnes() && "Fully undef mask expected");
     return DAG.getUNDEF(VT);
   }
 
@@ -11455,7 +11455,7 @@ static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
     // Arbitrarily choose from the 2nd operand if the select condition element
     // is undef.
     // TODO: Can we do better by matching patterns such as even/odd?
-    if (UndefElts[i] || EltBits[i].isNullValue())
+    if (UndefElts[i] || EltBits[i].isZero())
       Mask[i] += NumElts;
   }
 
@@ -11824,7 +11824,7 @@ static bool matchShuffleAsVTRUNC(MVT &SrcVT, MVT &DstVT, MVT VT,
     if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale))
       continue;
     unsigned UpperElts = NumElts - NumSrcElts;
-    if (!Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnesValue())
+    if (!Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
       continue;
     SrcVT = MVT::getIntegerVT(EltSizeInBits * Scale);
     SrcVT = MVT::getVectorVT(SrcVT, NumSrcElts);
@@ -11921,7 +11921,7 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
     unsigned NumSrcElts = NumElts / Scale;
     unsigned UpperElts = NumElts - NumSrcElts;
     if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale) ||
-        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnesValue())
+        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
       continue;
 
     SDValue Src = V1;
@@ -11978,7 +11978,7 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
     // The elements beyond the truncation must be undef/zero.
     unsigned UpperElts = NumElts - NumSrcElts;
     if (UpperElts > 0 &&
-        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnesValue())
+        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
       continue;
     bool UndefUppers =
         UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
@@ -12204,8 +12204,8 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
   MVT LogicVT = VT;
   if (EltVT == MVT::f32 || EltVT == MVT::f64) {
     Zero = DAG.getConstantFP(0.0, DL, EltVT);
-    APFloat AllOnesValue = APFloat::getAllOnesValue(
-        SelectionDAG::EVTToAPFloatSemantics(EltVT), EltVT.getSizeInBits());
+    APFloat AllOnesValue =
+        APFloat::getAllOnesValue(SelectionDAG::EVTToAPFloatSemantics(EltVT));
     AllOnes = DAG.getConstantFP(AllOnesValue, DL, EltVT);
     LogicVT =
         MVT::getVectorVT(EltVT == MVT::f64 ? MVT::i64 : MVT::i32, Mask.size());
@@ -13268,7 +13268,7 @@ static bool matchShuffleAsEXTRQ(MVT VT, SDValue &V1, SDValue &V2,
   int Size = Mask.size();
   int HalfSize = Size / 2;
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
-  assert(!Zeroable.isAllOnesValue() && "Fully zeroable shuffle mask");
+  assert(!Zeroable.isAllOnes() && "Fully zeroable shuffle mask");
 
   // Upper half must be undefined.
   if (!isUndefUpperHalf(Mask))
@@ -18838,7 +18838,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   computeZeroableShuffleElements(OrigMask, V1, V2, KnownUndef, KnownZero);
 
   APInt Zeroable = KnownUndef | KnownZero;
-  if (Zeroable.isAllOnesValue())
+  if (Zeroable.isAllOnes())
     return getZeroVector(VT, Subtarget, DAG, DL);
 
   bool V2IsZero = !V2IsUndef && ISD::isBuildVectorAllZeros(V2.getNode());
@@ -22762,7 +22762,7 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
   } else {
     // Quit if not all elements are used.
     for (const auto &I : SrcOpMap)
-      if (!I.second.isAllOnesValue())
+      if (!I.second.isAllOnes())
         return false;
   }
 
@@ -22785,7 +22785,7 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
   X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
 
   auto MaskBits = [&](SDValue Src) {
-    if (Mask.isAllOnesValue())
+    if (Mask.isAllOnes())
       return Src;
     EVT SrcVT = Src.getValueType();
     SDValue MaskValue = DAG.getConstant(Mask, DL, SrcVT);
@@ -22823,8 +22823,8 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
 
   // Without PTEST, a masked v2i64 or-reduction is not faster than
   // scalarization.
-  if (!Mask.isAllOnesValue() && VT.getScalarSizeInBits() > 32)
-      return SDValue();
+  if (!Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
+    return SDValue();
 
   V = DAG.getBitcast(MVT::v16i8, MaskBits(V));
   V = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, V,
@@ -23491,7 +23491,7 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc) {
 
     // Avoid overflow/underflow.
     const APInt &EltC = Elt->getAPIntValue();
-    if ((IsInc && EltC.isMaxValue()) || (!IsInc && EltC.isNullValue()))
+    if ((IsInc && EltC.isMaxValue()) || (!IsInc && EltC.isZero()))
       return SDValue();
 
     NewVecC.push_back(DAG.getConstant(EltC + (IsInc ? 1 : -1), DL, EltVT));
@@ -23810,7 +23810,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       Cond = ISD::SETGT;
     else if (ConstValue.isMaxSignedValue())
       Cond = ISD::SETLT;
-    else if (ConstValue.isNullValue() && DAG.SignBitIsZero(Op0))
+    else if (ConstValue.isZero() && DAG.SignBitIsZero(Op0))
       Cond = ISD::SETGT;
   }
 
@@ -24163,7 +24163,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     // TODO: Can we move this to TranslateX86CC to handle jumps/branches too?
     if (auto *Op1C = dyn_cast<ConstantSDNode>(Op1)) {
       const APInt &Op1Val = Op1C->getAPIntValue();
-      if (!Op1Val.isNullValue()) {
+      if (!Op1Val.isZero()) {
         // Ensure the constant+1 doesn't overflow.
         if ((CC == ISD::CondCode::SETGT && !Op1Val.isMaxSignedValue()) ||
             (CC == ISD::CondCode::SETUGT && !Op1Val.isMaxValue())) {
@@ -37722,10 +37722,10 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     ConstantElts.setBit(i);
     ConstantBitData[i] = Bits;
   }
-  assert((UndefElts | ZeroElts | ConstantElts).isAllOnesValue());
+  assert((UndefElts | ZeroElts | ConstantElts).isAllOnes());
 
   // Attempt to create a zero vector.
-  if ((UndefElts | ZeroElts).isAllOnesValue())
+  if ((UndefElts | ZeroElts).isAllOnes())
     return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG, DL);
 
   // Create the constant data.
@@ -37860,14 +37860,14 @@ static SDValue combineX86ShufflesRecursively(
     // Only resolve zeros if it will remove an input, otherwise we might end
     // up in an infinite loop.
     bool ResolveKnownZeros = true;
-    if (!OpZero.isNullValue()) {
+    if (!OpZero.isZero()) {
       APInt UsedInputs = APInt::getZero(OpInputs.size());
       for (int i = 0, e = OpMask.size(); i != e; ++i) {
         int M = OpMask[i];
         if (OpUndef[i] || OpZero[i] || isUndefOrZero(M))
           continue;
         UsedInputs.setBit(M / OpMask.size());
-        if (UsedInputs.isAllOnesValue()) {
+        if (UsedInputs.isAllOnes()) {
           ResolveKnownZeros = false;
           break;
         }
@@ -39554,7 +39554,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
     TargetLowering::TargetLoweringOpt &TLO, unsigned Depth) const {
   // If we're demanding all elements don't bother trying to simplify the mask.
   unsigned NumElts = DemandedElts.getBitWidth();
-  if (DemandedElts.isAllOnesValue())
+  if (DemandedElts.isAllOnes())
     return false;
 
   SDValue Mask = Op.getOperand(MaskIndex);
@@ -39641,6 +39641,26 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero | RHSZero;
     break;
   }
+  case X86ISD::VPMADDWD: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, 2 * NumElts);
+
+    APInt DemandedRHSElts = DemandedSrcElts;
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHSElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
+    // If RHS elements are known zero then we don't need the LHS equivalent.
+    APInt DemandedLHSElts = DemandedSrcElts & ~RHSZero;
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHSElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    // TODO: Multiply by zero.
+    break;
+  }
   case X86ISD::PSADBW: {
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
@@ -39650,7 +39670,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
            "Unexpected PSADBW types");
 
     // Aggressively peek through ops to get at the demanded elts.
-    if (!DemandedElts.isAllOnesValue()) {
+    if (!DemandedElts.isAllOnes()) {
       unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
       APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
@@ -39701,7 +39721,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
 
     // Aggressively peek through ops to get at the demanded elts.
-    if (!DemandedElts.isAllOnesValue())
+    if (!DemandedElts.isAllOnes())
       if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
               Src, DemandedElts, TLO.DAG, Depth + 1))
         return TLO.CombineTo(
@@ -39818,7 +39838,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     // Aggressively peek through ops to get at the demanded elts.
     // TODO - we should do this for all target/faux shuffles ops.
-    if (!DemandedElts.isAllOnesValue()) {
+    if (!DemandedElts.isAllOnes()) {
       SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(N0, DemandedLHS,
                                                             TLO.DAG, Depth + 1);
       SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(N1, DemandedRHS,
@@ -39855,7 +39875,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     // Aggressively peek through ops to get at the demanded elts.
     // TODO: Handle repeated operands.
-    if (N0 != N1 && !DemandedElts.isAllOnesValue()) {
+    if (N0 != N1 && !DemandedElts.isAllOnes()) {
       SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(N0, DemandedLHS,
                                                             TLO.DAG, Depth + 1);
       SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(N1, DemandedRHS,
@@ -40128,7 +40148,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   // For broadcasts, unless we *only* demand the 0'th element,
   // stop attempts at simplification here, we aren't going to improve things,
   // this is better than any potential shuffle.
-  if (isTargetShuffleSplat(Op) && !DemandedElts.isOneValue())
+  if (isTargetShuffleSplat(Op) && !DemandedElts.isOne())
     return false;
 
   // Get target/faux shuffle mask.
@@ -40198,7 +40218,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   // to match. This prevents combineX86ShuffleChain from returning a
   // combined shuffle that's the same as the original root, causing an
   // infinite loop.
-  if (!DemandedElts.isAllOnesValue()) {
+  if (!DemandedElts.isAllOnes()) {
     assert(Depth < X86::MaxShuffleCombineDepth && "Depth out of range");
 
     SmallVector<int, 64> DemandedMask(NumElts, SM_SentinelUndef);
@@ -42578,7 +42598,7 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
     SDValue R = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
 
     // Multiply condition by the difference if non-one.
-    if (!AbsDiff.isOneValue())
+    if (!AbsDiff.isOne())
       R = DAG.getNode(ISD::MUL, DL, VT, R, DAG.getConstant(AbsDiff, DL, VT));
 
     // Add the base if non-zero.
@@ -43336,7 +43356,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
 
   // We can handle comparisons with zero in a number of cases by manipulating
   // the CC used.
-  if (!Comparison.isNullValue())
+  if (!Comparison.isZero())
     return SDValue();
 
   if (CC == X86::COND_S && Addend == 1)
@@ -43742,7 +43762,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   unsigned NumElts = VecVT.getVectorNumElements();
   unsigned NumEltBits = VecVT.getScalarSizeInBits();
 
-  bool IsAnyOf = CmpOpcode == X86ISD::CMP && CmpVal.isNullValue();
+  bool IsAnyOf = CmpOpcode == X86ISD::CMP && CmpVal.isZero();
   bool IsAllOf = CmpOpcode == X86ISD::SUB && NumElts <= CmpBits &&
                  CmpVal.isMask(NumElts);
   if (!IsAnyOf && !IsAllOf)
@@ -43840,7 +43860,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
       assert(0 <= M && M < (int)NumShuffleElts && "Bad unary shuffle index");
       DemandedElts.setBit(M);
     }
-    if (DemandedElts.isAllOnesValue()) {
+    if (DemandedElts.isAllOnes()) {
       SDLoc DL(EFLAGS);
       SDValue Result = DAG.getBitcast(VecVT, ShuffleInputs[0]);
       Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
@@ -45976,7 +45996,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
         N->getOperand(0)->isOnlyUserOf(SrcVec.getNode()) &&
         getTargetConstantBitsFromNode(BitMask, 8, UndefElts, EltBits) &&
         llvm::all_of(EltBits, [](const APInt &M) {
-          return M.isNullValue() || M.isAllOnesValue();
+          return M.isZero() || M.isAllOnes();
         })) {
       unsigned NumElts = SrcVecVT.getVectorNumElements();
       unsigned Scale = SrcVecVT.getScalarSizeInBits() / 8;
@@ -45988,8 +46008,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
         if (UndefElts[i])
           continue;
         int VecIdx = Scale * Idx + i;
-        ShuffleMask[VecIdx] =
-            EltBits[i].isNullValue() ? SM_SentinelZero : VecIdx;
+        ShuffleMask[VecIdx] = EltBits[i].isZero() ? SM_SentinelZero : VecIdx;
       }
 
       if (SDValue Shuffle = combineX86ShufflesRecursively(
@@ -52105,7 +52124,7 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
   // TODO: SimplifyDemandedBits instead?
   if (VT == MVT::v1i1 && Src.getOpcode() == ISD::AND && Src.hasOneUse())
     if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(1)))
-      if (C->getAPIntValue().isOneValue())
+      if (C->getAPIntValue().isOne())
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1,
                            Src.getOperand(0));
 

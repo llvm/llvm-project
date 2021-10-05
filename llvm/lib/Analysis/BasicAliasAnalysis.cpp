@@ -204,12 +204,12 @@ static uint64_t getMinimalExtentFrom(const Value &V,
                                      bool NullIsValidLoc) {
   // If we have dereferenceability information we know a lower bound for the
   // extent as accesses for a lower offset would be valid. We need to exclude
-  // the "or null" part if null is a valid pointer.
+  // the "or null" part if null is a valid pointer. We can ignore frees, as an
+  // access after free would be undefined behavior.
   bool CanBeNull, CanBeFreed;
   uint64_t DerefBytes =
     V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
-  DerefBytes = CanBeFreed ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
   if (LocSize.isPrecise())
@@ -969,8 +969,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       // pointer were passed to arguments that were neither of these, then it
       // couldn't be no-capture.
       if (!(*CI)->getType()->isPointerTy() ||
-          (!Call->doesNotCapture(OperandNo) &&
-           OperandNo < Call->getNumArgOperands() &&
+          (!Call->doesNotCapture(OperandNo) && OperandNo < Call->arg_size() &&
            !Call->isByValArgument(OperandNo)))
         continue;
 

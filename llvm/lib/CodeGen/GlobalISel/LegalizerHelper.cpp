@@ -2435,7 +2435,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
       widenScalarSrc(
           MI, LLT::vector(VecTy.getElementCount(), WideTy.getSizeInBits()), 1,
-          TargetOpcode::G_SEXT);
+          TargetOpcode::G_ANYEXT);
 
       widenScalarDst(MI, WideTy, 0);
       Observer.changedInstr(MI);
@@ -4820,7 +4820,7 @@ LegalizerHelper::narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
   Register InH = MRI.createGenericVirtualRegister(HalfTy);
   MIRBuilder.buildUnmerge({InL, InH}, MI.getOperand(1));
 
-  if (Amt.isNullValue()) {
+  if (Amt.isZero()) {
     MIRBuilder.buildMerge(MI.getOperand(0), {InL, InH});
     MI.eraseFromParent();
     return Legalized;

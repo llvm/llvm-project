@@ -1336,22 +1336,22 @@ public:
   unsigned getNumArgOperands() const { return arg_size(); }
 
   Value *getArgOperand(unsigned i) const {
-    assert(i < getNumArgOperands() && "Out of bounds!");
+    assert(i < arg_size() && "Out of bounds!");
     return getOperand(i);
   }
 
   void setArgOperand(unsigned i, Value *v) {
-    assert(i < getNumArgOperands() && "Out of bounds!");
+    assert(i < arg_size() && "Out of bounds!");
     setOperand(i, v);
   }
 
   /// Wrappers for getting the \c Use of a call argument.
   const Use &getArgOperandUse(unsigned i) const {
-    assert(i < getNumArgOperands() && "Out of bounds!");
+    assert(i < arg_size() && "Out of bounds!");
     return User::getOperandUse(i);
   }
   Use &getArgOperandUse(unsigned i) {
-    assert(i < getNumArgOperands() && "Out of bounds!");
+    assert(i < arg_size() && "Out of bounds!");
     return User::getOperandUse(i);
   }
 
@@ -1518,13 +1518,13 @@ public:
 
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttribute(getContext(), ArgNo, Kind);
   }
 
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute Attr) {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttribute(getContext(), ArgNo, Attr);
   }
 
@@ -1560,13 +1560,13 @@ public:
 
   /// Removes the attribute from the given argument
   void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.removeParamAttribute(getContext(), ArgNo, Kind);
   }
 
   /// Removes the attribute from the given argument
   void removeParamAttr(unsigned ArgNo, StringRef Kind) {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.removeParamAttribute(getContext(), ArgNo, Kind);
   }
 
@@ -1617,13 +1617,13 @@ public:
 
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     return getAttributes().getParamAttr(ArgNo, Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
-    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    assert(ArgNo < arg_size() && "Out of bounds");
     return getAttributes().getParamAttr(ArgNo, Kind);
   }
 
@@ -1640,14 +1640,14 @@ public:
   ///     (\p i) in the operand list.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const {
     // Note that we have to add one because `i` isn't zero-indexed.
-    assert(i < getNumArgOperands() + getNumTotalBundleOperands() &&
+    assert(i < arg_size() + getNumTotalBundleOperands() &&
            "Data operand index out of bounds!");
 
     // The attribute A can either be directly specified, if the operand in
     // question is a call argument; or be indirectly implied by the kind of its
     // containing operand bundle, if the operand is a bundle operand.
 
-    if (i < getNumArgOperands())
+    if (i < arg_size())
       return paramHasAttr(i, Kind);
 
     assert(hasOperandBundles() && i >= getBundleOperandsStartIndex() &&

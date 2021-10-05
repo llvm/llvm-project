@@ -308,7 +308,7 @@ public:
     }
 
     // Multiplying by one is a no-op.
-    if (C.isOneValue()) {
+    if (C.isOne()) {
       return *this;
     }
 
