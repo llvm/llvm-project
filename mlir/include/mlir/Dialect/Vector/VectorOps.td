@@ -38,20 +38,25 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : BitEnumAttrCase<"ADD", 0x1,  "add">;
-def COMBINING_KIND_MUL : BitEnumAttrCase<"MUL", 0x2,  "mul">;
-def COMBINING_KIND_MIN : BitEnumAttrCase<"MIN", 0x4,  "min">;
-def COMBINING_KIND_MAX : BitEnumAttrCase<"MAX", 0x8,  "max">;
-def COMBINING_KIND_AND : BitEnumAttrCase<"AND", 0x10, "and">;
-def COMBINING_KIND_OR  : BitEnumAttrCase<"OR",  0x20, "or">;
-def COMBINING_KIND_XOR : BitEnumAttrCase<"XOR", 0x40, "xor">;
+def COMBINING_KIND_ADD : BitEnumAttrCase<"ADD", 0x1, "add">;
+def COMBINING_KIND_MUL : BitEnumAttrCase<"MUL", 0x2, "mul">;
+def COMBINING_KIND_MINUI : BitEnumAttrCase<"MINUI", 0x4, "minui">;
+def COMBINING_KIND_MINSI : BitEnumAttrCase<"MINSI", 0x8, "minsi">;
+def COMBINING_KIND_MINF : BitEnumAttrCase<"MINF", 0x10, "minf">;
+def COMBINING_KIND_MAXUI : BitEnumAttrCase<"MAXUI", 0x20, "maxui">;
+def COMBINING_KIND_MAXSI : BitEnumAttrCase<"MAXSI", 0x40, "maxsi">;
+def COMBINING_KIND_MAXF : BitEnumAttrCase<"MAXF", 0x80, "maxf">;
+def COMBINING_KIND_AND : BitEnumAttrCase<"AND", 0x100, "and">;
+def COMBINING_KIND_OR  : BitEnumAttrCase<"OR", 0x200, "or">;
+def COMBINING_KIND_XOR : BitEnumAttrCase<"XOR", 0x400, "xor">;
 
 def CombiningKind : BitEnumAttr<
     "CombiningKind",
     "Kind of combining function for contractions and reductions",
-    [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MIN,
-     COMBINING_KIND_MAX, COMBINING_KIND_AND, COMBINING_KIND_OR,
-     COMBINING_KIND_XOR]> {
+    [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,
+     COMBINING_KIND_MINSI, COMBINING_KIND_MINF, COMBINING_KIND_MAXUI,
+     COMBINING_KIND_MAXSI, COMBINING_KIND_MAXF, COMBINING_KIND_AND,
+     COMBINING_KIND_OR, COMBINING_KIND_XOR]> {
   let cppNamespace = "::mlir::vector";
   let genSpecializedAttr = 0;
 }
@@ -337,7 +342,7 @@ def Vector_MultiDimReductionOp :
 
     static SmallVector<int64_t> inferDestShape(
       ArrayRef<int64_t> shape, ArrayRef<bool> reducedDimsMask) {
-      assert(shape.size() == reducedDimsMask.size() && 
+      assert(shape.size() == reducedDimsMask.size() &&
              "shape and maks of different sizes");
       SmallVector<int64_t> res;
       for (auto it : llvm::zip(reducedDimsMask, shape))

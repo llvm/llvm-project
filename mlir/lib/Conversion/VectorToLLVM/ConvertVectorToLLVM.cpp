@@ -434,18 +434,16 @@ public:
       else if (kind == "mul")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_mul>(reductionOp,
                                                              llvmType, operand);
-      else if (kind == "min" &&
-               (eltType.isIndex() || eltType.isUnsignedInteger()))
+      else if (kind == "minui")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umin>(
             reductionOp, llvmType, operand);
-      else if (kind == "min")
+      else if (kind == "minsi")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smin>(
             reductionOp, llvmType, operand);
-      else if (kind == "max" &&
-               (eltType.isIndex() || eltType.isUnsignedInteger()))
+      else if (kind == "maxui")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umax>(
             reductionOp, llvmType, operand);
-      else if (kind == "max")
+      else if (kind == "maxsi")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smax>(
             reductionOp, llvmType, operand);
       else if (kind == "and")
@@ -486,10 +484,14 @@ public:
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmul>(
           reductionOp, llvmType, acc, operand,
           rewriter.getBoolAttr(reassociateFPReductions));
-    } else if (kind == "min")
+    } else if (kind == "minf")
+      // FIXME: MLIR's 'minf' and LLVM's 'vector_reduce_fmin' do not handle
+      // NaNs/-0.0/+0.0 in the same way.
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmin>(reductionOp,
                                                             llvmType, operand);
-    else if (kind == "max")
+    else if (kind == "maxf")
+      // FIXME: MLIR's 'maxf' and LLVM's 'vector_reduce_fmax' do not handle
+      // NaNs/-0.0/+0.0 in the same way.
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmax>(reductionOp,
                                                             llvmType, operand);
     else
