@@ -1,11 +1,9 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.func @fmul(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
+  spv.func @math(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
     // CHECK: {{%.*}} = spv.GLSL.Exp {{%.*}} : f32
     %0 = spv.GLSL.Exp %arg0 : f32
-    // CHECK: {{%.*}} = spv.GLSL.FMax {{%.*}}, {{%.*}} : f32
-    %1 = spv.GLSL.FMax %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spv.GLSL.Sqrt {{%.*}} : f32
     %2 = spv.GLSL.Sqrt %arg0 : f32
     // CHECK: {{%.*}} = spv.GLSL.Cos {{%.*}} : f32
@@ -34,6 +32,23 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %14 = spv.GLSL.Ldexp %arg0 : f32, %arg2 : i32 -> f32
     // CHECK: {{%.*}} = spv.GLSL.FMix {{%.*}} : f32, {{%.*}} : f32, {{%.*}} : f32 -> f32
     %15 = spv.GLSL.FMix %arg0 : f32, %arg1 : f32, %arg0 : f32 -> f32
+    spv.Return
+  }
+
+  spv.func @maxmin(%arg0 : f32, %arg1 : f32, %arg2 : i32, %arg3 : i32) "None" {
+    // CHECK: {{%.*}} = spv.GLSL.FMax {{%.*}}, {{%.*}} : f32
+    %1 = spv.GLSL.FMax %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.GLSL.SMax {{%.*}}, {{%.*}} : i32
+    %2 = spv.GLSL.SMax %arg2, %arg3 : i32
+    // CHECK: {{%.*}} = spv.GLSL.UMax {{%.*}}, {{%.*}} : i32
+    %3 = spv.GLSL.UMax %arg2, %arg3 : i32
+
+    // CHECK: {{%.*}} = spv.GLSL.FMin {{%.*}}, {{%.*}} : f32
+    %4 = spv.GLSL.FMin %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.GLSL.SMin {{%.*}}, {{%.*}} : i32
+    %5 = spv.GLSL.SMin %arg2, %arg3 : i32
+    // CHECK: {{%.*}} = spv.GLSL.UMin {{%.*}}, {{%.*}} : i32
+    %6 = spv.GLSL.UMin %arg2, %arg3 : i32
     spv.Return
   }
 
