@@ -26,7 +26,7 @@ def err_fe_linking_module : Error<"cannot link module '%0': %1">, DefaultFatal;
 def warn_fe_linking_module : Warning<"linking module '%0': %1">, InGroup<LinkerWarnings>;
 def note_fe_linking_module : Note<"linking module '%0': %1">;
 
-def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in %q2">,
+def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in '%2'">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
 def warn_fe_backend_frame_larger_than: Warning<"%0">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
