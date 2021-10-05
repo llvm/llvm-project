@@ -488,6 +488,30 @@ LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
   return success();
 }
 
+/// Linalg generalization pattern.
+mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
+    MLIRContext *context, LinalgTransformationFilter filter,
+    PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter) {}
+
+mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
+    StringRef opName, MLIRContext *context, LinalgTransformationFilter filter,
+    PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(filter) {}
+
+LogicalResult mlir::linalg::LinalgGeneralizationPattern::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+  if (failed(generalizeNamedOpPrecondition(op)))
+    return failure();
+
+  GenericOp genericOp = generalizeNamedOp(rewriter, op);
+  rewriter.replaceOp(op, genericOp.getResults());
+  filter.replaceLinalgTransformationFilter(rewriter, genericOp);
+  return success();
+}
+
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     MLIRContext *context, LinalgTransformationFilter filter,
     LinalgPromotionOptions options, PatternBenefit benefit)
