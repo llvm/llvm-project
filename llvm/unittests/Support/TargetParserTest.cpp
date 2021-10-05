@@ -1181,9 +1181,9 @@ TEST(TargetParserTest, testAArch64CPUArchList) {
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                      unsigned ArchAttr) {
   AArch64::ArchKind AK = AArch64::parseArch(Arch);
-  return (AK != AArch64::ArchKind::INVALID) &
-         AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &
-         AArch64::getSubArch(AK).equals(SubArch) &
+  return (AK != AArch64::ArchKind::INVALID) &&
+         AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &&
+         AArch64::getSubArch(AK).equals(SubArch) &&
          (AArch64::getArchAttr(AK) == ArchAttr);
 }
 

@@ -1016,6 +1016,19 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
   return RegOrConstant(Reg);
 }
 
+Optional<APInt>
+llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI) {
+  Register Def = MI.getOperand(0).getReg();
+  if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
+    return C->Value;
+  auto MaybeCst = getBuildVectorConstantSplat(MI, MRI);
+  if (!MaybeCst)
+    return None;
+  const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
+  return APInt(ScalarSize, *MaybeCst, true);
+}
+
 bool llvm::matchUnaryPredicate(
     const MachineRegisterInfo &MRI, Register Reg,
     std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {

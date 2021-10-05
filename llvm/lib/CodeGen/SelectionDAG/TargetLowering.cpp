@@ -26,6 +26,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -672,7 +673,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned Offset = i * NumSrcEltBits;
         APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
-        if (!Sub.isNullValue()) {
+        if (!Sub.isZero()) {
           DemandedSrcBits |= Sub;
           for (unsigned j = 0; j != NumElts; ++j)
             if (DemandedElts[j])
@@ -1612,7 +1613,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
     // the shift amount is >= the size of the datatype, which is undefined.
-    if (DemandedBits.isOneValue())
+    if (DemandedBits.isOne())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl, VT, Op0, Op1));
 
     if (const APInt *SA =
@@ -1788,7 +1789,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // If only 1 bit is demanded, replace with PARITY as long as we're before
     // op legalization.
     // FIXME: Limit to scalars for now.
-    if (DemandedBits.isOneValue() && !TLO.LegalOps && !VT.isVector())
+    if (DemandedBits.isOne() && !TLO.LegalOps && !VT.isVector())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::PARITY, dl, VT,
                                                Op.getOperand(0)));
 
@@ -2149,7 +2150,7 @@ bool TargetLowering::SimplifyDemandedBits(
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned Offset = i * NumSrcEltBits;
         APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
-        if (!Sub.isNullValue()) {
+        if (!Sub.isZero()) {
           DemandedSrcBits |= Sub;
           for (unsigned j = 0; j != NumElts; ++j)
             if (DemandedElts[j])
@@ -3109,7 +3110,7 @@ bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   case UndefinedBooleanContent:
     return CVal[0];
   case ZeroOrOneBooleanContent:
-    return CVal.isOneValue();
+    return CVal.isOne();
   case ZeroOrNegativeOneBooleanContent:
     return CVal.isAllOnes();
   }
@@ -3323,7 +3324,7 @@ SDValue TargetLowering::optimizeSetCCByHoistingAndByConstFromLogicalShift(
     EVT SCCVT, SDValue N0, SDValue N1C, ISD::CondCode Cond,
     DAGCombinerInfo &DCI, const SDLoc &DL) const {
   assert(isConstOrConstSplat(N1C) &&
-         isConstOrConstSplat(N1C)->getAPIntValue().isNullValue() &&
+         isConstOrConstSplat(N1C)->getAPIntValue().isZero() &&
          "Should be a comparison with 0.");
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
          "Valid only for [in]equality comparisons.");
@@ -3546,7 +3547,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     // If the LHS is '(srl (ctlz x), 5)', the RHS is 0/1, and this is an
     // equality comparison, then we're just comparing whether X itself is
     // zero.
-    if (N0.getOpcode() == ISD::SRL && (C1.isNullValue() || C1.isOneValue()) &&
+    if (N0.getOpcode() == ISD::SRL && (C1.isZero() || C1.isOne()) &&
         N0.getOperand(0).getOpcode() == ISD::CTLZ &&
         isPowerOf2_32(N0.getScalarValueSizeInBits())) {
       if (ConstantSDNode *ShAmt = isConstOrConstSplat(N0.getOperand(1))) {
@@ -4019,7 +4020,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // For example, when high 32-bits of i64 X are known clear:
       // all bits clear: (X | (Y<<32)) ==  0 --> (X | Y) ==  0
       // all bits set:   (X | (Y<<32)) == -1 --> (X & Y) == -1
-      bool CmpZero = N1C->getAPIntValue().isNullValue();
+      bool CmpZero = N1C->getAPIntValue().isZero();
       bool CmpNegOne = N1C->getAPIntValue().isAllOnes();
       if ((CmpZero || CmpNegOne) && N0.hasOneUse()) {
         // Match or(lo,shl(hi,bw/2)) pattern.
@@ -5121,112 +5122,6 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   return SDValue();
 }
 
-namespace {
-/// Magic data for optimising signed division by a constant.
-struct ms {
-  APInt m;    ///< magic number
-  unsigned s; ///< shift amount
-};
-
-/// Magic data for optimising unsigned division by a constant.
-struct mu {
-  APInt m;    ///< magic number
-  bool a;     ///< add indicator
-  unsigned s; ///< shift amount
-};
-} // namespace
-
-/// Calculate the magic numbers required to implement an unsigned integer
-/// division by a constant as a sequence of multiplies, adds and shifts.
-/// Requires that the divisor not be 0.  Taken from "Hacker's Delight", Henry
-/// S. Warren, Jr., chapter 10.
-/// LeadingZeros can be used to simplify the calculation if the upper bits
-/// of the divided value are known zero.
-static mu magicu(const APInt &d, unsigned LeadingZeros = 0) {
-  unsigned p;
-  APInt nc, delta, q1, r1, q2, r2;
-  struct mu magu;
-  magu.a = 0; // initialize "add" indicator
-  APInt allOnes = APInt::getAllOnes(d.getBitWidth()).lshr(LeadingZeros);
-  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
-  APInt signedMax = APInt::getSignedMaxValue(d.getBitWidth());
-
-  nc = allOnes - (allOnes - d).urem(d);
-  p = d.getBitWidth() - 1;  // initialize p
-  q1 = signedMin.udiv(nc);  // initialize q1 = 2p/nc
-  r1 = signedMin - q1 * nc; // initialize r1 = rem(2p,nc)
-  q2 = signedMax.udiv(d);   // initialize q2 = (2p-1)/d
-  r2 = signedMax - q2 * d;  // initialize r2 = rem((2p-1),d)
-  do {
-    p = p + 1;
-    if (r1.uge(nc - r1)) {
-      q1 = q1 + q1 + 1;  // update q1
-      r1 = r1 + r1 - nc; // update r1
-    } else {
-      q1 = q1 + q1; // update q1
-      r1 = r1 + r1; // update r1
-    }
-    if ((r2 + 1).uge(d - r2)) {
-      if (q2.uge(signedMax))
-        magu.a = 1;
-      q2 = q2 + q2 + 1;     // update q2
-      r2 = r2 + r2 + 1 - d; // update r2
-    } else {
-      if (q2.uge(signedMin))
-        magu.a = 1;
-      q2 = q2 + q2;     // update q2
-      r2 = r2 + r2 + 1; // update r2
-    }
-    delta = d - 1 - r2;
-  } while (p < d.getBitWidth() * 2 &&
-           (q1.ult(delta) || (q1 == delta && r1 == 0)));
-  magu.m = q2 + 1;              // resulting magic number
-  magu.s = p - d.getBitWidth(); // resulting shift
-  return magu;
-}
-
-/// Calculate the magic numbers required to implement a signed integer division
-/// by a constant as a sequence of multiplies, adds and shifts.  Requires that
-/// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
-/// Warren, Jr., Chapter 10.
-static ms magic(const APInt &d) {
-  unsigned p;
-  APInt ad, anc, delta, q1, r1, q2, r2, t;
-  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
-  struct ms mag;
-
-  ad = d.abs();
-  t = signedMin + (d.lshr(d.getBitWidth() - 1));
-  anc = t - 1 - t.urem(ad);  // absolute value of nc
-  p = d.getBitWidth() - 1;   // initialize p
-  q1 = signedMin.udiv(anc);  // initialize q1 = 2p/abs(nc)
-  r1 = signedMin - q1 * anc; // initialize r1 = rem(2p,abs(nc))
-  q2 = signedMin.udiv(ad);   // initialize q2 = 2p/abs(d)
-  r2 = signedMin - q2 * ad;  // initialize r2 = rem(2p,abs(d))
-  do {
-    p = p + 1;
-    q1 = q1 << 1;      // update q1 = 2p/abs(nc)
-    r1 = r1 << 1;      // update r1 = rem(2p/abs(nc))
-    if (r1.uge(anc)) { // must be unsigned comparison
-      q1 = q1 + 1;
-      r1 = r1 - anc;
-    }
-    q2 = q2 << 1;     // update q2 = 2p/abs(d)
-    r2 = r2 << 1;     // update r2 = rem(2p/abs(d))
-    if (r2.uge(ad)) { // must be unsigned comparison
-      q2 = q2 + 1;
-      r2 = r2 - ad;
-    }
-    delta = ad - r2;
-  } while (q1.ult(delta) || (q1 == delta && r1 == 0));
-
-  mag.m = q2 + 1;
-  if (d.isNegative())
-    mag.m = -mag.m;            // resulting magic number
-  mag.s = p - d.getBitWidth(); // resulting shift
-  return mag;
-}
-
 /// Given an ISD::SDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
@@ -5271,27 +5166,27 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       return false;
 
     const APInt &Divisor = C->getAPIntValue();
-    ms magics = magic(Divisor);
+    SignedDivisionByConstantInfo magics = SignedDivisionByConstantInfo::get(Divisor);
     int NumeratorFactor = 0;
     int ShiftMask = -1;
 
-    if (Divisor.isOneValue() || Divisor.isAllOnes()) {
+    if (Divisor.isOne() || Divisor.isAllOnes()) {
       // If d is +1/-1, we just multiply the numerator by +1/-1.
       NumeratorFactor = Divisor.getSExtValue();
-      magics.m = 0;
-      magics.s = 0;
+      magics.Magic = 0;
+      magics.ShiftAmount = 0;
       ShiftMask = 0;
-    } else if (Divisor.isStrictlyPositive() && magics.m.isNegative()) {
+    } else if (Divisor.isStrictlyPositive() && magics.Magic.isNegative()) {
       // If d > 0 and m < 0, add the numerator.
       NumeratorFactor = 1;
-    } else if (Divisor.isNegative() && magics.m.isStrictlyPositive()) {
+    } else if (Divisor.isNegative() && magics.Magic.isStrictlyPositive()) {
       // If d < 0 and m > 0, subtract the numerator.
       NumeratorFactor = -1;
     }
 
-    MagicFactors.push_back(DAG.getConstant(magics.m, dl, SVT));
+    MagicFactors.push_back(DAG.getConstant(magics.Magic, dl, SVT));
     Factors.push_back(DAG.getConstant(NumeratorFactor, dl, SVT));
-    Shifts.push_back(DAG.getConstant(magics.s, dl, ShSVT));
+    Shifts.push_back(DAG.getConstant(magics.ShiftAmount, dl, ShSVT));
     ShiftMasks.push_back(DAG.getConstant(ShiftMask, dl, SVT));
     return true;
   };
@@ -5417,28 +5312,28 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     // FIXME: We should use a narrower constant when the upper
     // bits are known to be zero.
     const APInt& Divisor = C->getAPIntValue();
-    mu magics = magicu(Divisor);
+    UnsignedDivisonByConstantInfo magics = UnsignedDivisonByConstantInfo::get(Divisor);
     unsigned PreShift = 0, PostShift = 0;
 
     // If the divisor is even, we can avoid using the expensive fixup by
     // shifting the divided value upfront.
-    if (magics.a != 0 && !Divisor[0]) {
+    if (magics.IsAdd != 0 && !Divisor[0]) {
       PreShift = Divisor.countTrailingZeros();
       // Get magic number for the shifted divisor.
-      magics = magicu(Divisor.lshr(PreShift), PreShift);
-      assert(magics.a == 0 && "Should use cheap fixup now");
+      magics = UnsignedDivisonByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
+      assert(magics.IsAdd == 0 && "Should use cheap fixup now");
     }
 
-    APInt Magic = magics.m;
+    APInt Magic = magics.Magic;
 
     unsigned SelNPQ;
-    if (magics.a == 0 || Divisor.isOneValue()) {
-      assert(magics.s < Divisor.getBitWidth() &&
+    if (magics.IsAdd == 0 || Divisor.isOne()) {
+      assert(magics.ShiftAmount < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
-      PostShift = magics.s;
+      PostShift = magics.ShiftAmount;
       SelNPQ = false;
     } else {
-      PostShift = magics.s - 1;
+      PostShift = magics.ShiftAmount - 1;
       SelNPQ = true;
     }
 
@@ -5632,7 +5527,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     const APInt &D = CDiv->getAPIntValue();
     const APInt &Cmp = CCmp->getAPIntValue();
 
-    ComparingWithAllZeros &= Cmp.isNullValue();
+    ComparingWithAllZeros &= Cmp.isZero();
 
     // x u% C1` is *always* less than C1. So given `x u% C1 == C2`,
     // if C2 is not less than C1, the comparison is always false.
@@ -5644,26 +5539,26 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     // If all lanes are tautological (either all divisors are ones, or divisor
     // is not greater than the constant we are comparing with),
     // we will prefer to avoid the fold.
-    bool TautologicalLane = D.isOneValue() || TautologicalInvertedLane;
+    bool TautologicalLane = D.isOne() || TautologicalInvertedLane;
     HadTautologicalLanes |= TautologicalLane;
     AllLanesAreTautological &= TautologicalLane;
 
     // If we are comparing with non-zero, we need'll need  to subtract said
     // comparison value from the LHS. But there is no point in doing that if
     // every lane where we are comparing with non-zero is tautological..
-    if (!Cmp.isNullValue())
+    if (!Cmp.isZero())
       AllComparisonsWithNonZerosAreTautological &= TautologicalLane;
 
     // Decompose D into D0 * 2^K
     unsigned K = D.countTrailingZeros();
-    assert((!D.isOneValue() || (K == 0)) && "For divisor '1' we won't rotate.");
+    assert((!D.isOne() || (K == 0)) && "For divisor '1' we won't rotate.");
     APInt D0 = D.lshr(K);
 
     // D is even if it has trailing zeros.
     HadEvenDivisor |= (K != 0);
     // D is a power-of-two if D0 is one.
     // If all divisors are power-of-two, we will prefer to avoid the fold.
-    AllDivisorsArePowerOfTwo &= D0.isOneValue();
+    AllDivisorsArePowerOfTwo &= D0.isOne();
 
     // P = inv(D0, 2^W)
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
@@ -5671,8 +5566,8 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     APInt P = D0.zext(W + 1)
                   .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
                   .trunc(W);
-    assert(!P.isNullValue() && "No multiplicative inverse!"); // unreachable
-    assert((D0 * P).isOneValue() && "Multiplicative inverse sanity check.");
+    assert(!P.isZero() && "No multiplicative inverse!"); // unreachable
+    assert((D0 * P).isOne() && "Multiplicative inverse sanity check.");
 
     // Q = floor((2^W - 1) u/ D)
     // R = ((2^W - 1) u% D)
@@ -5893,12 +5788,12 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     HadIntMinDivisor |= D.isMinSignedValue();
 
     // If all divisors are ones, we will prefer to avoid the fold.
-    HadOneDivisor |= D.isOneValue();
-    AllDivisorsAreOnes &= D.isOneValue();
+    HadOneDivisor |= D.isOne();
+    AllDivisorsAreOnes &= D.isOne();
 
     // Decompose D into D0 * 2^K
     unsigned K = D.countTrailingZeros();
-    assert((!D.isOneValue() || (K == 0)) && "For divisor '1' we won't rotate.");
+    assert((!D.isOne() || (K == 0)) && "For divisor '1' we won't rotate.");
     APInt D0 = D.lshr(K);
 
     if (!D.isMinSignedValue()) {
@@ -5909,7 +5804,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     // D is a power-of-two if D0 is one. This includes INT_MIN.
     // If all divisors are power-of-two, we will prefer to avoid the fold.
-    AllDivisorsArePowerOfTwo &= D0.isOneValue();
+    AllDivisorsArePowerOfTwo &= D0.isOne();
 
     // P = inv(D0, 2^W)
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
@@ -5917,8 +5812,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     APInt P = D0.zext(W + 1)
                   .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
                   .trunc(W);
-    assert(!P.isNullValue() && "No multiplicative inverse!"); // unreachable
-    assert((D0 * P).isOneValue() && "Multiplicative inverse sanity check.");
+    assert(!P.isZero() && "No multiplicative inverse!"); // unreachable
+    assert((D0 * P).isOne() && "Multiplicative inverse sanity check.");
 
     // A = floor((2^(W - 1) - 1) / D0) & -2^K
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);
@@ -5940,7 +5835,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     // If the divisor is 1 the result can be constant-folded. Likewise, we
     // don't care about INT_MIN lanes, those can be set to undef if appropriate.
-    if (D.isOneValue()) {
+    if (D.isOne()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
       A = -1;

@@ -9,24 +9,39 @@
 #include "fold-reduction.h"
 
 namespace Fortran::evaluate {
-
-std::optional<ConstantSubscript> CheckDIM(
-    FoldingContext &context, std::optional<ActualArgument> &arg, int rank) {
-  if (arg) {
-    if (auto *dimConst{Folder<SubscriptInteger>{context}.Folding(arg)}) {
+bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &context,
+    ActualArguments &arg, std::optional<int> dimIndex, int rank) {
+  if (dimIndex && static_cast<std::size_t>(*dimIndex) < arg.size()) {
+    if (auto *dimConst{
+            Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
       if (auto dimScalar{dimConst->GetScalarValue()}) {
-        auto dim{dimScalar->ToInt64()};
-        if (dim >= 1 && dim <= rank) {
-          return {dim};
+        auto dimVal{dimScalar->ToInt64()};
+        if (dimVal >= 1 && dimVal <= rank) {
+          dim = dimVal;
         } else {
           context.messages().Say(
               "DIM=%jd is not valid for an array of rank %d"_err_en_US,
-              static_cast<std::intmax_t>(dim), rank);
+              static_cast<std::intmax_t>(dimVal), rank);
+          return false;
         }
       }
     }
   }
-  return std::nullopt;
+  return true;
 }
 
+Constant<LogicalResult> *GetReductionMASK(
+    std::optional<ActualArgument> &maskArg, const ConstantSubscripts &shape,
+    FoldingContext &context) {
+  Constant<LogicalResult> *mask{
+      Folder<LogicalResult>{context}.Folding(maskArg)};
+  if (mask &&
+      !CheckConformance(context.messages(), AsShape(shape),
+          AsShape(mask->shape()), CheckConformanceFlags::RightScalarExpandable,
+          "ARRAY=", "MASK=")
+           .value_or(false)) {
+    mask = nullptr;
+  }
+  return mask;
+}
 } // namespace Fortran::evaluate

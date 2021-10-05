@@ -17,6 +17,8 @@
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
 
+#include "SIDefines.h"
+
 namespace llvm {
 
 class GCNSubtarget;
@@ -161,7 +163,7 @@ public:
   const TargetRegisterClass *getPhysRegClass(MCRegister Reg) const;
 
   /// \returns true if this class contains only SGPR registers
-  bool isSGPRClass(const TargetRegisterClass *RC) const {
+  static bool isSGPRClass(const TargetRegisterClass *RC) {
     return !hasVGPRs(RC) && !hasAGPRs(RC);
   }
 
@@ -173,23 +175,27 @@ public:
   bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
 
   /// \returns true if this class contains only VGPR registers
-  bool isVGPRClass(const TargetRegisterClass *RC) const {
+  static bool isVGPRClass(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) && !hasAGPRs(RC);
   }
 
   /// \returns true if this class contains only AGPR registers
-  bool isAGPRClass(const TargetRegisterClass *RC) const {
+  static bool isAGPRClass(const TargetRegisterClass *RC) {
     return hasAGPRs(RC) && !hasVGPRs(RC);
   }
 
   /// \returns true if this class contains VGPR registers.
-  bool hasVGPRs(const TargetRegisterClass *RC) const;
+  static bool hasVGPRs(const TargetRegisterClass *RC) {
+    return RC->TSFlags & SIRCFlags::HasVGPR;
+  }
 
   /// \returns true if this class contains AGPR registers.
-  bool hasAGPRs(const TargetRegisterClass *RC) const;
+  static bool hasAGPRs(const TargetRegisterClass *RC) {
+    return RC->TSFlags & SIRCFlags::HasAGPR;
+  }
 
   /// \returns true if this class contains any vector registers.
-  bool hasVectorRegisters(const TargetRegisterClass *RC) const {
+  static bool hasVectorRegisters(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) || hasAGPRs(RC);
   }
 

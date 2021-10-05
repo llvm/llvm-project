@@ -123,6 +123,8 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
     } else if (const auto *binding{
                    ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
       return &binding->symbol();
+    } else if (ultimate.has<semantics::SubprogramDetails>()) {
+      return &ultimate;
     }
   }
   return nullptr;

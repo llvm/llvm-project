@@ -33,8 +33,8 @@
 #include "print_tracing.h"
 #include "trace.h"
 
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #include "MemoryManager.h"
 
@@ -217,18 +217,14 @@ std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
 
 /// Use a single entity to encode a kernel and a set of flags
 struct KernelTy {
-  // execution mode of kernel
-  // 0 - SPMD mode (without master warp)
-  // 1 - Generic mode (with master warp)
-  // 2 - SPMD mode execution with Generic mode semantics.
-  int8_t ExecutionMode;
+  llvm::omp::OMPTgtExecModeFlags ExecutionMode;
   int16_t ConstWGSize;
   int32_t device_id;
   void *CallStackAddr = nullptr;
   const char *Name;
 
-  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
-           void *_CallStackAddr, const char *_Name,
+  KernelTy(llvm::omp::OMPTgtExecModeFlags _ExecutionMode, int16_t _ConstWGSize,
+           int32_t _device_id, void *_CallStackAddr, const char *_Name,
            uint32_t _kernarg_segment_size,
            hsa_amd_memory_pool_t &KernArgMemoryPool)
       : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
@@ -1564,8 +1560,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                 " compiler flag: -march=<gpu>\n",
                 DeviceName, ElfName);
       } else {
-        fprintf(stderr, "Error loading image onto GPU: %s\n",
-                get_error_string(err));
+        DP("Error loading image onto GPU: %s\n", get_error_string(err));
       }
 
       return NULL;
@@ -1676,7 +1671,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       if (err != HSA_STATUS_SUCCESS) {
         // Inform the user what symbol prevented offloading
-        fprintf(stderr, "Loading global '%s' (Failed)\n", e->name);
+        DP("Loading global '%s' (Failed)\n", e->name);
         return NULL;
       }
 
@@ -1727,7 +1722,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     // default value GENERIC (in case symbol is missing from cubin file)
-    int8_t ExecModeVal = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+    llvm::omp::OMPTgtExecModeFlags ExecModeVal =
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
     // get flat group size if present, else Default_WG_Size
     int16_t WGSizeVal = RTLDeviceInfoTy::Default_WG_Size;
@@ -1749,6 +1745,17 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     void *CallStackAddr = nullptr;
     err = interop_get_symbol_info((char *)image->ImageStart, img_size,
                                   KernDescName, &KernDescPtr, &KernDescSize);
+
+    // Two variables are used to communicate workgroup size in amd-stg-open,
+    // neither present in trunk.
+    // VAR_kern_desc is always emitted, contains a wg size which is either zero
+    // or a value known at compile time
+    // VAR_wg_size is only emitted if there is a value known at compile time
+    // If both are present, it's because the value was known at compile time and
+    // the value will match.
+    // The commit that added this comment changed clang to emit the VAR_wg_size
+    // whenever it emits VAR_kern_desc, with the same default value of zero
+    // if the value is not derivable at compile time.
 
     if (err == HSA_STATUS_SUCCESS) {
       if ((size_t)KernDescSize != sizeof(KernDescVal))
@@ -1799,7 +1806,12 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
         memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
 
-	DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
+        DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
+
+        if (WGSizeVal == 0) {
+          // zero means not known at compile time, use the default
+          WGSizeVal = RTLDeviceInfoTy::Default_WG_Size;
+        }
 
         if (WGSizeVal < RTLDeviceInfoTy::Default_WG_Size ||
             WGSizeVal > RTLDeviceInfoTy::Max_WG_Size) {
@@ -1825,31 +1837,32 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     void *ExecModePtr;
     uint32_t varsize;
     err = interop_get_symbol_info((char *)image->ImageStart, img_size,
-				  ExecModeName, &ExecModePtr, &varsize);
+                                  ExecModeName, &ExecModePtr, &varsize);
     if (err == HSA_STATUS_SUCCESS) {
-      if ((size_t)varsize != sizeof(int8_t)) {
-	DP("Loading global computation properties '%s' - size mismatch(%u != "
-	   "%lu)\n",
-	   ExecModeName, varsize, sizeof(int8_t));
-	return NULL;
+      if ((size_t)varsize != sizeof(llvm::omp::OMPTgtExecModeFlags)) {
+        DP("Loading global computation properties '%s' - size mismatch(%u != "
+           "%lu)\n",
+           ExecModeName, varsize, sizeof(llvm::omp::OMPTgtExecModeFlags));
+        return NULL;
       }
 
       memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
 
       DP("After loading global for %s ExecMode = %d\n", ExecModeName,
-	 ExecModeVal);
+         ExecModeVal);
 
-      if (ExecModeVal < 0 || ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
-	DP("Error wrong exec_mode value specified in HSA code object file: "
-	   "%d\n",
-	   ExecModeVal);
-	return NULL;
+      if (ExecModeVal < 0 ||
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
+        DP("Error wrong exec_mode value specified in HSA code object file: "
+           "%d\n",
+           ExecModeVal);
+        return NULL;
       }
     } else {
       DP("Loading global exec_mode '%s' - symbol missing, using default "
-	 "value "
-	 "GENERIC (1)\n",
-	 ExecModeName);
+         "value "
+         "GENERIC (1)\n",
+         ExecModeName);
     }
     check("Loading computation property", err);
 
@@ -1963,6 +1976,12 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
   if (thread_limit > 0) {
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
+    // Add master warp for GENERIC
+    if (ExecutionMode ==
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+      threadsPerGroup += WarpSize;
+      DP("Adding master wavefront: +%d threads\n", WarpSize);
+    }
     if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
       DP("Setting threads per block to maximum %d\n", threadsPerGroup);
@@ -1975,18 +1994,20 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
        threadsPerGroup);
   }
 
-  if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
     // Add master thread in additional warp for GENERIC mode
     // Only one additional thread is started, not an entire warp
 
     // Do not exceed max number of threads: sacrifice last warp for
     // the thread master
     if (threadsPerGroup == RTLDeviceInfoTy::Max_WG_Size)
-      threadsPerGroup -= WarpSize -1;
+      threadsPerGroup -= WarpSize - 1;
     else {
       // Cap threadsPerGroup at WarpSize level as we need a master
-      if (threadsPerGroup < WarpSize) threadsPerGroup = WarpSize;
-      threadsPerGroup = WarpSize*(threadsPerGroup / WarpSize) +1;
+      if (threadsPerGroup < WarpSize)
+        threadsPerGroup = WarpSize;
+      threadsPerGroup = WarpSize * (threadsPerGroup / WarpSize) + 1;
     }
 
     DP("Adding master thread (+1)\n");
@@ -2044,12 +2065,14 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
   } else {
     if (num_teams <= 0) {
       if (loop_tripcount > 0) {
-        if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD) {
+        if (ExecutionMode ==
+            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD) {
           // round up to the nearest integer
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-        } else if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+        } else if (ExecutionMode ==
+                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
           num_groups = loop_tripcount;
-        } else /* ExecutionMode == SPMD_GENERIC */ {
+        } else /* OMP_TGT_EXEC_MODE_GENERIC_SPMD */ {
           // This is a generic kernel that was transformed to use SPMD-mode
           // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;

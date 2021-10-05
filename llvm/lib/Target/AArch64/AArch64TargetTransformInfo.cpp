@@ -695,6 +695,33 @@ static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return None;
 }
 
+static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
+  switch (Intrinsic) {
+  case Intrinsic::aarch64_sve_fmul:
+    return Instruction::BinaryOps::FMul;
+  case Intrinsic::aarch64_sve_fadd:
+    return Instruction::BinaryOps::FAdd;
+  case Intrinsic::aarch64_sve_fsub:
+    return Instruction::BinaryOps::FSub;
+  default:
+    return Instruction::BinaryOpsEnd;
+  }
+}
+
+static Optional<Instruction *> instCombineSVEVectorBinOp(InstCombiner &IC,
+                                                         IntrinsicInst &II) {
+  auto BinOpCode = intrinsicIDToBinOpCode(II.getIntrinsicID());
+  if (BinOpCode == Instruction::BinaryOpsEnd ||
+      !match(II.getOperand(0),
+             m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                 m_ConstantInt<AArch64SVEPredPattern::all>())))
+    return None;
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  return IC.replaceInstUsesWith(
+      II, Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2)));
+}
+
 static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
                                                        IntrinsicInst &II) {
   auto *OpPredicate = II.getOperand(0);
@@ -744,7 +771,7 @@ static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
     }
   }
 
-  return None;
+  return instCombineSVEVectorBinOp(IC, II);
 }
 
 static Optional<Instruction *> instCombineSVEUnpack(InstCombiner &IC,
@@ -871,6 +898,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_mul:
   case Intrinsic::aarch64_sve_fmul:
     return instCombineSVEVectorMul(IC, II);
+  case Intrinsic::aarch64_sve_fadd:
+  case Intrinsic::aarch64_sve_fsub:
+    return instCombineSVEVectorBinOp(IC, II);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:
@@ -1832,7 +1862,7 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     StructType *ST = dyn_cast<StructType>(ExpectedType);
     if (!ST)
       return nullptr;
-    unsigned NumElts = Inst->getNumArgOperands() - 1;
+    unsigned NumElts = Inst->arg_size() - 1;
     if (ST->getNumElements() != NumElts)
       return nullptr;
     for (unsigned i = 0, e = NumElts; i != e; ++i) {
@@ -1873,7 +1903,7 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st4:
     Info.ReadMem = false;
     Info.WriteMem = true;
-    Info.PtrVal = Inst->getArgOperand(Inst->getNumArgOperands() - 1);
+    Info.PtrVal = Inst->getArgOperand(Inst->arg_size() - 1);
     break;
   }
 

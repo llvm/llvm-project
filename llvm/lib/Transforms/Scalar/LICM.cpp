@@ -1240,7 +1240,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       // writes to this memory in the loop, we can hoist or sink.
       if (AAResults::onlyAccessesArgPointees(Behavior)) {
         // TODO: expand to writeable arguments
-        for (Value *Op : CI->arg_operands())
+        for (Value *Op : CI->args())
           if (Op->getType()->isPointerTy()) {
             bool Invalidated;
             if (CurAST)

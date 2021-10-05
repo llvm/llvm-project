@@ -1525,6 +1525,7 @@ int registerOnlyStd() {
               ctx, mlirStringRefCreateFromCString(
                        "not_existing_dialect.not_existing_op")));
 
+  mlirContextDestroy(ctx);
   return 0;
 }
 
@@ -1666,6 +1667,9 @@ int testClone() {
   // CHECK: constant 0 : index
   // CHECK: constant 1 : index
 
+  mlirOperationDestroy(constZero);
+  mlirOperationDestroy(constOne);
+  mlirContextDestroy(ctx);
   return 0;
 }
 
@@ -1737,6 +1741,100 @@ void testDiagnostics() {
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
+  mlirContextDestroy(ctx);
+}
+
+int testTypeID(MlirContext ctx) {
+  fprintf(stderr, "@testTypeID\n");
+
+  // Test getting and comparing type and attribute type ids.
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirTypeID i32ID = mlirTypeGetTypeID(i32);
+  MlirType ui32 = mlirIntegerTypeUnsignedGet(ctx, 32);
+  MlirTypeID ui32ID = mlirTypeGetTypeID(ui32);
+  MlirType f32 = mlirF32TypeGet(ctx);
+  MlirTypeID f32ID = mlirTypeGetTypeID(f32);
+  MlirAttribute i32Attr = mlirIntegerAttrGet(i32, 1);
+  MlirTypeID i32AttrID = mlirAttributeGetTypeID(i32Attr);
+
+  if (mlirTypeIDIsNull(i32ID) || mlirTypeIDIsNull(ui32ID) ||
+      mlirTypeIDIsNull(f32ID) || mlirTypeIDIsNull(i32AttrID)) {
+    fprintf(stderr, "ERROR: Expected type ids to be present\n");
+    return 1;
+  }
+
+  if (!mlirTypeIDEqual(i32ID, ui32ID) ||
+      mlirTypeIDHashValue(i32ID) != mlirTypeIDHashValue(ui32ID)) {
+    fprintf(
+        stderr,
+        "ERROR: Expected different integer types to have the same type id\n");
+    return 2;
+  }
+
+  if (mlirTypeIDEqual(i32ID, f32ID) ||
+      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(f32ID)) {
+    fprintf(stderr,
+            "ERROR: Expected integer type id to not equal float type id\n");
+    return 3;
+  }
+
+  if (mlirTypeIDEqual(i32ID, i32AttrID) ||
+      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(i32AttrID)) {
+    fprintf(stderr, "ERROR: Expected integer type id to not equal integer "
+                    "attribute type id\n");
+    return 4;
+  }
+
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirType indexType = mlirIndexTypeGet(ctx);
+  MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
+
+  // Create a registered operation, which should have a type id.
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
+  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+
+  if (mlirOperationIsNull(constZero)) {
+    fprintf(stderr, "ERROR: Expected registered operation to be present\n");
+    return 5;
+  }
+
+  MlirTypeID registeredOpID = mlirOperationGetTypeID(constZero);
+
+  if (mlirTypeIDIsNull(registeredOpID)) {
+    fprintf(stderr,
+            "ERROR: Expected registered operation type id to be present\n");
+    return 6;
+  }
+
+  // Create an unregistered operation, which should not have a type id.
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
+  MlirOperationState opState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op"), loc);
+  MlirOperation unregisteredOp = mlirOperationCreate(&opState);
+  if (mlirOperationIsNull(unregisteredOp)) {
+    fprintf(stderr, "ERROR: Expected unregistered operation to be present\n");
+    return 7;
+  }
+
+  MlirTypeID unregisteredOpID = mlirOperationGetTypeID(unregisteredOp);
+
+  if (!mlirTypeIDIsNull(unregisteredOpID)) {
+    fprintf(stderr,
+            "ERROR: Expected unregistered operation type id to be null\n");
+    return 8;
+  }
+
+  mlirOperationDestroy(constZero);
+  mlirOperationDestroy(unregisteredOp);
+
+  return 0;
 }
 
 int main() {
@@ -1768,6 +1866,9 @@ int main() {
     return 11;
   if (testClone())
     return 12;
+  if (testTypeID(ctx)) {
+    return 13;
+  }
 
   mlirContextDestroy(ctx);
 

@@ -129,7 +129,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
 
   p->initialized = 1;
 
-  p->sse2 = 1; // Assume SSE2 by default.
+  p->flags.sse2 = 1; // Assume SSE2 by default.
 
   __kmp_x86_cpuid(0, 0, &buf);
 
@@ -169,7 +169,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       data[i] = (t & 0xff);
     }
 
-    p->sse2 = (buf.edx >> 26) & 1;
+    p->flags.sse2 = (buf.edx >> 26) & 1;
 
 #ifdef KMP_DEBUG
 
@@ -248,11 +248,11 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
     }
 #endif
 #if KMP_USE_ADAPTIVE_LOCKS
-    p->rtm = 0;
+    p->flags.rtm = 0;
     if (max_arg > 7) {
       /* RTM bit CPUID.07:EBX, bit 11 */
       __kmp_x86_cpuid(7, 0, &buf);
-      p->rtm = (buf.ebx >> 11) & 1;
+      p->flags.rtm = (buf.ebx >> 11) & 1;
       KA_TRACE(trace_level, (" RTM"));
     }
 #endif

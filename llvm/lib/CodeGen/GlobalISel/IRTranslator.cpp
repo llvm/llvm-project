@@ -1591,8 +1591,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   Align DstAlign;
   Align SrcAlign;
   unsigned IsVol =
-      cast<ConstantInt>(CI.getArgOperand(CI.getNumArgOperands() - 1))
-          ->getZExtValue();
+      cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1))->getZExtValue();
 
   if (auto *MCI = dyn_cast<MemCpyInst>(&CI)) {
     DstAlign = MCI->getDestAlign().valueOrOne();
@@ -1784,7 +1783,7 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
 
   // Yes. Let's translate it.
   SmallVector<llvm::SrcOp, 4> VRegs;
-  for (auto &Arg : CI.arg_operands())
+  for (auto &Arg : CI.args())
     VRegs.push_back(getOrCreateVReg(*Arg));
 
   MIRBuilder.buildInstr(Op, {getOrCreateVReg(CI)}, VRegs,
@@ -2205,7 +2204,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     // Directly emit some LOCAL_ESCAPE machine instrs. Label assignment emission
     // is the same on all targets.
-    for (unsigned Idx = 0, E = CI.getNumArgOperands(); Idx < E; ++Idx) {
+    for (unsigned Idx = 0, E = CI.arg_size(); Idx < E; ++Idx) {
       Value *Arg = CI.getArgOperand(Idx)->stripPointerCasts();
       if (isa<ConstantPointerNull>(Arg))
         continue; // Skip null pointers. They represent a hole in index space.
@@ -2400,7 +2399,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (isa<FPMathOperator>(CI))
     MIB->copyIRFlags(CI);
 
-  for (auto &Arg : enumerate(CI.arg_operands())) {
+  for (auto &Arg : enumerate(CI.args())) {
     // If this is required to be an immediate, don't materialize it in a
     // register.
     if (CI.paramHasAttr(Arg.index(), Attribute::ImmArg)) {

@@ -2050,20 +2050,55 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   } else if (Common) {
     outs() << "*COM*";
   } else if (Section == O->section_end()) {
-    outs() << "*UND*";
+    if (O->isXCOFF()) {
+      XCOFFSymbolRef XCOFFSym = dyn_cast<const XCOFFObjectFile>(O)->toSymbolRef(
+          Symbol.getRawDataRefImpl());
+      if (XCOFF::N_DEBUG == XCOFFSym.getSectionNumber())
+        outs() << "*DEBUG*";
+      else
+        outs() << "*UND*";
+    } else
+      outs() << "*UND*";
   } else {
     StringRef SegmentName = getSegmentName(MachO, *Section);
     if (!SegmentName.empty())
       outs() << SegmentName << ",";
     StringRef SectionName = unwrapOrError(Section->getName(), FileName);
     outs() << SectionName;
+    if (O->isXCOFF()) {
+      Optional<SymbolRef> SymRef = getXCOFFSymbolContainingSymbolRef(
+          dyn_cast<const XCOFFObjectFile>(O), Symbol);
+      if (SymRef) {
+
+        Expected<StringRef> NameOrErr = SymRef.getValue().getName();
+
+        if (NameOrErr) {
+          outs() << " (csect:";
+          std::string SymName(NameOrErr.get());
+
+          if (Demangle)
+            SymName = demangle(SymName);
+
+          if (SymbolDescription)
+            SymName = getXCOFFSymbolDescription(
+                createSymbolInfo(O, SymRef.getValue()), SymName);
+
+          outs() << ' ' << SymName;
+          outs() << ") ";
+        } else
+          reportWarning(toString(NameOrErr.takeError()), FileName);
+      }
+    }
   }
 
-  if (Common || O->isELF()) {
-    uint64_t Val =
-        Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
-    outs() << '\t' << format(Fmt, Val);
-  }
+  if (Common)
+    outs() << '\t' << format(Fmt, Symbol.getAlignment());
+  else if (O->isXCOFF())
+    outs() << '\t'
+           << format(Fmt, dyn_cast<const XCOFFObjectFile>(O)->getSymbolSize(
+                              Symbol.getRawDataRefImpl()));
+  else if (O->isELF())
+    outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
 
   if (O->isELF()) {
     if (!SymbolVersions.empty()) {
@@ -2096,10 +2131,14 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
     outs() << " .hidden";
   }
 
+  std::string SymName(Name);
   if (Demangle)
-    outs() << ' ' << demangle(std::string(Name)) << '\n';
-  else
-    outs() << ' ' << Name << '\n';
+    SymName = demangle(SymName);
+
+  if (O->isXCOFF() && SymbolDescription)
+    SymName = getXCOFFSymbolDescription(createSymbolInfo(O, Symbol), SymName);
+
+  outs() << ' ' << SymName << '\n';
 }
 
 static void printUnwindInfo(const ObjectFile *O) {

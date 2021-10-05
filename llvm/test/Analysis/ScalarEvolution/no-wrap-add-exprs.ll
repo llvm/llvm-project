@@ -209,11 +209,11 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 ; CHECK-NEXT:    %sunkaddr3 = mul i64 %add4.zext, 4
 ; CHECK-NEXT:    --> (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> U: [0,17179869169) S: [0,17179869181)
 ; CHECK-NEXT:    %sunkaddr4 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @tmp_addr to i8*), i64 %sunkaddr3
-; CHECK-NEXT:    --> ((4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> ((4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %sunkaddr5 = getelementptr inbounds i8, i8* %sunkaddr4, i64 4096
-; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4096,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr4.cast = bitcast i8* %sunkaddr5 to i32*
-; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4096,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr4.incr = getelementptr i32, i32* %addr4.cast, i64 1
 ; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %add5 = add i32 %mul, 5
@@ -223,11 +223,11 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 ; CHECK-NEXT:    %sunkaddr0 = mul i64 %add5.zext, 4
 ; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw>)<nuw><nsw> U: [4,17179869173) S: [4,17179869185)
 ; CHECK-NEXT:    %sunkaddr1 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @tmp_addr to i8*), i64 %sunkaddr0
-; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %sunkaddr2 = getelementptr inbounds i8, i8* %sunkaddr1, i64 4096
-; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr5.cast = bitcast i8* %sunkaddr2 to i32*
-; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @f3
 ;
   entry:
@@ -297,11 +297,11 @@ define i1 @test2_a(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
-; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%a + %b),+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
-; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (%a /u {(%a + %b),+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = add i32 %a, %b
-; CHECK-NEXT:    --> (%a + %b)<nuw><nsw> U: full-set S: full-set
+; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_a
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
@@ -335,9 +335,9 @@ define i1 @test2_b(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
-; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%a + %b),+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
-; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (%a /u {(%a + %b),+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_b
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.

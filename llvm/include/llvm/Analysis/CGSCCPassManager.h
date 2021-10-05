@@ -390,8 +390,11 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
   using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
                                        PreservedAnalyses, CGSCCAnalysisManager,
                                        LazyCallGraph &, CGSCCUpdateResult &>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
   return ModuleToPostOrderCGSCCPassAdaptor(
-      std::make_unique<PassModelT>(std::forward<CGSCCPassT>(Pass)));
+      std::unique_ptr<ModuleToPostOrderCGSCCPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<CGSCCPassT>(Pass))));
 }
 
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
@@ -515,8 +518,11 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
   return CGSCCToFunctionPassAdaptor(
-      std::make_unique<PassModelT>(std::forward<FunctionPassT>(Pass)));
+      std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<FunctionPassT>(Pass))));
 }
 
 /// A helper that repeats an SCC pass each time an indirect call is refined to
@@ -568,8 +574,11 @@ DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
   using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
                                        PreservedAnalyses, CGSCCAnalysisManager,
                                        LazyCallGraph &, CGSCCUpdateResult &>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
   return DevirtSCCRepeatedPass(
-      std::make_unique<PassModelT>(std::forward<CGSCCPassT>(Pass)),
+      std::unique_ptr<DevirtSCCRepeatedPass::PassConceptT>(
+          new PassModelT(std::forward<CGSCCPassT>(Pass))),
       MaxIterations);
 }
 

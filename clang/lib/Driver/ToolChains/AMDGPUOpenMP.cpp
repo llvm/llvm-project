@@ -308,10 +308,6 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
 
-  // Optimization bug in amdgpu backend, this sweeps under rug
-  if (!Args.getLastArg(options::OPT_O0)) {
-    OptArgs.push_back("-O0");
-  }
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
   if (OptEnv.hasValue()) {

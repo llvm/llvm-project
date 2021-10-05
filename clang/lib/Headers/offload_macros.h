@@ -77,47 +77,49 @@
 #if defined(_DEVICE_ARCH) && ( _DEVICE_ARCH == amdgcn )
   // AMD uses binary macros only, so create a value for _DEVICE_GPU
   #if defined(__gfx600__)
-    #define _DEVICE_GPU 600
+    #define _DEVICE_GPU 6000
   #elif defined(__gfx601__)
-    #define _DEVICE_GPU 601
+    #define _DEVICE_GPU 6010
   #elif defined(__gfx602__)
-    #define _DEVICE_GPU 602
+    #define _DEVICE_GPU 6020
   #elif defined(__gfx700__)
-    #define _DEVICE_GPU 700
+    #define _DEVICE_GPU 7000
   #elif defined(__gfx701__)
-    #define _DEVICE_GPU 701
+    #define _DEVICE_GPU 7010
   #elif defined(__gfx702__)
-    #define _DEVICE_GPU 702
+    #define _DEVICE_GPU 7020
   #elif defined(__gfx703__)
-    #define _DEVICE_GPU 703
+    #define _DEVICE_GPU 7030
   #elif defined(__gfx704__)
-    #define _DEVICE_GPU 704
+    #define _DEVICE_GPU 7040
   #elif defined(__gfx705__)
-    #define _DEVICE_GPU 705
+    #define _DEVICE_GPU 7050
   #elif defined(__gfx801__)
-    #define _DEVICE_GPU 801
+    #define _DEVICE_GPU 8010
   #elif defined(__gfx802__)
-    #define _DEVICE_GPU 802
+    #define _DEVICE_GPU 8020
   #elif defined(__gfx803__)
-    #define _DEVICE_GPU 803
+    #define _DEVICE_GPU 8030
   #elif defined(__gfx805__)
-    #define _DEVICE_GPU 805
+    #define _DEVICE_GPU 8050
   #elif defined(__gfx810__)
-    #define _DEVICE_GPU 810
+    #define _DEVICE_GPU 8100
   #elif defined(__gfx900__)
-    #define _DEVICE_GPU 900
+    #define _DEVICE_GPU 9000
   #elif defined(__gfx902__)
-    #define _DEVICE_GPU 902
+    #define _DEVICE_GPU 9020
   #elif defined(__gfx904__)
-    #define _DEVICE_GPU 904
+    #define _DEVICE_GPU 9040
   #elif defined(__gfx906__)
-    #define _DEVICE_GPU 906
+    #define _DEVICE_GPU 9060
   #elif defined(__gfx908__)
-    #define _DEVICE_GPU 908
+    #define _DEVICE_GPU 9080
   #elif defined(__gfx909__)
-    #define _DEVICE_GPU 909
+    #define _DEVICE_GPU 9090
+  #elif defined(__gfx90a__)
+    #define _DEVICE_GPU 9010
   #elif defined(__gfx90c__)
-    #define _DEVICE_GPU 90c
+    #define _DEVICE_GPU 9012
   #elif defined(__gfx1010__)
     #define _DEVICE_GPU 1010
   #elif defined(__gfx1011__)

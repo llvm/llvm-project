@@ -3234,17 +3234,21 @@ the configuration (without a prefix: ``Auto``).
 
 
 **QualifierAlignment** (``QualifierAlignmentStyle``) :versionbadge:`clang-format 14`
-  Different ways to arrange const/volatile qualifiers.
+  Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
 
   .. warning:: 
 
-   ``QualifierAlignment`` COULD lead to incorrect code generation.
+   Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+   lead to incorrect code formatting due to incorrect decisions made due to
+   clang-formats lack of complete semantic information.
+   As such extra care should be taken to review code changes made by the use
+   of this option.
 
   Possible values:
 
   * ``QAS_Leave`` (in configuration: ``Leave``)
-    Don't change specifiers/qualifier to either Left or Right alignment
-    (default)
+    Don't change specifiers/qualifiers to either Left or Right alignment
+    (default).
 
     .. code-block:: c++
 
@@ -3252,7 +3256,7 @@ the configuration (without a prefix: ``Auto``).
        const int *a;
 
   * ``QAS_Left`` (in configuration: ``Left``)
-    Change specifiers/qualifiers to be Left aligned.
+    Change specifiers/qualifiers to be left-aligned.
 
     .. code-block:: c++
 
@@ -3260,7 +3264,7 @@ the configuration (without a prefix: ``Auto``).
        const int *a;
 
   * ``QAS_Right`` (in configuration: ``Right``)
-    Change specifiers/qualifiers to be Right aligned.
+    Change specifiers/qualifiers to be right-aligned.
 
     .. code-block:: c++
 
@@ -3268,12 +3272,12 @@ the configuration (without a prefix: ``Auto``).
        int const *a;
 
   * ``QAS_Custom`` (in configuration: ``Custom``)
-    Change specifiers/qualifiers to be aligned based on QualfierOrder.
+    Change specifiers/qualifiers to be aligned based on ``QualifierOrder``.
     With:
 
     .. code-block:: yaml
 
-      QualifierOrder: ['inline', 'static' , '<type>', 'const']
+      QualifierOrder: ['inline', 'static' , 'type', 'const']
 
 
     .. code-block:: c++
@@ -3285,8 +3289,8 @@ the configuration (without a prefix: ``Auto``).
 
 
 **QualifierOrder** (``List of Strings``) :versionbadge:`clang-format 14`
-  The Order in which the qualifiers appear.
-  Order is a an array can contain any of the following
+  The order in which the qualifiers appear.
+  Order is an array that can contain any of the following:
 
     * const
     * inline
@@ -3297,8 +3301,8 @@ the configuration (without a prefix: ``Auto``).
     * type
 
   Note: it MUST contain 'type'.
-  Items to the left of type will be aligned in the order supplied.
-  Items to the right of type will be aligned  in the order supplied.
+  Items to the left of 'type' will be placed to the left of the type and aligned in the order supplied.
+  Items to the right of 'type' will be placed to the right of the type and aligned in the order supplied.
 
 
   .. code-block:: yaml

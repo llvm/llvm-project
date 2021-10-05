@@ -1586,13 +1586,22 @@ llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
 }
 
 llvm::FunctionCallee
-CGOpenMPRuntime::createForStaticInitFunction(unsigned IVSize, bool IVSigned) {
+CGOpenMPRuntime::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
+                                             bool IsGPUDistribute) {
   assert((IVSize == 32 || IVSize == 64) &&
          "IV size is not compatible with the omp runtime");
-  StringRef Name = IVSize == 32 ? (IVSigned ? "__kmpc_for_static_init_4"
-                                            : "__kmpc_for_static_init_4u")
-                                : (IVSigned ? "__kmpc_for_static_init_8"
-                                            : "__kmpc_for_static_init_8u");
+  StringRef Name;
+  if (IsGPUDistribute)
+    Name = IVSize == 32 ? (IVSigned ? "__kmpc_distribute_static_init_4"
+                                    : "__kmpc_distribute_static_init_4u")
+                        : (IVSigned ? "__kmpc_distribute_static_init_8"
+                                    : "__kmpc_distribute_static_init_8u");
+  else
+    Name = IVSize == 32 ? (IVSigned ? "__kmpc_for_static_init_4"
+                                    : "__kmpc_for_static_init_4u")
+                        : (IVSigned ? "__kmpc_for_static_init_8"
+                                    : "__kmpc_for_static_init_8u");
+
   llvm::Type *ITy = IVSize == 32 ? CGM.Int32Ty : CGM.Int64Ty;
   auto *PtrTy = llvm::PointerType::getUnqual(ITy);
   llvm::Type *TypeParams[] = {
@@ -2855,7 +2864,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                                  : OMP_IDENT_WORK_SECTIONS);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
-      createForStaticInitFunction(Values.IVSize, Values.IVSigned);
+      createForStaticInitFunction(Values.IVSize, Values.IVSigned, false);
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, ScheduleKind.M1, ScheduleKind.M2, Values);
@@ -2870,8 +2879,13 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *UpdatedLocation =
       emitUpdateLocation(CGF, Loc, OMP_IDENT_WORK_DISTRIBUTE);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
-  llvm::FunctionCallee StaticInitFunction =
-      createForStaticInitFunction(Values.IVSize, Values.IVSigned);
+  llvm::FunctionCallee StaticInitFunction;
+  bool isGPUDistribute =
+      CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
+  StaticInitFunction = createForStaticInitFunction(
+      Values.IVSize, Values.IVSigned, isGPUDistribute);
+
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, OMPC_SCHEDULE_MODIFIER_unknown,
                         OMPC_SCHEDULE_MODIFIER_unknown, Values);
@@ -2892,9 +2906,16 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                                    : OMP_IDENT_WORK_SECTIONS),
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_for_static_fini),
-                      Args);
+  if (isOpenMPDistributeDirective(DKind) && CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
+    CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(
+            CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),
+        Args);
+  else
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_for_static_fini),
+                        Args);
 }
 
 void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
@@ -3422,38 +3443,6 @@ void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
         C.getFunctionType(KmpInt32Ty, KmpRoutineEntryTyArgs, EPI));
     KmpRoutineEntryPtrTy = CGM.getTypes().ConvertType(KmpRoutineEntryPtrQTy);
   }
-}
-
-/// Emit structure descriptor for a kernel
-void CGOpenMPRuntime::emitStructureKernelDesc(CodeGenModule &CGM,
-                                              StringRef Name, int16_t WG_Size,
-                                              int8_t Mode, int8_t HostServices) {
-  // Create all device images
-  llvm::Constant *AttrData[] = {
-      llvm::ConstantInt::get(CGM.Int16Ty, 2), // Version
-      llvm::ConstantInt::get(CGM.Int16Ty, 8), // Size in bytes
-      llvm::ConstantInt::get(CGM.Int16Ty, WG_Size)};
-
-  llvm::GlobalVariable *AttrImages = createGlobalStruct(
-      CGM, getTgtAttributeStructQTy(), isDefaultLocationConstant(), AttrData,
-      Name + Twine("_kern_desc"), llvm::GlobalValue::WeakAnyLinkage);
-  CGM.addCompilerUsedGlobal(AttrImages);
-}
-
-// Create Tgt Attribute Sruct type.
-QualType CGOpenMPRuntime::getTgtAttributeStructQTy() {
-  ASTContext &C = CGM.getContext();
-  QualType KmpInt16Ty = C.getIntTypeForBitwidth(/*Width=*/16, /*Signed=*/1);
-  if (TgtAttributeStructQTy.isNull()) {
-    RecordDecl *RD = C.buildImplicitRecord("__tgt_attribute_struct");
-    RD->startDefinition();
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Version
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Struct Size in bytes.
-    addFieldToRecordDecl(C, RD, KmpInt16Ty); // WG_size
-    RD->completeDefinition();
-    TgtAttributeStructQTy = C.getRecordType(RD);
-  }
-  return TgtAttributeStructQTy;
 }
 
 QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {

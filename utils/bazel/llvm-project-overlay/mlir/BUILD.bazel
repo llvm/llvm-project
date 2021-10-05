@@ -5466,20 +5466,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "mlir-linalg-ods-gen",
-    srcs = [
-        "tools/mlir-linalg-ods-gen/mlir-linalg-ods-gen.cpp",
-    ],
-    deps = [
-        ":IR",
-        ":Support",
-        "//llvm:Support",
-        "//llvm:TableGen",
-        "//llvm:config",
-    ],
-)
-
-cc_binary(
     name = "mlir-linalg-ods-yaml-gen",
     srcs = [
         "tools/mlir-linalg-ods-gen/mlir-linalg-ods-yaml-gen.cpp",
@@ -5912,22 +5898,6 @@ gentbl_cc_library(
 )
 
 genlinalg(
-    name = "LinalgNamedStructuredOpsTcIncGen",
-    src = "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOpsSpec.tc",
-    linalg_outs = [
-        (
-            "-gen-impl -o=$@",
-            "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.cpp.inc",
-        ),
-        (
-            "-gen-ods-decl -o=$@",
-            "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.td",
-        ),
-    ],
-    linalggen = ":mlir-linalg-ods-gen",
-)
-
-genlinalg(
     name = "LinalgNamedStructuredOpsYamlIncGen",
     src = "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yaml",
     linalg_outs = [
@@ -5947,7 +5917,6 @@ td_library(
     name = "LinalgStructuredOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Linalg/IR/LinalgInterfaces.td",
-        "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.td",
         "include/mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.td",
         "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.td",
     ],
@@ -6123,7 +6092,6 @@ cc_library(
         ":InferTypeOpInterface",
         ":LinalgInterfaces",
         ":LinalgInterfacesIncGen",
-        ":LinalgNamedStructuredOpsTcIncGen",
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -6185,6 +6153,7 @@ cc_library(
         "include/mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h",
         "include/mlir/Dialect/Linalg/Passes.h",
         "include/mlir/Dialect/Linalg/Transforms/CodegenStrategy.h",
+        "include/mlir/Dialect/Linalg/Transforms/ComprehensiveBufferize.h",
         "include/mlir/Dialect/Linalg/Transforms/HoistPadding.h",
         "include/mlir/Dialect/Linalg/Transforms/Hoisting.h",
         "include/mlir/Dialect/Linalg/Transforms/Transforms.h",

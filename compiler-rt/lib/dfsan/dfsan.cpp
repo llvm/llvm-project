@@ -369,37 +369,6 @@ static void SetOrigin(const void *dst, uptr size, u32 origin) {
       *(u32 *)(end - kOriginAlign) = origin;
 }
 
-static void WriteShadowInRange(dfsan_label label, uptr beg_shadow_addr,
-                               uptr end_shadow_addr) {
-  // TODO: After changing dfsan_label to 8bit, use internal_memset when label
-  // is not 0.
-  dfsan_label *labelp = (dfsan_label *)beg_shadow_addr;
-  if (label) {
-    for (; (uptr)labelp < end_shadow_addr; ++labelp) *labelp = label;
-    return;
-  }
-
-  for (; (uptr)labelp < end_shadow_addr; ++labelp) {
-    // Don't write the label if it is already the value we need it to be.
-    // In a program where most addresses are not labeled, it is common that
-    // a page of shadow memory is entirely zeroed.  The Linux copy-on-write
-    // implementation will share all of the zeroed pages, making a copy of a
-    // page when any value is written.  The un-sharing will happen even if
-    // the value written does not change the value in memory.  Avoiding the
-    // write when both |label| and |*labelp| are zero dramatically reduces
-    // the amount of real memory used by large programs.
-    if (!*labelp)
-      continue;
-
-    *labelp = 0;
-  }
-}
-
-static void WriteShadowWithSize(dfsan_label label, uptr shadow_addr,
-                                uptr size) {
-  WriteShadowInRange(label, shadow_addr, shadow_addr + size * sizeof(label));
-}
-
 #define RET_CHAIN_ORIGIN(id)           \
   GET_CALLER_PC_BP_SP;                 \
   (void)sp;                            \
@@ -451,21 +420,6 @@ void dfsan_copy_memory(void *dst, const void *src, uptr size) {
     dfsan_mem_origin_transfer(dst, src, size);
 }
 
-}  // namespace __dfsan
-
-// If the label s is tainted, set the size bytes from the address p to be a new
-// origin chain with the previous ID o and the current stack trace. This is
-// used by instrumentation to reduce code size when too much code is inserted.
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
-    dfsan_label s, void *p, uptr size, dfsan_origin o) {
-  if (UNLIKELY(s)) {
-    GET_CALLER_PC_BP_SP;
-    (void)sp;
-    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
-    SetOrigin(p, size, ChainOrigin(o, &stack));
-  }
-}
-
 // Releases the pages within the origin address range.
 static void ReleaseOrigins(void *addr, uptr size) {
   const uptr beg_origin_addr = (uptr)__dfsan::origin_for(addr);
@@ -484,6 +438,19 @@ static void ReleaseOrigins(void *addr, uptr size) {
     Die();
 }
 
+static void WriteZeroShadowInRange(uptr beg, uptr end) {
+  // Don't write the label if it is already the value we need it to be.
+  // In a program where most addresses are not labeled, it is common that
+  // a page of shadow memory is entirely zeroed.  The Linux copy-on-write
+  // implementation will share all of the zeroed pages, making a copy of a
+  // page when any value is written.  The un-sharing will happen even if
+  // the value written does not change the value in memory.  Avoiding the
+  // write when both |label| and |*labelp| are zero dramatically reduces
+  // the amount of real memory used by large programs.
+  if (!mem_is_zero((const char *)beg, end - beg))
+    internal_memset((void *)beg, 0, end - beg);
+}
+
 // Releases the pages within the shadow address range, and sets
 // the shadow addresses not on the pages to be 0.
 static void ReleaseOrClearShadows(void *addr, uptr size) {
@@ -492,20 +459,22 @@ static void ReleaseOrClearShadows(void *addr, uptr size) {
   const uptr end_shadow_addr = (uptr)__dfsan::shadow_for(end_addr);
 
   if (end_shadow_addr - beg_shadow_addr <
-      common_flags()->clear_shadow_mmap_threshold)
-    return WriteShadowWithSize(0, beg_shadow_addr, size);
+      common_flags()->clear_shadow_mmap_threshold) {
+    WriteZeroShadowInRange(beg_shadow_addr, end_shadow_addr);
+    return;
+  }
 
   const uptr page_size = GetPageSizeCached();
   const uptr beg_aligned = RoundUpTo(beg_shadow_addr, page_size);
   const uptr end_aligned = RoundDownTo(end_shadow_addr, page_size);
 
   if (beg_aligned >= end_aligned) {
-    WriteShadowWithSize(0, beg_shadow_addr, size);
+    WriteZeroShadowInRange(beg_shadow_addr, end_shadow_addr);
   } else {
     if (beg_aligned != beg_shadow_addr)
-      WriteShadowInRange(0, beg_shadow_addr, beg_aligned);
+      WriteZeroShadowInRange(beg_shadow_addr, beg_aligned);
     if (end_aligned != end_shadow_addr)
-      WriteShadowInRange(0, end_aligned, end_shadow_addr);
+      WriteZeroShadowInRange(end_aligned, end_shadow_addr);
     if (!MmapFixedSuperNoReserve(beg_aligned, end_aligned - beg_aligned))
       Die();
   }
@@ -514,7 +483,7 @@ static void ReleaseOrClearShadows(void *addr, uptr size) {
 void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
   if (0 != label) {
     const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
-    WriteShadowWithSize(label, beg_shadow_addr, size);
+    internal_memset((void *)beg_shadow_addr, label, size);
     if (dfsan_get_track_origins())
       SetOrigin(addr, size, origin);
     return;
@@ -526,9 +495,24 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
   ReleaseOrClearShadows(addr, size);
 }
 
+}  // namespace __dfsan
+
+// If the label s is tainted, set the size bytes from the address p to be a new
+// origin chain with the previous ID o and the current stack trace. This is
+// used by instrumentation to reduce code size when too much code is inserted.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
+    dfsan_label s, void *p, uptr size, dfsan_origin o) {
+  if (UNLIKELY(s)) {
+    GET_CALLER_PC_BP_SP;
+    (void)sp;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    SetOrigin(p, size, ChainOrigin(o, &stack));
+  }
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
     dfsan_label label, dfsan_origin origin, void *addr, uptr size) {
-  SetShadow(label, addr, size, origin);
+  __dfsan::SetShadow(label, addr, size, origin);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -539,7 +523,7 @@ void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     init_origin = ChainOrigin(0, &stack, true);
   }
-  SetShadow(label, addr, size, init_origin);
+  __dfsan::SetShadow(label, addr, size, init_origin);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

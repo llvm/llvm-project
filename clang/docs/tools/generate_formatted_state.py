@@ -9,29 +9,32 @@ from datetime import datetime
 
 
 def get_git_revision_short_hash():
+    """ Get the get SHA in short hash form. """
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']
                                    ).decode(sys.stdout.encoding).strip()
 
 
 def get_style(count, passed):
+    """ Determine if this directory is good based on  the number of clean
+        files vs the number of files in total. """
     if passed == count:
         return ":good:"
-    elif passed != 0:
+    if passed != 0:
         return ":part:"
-    else:
-        return ":none:"
+    return ":none:"
 
 
 TOP_DIR = os.path.join(os.path.dirname(__file__), '../../..')
 CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
 DOC_FILE = os.path.join(CLANG_DIR, 'docs/ClangFormattedStatus.rst')
+CLEAN_FILE = os.path.join(CLANG_DIR, 'docs/tools/clang-formatted-files.txt')
 
 rootdir = TOP_DIR
 
 skipped_dirs = [".git", "test"]
 suffixes = (".cpp", ".h")
 
-rst_prefix = """\
+RST_PREFIX = """\
 .. raw:: html
 
       <style type="text/css">
@@ -64,7 +67,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: {today} (`{sha} <https
      - % Complete
 """
 
-table_row = """\
+TABLE_ROW = """\
    * - {path}
      - {style}`{count}`
      - {style}`{passes}`
@@ -74,10 +77,12 @@ table_row = """\
 
 FNULL = open(os.devnull, 'w')
 
+
 with open(DOC_FILE, 'wb') as output:
+    cleanfiles = open(CLEAN_FILE, "wb")
     sha = get_git_revision_short_hash()
     today = datetime.now().strftime("%B %d, %Y %H:%M:%S")
-    output.write(bytes(rst_prefix.format(today=today,
+    output.write(bytes(RST_PREFIX.format(today=today,
                                          sha=sha).encode("utf-8")))
 
     total_files_count = 0
@@ -126,6 +131,8 @@ with open(DOC_FILE, 'wb') as output:
             else:
                 print(relpath, ":", "PASS")
                 file_pass += 1
+                cleanfiles.write(bytes(relpath + "\n"))
+                cleanfiles.flush()
 
         total_files_count += file_count
         total_files_pass += file_pass
@@ -134,7 +141,7 @@ with open(DOC_FILE, 'wb') as output:
         if file_count > 0:
             percent = (int(100.0 * (float(file_pass)/float(file_count))))
             style = get_style(file_count, file_pass)
-            output.write(bytes(table_row.format(path=path,
+            output.write(bytes(TABLE_ROW.format(path=path,
                                                 count=file_count,
                                                 passes=file_pass,
                                                 fails=file_fail,
@@ -148,7 +155,7 @@ with open(DOC_FILE, 'wb') as output:
 
     total_percent = (float(total_files_pass)/float(total_files_count))
     percent_str = str(int(100.0 * total_percent))
-    output.write(bytes(table_row.format(path="Total",
+    output.write(bytes(TABLE_ROW.format(path="Total",
                                         count=total_files_count,
                                         passes=total_files_pass,
                                         fails=total_files_fail,

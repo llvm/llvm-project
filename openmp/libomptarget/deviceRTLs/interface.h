@@ -256,6 +256,27 @@ EXTERN void __kmpc_for_static_init_8u(kmp_Ident *loc, int32_t global_tid,
                                       uint64_t *plower, uint64_t *pupper,
                                       int64_t *pstride, int64_t incr,
                                       int64_t chunk);
+// distribute static (no chunk or chunk)
+EXTERN void __kmpc_distribute_static_init_4(kmp_Ident *loc, int32_t global_tid,
+                                            int32_t sched, int32_t *plastiter,
+                                            int32_t *plower, int32_t *pupper,
+                                            int32_t *pstride, int32_t incr,
+                                            int32_t chunk);
+EXTERN void __kmpc_distribute_static_init_4u(kmp_Ident *loc, int32_t global_tid,
+                                             int32_t sched, int32_t *plastiter,
+                                             uint32_t *plower, uint32_t *pupper,
+                                             int32_t *pstride, int32_t incr,
+                                             int32_t chunk);
+EXTERN void __kmpc_distribute_static_init_8(kmp_Ident *loc, int32_t global_tid,
+                                            int32_t sched, int32_t *plastiter,
+                                            int64_t *plower, int64_t *pupper,
+                                            int64_t *pstride, int64_t incr,
+                                            int64_t chunk);
+EXTERN void __kmpc_distribute_static_init_8u(kmp_Ident *loc, int32_t global_tid,
+                                             int32_t sched, int32_t *plastiter1,
+                                             uint64_t *plower, uint64_t *pupper,
+                                             int64_t *pstride, int64_t incr,
+                                             int64_t chunk);
 EXTERN
 void __kmpc_for_static_init_4_simple_spmd(kmp_Ident *loc, int32_t global_tid,
                                           int32_t sched, int32_t *plastiter,
@@ -304,6 +325,8 @@ void __kmpc_for_static_init_8u_simple_generic(
     int64_t chunk);
 
 EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid);
+
+EXTERN void __kmpc_distribute_static_fini(kmp_Ident *loc, int32_t global_tid);
 
 // for dynamic
 EXTERN void __kmpc_dispatch_init_4(kmp_Ident *loc, int32_t global_tid,

@@ -102,7 +102,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
   }
-  // TODO: findloc, maxloc, minloc, transfer
+  // TODO: maxloc, minloc, transfer
   return Expr<T>{std::move(funcRef)};
 }
 

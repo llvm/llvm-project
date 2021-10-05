@@ -3,7 +3,7 @@
 
 // expected-no-diagnostics
 
-// CHECK-DAG: @__omp_offloading_[[KERNEL:.*]]_kern_desc = weak constant
+// CHECK-DAG: @__omp_offloading_[[KERNEL:.*]]_wg_size = weak addrspace(1) constant
 // CHECK-DAG: @__omp_offloading_[[KERNEL]]_exec_mode = weak addrspace(1) constant
 template <typename T>
 class foo {

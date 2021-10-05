@@ -5114,13 +5114,13 @@ public:
   /// conversion.
   ExprResult tryConvertExprToType(Expr *E, QualType Ty);
 
-  /// Conditionally issue a diagnostic based on the statement's reachability
-  /// analysis evaluation context.
+  /// Conditionally issue a diagnostic based on the statements's reachability
+  /// analysis.
   ///
-  /// \param Statement If Statement is non-null, delay reporting the
-  /// diagnostic until the function body is parsed, and then do a basic
-  /// reachability analysis to determine if the statement is reachable.
-  /// If it is unreachable, the diagnostic will not be emitted.
+  /// \param Stmts If Stmts is non-empty, delay reporting the diagnostic until
+  /// the function body is parsed, and then do a basic reachability analysis to
+  /// determine if the statement is reachable. If it is unreachable, the
+  /// diagnostic will not be emitted.
   bool DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                        const PartialDiagnostic &PD);
 

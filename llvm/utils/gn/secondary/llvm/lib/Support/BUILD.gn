@@ -67,6 +67,7 @@ static_library("Support") {
     "Debug.cpp",
     "DebugCounter.cpp",
     "DeltaAlgorithm.cpp",
+    "DivisionByConstantInfo.cpp",
     "ELFAttributeParser.cpp",
     "ELFAttributes.cpp",
     "Error.cpp",

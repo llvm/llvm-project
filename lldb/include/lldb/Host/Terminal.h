@@ -13,8 +13,6 @@
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
 
-struct termios;
-
 namespace lldb_private {
 
 class Terminal {
@@ -41,17 +39,29 @@ protected:
   int m_fd; // This may or may not be a terminal file descriptor
 };
 
-/// \class State Terminal.h "lldb/Host/Terminal.h"
-/// A terminal state saving/restoring class.
+/// \class TerminalState Terminal.h "lldb/Host/Terminal.h"
+/// A RAII-friendly terminal state saving/restoring class.
 ///
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
 class TerminalState {
-public:
-  /// Default constructor
-  TerminalState();
+  struct Data;
 
-  /// Destructor
+public:
+  /// Construct a new instance and optionally save terminal state.
+  ///
+  /// \param[in] term
+  ///     The Terminal instance holding the file descriptor to save the state
+  ///     of.  If the instance is not associated with a fd, no state will
+  ///     be saved.
+  ///
+  /// \param[in] save_process_group
+  ///     If \b true, save the process group settings, else do not
+  ///     save the process group settings for a TTY.
+  TerminalState(Terminal term = -1, bool save_process_group = false);
+
+  /// Destroy the instance, restoring terminal state if saved.  If restoring
+  /// state is undesirable, the instance needs to be reset before destruction.
   ~TerminalState();
 
   /// Save the TTY state for \a fd.
@@ -60,8 +70,8 @@ public:
   /// "save_process_group" is true, attempt to save the process group info for
   /// the TTY.
   ///
-  /// \param[in] fd
-  ///     The file descriptor to save the state of.
+  /// \param[in] term
+  ///     The Terminal instance holding fd to save.
   ///
   /// \param[in] save_process_group
   ///     If \b true, save the process group settings, else do not
@@ -70,7 +80,7 @@ public:
   /// \return
   ///     Returns \b true if \a fd describes a TTY and if the state
   ///     was able to be saved, \b false otherwise.
-  bool Save(int fd, bool save_process_group);
+  bool Save(Terminal term, bool save_process_group);
 
   /// Restore the TTY state to the cached state.
   ///
@@ -115,12 +125,9 @@ protected:
   bool ProcessGroupIsValid() const;
 
   // Member variables
-  Terminal m_tty; ///< A terminal
-  int m_tflags = -1; ///< Cached tflags information.
-#if LLDB_ENABLE_TERMIOS
-  std::unique_ptr<struct termios>
-      m_termios_up; ///< Cached terminal state information.
-#endif
+  Terminal m_tty;               ///< A terminal
+  int m_tflags = -1;            ///< Cached tflags information.
+  std::unique_ptr<Data> m_data; ///< Platform-specific implementation.
   lldb::pid_t m_process_group = -1; ///< Cached process group information.
 };
 

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -659,7 +658,6 @@ int main(int, char**) {
   string_test();
   a_namespace::string_view_test();
 
-  u16string_test();
   u32string_test();
   tuple_test();
   unique_ptr_test();

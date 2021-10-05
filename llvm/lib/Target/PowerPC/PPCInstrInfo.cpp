@@ -3779,7 +3779,7 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   bool Simplified = false;
 
   // If final mask is 0, MI result should be 0 too.
-  if (FinalMask.isNullValue()) {
+  if (FinalMask.isZero()) {
     bool Is64Bit =
         (MI.getOpcode() == PPC::RLWINM8 || MI.getOpcode() == PPC::RLWINM8_rec);
     Simplified = true;

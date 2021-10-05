@@ -449,19 +449,6 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       }
     }
 
-    if (STI.getFeatureBits()[RISCV::FeatureStdExtZbproposedc] &&
-        STI.getFeatureBits()[RISCV::FeatureStdExtC]) {
-      LLVM_DEBUG(
-          dbgs() << "Trying RVBC32 table (BitManip 16-bit Instruction):\n");
-      // Calling the auto-generated decoder function.
-      Result = decodeInstruction(DecoderTableRVBC16, MI, Insn, Address,
-                                 this, STI);
-      if (Result != MCDisassembler::Fail) {
-        Size = 2;
-        return Result;
-      }
-    }
-
     LLVM_DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
     // Calling the auto-generated decoder function.
     Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);

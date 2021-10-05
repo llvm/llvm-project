@@ -10,6 +10,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -207,6 +208,10 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   BlockFrequencyInfo *BFI = UseBlockFrequencyInfo && F.hasProfileData()
                                 ? (&AM.getResult<BlockFrequencyAnalysis>(F))
                                 : nullptr;
+  BranchProbabilityInfo *BPI =
+      UseBranchProbabilityInfo && F.hasProfileData()
+          ? (&AM.getResult<BranchProbabilityAnalysis>(F))
+          : nullptr;
   LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
                                      AM.getResult<AssumptionAnalysis>(F),
                                      AM.getResult<DominatorTreeAnalysis>(F),
@@ -215,6 +220,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                      AM.getResult<TargetLibraryAnalysis>(F),
                                      AM.getResult<TargetIRAnalysis>(F),
                                      BFI,
+                                     BPI,
                                      MSSA};
 
   // Setup the loop analysis manager from its proxy. It is important that
@@ -335,6 +341,8 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PA.preserve<ScalarEvolutionAnalysis>();
   if (UseBlockFrequencyInfo && F.hasProfileData())
     PA.preserve<BlockFrequencyAnalysis>();
+  if (UseBranchProbabilityInfo && F.hasProfileData())
+    PA.preserve<BranchProbabilityAnalysis>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;

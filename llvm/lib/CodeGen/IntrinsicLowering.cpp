@@ -455,8 +455,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
 
 bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
   // Verify this is a simple bswap.
-  if (CI->getNumArgOperands() != 1 ||
-      CI->getType() != CI->getArgOperand(0)->getType() ||
+  if (CI->arg_size() != 1 || CI->getType() != CI->getArgOperand(0)->getType() ||
       !CI->getType()->isIntegerTy())
     return false;
 

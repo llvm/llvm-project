@@ -23,7 +23,6 @@ class TestDetachVrsProfile(TestBase):
 
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @skipIfReproducer
     def test_profile_and_detach(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

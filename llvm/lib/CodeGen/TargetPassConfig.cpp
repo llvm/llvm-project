@@ -1427,9 +1427,9 @@ void TargetPassConfig::addFastRegAlloc() {
 /// optimized register allocation, including coalescing, machine instruction
 /// scheduling, and register allocation itself.
 void TargetPassConfig::addOptimizedRegAlloc() {
-  addPass(&DetectDeadLanesID, false);
+  addPass(&DetectDeadLanesID);
 
-  addPass(&ProcessImplicitDefsID, false);
+  addPass(&ProcessImplicitDefsID);
 
   // LiveVariables currently requires pure SSA form.
   //
@@ -1441,11 +1441,11 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // When LiveVariables is removed this has to be removed/moved either.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
-  addPass(&UnreachableMachineBlockElimID, false);
-  addPass(&LiveVariablesID, false);
+  addPass(&UnreachableMachineBlockElimID);
+  addPass(&LiveVariablesID);
 
   // Edge splitting is smarter with machine loop info.
-  addPass(&MachineLoopInfoID, false);
+  addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID, false);
 
   // Eventually, we want to run LiveIntervals before PHI elimination.

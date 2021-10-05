@@ -1090,8 +1090,8 @@ private:
         Args.clear();
         Args.push_back(OutlinedFn->getArg(0));
         Args.push_back(OutlinedFn->getArg(1));
-        for (unsigned U = CallbackFirstArgOperand, E = CI->getNumArgOperands();
-             U < E; ++U)
+        for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
+             ++U)
           Args.push_back(CI->getArgOperand(U));
 
         CallInst *NewCI = CallInst::Create(FT, Callee, Args, "", CI);
@@ -1099,8 +1099,8 @@ private:
           NewCI->setDebugLoc(CI->getDebugLoc());
 
         // Forward parameter attributes from the callback to the callee.
-        for (unsigned U = CallbackFirstArgOperand, E = CI->getNumArgOperands();
-             U < E; ++U)
+        for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
+             ++U)
           for (const Attribute &A : CI->getAttributes().getParamAttrs(U))
             NewCI->addParamAttr(
                 U - (CallbackFirstArgOperand - CallbackCalleeOperand), A);
@@ -1621,7 +1621,7 @@ private:
 
     // TODO: Use dominance to find a good position instead.
     auto CanBeMoved = [this](CallBase &CB) {
-      unsigned NumArgs = CB.getNumArgOperands();
+      unsigned NumArgs = CB.arg_size();
       if (NumArgs == 0)
         return true;
       if (CB.getArgOperand(0)->getType() != OMPInfoCache.OMPBuilder.IdentPtr)
@@ -3864,6 +3864,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     switch (RF) {
     // All the functions we know are compatible with SPMD mode.
     case OMPRTL___kmpc_is_spmd_exec_mode:
+    case OMPRTL___kmpc_distribute_static_fini:
     case OMPRTL___kmpc_for_static_fini:
     case OMPRTL___kmpc_global_thread_num:
     case OMPRTL___kmpc_get_hardware_num_threads_in_block:
@@ -3874,6 +3875,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_end_master:
     case OMPRTL___kmpc_barrier:
       break;
+    case OMPRTL___kmpc_distribute_static_init_4:
+    case OMPRTL___kmpc_distribute_static_init_4u:
+    case OMPRTL___kmpc_distribute_static_init_8:
+    case OMPRTL___kmpc_distribute_static_init_8u:
     case OMPRTL___kmpc_for_static_init_4:
     case OMPRTL___kmpc_for_static_init_4u:
     case OMPRTL___kmpc_for_static_init_8:
@@ -3922,6 +3927,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_free_shared:
       // Return without setting a fixpoint, to be resolved in updateImpl.
       return;
+    case OMPRTL___kmpc_push_num_threads:
+      // num_threads clause require runtime: exclude from
+      // SPMD'ization for now
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+      SPMDCompatibilityTracker.insert(&CB);
+      break;
     default:
       // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
       // generally. However, they do not hide parallel regions.

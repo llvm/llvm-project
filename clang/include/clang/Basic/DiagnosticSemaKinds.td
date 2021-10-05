@@ -66,6 +66,7 @@ def warn_infinite_recursive_function : Warning<
 def warn_comma_operator : Warning<"possible misuse of comma operator here">,
   InGroup<DiagGroup<"comma">>, DefaultIgnore;
 def note_cast_to_void : Note<"cast expression to void to silence warning">;
+def note_cast_operand_to_int : Note<"cast one or both operands to int to silence this warning">;
 
 // Constant expressions
 def err_expr_not_ice : Error<
@@ -3387,7 +3388,7 @@ def warn_attribute_dllimport_static_field_definition : Warning<
   InGroup<DiagGroup<"dllimport-static-field-def">>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
-  InGroup<DiagGroup<"dllexport-explicit-instantiation-decl">>;
+  InGroup<DllexportExplicitInstantiationDecl>;
 def warn_attribute_dllexport_explicit_instantiation_def : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
@@ -7414,6 +7415,9 @@ def note_member_declared_here : Note<
   "member %0 declared here">;
 def note_member_first_declared_here : Note<
   "member %0 first declared here">;
+def warn_bitwise_instead_of_logical : Warning<
+  "use of bitwise '%0' with boolean operands">,
+  InGroup<BitwiseInsteadOfLogical>, DefaultIgnore;
 def warn_bitwise_negation_bool : Warning<
   "bitwise negation of a boolean expression%select{;| always evaluates to 'true';}0 "
   "did you mean logical negation?">,

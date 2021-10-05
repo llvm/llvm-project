@@ -192,17 +192,17 @@ define void @ptrtoint_of_gep(i8* %in, i64* %out0) {
 ; X64-LABEL: 'ptrtoint_of_gep'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint_of_gep
 ; X64-NEXT:    %in_adj = getelementptr inbounds i8, i8* %in, i64 42
-; X64-NEXT:    --> (42 + %in)<nuw> U: [42,0) S: [42,0)
+; X64-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint i8* %in_adj to i64
-; X64-NEXT:    --> (42 + (ptrtoint i8* %in to i64))<nuw> U: [42,0) S: [42,0)
+; X64-NEXT:    --> (42 + (ptrtoint i8* %in to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
 ;
 ; X32-LABEL: 'ptrtoint_of_gep'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_gep
 ; X32-NEXT:    %in_adj = getelementptr inbounds i8, i8* %in, i64 42
-; X32-NEXT:    --> (42 + %in)<nuw> U: [42,0) S: [42,0)
+; X32-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint i8* %in_adj to i64
-; X32-NEXT:    --> (42 + (zext i32 (ptrtoint i8* %in to i32) to i64))<nuw><nsw> U: [42,4294967338) S: [42,4294967338)
+; X32-NEXT:    --> (zext i32 (42 + (ptrtoint i8* %in to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
 ;
   %in_adj = getelementptr inbounds i8, i8* %in, i64 42
@@ -222,9 +222,9 @@ define void @ptrtoint_of_addrec(i32* %in, i32 %count) {
 ; X64-NEXT:    %i6 = phi i64 [ 0, %entry ], [ %i9, %loop ]
 ; X64-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + (zext i32 %count to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i7 = getelementptr inbounds i32, i32* %in, i64 %i6
-; X64-NEXT:    --> {%in,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i8 = ptrtoint i32* %i7 to i64
-; X64-NEXT:    --> {(ptrtoint i32* %in to i64),+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoint i32* %in to i64)) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    --> {(ptrtoint i32* %in to i64),+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoint i32* %in to i64)) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X64-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
@@ -392,7 +392,7 @@ define void @pr46786_c26_char(i8* %arg, i8* %arg1, i8* %arg2) {
 ; X64-NEXT:    %i13 = add i8 %i12, %i8
 ; X64-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i14 = getelementptr inbounds i8, i8* %i7, i64 1
-; X64-NEXT:    --> {(1 + %arg)<nuw>,+,1}<nuw><%bb6> U: [1,0) S: [1,0) Exits: ((-1 * (ptrtoint i8* %arg to i64)) + (ptrtoint i8* %arg1 to i64) + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint i8* %arg to i64)) + (ptrtoint i8* %arg1 to i64) + %arg) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_char
 ; X64-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint i8* %arg to i64)) + (ptrtoint i8* %arg1 to i64))
 ; X64-NEXT:  Loop %bb6: max backedge-taken count is -1
@@ -419,7 +419,7 @@ define void @pr46786_c26_char(i8* %arg, i8* %arg1, i8* %arg2) {
 ; X32-NEXT:    %i13 = add i8 %i12, %i8
 ; X32-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i14 = getelementptr inbounds i8, i8* %i7, i64 1
-; X32-NEXT:    --> {(1 + %arg)<nuw>,+,1}<nuw><%bb6> U: [1,0) S: [1,0) Exits: ((-1 * (ptrtoint i8* %arg to i32)) + (ptrtoint i8* %arg1 to i32) + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint i8* %arg to i32)) + (ptrtoint i8* %arg1 to i32) + %arg) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_char
 ; X32-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint i8* %arg to i32)) + (ptrtoint i8* %arg1 to i32))
 ; X32-NEXT:  Loop %bb6: max backedge-taken count is -1
@@ -479,7 +479,7 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X64-NEXT:    %i14 = add nsw i32 %i13, %i8
 ; X64-NEXT:    --> (%i13 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i15 = getelementptr inbounds i32, i32* %i7, i64 1
-; X64-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb6> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint i32* %arg to i64)) + (ptrtoint i32* %arg1 to i64)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint i32* %arg to i64)) + (ptrtoint i32* %arg1 to i64)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_int
 ; X64-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %arg to i64)) + (ptrtoint i32* %arg1 to i64)) /u 4)
 ; X64-NEXT:  Loop %bb6: max backedge-taken count is 4611686018427387903
@@ -508,7 +508,7 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X32-NEXT:    %i14 = add nsw i32 %i13, %i8
 ; X32-NEXT:    --> (%i13 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i15 = getelementptr inbounds i32, i32* %i7, i64 1
-; X32-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb6> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint i32* %arg to i32)) + (ptrtoint i32* %arg1 to i32)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint i32* %arg to i32)) + (ptrtoint i32* %arg1 to i32)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_int
 ; X32-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %arg to i32)) + (ptrtoint i32* %arg1 to i32)) /u 4)
 ; X32-NEXT:  Loop %bb6: max backedge-taken count is 1073741823

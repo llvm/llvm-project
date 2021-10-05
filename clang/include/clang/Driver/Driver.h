@@ -253,6 +253,14 @@ public:
   /// or when using the -gen-reproducer driver flag.
   unsigned GenReproducer : 1;
 
+  // getFinalPhase - Determine which compilation mode we are in and record
+  // which option we used to determine the final phase.
+  // TODO: Much of what getFinalPhase returns are not actually true compiler
+  //       modes. Fold this functionality into Types::getCompilationPhases and
+  //       handleArguments.
+  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
+
 private:
   /// Certain options suppress the 'no input files' warning.
   unsigned SuppressMissingInputWarning : 1;
@@ -272,14 +280,6 @@ private:
   /// arguments, after applying the standard argument translations.
   llvm::opt::DerivedArgList *
   TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
-
-  // getFinalPhase - Determine which compilation mode we are in and record
-  // which option we used to determine the final phase.
-  // TODO: Much of what getFinalPhase returns are not actually true compiler
-  //       modes. Fold this functionality into Types::getCompilationPhases and
-  //       handleArguments.
-  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
-                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
   // handleArguments - All code related to claiming and printing diagnostics
   // related to arguments to the driver are done here.

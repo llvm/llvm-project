@@ -107,10 +107,11 @@ extern "C" {
 int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
-int32_t __kmpc_omp_task_with_deps(void *loc_ref, int32_t gtid, void *new_task, int32_t depNum,
-                                  void *depList, int32_t noAliasDepNum, void *noAliasDepList);
-int32_t __kmpc_omp_wait_deps(void *loc_ref, int32_t gtid, int32_t depNum,
-                             void *depList, int32_t noAliasDepNum, void *noAliasDepList);
+int32_t __kmpc_omp_task_with_deps(void *, int32_t, void *, int32_t,
+                                  void *, int32_t, void *) __attribute__((weak));
+int32_t __kmpc_omp_wait_deps(void *, int32_t, int32_t,
+                             void *, int32_t, void *) __attribute__((weak));
+
 #ifdef __cplusplus
 }
 #endif

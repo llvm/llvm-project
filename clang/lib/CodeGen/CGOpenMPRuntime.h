@@ -798,9 +798,11 @@ private:
   llvm::Type *getKmpc_MicroPointerTy();
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
+  /// size \a IVSize and sign \a IVSigned. Will create a distribute call
+  /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
   llvm::FunctionCallee createForStaticInitFunction(unsigned IVSize,
-                                                   bool IVSigned);
+                                                   bool IVSigned,
+                                                   bool IsGPUDistribute);
 
   /// Returns __kmpc_dispatch_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
@@ -1794,14 +1796,6 @@ public:
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
-
-  /// Returns __tgt_attribute_struct type.
-  QualType getTgtAttributeStructQTy();
-
-  /// Emit structure descriptor for a kernel
-  void emitStructureKernelDesc(CodeGenModule &CGM, StringRef Name,
-                               int16_t WG_Size, int8_t Mode,
-                               int8_t HostServices);
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.

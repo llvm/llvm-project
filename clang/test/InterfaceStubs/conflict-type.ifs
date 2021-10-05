@@ -1,6 +1,3 @@
-# Flang driver changes break this test, -o multiple obj error
-# XFAIL: *
-
 # RUN: not %clang -emit-merged-ifs -emit-interface-stubs -o - %s %S/func.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 

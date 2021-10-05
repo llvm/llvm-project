@@ -126,7 +126,7 @@ static ValueLatticeElement intersect(const ValueLatticeElement &A,
   // Note: An empty range is implicitly converted to unknown or undef depending
   // on MayIncludeUndef internally.
   return ValueLatticeElement::getRange(
-      std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() |
+      std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() ||
                             B.isConstantRangeIncludingUndef());
 }
 
@@ -832,7 +832,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
         };
       }();
       return ValueLatticeElement::getRange(
-          ResultCR, TrueVal.isConstantRangeIncludingUndef() |
+          ResultCR, TrueVal.isConstantRangeIncludingUndef() ||
                         FalseVal.isConstantRangeIncludingUndef());
     }
 
@@ -1117,8 +1117,7 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     }
     // If (Val & Mask) != 0 then the value must be larger than the lowest set
     // bit of Mask.
-    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isNullValue() &&
-        C->isNullValue()) {
+    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isZero() && C->isZero()) {
       unsigned BitWidth = Ty->getIntegerBitWidth();
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
           APInt::getOneBitSet(BitWidth, Mask->countTrailingZeros()),

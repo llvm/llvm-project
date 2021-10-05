@@ -2078,8 +2078,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     clearFeatureBits(RISCV::FeatureStdExtZbf, "experimental-zbf");
     clearFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
     clearFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
-    clearFeatureBits(RISCV::FeatureStdExtZbproposedc,
-                     "experimental-zbproposedc");
     clearFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
     clearFeatureBits(RISCV::FeatureStdExtZbs, "experimental-zbs");
     clearFeatureBits(RISCV::FeatureStdExtZbt, "experimental-zbt");
@@ -2130,9 +2128,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
           setFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
         else if (Ext == "zbp")
           setFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
-        else if (Ext == "zbproposedc")
-          setFeatureBits(RISCV::FeatureStdExtZbproposedc,
-                         "experimental-zbproposedc");
         else if (Ext == "zbr")
           setFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
         else if (Ext == "zbs")
@@ -2207,8 +2202,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
         formalArchStr = (Twine(formalArchStr) + "_zbm0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbp))
         formalArchStr = (Twine(formalArchStr) + "_zbp0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbproposedc))
-        formalArchStr = (Twine(formalArchStr) + "_zbproposedc0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbr))
         formalArchStr = (Twine(formalArchStr) + "_zbr0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbs))

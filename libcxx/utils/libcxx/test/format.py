@@ -61,7 +61,6 @@ def parseScript(test, preamble):
         must not be of the form 'RUN:' -- they must be proper commands
         once substituted.
     """
-
     # Get the default substitutions
     tmpDir, tmpBase = _getTempPaths(test)
     substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)

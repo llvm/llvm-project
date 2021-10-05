@@ -111,6 +111,12 @@ DynamicType Parentheses<SomeDerived>::GetType() const {
   return left().GetType().value();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
+  llvm::errs() << "Expr is <{" << AsFortran() << "}>\n";
+}
+#endif
+
 // Equality testing
 
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {

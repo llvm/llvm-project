@@ -1238,7 +1238,7 @@ public:
     assert(Indices.size() <= Factor &&
            "Interleaved memory op has too many members");
 
-    APInt DemandedLoadStoreElts = APInt::getNullValue(NumElts);
+    APInt DemandedLoadStoreElts = APInt::getZero(NumElts);
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
       for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
@@ -1789,23 +1789,16 @@ public:
                             ? BinaryOperator::Add
                             : BinaryOperator::Sub;
 
-      //   LHSSign -> LHS >= 0
-      //   RHSSign -> RHS >= 0
-      //   SumSign -> Sum >= 0
-      //
       //   Add:
-      //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
+      //   Overflow -> (Result < LHS) ^ (RHS < 0)
       //   Sub:
-      //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
+      //   Overflow -> (Result < LHS) ^ (RHS > 0)
       InstructionCost Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost += 3 * thisT()->getCmpSelInstrCost(
-                      Instruction::ICmp, SumTy, OverflowTy,
-                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += 2 * thisT()->getCmpSelInstrCost(
-                      Instruction::Select, OverflowTy, OverflowTy,
-                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, OverflowTy,
+                      Instruction::ICmp, SumTy, OverflowTy,
+                      CmpInst::ICMP_SGT, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Xor, OverflowTy,
                                               CostKind);
       return Cost;
     }

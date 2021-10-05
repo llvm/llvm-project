@@ -167,6 +167,7 @@ end
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
+* Intrinsic subroutines EXIT([status]) and ABORT()
 
 ### Extensions supported when enabled by options
 

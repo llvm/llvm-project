@@ -417,89 +417,6 @@ def ConvOp : PoolingBase_Op<"conv", []> {
   let hasFolder = 1;
 }
 
-// Only support buffer semantics.
-class SingleInputPoolingBase_Op<string mnemonic>
-    : PoolingBase_Op<mnemonic, []> {
-  let description = [{
-    A base class for single input pooling function.
-
-    TODO: Figure out a better way to handle window dimensions, i.e., eliminate
-    the fake memref.
-    The window dimensions are specified by argument `windowDims`. The i-th
-    dimension in the shape of `windowDims` denotes the size of the window along
-    dimension i. For example, if the window size is 2x3, then a memref<2x3>
-    should be passed to the operation as `windowDims`.
-  }];
-
-  let arguments = (ins AnyStridedMemRef:$input,
-                   AnyStridedMemRef:$windowDims,
-                   AnyStridedMemRef:$output,
-                   OptionalAttr<I64ArrayAttr>:$strides,
-                   OptionalAttr<I64ArrayAttr>:$dilations,
-                   OptionalAttr<I64ElementsAttr>:$padding);
-
-  let extraClassDeclaration = commonUtils# [{
-    ValueRange inputs() { return getOperands().slice(0, 2); }
-    ValueRange outputs() { return getOperands().take_back(); }
-
-    ArrayAttr iterator_types() {
-      // Outer parallel loops are always the number of output dimensions.
-      int64_t nPar = getRank(getOutputOperand(0));
-      // The window loops has the same number loops with output dimensions.
-      unsigned nWin = nPar;
-      SmallVector<StringRef, 8> iters(nPar, getParallelIteratorTypeName());
-      iters.reserve(nPar + nWin);
-      iters.append(nWin, getWindowIteratorTypeName());
-      return Builder(getContext()).getStrArrayAttr(iters);
-    }
-
-    ArrayAttr indexing_maps() {
-      MLIRContext *context = getContext();
-      auto nPar = getNumParallelLoops();
-      auto nWin = getNumWindowLoops();
-      assert(nWin > 0 && "expected at least one window dimension");
-      unsigned idx = 0;
-      auto outputDims = makeAffineDimExprs(nPar, idx, context);
-      auto windowDims = makeAffineDimExprs(nWin, idx, context);
-      // Construct the weighedSum expression.
-      auto inputDims =
-          weightedPoolingInputIndex(*this, outputDims, windowDims);
-      return Builder(getContext()).getAffineMapArrayAttr({
-        // input
-        AffineMap::get(idx, 0, inputDims, context),
-        // windowDims
-        AffineMap::get(idx, 0, windowDims, context),
-        // output
-        AffineMap::get(idx, 0, outputDims, context)});
-    }
-  }];
-
-  let verifier = [{ return ::verify(*this); }];
-
-  let hasFolder = 1;
-}
-
-def PoolingMaxOp: SingleInputPoolingBase_Op<"pooling_max"> {
-  let description = [{
-    Takes max op as pooling operation, i.e., it samples the maximum value in the
-    window.
-  }];
-}
-
-def PoolingMinOp: SingleInputPoolingBase_Op<"pooling_min"> {
-  let description = [{
-    Takes min op as pooling operation, i.e., it samples the minimum value in the
-    window.
-  }];
-}
-
-def PoolingSumOp: SingleInputPoolingBase_Op<"pooling_sum"> {
-  let description = [{
-    Takes add op as pooling operation, i.e., it accumulates the values in the
-    window.
-  }];
-}
-
 //===----------------------------------------------------------------------===//
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
@@ -671,8 +588,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
 //===----------------------------------------------------------------------===//
 
-// This file is auto-generated from a TC def specification.
-include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.td"
 include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.td"
 
 #endif // LINALG_STRUCTURED_OPS

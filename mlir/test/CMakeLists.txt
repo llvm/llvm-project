@@ -66,7 +66,6 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
-  mlir-linalg-ods-gen
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
@@ -124,6 +123,14 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
     MLIRPythonTestModules
   )
 endif()
+
+# This target can be used to just build the dependencies
+# for the check-mlir target without executing the tests.
+# This is useful for bots when splitting the build step
+# from the testing step.
+add_custom_target(check-mlir-build-only
+  DEPENDS ${MLIR_TEST_DEPENDS}
+)
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}

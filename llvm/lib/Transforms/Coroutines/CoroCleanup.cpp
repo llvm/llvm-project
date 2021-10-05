@@ -70,6 +70,10 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
       case Intrinsic::coro_alloc:
         II->replaceAllUsesWith(ConstantInt::getTrue(Context));
         break;
+      case Intrinsic::coro_async_resume:
+        II->replaceAllUsesWith(
+            ConstantPointerNull::get(cast<PointerType>(I.getType())));
+        break;
       case Intrinsic::coro_id:
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
@@ -114,7 +118,8 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
       M, {"llvm.coro.alloc", "llvm.coro.begin", "llvm.coro.subfn.addr",
           "llvm.coro.free", "llvm.coro.id", "llvm.coro.id.retcon",
-          "llvm.coro.id.retcon.once", "llvm.coro.async.size.replace"});
+          "llvm.coro.id.retcon.once", "llvm.coro.async.size.replace",
+          "llvm.coro.async.resume"});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Function &F,

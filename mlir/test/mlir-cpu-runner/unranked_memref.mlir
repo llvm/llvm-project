@@ -69,6 +69,7 @@ func @main() -> () {
     %U4 = memref.cast %I8 : memref<i8> to memref<*xi8>
     call @print_memref_i8(%U4) : (memref<*xi8>) -> ()
 
+    memref.dealloc %U4 : memref<*xi8>
     memref.dealloc %A : memref<10x3xf32, 0>
 
     call @return_var_memref_caller() : () -> ()
@@ -113,7 +114,7 @@ func private @printU64(index) -> ()
 func private @printNewline() -> ()
 
 func @dim_op_of_unranked() {
-  %ranked = memref.alloc() : memref<4x3xf32>
+  %ranked = memref.alloca() : memref<4x3xf32>
   %unranked = memref.cast %ranked: memref<4x3xf32> to memref<*xf32>
 
   %c0 = constant 0 : index

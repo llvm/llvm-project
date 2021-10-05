@@ -112,6 +112,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SCFOps.td
+  SOURCES
+    dialects/scf.py
+    dialects/_scf_ops_ext.py
+  DIALECT_NAME scf)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/ShapeOps.td
   SOURCES dialects/shape.py
   DIALECT_NAME shape)
@@ -119,6 +128,7 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SparseTensorOps.td
   SOURCES dialects/sparse_tensor.py
   DIALECT_NAME sparse_tensor)
 
@@ -126,7 +136,9 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/StandardOps.td
-  SOURCES dialects/std.py
+  SOURCES
+    dialects/std.py
+    dialects/_std_ops_ext.py
   DIALECT_NAME std)
 
 declare_mlir_dialect_python_bindings(

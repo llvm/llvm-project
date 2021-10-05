@@ -510,7 +510,8 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
   // Ensure file proximity signals are correct.
-  auto &FM = PatchedAST->getSourceManager().getFileManager();
+  auto &SM = PatchedAST->getSourceManager();
+  auto &FM = SM.getFileManager();
   // Copy so that we can use operator[] to get the children.
   IncludeStructure Includes = PatchedAST->getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));
@@ -553,7 +554,8 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
               testing::Pointwise(
                   EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
   // Ensure file proximity signals are correct.
-  auto &FM = ExpectedAST.getSourceManager().getFileManager();
+  auto &SM = ExpectedAST.getSourceManager();
+  auto &FM = SM.getFileManager();
   // Copy so that we can getOrCreateID().
   IncludeStructure Includes = ExpectedAST.getIncludeStructure();
   auto MainFE = FM.getFile(testPath("foo.cpp"));

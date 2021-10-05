@@ -15,7 +15,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbf %s -o - | FileCheck --check-prefix=RV32ZBF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbm %s -o - | FileCheck --check-prefix=RV32ZBM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbp %s -o - | FileCheck --check-prefix=RV32ZBP %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbproposedc %s -o - | FileCheck --check-prefix=RV32ZBPROPOSEDC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbr %s -o - | FileCheck --check-prefix=RV32ZBR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbs %s -o - | FileCheck --check-prefix=RV32ZBS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt %s -o - | FileCheck --check-prefix=RV32ZBT %s
@@ -35,7 +34,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbf %s -o - | FileCheck --check-prefix=RV64ZBF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbm %s -o - | FileCheck --check-prefix=RV64ZBM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbp %s -o - | FileCheck --check-prefix=RV64ZBP %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbproposedc %s -o - | FileCheck --check-prefix=RV64ZBPROPOSEDC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbr %s -o - | FileCheck --check-prefix=RV64ZBR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbs %s -o - | FileCheck --check-prefix=RV64ZBS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbt %s -o - | FileCheck --check-prefix=RV64ZBT %s
@@ -56,7 +54,6 @@
 ; RV32ZBF: .attribute 5, "rv32i2p0_zbf0p93"
 ; RV32ZBM: .attribute 5, "rv32i2p0_zbm0p93"
 ; RV32ZBP: .attribute 5, "rv32i2p0_zbp0p93"
-; RV32ZBPROPOSEDC: .attribute 5, "rv32i2p0_zbproposedc0p93"
 ; RV32ZBR: .attribute 5, "rv32i2p0_zbr0p93"
 ; RV32ZBS: .attribute 5, "rv32i2p0_zbs0p93"
 ; RV32ZBT: .attribute 5, "rv32i2p0_zbt0p93"
@@ -76,7 +73,6 @@
 ; RV64ZBF: .attribute 5, "rv64i2p0_zbf0p93"
 ; RV64ZBM: .attribute 5, "rv64i2p0_zbm0p93"
 ; RV64ZBP: .attribute 5, "rv64i2p0_zbp0p93"
-; RV64ZBPROPOSEDC: .attribute 5, "rv64i2p0_zbproposedc0p93"
 ; RV64ZBR: .attribute 5, "rv64i2p0_zbr0p93"
 ; RV64ZBS: .attribute 5, "rv64i2p0_zbs0p93"
 ; RV64ZBT: .attribute 5, "rv64i2p0_zbt0p93"

@@ -64,6 +64,7 @@ func @entry() {
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
+  memref.dealloc %A : memref<40xi32>
   return
 }
 
