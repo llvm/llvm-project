@@ -1173,6 +1173,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
                  strerror(errno));
         return 1;
       }
+      fflush(File);
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
