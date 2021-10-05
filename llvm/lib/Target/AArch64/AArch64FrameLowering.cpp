@@ -3537,7 +3537,14 @@ StackOffset AArch64FrameLowering::getFrameIndexReferencePreferSP(
     return StackOffset::getFixed(MFI.getObjectOffset(FI));
   }
 
-  return getFrameIndexReference(MF, FI, FrameReg);
+  // Go to common code if we cannot provide sp + offset.
+  if (MFI.hasVarSizedObjects() ||
+      MF.getInfo<AArch64FunctionInfo>()->getStackSizeSVE() ||
+      MF.getSubtarget().getRegisterInfo()->hasStackRealignment(MF))
+    return getFrameIndexReference(MF, FI, FrameReg);
+
+  FrameReg = AArch64::SP;
+  return getStackOffset(MF, MFI.getObjectOffset(FI));
 }
 
 /// The parent frame offset (aka dispFrame) is only used on X86_64 to retrieve
