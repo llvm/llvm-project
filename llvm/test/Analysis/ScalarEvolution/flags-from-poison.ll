@@ -1621,15 +1621,21 @@ cont6:                                            ; preds = %cont1, %if.then
   br label %for.cond
 }
 
+; TODO: once D111180 lands, remove the udiv from these *-basic tests.
+; noundef really should be enough
+
 define noundef i32 @add-basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'add-basic'
 ; CHECK-NEXT:  Classifying expressions for: @add-basic
 ; CHECK-NEXT:    %res = add nuw nsw i32 %a, %b
 ; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
+; CHECK-NEXT:    %res2 = udiv i32 255, %res
+; CHECK-NEXT:    --> (255 /u (%a + %b)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-basic
 ;
   %res = add nuw nsw i32 %a, %b
-  ret i32 %res
+  %res2 = udiv i32 255, %res
+  ret i32 %res2
 }
 
 define noundef i32 @sub-basic(i32 %a, i32 %b) {
@@ -1637,10 +1643,13 @@ define noundef i32 @sub-basic(i32 %a, i32 %b) {
 ; CHECK-NEXT:  Classifying expressions for: @sub-basic
 ; CHECK-NEXT:    %res = sub nuw nsw i32 %a, %b
 ; CHECK-NEXT:    --> ((-1 * %b) + %a) U: full-set S: full-set
+; CHECK-NEXT:    %res2 = udiv i32 255, %res
+; CHECK-NEXT:    --> (255 /u ((-1 * %b) + %a)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @sub-basic
 ;
   %res = sub nuw nsw i32 %a, %b
-  ret i32 %res
+  %res2 = udiv i32 255, %res
+  ret i32 %res2
 }
 
 define noundef i32 @mul-basic(i32 %a, i32 %b) {
@@ -1648,10 +1657,13 @@ define noundef i32 @mul-basic(i32 %a, i32 %b) {
 ; CHECK-NEXT:  Classifying expressions for: @mul-basic
 ; CHECK-NEXT:    %res = mul nuw nsw i32 %a, %b
 ; CHECK-NEXT:    --> (%a * %b) U: full-set S: full-set
+; CHECK-NEXT:    %res2 = udiv i32 255, %res
+; CHECK-NEXT:    --> (255 /u (%a * %b)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul-basic
 ;
   %res = mul nuw nsw i32 %a, %b
-  ret i32 %res
+  %res2 = udiv i32 255, %res
+  ret i32 %res2
 }
 
 @gA = external global i32
