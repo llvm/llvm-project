@@ -550,7 +550,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   return Failed;
 }
 
-static void LLVMErrorHandler(void *UserData, const std::string &Message,
+static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
   DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
 
