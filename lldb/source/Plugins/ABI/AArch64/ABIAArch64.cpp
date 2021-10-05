@@ -71,10 +71,14 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
       .Default(LLDB_INVALID_REGNUM);
 }
 
-void ABIAArch64::AugmentRegisterInfo(lldb_private::RegisterInfo &info) {
-  lldb_private::MCBasedABI::AugmentRegisterInfo(info);
+void ABIAArch64::AugmentRegisterInfo(
+    std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
+  lldb_private::MCBasedABI::AugmentRegisterInfo(regs);
 
-  // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
-  if (!strcmp(info.name, "sp") && !info.alt_name)
-    info.alt_name = "x31";
+  lldb_private::ConstString sp_string{"sp"};
+  for (lldb_private::DynamicRegisterInfo::Register &info : regs) {
+    // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
+    if (info.name == sp_string && !info.alt_name)
+      info.alt_name.SetCString("x31");
+  }
 }

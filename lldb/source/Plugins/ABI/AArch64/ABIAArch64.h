@@ -11,7 +11,7 @@
 
 #include "lldb/Target/ABI.h"
 
-class ABIAArch64: public lldb_private::MCBasedABI {
+class ABIAArch64 : public lldb_private::MCBasedABI {
 public:
   static void Initialize();
   static void Terminate();
@@ -31,7 +31,8 @@ protected:
 
   uint32_t GetGenericNum(llvm::StringRef name) override;
 
-  void AugmentRegisterInfo(lldb_private::RegisterInfo &info) override;
+  void AugmentRegisterInfo(
+      std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
 
   using lldb_private::MCBasedABI::MCBasedABI;
 };

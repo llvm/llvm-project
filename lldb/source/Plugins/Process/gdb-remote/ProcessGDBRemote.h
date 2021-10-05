@@ -19,6 +19,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -43,22 +44,6 @@ namespace repro {
 class Loader;
 }
 namespace process_gdb_remote {
-
-struct RemoteRegisterInfo {
-  ConstString name;
-  ConstString alt_name;
-  ConstString set_name;
-  uint32_t byte_size = LLDB_INVALID_INDEX32;
-  uint32_t byte_offset = LLDB_INVALID_INDEX32;
-  lldb::Encoding encoding = lldb::eEncodingUint;
-  lldb::Format format = lldb::eFormatHex;
-  uint32_t regnum_dwarf = LLDB_INVALID_REGNUM;
-  uint32_t regnum_ehframe = LLDB_INVALID_REGNUM;
-  uint32_t regnum_generic = LLDB_INVALID_REGNUM;
-  uint32_t regnum_remote = LLDB_INVALID_REGNUM;
-  std::vector<uint32_t> value_regs;
-  std::vector<uint32_t> invalidate_regs;
-};
 
 class ThreadGDBRemote;
 
@@ -411,11 +396,11 @@ protected:
 
   bool GetGDBServerRegisterInfoXMLAndProcess(
     ArchSpec &arch_to_use, std::string xml_filename,
-    std::vector<RemoteRegisterInfo> &registers);
+    std::vector<DynamicRegisterInfo::Register> &registers);
 
-  // Convert RemoteRegisterInfos into RegisterInfos and add to the dynamic
-  // register list.
-  void AddRemoteRegisters(std::vector<RemoteRegisterInfo> &registers,
+  // Convert DynamicRegisterInfo::Registers into RegisterInfos and add
+  // to the dynamic register list.
+  void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
   bool GetGDBServerRegisterInfo(ArchSpec &arch);
