@@ -6,26 +6,24 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-cold-count=0 --csprof-max-context-depth=2
 ; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
 
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb]:48:0
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb]:37:0
 ; CHECK-UNCOMPRESS: 1: 11
 ; CHECK-UNCOMPRESS: 2: 1 fa:1
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa]:24:0
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa]:21:0
 ; CHECK-UNCOMPRESS: 1: 1
 ; CHECK-UNCOMPRESS: 2: 13 fb:11
 ; CHECK-UNCOMPRESS:[main:1 @ foo]:7:0
 ; CHECK-UNCOMPRESS: 2: 1
 ; CHECK-UNCOMPRESS: 3: 2 fa:1
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:7:0
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:6:0
 ; CHECK-UNCOMPRESS: 1: 1
-; CHECK-UNCOMPRESS: 2: 2 fb:1
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb]:2:0
-; CHECK-UNCOMPRESS: 2: 1 fa:1
+; CHECK-UNCOMPRESS: 2: 1
 ; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb:2 @ fa]:2:0
 ; CHECK-UNCOMPRESS: 4: 1
 
-; CHECK-MAX-CTX-DEPTH:[foo:3 @ fa:2 @ fb]:47:0
+; CHECK-MAX-CTX-DEPTH:[foo:3 @ fa:2 @ fb]:36:0
 ; CHECK-MAX-CTX-DEPTH: 1: 11
-; CHECK-MAX-CTX-DEPTH:[main:1 @ foo:3 @ fa]:13:0
+; CHECK-MAX-CTX-DEPTH:[main:1 @ foo:3 @ fa]:10:0
 ; CHECK-MAX-CTX-DEPTH: 1: 1
 ; CHECK-MAX-CTX-DEPTH: 2: 2
 ; CHECK-MAX-CTX-DEPTH:[fa:2 @ fb:2 @ fa]:8:0
@@ -35,24 +33,21 @@
 ; CHECK-MAX-CTX-DEPTH:[main:1 @ foo]:7:0
 ; CHECK-MAX-CTX-DEPTH: 2: 1
 ; CHECK-MAX-CTX-DEPTH: 3: 2 fa:1
-; CHECK-MAX-CTX-DEPTH:[fb:2 @ fa:2 @ fb]:1:0
 
 
-; CHECK: [main:1 @ foo:3 @ fa:2 @ fb]:48:0
+; CHECK: [main:1 @ foo:3 @ fa:2 @ fb]:37:0
 ; CHECK:  1: 11
 ; CHECK:  2: 1 fa:1
-; CHECK: [main:1 @ foo:3 @ fa]:24:0
+; CHECK: [main:1 @ foo:3 @ fa]:21:0
 ; CHECK:  1: 1
 ; CHECK:  2: 13 fb:11
-; CHECK: [main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:9:0
+; CHECK: [main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:8:0
 ; CHECK:  1: 1
-; CHECK:  2: 2 fb:1
+; CHECK:  2: 1
 ; CHECK:  4: 1
 ; CHECK: [main:1 @ foo]:7:0
 ; CHECK:  2: 1
 ; CHECK:  3: 2 fa:1
-; CHECK: [main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb]:1:0
-
 
 ; original code:
 ; clang -O3 -g test.c -o a.out

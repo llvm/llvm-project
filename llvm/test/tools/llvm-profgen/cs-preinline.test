@@ -10,7 +10,7 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  -sample-profile-cold-inline-threshold=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-NO-PREINL
 
-; CHECK-DEFAULT:     [main:1 @ foo]:309:0
+; CHECK-DEFAULT:     [main:1 @ foo]:225:0
 ; CHECK-DEFAULT-NEXT: 2.1: 14
 ; CHECK-DEFAULT-NEXT: 3: 15
 ; CHECK-DEFAULT-NEXT: 3.1: 14 bar:14
@@ -20,7 +20,7 @@
 ; CHECK-DEFAULT-NEXT: 1: 14
 ; CHECK-DEFAULT-NEXT: !Attributes: 1
 
-; CHECK-PREINL:     [foo]:309:0
+; CHECK-PREINL:     [foo]:225:0
 ; CHECK-PREINL-NEXT: 2.1: 14
 ; CHECK-PREINL-NEXT: 3: 15
 ; CHECK-PREINL-NEXT: 3.1: 14 bar:14
@@ -30,7 +30,7 @@
 ; CHECK-PREINL-NEXT: 1: 14
 ; CHECK-PREINL-NEXT: !Attributes: 3
 
-; CHECK-NO-PREINL:     [foo]:309:0
+; CHECK-NO-PREINL:     [foo]:225:0
 ; CHECK-NO-PREINL-NEXT: 2.1: 14
 ; CHECK-NO-PREINL-NEXT: 3: 15
 ; CHECK-NO-PREINL-NEXT: 3.1: 14 bar:14

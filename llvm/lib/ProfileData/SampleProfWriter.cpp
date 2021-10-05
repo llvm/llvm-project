@@ -269,10 +269,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
     auto Frames = Context.getContextFrames();
     encodeULEB128(Frames.size(), OS);
     for (auto &Callsite : Frames) {
-      if (std::error_code EC = writeNameIdx(Callsite.CallerName))
+      if (std::error_code EC = writeNameIdx(Callsite.FuncName))
         return EC;
-      encodeULEB128(Callsite.Callsite.LineOffset, OS);
-      encodeULEB128(Callsite.Callsite.Discriminator, OS);
+      encodeULEB128(Callsite.Location.LineOffset, OS);
+      encodeULEB128(Callsite.Location.Discriminator, OS);
     }
   }
 
@@ -542,7 +542,7 @@ void SampleProfileWriterExtBinaryBase::addContext(
     const SampleContext &Context) {
   if (Context.hasContext()) {
     for (auto &Callsite : Context.getContextFrames())
-      SampleProfileWriterBinary::addName(Callsite.CallerName);
+      SampleProfileWriterBinary::addName(Callsite.FuncName);
     CSNameTable.insert(std::make_pair(Context, 0));
   } else {
     SampleProfileWriterBinary::addName(Context.getName());
