@@ -80,8 +80,10 @@ TEST_F(TerminalTest, SaveRestoreRAII) {
     terminfo = orig_terminfo;
 
     // make an arbitrary change
-    cfsetispeed(&terminfo,cfgetispeed(&orig_terminfo) == B9600 ? B4800 : B9600);
-    cfsetospeed(&terminfo,cfgetospeed(&orig_terminfo) == B9600 ? B4800 : B9600);
+    cfsetispeed(&terminfo,
+                cfgetispeed(&orig_terminfo) == B9600 ? B4800 : B9600);
+    cfsetospeed(&terminfo,
+                cfgetospeed(&orig_terminfo) == B9600 ? B4800 : B9600);
 
     ASSERT_EQ(tcsetattr(m_pty.GetPrimaryFileDescriptor(), TCSANOW, &terminfo),
               0);
