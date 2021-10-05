@@ -56,16 +56,14 @@ public:
       llvm::errs() << "dynamic-pipeline skip op name: " << opName << "\n";
       return;
     }
-    if (!pm) {
-      pm = std::make_unique<OpPassManager>(currentOp->getName().getIdentifier(),
-                                           OpPassManager::Nesting::Implicit);
-      (void)parsePassPipeline(pipeline, *pm, llvm::errs());
-    }
+    OpPassManager pm(currentOp->getName().getIdentifier(),
+                     OpPassManager::Nesting::Implicit);
+    (void)parsePassPipeline(pipeline, pm, llvm::errs());
 
     // Check that running on the parent operation always immediately fails.
     if (runOnParent) {
       if (currentOp->getParentOp())
-        if (!failed(runPipeline(*pm, currentOp->getParentOp())))
+        if (!failed(runPipeline(pm, currentOp->getParentOp())))
           signalPassFailure();
       return;
     }
@@ -78,17 +76,15 @@ public:
           return;
         llvm::errs() << "Run on " << *op << "\n";
         // Run on the current operation
-        if (failed(runPipeline(*pm, op)))
+        if (failed(runPipeline(pm, op)))
           signalPassFailure();
       });
     } else {
       // Run on the current operation
-      if (failed(runPipeline(*pm, currentOp)))
+      if (failed(runPipeline(pm, currentOp)))
         signalPassFailure();
     }
   }
-
-  std::unique_ptr<OpPassManager> pm;
 
   Option<bool> runOnNestedOp{
       *this, "run-on-nested-operations",
