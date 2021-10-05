@@ -21,13 +21,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-
-const int kDomain = AF_INET;
-const int kType = SOCK_DGRAM;
+static const int kDomain = AF_INET;
+static const int kType = SOCK_DGRAM;
 
 static const char *g_not_supported_error = "Not supported";
-}
 
 UDPSocket::UDPSocket(NativeSocket socket) : Socket(ProtocolUdp, true, true) {
   m_socket = socket;

@@ -53,9 +53,7 @@ static Status GetLastSocketError() {
   return EC;
 }
 
-namespace {
-const int kType = SOCK_STREAM;
-}
+static const int kType = SOCK_STREAM;
 
 TCPSocket::TCPSocket(bool should_close, bool child_processes_inherit)
     : Socket(ProtocolTcp, should_close, child_processes_inherit) {}

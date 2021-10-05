@@ -448,9 +448,7 @@ bool ApplePropertyList::ExtractStringFromValueNode(const XMLNode &node,
 
 #if LLDB_ENABLE_LIBXML2
 
-namespace {
-
-StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
+static StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
   llvm::StringRef element_name = node.GetName();
   if (element_name == "array") {
     std::shared_ptr<StructuredData::Array> array_sp(
@@ -502,7 +500,6 @@ StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
     return StructuredData::ObjectSP(new StructuredData::Boolean(false));
   }
   return StructuredData::ObjectSP(new StructuredData::Null());
-}
 }
 #endif
 

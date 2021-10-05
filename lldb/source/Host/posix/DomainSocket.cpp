@@ -26,13 +26,11 @@ using namespace lldb_private;
 #endif
 #endif // #ifdef __ANDROID__
 
-namespace {
+static const int kDomain = AF_UNIX;
+static const int kType = SOCK_STREAM;
 
-const int kDomain = AF_UNIX;
-const int kType = SOCK_STREAM;
-
-bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
-                 sockaddr_un *saddr_un, socklen_t &saddr_un_len) {
+static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
+                        sockaddr_un *saddr_un, socklen_t &saddr_un_len) {
   if (name.size() + name_offset > sizeof(saddr_un->sun_path))
     return false;
 
@@ -56,7 +54,6 @@ bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
 
   return true;
 }
-} // namespace
 
 DomainSocket::DomainSocket(bool should_close, bool child_processes_inherit)
     : Socket(ProtocolUnixDomain, should_close, child_processes_inherit) {}

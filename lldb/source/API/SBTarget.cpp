@@ -73,9 +73,7 @@ using namespace lldb_private;
 
 #define DEFAULT_DISASM_BYTE_SIZE 32
 
-namespace {
-
-Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
+static Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
   std::lock_guard<std::recursive_mutex> guard(target.GetAPIMutex());
 
   auto process_sp = target.GetProcessSP();
@@ -93,8 +91,6 @@ Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
 
   return target.Attach(attach_info, nullptr);
 }
-
-} // namespace
 
 // SBTarget constructor
 SBTarget::SBTarget() : m_opaque_sp() {

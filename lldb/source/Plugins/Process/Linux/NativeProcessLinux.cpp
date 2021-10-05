@@ -107,8 +107,7 @@ static bool ProcessVmReadvSupported() {
   return is_supported;
 }
 
-namespace {
-void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
+static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   if (!log)
     return;
@@ -134,7 +133,7 @@ void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
     LLDB_LOG(log, "arg {0}: '{1}'", i, *args);
 }
 
-void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
+static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
   const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
   for (uint32_t i = 0; i < loop_count; i++) {
@@ -143,7 +142,7 @@ void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   }
 }
 
-void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
+static void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
   if (!log)
     return;
@@ -193,7 +192,6 @@ void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
 static constexpr unsigned k_ptrace_word_size = sizeof(void *);
 static_assert(sizeof(long) >= k_ptrace_word_size,
               "Size of long must be larger than ptrace word size");
-} // end of anonymous namespace
 
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.

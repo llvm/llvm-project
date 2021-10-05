@@ -31,9 +31,9 @@ struct HostInfoLinuxFields {
   llvm::once_flag m_os_version_once_flag;
   llvm::VersionTuple m_os_version;
 };
+} // namespace
 
-HostInfoLinuxFields *g_fields = nullptr;
-}
+static HostInfoLinuxFields *g_fields = nullptr;
 
 void HostInfoLinux::Initialize(SharedLibraryDirectoryHelper *helper) {
   HostInfoPosix::Initialize(helper);

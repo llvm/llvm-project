@@ -16,11 +16,11 @@
 
 using namespace lldb_private;
 
+
+static pthread_once_t g_thread_create_once = PTHREAD_ONCE_INIT;
+static pthread_key_t g_thread_create_key = 0;
+
 namespace {
-
-pthread_once_t g_thread_create_once = PTHREAD_ONCE_INIT;
-pthread_key_t g_thread_create_key = 0;
-
 class MacOSXDarwinThread {
 public:
   MacOSXDarwinThread() { m_pool = [[NSAutoreleasePool alloc] init]; }
@@ -45,12 +45,12 @@ private:
   MacOSXDarwinThread(const MacOSXDarwinThread &) = delete;
   const MacOSXDarwinThread &operator=(const MacOSXDarwinThread &) = delete;
 };
+} // namespace
 
-void InitThreadCreated() {
+static void InitThreadCreated() {
   ::pthread_key_create(&g_thread_create_key,
                        MacOSXDarwinThread::PThreadDestructor);
 }
-} // namespace
 
 HostThreadMacOSX::HostThreadMacOSX() : HostThreadPosix() {}
 

@@ -334,7 +334,6 @@ namespace Foundation1428 {
 }
   
 namespace Foundation1437 {
-  namespace {
     static const uint64_t NSDictionaryCapacities[] = {
         0, 3, 7, 13, 23, 41, 71, 127, 191, 251, 383, 631, 1087, 1723,
         2803, 4523, 7351, 11959, 19447, 31231, 50683, 81919, 132607,
@@ -345,7 +344,8 @@ namespace Foundation1437 {
     
     static const size_t NSDictionaryNumSizeBuckets =
         sizeof(NSDictionaryCapacities) / sizeof(uint64_t);
-    
+
+    namespace {
     struct DataDescriptor_32 {
       uint32_t _buffer;
       uint32_t _muts;
@@ -371,8 +371,8 @@ namespace Foundation1437 {
             0 : NSDictionaryCapacities[_szidx];
       }
     };
-  }
-  
+    } // namespace
+
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
   
