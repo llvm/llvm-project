@@ -515,7 +515,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "    std::string msg;\n"
     << "    raw_string_ostream Msg(msg);\n"
     << "    Msg << \"Not supported instr: \" << MI;\n"
-    << "    report_fatal_error(Msg.str());\n"
+    << "    report_fatal_error(Msg.str().c_str());\n"
     << "  }\n";
   if (UseAPInt)
     o << "  Inst = Value;\n";
@@ -638,7 +638,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "      if (MissingFeatures.test(i))\n"
     << "        Msg << SubtargetFeatureNames[i] << \" \";\n"
     << "    Msg << \"predicate(s) are not met\";\n"
-    << "    report_fatal_error(Msg.str());\n"
+    << "    report_fatal_error(Msg.str().c_str());\n"
     << "  }\n"
     << "#else\n"
     << "  // Silence unused variable warning on targets that don't use MCII for "
