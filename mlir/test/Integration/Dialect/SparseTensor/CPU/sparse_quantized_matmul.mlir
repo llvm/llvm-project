@@ -71,6 +71,10 @@ module {
       : memref<5x6xi32>, vector<5x6xi32>
     vector.print %v : vector<5x6xi32>
 
+    // Release the resources.
+    sparse_tensor.release %sparse_input2 : tensor<3x6xi8, #DCSR>
+    memref.dealloc %m : memref<5x6xi32>
+
     return
   }
 }
