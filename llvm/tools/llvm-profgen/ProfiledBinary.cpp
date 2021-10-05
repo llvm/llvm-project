@@ -62,8 +62,8 @@ void BinarySizeContextTracker::addInstructionForContext(
   ContextTrieNode *CurNode = &RootContext;
   bool IsLeaf = true;
   for (const auto &Callsite : reverse(Context)) {
-    StringRef CallerName = Callsite.CallerName;
-    LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.Callsite;
+    StringRef CallerName = Callsite.FuncName;
+    LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.Location;
     CurNode = CurNode->getOrCreateChildContext(CallsiteLoc, CallerName);
     IsLeaf = false;
   }
@@ -88,7 +88,7 @@ BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
     const auto &ChildFrame = Frames[I--];
     PrevNode = CurrNode;
     CurrNode =
-        CurrNode->getChildContext(ChildFrame.Callsite, ChildFrame.CallerName);
+        CurrNode->getChildContext(ChildFrame.Location, ChildFrame.FuncName);
     if (CurrNode && CurrNode->getFunctionSize().hasValue())
       Size = CurrNode->getFunctionSize().getValue();
   }
@@ -222,7 +222,7 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
 
   // Compress the context string except for the leaf frame
   auto LeafFrame = ContextVec.back();
-  LeafFrame.Callsite = LineLocation(0, 0);
+  LeafFrame.Location = LineLocation(0, 0);
   ContextVec.pop_back();
   CSProfileGenerator::compressRecursionContext(ContextVec);
   CSProfileGenerator::trimContext(ContextVec);
