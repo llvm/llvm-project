@@ -150,24 +150,20 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
       IsAlias = false;
       return true;
     }
-    // We cannot safely determine whether the pointers alias if we compare two
-    // global values and at least one is a GlobalAlias.
-    if (IsGV0 && IsGV1 &&
-        (isa<GlobalAlias>(
-             cast<GlobalAddressSDNode>(BasePtr0.getBase())->getGlobal()) ||
-         isa<GlobalAlias>(
-             cast<GlobalAddressSDNode>(BasePtr1.getBase())->getGlobal())))
-      return false;
-    // If checkable indices we can check they do not alias.
-    // FIXME: Please describe this a bit better. Looks weird to say that there
-    // is no alias if the indices are the same. Is this code assuming that
-    // someone has checked that the base isn't the same as a precondition? And
-    // what about offsets? And what about NumBytes0 and NumBytest1 (can we
-    // really derive NoAlias here if we do not even know how many bytes that are
-    // dereferenced)?
-    if (BasePtr0.getIndex() == BasePtr1.getIndex()) {
-      IsAlias = false;
-      return true;
+    if (IsGV0 && IsGV1) {
+      auto *GV0 = cast<GlobalAddressSDNode>(BasePtr0.getBase())->getGlobal();
+      auto *GV1 = cast<GlobalAddressSDNode>(BasePtr1.getBase())->getGlobal();
+      // It doesn't make sense to access one global value using another globals
+      // values address, so we can assume that there is no aliasing in case of
+      // two different globals (unless we have symbols that may indirectly point
+      // to each other).
+      // FIXME: This is perhaps a bit too defensive. We could try to follow the
+      // chain with aliasee information for GlobalAlias variables to find out if
+      // we indirect symbols may alias or not.
+      if (GV0 != GV1 && !isa<GlobalAlias>(GV0) && !isa<GlobalAlias>(GV1)) {
+        IsAlias = false;
+        return true;
+      }
     }
   }
   return false; // Cannot determine whether the pointers alias.

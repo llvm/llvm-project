@@ -121,6 +121,31 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   EXPECT_TRUE(IsAlias);
 }
 
+TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObjectUnknownSize) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, Int8VT, 4);
+  SDValue FIPtr = DAG->CreateStackTemporary(VecVT);
+  int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
+  TypeSize Offset = TypeSize::Fixed(0);
+  SDValue Value = DAG->getConstant(0, Loc, VecVT);
+  SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
+  SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
+                                PtrInfo.getWithOffset(Offset));
+
+  // Maybe unlikely that BaseIndexOffset::computeAliasing is used with the
+  // optional NumBytes being unset like in this test, but it would be confusing
+  // if that function determined IsAlias=false here.
+  Optional<int64_t> NumBytes;
+
+  bool IsAlias;
+  bool IsValid = BaseIndexOffset::computeAliasing(
+      Store.getNode(), NumBytes, Store.getNode(), NumBytes, *DAG, IsAlias);
+
+  EXPECT_FALSE(IsValid);
+}
+
 TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
