@@ -18,7 +18,6 @@
 #include "FeatureModule.h"
 #include "Headers.h"
 #include "HeuristicResolver.h"
-#include "IncludeCleaner.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
 #include "SourceCode.h"
