@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 class foo {
 public:
   template <class T> T func(T x) const {
