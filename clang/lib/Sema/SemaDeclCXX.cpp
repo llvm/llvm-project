@@ -1892,13 +1892,17 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (VD->isStaticLocal()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
             SemaRef.Diag(VD->getLocation(),
-                         diag::err_constexpr_local_var_static)
-              << isa<CXXConstructorDecl>(Dcl)
-              << (VD->getTLSKind() == VarDecl::TLS_Dynamic);
+                         SemaRef.getLangOpts().CPlusPlus2b
+                             ? diag::warn_cxx20_compat_constexpr_static_var
+                             : diag::ext_constexpr_static_var)
+                << isa<CXXConstructorDecl>(Dcl)
+                << (VD->getTLSKind() == VarDecl::TLS_Dynamic);
+          } else if (!SemaRef.getLangOpts().CPlusPlus2b) {
+            return false;
           }
-          return false;
         }
-        if (CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
+        if (!SemaRef.LangOpts.CPlusPlus2b &&
+            CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
                              diag::err_constexpr_local_var_non_literal_type,
                              isa<CXXConstructorDecl>(Dcl)))
           return false;
@@ -2021,6 +2025,7 @@ static bool
 CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
                            SmallVectorImpl<SourceLocation> &ReturnStmts,
                            SourceLocation &Cxx1yLoc, SourceLocation &Cxx2aLoc,
+                           SourceLocation &Cxx2bLoc,
                            Sema::CheckConstexprKind Kind) {
   // - its function-body shall be [...] a compound-statement that contains only
   switch (S->getStmtClass()) {
@@ -2053,9 +2058,9 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
   case Stmt::AttributedStmtClass:
     // Attributes on a statement don't affect its formal kind and hence don't
     // affect its validity in a constexpr function.
-    return CheckConstexprFunctionStmt(SemaRef, Dcl,
-                                      cast<AttributedStmt>(S)->getSubStmt(),
-                                      ReturnStmts, Cxx1yLoc, Cxx2aLoc, Kind);
+    return CheckConstexprFunctionStmt(
+        SemaRef, Dcl, cast<AttributedStmt>(S)->getSubStmt(), ReturnStmts,
+        Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind);
 
   case Stmt::CompoundStmtClass: {
     // C++1y allows compound-statements.
@@ -2065,7 +2070,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     CompoundStmt *CompStmt = cast<CompoundStmt>(S);
     for (auto *BodyIt : CompStmt->body()) {
       if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Kind))
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
     }
     return true;
@@ -2078,11 +2083,11 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 
     IfStmt *If = cast<IfStmt>(S);
     if (!CheckConstexprFunctionStmt(SemaRef, Dcl, If->getThen(), ReturnStmts,
-                                    Cxx1yLoc, Cxx2aLoc, Kind))
+                                    Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
       return false;
     if (If->getElse() &&
         !CheckConstexprFunctionStmt(SemaRef, Dcl, If->getElse(), ReturnStmts,
-                                    Cxx1yLoc, Cxx2aLoc, Kind))
+                                    Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
       return false;
     return true;
   }
@@ -2101,7 +2106,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     for (Stmt *SubStmt : S->children())
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Kind))
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
     return true;
 
@@ -2116,7 +2121,18 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     for (Stmt *SubStmt : S->children())
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Kind))
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+        return false;
+    return true;
+
+  case Stmt::LabelStmtClass:
+  case Stmt::GotoStmtClass:
+    if (Cxx2bLoc.isInvalid())
+      Cxx2bLoc = S->getBeginLoc();
+    for (Stmt *SubStmt : S->children())
+      if (SubStmt &&
+          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
     return true;
 
@@ -2129,7 +2145,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     for (Stmt *SubStmt : S->children()) {
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Kind))
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
     }
     return true;
@@ -2137,9 +2153,9 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
   case Stmt::CXXCatchStmtClass:
     // Do not bother checking the language mode (already covered by the
     // try block check).
-    if (!CheckConstexprFunctionStmt(SemaRef, Dcl,
-                                    cast<CXXCatchStmt>(S)->getHandlerBlock(),
-                                    ReturnStmts, Cxx1yLoc, Cxx2aLoc, Kind))
+    if (!CheckConstexprFunctionStmt(
+            SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
+            Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
       return false;
     return true;
 
@@ -2204,20 +2220,27 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   //
   // Note that walking the children here is enough to properly check for
   // CompoundStmt and CXXTryStmt body.
-  SourceLocation Cxx1yLoc, Cxx2aLoc;
+  SourceLocation Cxx1yLoc, Cxx2aLoc, Cxx2bLoc;
   for (Stmt *SubStmt : Body->children()) {
     if (SubStmt &&
         !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                    Cxx1yLoc, Cxx2aLoc, Kind))
+                                    Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
       return false;
   }
 
   if (Kind == Sema::CheckConstexprKind::CheckValid) {
     // If this is only valid as an extension, report that we don't satisfy the
     // constraints of the current language.
-    if ((Cxx2aLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus20) ||
+    if ((Cxx2bLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus2b) ||
+        (Cxx2aLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus20) ||
         (Cxx1yLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus17))
       return false;
+  } else if (Cxx2bLoc.isValid()) {
+    SemaRef.Diag(Cxx2bLoc,
+                 SemaRef.getLangOpts().CPlusPlus2b
+                     ? diag::warn_cxx20_compat_constexpr_body_invalid_stmt
+                     : diag::ext_constexpr_body_invalid_stmt_cxx2b)
+        << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx2aLoc.isValid()) {
     SemaRef.Diag(Cxx2aLoc,
          SemaRef.getLangOpts().CPlusPlus20

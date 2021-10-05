@@ -2693,6 +2693,13 @@ def warn_cxx17_compat_constexpr_body_invalid_stmt : Warning<
   "use of this statement in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++20">,
   InGroup<CXXPre20Compat>, DefaultIgnore;
+def ext_constexpr_body_invalid_stmt_cxx2b : ExtWarn<
+  "use of this statement in a constexpr %select{function|constructor}0 "
+  "is a C++2b extension">, InGroup<CXX2b>;
+def warn_cxx20_compat_constexpr_body_invalid_stmt : Warning<
+  "use of this statement in a constexpr %select{function|constructor}0 "
+  "is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
 def ext_constexpr_type_definition : ExtWarn<
   "type definition in a constexpr %select{function|constructor}0 "
   "is a C++14 extension">, InGroup<CXX14>;
@@ -2710,12 +2717,18 @@ def warn_cxx11_compat_constexpr_local_var : Warning<
   "variable declaration in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
-def err_constexpr_local_var_static : Error<
-  "%select{static|thread_local}1 variable not permitted in a constexpr "
-  "%select{function|constructor}0">;
+def ext_constexpr_static_var : ExtWarn<
+  "definition of a %select{static|thread_local}1 variable "
+  "in a constexpr %select{function|constructor}0 "
+  "is a C++2b extension">, InGroup<CXX2b>;
+def warn_cxx20_compat_constexpr_static_var : Warning<
+  "definition of a %select{static|thread_local}1 variable "
+  "in a constexpr %select{function|constructor}0 "
+  "is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
 def err_constexpr_local_var_non_literal_type : Error<
   "variable of non-literal type %1 cannot be defined in a constexpr "
-  "%select{function|constructor}0">;
+  "%select{function|constructor}0 before C++2b">;
 def ext_constexpr_local_var_no_init : ExtWarn<
   "uninitialized variable in a constexpr %select{function|constructor}0 "
   "is a C++20 extension">, InGroup<CXX20>;
