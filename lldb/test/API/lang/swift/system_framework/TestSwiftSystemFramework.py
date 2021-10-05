@@ -26,7 +26,7 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
         neg = 0
         with open(log, "r") as logfile:
             for line in logfile:
-                if ") rejecting framework path " in line:
+                if "-- rejecting framework path " in line:
                     pos += 1
                 elif ("reflection metadata" not in line) and \
                      ("/System/Library/Frameworks" in line):
