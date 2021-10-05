@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
+#ifndef LLDB_TARGET_DYNAMICREGISTERINFO_H
+#define LLDB_TARGET_DYNAMICREGISTERINFO_H
 
 #include <map>
 #include <vector>
@@ -15,6 +15,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
+
+namespace lldb_private {
 
 class DynamicRegisterInfo {
 protected:
@@ -113,4 +115,6 @@ protected:
   bool m_is_reconfigurable = false;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
+} // namespace lldb_private
+
+#endif // LLDB_TARGET_DYNAMICREGISTERINFO_H

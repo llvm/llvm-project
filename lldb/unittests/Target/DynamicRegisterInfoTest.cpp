@@ -9,8 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Plugins/Process/Utility/DynamicRegisterInfo.h"
-
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 
 using namespace lldb_private;
