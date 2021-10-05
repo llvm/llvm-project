@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -132,12 +131,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   const size_t NumBlocks = MF.size();
 #endif
 
-  // Keep track of selected blocks, so we can delete unreachable ones later.
-  DenseSet<MachineBasicBlock *> SelectedBlocks;
-
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     ISel->CurMBB = MBB;
-    SelectedBlocks.insert(MBB);
     if (MBB->empty())
       continue;
 
@@ -206,19 +201,9 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  SmallVector<MachineBasicBlock *> BlocksToDelete;
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
       continue;
-
-    if (!SelectedBlocks.contains(&MBB)) {
-      // This is an unreachable block and therefore hasn't been selected, since
-      // the main selection loop above uses a postorder block traversal. Mark
-      // the block for deletion.
-      if (!MBB.hasAddressTaken())
-        BlocksToDelete.push_back(&MBB);
-      continue;
-    }
 
     // Try to find redundant copies b/w vregs of the same register class.
     bool ReachedBegin = false;
@@ -288,9 +273,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 #endif
-  for (auto *MBB : BlocksToDelete)
-    MBB->eraseFromParent();
-
   // Determine if there are any calls in this machine function. Ported from
   // SelectionDAG.
   MachineFrameInfo &MFI = MF.getFrameInfo();
