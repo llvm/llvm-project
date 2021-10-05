@@ -4917,7 +4917,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (FD->isInlineBuiltinDeclaration() &&
         CGF.CurFn->getName() != FDInlineName) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
