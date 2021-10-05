@@ -1937,7 +1937,7 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
               std::vector<std::string> &extra_clang_args) {
   {
     llvm::raw_string_ostream ss(m_description);
-    ss << "ProcessModule(" << '"';
+    ss << "::ProcessModule(" << '"';
     module_sp->GetDescription(ss, eDescriptionLevelBrief);
     ss << '"' << ')';
   }
