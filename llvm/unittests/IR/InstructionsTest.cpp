@@ -638,7 +638,7 @@ TEST(InstructionsTest, AlterCallBundles) {
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
-  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->arg_size(), Clone->arg_size());
   EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
   EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
@@ -671,7 +671,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
       InvokeInst::Create(Invoke.get(), NewBundle));
   EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
   EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
-  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->arg_size(), Clone->arg_size());
   EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
