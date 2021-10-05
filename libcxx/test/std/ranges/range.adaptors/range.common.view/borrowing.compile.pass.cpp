@@ -19,19 +19,14 @@
 #include "test_iterators.h"
 
 struct View : std::ranges::view_base {
-  friend int* begin(View&);
-  friend int* begin(View const&);
-  friend sentinel_wrapper<int*> end(View&);
-  friend sentinel_wrapper<int*> end(View const&);
+  int *begin() const;
+  sentinel_wrapper<int*> end() const;
 };
 
 struct BorrowableView : std::ranges::view_base {
-  friend int* begin(BorrowableView&);
-  friend int* begin(BorrowableView const&);
-  friend sentinel_wrapper<int*> end(BorrowableView&);
-  friend sentinel_wrapper<int*> end(BorrowableView const&);
+  int *begin() const;
+  sentinel_wrapper<int*> end() const;
 };
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowableView> = true;
 

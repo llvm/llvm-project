@@ -106,16 +106,16 @@ struct BeginMemberContiguousIterator {
 
   constexpr ContiguousIter begin() const { return ContiguousIter(buff); }
 };
-
 static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &&>);
+static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator const&&>);
 
 struct BeginMemberRandomAccess {
   int buff[8];
 
   random_access_iterator<const int*> begin() const;
 };
-
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const&>);
@@ -127,11 +127,14 @@ struct BeginFriendContiguousIterator {
     return ContiguousIter(iter.buff);
   }
 };
+static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &&>);
+static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator const&&>);
 
 struct BeginFriendRandomAccess {
   friend random_access_iterator<const int*> begin(const BeginFriendRandomAccess iter);
 };
-
 static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess const>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess const&>);
@@ -141,16 +144,18 @@ struct BeginMemberRvalue {
 
   ContiguousIter begin() &&;
 };
-
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue&&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue const&>);
 
 struct BeginMemberBorrowingEnabled {
   constexpr contiguous_iterator<int*> begin() { return contiguous_iterator<int*>{&globalBuff[1]}; }
 };
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BeginMemberBorrowingEnabled> = true;
+static_assert( std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled &>);
+static_assert( std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled &&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled const&&>);
 
 constexpr bool testViaRangesBegin() {
   int arr[2];
