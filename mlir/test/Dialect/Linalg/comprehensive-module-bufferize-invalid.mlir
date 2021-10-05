@@ -140,3 +140,27 @@ func @mini_test_case1() -> tensor<10x20xf32> {
   %r = linalg.fill(%f0, %t) : f32, tensor<10x20xf32> -> tensor<10x20xf32>
   return %r : tensor<10x20xf32>
 }
+
+// -----
+
+func @main() -> tensor<4xi32> {
+  // expected-error @+1 {{unsupported op with tensors}}
+  %r = scf.execute_region -> tensor<4xi32> {
+    %A = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    scf.yield %A: tensor<4xi32>
+  }
+  return %r: tensor<4xi32>
+}
+
+// -----
+
+func @main() -> i32 {
+  %c0 = constant 0: index
+  // expected-error @+1 {{expected result-less scf.execute_region containing op}}
+  %r = scf.execute_region -> i32 {
+    %A = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    %e = tensor.extract %A[%c0]: tensor<4xi32>
+    scf.yield %e: i32
+  }
+  return %r: i32
+}
