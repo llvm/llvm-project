@@ -225,6 +225,9 @@ public:
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
 
+  /// Load the list of plugins requested in the \c FrontendOptions.
+  void LoadRequestedPlugins();
+
   /// }
   /// @name Compiler Invocation and Options
   /// {
