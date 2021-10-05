@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): loop.0
 
 ; CHECK:      loop.0:
@@ -21,9 +21,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; CHECK:      <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 
 ; CHECK:      pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -35,7 +35,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:
-; CHECK-NEXT:   PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%lv.b>
+; CHECK-NEXT:   PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
@@ -71,14 +71,14 @@ exit:
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:      <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 
 ; CHECK:      pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -86,7 +86,7 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
 ; CHECK:      pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%5> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
@@ -96,12 +96,12 @@ exit:
 
 ; CHECK:      <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%add> = add vp<%5>, ir<10>
+; CHECK-NEXT:     REPLICATE ir<%add> = add vp<[[PRED]]>, ir<10>
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
@@ -142,14 +142,14 @@ exit:
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:      <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -157,20 +157,20 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%5> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.0:
-; CHECK-NEXT:   WIDEN ir<%add> = add vp<%5>, ir<10>
+; CHECK-NEXT:   WIDEN ir<%add> = add vp<[[PRED]]>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<%add>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 
 ; CHECK:      pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
@@ -215,23 +215,23 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 21, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = WIDEN-CANONICAL-INDUCTION
-; CHECK-NEXT:   EMIT vp<%3> = icmp ule vp<%2> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[CAN_IV]]> vp<%0>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%3> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%lv>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.0
@@ -241,19 +241,19 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT: Successor(s): loop.then
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.then:
-; CHECK-NEXT:   EMIT vp<%8> = not ir<%cmp>
-; CHECK-NEXT:   EMIT vp<%9> = select vp<%3> vp<%8> ir<false>
+; CHECK-NEXT:   EMIT vp<[[NOT2:%.+]]> = not ir<%cmp>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]> vp<[[NOT2]]> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%9>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK2]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%9> (loop.then)
+; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (loop.then)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.B> = getelementptr ir<%B>, ir<%iv>
-; CHECK-NEXT:     REPLICATE store vp<%6>, ir<%gep.B>
+; CHECK-NEXT:     REPLICATE store vp<[[PRED]]>, ir<%gep.B>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
@@ -302,15 +302,15 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<%4> = icmp ule ir<%iv> vp<%0>
-; CHECK-NEXT:   EMIT vp<%5> = select vp<%4> ir<%c.1> ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]> ir<%c.1> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%5>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK2]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%5> (then.0)
+; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (then.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -318,7 +318,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): then.0.0
@@ -327,17 +327,17 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): next.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: next.0:
-; CHECK-NEXT:   EMIT vp<%9> = not ir<%c.1>
-; CHECK-NEXT:   EMIT vp<%10> = select vp<%4> vp<%9> ir<false>
-; CHECK-NEXT:   BLEND %p = ir<0>/vp<%10> vp<%8>/vp<%5>
-; CHECK-NEXT:   EMIT vp<%12> = or vp<%5> vp<%10>
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.1>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
+; CHECK-NEXT:   BLEND %p = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
+; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]> vp<[[MASK3]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%12>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[OR]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%12> (next.0)
+; CHECK-NEXT:   CondBit: vp<[[OR]]> (next.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
@@ -396,15 +396,15 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<%5> = icmp ule ir<%iv> vp<%0>
-; CHECK-NEXT:   EMIT vp<%6> = select vp<%5> ir<%c.0> ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%6>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK2]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%6> (then.0)
+; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (then.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -412,7 +412,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): then.0.0
@@ -421,21 +421,21 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): next.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: next.0:
-; CHECK-NEXT:   EMIT vp<%10> = not ir<%c.0>
-; CHECK-NEXT:   EMIT vp<%11> = select vp<%5> vp<%10> ir<false>
-; CHECK-NEXT:   BLEND %p = ir<0>/vp<%11> vp<%9>/vp<%6>
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
+; CHECK-NEXT:   BLEND %p = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.1:
-; CHECK-NEXT:   EMIT vp<%13> = or vp<%6> vp<%11>
-; CHECK-NEXT:   EMIT vp<%14> = select vp<%13> ir<%c.1> ir<false>
+; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]> vp<[[MASK3]]>
+; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = select vp<[[OR]]> ir<%c.1> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%14>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK4]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%14> (then.1)
+; CHECK-NEXT:   CondBit: vp<[[MASK4]]> (then.1)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
@@ -503,15 +503,15 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<%4> = icmp ule ir<%iv> vp<%0>
-; CHECK-NEXT:   EMIT vp<%5> = select vp<%4> ir<%c.0> ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1:%.+]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%5>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK2]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%5> (then.0)
+; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (then.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
@@ -519,7 +519,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): then.0.0
@@ -531,17 +531,17 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.1:
-; CHECK-NEXT:   EMIT vp<%9> = not ir<%c.0>
-; CHECK-NEXT:   EMIT vp<%10> = select vp<%4> vp<%9> ir<false>
-; CHECK-NEXT:   EMIT vp<%11> = or vp<%5> vp<%10>
-; CHECK-NEXT:   EMIT vp<%12> = select vp<%11> ir<%c.0> ir<false>
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = or vp<[[MASK2]]> vp<[[MASK3]]>
+; CHECK-NEXT:   EMIT vp<[[MASK5:%.+]]> = select vp<[[MASK4]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%12>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK5]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%12> (then.1)
+; CHECK-NEXT:   CondBit: vp<[[MASK5]]> (then.1)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
@@ -600,7 +600,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
@@ -615,9 +615,9 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
@@ -629,8 +629,8 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%10> = ir<%lv.a>
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%11> = ir<%lv.b>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED1:%.+]]> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.3
@@ -640,15 +640,15 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<%10>, vp<%11>
-; CHECK-NEXT:   EMIT vp<%14> = select vp<%2> ir<%c.0> ir<false>
+; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%14>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK2]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%14> (then.0)
+; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (then.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.c.1> = getelementptr ir<@c>, ir<0>, ir<%iv>
@@ -707,7 +707,7 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
@@ -719,9 +719,9 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
@@ -730,8 +730,8 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%7> = ir<%lv.a>
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%div>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED1:%.+]]> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
@@ -767,28 +767,28 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, ir<%lv.a>
-; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
 ; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%3> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.a>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT:   EMIT vp<%7> = first-order splice ir<%for> ir<%lv.a>
+; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> ir<%lv.a>
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
@@ -796,17 +796,17 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%3> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%div> = sdiv vp<%7>, vp<%6>
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv vp<[[SPLICE]]>, vp<[[PRED]]>
 ; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%10> = ir<%div>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
@@ -865,13 +865,13 @@ define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%l1>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%l1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.then.1:
-; CHECK-NEXT:   WIDEN ir<%sext.l1> = sext vp<%6>
+; CHECK-NEXT:   WIDEN ir<%sext.l1> = sext vp<[[PRED]]>
 ; CHECK-NEXT: Successor(s): loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.latch:
@@ -917,14 +917,14 @@ define void @sinking_requires_duplication(float* %addr) {
 ; CHECK-NEXT: Successor(s): then
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then:
-; CHECK-NEXT:   EMIT vp<%4> = not ir<%pred>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = not ir<%pred>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%4>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%4> (then)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (then)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%addr>, ir<%iv>
