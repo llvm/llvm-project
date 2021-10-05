@@ -10,18 +10,12 @@
 
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
-# RUN: %{python} %s x%S \
-# RUN:              x%T \
-# RUN:              x%{escaped_exec} \
-# RUN:              x%{escaped_cxx} \
-# RUN:              x%{escaped_flags} \
-# RUN:              x%{escaped_compile_flags} \
-# RUN:              x%{escaped_link_flags}
-# END.
+# RUN: %{python} %s x%S x%T x%{substitutions}
 
 import base64
 import copy
 import os
+import pickle
 import platform
 import subprocess
 import sys
@@ -40,8 +34,13 @@ import lit.util
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
 args = list(map(lambda s: s[1:], sys.argv[1:8])) # Remove the leading 'x'
-SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = args
+SOURCE_ROOT, EXEC_PATH, SUBSTITUTIONS = args
 sys.argv[1:8] = []
+
+# Decode the substitutions.
+SUBSTITUTIONS = pickle.loads(base64.b64decode(SUBSTITUTIONS))
+for s, sub in SUBSTITUTIONS:
+    print("Substitution '{}' is '{}'".format(s, sub))
 
 class SetupConfigs(unittest.TestCase):
     """
@@ -69,14 +68,7 @@ class SetupConfigs(unittest.TestCase):
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
         self.config.recursiveExpansionLimit = 10
-        base64Decode = lambda s: lit.util.to_string(base64.b64decode(s))
-        self.config.substitutions = [
-            ('%{cxx}', base64Decode(CXX)),
-            ('%{flags}', base64Decode(FLAGS)),
-            ('%{compile_flags}', base64Decode(COMPILE_FLAGS)),
-            ('%{link_flags}', base64Decode(LINK_FLAGS)),
-            ('%{exec}', base64Decode(EXEC))
-        ]
+        self.config.substitutions = copy.deepcopy(SUBSTITUTIONS)
 
     def getSubstitution(self, substitution):
         """
