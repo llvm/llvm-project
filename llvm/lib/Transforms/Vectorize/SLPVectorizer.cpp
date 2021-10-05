@@ -10582,7 +10582,7 @@ public:
         // Estimate cost.
         InstructionCost TreeCost = V.getTreeCost(VL);
         InstructionCost ReductionCost =
-            getReductionCost(TTI, VL[0], ReduxWidth, RdxFMF);
+            getReductionCost(TTI, VL, ReduxWidth, RdxFMF);
         InstructionCost Cost = TreeCost + ReductionCost;
         if (!Cost.isValid()) {
           LLVM_DEBUG(dbgs() << "Encountered invalid baseline cost.\n");
@@ -10659,45 +10659,78 @@ public:
       // Finish the reduction.
       // Need to add extra arguments and not vectorized possible reduction
       // values.
+      // Try to avoid dependencies between the scalar remainders after
+      // reductions.
+      auto &&FinalGen =
+          [this, &Builder,
+           &TrackedVals](ArrayRef<std::pair<Instruction *, Value *>> InstVals) {
+            unsigned Sz = InstVals.size();
+            SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 +
+                                                                     Sz % 2);
+            for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
+              Instruction *RedOp = InstVals[I + 1].first;
+              Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
+              ReductionOpsListType Ops;
+              if (auto *Sel = dyn_cast<SelectInst>(RedOp))
+                Ops.emplace_back().push_back(Sel->getCondition());
+              Ops.emplace_back().push_back(RedOp);
+              Value *RdxVal1 = InstVals[I].second;
+              Value *StableRdxVal1 = RdxVal1;
+              auto It1 = TrackedVals.find(RdxVal1);
+              if (It1 != TrackedVals.end())
+                StableRdxVal1 = It1->second;
+              Value *RdxVal2 = InstVals[I + 1].second;
+              Value *StableRdxVal2 = RdxVal2;
+              auto It2 = TrackedVals.find(RdxVal2);
+              if (It2 != TrackedVals.end())
+                StableRdxVal2 = It2->second;
+              Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
+                                         StableRdxVal2, "op.rdx", Ops);
+              ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
+            }
+            if (Sz % 2 == 1)
+              ExtraReds[Sz / 2] = InstVals.back();
+            return ExtraReds;
+          };
+      SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
       SmallPtrSet<Value *, 8> Visited;
-      for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
-        ArrayRef<Value *> Candidates = ReducedVals[I];
+      for (ArrayRef<Value *> Candidates : ReducedVals) {
         for (Value *RdxVal : Candidates) {
           if (!Visited.insert(RdxVal).second)
             continue;
-          Value *StableRdxVal = RdxVal;
-          auto TVIt = TrackedVals.find(RdxVal);
-          if (TVIt != TrackedVals.end())
-            StableRdxVal = TVIt->second;
           unsigned NumOps = VectorizedVals.lookup(RdxVal);
           for (Instruction *RedOp :
                makeArrayRef(ReducedValsToOps.find(RdxVal)->second)
-                   .drop_back(NumOps)) {
-            Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
-            ReductionOpsListType Ops;
-            if (auto *Sel = dyn_cast<SelectInst>(RedOp))
-              Ops.emplace_back().push_back(Sel->getCondition());
-            Ops.emplace_back().push_back(RedOp);
-            VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
-                                      StableRdxVal, "op.rdx", Ops);
-          }
+                   .drop_back(NumOps))
+            ExtraReductions.emplace_back(RedOp, RdxVal);
         }
       }
       for (auto &Pair : ExternallyUsedValues) {
         // Add each externally used value to the final reduction.
-        for (auto *I : Pair.second) {
-          Builder.SetCurrentDebugLocation(I->getDebugLoc());
-          ReductionOpsListType Ops;
-          if (auto *Sel = dyn_cast<SelectInst>(I))
-            Ops.emplace_back().push_back(Sel->getCondition());
-          Ops.emplace_back().push_back(I);
-          Value *StableRdxVal = Pair.first;
-          auto TVIt = TrackedVals.find(Pair.first);
-          if (TVIt != TrackedVals.end())
-            StableRdxVal = TVIt->second;
-          VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
-                                    StableRdxVal, "op.rdx", Ops);
-        }
+        for (auto *I : Pair.second)
+          ExtraReductions.emplace_back(I, Pair.first);
+      }
+      // Iterate through all not-vectorized reduction values/extra arguments.
+      while (ExtraReductions.size() > 1) {
+        SmallVector<std::pair<Instruction *, Value *>> NewReds =
+            FinalGen(ExtraReductions);
+        ExtraReductions.swap(NewReds);
+      }
+      // Final reduction.
+      if (ExtraReductions.size() == 1) {
+        Instruction *RedOp = ExtraReductions.back().first;
+        Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
+        ReductionOpsListType Ops;
+        if (auto *Sel = dyn_cast<SelectInst>(RedOp))
+          Ops.emplace_back().push_back(Sel->getCondition());
+        Ops.emplace_back().push_back(RedOp);
+        Value *RdxVal = ExtraReductions.back().second;
+        Value *StableRdxVal = RdxVal;
+        auto It = TrackedVals.find(RdxVal);
+        if (It != TrackedVals.end())
+          StableRdxVal = It->second;
+        VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
+                                  StableRdxVal, "op.rdx", Ops);
       }
 
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
@@ -10739,12 +10772,16 @@ public:
 private:
   /// Calculate the cost of a reduction.
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
-                                   Value *FirstReducedVal, unsigned ReduxWidth,
-                                   FastMathFlags FMF) {
+                                   ArrayRef<Value *> ReducedVals,
+                                   unsigned ReduxWidth, FastMathFlags FMF) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    Value *FirstReducedVal = ReducedVals.front();
     Type *ScalarTy = FirstReducedVal->getType();
     FixedVectorType *VectorTy = FixedVectorType::get(ScalarTy, ReduxWidth);
-    InstructionCost VectorCost, ScalarCost;
+    InstructionCost VectorCost = 0, ScalarCost;
+    // If all of the reduced values are constant, the vector cost is 0, since
+    // the reduction value can be calculated at the compile time.
+    bool AllConsts = all_of(ReducedVals, isConstant);
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -10754,17 +10791,22 @@ private:
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
-      VectorCost =
-          TTI->getArithmeticReductionCost(RdxOpcode, VectorTy, FMF, CostKind);
+      if (!AllConsts)
+        VectorCost =
+            TTI->getArithmeticReductionCost(RdxOpcode, VectorTy, FMF, CostKind);
       ScalarCost = TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy, CostKind);
       break;
     }
     case RecurKind::FMax:
     case RecurKind::FMin: {
       auto *SclCondTy = CmpInst::makeCmpResultType(ScalarTy);
-      auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
-      VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                               /*IsUnsigned=*/false, CostKind);
+      if (!AllConsts) {
+        auto *VecCondTy =
+            cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
+        VectorCost =
+            TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
+                                        /*IsUnsigned=*/false, CostKind);
+      }
       CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
       ScalarCost = TTI->getCmpSelInstrCost(Instruction::FCmp, ScalarTy,
                                            SclCondTy, RdxPred, CostKind) +
@@ -10777,11 +10819,14 @@ private:
     case RecurKind::UMax:
     case RecurKind::UMin: {
       auto *SclCondTy = CmpInst::makeCmpResultType(ScalarTy);
-      auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
-      bool IsUnsigned =
-          RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
-      VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy, IsUnsigned,
-                                               CostKind);
+      if (!AllConsts) {
+        auto *VecCondTy =
+            cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
+        bool IsUnsigned =
+            RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
+        VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
+                                                 IsUnsigned, CostKind);
+      }
       CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
       ScalarCost = TTI->getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
                                            SclCondTy, RdxPred, CostKind) +
