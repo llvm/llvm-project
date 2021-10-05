@@ -1133,7 +1133,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           variable.GetType(), variable.GetDecl(),
           &user_expression.GetPersistentVariableDelegate(), error);
     } else {
-      // Transform the variable metadata to a typeref type if possible.
+      // Transform the variable metadata to a typeref type if necessary.
       auto compiler_type =
           variable_metadata->m_persistent_variable_sp->GetCompilerType();
       if (auto *swift_ast_ctx =
