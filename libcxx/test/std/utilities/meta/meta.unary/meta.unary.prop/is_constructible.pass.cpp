@@ -14,12 +14,6 @@
 #include <type_traits>
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 11 && defined(_LIBCPP_VERSION)
-#define LIBCPP11_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
-#else
-#define LIBCPP11_STATIC_ASSERT(...) ((void)0)
-#endif
-
 struct A
 {
     explicit A(int);
