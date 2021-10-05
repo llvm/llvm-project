@@ -89,8 +89,8 @@ multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
 
 multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
 {
-  defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#m.BX);
+  defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#m.BX);
+  defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
   // Load
   def : Pat<(m.Mask (load BaseAddr:$rs1)),
             (load_instr BaseAddr:$rs1, m.AVL, m.Log2SEW)>;

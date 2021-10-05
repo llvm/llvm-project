@@ -2131,6 +2131,23 @@ bool CombinerHelper::matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src) {
   return mi_match(Src, MRI, m_GFabs(m_Reg(AbsSrc)));
 }
 
+bool CombinerHelper::matchCombineFAbsOfFNeg(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
+  Register Src = MI.getOperand(1).getReg();
+  Register NegSrc;
+
+  if (!mi_match(Src, MRI, m_GFNeg(m_Reg(NegSrc))))
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(NegSrc);
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchCombineTruncOfExt(
     MachineInstr &MI, std::pair<Register, unsigned> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");

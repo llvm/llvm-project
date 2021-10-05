@@ -18,12 +18,12 @@
 #include <string>
 
 namespace llvm {
-class StringRef;
+  class StringRef;
   class Twine;
 
   /// An error handler callback.
   typedef void (*fatal_error_handler_t)(void *user_data,
-                                        const std::string& reason,
+                                        const char *reason,
                                         bool gen_crash_diag);
 
   /// install_fatal_error_handler - Installs a new error handler to be used

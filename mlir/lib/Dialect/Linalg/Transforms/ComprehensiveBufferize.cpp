@@ -726,15 +726,21 @@ void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
 }
 
 /// Return true if the buffer to which `operand` would bufferize aliases a
-/// buffer that is known to not be writeable. This implies that the matching
+/// buffer that is known to not be writable. This implies that the matching
 /// OpResult cannot be bufferized inplace.
-bool BufferizationAliasInfo::aliasesNonWriteableBuffer(
+bool BufferizationAliasInfo::aliasesNonWritableBuffer(
     OpOperand &operand) const {
-  LDBG("----Start aliasesNonWriteableBuffer\n");
+  LDBG("----Start aliasesNonWritableBuffer\n");
   LDBG("-------for -> #" << operand.getOperandNumber() << ": "
                          << printOperationInfo(operand.getOwner()) << '\n');
   for (Value v : getAliases(operand.get())) {
     LDBG("-----------examine: " << printValueInfo(v) << '\n');
+    if (bufferizesToWritableMemory(v)) {
+      LDBG("-----------Value is known to be writeable -> skip: "
+           << printValueInfo(v) << '\n');
+      continue;
+    }
+
     if (auto bbArg = v.dyn_cast<BlockArgument>()) {
       if (getInPlace(bbArg) == InPlaceSpec::True) {
         LDBG("-----------bbArg is writeable -> skip: " << printValueInfo(bbArg)
@@ -747,13 +753,22 @@ bool BufferizationAliasInfo::aliasesNonWriteableBuffer(
 
     if (Operation *op = v.getDefiningOp()) {
       if (isa<ConstantOp>(op) || !hasKnownBufferizationAliasingBehavior(op)) {
-        LDBG("-----------notWriteable\n");
+        LDBG("-----------notWritable\n");
         return true;
       }
     }
   }
-  LDBG("---->operand is writeable\n");
+  LDBG("---->operand is writable\n");
   return false;
+}
+
+bool BufferizationAliasInfo::bufferizesToWritableMemory(Value v) const {
+  return bufferizeToWritableMemory.count(v) > 0;
+}
+
+/// Specify that the value is known to bufferize to writable memory.
+void BufferizationAliasInfo::setBufferizesToWritableMemory(Value v) {
+  bufferizeToWritableMemory.insert(v);
 }
 
 /// Return true if the buffer to which `operand` would bufferize is equivalent
@@ -2095,8 +2110,16 @@ static LogicalResult bufferize(OpBuilder &b, scf::YieldOp yieldOp,
   // Cannot create IR past a yieldOp.
   b.setInsertionPoint(yieldOp);
 
+  if (auto execOp = dyn_cast<scf::ExecuteRegionOp>(yieldOp->getParentOp())) {
+    if (execOp->getNumResults() != 0)
+      return execOp->emitError(
+          "expected result-less scf.execute_region containing op");
+    return success();
+  }
+
   scf::ForOp forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
-  assert(forOp && "only support scf::ForOp parent for scf::YieldOp");
+  if (!forOp)
+    return yieldOp->emitError("expected scf::ForOp parent for scf::YieldOp");
   for (OpOperand &operand : yieldOp->getOpOperands()) {
     auto tensorType = operand.get().getType().dyn_cast<TensorType>();
     if (!tensorType)
@@ -2184,22 +2207,22 @@ bufferizableInPlaceAnalysis(ExtractSliceOp extractSliceOp,
        << printOperationInfo(extractSliceOp) << '\n');
 
   // If `extractSliceOp` were to be bufferized inplace, it cannot end up
-  // aliasing a write into a non-writeable buffer.
-  bool wouldCreateAliasingWriteToNonWriteableBuffer =
+  // aliasing a write into a non-writable buffer.
+  bool wouldCreateAliasingWriteToNonWritableBuffer =
       aliasInfo.aliasesInPlaceWrite(extractSliceOp.result()) &&
-      aliasInfo.aliasesNonWriteableBuffer(extractSliceOp->getOpOperand(0));
+      aliasInfo.aliasesNonWritableBuffer(extractSliceOp->getOpOperand(0));
 
-  if (wouldCreateAliasingWriteToNonWriteableBuffer)
-    LDBG("->the corresponding buffer is not writeable\n");
+  if (wouldCreateAliasingWriteToNonWritableBuffer)
+    LDBG("->the corresponding buffer is not writable\n");
   else
-    LDBG("->bufferizes to writeable inplace buffer\n");
+    LDBG("->bufferizes to writable inplace buffer\n");
 
   // In any of extractSliceOp.result's aliases, can we find 2 such that we hit
   // an interfering write?
   OpResult r = extractSliceOp->getResult(0);
   OpOperand &s = extractSliceOp->getOpOperand(0);
   bool foundInterference =
-      wouldCreateAliasingWriteToNonWriteableBuffer ||
+      wouldCreateAliasingWriteToNonWritableBuffer ||
       aliasInfo.wouldCreateReadAfterWriteInterference(r, domInfo);
   if (foundInterference)
     aliasInfo.bufferizeOutOfPlace(r);
@@ -2230,21 +2253,21 @@ bufferizableInPlaceAnalysis(OpOperand &operand, OpResult result,
                                    << operand.getOperandNumber() << " in "
                                    << printValueInfo(result) << '\n');
 
-  // `result` must bufferize to a writeable buffer to be a candidate.
+  // `result` must bufferize to a writable buffer to be a candidate.
   // This means the operand  must not alias either:
   //   1. a function bbArg that is not inplaceable or
   //   2. a constant op.
   // to be considered for inplace bufferization
-  bool wouldCreateAliasingWriteToNonWriteableBuffer =
-      aliasInfo.aliasesNonWriteableBuffer(operand);
-  if (wouldCreateAliasingWriteToNonWriteableBuffer)
-    LDBG("->the corresponding buffer is not writeable\n");
+  bool wouldCreateAliasingWriteToNonWritableBuffer =
+      aliasInfo.aliasesNonWritableBuffer(operand);
+  if (wouldCreateAliasingWriteToNonWritableBuffer)
+    LDBG("->the corresponding buffer is not writable\n");
   else
-    LDBG("->bufferizes to writeable inplace buffer\n");
+    LDBG("->bufferizes to writable inplace buffer\n");
 
   assert(result == getInplaceableOpResult(operand));
   bool foundInterference =
-      wouldCreateAliasingWriteToNonWriteableBuffer ||
+      wouldCreateAliasingWriteToNonWritableBuffer ||
       aliasInfo.wouldCreateReadAfterWriteInterference(result, domInfo);
 
   if (foundInterference)
@@ -2311,6 +2334,15 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
       return;
     ops.push_back(op);
   });
+
+  // Set the function arguments marked with inplaceable to be known as
+  // bufferizing to a writeable memory.
+  for (BlockArgument bbArg : funcOp.getArguments()) {
+    BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+        bbArg.getArgNumber(), LinalgDialect::kInplaceableAttrName);
+    if (inplaceAttr && inplaceAttr.getValue())
+      aliasInfo.setBufferizesToWritableMemory(bbArg);
+  }
 
   LogicalResult res = inPlaceAnalysis(ops, aliasInfo, domInfo);
   LDBG("End InPlaceAnalysisFuncOpInternals:\n" << funcOp << '\n');

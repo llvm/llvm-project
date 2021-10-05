@@ -11,7 +11,7 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\7\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 // There will be 2 20-byte binary IDs, so the total Binary IDs size will be 64 bytes.
 //   2 * 8  binary ID sizes
 // + 2 * 20 binary IDs (of size 20)

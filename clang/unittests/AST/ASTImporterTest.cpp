@@ -6564,10 +6564,176 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
   EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
 }
 
+TEST_P(ImportAttributes, ImportGuardedVar) {
+  GuardedVarAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>("int test __attribute__((guarded_var));", FromAttr,
+                      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportPtGuardedVar) {
+  PtGuardedVarAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>("int *test __attribute__((pt_guarded_var));", FromAttr,
+                      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportScopedLockable) {
+  ScopedLockableAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>("struct __attribute__((scoped_lockable)) test {};",
+                            FromAttr, ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportCapability) {
+  CapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      "struct __attribute__((capability(\"cap\"))) test {};", FromAttr, ToAttr);
+  EXPECT_EQ(FromAttr->getName(), ToAttr->getName());
+}
+
 TEST_P(ImportAttributes, ImportAssertCapability) {
   AssertCapabilityAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
       "void test(int A1, int A2) __attribute__((assert_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAcquireCapability) {
+  AcquireCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((acquire_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportTryAcquireCapability) {
+  TryAcquireCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
+      "A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportReleaseCapability) {
+  ReleaseCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((release_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportRequiresCapability) {
+  RequiresCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((requires_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportNoThreadSafetyAnalysis) {
+  NoThreadSafetyAnalysisAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test() __attribute__((no_thread_safety_analysis));", FromAttr,
+      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportGuardedBy) {
+  GuardedByAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      int G;
+      int test __attribute__((guarded_by(G)));
+      )",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportPtGuardedBy) {
+  PtGuardedByAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      int G;
+      int *test __attribute__((pt_guarded_by(G)));
+      )",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportAcquiredAfter) {
+  AcquiredAfterAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      struct __attribute__((lockable)) L {};
+      L A1;
+      L A2;
+      L test __attribute__((acquired_after(A1, A2)));
+      )",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAcquiredBefore) {
+  AcquiredBeforeAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      struct __attribute__((lockable)) L {};
+      L A1;
+      L A2;
+      L test __attribute__((acquired_before(A1, A2)));
+      )",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAssertExclusiveLock) {
+  AssertExclusiveLockAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>("void test(int A1, int A2) "
+                           "__attribute__((assert_exclusive_lock(A1, A2)));",
+                           FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAssertSharedLock) {
+  AssertSharedLockAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((assert_shared_lock(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
+  ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
+      "A1, A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
+  SharedTrylockFunctionAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
+      "A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportLockReturned) {
+  LockReturnedAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1) __attribute__((lock_returned(A1)));", FromAttr,
+      ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportLocksExcluded) {
+  LocksExcludedAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
       FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }

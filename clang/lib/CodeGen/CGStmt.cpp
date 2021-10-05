@@ -713,6 +713,17 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 }
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
+  // The else branch of a consteval if statement is always the only branch that
+  // can be runtime evaluated.
+  if (S.isConsteval()) {
+    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : S.getElse();
+    if (Executed) {
+      RunCleanupsScope ExecutedScope(*this);
+      EmitStmt(Executed);
+    }
+    return;
+  }
+
   // C99 6.8.4.1: The first substatement is executed if the expression compares
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());

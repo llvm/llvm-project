@@ -79,15 +79,11 @@ TEST_F(TerminalTest, SaveRestoreRAII) {
     TerminalState term_state{term};
     terminfo = orig_terminfo;
 
-    // make some arbitrary changes
-    terminfo.c_iflag ^= IGNPAR | INLCR;
-    terminfo.c_oflag ^= OPOST | OCRNL;
-    terminfo.c_cflag ^= PARENB | PARODD;
-    terminfo.c_lflag ^= ICANON | ECHO;
-    terminfo.c_cc[VEOF] ^= 8;
-    terminfo.c_cc[VEOL] ^= 4;
-    cfsetispeed(&terminfo, B9600);
-    cfsetospeed(&terminfo, B9600);
+    // make an arbitrary change
+    cfsetispeed(&terminfo,
+                cfgetispeed(&orig_terminfo) == B9600 ? B4800 : B9600);
+    cfsetospeed(&terminfo,
+                cfgetospeed(&orig_terminfo) == B9600 ? B4800 : B9600);
 
     ASSERT_EQ(tcsetattr(m_pty.GetPrimaryFileDescriptor(), TCSANOW, &terminfo),
               0);
@@ -108,15 +104,9 @@ TEST_F(TerminalTest, SaveRestore) {
   term_state.Save(term, false);
   terminfo = orig_terminfo;
 
-  // make some arbitrary changes
-  terminfo.c_iflag ^= IGNPAR | INLCR;
-  terminfo.c_oflag ^= OPOST | OCRNL;
-  terminfo.c_cflag ^= PARENB | PARODD;
-  terminfo.c_lflag ^= ICANON | ECHO;
-  terminfo.c_cc[VEOF] ^= 8;
-  terminfo.c_cc[VEOL] ^= 4;
-  cfsetispeed(&terminfo, B9600);
-  cfsetospeed(&terminfo, B9600);
+  // make an arbitrary change
+  cfsetispeed(&terminfo, cfgetispeed(&orig_terminfo) == B9600 ? B4800 : B9600);
+  cfsetospeed(&terminfo, cfgetospeed(&orig_terminfo) == B9600 ? B4800 : B9600);
 
   ASSERT_EQ(tcsetattr(m_pty.GetPrimaryFileDescriptor(), TCSANOW, &terminfo), 0);
 

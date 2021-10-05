@@ -191,7 +191,7 @@ LogicalResult ConstShapeOpConverter::matchAndRewrite(
   Type indexTy = rewriter.getIndexType();
   Value tensor =
       rewriter.create<tensor::FromElementsOp>(loc, indexTy, extentOperands);
-  Type resultTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
+  Type resultTy = RankedTensorType::get({op.shape().size()}, indexTy);
   rewriter.replaceOpWithNewOp<tensor::CastOp>(op, resultTy, tensor);
   return success();
 }

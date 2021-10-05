@@ -16,36 +16,12 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
-  let summary = "Promotes fir.do_loop and fir.where to affine.for and affine.if where possible";
+def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
+  let summary = "Convert name for external interoperability";
   let description = [{
-    TODO
+    Demangle FIR internal name and mangle them for external interoperability.
   }];
-  let constructor = "fir::createPromoteToAffinePass()";
-}
-
-def BasicCSE : FunctionPass<"basic-cse"> {
-  let summary = "Basic common sub-expression elimination";
-  let description = [{
-      TODO
-  }];
-  let constructor = "fir::createCSEPass()";
-}
-
-def ControlFlowLowering : FunctionPass<"lower-control-flow"> {
-  let summary = "Convert affine dialect, fir.select_type to standard dialect";
-  let description = [{
-      TODO
-  }];
-  let constructor = "fir::createControlFlowLoweringPass()";
-}
-
-def CFGConversion : FunctionPass<"cfg-conversion"> {
-  let summary = "Convert FIR structured control flow ops to CFG ops.";
-  let description = [{
-      TODO
-  }];
-  let constructor = "fir::createFirToCfgPass()";
+  let constructor = "::fir::createExternalNameConversionPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

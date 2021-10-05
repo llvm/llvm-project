@@ -282,8 +282,7 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(AddressOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     // We apply SymbolOffset here directly. We return it separately to allow
     // the caller to print it as an offset on the symbol name.
@@ -1006,8 +1005,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
 
     ListScope EHS(SW, "ExceptionHandler");
@@ -1046,8 +1044,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1061,8 +1058,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
 
     SW.printString("ExceptionRecord",
@@ -1107,8 +1103,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1149,8 +1144,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     FunctionName = *FunctionNameOrErr;
   }

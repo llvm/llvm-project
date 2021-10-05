@@ -3534,8 +3534,8 @@ def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp:$vtypei), 
 defm PseudoVL : VPseudoUSLoad</*isFF=*/false>;
 defm PseudoVS : VPseudoUSStore;
 
-defm PseudoVLE1 : VPseudoLoadMask;
-defm PseudoVSE1 : VPseudoStoreMask;
+defm PseudoVLM : VPseudoLoadMask;
+defm PseudoVSM : VPseudoStoreMask;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions

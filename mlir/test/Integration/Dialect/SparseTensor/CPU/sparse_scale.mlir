@@ -74,6 +74,9 @@ module {
     %v = vector.transfer_read %m[%c0], %f0: memref<?xf32>, vector<16xf32>
     vector.print %v : vector<16xf32>
 
+    // Release the resources.
+    sparse_tensor.release %1 : tensor<8x8xf32, #CSR>
+
     return
   }
 }

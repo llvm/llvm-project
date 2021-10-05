@@ -1925,6 +1925,10 @@ private:
   /// (See scope definition rules associated with flag discussion above)
   const Instruction *getDefiningScopeBound(const SCEV *S);
 
+  /// Return a scope which provides an upper bound on the defining scope for
+  /// a SCEV with the operands in Ops.
+  const Instruction *getDefiningScopeBound(ArrayRef<const SCEV *> Ops);
+
   /// Given two instructions in the same function, return true if we can
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,

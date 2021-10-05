@@ -261,10 +261,10 @@ def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
   let description = [{
     The standard trigonometric tangent of x radians.
 
-    The operand x must be a scalar or vector whose component type is 16-bit or 
+    The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
 
-    Result Type and the type of x must be the same type. Results are computed 
+    Result Type and the type of x must be the same type. Results are computed
     per component.
 
     <!-- End of AutoGen section -->
@@ -576,6 +576,36 @@ def SPV_GLSLFMaxOp : SPV_GLSLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
 
 // -----
 
+def SPV_GLSLUMaxOp : SPV_GLSLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
+  let summary = "Return maximum of two unsigned integer operands";
+
+  let description = [{
+    Result is y if x < y; otherwise result is x, where x and y are interpreted
+    as unsigned integers.
+
+    Result Type and the type of x and y must both be integer scalar or integer
+    vector types. Result Type and operand types must have the same number of
+    components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smax-op ::= ssa-id `=` `spv.GLSL.UMax` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.UMax %0, %1 : i32
+    %3 = spv.GLSL.UMax %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLSMaxOp : SPV_GLSLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
@@ -631,6 +661,36 @@ def SPV_GLSLFMinOp : SPV_GLSLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
     ```mlir
     %2 = spv.GLSL.FMin %0, %1 : f32
     %3 = spv.GLSL.FMin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLUMinOp : SPV_GLSLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
+  let summary = "Return minimum of two unsigned integer operands";
+
+  let description = [{
+    Result is y if y < x; otherwise result is x, where x and y are interpreted
+    as unsigned integers.
+
+    Result Type and the type of x and y must both be integer scalar or integer
+    vector types. Result Type and operand types must have the same number of
+    components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smin-op ::= ssa-id `=` `spv.GLSL.UMin` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.UMin %0, %1 : i32
+    %3 = spv.GLSL.UMin %0, %1 : vector<3xi16>
     ```
   }];
 }
