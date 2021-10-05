@@ -1274,6 +1274,8 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::RevisionIncompatible:
     return "The module file was built with library evolution enabled by a "
            "different version of the compiler.";
+  case swift::serialization::Status::NotInOSSA:
+    return "The module file was not built with -enable-ossa-modules";
   }
 }
 
@@ -1361,7 +1363,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     for (; !buf.empty(); buf = buf.substr(info.bytes)) {
       swift::serialization::ExtendedValidationInfo extended_validation_info;
       info = swift::serialization::validateSerializedAST(
-          buf, &extended_validation_info);
+          buf, invocation.getSILOptions().EnableOSSAModules, &extended_validation_info);
       bool invalid_ast = info.status != swift::serialization::Status::Valid;
       bool invalid_size = (info.bytes == 0) || (info.bytes > buf.size());
       bool invalid_name = info.name.empty();
@@ -3350,9 +3352,9 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   LLDB_SCOPED_TIMER();
   m_ast_context_ap.reset(swift::ASTContext::get(
-      GetLanguageOptions(), GetTypeCheckerOptions(), GetSearchPathOptions(),
-      GetClangImporterOptions(), GetSymbolGraphOptions(),
-      GetSourceManager(), GetDiagnosticEngine()));
+      GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
+      GetSearchPathOptions(), GetClangImporterOptions(),
+      GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine()));
   m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
