@@ -7,25 +7,33 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VECTOR_SPLICE (index)
 ;
 
+define <vscale x 16 x i8> @splice_nxv16i8_zero_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: splice_nxv16i8_zero_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 0)
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 16 x i8> @splice_nxv16i8_first_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i8_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 0)
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 1)
   ret <vscale x 16 x i8> %res
 }
 
 define <vscale x 16 x i8> @splice_nxv16i8_last_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i8_last_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #15
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #255
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 15)
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 255)
   ret <vscale x 16 x i8> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 16 x i8> @splice_nxv16i8_clamped_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i8_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -35,8 +43,8 @@ define <vscale x 16 x i8> @splice_nxv16i8_clamped_idx(<vscale x 16 x i8> %a, <vs
 ; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w10, #16
-; CHECK-NEXT:    cmp x9, #16
+; CHECK-NEXT:    mov w10, #256
+; CHECK-NEXT:    cmp x9, #256
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x9, x10, lo
@@ -44,29 +52,29 @@ define <vscale x 16 x i8> @splice_nxv16i8_clamped_idx(<vscale x 16 x i8> %a, <vs
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 16)
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 256)
   ret <vscale x 16 x i8> %res
 }
 
 define <vscale x 8 x i16> @splice_nxv8i16_first_idx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i16_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 0)
+  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 1)
   ret <vscale x 8 x i16> %res
 }
 
 define <vscale x 8 x i16> @splice_nxv8i16_last_idx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i16_last_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #14
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 7)
+  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 127)
   ret <vscale x 8 x i16> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 8 x i16> @splice_nxv8i16_clamped_idx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i16_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -76,8 +84,8 @@ define <vscale x 8 x i16> @splice_nxv8i16_clamped_idx(<vscale x 8 x i16> %a, <vs
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #8
-; CHECK-NEXT:    cmp x10, #8
+; CHECK-NEXT:    mov w9, #128
+; CHECK-NEXT:    cmp x10, #128
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -85,29 +93,29 @@ define <vscale x 8 x i16> @splice_nxv8i16_clamped_idx(<vscale x 8 x i16> %a, <vs
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 8)
+  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 128)
   ret <vscale x 8 x i16> %res
 }
 
 define <vscale x 4 x i32> @splice_nxv4i32_first_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 0)
+  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 1)
   ret <vscale x 4 x i32> %res
 }
 
 define <vscale x 4 x i32> @splice_nxv4i32_last_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32_last_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #12
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 3)
+  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 63)
   ret <vscale x 4 x i32> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 4 x i32> @splice_nxv4i32_clamped_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -117,8 +125,8 @@ define <vscale x 4 x i32> @splice_nxv4i32_clamped_idx(<vscale x 4 x i32> %a, <vs
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #4
-; CHECK-NEXT:    cmp x10, #4
+; CHECK-NEXT:    mov w9, #64
+; CHECK-NEXT:    cmp x10, #64
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -126,21 +134,12 @@ define <vscale x 4 x i32> @splice_nxv4i32_clamped_idx(<vscale x 4 x i32> %a, <vs
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 4)
+  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 64)
   ret <vscale x 4 x i32> %res
 }
 
 define <vscale x 2 x i64> @splice_nxv2i64_first_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i64_first_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 0)
-  ret <vscale x 2 x i64> %res
-}
-
-define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
-; CHECK-LABEL: splice_nxv2i64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
@@ -148,7 +147,16 @@ define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscal
   ret <vscale x 2 x i64> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: splice_nxv2i64_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 31)
+  ret <vscale x 2 x i64> %res
+}
+
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 2 x i64> @splice_nxv2i64_clamped_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i64_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -158,8 +166,8 @@ define <vscale x 2 x i64> @splice_nxv2i64_clamped_idx(<vscale x 2 x i64> %a, <vs
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #2
-; CHECK-NEXT:    cmp x10, #2
+; CHECK-NEXT:    mov w9, #32
+; CHECK-NEXT:    cmp x10, #32
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -167,7 +175,7 @@ define <vscale x 2 x i64> @splice_nxv2i64_clamped_idx(<vscale x 2 x i64> %a, <vs
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 2)
+  %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 32)
   ret <vscale x 2 x i64> %res
 }
 
@@ -205,31 +213,31 @@ define <vscale x 2 x half> @splice_nxv2f16_neg2_idx(<vscale x 2 x half> %a, <vsc
 define <vscale x 2 x half> @splice_nxv2f16_first_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f16_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 0)
-  ret <vscale x 2 x half> %res
-}
-
-define <vscale x 2 x half> @splice_nxv2f16_1_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv2f16_1_idx:
-; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 1)
   ret <vscale x 2 x half> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
 define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f16_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 31)
+  ret <vscale x 2 x half> %res
+}
+
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
+define <vscale x 2 x half> @splice_nxv2f16_clamped_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
+; CHECK-LABEL: splice_nxv2f16_clamped_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    sub x10, x10, #1
-; CHECK-NEXT:    mov w9, #2
-; CHECK-NEXT:    cmp x10, #2
+; CHECK-NEXT:    mov w9, #32
+; CHECK-NEXT:    cmp x10, #32
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -241,7 +249,7 @@ define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vsc
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 2)
+  %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 32)
   ret <vscale x 2 x half> %res
 }
 
@@ -279,31 +287,31 @@ define <vscale x 4 x half> @splice_nxv4f16_neg3_idx(<vscale x 4 x half> %a, <vsc
 define <vscale x 4 x half> @splice_nxv4f16_first_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f16_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 0)
+  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 1)
   ret <vscale x 4 x half> %res
 }
 
-define <vscale x 4 x half> @splice_nxv4f16_3_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv4f16_3_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #12
-; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 3)
-  ret <vscale x 4 x half> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than VL-1.
 define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f16_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 63)
+  ret <vscale x 4 x half> %res
+}
+
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
+define <vscale x 4 x half> @splice_nxv4f16_clamped_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
+; CHECK-LABEL: splice_nxv4f16_clamped_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    cntw x10
 ; CHECK-NEXT:    sub x10, x10, #1
-; CHECK-NEXT:    mov w9, #4
-; CHECK-NEXT:    cmp x10, #4
+; CHECK-NEXT:    mov w9, #64
+; CHECK-NEXT:    cmp x10, #64
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -315,30 +323,29 @@ define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vsc
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 4)
+  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 64)
   ret <vscale x 4 x half> %res
 }
-
 
 define <vscale x 8 x half> @splice_nxv8f16_first_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv8f16_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 0)
+  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 1)
   ret <vscale x 8 x half> %res
 }
 
 define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv8f16_last_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #14
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 7)
+  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 127)
   ret <vscale x 8 x half> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 8 x half> @splice_nxv8f16_clamped_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv8f16_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -348,8 +355,8 @@ define <vscale x 8 x half> @splice_nxv8f16_clamped_idx(<vscale x 8 x half> %a, <
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #8
-; CHECK-NEXT:    cmp x10, #8
+; CHECK-NEXT:    mov w9, #128
+; CHECK-NEXT:    cmp x10, #128
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -357,7 +364,7 @@ define <vscale x 8 x half> @splice_nxv8f16_clamped_idx(<vscale x 8 x half> %a, <
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 8)
+  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 128)
   ret <vscale x 8 x half> %res
 }
 
@@ -395,31 +402,31 @@ define <vscale x 2 x float> @splice_nxv2f32_neg2_idx(<vscale x 2 x float> %a, <v
 define <vscale x 2 x float> @splice_nxv2f32_first_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f32_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 0)
-  ret <vscale x 2 x float> %res
-}
-
-define <vscale x 2 x float> @splice_nxv2f32_1_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv2f32_1_idx:
-; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 1)
   ret <vscale x 2 x float> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
 define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f32_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 31)
+  ret <vscale x 2 x float> %res
+}
+
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
+define <vscale x 2 x float> @splice_nxv2f32_clamped_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
+; CHECK-LABEL: splice_nxv2f32_clamped_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    sub x10, x10, #1
-; CHECK-NEXT:    mov w9, #2
-; CHECK-NEXT:    cmp x10, #2
+; CHECK-NEXT:    mov w9, #32
+; CHECK-NEXT:    cmp x10, #32
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -431,29 +438,29 @@ define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <v
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 2)
+  %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 32)
   ret <vscale x 2 x float> %res
 }
 
 define <vscale x 4 x float> @splice_nxv4f32_first_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f32_first_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 0)
+  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 1)
   ret <vscale x 4 x float> %res
 }
 
 define <vscale x 4 x float> @splice_nxv4f32_last_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f32_last_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #12
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 3)
+  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 63)
   ret <vscale x 4 x float> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 4 x float> @splice_nxv4f32_clamped_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f32_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -463,8 +470,8 @@ define <vscale x 4 x float> @splice_nxv4f32_clamped_idx(<vscale x 4 x float> %a,
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #4
-; CHECK-NEXT:    cmp x10, #4
+; CHECK-NEXT:    mov w9, #64
+; CHECK-NEXT:    cmp x10, #64
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -472,21 +479,12 @@ define <vscale x 4 x float> @splice_nxv4f32_clamped_idx(<vscale x 4 x float> %a,
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 4)
+  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 64)
   ret <vscale x 4 x float> %res
 }
 
 define <vscale x 2 x double> @splice_nxv2f64_first_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f64_first_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 0)
-  ret <vscale x 2 x double> %res
-}
-
-define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
-; CHECK-LABEL: splice_nxv2f64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
@@ -494,7 +492,16 @@ define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, 
   ret <vscale x 2 x double> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than VL-1.
+define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
+; CHECK-LABEL: splice_nxv2f64_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 31)
+  ret <vscale x 2 x double> %res
+}
+
+; Ensure index is clamped when we cannot prove it's less than 2048-bit.
 define <vscale x 2 x double> @splice_nxv2f64_clamped_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f64_clamped_idx:
 ; CHECK:       // %bb.0:
@@ -504,8 +511,8 @@ define <vscale x 2 x double> @splice_nxv2f64_clamped_idx(<vscale x 2 x double> %
 ; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #2
-; CHECK-NEXT:    cmp x10, #2
+; CHECK-NEXT:    mov w9, #32
+; CHECK-NEXT:    cmp x10, #32
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -513,7 +520,7 @@ define <vscale x 2 x double> @splice_nxv2f64_clamped_idx(<vscale x 2 x double> %
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 2)
+  %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 32)
   ret <vscale x 2 x double> %res
 }
 
