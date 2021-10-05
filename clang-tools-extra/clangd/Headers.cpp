@@ -56,6 +56,8 @@ public:
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
       Inc.FileKind = FileKind;
       Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
+      if (File)
+        Inc.HeaderID = static_cast<unsigned>(Out->getOrCreateID(File));
     }
 
     // Record include graph (not just for main-file includes)
