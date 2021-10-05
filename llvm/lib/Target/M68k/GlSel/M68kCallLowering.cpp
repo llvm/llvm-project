@@ -33,7 +33,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override {
+                        CCValAssign VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -110,7 +110,7 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void M68kIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
-                                                CCValAssign &VA) {
+                                                CCValAssign VA) {
   MIRBuilder.getMRI()->addLiveIn(PhysReg);
   MIRBuilder.getMBB().addLiveIn(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);

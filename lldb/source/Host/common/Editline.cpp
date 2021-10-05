@@ -1560,7 +1560,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   if (!interrupted) {
     // Save the completed entry in history before returning. Don't save empty
     // input as that just clutters the command history.
-    if (m_input_lines.size() > 1 || !m_input_lines.front().empty())
+    if (!m_input_lines.empty())
       m_history_sp->Enter(CombineLines(m_input_lines).c_str());
 
     lines = GetInputAsStringList();

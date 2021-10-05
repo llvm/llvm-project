@@ -30,9 +30,9 @@ body:             |
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.v2ptr)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK-NEXT: $x0 = COPY [[UV]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UV1]](s64)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK-NEXT: $x2 = COPY [[UV2]](s64)
     ; CHECK-NEXT: $x3 = COPY [[UV3]](s64)
     ; CHECK-NEXT: BL &__udivti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
@@ -72,9 +72,9 @@ body:             |
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.v2ptr)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK-NEXT: $x0 = COPY [[UV]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UV1]](s64)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK-NEXT: $x2 = COPY [[UV2]](s64)
     ; CHECK-NEXT: $x3 = COPY [[UV3]](s64)
     ; CHECK-NEXT: BL &__divti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
