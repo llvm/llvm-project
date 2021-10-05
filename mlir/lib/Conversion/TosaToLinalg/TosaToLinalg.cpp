@@ -566,6 +566,19 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       return rewriter.create<mlir::SIToFPOp>(loc, resultTypes, args,
                                              mlir::None);
 
+    // Unsigned integers need an unrealized cast so that they can be passed
+    // to UIToFP.
+    if (srcTy.isUnsignedInteger() && dstTy.isa<FloatType>()) {
+      auto unrealizedCast =
+          rewriter
+              .create<UnrealizedConversionCastOp>(
+                  loc, rewriter.getIntegerType(srcTy.getIntOrFloatBitWidth()),
+                  args[0])
+              .getResult(0);
+      return rewriter.create<mlir::UIToFPOp>(loc, resultTypes[0],
+                                             unrealizedCast);
+    }
+
     // Casting to boolean, floats need to only be checked as not-equal to zero.
     if (srcTy.isa<FloatType>() && dstTy.isInteger(1)) {
       Value zero =
