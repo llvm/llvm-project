@@ -168,6 +168,19 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_2_0
 
+/**
+ * The function was introduced or changed in version 2.2 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.2"``.
+ */
+#define AMD_COMGR_VERSION_2_2
+
+/**
+ * The function was introduced or changed in version 2.3 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.3"``.
+ */
+#define AMD_COMGR_VERSION_2_3
+
+
 /** @} */
 
 /**
@@ -554,6 +567,38 @@ amd_comgr_set_data(
   amd_comgr_data_t data,
   size_t size,
   const char* bytes) AMD_COMGR_VERSION_1_8;
+
+/**
+ * @brief For the given open posix file descriptor, map a slice of the
+ * file into the data object. The slice is specified by @p offset and @p size.
+ * Internally this API calls amd_comgr_set_data and resets data object's
+ * current state.
+ *
+ * @param[in, out] data The data object to update.
+ *
+ * @param[in] file_descriptor The native file descriptor for an open file.
+ * The @p file_descriptor must not be passed into a system I/O function
+ * by any other thread while this function is executing.  The offset in
+ * the file descriptor may be updated based on the requested size and
+ * underlying platform. The @p file_descriptor may be closed immediately
+ * after this function returns.
+ *
+ * @param[in] offset position relative to the start of the file
+ * specifying the beginning of the slice in @p file_descriptor.
+ *
+ * @param[in] size Size in bytes of the slice.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The operation is successful.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p data is an invalid or
+ * the map operation failed.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_set_data_from_file_slice(
+    amd_comgr_data_t data,
+    int file_descriptor,
+    uint64_t offset,
+    uint64_t size) AMD_COMGR_VERSION_2_3;
 
 /**
  * @brief Set the name associated with a data object.
@@ -2099,6 +2144,92 @@ amd_comgr_disassemble_instruction(
   uint64_t address,
   void *user_data,
   uint64_t *size) AMD_COMGR_VERSION_1_8;
+
+/**
+ * @brief Demangle a symbol name.
+ *
+ * @param[in] mangled_symbol_name A data object of kind @p
+ * AMD_COMGR_DATA_KIND_BYTES containing the mangled symbol name.
+ *
+ * @param[out] demangled_symbol_name A handle to the data object of kind @p
+ * AMD_COMGR_DATA_KIND_BYTES created and set to contain the demangled symbol
+ * name in case of successful completion. The handle must be released using
+ * @c amd_comgr_release_data. @p demangled_symbol_name is not updated for
+ * an error case.
+ *
+ * @note If the @p mangled_symbol_name cannot be demangled, it will be copied
+ * without changes to the @p demangled_symbol_name and AMD_COMGR_STATUS_SUCCESS
+ * is returned.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p mangled_symbol_name is
+ * an invalid data object or not of kind @p AMD_COMGR_DATA_KIND_BYTES or
+ * @p demangled_symbol_name is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_demangle_symbol_name(
+    amd_comgr_data_t mangled_symbol_name,
+    amd_comgr_data_t *demangled_symbol_name) AMD_COMGR_VERSION_2_2;
+
+/**
+ * @brief A data structure for Code object information.
+ */
+typedef struct code_object_info_s {
+  /**
+   * ISA name representing the code object.
+   */
+  const char *isa;
+  /**
+   * The size of the code object.
+   */
+  size_t size;
+  /*
+   * The location of code object from the beginning
+   * of code object bundle.
+   */
+  uint64_t offset;
+} amd_comgr_code_object_info_t;
+
+/**
+ * @ brief Given a bundled code object and list of target id strings, extract
+ * correponding code object information.
+ *
+ * @param[in] data The data object for bundled code object. This should be
+ * of kind AMD_COMGR_DATA_KIND_FATBIN or AMD_COMGR_DATA_KIND_EXECUTABLE or
+ * AMD_COMGR_DATA_KIND_BYTES. The API interprets the data object of kind
+ * AMD_COMGR_DATA_KIND_FATBIN as a clang offload bundle and of kind
+ * AMD_COMGR_DATA_KIND_EXECUTABLE as an executable shared object. For a data
+ * object of type AMD_COMGR_DATA_KIND_BYTES the API first inspects the data
+ * passed to determine if it is a fatbin or an executable and performs
+ * the lookup.
+ *
+ * @param[in, out] info_list A list of code object information structure
+ * initialized with null terminated target id strings. If the target id
+ * is matched in the code object bundle the corresponding code object
+ * information is updated with offset and size of the code object. If the
+ * target id is not found the offset and size are set to 0.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR The code object bundle header is incorrect
+ * or reading bundle entries failed.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p data is not of
+ * kind AMD_COMGR_DATA_KIND_FATBIN, or AMD_COMGR_DATA_KIND_BYTES or
+ * AMD_COMGR_DATA_KIND_EXECUTABLE or either @p info_list is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if the @p data has
+ * invalid data.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_lookup_code_object(
+    amd_comgr_data_t data,
+    amd_comgr_code_object_info_t *info_list,
+    size_t info_list_size) AMD_COMGR_VERSION_2_3;
 
 /** @} */
 

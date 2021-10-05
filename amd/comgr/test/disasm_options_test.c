@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
                                        &Count);
   checkError(Status, "amd_comgr_action_data_count");
   if (Count != 1) {
-    printf("wrong number of source data objects (%ld returned, expected 1)\n",
+    printf("wrong number of source data objects (%zd returned, expected 1)\n",
            Count);
     exit(1);
   }
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
       amd_comgr_action_data_count(DataSetOut, AMD_COMGR_DATA_KIND_LOG, &Count);
   checkError(Status, "amd_comgr_action_data_count");
   if (Count != 1) {
-    printf("wrong number of log data objects (%ld returned, expected 1)\n",
+    printf("wrong number of log data objects (%zd returned, expected 1)\n",
            Count);
     exit(1);
   }

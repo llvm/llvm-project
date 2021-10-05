@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.1.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "2.3.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 include(GNUInstallDirs)
@@ -154,18 +154,13 @@ if (UNIX)
     endif()
   endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0" "/wd4244")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
+    "/wd4244" #[[Suppress 'argument' : conversion from 'type1' to 'type2', possible loss of data]]
+    "/wd4624" #[[Suppress 'derived class' : destructor could not be generated because a base class destructor is inaccessible]]
+    "/wd4267" #[[Suppress 'var' : conversion from 'size_t' to 'type', possible loss of data]]
+    "/wd4291" #[[Suppress 'declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception]]
+    "/wd4146" #[[Suppress 'unary minus operator applied to unsigned type, result still unsigned]])
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
-endif()
-
-if (ROCM_FOUND)
-  get_filename_component(ROCM_INSTALL_PATH "${ROCM_DIR}/../../.." ABSOLUTE)
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
-    ROCM_INSTALL_PATH=\"${ROCM_INSTALL_PATH}\")
-else()
-  message("ROCM not FOUND")
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
-    ROCM_INSTALL_PATH=\"\")
 endif()
 
 # Windows is strict about visibility of exports in shared libraries, so we ask
@@ -352,6 +347,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Debian package specific variables
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo5")
   if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
     set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   else()
@@ -359,6 +355,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   # RPM package specific variables
+  set(CPACK_RPM_PACKAGE_REQUIRES "ncurses")
   if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_PACKAGING_INSTALL_PREFIX}")
   endif()

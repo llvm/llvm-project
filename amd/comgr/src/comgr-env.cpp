@@ -246,11 +246,6 @@ InstallationDetector *getDetectorImpl() {
   static const char *EnvROCMPath = std::getenv("ROCM_PATH");
   if (EnvROCMPath) {
     ROCmInstallPath = EnvROCMPath;
-  } else {
-    const char *BuildROCMPath = ROCM_INSTALL_PATH;
-    if (StringRef(BuildROCMPath) != "") {
-      ROCmInstallPath = BuildROCMPath;
-    }
   }
 
   InstallationDetector *Detector;

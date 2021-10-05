@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     if (Count == 1) {
       printf("Passed, output 1 relocatable object\n");
     } else {
-      printf("Failed, output %ld relocatable objects (should output 1)\n",
+      printf("Failed, output %zd relocatable objects (should output 1)\n",
              Count);
       exit(1);
     }

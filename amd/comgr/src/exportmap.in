@@ -55,3 +55,13 @@ global: amd_comgr_action_info_get_isa_name;
         amd_comgr_get_isa_metadata;
         amd_comgr_get_isa_name;
 } @amd_comgr_NAME@_1.8;
+
+@amd_comgr_NAME@_2.2 {
+global: amd_comgr_demangle_symbol_name;
+} @amd_comgr_NAME@_2.0;
+
+@amd_comgr_NAME@_2.3 {
+global: amd_comgr_set_data_from_file_slice;
+        amd_comgr_lookup_code_object;
+} @amd_comgr_NAME@_2.2;
+

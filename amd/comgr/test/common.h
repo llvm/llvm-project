@@ -37,10 +37,21 @@
 #define COMGR_TEST_COMMON_H
 
 #include "amd_comgr.h"
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else // Windows
+#include <io.h>
+#endif
+#include <errno.h>
+#include <fcntl.h>
 
 void fail(const char *format, ...) {
   va_list ap;
@@ -92,6 +103,32 @@ void checkError(amd_comgr_status_t status, const char *str) {
   }
 }
 
+void dumpData(amd_comgr_data_t Data, const char *OutFile) {
+  size_t size;
+  char *bytes = NULL;
+  amd_comgr_status_t status;
+
+  status = amd_comgr_get_data(Data, &size, NULL);
+  checkError(status, "amd_comgr_get_data");
+
+  bytes = (char *)malloc(size);
+  if (!bytes)
+    fail("malloc");
+
+  status = amd_comgr_get_data(Data, &size, bytes);
+  checkError(status, "amd_comgr_get_data");
+
+  FILE *fp = fopen(OutFile, "wb");
+  if (!fp)
+    fail("fopen : %s", OutFile);
+
+  size_t ret = fwrite(bytes, sizeof(char), size, fp);
+  if (ret != size)
+    fail("fwrite");
+
+  fclose(fp);
+}
+
 amd_comgr_status_t printSymbol(amd_comgr_symbol_t symbol, void *userData) {
   amd_comgr_status_t status;
 
@@ -125,7 +162,8 @@ amd_comgr_status_t printSymbol(amd_comgr_symbol_t symbol, void *userData) {
                                      (void *)&value);
   checkError(status, "amd_comgr_symbol_get_info_6");
 
-  printf("%d:  name=%s, type=%d, size=%lu, undef:%d, value:%lu\n",
+  printf("%d:  name=%s, type=%d, size=%" PRIu64 ", undef:%d, value:%" PRIu64
+         "I64u\n",
          *(int *)userData, name, type, size, undefined ? 1 : 0, value);
   *(int *)userData += 1;
 
@@ -180,7 +218,7 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_list_size(value, &size);
     checkError(status, "amd_comgr_get_metadata_list_size");
-    printf("LIST %s %ld entries = \n", keybuf, size);
+    printf("LIST %s %zd entries = \n", keybuf, size);
     for (size_t i = 0; i < size; i++) {
       status = amd_comgr_index_list_metadata(value, i, &son);
       checkError(status, "amd_comgr_index_list_metadata");
@@ -196,7 +234,7 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_map_size(value, &size);
     checkError(status, "amd_comgr_get_metadata_map_size");
-    printf("MAP %ld entries = \n", size);
+    printf("MAP %zd entries = \n", size);
     status = amd_comgr_iterate_map_metadata(value, printEntry, data);
     checkError(status, "amd_comgr_iterate_map_metadata");
     *indent = *indent > 0 ? *indent - 1 : 0;
@@ -230,7 +268,7 @@ void checkLogs(const char *id, amd_comgr_data_set_t dataSet,
     status = amd_comgr_get_data(data, &size, NULL);
     checkError(status, "amd_comgr_get_data");
 
-    char *bytes = malloc(size + 1);
+    char *bytes = (char *)malloc(size + 1);
     if (!bytes)
       fail("malloc");
     status = amd_comgr_get_data(data, &size, bytes);
@@ -280,6 +318,31 @@ void checkCount(const char *id, amd_comgr_data_set_t dataSet,
   if (count != expected)
     fail("%s failed: produced %zu %s objects (expected %zu)\n", id, count,
          dataKindString(dataKind), expected);
+}
+
+size_t WriteFile(int FD, const char *Buffer, size_t Size) {
+  size_t BytesWritten = 0;
+
+  while (BytesWritten < Size) {
+#if defined(_WIN32) || defined(_WIN64)
+    size_t Ret =
+        _write(FD, Buffer + BytesWritten, (unsigned int)(Size - BytesWritten));
+#else
+    size_t Ret = write(FD, Buffer + BytesWritten, Size - BytesWritten);
+#endif
+    if (Ret == 0) {
+      break;
+    } else if (Ret < 0) {
+      if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+        break;
+      }
+      printf("Write failed with errno %d\n", errno);
+    } else {
+      BytesWritten += Ret;
+    }
+  }
+
+  return BytesWritten;
 }
 
 #endif // COMGR_TEST_COMMON_H

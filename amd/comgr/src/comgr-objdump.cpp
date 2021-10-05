@@ -334,25 +334,25 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
+[[noreturn]] static void error(Twine Message) {
   errs() << ToolName << ": " << Message << ".\n";
   errs().flush();
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message) {
+[[noreturn]] static void reportError(StringRef File, Twine Message) {
   errs() << ToolName << ": '" << File << "': " << Message << ".\n";
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File,
+[[noreturn]] static void reportError(StringRef File,
                                                 std::error_code EC) {
   assert(EC);
   errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, llvm::Error E) {
+[[noreturn]] static void reportError(StringRef File, llvm::Error E) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -362,7 +362,7 @@ static LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, llvm::Error E) {
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void
+[[noreturn]] static void
 reportError(StringRef ArchiveName, StringRef FileName, llvm::Error E,
             StringRef ArchitectureName = StringRef()) {
   assert(E);
@@ -383,7 +383,7 @@ reportError(StringRef ArchiveName, StringRef FileName, llvm::Error E,
   exit(1);
 }
 
-static LLVM_ATTRIBUTE_NORETURN void
+[[noreturn]] static void
 reportError(StringRef ArchiveName, const object::Archive::Child &C,
             llvm::Error E, StringRef ArchitectureName = StringRef()) {
   Expected<StringRef> NameOrErr = C.getName();
@@ -398,7 +398,7 @@ reportError(StringRef ArchiveName, const object::Archive::Child &C,
   }
 }
 
-static LLVM_ATTRIBUTE_NORETURN void reportError(llvm::Error E, StringRef File) {
+[[noreturn]] static void reportError(llvm::Error E, StringRef File) {
   reportError(File, std::move(E));
 }
 
