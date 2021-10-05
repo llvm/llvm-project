@@ -59,9 +59,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace clang;
 
-namespace {
-const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
-} // anonymous namespace
+static const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 
 ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
