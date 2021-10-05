@@ -132,7 +132,8 @@ define <4 x i1> @ins2_ins2_f32_uses(float %x, float %y) {
 ; CHECK-NEXT:    call void @usef(<4 x float> [[I0]])
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 2
 ; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp oeq float [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[R_SCALAR]], i64 2
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %i0 = insertelement <4 x float> undef, float %x, i32 2

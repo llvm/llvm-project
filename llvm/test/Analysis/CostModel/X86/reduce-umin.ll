@@ -12,26 +12,26 @@
 define i32 @reduce_i64(i32 %arg) {
 ; SSE2-LABEL: 'reduce_i64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'reduce_i64'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'reduce_i64'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'reduce_i64'
@@ -46,16 +46,16 @@ define i32 @reduce_i64(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'reduce_i64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umin.v1i64(<1 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4 = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8 = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16 = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'reduce_i64'
@@ -76,19 +76,19 @@ define i32 @reduce_i64(i32 %arg) {
 
 define i32 @reduce_i32(i32 %arg) {
 ; SSE2-LABEL: 'reduce_i32'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V16 = call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V32 = call i32 @llvm.vector.reduce.umin.v32i32(<32 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2 = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V4 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V16 = call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V32 = call i32 @llvm.vector.reduce.umin.v32i32(<32 x i32> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'reduce_i32'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V16 = call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V32 = call i32 @llvm.vector.reduce.umin.v32i32(<32 x i32> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2 = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V4 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V16 = call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V32 = call i32 @llvm.vector.reduce.umin.v32i32(<32 x i32> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE4-LABEL: 'reduce_i32'
@@ -136,18 +136,18 @@ define i32 @reduce_i16(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i16 @llvm.vector.reduce.umin.v2i16(<2 x i16> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4 = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'reduce_i16'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i16 @llvm.vector.reduce.umin.v2i16(<2 x i16> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4 = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE4-LABEL: 'reduce_i16'
@@ -183,7 +183,7 @@ define i32 @reduce_i16(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i16'
@@ -201,7 +201,7 @@ define i32 @reduce_i16(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V32 = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V64 = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V2  = call i16 @llvm.vector.reduce.umin.v2i16(<2 x i16> undef)
@@ -271,7 +271,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32 = call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V64 = call i8 @llvm.vector.reduce.umin.v64i8(<64 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V128 = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128 = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i8'
@@ -291,7 +291,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32 = call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V64 = call i8 @llvm.vector.reduce.umin.v64i8(<64 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V128 = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128 = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V2   = call i8 @llvm.vector.reduce.umin.v2i8(<2 x i8> undef)
