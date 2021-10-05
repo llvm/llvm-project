@@ -2490,6 +2490,14 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
   LLDB_SCOPED_TIMER();
+  child_name = "";
+  child_byte_size = 0;
+  child_byte_offset = 0;
+  child_bitfield_bit_size = 0;
+  child_bitfield_bit_offset = 0;
+  child_is_base_class = false;
+  child_is_deref_of_parent = false;
+  language_flags = 0;
   auto fallback = [&]() -> CompilerType {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "Had to engage SwiftASTContext fallback for type %s.",
@@ -2648,13 +2656,13 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
 
 #ifndef NDEBUG
   std::string ast_child_name;
-  uint32_t ast_child_byte_size;
-  int32_t ast_child_byte_offset;
-  uint32_t ast_child_bitfield_bit_size;
-  uint32_t ast_child_bitfield_bit_offset;
-  bool ast_child_is_base_class;
-  bool ast_child_is_deref_of_parent;
-  uint64_t ast_language_flags;
+  uint32_t ast_child_byte_size = 0;
+  int32_t ast_child_byte_offset = 0;
+  uint32_t ast_child_bitfield_bit_size = 0;
+  uint32_t ast_child_bitfield_bit_offset = 0;
+  bool ast_child_is_base_class = false;
+  bool ast_child_is_deref_of_parent = false;
+  uint64_t ast_language_flags = 0;
   auto defer = llvm::make_scope_exit([&] {
     if (!ModuleList::GetGlobalModuleListProperties()
              .GetSwiftValidateTypeSystem())
