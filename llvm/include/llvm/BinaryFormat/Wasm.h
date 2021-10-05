@@ -139,6 +139,7 @@ struct WasmLocalDecl {
 
 struct WasmFunction {
   uint32_t Index;
+  uint32_t SigIndex;
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
