@@ -256,12 +256,13 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
   if (LeafLoc.Location.LineOffset & 0x80000000)
     return;
   // Use the maximum count of samples with same line location
-  ErrorOr<uint64_t> R = FunctionProfile.findSamplesAt(
-      LeafLoc.Location.LineOffset, LeafLoc.Location.Discriminator);
+  uint32_t Discriminator = getBaseDiscriminator(LeafLoc.Location.Discriminator);
+  ErrorOr<uint64_t> R =
+      FunctionProfile.findSamplesAt(LeafLoc.Location.LineOffset, Discriminator);
+
   uint64_t PreviousCount = R ? R.get() : 0;
   if (PreviousCount <= Count) {
-    FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset,
-                                   LeafLoc.Location.Discriminator,
+    FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
                                    Count - PreviousCount);
   }
 }
@@ -303,8 +304,11 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
   FunctionProfile->addTotalSamples(Count);
 
   for (size_t I = 1; I < FrameVec.size(); I++) {
+    LineLocation Callsite(
+        FrameVec[I - 1].Location.LineOffset,
+        getBaseDiscriminator(FrameVec[I - 1].Location.Discriminator));
     FunctionSamplesMap &SamplesMap =
-        FunctionProfile->functionSamplesAt(FrameVec[I - 1].Location);
+        FunctionProfile->functionSamplesAt(Callsite);
     auto Ret =
         SamplesMap.emplace(FrameVec[I].FuncName.str(), FunctionSamples());
     if (Ret.second) {
@@ -363,10 +367,12 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       const SampleContextFrameVector &FrameVec =
           Binary->getFrameLocationStack(Offset);
       if (!FrameVec.empty()) {
+        uint64_t DC = Count * getDuplicationFactor(
+                                  FrameVec.back().Location.Discriminator);
         FunctionSamples &FunctionProfile =
-            getLeafProfileAndAddTotalSamples(FrameVec, Count);
+            getLeafProfileAndAddTotalSamples(FrameVec, DC);
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
-                                            Count);
+                                            DC);
       }
       // Move to next IP within the range.
       IP.advance();
@@ -391,11 +397,13 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const SampleContextFrameVector &FrameVec =
         Binary->getFrameLocationStack(SourceOffset);
     if (!FrameVec.empty()) {
+      Count *= getDuplicationFactor(FrameVec.back().Location.Discriminator);
       FunctionSamples &FunctionProfile =
           getLeafProfileAndAddTotalSamples(FrameVec, Count);
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
-          FrameVec.back().Location.Discriminator, CalleeName, Count);
+          getBaseDiscriminator(FrameVec.back().Location.Discriminator),
+          CalleeName, Count);
     }
     // Add head samples for callee.
     FunctionSamples &CalleeProfile = getTopLevelFunctionProfile(CalleeName);
@@ -504,10 +512,12 @@ void CSProfileGenerator::populateBodySamplesForFunction(
       auto LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
       if (LeafLoc.hasValue()) {
         // Recording body sample for this specific context
-        updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
+        uint64_t DC =
+            Count * getDuplicationFactor(LeafLoc->Location.Discriminator);
+        updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, DC);
+        FunctionProfile.addTotalSamples(DC);
       }
-      // Accumulate total sample count even it's a line with invalid debug info
-      FunctionProfile.addTotalSamples(Count);
+
       // Move to next IP within the range
       IP.advance();
     }
@@ -534,9 +544,11 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
     if (!LeafLoc.hasValue())
       continue;
-    FunctionProfile.addCalledTargetSamples(LeafLoc->Location.LineOffset,
-                                           LeafLoc->Location.Discriminator,
-                                           CalleeName, Count);
+    Count *= getDuplicationFactor(LeafLoc->Location.Discriminator);
+    FunctionProfile.addCalledTargetSamples(
+        LeafLoc->Location.LineOffset,
+        getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
+        Count);
 
     // Record head sample for called target(callee)
     SampleContextFrameVector CalleeCtx(ContextId.begin(), ContextId.end());
