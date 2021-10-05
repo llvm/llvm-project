@@ -50,6 +50,8 @@
    LIBLLDB_LOG_STATE | LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_TARGET |              \
    LIBLLDB_LOG_COMMANDS)
 
+#define LIBLLDB_SWIFT_LOG_HEALTH (1u << 1)
+
 namespace lldb_private {
 
 class Log;
@@ -57,6 +59,8 @@ class Log;
 Log *GetLogIfAllCategoriesSet(uint32_t mask);
 
 Log *GetLogIfAnyCategoriesSet(uint32_t mask);
+
+Log *GetSwiftHealthLog();
 
 void InitializeLldbChannel();
 

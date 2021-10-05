@@ -49,10 +49,16 @@ static constexpr Log::Category g_categories[] = {
   {{"watch"}, {"log watchpoint related activities"}, LIBLLDB_LOG_WATCHPOINTS},
 };
 
+static constexpr Log::Category g_swift_categories[] = {
+  {{"health"}, {"log all messages related to lldb Swift operational health"}, LIBLLDB_SWIFT_LOG_HEALTH},
+};
+
 static Log::Channel g_log_channel(g_categories, LIBLLDB_LOG_DEFAULT);
+static Log::Channel g_swift_log_channel(g_swift_categories, LIBLLDB_SWIFT_LOG_HEALTH);
 
 void lldb_private::InitializeLldbChannel() {
   Log::Register("lldb", g_log_channel);
+  Log::Register("swift", g_swift_log_channel);
 }
 
 Log *lldb_private::GetLogIfAllCategoriesSet(uint32_t mask) {
@@ -61,4 +67,8 @@ Log *lldb_private::GetLogIfAllCategoriesSet(uint32_t mask) {
 
 Log *lldb_private::GetLogIfAnyCategoriesSet(uint32_t mask) {
   return g_log_channel.GetLogIfAny(mask);
+}
+
+Log *lldb_private::GetSwiftHealthLog() {
+  return g_swift_log_channel.GetLogIfAny(LIBLLDB_SWIFT_LOG_HEALTH);
 }
