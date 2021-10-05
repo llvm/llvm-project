@@ -582,7 +582,7 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
     raw_string_ostream Msg(msg);
     Msg << "Unknown special formatter '" << Code
          << "' for machine instr: " << *MI;
-    report_fatal_error(Msg.str());
+    report_fatal_error(Twine(Msg.str()));
   }
 }
 

@@ -453,7 +453,7 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
   raw_string_ostream Stream(Text);
   Stream << "Unrecognized relocation combination: width=" << Width
          << " kind=" << Kind;
-  report_fatal_error(Stream.str());
+  report_fatal_error(Twine(Stream.str()));
 }
 
 /// Some insns are not extended and thus have no bits. These cases require

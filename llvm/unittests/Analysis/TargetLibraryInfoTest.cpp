@@ -37,7 +37,7 @@ protected:
     Error.print("", os);
 
     if (!M)
-      report_fatal_error(os.str());
+      report_fatal_error(Twine(os.str()));
   }
 
   ::testing::AssertionResult isLibFunc(const Function *FDecl,

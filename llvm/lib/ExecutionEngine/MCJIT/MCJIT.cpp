@@ -218,8 +218,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(LoadedObject.takeError(), OS);
-    OS.flush();
-    report_fatal_error(Buf);
+    report_fatal_error(Twine(OS.str()));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
     Dyld.loadObject(*LoadedObject.get());
