@@ -466,9 +466,8 @@ private:
   bool translateSIToFP(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_SITOFP, U, MIRBuilder);
   }
-  bool translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder) {
-    return true;
-  }
+  bool translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateSExt(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_SEXT, U, MIRBuilder);
   }
