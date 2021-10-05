@@ -546,6 +546,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       LineOffset =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
       Discriminator = 0;
+    } else {
+      // Filter out invalid negative(int type) lineOffset
+      if (LineOffset & 0xffff0000)
+        return SampleContextFrameVector();
     }
 
     LineLocation Line(LineOffset, Discriminator);

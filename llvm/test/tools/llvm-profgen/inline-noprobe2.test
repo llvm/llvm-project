@@ -2,7 +2,7 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
-;CHECK:       partition_pivot_first:1050:5
+;CHECK:       partition_pivot_first:1045:5
 ;CHECK-NEXT:  0: 5
 ;CHECK-NEXT:  1: 5
 ;CHECK-NEXT:  2: 5
@@ -22,7 +22,7 @@
 ;CHECK-NEXT:   1: 6
 ;CHECK-NEXT:   2: 6
 ;CHECK-NEXT:   3: 6
-;CHECK-NEXT: partition_pivot_last:649:7
+;CHECK-NEXT: partition_pivot_last:647:7
 ;CHECK-NEXT:  1: 6
 ;CHECK-NEXT:  2: 6
 ;CHECK-NEXT:  3: 6
@@ -51,7 +51,7 @@
 ;CHECK-NEXT:   1: 5
 ;CHECK-NEXT:   2: 5
 ;CHECK-NEXT:   3: 5
-;CHECK-NEXT: quick_sort:414:25
+;CHECK-NEXT: quick_sort:318:25
 ;CHECK-NEXT:  1: 24
 ;CHECK-NEXT:  2: 12 partition_pivot_last:7 partition_pivot_first:5
 ;CHECK-NEXT:  3: 11 quick_sort:12

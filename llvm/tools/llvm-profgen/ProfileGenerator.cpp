@@ -252,9 +252,6 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
 void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
     FunctionSamples &FunctionProfile, const SampleContextFrame &LeafLoc,
     uint64_t Count) {
-  // Filter out invalid negative(int type) lineOffset
-  if (LeafLoc.Location.LineOffset & 0x80000000)
-    return;
   // Use the maximum count of samples with same line location
   uint32_t Discriminator = getBaseDiscriminator(LeafLoc.Location.Discriminator);
   ErrorOr<uint64_t> R =
