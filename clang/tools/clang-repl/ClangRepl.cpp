@@ -80,9 +80,6 @@ int main(int argc, const char **argv) {
   llvm::install_fatal_error_handler(LLVMErrorHandler,
                                     static_cast<void *>(&CI->getDiagnostics()));
 
-  // Load any requested plugins.
-  CI->LoadRequestedPlugins();
-
   auto Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
   for (const std::string &input : OptInputs) {
     if (auto Err = Interp->ParseAndExecute(input))

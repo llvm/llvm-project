@@ -65,8 +65,6 @@ public:
           case frontend::ParseSyntaxOnly:
             Act = CreateFrontendAction(CI);
             break;
-          case frontend::PluginAction:
-            LLVM_FALLTHROUGH;
           case frontend::EmitAssembly:
             LLVM_FALLTHROUGH;
           case frontend::EmitObj:
