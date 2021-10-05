@@ -8532,6 +8532,7 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitAtomicCmpSwapW(MI, MBB);
   case SystemZ::MVCSequence:
   case SystemZ::MVCLoop:
+  case SystemZ::MVCLoopVarLen:
     return emitMemMemWrapper(MI, MBB, SystemZ::MVC);
   case SystemZ::NCSequence:
   case SystemZ::NCLoop:
