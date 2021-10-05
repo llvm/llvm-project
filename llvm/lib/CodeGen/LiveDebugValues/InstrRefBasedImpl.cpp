@@ -2027,6 +2027,12 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     auto PHIRec = DebugPHIRecord(
         {InstrNum, MI.getParent(), Num, MTracker->lookupOrTrackRegister(Reg)});
     DebugPHINumToValue.push_back(PHIRec);
+
+    // Subsequent register operations, or variable locations, might occur for
+    // any of the subregisters of this DBG_PHIs operand. Ensure that all
+    // registers aliasing this register are tracked.
+    for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
+      MTracker->lookupOrTrackRegister(*RAI);
   } else {
     // The value is whatever's in this stack slot.
     assert(MO.isFI());
