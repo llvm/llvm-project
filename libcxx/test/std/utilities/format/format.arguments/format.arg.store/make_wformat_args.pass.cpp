@@ -22,10 +22,10 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  using Context [[maybe_unused]] =
-      std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>;
+  [[maybe_unused]] auto store = std::make_wformat_args(42, nullptr, false, 1.0);
 
-  std::make_wformat_args(42, nullptr, false, 1.0);
+  LIBCPP_STATIC_ASSERT(
+      std::same_as<decltype(store), std::__format_arg_store<std::wformat_context, int, nullptr_t, bool, double>>);
 
   return 0;
 }
