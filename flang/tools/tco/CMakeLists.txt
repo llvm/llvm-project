@@ -1,10 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 set(LIBS
-  FIRCodeGen
-  FIRDialect
-  FIRSupport
-  FIRTransforms
+  FIROptimizer
   ${dialect_libs}
   MLIRIR
   MLIRLLVMIR

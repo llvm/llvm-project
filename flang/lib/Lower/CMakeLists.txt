@@ -17,15 +17,11 @@ add_flang_library(FortranLower
   PFTBuilder.cpp
 
   DEPENDS
-  FIRDialect
-  FIRSupport
-  FIRTransforms
+  FIROptimizer
   ${dialect_libs}
 
   LINK_LIBS
-  FIRDialect
-  FIRSupport
-  FIRTransforms
+  FIROptimizer
   ${dialect_libs}
   FortranCommon
   FortranParser
