@@ -35,12 +35,6 @@
 #include <span>
 #endif
 
-#if TEST_STD_VER >= 11
-#define DELETE_FUNCTION = delete
-#else
-#define DELETE_FUNCTION
-#endif
-
 class T;  // incomplete
 
 class my_input_iterator
