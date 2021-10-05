@@ -540,8 +540,14 @@ void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
             E = F->arg_end();
        I != E; ++I, ++J)
     if (J != A && ValueState.count(I)) {
-      ValueState[J] = ValueState[I];
-      pushToWorkList(ValueState[J], J);
+      // Note: This previously looked like this:
+      // ValueState[J] = ValueState[I];
+      // This is incorrect because the DenseMap class may resize the underlying
+      // memory when inserting `J`, which will invalidate the reference to `I`.
+      // Instead, we make sure `J` exists, then set it to `I` afterwards.
+      auto &NewValue = ValueState[J];
+      NewValue = ValueState[I];
+      pushToWorkList(NewValue, J);
     }
 }
 
