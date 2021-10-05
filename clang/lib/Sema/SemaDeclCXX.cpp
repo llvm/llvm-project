@@ -8202,7 +8202,7 @@ private:
     if (ReturnFalse.isInvalid())
       return StmtError();
 
-    return S.ActOnIfStmt(Loc, false, Loc, nullptr,
+    return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, nullptr,
                          S.ActOnCondition(nullptr, Loc, NotCond.get(),
                                           Sema::ConditionKind::Boolean),
                          Loc, ReturnFalse.get(), SourceLocation(), nullptr);
@@ -8357,8 +8357,8 @@ private:
         return StmtError();
 
       // if (...)
-      return S.ActOnIfStmt(Loc, /*IsConstexpr=*/false, Loc, InitStmt, Cond, Loc,
-                           ReturnStmt.get(),
+      return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, InitStmt, Cond,
+                           Loc, ReturnStmt.get(),
                            /*ElseLoc=*/SourceLocation(), /*Else=*/nullptr);
     }
 

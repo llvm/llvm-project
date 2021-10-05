@@ -626,6 +626,13 @@ def ext_constexpr_if : ExtWarn<
 def warn_cxx14_compat_constexpr_if : Warning<
   "constexpr if is incompatible with C++ standards before C++17">,
   DefaultIgnore, InGroup<CXXPre17Compat>;
+def ext_consteval_if : ExtWarn<
+  "consteval if is a C++2b extension">,
+   InGroup<CXX2b>;
+def warn_cxx20_compat_consteval_if : Warning<
+  "consteval if is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+
 def ext_init_statement : ExtWarn<
   "'%select{if|switch}0' initialization statements are a C++17 extension">,
   InGroup<CXX17>;

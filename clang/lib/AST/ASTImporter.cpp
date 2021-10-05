@@ -6401,7 +6401,7 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
   if (Err)
     return std::move(Err);
 
-  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->isConstexpr(),
+  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->getStatementKind(),
                         ToInit, ToConditionVariable, ToCond, ToLParenLoc,
                         ToRParenLoc, ToThen, ToElseLoc, ToElse);
 }

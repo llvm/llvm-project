@@ -1339,7 +1339,10 @@ bool PluralMisuseChecker::MethodCrawler::EndVisitIfStmt(IfStmt *I) {
 }
 
 bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(const IfStmt *I) {
-  const Expr *Condition = I->getCond()->IgnoreParenImpCasts();
+  const Expr *Condition = I->getCond();
+  if (!Condition)
+    return true;
+  Condition = Condition->IgnoreParenImpCasts();
   if (isCheckingPlurality(Condition)) {
     MatchingStatements.push_back(I);
     InMatchingStatement = true;

@@ -188,6 +188,12 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
   BlockScope<Emitter> IfScope(this);
+
+  if (IS->isNonNegatedConsteval())
+    return visitStmt(IS->getThen());
+  if (IS->isNegatedConsteval())
+    return IS->getElse() ? visitStmt(IS->getElse()) : true;
+
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(IS->getInit()))
       return false;

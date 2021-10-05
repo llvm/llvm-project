@@ -31,6 +31,15 @@ namespace clang {
   /// Define the kind of constexpr specifier.
   enum class ConstexprSpecKind { Unspecified, Constexpr, Consteval, Constinit };
 
+  /// In an if statement, this denotes whether the the statement is
+  /// a constexpr or consteval if statement.
+  enum class IfStatementKind : unsigned {
+    Ordinary,
+    Constexpr,
+    ConstevalNonNegated,
+    ConstevalNegated
+  };
+
   /// Specifies the width of a type, e.g., short, long, or long long.
   enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };
 

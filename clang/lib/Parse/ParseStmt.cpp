@@ -1338,20 +1338,36 @@ struct MisleadingIndentationChecker {
 ///         'if' '(' expression ')' statement 'else' statement
 /// [C++]   'if' '(' condition ')' statement
 /// [C++]   'if' '(' condition ')' statement 'else' statement
+/// [C++23] 'if' '!' [opt] consteval compound-statement
+/// [C++23] 'if' '!' [opt] consteval compound-statement 'else' statement
 ///
 StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
 
   bool IsConstexpr = false;
+  bool IsConsteval = false;
+  SourceLocation NotLocation;
+  SourceLocation ConstevalLoc;
+
   if (Tok.is(tok::kw_constexpr)) {
     Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
                                         : diag::ext_constexpr_if);
     IsConstexpr = true;
     ConsumeToken();
-  }
+  } else {
+    if (Tok.is(tok::exclaim)) {
+      NotLocation = ConsumeToken();
+    }
 
-  if (Tok.isNot(tok::l_paren)) {
+    if (Tok.is(tok::kw_consteval)) {
+      Diag(Tok, getLangOpts().CPlusPlus2b ? diag::warn_cxx20_compat_consteval_if
+                                          : diag::ext_consteval_if);
+      IsConsteval = true;
+      ConstevalLoc = ConsumeToken();
+    }
+  }
+  if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1378,15 +1394,18 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   Sema::ConditionResult Cond;
   SourceLocation LParen;
   SourceLocation RParen;
-  if (ParseParenExprOrCondition(&InitStmt, Cond, IfLoc,
-                                IsConstexpr ? Sema::ConditionKind::ConstexprIf
-                                            : Sema::ConditionKind::Boolean,
-                                &LParen, &RParen))
-    return StmtError();
-
   llvm::Optional<bool> ConstexprCondition;
-  if (IsConstexpr)
-    ConstexprCondition = Cond.getKnownValue();
+  if (!IsConsteval) {
+
+    if (ParseParenExprOrCondition(&InitStmt, Cond, IfLoc,
+                                  IsConstexpr ? Sema::ConditionKind::ConstexprIf
+                                              : Sema::ConditionKind::Boolean,
+                                  &LParen, &RParen))
+      return StmtError();
+
+    if (IsConstexpr)
+      ConstexprCondition = Cond.getKnownValue();
+  }
 
   bool IsBracedThen = Tok.is(tok::l_brace);
 
@@ -1418,10 +1437,16 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation InnerStatementTrailingElseLoc;
   StmtResult ThenStmt;
   {
+    bool ShouldEnter =
+        (ConstexprCondition && !*ConstexprCondition) || IsConsteval;
+    Sema::ExpressionEvaluationContext Context =
+        Sema::ExpressionEvaluationContext::DiscardedStatement;
+    if (NotLocation.isInvalid() && IsConsteval)
+      Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+
     EnterExpressionEvaluationContext PotentiallyDiscarded(
-        Actions, Sema::ExpressionEvaluationContext::DiscardedStatement, nullptr,
-        Sema::ExpressionEvaluationContextRecord::EK_Other,
-        /*ShouldEnter=*/ConstexprCondition && !*ConstexprCondition);
+        Actions, Context, nullptr,
+        Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
   }
 
@@ -1456,11 +1481,16 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                           Tok.is(tok::l_brace));
 
     MisleadingIndentationChecker MIChecker(*this, MSK_else, ElseLoc);
+    bool ShouldEnter =
+        (ConstexprCondition && *ConstexprCondition) || IsConsteval;
+    Sema::ExpressionEvaluationContext Context =
+        Sema::ExpressionEvaluationContext::DiscardedStatement;
+    if (NotLocation.isValid() && IsConsteval)
+      Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
-        Actions, Sema::ExpressionEvaluationContext::DiscardedStatement, nullptr,
-        Sema::ExpressionEvaluationContextRecord::EK_Other,
-        /*ShouldEnter=*/ConstexprCondition && *ConstexprCondition);
+        Actions, Context, nullptr,
+        Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ElseStmt = ParseStatement();
 
     if (ElseStmt.isUsable())
@@ -1488,14 +1518,40 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
   }
 
+  if (IsConsteval) {
+    auto IsCompoundStatement = [](const Stmt *S) {
+      if (const auto *Outer = dyn_cast_or_null<AttributedStmt>(S))
+        S = Outer->getSubStmt();
+      return isa_and_nonnull<clang::CompoundStmt>(S);
+    };
+
+    if (!IsCompoundStatement(ThenStmt.get())) {
+      Diag(ConstevalLoc, diag::err_expected_after) << "consteval"
+                                                   << "{";
+      return StmtError();
+    }
+    if (!ElseStmt.isUnset() && !IsCompoundStatement(ElseStmt.get())) {
+      Diag(ElseLoc, diag::err_expected_after) << "else"
+                                              << "{";
+      return StmtError();
+    }
+  }
+
   // Now if either are invalid, replace with a ';'.
   if (ThenStmt.isInvalid())
     ThenStmt = Actions.ActOnNullStmt(ThenStmtLoc);
   if (ElseStmt.isInvalid())
     ElseStmt = Actions.ActOnNullStmt(ElseStmtLoc);
 
-  return Actions.ActOnIfStmt(IfLoc, IsConstexpr, LParen, InitStmt.get(), Cond,
-                             RParen, ThenStmt.get(), ElseLoc, ElseStmt.get());
+  IfStatementKind Kind = IfStatementKind::Ordinary;
+  if (IsConstexpr)
+    Kind = IfStatementKind::Constexpr;
+  else if (IsConsteval)
+    Kind = NotLocation.isValid() ? IfStatementKind::ConstevalNegated
+                                 : IfStatementKind::ConstevalNonNegated;
+
+  return Actions.ActOnIfStmt(IfLoc, Kind, LParen, InitStmt.get(), Cond, RParen,
+                             ThenStmt.get(), ElseLoc, ElseStmt.get());
 }
 
 /// ParseSwitchStatement

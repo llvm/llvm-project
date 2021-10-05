@@ -20,6 +20,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -160,8 +161,8 @@ protected:
 
     unsigned : NumStmtBits;
 
-    /// True if this if statement is a constexpr if.
-    unsigned IsConstexpr : 1;
+    /// Whether this is a constexpr if, or a consteval if, or neither.
+    unsigned Kind : 3;
 
     /// True if this if statement has storage for an else statement.
     unsigned HasElse : 1;
@@ -1950,8 +1951,8 @@ class IfStmt final
   unsigned elseOffset() const { return condOffset() + ElseOffsetFromCond; }
 
   /// Build an if/then/else statement.
-  IfStmt(const ASTContext &Ctx, SourceLocation IL, bool IsConstexpr, Stmt *Init,
-         VarDecl *Var, Expr *Cond, SourceLocation LParenLoc,
+  IfStmt(const ASTContext &Ctx, SourceLocation IL, IfStatementKind Kind,
+         Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LParenLoc,
          SourceLocation RParenLoc, Stmt *Then, SourceLocation EL, Stmt *Else);
 
   /// Build an empty if/then/else statement.
@@ -1960,9 +1961,9 @@ class IfStmt final
 public:
   /// Create an IfStmt.
   static IfStmt *Create(const ASTContext &Ctx, SourceLocation IL,
-                        bool IsConstexpr, Stmt *Init, VarDecl *Var, Expr *Cond,
-                        SourceLocation LPL, SourceLocation RPL, Stmt *Then,
-                        SourceLocation EL = SourceLocation(),
+                        IfStatementKind Kind, Stmt *Init, VarDecl *Var,
+                        Expr *Cond, SourceLocation LPL, SourceLocation RPL,
+                        Stmt *Then, SourceLocation EL = SourceLocation(),
                         Stmt *Else = nullptr);
 
   /// Create an empty IfStmt optionally with storage for an else statement,
@@ -2077,8 +2078,30 @@ public:
     *getTrailingObjects<SourceLocation>() = ElseLoc;
   }
 
-  bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
-  void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
+  bool isConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNonNegated ||
+           getStatementKind() == IfStatementKind::ConstevalNegated;
+  }
+
+  bool isNonNegatedConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNonNegated;
+  }
+
+  bool isNegatedConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNegated;
+  }
+
+  bool isConstexpr() const {
+    return getStatementKind() == IfStatementKind::Constexpr;
+  }
+
+  void setStatementKind(IfStatementKind Kind) {
+    IfStmtBits.Kind = static_cast<unsigned>(Kind);
+  }
+
+  IfStatementKind getStatementKind() const {
+    return static_cast<IfStatementKind>(IfStmtBits.Kind);
+  }
 
   /// If this is an 'if constexpr', determine which substatement will be taken.
   /// Otherwise, or if the condition is value-dependent, returns None.
@@ -2101,13 +2124,19 @@ public:
   // Iterators over subexpressions.  The iterators will include iterating
   // over the initialization expression referenced by the condition variable.
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
+    // We always store a condition, but there is none for consteval if
+    // statements, so skip it.
+    return child_range(getTrailingObjects<Stmt *>() +
+                           (isConsteval() ? thenOffset() : 0),
                        getTrailingObjects<Stmt *>() +
                            numTrailingObjects(OverloadToken<Stmt *>()));
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
+    // We always store a condition, but there is none for consteval if
+    // statements, so skip it.
+    return const_child_range(getTrailingObjects<Stmt *>() +
+                                 (isConsteval() ? thenOffset() : 0),
                              getTrailingObjects<Stmt *>() +
                                  numTrailingObjects(OverloadToken<Stmt *>()));
   }

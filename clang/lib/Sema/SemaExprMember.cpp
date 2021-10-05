@@ -144,6 +144,7 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   case Sema::ExpressionEvaluationContext::DiscardedStatement:
   case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+  case Sema::ExpressionEvaluationContext::ImmediateFunctionContext:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
     break;

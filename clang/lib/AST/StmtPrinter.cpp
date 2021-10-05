@@ -236,6 +236,22 @@ void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
 }
 
 void StmtPrinter::PrintRawIfStmt(IfStmt *If) {
+  if (If->isConsteval()) {
+    OS << "if ";
+    if (If->isNegatedConsteval())
+      OS << "!";
+    OS << "consteval";
+    OS << NL;
+    PrintStmt(If->getThen());
+    if (Stmt *Else = If->getElse()) {
+      Indent();
+      OS << "else";
+      PrintStmt(Else);
+      OS << NL;
+    }
+    return;
+  }
+
   OS << "if (";
   if (If->getInit())
     PrintInitStmt(If->getInit(), 4);

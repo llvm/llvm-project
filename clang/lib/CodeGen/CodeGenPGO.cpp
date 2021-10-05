@@ -649,6 +649,14 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitIfStmt(const IfStmt *S) {
     RecordStmtCount(S);
+
+    if (S->isConsteval()) {
+      const Stmt *Stm = S->isNegatedConsteval() ? S->getThen() : S->getElse();
+      if (Stm)
+        Visit(Stm);
+      return;
+    }
+
     uint64_t ParentCount = CurrentCount;
     if (S->getInit())
       Visit(S->getInit());
