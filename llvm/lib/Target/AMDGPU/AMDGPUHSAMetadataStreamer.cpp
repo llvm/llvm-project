@@ -798,7 +798,8 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   if (!HiddenArgNumBytes)
     return;
 
-  auto &DL = Func.getParent()->getDataLayout();
+  const Module *M = Func.getParent();
+  auto &DL = M->getDataLayout();
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
 
   if (HiddenArgNumBytes >= 8)
@@ -814,16 +815,16 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   auto Int8PtrTy =
       Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
-  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-  // "none" argument.
+  // Emit "printf buffer" argument if printf is used, emit "hostcall buffer"
+  // if "hostcall" module flag is set, otherwise emit dummy "none" argument.
   if (HiddenArgNumBytes >= 32) {
-    if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
+    if (M->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                     Args);
-    else if (Func.getParent()->getFunction("__ockl_hostcall_internal")) {
+    else if (M->getModuleFlag("amdgpu_hostcall")) {
       // The printf runtime binding pass should have ensured that hostcall and
       // printf are not used in the same module.
-      assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
+      assert(!M->getNamedMetadata("llvm.printf.fmts"));
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                     Args);
     } else
