@@ -642,7 +642,7 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 
 ; CHECK-NEXT:  .LBB49_2:
 ; CHECK-NEXT:    mv a4, zero
 ; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, mu
-; CHECK-NEXT:    vle1.v v25, (a0)
+; CHECK-NEXT:    vlm.v v25, (a0)
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    sub a0, a1, a2
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t

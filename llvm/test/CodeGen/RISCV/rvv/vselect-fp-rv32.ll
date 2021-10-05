@@ -435,7 +435,7 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-LABEL: vselect_legalize_regression:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vle1.v v25, (a0)
+; CHECK-NEXT:    vlm.v v25, (a0)
 ; CHECK-NEXT:    vmand.mm v1, v0, v25
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 3

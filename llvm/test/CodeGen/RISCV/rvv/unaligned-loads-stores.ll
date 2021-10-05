@@ -93,7 +93,7 @@ define <vscale x 1 x i1> @unaligned_load_nxv1i1_a1(<vscale x 1 x i1>* %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i1_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <vscale x 1 x i1>, <vscale x 1 x i1>* %ptr, align 1
   ret <vscale x 1 x i1> %v

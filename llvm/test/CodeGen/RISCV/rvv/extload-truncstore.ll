@@ -6,7 +6,7 @@ define <vscale x 1 x i8> @sextload_nxv1i1_nxv1i8(<vscale x 1 x i1>* %x) {
 ; CHECK-LABEL: sextload_nxv1i1_nxv1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v8, v25, -1, v0
 ; CHECK-NEXT:    ret
@@ -399,7 +399,7 @@ define void @truncstore_nxv1i8_nxv1i1(<vscale x 1 x i8> %x, <vscale x 1 x i1> *%
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vand.vi v25, v8, 1
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
-; CHECK-NEXT:    vse1.v v25, (a0)
+; CHECK-NEXT:    vsm.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 1 x i8> %x to <vscale x 1 x i1>
   store <vscale x 1 x i1> %y, <vscale x 1 x i1>* %z

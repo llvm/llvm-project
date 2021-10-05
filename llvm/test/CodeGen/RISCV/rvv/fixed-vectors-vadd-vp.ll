@@ -403,7 +403,7 @@ define <256 x i8> @vadd_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %ev
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
-; CHECK-NEXT:    vle1.v v26, (a0)
+; CHECK-NEXT:    vlm.v v26, (a0)
 ; CHECK-NEXT:    addi a3, a1, -128
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    mv a0, zero
@@ -462,7 +462,7 @@ define <256 x i8> @vadd_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, zero, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; CHECK-NEXT:    vle1.v v25, (a0)
+; CHECK-NEXT:    vlm.v v25, (a0)
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25

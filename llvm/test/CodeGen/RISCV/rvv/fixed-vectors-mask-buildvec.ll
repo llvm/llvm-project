@@ -767,10 +767,10 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV32-LMULMAX4-NEXT:    addi a1, zero, 64
 ; RV32-LMULMAX4-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
-; RV32-LMULMAX4-NEXT:    vle1.v v0, (a0)
+; RV32-LMULMAX4-NEXT:    vlm.v v0, (a0)
 ; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_1)
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI21_1)
-; RV32-LMULMAX4-NEXT:    vle1.v v8, (a0)
+; RV32-LMULMAX4-NEXT:    vlm.v v8, (a0)
 ; RV32-LMULMAX4-NEXT:    ret
 ;
 ; RV64-LMULMAX4-LABEL: buildvec_mask_optsize_v128i1:
@@ -800,7 +800,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV32-LMULMAX8-NEXT:    addi a1, zero, 128
 ; RV32-LMULMAX8-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; RV32-LMULMAX8-NEXT:    vle1.v v0, (a0)
+; RV32-LMULMAX8-NEXT:    vlm.v v0, (a0)
 ; RV32-LMULMAX8-NEXT:    ret
 ;
 ; RV64-LMULMAX8-LABEL: buildvec_mask_optsize_v128i1:
@@ -809,7 +809,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV64-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV64-LMULMAX8-NEXT:    addi a1, zero, 128
 ; RV64-LMULMAX8-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; RV64-LMULMAX8-NEXT:    vle1.v v0, (a0)
+; RV64-LMULMAX8-NEXT:    vlm.v v0, (a0)
 ; RV64-LMULMAX8-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>
 }
