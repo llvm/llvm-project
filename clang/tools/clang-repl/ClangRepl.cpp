@@ -32,7 +32,7 @@ static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::ZeroOrMore,
                                              llvm::cl::desc("[code to run]"));
 
-static void LLVMErrorHandler(void *UserData, const std::string &Message,
+static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
   auto &Diags = *static_cast<clang::DiagnosticsEngine *>(UserData);
 
