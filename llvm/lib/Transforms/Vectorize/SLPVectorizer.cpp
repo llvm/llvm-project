@@ -3198,10 +3198,42 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
+  SmallVector<int> ReuseShuffleIndicies;
+  SmallVector<Value *> UniqueValues;
+  auto &&TryToFindDuplicates = [&VL, &ReuseShuffleIndicies, &UniqueValues,
+                                &UserTreeIdx,
+                                this](const InstructionsState &S) {
+    // Check that every instruction appears once in this bundle.
+    DenseMap<Value *, unsigned> UniquePositions;
+    for (Value *V : VL) {
+      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+      ReuseShuffleIndicies.emplace_back(isa<UndefValue>(V) ? -1
+                                                           : Res.first->second);
+      if (Res.second)
+        UniqueValues.emplace_back(V);
+    }
+    size_t NumUniqueScalarValues = UniqueValues.size();
+    if (NumUniqueScalarValues == VL.size()) {
+      ReuseShuffleIndicies.clear();
+    } else {
+      LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
+      if (NumUniqueScalarValues <= 1 ||
+          !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
+        LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+        return false;
+      }
+      VL = UniqueValues;
+    }
+    return true;
+  };
+
   InstructionsState S = getSameOpcode(VL);
   if (Depth == RecursionMaxDepth) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
-    newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+    if (TryToFindDuplicates(S))
+      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndicies);
     return;
   }
 
@@ -3210,7 +3242,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       isa<ScalableVectorType>(
           cast<ExtractElementInst>(S.OpValue)->getVectorOperandType())) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
-    newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+    if (TryToFindDuplicates(S))
+      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndicies);
     return;
   }
 
@@ -3236,7 +3270,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       (isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(S.MainOp) &&
        !all_of(VL, isVectorLikeInstWithConstOps))) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O. \n");
-    newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+    if (TryToFindDuplicates(S))
+      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndicies);
     return;
   }
 
@@ -3258,7 +3294,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
     if (!E->isSame(VL)) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
-      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+      if (TryToFindDuplicates(S))
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                     ReuseShuffleIndicies);
       return;
     }
     // Record the reuse of the tree node.  FIXME, currently this is only used to
@@ -3277,7 +3315,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (getTreeEntry(I)) {
       LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                         << ") is already in tree.\n");
-      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+      if (TryToFindDuplicates(S))
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                     ReuseShuffleIndicies);
       return;
     }
   }
@@ -3288,7 +3328,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   for (Value *V : VL) {
     if (MustGather.count(V) || is_contained(UserIgnoreList, V)) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
-      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+      if (TryToFindDuplicates(S))
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                     ReuseShuffleIndicies);
       return;
     }
   }
@@ -3307,28 +3349,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Check that every instruction appears once in this bundle.
-  SmallVector<int> ReuseShuffleIndicies;
-  SmallVector<Value *, 4> UniqueValues;
-  DenseMap<Value *, unsigned> UniquePositions;
-  for (Value *V : VL) {
-    auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
-    ReuseShuffleIndicies.emplace_back(Res.first->second);
-    if (Res.second)
-      UniqueValues.emplace_back(V);
-  }
-  size_t NumUniqueScalarValues = UniqueValues.size();
-  if (NumUniqueScalarValues == VL.size()) {
-    ReuseShuffleIndicies.clear();
-  } else {
-    LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-    if (NumUniqueScalarValues <= 1 ||
-        !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
-      LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
-      return;
-    }
-    VL = UniqueValues;
-  }
+  if (!TryToFindDuplicates(S))
+    return;
 
   auto &BSRef = BlocksSchedules[BB];
   if (!BSRef)
