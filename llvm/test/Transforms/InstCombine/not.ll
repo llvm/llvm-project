@@ -524,3 +524,113 @@ define i1 @not_select_bool_const4(i1 %x, i1 %y) {
   %r = xor i1 %sel, true
   ret i1 %r
 }
+
+define <2 x i1> @not_logicalAnd_not_op0(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @not_logicalAnd_not_op0(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[NOTX]], <2 x i1> [[Y:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[NOTAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[NOTAND]]
+;
+  %notx = xor <2 x i1> %x, <i1 true, i1 true>
+  %and = select <2 x i1> %notx, <2 x i1> %y, <2 x i1> zeroinitializer
+  %notand = xor <2 x i1> %and, <i1 true, i1 true>
+  ret <2 x i1> %notand
+}
+
+define i1 @not_logicalAnd_not_op1(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalAnd_not_op1(
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[NOTAND:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[NOTAND]]
+;
+  %noty = xor i1 %y, true
+  %and = select i1 %x, i1 %noty, i1 false
+  %notand = xor i1 %and, true
+  ret i1 %notand
+}
+
+define i1 @not_logicalAnd_not_op0_use1(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalAnd_not_op0_use1(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @use1(i1 [[NOTX]])
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOTX]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[NOTAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    ret i1 [[NOTAND]]
+;
+  %notx = xor i1 %x, true
+  call void @use1(i1 %notx)
+  %and = select i1 %notx, i1 %y, i1 false
+  %notand = xor i1 %and, true
+  ret i1 %notand
+}
+
+define i1 @not_logicalAnd_not_op0_use2(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalAnd_not_op0_use2(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOTX]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    call void @use1(i1 [[AND]])
+; CHECK-NEXT:    [[NOTAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    ret i1 [[NOTAND]]
+;
+  %notx = xor i1 %x, true
+  %and = select i1 %notx, i1 %y, i1 false
+  call void @use1(i1 %and)
+  %notand = xor i1 %and, true
+  ret i1 %notand
+}
+
+define <2 x i1> @not_logicalOr_not_op0(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @not_logicalOr_not_op0(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NOTX]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y:%.*]]
+; CHECK-NEXT:    [[NOTOR:%.*]] = xor <2 x i1> [[OR]], <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[NOTOR]]
+;
+  %notx = xor <2 x i1> %x, <i1 true, i1 true>
+  %or = select <2 x i1> %notx, <2 x i1> <i1 true, i1 true>, <2 x i1> %y
+  %notor = xor <2 x i1> %or, <i1 true, i1 true>
+  ret <2 x i1> %notor
+}
+
+define i1 @not_logicalOr_not_op1(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalOr_not_op1(
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[NOTOR:%.*]] = select i1 [[NOT_X]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[NOTOR]]
+;
+  %noty = xor i1 %y, true
+  %or = select i1 %x, i1 true, i1 %noty
+  %notor = xor i1 %or, true
+  ret i1 %notor
+}
+
+define i1 @not_logicalOr_not_op0_use1(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalOr_not_op0_use1(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @use1(i1 [[NOTX]])
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[NOTX]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[NOTOR:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    ret i1 [[NOTOR]]
+;
+  %notx = xor i1 %x, true
+  call void @use1(i1 %notx)
+  %or = select i1 %notx, i1 true, i1 %y
+  %notor = xor i1 %or, true
+  ret i1 %notor
+}
+
+define i1 @not_logicalOr_not_op0_use2(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_logicalOr_not_op0_use2(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[NOTX]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[OR]])
+; CHECK-NEXT:    [[NOTOR:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    ret i1 [[NOTOR]]
+;
+  %notx = xor i1 %x, true
+  %or = select i1 %notx, i1 true, i1 %y
+  call void @use1(i1 %or)
+  %notor = xor i1 %or, true
+  ret i1 %notor
+}
