@@ -2802,11 +2802,10 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       // Proving that entry to the outer scope neccesitates entry to the inner
       // scope, thus proves the program undefined if the flags would be violated
       // in the outer scope.
-      const bool CanPropagateFlags = llvm::any_of(LIOps, [&](const SCEV *S) {
-        auto *ReachI = &*AddRecLoop->getHeader()->begin();
-        auto *DefI = getDefiningScopeBound(S);
-        return isGuaranteedToTransferExecutionTo(DefI, ReachI);
-      });
+      auto *DefI = getDefiningScopeBound(LIOps);
+      auto *ReachI = &*AddRecLoop->getHeader()->begin();
+      const bool CanPropagateFlags =
+        isGuaranteedToTransferExecutionTo(DefI, ReachI);
       auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
       AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
@@ -6594,6 +6593,18 @@ const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
   return &*F.getEntryBlock().begin();
 }
 
+const Instruction *
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+  const Instruction *Bound = &*F.getEntryBlock().begin();
+  for (auto *S : Ops) {
+    auto *DefI = getDefiningScopeBound(S);
+    if (DT.dominates(Bound, DefI))
+      Bound = DefI;
+  }
+  return Bound;
+}
+
+
 static bool
 isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
                                            BasicBlock::const_iterator End) {
@@ -6657,15 +6668,16 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // executed every time we enter that scope.  When the bounding scope is a
   // loop (the common case), this is equivalent to proving I executes on every
   // iteration of that loop.
+  SmallVector<const SCEV *> SCEVOps;
   for (const Use &Op : I->operands()) {
     // I could be an extractvalue from a call to an overflow intrinsic.
     // TODO: We can do better here in some cases.
-    if (!isSCEVable(Op->getType()))
-      return false;
-    auto *DefI = getDefiningScopeBound(getSCEV(Op));
-    if (isGuaranteedToTransferExecutionTo(DefI, I))
-      return true;
+    if (isSCEVable(Op->getType()))
+      SCEVOps.push_back(getSCEV(Op));
   }
+  auto *DefI = getDefiningScopeBound(SCEVOps);
+  if (isGuaranteedToTransferExecutionTo(DefI, I))
+    return true;
   return false;
 }
 
