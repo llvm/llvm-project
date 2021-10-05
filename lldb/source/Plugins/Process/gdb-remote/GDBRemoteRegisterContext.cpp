@@ -203,16 +203,11 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
           SetAllRegisterValid(true);
           return true;
         } else if (buffer_sp->GetByteSize() > 0) {
-          const int regcount = m_reg_info_sp->GetNumRegisters();
-          for (int i = 0; i < regcount; i++) {
-            struct RegisterInfo *reginfo =
-                m_reg_info_sp->GetRegisterInfoAtIndex(i);
-            if (reginfo->byte_offset + reginfo->byte_size <=
-                buffer_sp->GetByteSize()) {
-              m_reg_valid[i] = true;
-            } else {
-              m_reg_valid[i] = false;
-            }
+          for (auto x : llvm::enumerate(m_reg_info_sp->registers())) {
+            const struct RegisterInfo &reginfo = x.value();
+            m_reg_valid[x.index()] =
+                (reginfo.byte_offset + reginfo.byte_size <=
+                 buffer_sp->GetByteSize());
           }
 
           m_gpacket_cached = true;
