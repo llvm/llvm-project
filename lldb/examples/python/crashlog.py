@@ -415,8 +415,14 @@ class JSONCrashLogParser:
         with open(self.path, 'r') as f:
             buffer = f.read()
 
-        # First line is meta-data.
-        buffer = buffer[buffer.index('\n') + 1:]
+        # Skip the first line if it contains meta data.
+        head, _, tail = buffer.partition('\n')
+        try:
+            metadata = json.loads(head)
+            if 'app_name' in metadata and 'app_version' in metadata:
+                buffer = tail
+        except ValueError:
+            pass
 
         try:
             self.data = json.loads(buffer)
