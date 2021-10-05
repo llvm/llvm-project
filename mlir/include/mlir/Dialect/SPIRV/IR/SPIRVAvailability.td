@@ -19,6 +19,8 @@ include "mlir/IR/OpBase.td"
 class Availability {
   // The following are fields for controlling the generated C++ OpInterface.
 
+  // The namespace for the generated C++ OpInterface subclass.
+  string cppNamespace = ?;
   // The name for the generated C++ OpInterface subclass.
   string interfaceName = ?;
   // The documentation for the generated C++ OpInterface subclass.

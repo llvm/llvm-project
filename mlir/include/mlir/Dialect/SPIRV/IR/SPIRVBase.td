@@ -125,6 +125,7 @@ def SPV_VersionAttr : SPV_I32EnumAttr<"Version", "valid SPIR-V version", [
 
 class MinVersion<I32EnumAttrCase min> : MinVersionBase<
     "QueryMinVersionInterface", SPV_VersionAttr, min> {
+  let cppNamespace = "::mlir::spirv";
   let interfaceDescription = [{
     Querying interface for minimal required SPIR-V version.
 
@@ -136,6 +137,7 @@ class MinVersion<I32EnumAttrCase min> : MinVersionBase<
 
 class MaxVersion<I32EnumAttrCase max> : MaxVersionBase<
     "QueryMaxVersionInterface", SPV_VersionAttr, max> {
+  let cppNamespace = "::mlir::spirv";
   let interfaceDescription = [{
     Querying interface for maximal supported SPIR-V version.
 
@@ -146,6 +148,7 @@ class MaxVersion<I32EnumAttrCase max> : MaxVersionBase<
 }
 
 class Extension<list<StrEnumAttrCase> extensions> : Availability {
+  let cppNamespace = "::mlir::spirv";
   let interfaceName = "QueryExtensionInterface";
   let interfaceDescription = [{
     Querying interface for required SPIR-V extensions.
@@ -189,6 +192,7 @@ class Extension<list<StrEnumAttrCase> extensions> : Availability {
 }
 
 class Capability<list<I32EnumAttrCase> capabilities> : Availability {
+  let cppNamespace = "::mlir::spirv";
   let interfaceName = "QueryCapabilityInterface";
   let interfaceDescription = [{
     Querying interface for required SPIR-V capabilities.
