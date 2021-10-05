@@ -360,8 +360,7 @@ void APInt::flipBit(unsigned bitPosition) {
 
 void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   unsigned subBitWidth = subBits.getBitWidth();
-  assert(subBitWidth >= 0 && (subBitWidth + bitPosition) <= BitWidth &&
-         "Illegal bit insertion");
+  assert((subBitWidth + bitPosition) <= BitWidth && "Illegal bit insertion");
 
   // inserting no bits is a noop.
   if (subBitWidth == 0)
