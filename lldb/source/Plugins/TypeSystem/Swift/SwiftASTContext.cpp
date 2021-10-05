@@ -956,23 +956,14 @@ const std::string &SwiftASTContext::GetDescription() const {
   return m_description;
 }
 
-namespace {
-struct SDKTypeMinVersion {
-  XcodeSDK::Type sdk_type;
-  unsigned min_version_major;
-  unsigned min_version_minor;
-};
-} // namespace
-
-/// Return the SDKType (+minimum version needed for Swift support) for
-/// the target triple, if that makes sense. Otherwise, return the
-/// unknown sdk type.
-static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
-                                    const llvm::Triple &host) {
+/// Return the Xcode sdk type for the target triple, if that makes sense.
+/// Otherwise, return the unknown sdk type.
+static XcodeSDK::Type GetSDKType(const llvm::Triple &target,
+                                 const llvm::Triple &host) {
   // Only Darwin platforms know the concept of an SDK.
   auto host_os = host.getOS();
   if (host_os != llvm::Triple::OSType::MacOSX)
-    return {XcodeSDK::Type::unknown, 0, 0};
+    return XcodeSDK::Type::unknown;
 
   auto is_simulator = [&]() -> bool {
     return target.getEnvironment() == llvm::Triple::Simulator ||
@@ -982,21 +973,21 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   switch (target.getOS()) {
   case llvm::Triple::OSType::MacOSX:
   case llvm::Triple::OSType::Darwin:
-    return {XcodeSDK::Type::MacOSX, 10, 10};
+    return XcodeSDK::Type::MacOSX;
   case llvm::Triple::OSType::IOS:
     if (is_simulator())
-      return {XcodeSDK::Type::iPhoneSimulator, 8, 0};
-    return {XcodeSDK::Type::iPhoneOS, 8, 0};
+      return XcodeSDK::Type::iPhoneSimulator;
+    return XcodeSDK::Type::iPhoneOS;
   case llvm::Triple::OSType::TvOS:
     if (is_simulator())
-      return {XcodeSDK::Type::AppleTVSimulator, 9, 0};
-    return {XcodeSDK::Type::AppleTVOS, 9, 0};
+      return XcodeSDK::Type::AppleTVSimulator;
+    return XcodeSDK::Type::AppleTVOS;
   case llvm::Triple::OSType::WatchOS:
     if (is_simulator())
-      return {XcodeSDK::Type::WatchSimulator, 2, 0};
-    return {XcodeSDK::Type::watchOS, 2, 0};
+      return XcodeSDK::Type::WatchSimulator;
+    return XcodeSDK::Type::watchOS;
   default:
-    return {XcodeSDK::Type::unknown, 0, 0};
+    return XcodeSDK::Type::unknown;
   }
 }
 
@@ -1004,9 +995,8 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
 /// Swift stdlib needed for \p target.
 std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
                                                  const llvm::Triple &host) {
-  auto sdk = GetSDKType(target, host);
   XcodeSDK::Info sdk_info;
-  sdk_info.type = sdk.sdk_type;
+  sdk_info.type = GetSDKType(target, host);
   std::string sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
   if (!sdk_name.empty())
     return sdk_name;
