@@ -14,10 +14,12 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer
                SCUDO_CFLAGS)
+append_list_if(COMPILER_RT_HAS_EXECINFO execinfo SCUDO_MINIMAL_DYNAMIC_LIBS)
 
 set(SCUDO_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 # Use gc-sections by default to avoid unused code being pulled in.
 list(APPEND SCUDO_DYNAMIC_LINK_FLAGS -Wl,--gc-sections)
+
 
 if(ANDROID)
 # Put most Sanitizer shared libraries in the global group. For more details, see

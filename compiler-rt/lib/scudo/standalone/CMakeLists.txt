@@ -134,6 +134,7 @@ endif()
 set(SCUDO_LINK_LIBS)
 
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SCUDO_LINK_FLAGS)
+append_list_if(COMPILER_RT_HAS_EXECINFO execinfo SCUDO_LINK_LIBS)
 
 append_list_if(FUCHSIA zircon SCUDO_LINK_LIBS)
 

@@ -14,6 +14,7 @@ function(compiler_rt_check_linker_flag flag out_var)
 endfunction()
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
+check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_EXECINFO)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   include(HandleCompilerRT)
   find_compiler_rt_library(builtins "" COMPILER_RT_BUILTINS_LIBRARY)
