@@ -355,39 +355,24 @@ define void @masked_scatter_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-LABEL: masked_scatter_v8i32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #80
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
-; VBITS_EQ_256-NEXT:    ptrue p1.s, vl8
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; VBITS_EQ_256-NEXT:    add x9, sp, #32
-; VBITS_EQ_256-NEXT:    mov x10, sp
-; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; VBITS_EQ_256-NEXT:    cmpeq p2.s, p1/z, z0.s, #0
-; VBITS_EQ_256-NEXT:    mov z3.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_EQ_256-NEXT:    st1w { z3.s }, p1, [x9]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p1, [x10]
-; VBITS_EQ_256-NEXT:    ldr q0, [sp, #32]
-; VBITS_EQ_256-NEXT:    ldr q3, [sp]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ptrue p1.d, vl4
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p1/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z4.d }, p1/z, [x1]
+; VBITS_EQ_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; VBITS_EQ_256-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    uunpklo z3.d, z1.s
+; VBITS_EQ_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_EQ_256-NEXT:    cmpne p0.d, p1/z, z3.d, #0
+; VBITS_EQ_256-NEXT:    uunpklo z3.d, z0.s
+; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z3.s
+; VBITS_EQ_256-NEXT:    st1w { z3.d }, p0, [z4.d]
 ; VBITS_EQ_256-NEXT:    st1w { z0.d }, p1, [z2.d]
-; VBITS_EQ_256-NEXT:    ldr q0, [sp, #48]
-; VBITS_EQ_256-NEXT:    ldr q2, [sp, #16]
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z2.s
-; VBITS_EQ_256-NEXT:    st1w { z0.d }, p0, [z1.d]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_scatter_v8i32:

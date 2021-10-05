@@ -10741,6 +10741,18 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
       InVT.getSizeInBits() == 128)
     return Op;
 
+  if (useSVEForFixedLengthVectorVT(InVT)) {
+    SDLoc DL(Op);
+
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
+    SDValue NewInVec =
+        convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+
+    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, ContainerVT, NewInVec,
+                                 NewInVec, DAG.getConstant(Idx, DL, MVT::i64));
+    return convertFromScalableVector(DAG, Op.getValueType(), Splice);
+  }
+
   return SDValue();
 }
 

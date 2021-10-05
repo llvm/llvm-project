@@ -61,33 +61,22 @@ define void @fcvt_v8f16_v8f32(<8 x half>* %a, <8 x float>* %b) #0 {
 }
 
 define void @fcvt_v16f16_v16f32(<16 x half>* %a, <16 x float>* %b) #0 {
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256-LABEL: fcvt_v16f16_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #8
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    uunpklo z1.s, z0.h
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    fcvt z0.s, p0/m, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    fcvt z1.s, p0/m, z1.h
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    fcvt z0.s, p0/m, z0.h
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ret
-;
+
 ; VBITS_GE_512-LABEL: fcvt_v16f16_v16f32:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
@@ -197,7 +186,7 @@ define void @fcvt_v8f16_v8f64(<8 x half>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.h
 ; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
-;
+
 ; VBITS_GE_512-LABEL: fcvt_v8f16_v8f64:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ldr q0, [x0]
@@ -288,33 +277,22 @@ define void @fcvt_v4f32_v4f64(<4 x float>* %a, <4 x double>* %b) #0 {
 }
 
 define void @fcvt_v8f32_v8f64(<8 x float>* %a, <8 x double>* %b) #0 {
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256-LABEL: fcvt_v8f32_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    uunpklo z1.d, z0.s
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.s
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.s
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.s
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
-;
+
 ; VBITS_GE_512-LABEL: fcvt_v8f32_v8f64:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
