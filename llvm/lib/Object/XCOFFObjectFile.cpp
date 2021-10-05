@@ -230,7 +230,7 @@ uint32_t XCOFFObjectFile::getSymbolAlignment(DataRefImpl Symb) const {
       // TODO: report the error up the stack.
       consumeError(CsectAuxRefOrError.takeError());
     else
-      Result = 1 << CsectAuxRefOrError.get().getAlignmentLog2();
+      Result = 1ULL << CsectAuxRefOrError.get().getAlignmentLog2();
   }
   return Result;
 }
