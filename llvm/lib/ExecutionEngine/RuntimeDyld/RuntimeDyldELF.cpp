@@ -1236,8 +1236,7 @@ RuntimeDyldELF::processRelocationRef(
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     SymType = *SymTypeOrErr;
   }
@@ -1257,8 +1256,7 @@ RuntimeDyldELF::processRelocationRef(
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(SectionOrErr.takeError(), OS);
-        OS.flush();
-        report_fatal_error(Buf);
+        report_fatal_error(Twine(OS.str()));
       }
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())
