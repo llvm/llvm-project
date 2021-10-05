@@ -221,4 +221,36 @@ TEST(InternalNamesTest, complexdeconstructTest) {
   validateDeconstructedName(actual, expectedNameKind, expectedComponents);
 }
 
+TEST(InternalNamesTest, needExternalNameMangling) {
+  ASSERT_FALSE(
+      NameUniquer::needExternalNameMangling("_QMmodSs1modSs2modFsubPfun"));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling("omp_num_thread"));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling(""));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling("_QDTmytypeK2K8K18"));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling("exit_"));
+  ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPfoo"));
+  ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPbar"));
+  ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QBa"));
+}
+
+TEST(InternalNamesTest, isExternalFacingUniquedName) {
+  std::pair result = NameUniquer::deconstruct("_QMmodSs1modSs2modFsubPfun");
+
+  ASSERT_FALSE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("omp_num_thread");
+  ASSERT_FALSE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("");
+  ASSERT_FALSE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("_QDTmytypeK2K8K18");
+  ASSERT_FALSE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("exit_");
+  ASSERT_FALSE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("_QPfoo");
+  ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("_QPbar");
+  ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
+  result = NameUniquer::deconstruct("_QBa");
+  ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
+}
+
 // main() from gtest_main

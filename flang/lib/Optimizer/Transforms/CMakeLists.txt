@@ -1,5 +1,6 @@
 add_flang_library(FIRTransforms
   Inliner.cpp
+  ExternalNameConversion.cpp
 
   DEPENDS
   FIRDialect

@@ -126,6 +126,13 @@ struct NameUniquer {
   static std::pair<NameKind, DeconstructedName>
   deconstruct(llvm::StringRef uniquedName);
 
+  /// Check if the name is an external facing name.
+  static bool isExternalFacingUniquedName(
+      const std::pair<NameKind, DeconstructedName> &deconstructResult);
+
+  /// Check whether the name should be re-mangle with external ABI convention.
+  static bool needExternalNameMangling(llvm::StringRef uniquedName);
+
 private:
   static std::string intAsString(std::int64_t i);
   static std::string doKind(std::int64_t kind);
