@@ -89,6 +89,9 @@ long double operator""_SacreBleu(long double) // no-warning
 long double sacrebleu = operator"" _SacreBleu(1.2); // expected-warning {{identifier '_SacreBleu' is reserved because it starts with '_' followed by a capital letter}}
 long double sangbleu = operator""_SacreBleu(1.2);   // no-warning
 
+void operator"" _lowercase(unsigned long long); // no-warning
+void operator""_lowercase(unsigned long long); // no-warning
+
 struct _BarbeRouge { // expected-warning {{identifier '_BarbeRouge' is reserved because it starts with '_' followed by a capital letter}}
 } p;
 struct _BarbeNoire { // expected-warning {{identifier '_BarbeNoire' is reserved because it starts with '_' followed by a capital letter}}
@@ -97,3 +100,8 @@ struct _BarbeNoire { // expected-warning {{identifier '_BarbeNoire' is reserved 
 struct Any {
   friend void _barbegrise(); // expected-warning {{identifier '_barbegrise' is reserved because it starts with '_' at global scope}}
 };
+
+#define _not_reserved
+#define _Reserved // expected-warning {{macro name is a reserved identifier}}
+#undef _not_reserved
+#undef _Reserved // expected-warning {{macro name is a reserved identifier}}

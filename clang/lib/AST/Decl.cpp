@@ -1088,7 +1088,7 @@ NamedDecl::isReserved(const LangOptions &LangOpts) const {
     return ReservedIdentifierStatus::NotReserved;
 
   ReservedIdentifierStatus Status = II->isReserved(LangOpts);
-  if (Status == ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope) {
+  if (isReservedAtGlobalScope(Status) && !isReservedInAllContexts(Status)) {
     // Check if we're at TU level or not.
     if (isa<ParmVarDecl>(this) || isTemplateParameter())
       return ReservedIdentifierStatus::NotReserved;

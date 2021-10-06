@@ -48,6 +48,21 @@ enum class ReservedIdentifierStatus {
   ContainsDoubleUnderscore,
 };
 
+/// Determine whether an identifier is reserved for use as a name at global
+/// scope. Such identifiers might be implementation-specific global functions
+/// or variables.
+inline bool isReservedAtGlobalScope(ReservedIdentifierStatus Status) {
+  return Status != ReservedIdentifierStatus::NotReserved;
+}
+
+/// Determine whether an identifier is reserved in all contexts. Such
+/// identifiers might be implementation-specific keywords or macros, for
+/// example.
+inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
+  return Status != ReservedIdentifierStatus::NotReserved &&
+         Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope;
+}
+
 /// A simple pair of identifier info and location.
 using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 

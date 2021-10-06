@@ -547,7 +547,7 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   }
 
   ReservedIdentifierStatus Status = TheDecl->isReserved(getLangOpts());
-  if (Status != ReservedIdentifierStatus::NotReserved &&
+  if (isReservedInAllContexts(Status) &&
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
