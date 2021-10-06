@@ -31,4 +31,18 @@ TEST(SanitizerCommon, Hash32Add) {
   EXPECT_EQ(h.get(), 2640061027u);
 }
 
+TEST(SanitizerCommon, Hash64Seed) {
+  EXPECT_EQ(MurMur2Hash64Builder(0).get(), 4469829599815726255ull);
+  EXPECT_EQ(MurMur2Hash64Builder(1).get(), 14121968454562043709ull);
+  EXPECT_EQ(MurMur2Hash64Builder(3).get(), 8040757559320203998ull);
+}
+
+TEST(SanitizerCommon, Hash64Add) {
+  MurMur2Hash64Builder h(123 * sizeof(u64));
+  for (u32 i = 0; i < 123; ++i) h.add(i);
+  EXPECT_EQ(h.get(), 11366430808886012537ull);
+  for (u32 i = 0; i < 123; ++i) h.add(-i);
+  EXPECT_EQ(h.get(), 10843188204560467446ull);
+}
+
 }  // namespace __sanitizer
