@@ -525,30 +525,30 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "iany") {
     return FoldBitReduction(
         context, std::move(funcRef), &Scalar<T>::IOR, Scalar<T>{});
-  } else if (name == "ibclr" || name == "ibset" || name == "ishft" ||
-      name == "shifta" || name == "shiftr" || name == "shiftl") {
-    // Second argument can be of any kind. However, it must be smaller or
-    // equal than BIT_SIZE. It can be converted to Int4 to simplify.
+  } else if (name == "ibclr" || name == "ibset") {
+    // Second argument can be of any kind. However, it must be smaller
+    // than BIT_SIZE. It can be converted to Int4 to simplify.
     auto fptr{&Scalar<T>::IBCLR};
-    if (name == "ibclr") { // done in fprt definition
+    if (name == "ibclr") { // done in fptr definition
     } else if (name == "ibset") {
       fptr = &Scalar<T>::IBSET;
-    } else if (name == "ishft") {
-      fptr = &Scalar<T>::ISHFT;
-    } else if (name == "shifta") {
-      fptr = &Scalar<T>::SHIFTA;
-    } else if (name == "shiftr") {
-      fptr = &Scalar<T>::SHIFTR;
-    } else if (name == "shiftl") {
-      fptr = &Scalar<T>::SHIFTL;
     } else {
       common::die("missing case to fold intrinsic function %s", name.c_str());
     }
     return FoldElementalIntrinsic<T, T, Int4>(context, std::move(funcRef),
-        ScalarFunc<T, T, Int4>(
-            [&fptr](const Scalar<T> &i, const Scalar<Int4> &pos) -> Scalar<T> {
-              return std::invoke(fptr, i, static_cast<int>(pos.ToInt64()));
-            }));
+        ScalarFunc<T, T, Int4>([&](const Scalar<T> &i,
+                                   const Scalar<Int4> &pos) -> Scalar<T> {
+          auto posVal{static_cast<int>(pos.ToInt64())};
+          if (posVal < 0) {
+            context.messages().Say(
+                "bit position for %s (%d) is negative"_err_en_US, name, posVal);
+          } else if (posVal >= i.bits) {
+            context.messages().Say(
+                "bit position for %s (%d) is not less than %d"_err_en_US, name,
+                posVal, i.bits);
+          }
+          return std::invoke(fptr, i, posVal);
+        }));
   } else if (name == "index" || name == "scan" || name == "verify") {
     if (auto *charExpr{UnwrapExpr<Expr<SomeCharacter>>(args[0])}) {
       return std::visit(
@@ -610,6 +610,35 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "iparity") {
     return FoldBitReduction(
         context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{});
+  } else if (name == "ishft" || name == "shifta" || name == "shiftr" ||
+      name == "shiftl") {
+    // Second argument can be of any kind. However, it must be smaller or
+    // equal than BIT_SIZE. It can be converted to Int4 to simplify.
+    auto fptr{&Scalar<T>::ISHFT};
+    if (name == "ISHFT") { // done in fptr definition
+    } else if (name == "shifta") {
+      fptr = &Scalar<T>::SHIFTA;
+    } else if (name == "shiftr") {
+      fptr = &Scalar<T>::SHIFTR;
+    } else if (name == "shiftl") {
+      fptr = &Scalar<T>::SHIFTL;
+    } else {
+      common::die("missing case to fold intrinsic function %s", name.c_str());
+    }
+    return FoldElementalIntrinsic<T, T, Int4>(context, std::move(funcRef),
+        ScalarFunc<T, T, Int4>([&](const Scalar<T> &i,
+                                   const Scalar<Int4> &pos) -> Scalar<T> {
+          auto posVal{static_cast<int>(pos.ToInt64())};
+          if (posVal < 0) {
+            context.messages().Say(
+                "shift count for %s (%d) is negative"_err_en_US, name, posVal);
+          } else if (posVal > i.bits) {
+            context.messages().Say(
+                "shift count for %s (%d) is greater than %d"_err_en_US, name,
+                posVal, i.bits);
+          }
+          return std::invoke(fptr, i, posVal);
+        }));
   } else if (name == "lbound") {
     return LBOUND(context, std::move(funcRef));
   } else if (name == "leadz" || name == "trailz" || name == "poppar" ||
