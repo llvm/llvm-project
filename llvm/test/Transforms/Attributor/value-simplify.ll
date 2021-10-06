@@ -449,12 +449,12 @@ define i32* @complicated_args_inalloca(i32* %arg) {
 define internal i32* @test_preallocated(i32* preallocated(i32) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__TUNIT____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 4294967296 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 1073741824 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__CGSCC____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 4294967296 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 1073741824 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
@@ -464,14 +464,14 @@ define i32* @complicated_args_preallocated() {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__TUNIT_OPM-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call noundef nonnull align 1073741824 dereferenceable(4) i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 1073741824 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__TUNIT_NPM-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR4:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call noundef nonnull align 1073741824 dereferenceable(4) i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 1073741824 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_NPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
@@ -495,13 +495,13 @@ define internal void @test_sret(%struct.X* sret(%struct.X) %a, %struct.X** %b) {
 ;
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 1073741824 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_sret
-; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 1073741824 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -515,7 +515,7 @@ define void @complicated_args_sret(%struct.X** %b) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__TUNIT____-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR2]] {
-; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR3:[0-9]+]]
+; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 1073741824 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR3:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
@@ -530,7 +530,7 @@ define void @complicated_args_sret(%struct.X** %b) {
 define internal %struct.X* @test_nest(%struct.X* nest %a) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_nest
-; IS__CGSCC____-SAME: (%struct.X* nest noalias nocapture nofree readnone align 4294967296 [[A:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (%struct.X* nest noalias nocapture nofree readnone align 1073741824 [[A:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret %struct.X* undef
 ;
   ret %struct.X* %a

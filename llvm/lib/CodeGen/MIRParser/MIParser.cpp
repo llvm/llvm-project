@@ -498,7 +498,7 @@ public:
                                          MachineOperand &Dest,
                                          Optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
-  bool parseAlignment(uint64_t &Alignment);
+  bool parseAlignment(unsigned &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(Optional<MBBSectionID> &SID);
   bool parseOperandsOffset(MachineOperand &Op);
@@ -676,7 +676,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsEHFuncletEntry = false;
   Optional<MBBSectionID> SectionID;
-  uint64_t Alignment = 0;
+  unsigned Alignment = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -2898,16 +2898,16 @@ bool MIParser::parseOffset(int64_t &Offset) {
   return false;
 }
 
-bool MIParser::parseAlignment(uint64_t &Alignment) {
+bool MIParser::parseAlignment(unsigned &Alignment) {
   assert(Token.is(MIToken::kw_align) || Token.is(MIToken::kw_basealign));
   lex();
   if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
     return error("expected an integer literal after 'align'");
-  if (getUint64(Alignment))
+  if (getUnsigned(Alignment))
     return true;
   lex();
 
-  if (!isPowerOf2_64(Alignment))
+  if (!isPowerOf2_32(Alignment))
     return error("expected a power-of-2 literal after 'align'");
 
   return false;
@@ -3261,7 +3261,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     if (parseMachinePointerInfo(Ptr))
       return true;
   }
-  uint64_t BaseAlignment =
+  unsigned BaseAlignment =
       (Size != MemoryLocation::UnknownSize ? PowerOf2Ceil(Size) : 1);
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;

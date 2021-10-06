@@ -3413,7 +3413,7 @@ struct AADereferenceable
 };
 
 using AAAlignmentStateType =
-    IncIntegerState<uint64_t, Value::MaximumAlignment, 1>;
+    IncIntegerState<uint32_t, Value::MaximumAlignment, 1>;
 /// An abstract interface for all align attributes.
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
@@ -3421,10 +3421,10 @@ struct AAAlign : public IRAttribute<
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
-  uint64_t getAssumedAlign() const { return getAssumed(); }
+  unsigned getAssumedAlign() const { return getAssumed(); }
 
   /// Return known alignment.
-  uint64_t getKnownAlign() const { return getKnown(); }
+  unsigned getKnownAlign() const { return getKnown(); }
 
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAAlign"; }

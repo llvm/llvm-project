@@ -7,7 +7,7 @@
 
 define internal void @dead() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dead() {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test(i32* noalias noundef align 4294967296 null)
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test(i32* noalias noundef align 1073741824 null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call i32 @test(i32* null, i32* null)
