@@ -67,6 +67,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Added support for globbing in `NOLINT*` expressions, to simplify suppressing
+  multiple warnings in the same line.
+
 - Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
   Clang-Tidy warnings over multiple lines.
 

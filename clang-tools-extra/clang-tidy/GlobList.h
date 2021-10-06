@@ -29,7 +29,10 @@ public:
   ///
   /// An empty \p Globs string is interpreted as one glob that matches an empty
   /// string.
-  GlobList(StringRef Globs);
+  ///
+  /// \p KeepNegativeGlobs a bool flag indicating whether to keep negative
+  /// globs from \p Globs or not. When false, negative globs are simply ignored.
+  GlobList(StringRef Globs, bool KeepNegativeGlobs = true);
 
   /// Returns \c true if the pattern matches \p S. The result is the last
   /// matching glob's Positive flag.
