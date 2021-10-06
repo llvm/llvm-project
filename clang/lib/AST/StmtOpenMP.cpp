@@ -125,28 +125,25 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
     llvm::function_ref<bool(unsigned, Stmt *)> Callback,
-    llvm::function_ref<void(OMPLoopBasedDirective *)>
+    llvm::function_ref<void(OMPLoopTransformationDirective *)>
         OnTransformationCallback) {
   CurStmt = CurStmt->IgnoreContainers();
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
-      auto *OrigStmt = CurStmt;
-      if (auto *Dir = dyn_cast<OMPTileDirective>(OrigStmt)) {
-        OnTransformationCallback(Dir);
-        CurStmt = Dir->getTransformedStmt();
-      } else if (auto *Dir = dyn_cast<OMPUnrollDirective>(OrigStmt)) {
-        OnTransformationCallback(Dir);
-        CurStmt = Dir->getTransformedStmt();
-      } else {
+      auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
+      if (!Dir)
+        break;
+
+      OnTransformationCallback(Dir);
+
+      Stmt *TransformedStmt = Dir->getTransformedStmt();
+      if (!TransformedStmt) {
+        // May happen if the loop transformation does not result in a
+        // generated loop (such as full unrolling).
         break;
       }
 
-      if (!CurStmt) {
-        // May happen if the loop transformation does not result in a generated
-        // loop (such as full unrolling).
-        CurStmt = OrigStmt;
-        break;
-      }
+      CurStmt = TransformedStmt;
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
@@ -361,6 +358,32 @@ OMPForDirective *OMPForDirective::Create(
   Dir->setTaskReductionRefExpr(TaskRedRef);
   Dir->setHasCancel(HasCancel);
   return Dir;
+}
+
+Stmt *OMPLoopTransformationDirective::getTransformedStmt() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getTransformedStmt();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation");
+  }
+}
+
+Stmt *OMPLoopTransformationDirective::getPreInits() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getPreInits();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation");
+  }
 }
 
 OMPForDirective *OMPForDirective::CreateEmpty(const ASTContext &C,

@@ -915,12 +915,17 @@ void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
-void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+void StmtProfiler::VisitOMPLoopTransformationDirective(
+    const OMPLoopTransformationDirective *S) {
   VisitOMPLoopBasedDirective(S);
 }
 
+void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
-  VisitOMPLoopBasedDirective(S);
+  VisitOMPLoopTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
