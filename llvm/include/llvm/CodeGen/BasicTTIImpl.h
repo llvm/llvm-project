@@ -1846,9 +1846,8 @@ public:
                                                 CostKind, TTI::OK_AnyValue,
                                                 TTI::OK_UniformConstantValue);
 
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, MulTy, OverflowTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(
+          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::ctpop:
