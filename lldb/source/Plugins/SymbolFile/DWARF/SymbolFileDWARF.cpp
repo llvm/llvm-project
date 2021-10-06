@@ -2211,7 +2211,7 @@ void SymbolFileDWARF::FindGlobalVariables(
       }
     }
 
-    ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
+    ParseAndAppendGlobalVariable(sc, die, variables);
     while (pruned_idx < variables.GetSize()) {
       VariableSP var_sp = variables.GetVariableAtIndex(pruned_idx);
       if (name_is_mangled ||
@@ -2264,7 +2264,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
       return true;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
-    ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
+    ParseAndAppendGlobalVariable(sc, die, variables);
 
     return variables.GetSize() - original_size < max_matches;
   });
@@ -3185,8 +3185,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
               /*check_hi_lo_pc=*/true))
         func_lo_pc = ranges.GetMinRangeBase(0);
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
-        const size_t num_variables = ParseVariables(
-            sc, function_die.GetFirstChild(), func_lo_pc, true, true);
+        const size_t num_variables =
+            ParseVariablesInFunctionContext(sc, function_die, func_lo_pc);
 
         // Let all blocks know they have parse all their variables
         sc.function->GetBlock(false).SetDidParseVariables(true, true);
@@ -3627,117 +3627,136 @@ SymbolFileDWARF::FindBlockContainingSpecification(
   return DWARFDIE();
 }
 
-size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
-                                       const DWARFDIE &orig_die,
-                                       const lldb::addr_t func_low_pc,
-                                       bool parse_siblings, bool parse_children,
-                                       VariableList *cc_variable_list) {
-  if (!orig_die)
+void SymbolFileDWARF::ParseAndAppendGlobalVariable(
+    const SymbolContext &sc, const DWARFDIE &die,
+    VariableList &cc_variable_list) {
+  if (!die)
+    return;
+
+  dw_tag_t tag = die.Tag();
+  if (tag != DW_TAG_variable && tag != DW_TAG_constant)
+    return;
+
+  // Check to see if we have already parsed this variable or constant?
+  VariableSP var_sp = GetDIEToVariable()[die.GetDIE()];
+  if (var_sp) {
+    cc_variable_list.AddVariableIfUnique(var_sp);
+    return;
+  }
+
+  // We haven't already parsed it, lets do that now.
+  VariableListSP variable_list_sp;
+  DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
+  dw_tag_t parent_tag = sc_parent_die.Tag();
+  switch (parent_tag) {
+  case DW_TAG_compile_unit:
+  case DW_TAG_partial_unit:
+    if (sc.comp_unit != nullptr) {
+      variable_list_sp = sc.comp_unit->GetVariableList(false);
+    } else {
+      GetObjectFile()->GetModule()->ReportError(
+          "parent 0x%8.8" PRIx64 " %s with no valid compile unit in "
+          "symbol context for 0x%8.8" PRIx64 " %s.\n",
+          sc_parent_die.GetID(), sc_parent_die.GetTagAsCString(), die.GetID(),
+          die.GetTagAsCString());
+      return;
+    }
+    break;
+
+  default:
+    GetObjectFile()->GetModule()->ReportError(
+        "didn't find appropriate parent DIE for variable list for "
+        "0x%8.8" PRIx64 " %s.\n",
+        die.GetID(), die.GetTagAsCString());
+    return;
+  }
+
+  var_sp = ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS);
+  if (!var_sp)
+    return;
+
+  cc_variable_list.AddVariableIfUnique(var_sp);
+  if (variable_list_sp)
+    variable_list_sp->AddVariableIfUnique(var_sp);
+}
+
+size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
+    const SymbolContext &sc, const DWARFDIE &die,
+    const lldb::addr_t func_low_pc) {
+  if (!die || !sc.function)
     return 0;
 
-  VariableListSP variable_list_sp;
+  VariableList empty_variable_list;
+  // Since |die| corresponds to a Block instance, the recursive call will get
+  // a variable list from the block. |empty_variable_list| should remain empty.
+  return ParseVariablesInFunctionContextRecursive(sc, die, func_low_pc,
+                                                  empty_variable_list);
+}
 
+size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
+    const lldb_private::SymbolContext &sc, const DWARFDIE &die,
+    const lldb::addr_t func_low_pc, VariableList &variable_list) {
   size_t vars_added = 0;
-  DWARFDIE die = orig_die;
-  while (die) {
-    dw_tag_t tag = die.Tag();
+  dw_tag_t tag = die.Tag();
 
-    // Check to see if we have already parsed this variable or constant?
-    VariableSP var_sp = GetDIEToVariable()[die.GetDIE()];
+  if ((tag == DW_TAG_variable) || (tag == DW_TAG_constant) ||
+      (tag == DW_TAG_formal_parameter)) {
+    VariableSP var_sp(ParseVariableDIE(sc, die, func_low_pc));
     if (var_sp) {
-      if (cc_variable_list)
-        cc_variable_list->AddVariableIfUnique(var_sp);
-    } else {
-      // We haven't already parsed it, lets do that now.
-      if ((tag == DW_TAG_variable) || (tag == DW_TAG_constant) ||
-          (tag == DW_TAG_formal_parameter && sc.function)) {
-        if (variable_list_sp.get() == nullptr) {
-          DWARFDIE sc_parent_die = GetParentSymbolContextDIE(orig_die);
-          dw_tag_t parent_tag = sc_parent_die.Tag();
-          switch (parent_tag) {
-          case DW_TAG_compile_unit:
-          case DW_TAG_partial_unit:
-            if (sc.comp_unit != nullptr) {
-              variable_list_sp = sc.comp_unit->GetVariableList(false);
-              if (variable_list_sp.get() == nullptr) {
-                variable_list_sp = std::make_shared<VariableList>();
-              }
-            } else {
-              GetObjectFile()->GetModule()->ReportError(
-                  "parent 0x%8.8" PRIx64 " %s with no valid compile unit in "
-                  "symbol context for 0x%8.8" PRIx64 " %s.\n",
-                  sc_parent_die.GetID(), sc_parent_die.GetTagAsCString(),
-                  orig_die.GetID(), orig_die.GetTagAsCString());
-            }
-            break;
-
-          case DW_TAG_subprogram:
-          case DW_TAG_inlined_subroutine:
-          case DW_TAG_lexical_block:
-            if (sc.function != nullptr) {
-              // Check to see if we already have parsed the variables for the
-              // given scope
-
-              Block *block = sc.function->GetBlock(true).FindBlockByID(
-                  sc_parent_die.GetID());
-              if (block == nullptr) {
-                // This must be a specification or abstract origin with a
-                // concrete block counterpart in the current function. We need
-                // to find the concrete block so we can correctly add the
-                // variable to it
-                const DWARFDIE concrete_block_die =
-                    FindBlockContainingSpecification(
-                        GetDIE(sc.function->GetID()),
-                        sc_parent_die.GetOffset());
-                if (concrete_block_die)
-                  block = sc.function->GetBlock(true).FindBlockByID(
-                      concrete_block_die.GetID());
-              }
-
-              if (block != nullptr) {
-                const bool can_create = false;
-                variable_list_sp = block->GetBlockVariableList(can_create);
-                if (variable_list_sp.get() == nullptr) {
-                  variable_list_sp = std::make_shared<VariableList>();
-                  block->SetVariableList(variable_list_sp);
-                }
-              }
-            }
-            break;
-
-          default:
-            GetObjectFile()->GetModule()->ReportError(
-                "didn't find appropriate parent DIE for variable list for "
-                "0x%8.8" PRIx64 " %s.\n",
-                orig_die.GetID(), orig_die.GetTagAsCString());
-            break;
-          }
-        }
-
-        if (variable_list_sp) {
-          VariableSP var_sp(ParseVariableDIE(sc, die, func_low_pc));
-          if (var_sp) {
-            variable_list_sp->AddVariableIfUnique(var_sp);
-            if (cc_variable_list)
-              cc_variable_list->AddVariableIfUnique(var_sp);
-            ++vars_added;
-          }
-        }
-      }
+      variable_list.AddVariableIfUnique(var_sp);
+      ++vars_added;
     }
-
-    bool skip_children = (sc.function == nullptr && tag == DW_TAG_subprogram);
-
-    if (!skip_children && parse_children && die.HasChildren()) {
-      vars_added += ParseVariables(sc, die.GetFirstChild(), func_low_pc, true,
-                                   true, cc_variable_list);
-    }
-
-    if (parse_siblings)
-      die = die.GetSibling();
-    else
-      die.Clear();
   }
+
+  switch (tag) {
+  case DW_TAG_subprogram:
+  case DW_TAG_inlined_subroutine:
+  case DW_TAG_lexical_block: {
+    // If we start a new block, compute a new block variable list and recurse.
+    Block *block =
+        sc.function->GetBlock(/*can_create=*/true).FindBlockByID(die.GetID());
+    if (block == nullptr) {
+      // This must be a specification or abstract origin with a
+      // concrete block counterpart in the current function. We need
+      // to find the concrete block so we can correctly add the
+      // variable to it.
+      const DWARFDIE concrete_block_die = FindBlockContainingSpecification(
+          GetDIE(sc.function->GetID()), die.GetOffset());
+      if (concrete_block_die)
+        block = sc.function->GetBlock(/*can_create=*/true)
+                    .FindBlockByID(concrete_block_die.GetID());
+    }
+
+    if (block == nullptr)
+      return 0;
+
+    const bool can_create = false;
+    VariableListSP block_variable_list_sp =
+        block->GetBlockVariableList(can_create);
+    if (block_variable_list_sp.get() == nullptr) {
+      block_variable_list_sp = std::make_shared<VariableList>();
+      block->SetVariableList(block_variable_list_sp);
+    }
+    for (DWARFDIE child = die.GetFirstChild(); child;
+         child = child.GetSibling()) {
+      vars_added += ParseVariablesInFunctionContextRecursive(
+          sc, child, func_low_pc, *block_variable_list_sp);
+    }
+
+    break;
+  }
+
+  default:
+    // Recurse to children with the same variable list.
+    for (DWARFDIE child = die.GetFirstChild(); child;
+         child = child.GetSibling()) {
+      vars_added += ParseVariablesInFunctionContextRecursive(
+          sc, child, func_low_pc, variable_list);
+    }
+
+    break;
+  }
+
   return vars_added;
 }
 
