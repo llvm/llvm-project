@@ -37,9 +37,11 @@ extern "C" void *registers_thread_func(void *arg) {
       :
       : "r"(p));
 #elif defined(__aarch64__)
-  // x9-10are used. x11-12 are probably used.
-  // So we pick x13 to be safe.
-  asm("mov x13, %0"
+  // x9-10 are used. x11-12 are probably used.
+  // So we pick x13 to be safe and x14 as a backup.
+  // (x13 known to be used on Ubuntu Focal)
+  asm("mov x13, %0\n"
+      "mov x14, %0"
       :
       : "r"(p));
 #elif defined(__powerpc__)
