@@ -219,30 +219,3 @@ define i32 @f13(i8 *%src1, i8 *%src2) {
   %res = call i32 @memcmp(i8 *%src1, i8 *%src2, i64 769)
   ret i32 %res
 }
-
-define i32 @f14(i8 *%src1, i8 *%src2, i64 %Len) {
-; CHECK-LABEL: f14:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    aghi %r4, -1
-; CHECK-NEXT:    cghi %r4, -1
-; CHECK-NEXT:    je .LBB13_5
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srlg %r0, %r4, 8
-; CHECK-NEXT:    cgije %r0, 0, .LBB13_4
-; CHECK-NEXT:  .LBB13_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    clc 0(256,%r3), 0(%r2)
-; CHECK-NEXT:    jlh .LBB13_5
-; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB13_2 Depth=1
-; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    la %r2, 256(%r2)
-; CHECK-NEXT:    brctg %r0, .LBB13_2
-; CHECK-NEXT:  .LBB13_4:
-; CHECK-NEXT:    exrl %r4, .Ltmp0
-; CHECK-NEXT:  .LBB13_5:
-; CHECK-NEXT:    ipm %r2
-; CHECK-NEXT:    sll %r2, 2
-; CHECK-NEXT:    sra %r2, 30
-; CHECK-NEXT:    br %r14
-  %res = call i32 @memcmp(i8 *%src1, i8 *%src2, i64 %Len)
-  ret i32 %res
-}
