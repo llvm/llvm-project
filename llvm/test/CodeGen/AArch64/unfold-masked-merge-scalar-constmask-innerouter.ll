@@ -245,9 +245,10 @@ define i32 @in_multiuse_B_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 define i32 @n0_badconstmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: n0_badconstmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w1, #0xffffff00
+; CHECK-NEXT:    mov w9, #256
+; CHECK-NEXT:    movk w9, #65280, lsl #16
 ; CHECK-NEXT:    and w8, w0, #0xffff00
-; CHECK-NEXT:    and w9, w9, #0xff0001ff
+; CHECK-NEXT:    and w9, w1, w9
 ; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, 16776960
