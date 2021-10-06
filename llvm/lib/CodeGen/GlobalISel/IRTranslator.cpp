@@ -117,7 +117,7 @@ static void reportTranslationError(MachineFunction &MF,
     R << (" (in function: " + MF.getName() + ")").str();
 
   if (TPC.isGlobalISelAbortEnabled())
-    report_fatal_error(R.getMsg());
+    report_fatal_error(Twine(R.getMsg()));
   else
     ORE.emit(R);
 }
