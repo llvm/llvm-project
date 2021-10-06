@@ -59,9 +59,9 @@ define void @test2(double* %ptr, i32 %skip) {
 define void @test3(double* %ptr, i32 %skip) {
 ; CHECK-LABEL: Function: test3: 4 pointers, 1 call sites
 ; CHECK-NEXT:  MustAlias:   <6 x double>* %col.ptr.1, double* %ptr
-; CHECK-NEXT:  NoAlias:     double* %col.ptr.2, double* %ptr
+; CHECK-NEXT:  MayAlias:    double* %col.ptr.2, double* %ptr
 ; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.1, double* %col.ptr.2
-; CHECK-NEXT:  NoAlias:     <6 x double>* %col.ptr.2.cast, double* %ptr
+; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.2.cast, double* %ptr
 ; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.1, <6 x double>* %col.ptr.2.cast
 ; CHECK-NEXT:  MustAlias:   <6 x double>* %col.ptr.2.cast, double* %col.ptr.2
 ; CHECK-NEXT:  NoModRef:  Ptr: double* %ptr <->  call void @llvm.assume(i1 %gt)
