@@ -85,6 +85,8 @@ namespace std {
       constexpr basic_string_view(const charT* str);
       basic_string_view(nullptr_t) = delete; // C++2b
       constexpr basic_string_view(const charT* str, size_type len);
+      template <class It, class End>
+      constexpr basic_string_view(It begin, End end); // C++20
 
       // 7.4, basic_string_view iterator support
       constexpr const_iterator begin() const noexcept;
@@ -166,6 +168,10 @@ namespace std {
       size_type     size_;  // exposition only
     };
 
+  // basic_string_view deduction guides
+  template<class It, class End>
+    basic_string_view(It, End) -> basic_string_view<iter_value_t<It>>; // C++20
+
   // 7.11, Hash support
   template <class T> struct hash;
   template <> struct hash<string_view>;
@@ -185,6 +191,8 @@ namespace std {
 
 */
 
+#include <__concepts/convertible_to.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>
 #include <__ranges/enable_borrowed_range.h>
@@ -269,6 +277,16 @@ public:
     _LIBCPP_ASSERT(__len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
 #endif
     }
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+    template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
+      requires (same_as<iter_value_t<_It>, _CharT> && !convertible_to<_End, size_type>)
+    constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
+       : __data(_VSTD::to_address(__begin)), __size(__end - __begin)
+    {
+      _LIBCPP_ASSERT((__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
+    }
+#endif
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
@@ -669,6 +687,13 @@ inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+
+// [string.view.deduct]
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
+  basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
+#endif
 
 // [string.view.comparison]
 // operator ==

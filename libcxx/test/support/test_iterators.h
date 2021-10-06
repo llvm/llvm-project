@@ -885,6 +885,39 @@ private:
     I base_ = I();
 };
 
+template <std::input_or_output_iterator I>
+class sized_sentinel {
+public:
+    sized_sentinel() = default;
+    constexpr explicit sized_sentinel(I base) : base_(std::move(base)) {}
+
+    constexpr bool operator==(const I& other) const requires std::equality_comparable<I> {
+        return base_ == other;
+    }
+
+    constexpr const I& base() const& { return base_; }
+    constexpr I base() && { return std::move(base_); }
+
+    template<std::input_or_output_iterator I2>
+        requires sentinel_for_base<I, I2>
+    constexpr bool operator==(const I2& other) const {
+        return base_ == other.base();
+    }
+
+private:
+    I base_ = I();
+};
+
+template <std::input_or_output_iterator I>
+constexpr auto operator-(sized_sentinel<I> sent, std::input_or_output_iterator auto iter) {
+  return sent.base() - iter;
+}
+
+template <std::input_or_output_iterator I>
+constexpr auto operator-(std::input_or_output_iterator auto iter, sized_sentinel<I> sent) {
+  return iter - sent.base();
+}
+
 template <class It>
 class three_way_contiguous_iterator
 {
