@@ -64,6 +64,7 @@ endif ()
 list(APPEND CLANG_TEST_DEPS
   apinotes-test
   c-index-test
+  cir-tool
   clang
   clang-fuzzer-dictionary
   clang-resource-headers
