@@ -538,7 +538,7 @@ public:
 /// NestedNameSpecifiers into a diagnostic with <<.
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              NestedNameSpecifier *NNS) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(NNS),
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(NNS),
                   DiagnosticsEngine::ak_nestednamespec);
   return DB;
 }
