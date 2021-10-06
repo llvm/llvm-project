@@ -65,7 +65,7 @@ func @test_broadcast_extents() -> tensor<?xindex> {
 func @test_shape_any_fixed() {
   %0 = shape.const_shape [4, 57, 92] : !shape.shape
   %1 = shape.const_shape [4, 57, 92] : !shape.shape
-  %2 = "shape.join"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = "shape.meet"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
 }
@@ -73,7 +73,7 @@ func @test_shape_any_fixed() {
 func @test_shape_any_unknown() {
   %0 = shape.const_shape [4, -1, 92] : !shape.shape
   %1 = shape.const_shape [-1, 57, 92] : !shape.shape
-  %2 = "shape.join"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = "shape.meet"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
 }
@@ -81,7 +81,7 @@ func @test_shape_any_unknown() {
 func @test_shape_any_fixed_mismatch() {
   %0 = shape.const_shape [4, 57, 92] : !shape.shape
   %1 = shape.const_shape [2, 57, 92] : !shape.shape
-  %2 = "shape.join"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = "shape.meet"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
 }
@@ -243,7 +243,7 @@ func @num_elements_shape(%arg : !shape.shape) -> !shape.size {
 func @shape_equal_shapes(%a : !shape.value_shape, %b : !shape.value_shape) -> !shape.shape {
   %0 = shape.shape_of %a : !shape.value_shape -> !shape.shape
   %1 = shape.shape_of %b : !shape.value_shape -> !shape.shape
-  %2 = "shape.join"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = "shape.meet"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
   return %2 : !shape.shape
 }
 func @shape_with_shape(%a : !shape.value_shape, %b : !shape.value_shape) -> !shape.shape {
@@ -293,7 +293,7 @@ func @is_broadcastable_on_shapes(%a : !shape.shape,
 func @shape_upper_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
   %0 = shape.const_shape [4, 57, 92] : !shape.shape
   %1 = shape.max %a, %0 : !shape.shape, !shape.shape -> !shape.shape
-  %2 = shape.join %0, %1, error="exceeded element-wise upper bound" :
+  %2 = shape.meet %0, %1, error="exceeded element-wise upper bound" :
     !shape.shape, !shape.shape -> !shape.shape
   return %2 : !shape.shape
 }
@@ -301,7 +301,7 @@ func @shape_upper_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
 func @shape_lower_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
   %0 = shape.const_shape [4, 57, 92] : !shape.shape
   %1 = shape.min %a, %0 : !shape.shape, !shape.shape -> !shape.shape
-  %2 = shape.join %0, %1, error="lower bound element-wise exceeded" :
+  %2 = shape.meet %0, %1, error="lower bound element-wise exceeded" :
     !shape.shape, !shape.shape -> !shape.shape
   return %2 : !shape.shape
 }
@@ -309,7 +309,7 @@ func @shape_lower_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
 func @size_upper_bounded_by_constant(%a: !shape.size) -> !shape.size {
   %0 = shape.const_size 5
   %1 = shape.max %a, %0 : !shape.size, !shape.size -> !shape.size
-  %2 = shape.join %0, %1, error="exceeded element-wise upper bound" :
+  %2 = shape.meet %0, %1, error="exceeded element-wise upper bound" :
     !shape.size, !shape.size -> !shape.size
   return %2 : !shape.size
 }
@@ -317,7 +317,7 @@ func @size_upper_bounded_by_constant(%a: !shape.size) -> !shape.size {
 func @size_lower_bounded_by_constant(%a: !shape.size) -> !shape.size {
   %0 = shape.const_size 9
   %1 = shape.min %a, %0 : !shape.size, !shape.size -> !shape.size
-  %2 = shape.join %0, %1, error="lower bound element-wise exceeded" :
+  %2 = shape.meet %0, %1, error="lower bound element-wise exceeded" :
     !shape.size, !shape.size -> !shape.size
   return %2 : !shape.size
 }

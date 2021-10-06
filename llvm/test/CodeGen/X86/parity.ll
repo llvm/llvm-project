@@ -354,29 +354,187 @@ define i8 @parity_32_trunc(i32 %x) {
   ret i8 %3
 }
 
-define i32 @parity_8_zext(i8 %x) {
-; X86-NOPOPCNT-LABEL: parity_8_zext:
+define i16 @parity_16_zexti8(i8 %x) {
+; X86-NOPOPCNT-LABEL: parity_16_zexti8:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_16_zexti8:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_16_zexti8:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntw %ax, %ax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_16_zexti8:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntw %ax, %ax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-POPCNT-NEXT:    retq
+  %a = zext i8 %x to i16
+  %b = tail call i16 @llvm.ctpop.i16(i16 %a)
+  %c = and i16 %b, 1
+  ret i16 %c
+}
+
+define i16 @parity_16_mask255(i16 %x) {
+; X86-NOPOPCNT-LABEL: parity_16_mask255:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_16_mask255:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_16_mask255:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntw %ax, %ax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_16_mask255:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntw %ax, %ax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i16 %x, 255
+  %b = tail call i16 @llvm.ctpop.i16(i16 %a)
+  %c = and i16 %b, 1
+  ret i16 %c
+}
+
+define i16 @parity_16_mask15(i16 %x) {
+; X86-NOPOPCNT-LABEL: parity_16_mask15:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    testb $15, %cl
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_16_mask15:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb $15, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_16_mask15:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    andl $15, %eax
+; X86-POPCNT-NEXT:    popcntw %ax, %ax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_16_mask15:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    andl $15, %edi
+; X64-POPCNT-NEXT:    popcntw %di, %ax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i16 %x, 15
+  %b = tail call i16 @llvm.ctpop.i16(i16 %a)
+  %c = and i16 %b, 1
+  ret i16 %c
+}
+
+define i16 @parity_16_shift(i16 %0) {
+; X86-NOPOPCNT-LABEL: parity_16_shift:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    xorb %ch, %cl
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    addl %eax, %eax
+; X86-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_16_shift:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    movl %edi, %ecx
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    addl %eax, %eax
+; X64-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_16_shift:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    popcntw {{[0-9]+}}(%esp), %ax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    addl %eax, %eax
+; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_16_shift:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    popcntw %di, %ax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    addl %eax, %eax
+; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-POPCNT-NEXT:    retq
+  %2 = tail call i16 @llvm.ctpop.i16(i16 %0)
+  %3 = shl nuw nsw i16 %2, 1
+  %4 = and i16 %3, 2
+  ret i16 %4
+}
+
+define i32 @parity_32_zexti8(i8 %x) {
+; X86-NOPOPCNT-LABEL: parity_32_zexti8:
 ; X86-NOPOPCNT:       # %bb.0:
 ; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NOPOPCNT-NEXT:    setnp %al
 ; X86-NOPOPCNT-NEXT:    retl
 ;
-; X64-NOPOPCNT-LABEL: parity_8_zext:
+; X64-NOPOPCNT-LABEL: parity_32_zexti8:
 ; X64-NOPOPCNT:       # %bb.0:
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X64-NOPOPCNT-NEXT:    testb %dil, %dil
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
-; X86-POPCNT-LABEL: parity_8_zext:
+; X86-POPCNT-LABEL: parity_32_zexti8:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCNT-NEXT:    andl $1, %eax
 ; X86-POPCNT-NEXT:    retl
 ;
-; X64-POPCNT-LABEL: parity_8_zext:
+; X64-POPCNT-LABEL: parity_32_zexti8:
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    movzbl %dil, %eax
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
@@ -388,35 +546,70 @@ define i32 @parity_8_zext(i8 %x) {
   ret i32 %c
 }
 
-define i32 @parity_8_mask(i32 %x) {
-; X86-NOPOPCNT-LABEL: parity_8_mask:
+define i32 @parity_32_mask255(i32 %x) {
+; X86-NOPOPCNT-LABEL: parity_32_mask255:
 ; X86-NOPOPCNT:       # %bb.0:
 ; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NOPOPCNT-NEXT:    setnp %al
 ; X86-NOPOPCNT-NEXT:    retl
 ;
-; X64-NOPOPCNT-LABEL: parity_8_mask:
+; X64-NOPOPCNT-LABEL: parity_32_mask255:
 ; X64-NOPOPCNT:       # %bb.0:
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X64-NOPOPCNT-NEXT:    testb %dil, %dil
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
-; X86-POPCNT-LABEL: parity_8_mask:
+; X86-POPCNT-LABEL: parity_32_mask255:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCNT-NEXT:    andl $1, %eax
 ; X86-POPCNT-NEXT:    retl
 ;
-; X64-POPCNT-LABEL: parity_8_mask:
+; X64-POPCNT-LABEL: parity_32_mask255:
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    movzbl %dil, %eax
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    andl $1, %eax
 ; X64-POPCNT-NEXT:    retq
   %a = and i32 %x, 255
+  %b = tail call i32 @llvm.ctpop.i32(i32 %a)
+  %c = and i32 %b, 1
+  ret i32 %c
+}
+
+define i32 @parity_32_mask15(i32 %x) {
+; X86-NOPOPCNT-LABEL: parity_32_mask15:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    testb $15, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_32_mask15:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb $15, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_32_mask15:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    andl $15, %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_32_mask15:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    andl $15, %edi
+; X64-POPCNT-NEXT:    popcntl %edi, %eax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i32 %x, 15
   %b = tail call i32 @llvm.ctpop.i32(i32 %a)
   %c = and i32 %b, 1
   ret i32 %c
@@ -463,6 +656,116 @@ define i32 @parity_32_shift(i32 %0) {
   %3 = shl nuw nsw i32 %2, 1
   %4 = and i32 %3, 2
   ret i32 %4
+}
+
+define i64 @parity_64_zexti8(i8 %x) {
+; X86-NOPOPCNT-LABEL: parity_64_zexti8:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    xorl %edx, %edx
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_64_zexti8:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_64_zexti8:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    xorl %edx, %edx
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_64_zexti8:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntq %rax, %rax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = zext i8 %x to i64
+  %b = tail call i64 @llvm.ctpop.i64(i64 %a)
+  %c = and i64 %b, 1
+  ret i64 %c
+}
+
+define i64 @parity_64_mask255(i64 %x) {
+; X86-NOPOPCNT-LABEL: parity_64_mask255:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    xorl %edx, %edx
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_64_mask255:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_64_mask255:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    xorl %edx, %edx
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_64_mask255:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntq %rax, %rax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i64 %x, 255
+  %b = tail call i64 @llvm.ctpop.i64(i64 %a)
+  %c = and i64 %b, 1
+  ret i64 %c
+}
+
+define i64 @parity_64_mask15(i64 %x) {
+; X86-NOPOPCNT-LABEL: parity_64_mask15:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    testb $15, {{[0-9]+}}(%esp)
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    xorl %edx, %edx
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_64_mask15:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    testb $15, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_64_mask15:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    andl $15, %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    xorl %edx, %edx
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_64_mask15:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    andl $15, %edi
+; X64-POPCNT-NEXT:    popcntq %rdi, %rax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i64 %x, 15
+  %b = tail call i64 @llvm.ctpop.i64(i64 %a)
+  %c = and i64 %b, 1
+  ret i64 %c
 }
 
 define i64 @parity_64_shift(i64 %0) {
