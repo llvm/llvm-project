@@ -47,7 +47,93 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-The improvements are...
+Code Completion
+^^^^^^^^^^^^^^^
+
+- ML based model is used by default for ranking completion candidates.
+
+- Support for completion of attributes.
+
+- Improved handling of Objective-C(++) constructs.
+
+
+Hover
+^^^^^
+
+- Shows documentation for Attributes.
+
+- Displays resolved paths for includes.
+
+- Shows padding for fields.
+
+Document Outline
+^^^^^^^^^^^^^^^^
+
+- Contains information in detail field about extra type information
+
+- Macro expansions now show up in the tree
+
+- Improved handling of Objective-C(++) constructs.
+
+Code Navigation
+^^^^^^^^^^^^^^^^
+
+- Cross references surfaces occurrences for calls to overridden methods and
+  declarations.
+
+Semantic Highlighting
+^^^^^^^^^^^^^^^^^^^^^
+
+- Support for legacy semantic tokens extension is dropped.
+
+- Better support for Objective-C(++) constructs and dependent code.
+
+
+Diagnostics
+^^^^^^^^^^^
+
+- Diagnostics for unused/deprecated code are tagged according to LSP.
+
+- Clang-tidy checks that operate at translation-unit level are now available.
+
+System Integration
+^^^^^^^^^^^^^^^^^^
+
+- Compile flag parsing has been improved to be more resilient against multiple
+  jobs.
+
+- Better error reporting when compile flags are unusable.
+
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Better support for TUs with circular includes (e.g. templated header vs
+  implementation file).
+
+- Compile flags for headers are inferred from files known to be including them
+  when possible.
+
+- Version info contains information about compile-time setup of clangd
+
+- FeatureModule mechanism has been introduced to make contribution of vertical
+  features to clangd easier, by making it possible to write features that can
+  interact with clangd-core without touching it.
+
+- There's an extension for inlay-hints for deduced types and parameter names,
+  hidden behind -inlay-hints flag.
+
+- Rename is more robust:
+
+  - Won't trigger on non-identifiers.
+  - Makes use of dirty buffers for open files.
+
+- Improvements to dex query latency.
+
+- There's a remote-index service for LLVM at http://clangd-index.llvm.org/.
+
+- There's a remote-index service for Chromium at
+  https://linux.clangd-index.chromium.org/.
 
 Improvements to clang-doc
 -------------------------
