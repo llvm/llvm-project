@@ -91,6 +91,14 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
       .result();
 }
 
+static SmallVector<Value> filterDynamicDims(SmallVector<Value> dynDims) {
+  SmallVector<Value> filteredDims;
+  for (auto dim : dynDims)
+    if (dim)
+      filteredDims.push_back(dim);
+  return filteredDims;
+}
+
 static Value
 createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                             ArrayRef<Type> resultTypes,
@@ -690,10 +698,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     }
   }
 
-  SmallVector<Value> filteredDims;
-  for (auto dim : dynDims)
-    if (dim)
-      filteredDims.push_back(dim);
+  SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
 
   for (auto result : results) {
     auto resultTy = result.getType().template cast<ShapedType>();
@@ -1355,10 +1360,31 @@ public:
 
     auto outputTy = op.getType().cast<ShapedType>();
     auto outputElementTy = outputTy.getElementType();
+
+    auto firstOperandTy = op->getOperand(0).getType().cast<ShapedType>();
+    auto secondOperandTy = op->getOperand(1).getType().cast<ShapedType>();
+
+    SmallVector<Value> dynDims;
+    dynDims.resize(op->getResult(0).getType().cast<ShapedType>().getRank());
+
+    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(0)) {
+      dynDims[0] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 0);
+    }
+
+    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(1)) {
+      dynDims[1] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 1);
+    }
+
+    if (!secondOperandTy.hasRank() || secondOperandTy.isDynamicDim(2)) {
+      dynDims[2] = rewriter.create<tensor::DimOp>(loc, op->getOperand(1), 2);
+    }
+
+    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+
     auto zeroAttr = rewriter.getZeroAttr(outputElementTy);
     Value zero = rewriter.create<ConstantOp>(loc, zeroAttr);
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, outputTy.getShape(), outputTy.getElementType());
+        loc, filteredDims, outputTy.getShape(), outputTy.getElementType());
     Value zeroTensor =
         rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
     if (!op.quantization_info()) {
@@ -1393,13 +1419,28 @@ public:
     Location loc = op.getLoc();
     auto outputTy = op.getType().cast<ShapedType>();
     auto input = op.input();
-    auto weight = op.weight();
+    auto inputTy = input.getType().cast<ShapedType>();
+
     auto bias = op.bias();
 
+    auto weight = op.weight();
     auto weightTy = weight.getType().cast<ShapedType>();
     auto weightShape = weightTy.getShape();
 
     auto outputETy = outputTy.getElementType();
+
+    SmallVector<Value> dynDims;
+    dynDims.resize(op->getResult(0).getType().cast<ShapedType>().getRank());
+
+    if (!inputTy.hasRank() || inputTy.isDynamicDim(0)) {
+      dynDims[0] = rewriter.create<tensor::DimOp>(loc, input, 0);
+    }
+
+    if (!weightTy.hasRank() || weightTy.isDynamicDim(0)) {
+      dynDims[1] = rewriter.create<tensor::DimOp>(loc, weight, 0);
+    }
+
+    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
 
     // Creating maps for the output of MatMul and the bias
     SmallVector<AffineMap, 4> indexingMaps;
@@ -1413,7 +1454,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
 
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, outputTy.getShape(), outputTy.getElementType());
+        loc, filteredDims, outputTy.getShape(), outputTy.getElementType());
 
     // When quantized, the input elemeny type is not the same as the output
     Attribute resultZeroAttr = rewriter.getZeroAttr(outputETy);
@@ -1435,7 +1476,8 @@ public:
 
     auto biasInitTensor =
         rewriter
-            .create<linalg::InitTensorOp>(loc, outputTy.getShape(), outputETy)
+            .create<linalg::InitTensorOp>(loc, filteredDims,
+                                          outputTy.getShape(), outputETy)
             ->getResults();
 
     if (!op.quantization_info()) {
@@ -1614,20 +1656,29 @@ public:
       return failure();
     }
 
+    auto loc = op.getLoc();
+    auto input = op->getOperand(0);
     auto resultTy = op.getType().cast<ShapedType>();
-    if (!resultTy.hasStaticShape())
-      return failure();
+
+    SmallVector<Value> dynDims;
+    dynDims.resize(op->getResult(0).getType().cast<ShapedType>().getRank());
 
     SmallVector<AffineExpr, 2> inputExprs;
     inputExprs.resize(resultTy.getRank());
+    auto operandTy = input.getType().cast<ShapedType>();
     for (auto permutation : llvm::enumerate(perms.getValues<APInt>())) {
-      inputExprs[permutation.value().getZExtValue()] =
-          rewriter.getAffineDimExpr(permutation.index());
+      auto index = permutation.index();
+      auto value = permutation.value().getZExtValue();
+      if (!operandTy.hasRank() || operandTy.isDynamicDim(index)) {
+        dynDims[value] = rewriter.create<tensor::DimOp>(loc, input, index);
+      }
+      inputExprs[value] = rewriter.getAffineDimExpr(index);
     }
 
+    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        op.getLoc(), ArrayRef<Value>({}), resultTy.getShape(),
-        resultTy.getElementType());
+        loc, filteredDims, resultTy.getShape(), resultTy.getElementType());
 
     SmallVector<AffineMap, 2> affineMaps = {
         AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
@@ -1638,7 +1689,7 @@ public:
         op, resultTy, op.input1(), ValueRange{initTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+          nestedBuilder.create<linalg::YieldOp>(loc, *args.begin());
         });
     return success();
   }
