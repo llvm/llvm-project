@@ -99,3 +99,17 @@ func @test_signature_conversion_undo() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// Should not segfault here but gracefully fail.
+// CHECK-LABEL: func @test_block_argument_not_converted
+func @test_block_argument_not_converted() {
+  "test.unsupported_block_arg_type"() ({
+    // NOTE: The test pass does not convert `index` types.
+    // CHECK: ^bb0({{.*}}: index):
+    ^bb0(%0 : index):
+      "test.return"(%0) : (index) -> ()
+  }) : () -> ()
+  return
+}
