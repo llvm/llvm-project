@@ -15,6 +15,8 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
+#include "llvm/IR/DerivedTypes.h"
+
 namespace llvm {
 
 class MachineBasicBlock;
@@ -35,17 +37,34 @@ enum WasmAddressSpace : unsigned {
   // linear memory: WebAssembly globals or WebAssembly locals.  Loads and stores
   // to these pointers are lowered to global.get / global.set or local.get /
   // local.set, as appropriate.
-  WASM_ADDRESS_SPACE_WASM_VAR = 1
+  WASM_ADDRESS_SPACE_VAR = 1,
+  // A non-integral address space for externref values
+  WASM_ADDRESS_SPACE_EXTERNREF = 10,
+  // A non-integral address space for funcref values
+  WASM_ADDRESS_SPACE_FUNCREF = 20,
 };
 
 inline bool isDefaultAddressSpace(unsigned AS) {
   return AS == WASM_ADDRESS_SPACE_DEFAULT;
 }
 inline bool isWasmVarAddressSpace(unsigned AS) {
-  return AS == WASM_ADDRESS_SPACE_WASM_VAR;
+  return AS == WASM_ADDRESS_SPACE_VAR;
 }
 inline bool isValidAddressSpace(unsigned AS) {
   return isDefaultAddressSpace(AS) || isWasmVarAddressSpace(AS);
+}
+inline bool isFuncrefType(const Type *Ty) {
+  return isa<PointerType>(Ty) &&
+         Ty->getPointerAddressSpace() ==
+             WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
+}
+inline bool isExternrefType(const Type *Ty) {
+  return isa<PointerType>(Ty) &&
+         Ty->getPointerAddressSpace() ==
+             WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
+}
+inline bool isRefType(const Type *Ty) {
+  return isFuncrefType(Ty) || isExternrefType(Ty);
 }
 
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);

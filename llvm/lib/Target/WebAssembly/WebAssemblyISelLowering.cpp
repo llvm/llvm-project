@@ -336,6 +336,24 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setMinimumJumpTableEntries(2);
 }
 
+MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
+                                            uint32_t AS) const {
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
+    return MVT::externref;
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
+    return MVT::funcref;
+  return TargetLowering::getPointerTy(DL, AS);
+}
+
+MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
+                                               uint32_t AS) const {
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
+    return MVT::externref;
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
+    return MVT::funcref;
+  return TargetLowering::getPointerMemTy(DL, AS);
+}
+
 TargetLowering::AtomicExpansionKind
 WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // We have wasm instructions for these
@@ -1132,7 +1150,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB && isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
+  if (CLI.CB &&
+      WebAssembly::isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1150,7 +1169,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
         MVT::funcref,
         // Machine Mem Operand args
-        MachinePointerInfo(WasmAddressSpace::FUNCREF),
+        MachinePointerInfo(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
         CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
         MachineMemOperand::MOStore);
 
@@ -1386,16 +1406,6 @@ static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
 
   auto &MF = DAG.getMachineFunction();
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());
-}
-
-bool WebAssemblyTargetLowering::isFuncrefType(const Type *Ty) {
-  return isa<PointerType>(Ty) &&
-         Ty->getPointerAddressSpace() == WasmAddressSpace::FUNCREF;
-}
-
-bool WebAssemblyTargetLowering::isExternrefType(const Type *Ty) {
-  return isa<PointerType>(Ty) &&
-         Ty->getPointerAddressSpace() == WasmAddressSpace::EXTERNREF;
 }
 
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
