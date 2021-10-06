@@ -567,7 +567,21 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   if (IsIndirect) {
     auto FnPtr = CallParams.getOperand(0);
     CallParams.RemoveOperand(0);
-    CallParams.addOperand(FnPtr);
+
+    // For funcrefs, call_indirect is done through __funcref_call_table and the
+    // funcref is always installed in slot 0 of the table, therefore instead of having
+    // the function pointer added at the end of the params list, a zero (the index in
+    // __funcref_call_table is added).
+    if (IsFuncrefCall) {
+      Register RegZero =
+          MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+      MachineInstrBuilder MIBC0 =
+          BuildMI(MF, DL, TII.get(WebAssembly::CONST_I32), RegZero).addImm(0);
+
+      BB->insert(CallResults.getIterator(), MIBC0);
+      MachineInstrBuilder(MF, CallParams).addReg(RegZero);
+    } else
+      CallParams.addOperand(FnPtr);
   }
 
   for (auto Def : CallResults.defs())
