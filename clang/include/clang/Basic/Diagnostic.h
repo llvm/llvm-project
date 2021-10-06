@@ -164,9 +164,9 @@ struct DiagnosticStorage {
   /// The values for the various substitution positions.
   ///
   /// This is used when the argument is not an std::string. The specific value
-  /// is mangled into an uint64_t and the interpretation depends on exactly
+  /// is mangled into an intptr_t and the interpretation depends on exactly
   /// what sort of argument kind it is.
-  uint64_t DiagArgumentsVal[MaxArguments];
+  intptr_t DiagArgumentsVal[MaxArguments];
 
   /// The values for the various substitution positions that have
   /// string arguments.
@@ -1179,7 +1179,7 @@ public:
     DiagStorage = nullptr;
   }
 
-  void AddTaggedVal(uint64_t V, DiagnosticsEngine::ArgumentKind Kind) const {
+  void AddTaggedVal(intptr_t V, DiagnosticsEngine::ArgumentKind Kind) const {
     if (!DiagStorage)
       DiagStorage = getStorage();
 
@@ -1580,18 +1580,18 @@ public:
 
   /// Return the specified signed integer argument.
   /// \pre getArgKind(Idx) == DiagnosticsEngine::ak_sint
-  int64_t getArgSInt(unsigned Idx) const {
+  int getArgSInt(unsigned Idx) const {
     assert(getArgKind(Idx) == DiagnosticsEngine::ak_sint &&
            "invalid argument accessor!");
-    return (int64_t)DiagObj->DiagStorage.DiagArgumentsVal[Idx];
+    return (int)DiagObj->DiagStorage.DiagArgumentsVal[Idx];
   }
 
   /// Return the specified unsigned integer argument.
   /// \pre getArgKind(Idx) == DiagnosticsEngine::ak_uint
-  uint64_t getArgUInt(unsigned Idx) const {
+  unsigned getArgUInt(unsigned Idx) const {
     assert(getArgKind(Idx) == DiagnosticsEngine::ak_uint &&
            "invalid argument accessor!");
-    return DiagObj->DiagStorage.DiagArgumentsVal[Idx];
+    return (unsigned)DiagObj->DiagStorage.DiagArgumentsVal[Idx];
   }
 
   /// Return the specified IdentifierInfo argument.
@@ -1605,7 +1605,7 @@ public:
 
   /// Return the specified non-string argument in an opaque form.
   /// \pre getArgKind(Idx) != DiagnosticsEngine::ak_std_string
-  uint64_t getRawArg(unsigned Idx) const {
+  intptr_t getRawArg(unsigned Idx) const {
     assert(getArgKind(Idx) != DiagnosticsEngine::ak_std_string &&
            "invalid argument accessor!");
     return DiagObj->DiagStorage.DiagArgumentsVal[Idx];

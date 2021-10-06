@@ -932,7 +932,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     }
     // ---- INTEGERS ----
     case DiagnosticsEngine::ak_sint: {
-      int64_t Val = getArgSInt(ArgNo);
+      int Val = getArgSInt(ArgNo);
 
       if (ModifierIs(Modifier, ModifierLen, "select")) {
         HandleSelectModifier(*this, (unsigned)Val, Argument, ArgumentLen,
@@ -951,7 +951,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       break;
     }
     case DiagnosticsEngine::ak_uint: {
-      uint64_t Val = getArgUInt(ArgNo);
+      unsigned Val = getArgUInt(ArgNo);
 
       if (ModifierIs(Modifier, ModifierLen, "select")) {
         HandleSelectModifier(*this, Val, Argument, ArgumentLen, OutStr);
