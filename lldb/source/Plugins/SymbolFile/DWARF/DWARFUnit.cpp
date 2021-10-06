@@ -626,16 +626,17 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static RegularExpression llvm_gcc_regex(
-      llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
-                      "Inc\\. build [0-9]+\\) \\(LLVM build "
-                      "[\\.0-9]+\\)$"));
-  if (llvm_gcc_regex.Execute(producer)) {
+  static RegularExpression g_llvm_gcc_regex(
+      llvm::StringRef(R"(4\.[012]\.[01] )"
+                      R"(\(Based on Apple Inc\. build [0-9]+\) )"
+                      R"(\(LLVM build [\.0-9]+\)$)"));
+  static RegularExpression g_clang_version_regex(
+      llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+
+  if (g_llvm_gcc_regex.Execute(producer)) {
     m_producer = eProducerLLVMGCC;
   } else if (producer.contains("clang")) {
-    static RegularExpression g_clang_version_regex(
-        llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
-    llvm::SmallVector<llvm::StringRef, 4> matches;
+    llvm::SmallVector<llvm::StringRef, 3> matches;
     if (g_clang_version_regex.Execute(producer, &matches))
       m_producer_version.tryParse(matches[1]);
     m_producer = eProducerClang;
