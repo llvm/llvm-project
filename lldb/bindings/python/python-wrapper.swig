@@ -341,6 +341,63 @@ LLDBSwigPythonCreateScriptedProcess
 }
 
 SWIGEXPORT void*
+LLDBSwigPythonCreateScriptedThread
+(
+    const char *python_class_name,
+    const char *session_dictionary_name,
+    const lldb::TargetSP& target_sp,
+    std::string &error_string
+)
+{
+    if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
+        Py_RETURN_NONE;
+
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
+    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
+
+    if (!pfunc.IsAllocated()) {
+        error_string.append("could not find script class: ");
+        error_string.append(python_class_name);
+        return nullptr;
+    }
+
+    // I do not want the SBTarget to be deallocated when going out of scope
+    // because python has ownership of it and will manage memory for this
+    // object by itself
+    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBTarget(target_sp)));
+
+    if (!target_arg.IsAllocated())
+        Py_RETURN_NONE;
+
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+    if (!arg_info) {
+        llvm::handleAllErrors(
+            arg_info.takeError(),
+            [&](PythonException &E) {
+                error_string.append(E.ReadBacktrace());
+            },
+            [&](const llvm::ErrorInfoBase &E) {
+                error_string.append(E.message());
+            });
+        Py_RETURN_NONE;
+    }
+
+    PythonObject result = {};
+    if (arg_info.get().max_positional_args == 1) {
+        result = pfunc(target_arg);
+    } else {
+        error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
+        Py_RETURN_NONE;
+    }
+
+    if (result.IsAllocated())
+        return result.release();
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT void*
 LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,

@@ -1,7 +1,10 @@
-import os
+import os,struct,signal
+
+from typing import Any, Dict
 
 import lldb
 from lldb.plugins.scripted_process import ScriptedProcess
+from lldb.plugins.scripted_process import ScriptedThread
 
 class MyScriptedProcess(ScriptedProcess):
     def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
@@ -34,6 +37,45 @@ class MyScriptedProcess(ScriptedProcess):
 
     def is_alive(self) -> bool:
         return True
+
+    def get_scripted_thread_plugin(self):
+        return MyScriptedThread.__module__ + "." + MyScriptedThread.__name__
+
+
+class MyScriptedThread(ScriptedThread):
+    def __init__(self, target):
+        super().__init__(target)
+
+    def get_thread_id(self) -> int:
+        return 0x19
+
+    def get_name(self) -> str:
+        return MyScriptedThread.__name__ + ".thread-1"
+
+    def get_stop_reason(self) -> Dict[str, Any]:
+        return { "type": lldb.eStopReasonSignal, "data": {
+            "signal": signal.SIGINT
+        } }
+
+    def get_stackframes(self):
+        class ScriptedStackFrame:
+            def __init__(idx, cfa, pc, symbol_ctx):
+                self.idx = idx
+                self.cfa = cfa
+                self.pc = pc
+                self.symbol_ctx = symbol_ctx
+
+
+        symbol_ctx = lldb.SBSymbolContext()
+        frame_zero = ScriptedStackFrame(0, 0x42424242, 0x5000000, symbol_ctx)
+        self.frames.append(frame_zero)
+
+        return self.frame_zero[0:0]
+
+    def get_register_context(self) -> str:
+        return struct.pack(
+                '21Q', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+
 
 def __lldb_init_module(debugger, dict):
     if not 'SKIP_SCRIPTED_PROCESS_LAUNCH' in os.environ:

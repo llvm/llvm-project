@@ -57,6 +57,45 @@ public:
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
   virtual bool IsAlive() { return true; }
+
+  virtual llvm::Optional<std::string> GetScriptedThreadPluginName() {
+    return llvm::None;
+  }
+
+protected:
+  friend class ScriptedThread;
+  virtual lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() {
+    return nullptr;
+  }
+
+  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
+};
+
+class ScriptedThreadInterface : virtual public ScriptedInterface {
+public:
+  StructuredData::GenericSP
+  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
+                     StructuredData::DictionarySP args_sp) override {
+    return nullptr;
+  }
+
+  virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
+
+  virtual llvm::Optional<std::string> GetName() { return llvm::None; }
+
+  virtual lldb::StateType GetState() { return lldb::eStateInvalid; }
+
+  virtual llvm::Optional<std::string> GetQueue() { return llvm::None; }
+
+  virtual StructuredData::DictionarySP GetStopReason() { return nullptr; }
+
+  virtual StructuredData::ArraySP GetStackFrames() { return nullptr; }
+
+  virtual StructuredData::DictionarySP GetRegisterInfo() { return nullptr; }
+
+  virtual llvm::Optional<std::string> GetRegisterContext() {
+    return llvm::None;
+  }
 };
 } // namespace lldb_private
 

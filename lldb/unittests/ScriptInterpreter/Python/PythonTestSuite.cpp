@@ -223,6 +223,12 @@ extern "C" void *LLDBSwigPythonCreateScriptedProcess(
   return nullptr;
 }
 
+extern "C" void *LLDBSwigPythonCreateScriptedThread(
+    const char *python_class_name, const char *session_dictionary_name,
+    const lldb::TargetSP &target_sp, std::string &error_string) {
+  return nullptr;
+}
+
 extern "C" void *
 LLDBSWIGPython_CreateFrameRecognizer(const char *python_class_name,
                                      const char *session_dictionary_name) {

@@ -36,6 +36,14 @@ ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
 }
 
 template <>
+StructuredData::DictionarySP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    StructuredData::DictionarySP>(python::PythonObject &p, Status &error) {
+  python::PythonDictionary result_dict(python::PyRefType::Borrowed, p.get());
+  return result_dict.CreateStructuredDictionary();
+}
+
+template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(

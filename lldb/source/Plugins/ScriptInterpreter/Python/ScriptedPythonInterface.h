@@ -38,15 +38,13 @@ protected:
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
-    auto error_with_message = [&method_name, &error](llvm::StringRef message) {
-      error.SetErrorStringWithFormatv(
-          "ScriptedPythonInterface::{0} ({1}) ERROR = {2}", __FUNCTION__,
-          method_name, message);
-      return T();
-    };
-
+    std::string caller_signature =
+        llvm::Twine(__PRETTY_FUNCTION__ + llvm::Twine(" (") +
+                    llvm::Twine(method_name) + llvm::Twine(")"))
+            .str();
     if (!m_object_instance_sp)
-      return error_with_message("Python object ill-formed");
+      return ErrorWithMessage<T>(caller_signature, "Python object ill-formed",
+                                 error);
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
@@ -55,7 +53,8 @@ protected:
                              (PyObject *)m_object_instance_sp->GetValue());
 
     if (!implementor.IsAllocated())
-      return error_with_message("Python implementor not allocated.");
+      return ErrorWithMessage<T>(caller_signature,
+                                 "Python implementor not allocated.", error);
 
     PythonObject pmeth(
         PyRefType::Owned,
@@ -65,12 +64,14 @@ protected:
       PyErr_Clear();
 
     if (!pmeth.IsAllocated())
-      return error_with_message("Python method not allocated.");
+      return ErrorWithMessage<T>(caller_signature,
+                                 "Python method not allocated.", error);
 
     if (PyCallable_Check(pmeth.get()) == 0) {
       if (PyErr_Occurred())
         PyErr_Clear();
-      return error_with_message("Python method not callable.");
+      return ErrorWithMessage<T>(caller_signature,
+                                 "Python method not callable.", error);
     }
 
     if (PyErr_Occurred())
@@ -96,11 +97,13 @@ protected:
     if (PyErr_Occurred()) {
       PyErr_Print();
       PyErr_Clear();
-      return error_with_message("Python method could not be called.");
+      return ErrorWithMessage<T>(caller_signature,
+                                 "Python method could not be called.", error);
     }
 
     if (!py_return.IsAllocated())
-      return error_with_message("Returned object is null.");
+      return ErrorWithMessage<T>(caller_signature, "Returned object is null.",
+                                 error);
 
     return ExtractValueFromPythonObject<T>(py_return, error);
   }
@@ -122,6 +125,11 @@ protected:
   // The lifetime is managed by the ScriptInterpreter
   ScriptInterpreterPythonImpl &m_interpreter;
 };
+
+template <>
+StructuredData::DictionarySP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    StructuredData::DictionarySP>(python::PythonObject &p, Status &error);
 
 template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(

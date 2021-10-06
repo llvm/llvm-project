@@ -72,6 +72,28 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(error.Success(), "Failed to read memory from scripted process.")
         self.assertEqual(hello_world, memory_read)
 
+        self.assertEqual(process.GetNumThreads(), 1)
+
+        thread = process.GetSelectedThread()
+        self.assertTrue(thread, "Invalid thread.")
+        self.assertEqual(thread.GetThreadID(), 0x19)
+        self.assertEqual(thread.GetName(), "MyScriptedThread.thread-1")
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+
+        self.assertGreater(thread.GetNumFrames(), 0)
+
+        frame = thread.GetFrameAtIndex(0)
+        register_set = frame.registers # Returns an SBValueList.
+        for regs in register_set:
+            if 'GPR' in regs.name:
+                registers  = regs
+                break
+
+        self.assertTrue(registers, "Invalid General Purpose Registers Set")
+        self.assertEqual(registers.GetNumChildren(), 21)
+        for idx, reg in enumerate(registers, start=1):
+            self.assertEqual(idx, int(reg.value, 16))
+
     def test_launch_scripted_process_cli(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""
