@@ -2299,19 +2299,17 @@ LogicalResult mlir::linalg::inPlaceAnalysis(SmallVector<Operation *> &ops,
         if (result.getType().isa<TensorType>() &&
             failed(bufferizableInPlaceAnalysis(opOperand, result, aliasInfo,
                                                domInfo)))
-          return failure();
+          op->emitWarning() << "Inplace analysis treated conservatively";
     }
     // Special logic to analyze ExtractSliceOp.
     // Note that ExtractSliceOp analysis needs to be interleaved with other ops
     // to properly capture aliases.
     // Walk ExtractSliceOps in reverse for better clobbering analysis behavior:
     // it is easier to detect clobbers of smaller slices before larger ones.
-    if (auto extractSliceOp = dyn_cast<ExtractSliceOp>(op)) {
+    if (auto extractSliceOp = dyn_cast<ExtractSliceOp>(op))
       if (failed(
               bufferizableInPlaceAnalysis(extractSliceOp, aliasInfo, domInfo)))
-        return failure();
-      continue;
-    }
+        op->emitWarning() << "Inplace analysis treated conservatively";
   }
   return success();
 }
