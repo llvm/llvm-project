@@ -69,7 +69,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
           solutions.
         * ``Xcode`` --- for generating Xcode projects.
 
-        Some Common options:
+        Some common options:
 
         * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
           sub-projects you'd like to additionally build. Can include any of: clang,
