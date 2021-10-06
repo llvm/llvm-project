@@ -103,6 +103,7 @@ static void InsertNewValueIntoMap(ValueToValueMapTy &VM, Value *K, Value *V) {
 static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
                                             BasicBlock *OrigPreheader,
                                             ValueToValueMapTy &ValueMap,
+                                            ScalarEvolution *SE,
                                 SmallVectorImpl<PHINode*> *InsertedPHIs) {
   // Remove PHI node entries that are no longer live.
   BasicBlock::iterator I, E = OrigHeader->end();
@@ -125,6 +126,10 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     // The value now exits in two versions: the initial value in the preheader
     // and the loop "next" value in the original header.
     SSA.Initialize(OrigHeaderVal->getType(), OrigHeaderVal->getName());
+    // Force re-computation of OrigHeaderVal, as some users now need to use the
+    // new PHI node.
+    if (SE)
+      SE->forgetValue(OrigHeaderVal);
     SSA.AddAvailableValue(OrigHeader, OrigHeaderVal);
     SSA.AddAvailableValue(OrigPreheader, OrigPreHeaderVal);
 
@@ -563,7 +568,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     SmallVector<PHINode*, 2> InsertedPHIs;
     // If there were any uses of instructions in the duplicated block outside the
     // loop, update them, inserting PHI nodes as required
-    RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap,
+    RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap, SE,
                                     &InsertedPHIs);
 
     // Attach dbg.value intrinsics to the new phis if that phi uses a value that
