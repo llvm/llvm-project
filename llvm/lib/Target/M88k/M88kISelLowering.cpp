@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kISelLowering.h"
-#include "M88kCondCode.h"
 //#include "M88kCallingConv.h"
 //#include "M88kConstantPoolValue.h"
 //#include "M88kMachineFunctionInfo.h"
@@ -44,41 +43,11 @@ static bool isShiftedMask(uint64_t I, uint64_t &Width, uint64_t &Offset) {
   return true;
 }
 
-static M88kCC::CondCode ISDCCtoM88kCC(ISD::CondCode isdCC) {
-  switch (isdCC) {
-  case ISD::SETUEQ:
-    return M88kCC::EQ;
-  case ISD::SETUGT:
-    return M88kCC::HI;
-  case ISD::SETUGE:
-    return M88kCC::HS;
-  case ISD::SETULT:
-    return M88kCC::LO;
-  case ISD::SETULE:
-    return M88kCC::LS;
-  case ISD::SETUNE:
-    return M88kCC::NE;
-  case ISD::SETEQ:
-    return M88kCC::EQ;
-  case ISD::SETGT:
-    return M88kCC::GT;
-  case ISD::SETGE:
-    return M88kCC::GE;
-  case ISD::SETLT:
-    return M88kCC::LT;
-  case ISD::SETLE:
-    return M88kCC::LE;
-  case ISD::SETNE:
-    return M88kCC::NE;
-  default:
-    llvm_unreachable("Unhandled ISDCC code.");
-  }
-}
-
 M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
                                        const M88kSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
   addRegisterClass(MVT::i32, &M88k::GPRRegClass);
+  //addRegisterClass(MVT::i64, &M88k::GPR64RegClass);
   addRegisterClass(MVT::f32, &M88k::GPRRegClass);
 
   // Compute derived properties from the register classes
