@@ -294,6 +294,34 @@ void TestIntrinsics() {
       .Push(Const(Scalar<Real4>{}))
       .DoCall(); // bad type
 
+  // This test temporarily removed because it requires access to
+  // the ISO_FORTRAN_ENV intrinsic module. This module should to
+  // be loaded (somehow) and the following test reinstated.
+  // TestCall{defaults, table, "team_number"}.DoCall(Int4::GetType());
+
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // too many args
+  TestCall{defaults, table, "team_number"}
+      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Char>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Log4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Complex8>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Real4>{}))
+      .DoCall(); // bad type
+
   // TODO: test other intrinsics
 
   // Test unrestricted specific to generic name mapping (table 16.2).

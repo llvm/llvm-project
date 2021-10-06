@@ -2844,7 +2844,7 @@ unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
     return FPI->getNumArgOperands();
   }
-  return unwrap<CallBase>(Instr)->getNumArgOperands();
+  return unwrap<CallBase>(Instr)->arg_size();
 }
 
 /*--.. Call and invoke instructions ........................................--*/

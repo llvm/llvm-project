@@ -40,7 +40,8 @@ module {
   func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseMatrix>,
                       %argc: tensor<?x?xf64>,
                       %argd: tensor<?x?xf64>,
-                      %arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
+                      %arga: tensor<?x?xf64> {linalg.inplaceable = true})
+		      -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:
             tensor<?x?x?xf64, #SparseMatrix>, tensor<?x?xf64>, tensor<?x?xf64>)
@@ -126,6 +127,7 @@ module {
     memref.dealloc %adata : memref<?x?xf64>
     memref.dealloc %cdata : memref<?x?xf64>
     memref.dealloc %ddata : memref<?x?xf64>
+    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseMatrix>
 
     return
   }

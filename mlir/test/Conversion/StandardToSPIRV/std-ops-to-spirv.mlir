@@ -24,6 +24,14 @@ func @int32_scalar(%lhs: i32, %rhs: i32) {
   %4 = divi_unsigned %lhs, %rhs: i32
   // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
   %5 = remi_unsigned %lhs, %rhs: i32
+  // CHECK: spv.GLSL.SMax %{{.*}}, %{{.*}}: i32
+  %6 = maxsi %lhs, %rhs : i32
+  // CHECK: spv.GLSL.UMax %{{.*}}, %{{.*}}: i32
+  %7 = maxui %lhs, %rhs : i32
+  // CHECK: spv.GLSL.SMin %{{.*}}, %{{.*}}: i32
+  %8 = minsi %lhs, %rhs : i32
+  // CHECK: spv.GLSL.UMin %{{.*}}, %{{.*}}: i32
+  %9 = minui %lhs, %rhs : i32
   return
 }
 
@@ -67,6 +75,10 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %3 = divf %lhs, %rhs: f32
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = remf %lhs, %rhs: f32
+  // CHECK: spv.GLSL.FMax %{{.*}}, %{{.*}}: f32
+  %5 = maxf %lhs, %rhs: f32
+  // CHECK: spv.GLSL.FMin %{{.*}}, %{{.*}}: f32
+  %6 = minf %lhs, %rhs: f32
   return
 }
 

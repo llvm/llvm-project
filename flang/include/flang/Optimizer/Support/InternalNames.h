@@ -54,10 +54,10 @@ struct NameUniquer {
         : modules{modules.begin(), modules.end()}, host{host}, name{name},
           kinds{kinds.begin(), kinds.end()} {}
 
-    llvm::SmallVector<std::string, 2> modules;
+    llvm::SmallVector<std::string> modules;
     llvm::Optional<std::string> host;
     std::string name;
-    llvm::SmallVector<std::int64_t, 4> kinds;
+    llvm::SmallVector<std::int64_t> kinds;
   };
 
   /// Unique a common block name
@@ -125,6 +125,13 @@ struct NameUniquer {
   /// Decompose `uniquedName` into the parse name, symbol type, and scope info
   static std::pair<NameKind, DeconstructedName>
   deconstruct(llvm::StringRef uniquedName);
+
+  /// Check if the name is an external facing name.
+  static bool isExternalFacingUniquedName(
+      const std::pair<NameKind, DeconstructedName> &deconstructResult);
+
+  /// Check whether the name should be re-mangle with external ABI convention.
+  static bool needExternalNameMangling(llvm::StringRef uniquedName);
 
 private:
   static std::string intAsString(std::int64_t i);

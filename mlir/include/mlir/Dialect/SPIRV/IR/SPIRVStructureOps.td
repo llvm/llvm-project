@@ -379,12 +379,25 @@ def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
   let arguments = (ins
     TypeAttr:$type,
     StrAttr:$sym_name,
-    OptionalAttr<FlatSymbolRefAttr>:$initializer
+    OptionalAttr<FlatSymbolRefAttr>:$initializer,
+    OptionalAttr<I32Attr>:$location,
+    OptionalAttr<I32Attr>:$binding,
+    OptionalAttr<I32Attr>:$descriptorSet,
+    OptionalAttr<StrAttr>:$builtin
   );
 
   let results = (outs);
 
   let builders = [
+    OpBuilder<(ins "TypeAttr":$type,
+                   "StringAttr":$sym_name,
+                   CArg<"FlatSymbolRefAttr", "nullptr">:$initializer),
+    [{
+      $_state.addAttribute("type", type);
+      $_state.addAttribute(sym_nameAttrName($_state.name), sym_name);
+      if (initializer)
+        $_state.addAttribute(initializerAttrName($_state.name), initializer);
+    }]>,
     OpBuilder<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
     [{
       $_state.addAttribute("type", type);
@@ -393,7 +406,16 @@ def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
     OpBuilder<(ins "Type":$type, "StringRef":$name,
       "unsigned":$descriptorSet, "unsigned":$binding)>,
     OpBuilder<(ins "Type":$type, "StringRef":$name,
-      "spirv::BuiltIn":$builtin)>
+      "spirv::BuiltIn":$builtin)>,
+    OpBuilder<(ins "Type":$type,
+                   "StringRef":$sym_name,
+                    CArg<"FlatSymbolRefAttr", "{}">:$initializer),
+    [{
+      $_state.addAttribute("type", TypeAttr::get(type));
+      $_state.addAttribute(sym_nameAttrName($_state.name), $_builder.getStringAttr(sym_name));
+      if (initializer)
+        $_state.addAttribute(initializerAttrName($_state.name), initializer);
+    }]>
   ];
 
   let hasOpcode = 0;

@@ -624,5 +624,6 @@ llvm::Optional<llvm::StringRef> ParsedAST::preambleVersion() const {
     return llvm::None;
   return llvm::StringRef(Preamble->Version);
 }
+
 } // namespace clangd
 } // namespace clang

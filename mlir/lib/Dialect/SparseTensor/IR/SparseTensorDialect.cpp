@@ -235,6 +235,12 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+static LogicalResult verify(ReleaseOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to release");
+  return success();
+}
+
 static LogicalResult verify(ToPointersOp op) {
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
     if (failed(isInBounds(op.dim(), op.tensor())))

@@ -97,10 +97,8 @@ static const uint32_t g_vsx_regnums_ppc64le[] = {
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-namespace {
 // Number of register sets provided by this context.
-enum { k_num_register_sets = 4 };
-}
+static constexpr int k_num_register_sets = 4;
 
 static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
     {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64le,

@@ -411,7 +411,8 @@ public:
   const Elf_Shdr *getRelSection(DataRefImpl Rel) const {
     auto RelSecOrErr = EF.getSection(Rel.d.a);
     if (!RelSecOrErr)
-      report_fatal_error(errorToErrorCode(RelSecOrErr.takeError()).message());
+      report_fatal_error(
+          Twine(errorToErrorCode(RelSecOrErr.takeError()).message()));
     return *RelSecOrErr;
   }
 
@@ -970,7 +971,8 @@ ELFObjectFile<ELFT>::section_rel_end(DataRefImpl Sec) const {
   // Error check sh_link here so that getRelocationSymbol can just use it.
   auto SymSecOrErr = EF.getSection(RelSec->sh_link);
   if (!SymSecOrErr)
-    report_fatal_error(errorToErrorCode(SymSecOrErr.takeError()).message());
+    report_fatal_error(
+        Twine(errorToErrorCode(SymSecOrErr.takeError()).message()));
 
   RelData.d.b += S->sh_size / S->sh_entsize;
   return relocation_iterator(RelocationRef(RelData, this));
@@ -1059,7 +1061,7 @@ ELFObjectFile<ELFT>::getRel(DataRefImpl Rel) const {
   assert(getRelSection(Rel)->sh_type == ELF::SHT_REL);
   auto Ret = EF.template getEntry<Elf_Rel>(Rel.d.a, Rel.d.b);
   if (!Ret)
-    report_fatal_error(errorToErrorCode(Ret.takeError()).message());
+    report_fatal_error(Twine(errorToErrorCode(Ret.takeError()).message()));
   return *Ret;
 }
 
@@ -1069,7 +1071,7 @@ ELFObjectFile<ELFT>::getRela(DataRefImpl Rela) const {
   assert(getRelSection(Rela)->sh_type == ELF::SHT_RELA);
   auto Ret = EF.template getEntry<Elf_Rela>(Rela.d.a, Rela.d.b);
   if (!Ret)
-    report_fatal_error(errorToErrorCode(Ret.takeError()).message());
+    report_fatal_error(Twine(errorToErrorCode(Ret.takeError()).message()));
   return *Ret;
 }
 

@@ -243,13 +243,13 @@ func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32
 #contraction_to_scalar_max_trait = {
   indexing_maps = #contraction_to_scalar_max_accesses,
   iterator_types = ["reduction"],
-  kind = #vector.kind<max>
+  kind = #vector.kind<maxf>
 }
 // CHECK-LABEL: @contraction_to_scalar_with_max
 func @contraction_to_scalar_with_max(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
   // CHECK:      %[[C0:.*]] = constant 0.000000e+00 : f32
   %f0 = constant 0.0: f32
-  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<max>} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<maxf>} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
   %0 = vector.contract #contraction_to_scalar_max_trait %arg0, %arg1, %f0
     : vector<10xf32>, vector<10xf32> into f32
   // CHECK:      return %[[X]] : f32
@@ -281,7 +281,7 @@ func @contraction_to_scalar_with_max(%arg0: vector<10xf32>, %arg1: vector<10xf32
 #contraction_trait2 = {
   indexing_maps = #contraction_accesses1,
   iterator_types = #iterator_types1,
-  kind = #vector.kind<max>
+  kind = #vector.kind<maxf>
 }
 // CHECK-LABEL: @contraction
 func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
@@ -309,7 +309,7 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
   %3 = vector.contract #contraction_trait1 %arg4, %arg5, %arg3
       : vector<7x8x16x15xf16>, vector<8x16x7x5xf16> into vector<8x8x15x5xf32>
   // Test contraction with "max" instead of "add".
-  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<max>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
+  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<maxf>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   %4 = vector.contract #contraction_trait2 %arg0, %arg1, %arg3
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   return
@@ -432,10 +432,10 @@ func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   vector.reduction "mul", %arg0 : vector<16xf32> into f32
   // CHECK:    vector.reduction "mul", %{{.*}}, %{{.*}} : vector<16xf32> into f32
   vector.reduction "mul", %arg0, %arg1 : vector<16xf32> into f32
-  // CHECK:    vector.reduction "min", %{{.*}} : vector<16xf32> into f32
-  vector.reduction "min", %arg0 : vector<16xf32> into f32
-  // CHECK:    %[[X:.*]] = vector.reduction "max", %{{.*}} : vector<16xf32> into f32
-  %0 = vector.reduction "max", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction "minf", %{{.*}} : vector<16xf32> into f32
+  vector.reduction "minf", %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X:.*]] = vector.reduction "maxf", %{{.*}} : vector<16xf32> into f32
+  %0 = vector.reduction "maxf", %arg0 : vector<16xf32> into f32
   // CHECK:    return %[[X]] : f32
   return %0 : f32
 }
@@ -446,10 +446,14 @@ func @reduce_int(%arg0: vector<16xi32>) -> i32 {
   vector.reduction "add", %arg0 : vector<16xi32> into i32
   // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xi32> into i32
   vector.reduction "mul", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "min", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "min", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "max", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "max", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "minui", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "minui", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "minsi", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "minsi", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "maxui", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "maxui", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "maxsi", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "maxsi", %arg0 : vector<16xi32> into i32
   // CHECK:    vector.reduction "and", %{{.*}} : vector<16xi32> into i32
   vector.reduction "and", %arg0 : vector<16xi32> into i32
   // CHECK:    vector.reduction "or", %{{.*}} : vector<16xi32> into i32

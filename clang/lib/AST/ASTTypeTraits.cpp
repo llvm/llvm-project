@@ -18,6 +18,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/TypeLoc.h"
 
 using namespace clang;
 
@@ -28,6 +29,8 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "TemplateName"},
     {NKI_None, "NestedNameSpecifierLoc"},
     {NKI_None, "QualType"},
+#define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
+#include "clang/AST/TypeLocNodes.def"
     {NKI_None, "TypeLoc"},
     {NKI_None, "CXXBaseSpecifier"},
     {NKI_None, "CXXCtorInitializer"},
@@ -125,6 +128,17 @@ ASTNodeKind ASTNodeKind::getFromNode(const Type &T) {
 #include "clang/AST/TypeNodes.inc"
   }
   llvm_unreachable("invalid type kind");
+ }
+
+ ASTNodeKind ASTNodeKind::getFromNode(const TypeLoc &T) {
+   switch (T.getTypeLocClass()) {
+#define ABSTRACT_TYPELOC(CLASS, PARENT)
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case TypeLoc::CLASS:                                                         \
+    return ASTNodeKind(NKI_##CLASS##TypeLoc);
+#include "clang/AST/TypeLocNodes.def"
+   }
+   llvm_unreachable("invalid typeloc kind");
  }
 
 ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {

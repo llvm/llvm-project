@@ -679,7 +679,8 @@ raw_fd_ostream::~raw_fd_ostream() {
   // has_error() and clear the error flag with clear_error() before
   // destructing raw_ostream objects which may have errors.
   if (has_error())
-    report_fatal_error("IO failure on output stream: " + error().message(),
+    report_fatal_error(Twine("IO failure on output stream: ") +
+                           error().message(),
                        /*gen_crash_diag=*/false);
 }
 

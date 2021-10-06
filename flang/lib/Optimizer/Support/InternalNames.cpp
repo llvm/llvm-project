@@ -21,7 +21,7 @@ static llvm::cl::opt<std::string> mainEntryName(
     llvm::cl::desc("override the name of the default PROGRAM entry (may be "
                    "helpful for using other runtimes)"));
 
-constexpr std::int64_t BAD_VALUE = -1;
+constexpr std::int64_t badValue = -1;
 
 inline std::string prefix() { return "_Q"; }
 
@@ -69,9 +69,9 @@ static std::int64_t readInt(llvm::StringRef uniq, std::size_t &i,
   for (i = init; i < end && uniq[i] >= '0' && uniq[i] <= '9'; ++i) {
     // do nothing
   }
-  std::int64_t result = BAD_VALUE;
+  std::int64_t result = badValue;
   if (uniq.substr(init, i - init).getAsInteger(10, result))
-    return BAD_VALUE;
+    return badValue;
   return result;
 }
 
@@ -223,10 +223,10 @@ llvm::StringRef fir::NameUniquer::doProgramEntry() {
 std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
   if (uniq.startswith("_Q")) {
-    llvm::SmallVector<std::string, 4> modules;
+    llvm::SmallVector<std::string> modules;
     llvm::Optional<std::string> host;
     std::string name;
-    llvm::SmallVector<std::int64_t, 8> kinds;
+    llvm::SmallVector<std::int64_t> kinds;
     NameKind nk = NameKind::NOT_UNIQUED;
     for (std::size_t i = 2, end{uniq.size()}; i != end;) {
       switch (uniq[i]) {
@@ -301,4 +301,19 @@ fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
     return {nk, DeconstructedName(modules, host, name, kinds)};
   }
   return {NameKind::NOT_UNIQUED, DeconstructedName(uniq)};
+}
+
+bool fir::NameUniquer::isExternalFacingUniquedName(
+    const std::pair<fir::NameUniquer::NameKind,
+                    fir::NameUniquer::DeconstructedName> &deconstructResult) {
+  return (deconstructResult.first == NameKind::PROCEDURE ||
+          deconstructResult.first == NameKind::COMMON) &&
+         deconstructResult.second.modules.empty() &&
+         !deconstructResult.second.host;
+}
+
+bool fir::NameUniquer::needExternalNameMangling(llvm::StringRef uniquedName) {
+  auto result = fir::NameUniquer::deconstruct(uniquedName);
+  return result.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
+         fir::NameUniquer::isExternalFacingUniquedName(result);
 }

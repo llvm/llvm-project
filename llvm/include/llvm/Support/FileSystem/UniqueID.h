@@ -14,7 +14,7 @@
 #ifndef LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 #define LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include <cstdint>
 #include <utility>
 

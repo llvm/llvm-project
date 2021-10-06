@@ -32,16 +32,14 @@ LibIgnore *libignore();
 
 #if !SANITIZER_GO
 inline bool in_symbolizer() {
-  cur_thread_init();
-  return UNLIKELY(cur_thread()->in_symbolizer);
+  return UNLIKELY(cur_thread_init()->in_symbolizer);
 }
 #endif
 
 }  // namespace __tsan
 
 #define SCOPED_INTERCEPTOR_RAW(func, ...)      \
-  cur_thread_init();                           \
-  ThreadState *thr = cur_thread();             \
+  ThreadState *thr = cur_thread_init();        \
   const uptr caller_pc = GET_CALLER_PC();      \
   ScopedInterceptor si(thr, #func, caller_pc); \
   const uptr pc = GET_CURRENT_PC();            \

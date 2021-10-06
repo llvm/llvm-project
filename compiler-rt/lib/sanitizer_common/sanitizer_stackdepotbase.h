@@ -27,6 +27,7 @@ class StackDepotBase {
  public:
   typedef typename Node::args_type args_type;
   typedef typename Node::handle_type handle_type;
+  typedef typename Node::hash_type hash_type;
   // Maps stack trace to an unique id.
   handle_type Put(args_type args, bool *inserted = nullptr);
   // Retrieves a stored stack trace by the id.
@@ -39,7 +40,7 @@ class StackDepotBase {
   void PrintAll();
 
  private:
-  static Node *find(Node *s, args_type args, u32 hash);
+  static Node *find(Node *s, args_type args, hash_type hash);
   static Node *lock(atomic_uintptr_t *p);
   static void unlock(atomic_uintptr_t *p, Node *s);
 
@@ -62,7 +63,7 @@ class StackDepotBase {
 template <class Node, int kReservedBits, int kTabSizeLog>
 Node *StackDepotBase<Node, kReservedBits, kTabSizeLog>::find(Node *s,
                                                              args_type args,
-                                                             u32 hash) {
+                                                             hash_type hash) {
   // Searches linked list s for the stack, returns its id.
   for (; s; s = s->link) {
     if (s->eq(hash, args)) {
@@ -101,7 +102,7 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
                                                       bool *inserted) {
   if (inserted) *inserted = false;
   if (!Node::is_valid(args)) return handle_type();
-  uptr h = Node::hash(args);
+  hash_type h = Node::hash(args);
   atomic_uintptr_t *p = &tab[h % kTabSize];
   uptr v = atomic_load(p, memory_order_consume);
   Node *s = (Node *)(v & ~1);

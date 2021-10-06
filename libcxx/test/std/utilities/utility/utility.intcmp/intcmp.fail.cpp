@@ -33,6 +33,7 @@
 //   constexpr bool in_range(T t) noexcept;      // C++20
 
 #include <utility>
+#include <cstddef>
 
 #include "test_macros.h"
 
@@ -133,7 +134,7 @@ int main() {
   test<std::byte>();
   test<NonEmptyT>();
   test<ColorT>();
-  test<nullptr_t>();
+  test<std::nullptr_t>();
   test<EmptyT>();
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T

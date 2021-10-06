@@ -133,7 +133,7 @@ C++20 Feature Support
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-...
+- Implemented `P1938R3: if consteval <https://wg21.link/P1938R3>`_.
 
 CUDA Language Changes in Clang
 ------------------------------

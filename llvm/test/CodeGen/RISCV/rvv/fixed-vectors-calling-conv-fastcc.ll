@@ -54,7 +54,7 @@ define fastcc <8 x i1> @ret_mask_v8i1(<8 x i1>* %p) {
 ; CHECK-LABEL: ret_mask_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %p
   ret <8 x i1> %v
@@ -65,7 +65,7 @@ define fastcc <32 x i1> @ret_mask_v32i1(<32 x i1>* %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <32 x i1>, <32 x i1>* %p
   ret <32 x i1> %v
@@ -561,7 +561,7 @@ define fastcc <4 x i1> @vector_mask_arg_direct_stack(i32 %0, i32 %1, i32 %2, i32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 152
-; CHECK-NEXT:    vle1.v v25, (a0)
+; CHECK-NEXT:    vlm.v v25, (a0)
 ; CHECK-NEXT:    vmxor.mm v0, v0, v25
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret

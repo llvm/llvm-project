@@ -87,7 +87,7 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
   return linalg::PadTensorOp::createPadScalarOp(
              RankedTensorType::get(paddedShape, inputETy), input, padValue,
-             lowIndices, highIndices, /*packing=*/false, loc, rewriter)
+             lowIndices, highIndices, /*nofold=*/false, loc, rewriter)
       .result();
 }
 
@@ -565,6 +565,19 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     if (mlir::SIToFPOp::areCastCompatible(srcTy, dstTy))
       return rewriter.create<mlir::SIToFPOp>(loc, resultTypes, args,
                                              mlir::None);
+
+    // Unsigned integers need an unrealized cast so that they can be passed
+    // to UIToFP.
+    if (srcTy.isUnsignedInteger() && dstTy.isa<FloatType>()) {
+      auto unrealizedCast =
+          rewriter
+              .create<UnrealizedConversionCastOp>(
+                  loc, rewriter.getIntegerType(srcTy.getIntOrFloatBitWidth()),
+                  args[0])
+              .getResult(0);
+      return rewriter.create<mlir::UIToFPOp>(loc, resultTypes[0],
+                                             unrealizedCast);
+    }
 
     // Casting to boolean, floats need to only be checked as not-equal to zero.
     if (srcTy.isa<FloatType>() && dstTy.isInteger(1)) {
@@ -2349,7 +2362,7 @@ public:
 
     auto newPadOp = linalg::PadTensorOp::createPadScalarOp(
         padOp.getType(), input, constant, lowValues, highValues,
-        /*packing=*/false, loc, rewriter);
+        /*nofold=*/false, loc, rewriter);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();

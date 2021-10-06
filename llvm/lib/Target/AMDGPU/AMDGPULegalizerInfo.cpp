@@ -606,7 +606,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &Mulh = getActionDefinitionsBuilder({G_UMULH, G_SMULH})
                    .legalFor({S32})
-                   .maxScalarOrElt(0, S32);
+                   .maxScalar(0, S32);
 
   if (ST.hasVOP3PInsts()) {
     Mulh

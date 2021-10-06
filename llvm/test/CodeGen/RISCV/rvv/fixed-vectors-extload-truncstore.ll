@@ -8,7 +8,7 @@ define <2 x i16> @sextload_v2i1_v2i16(<2 x i1>* %x) {
 ; CHECK-LABEL: sextload_v2i1_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v8, v25, -1, v0
@@ -562,7 +562,7 @@ define void @truncstore_v2i8_v2i1(<2 x i8> %x, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a0)
+; CHECK-NEXT:    vsm.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i8> %x to <2 x i1>
   store <2 x i1> %y, <2 x i1>* %z

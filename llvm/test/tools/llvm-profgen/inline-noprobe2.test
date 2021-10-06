@@ -2,7 +2,7 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
-;CHECK:       partition_pivot_first:1050:5
+;CHECK:       partition_pivot_first:1045:5
 ;CHECK-NEXT:  0: 5
 ;CHECK-NEXT:  1: 5
 ;CHECK-NEXT:  2: 5
@@ -22,30 +22,41 @@
 ;CHECK-NEXT:   1: 6
 ;CHECK-NEXT:   2: 6
 ;CHECK-NEXT:   3: 6
-;CHECK-NEXT: quick_sort:414:25
+;CHECK-NEXT: partition_pivot_last:647:7
+;CHECK-NEXT:  1: 6
+;CHECK-NEXT:  2: 6
+;CHECK-NEXT:  3: 6
+
+;w/o duplication factor :  3.1: 18
+;w/o duplication factor :  3.3: 18
+;w/o duplication factor :  4: 19
+;w/o duplication factor :  5: 9
+;CHECK-NEXT:  3.1: 36
+;CHECK-NEXT:  3.3: 36
+;CHECK-NEXT:  4: 38
+;CHECK-NEXT:  5: 18
+
+;CHECK-NEXT:  6: 5
+;CHECK-NEXT:  7: 5
+;CHECK-NEXT:  5: swap:116
+
+;w/o duplication factor :  1: 9
+;w/o duplication factor :  2: 9
+;w/o duplication factor :  3: 9
+;CHECK-NEXT:   1: 18
+;CHECK-NEXT:   2: 18
+;CHECK-NEXT:   3: 18
+
+;CHECK-NEXT:  6: swap:20
+;CHECK-NEXT:   1: 5
+;CHECK-NEXT:   2: 5
+;CHECK-NEXT:   3: 5
+;CHECK-NEXT: quick_sort:318:25
 ;CHECK-NEXT:  1: 24
 ;CHECK-NEXT:  2: 12 partition_pivot_last:7 partition_pivot_first:5
 ;CHECK-NEXT:  3: 11 quick_sort:12
 ;CHECK-NEXT:  4: 12 quick_sort:12
 ;CHECK-NEXT:  6: 24
-;CHECK-NEXT: partition_pivot_last:391:7
-;CHECK-NEXT:  1: 6
-;CHECK-NEXT:  2: 6
-;CHECK-NEXT:  3: 6
-;CHECK-NEXT:  3.1: 18
-;CHECK-NEXT:  3.3: 18
-;CHECK-NEXT:  4: 19
-;CHECK-NEXT:  5: 9
-;CHECK-NEXT:  6: 5
-;CHECK-NEXT:  7: 5
-;CHECK-NEXT:  5: swap:61
-;CHECK-NEXT:   1: 9
-;CHECK-NEXT:   2: 9
-;CHECK-NEXT:   3: 9
-;CHECK-NEXT:  6: swap:20
-;CHECK-NEXT:   1: 5
-;CHECK-NEXT:   2: 5
-;CHECK-NEXT:   3: 5
 ;CHECK-NEXT: main:213:0
 ;CHECK-NEXT:  0: 0
 ;CHECK-NEXT:  3: 0

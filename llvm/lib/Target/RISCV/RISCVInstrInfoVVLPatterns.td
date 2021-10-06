@@ -622,8 +622,8 @@ foreach vti = AllVectors in {
 }
 
 foreach mti = AllMasks in {
-  defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#mti.BX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#mti.BX);
+  defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#mti.BX);
+  defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#mti.BX);
   def : Pat<(mti.Mask (riscv_vle_vl BaseAddr:$rs1, VLOpFrag)),
             (load_instr BaseAddr:$rs1, GPR:$vl, mti.Log2SEW)>;
   def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), BaseAddr:$rs1,

@@ -18,9 +18,7 @@
 
 using namespace lldb_private;
 
-namespace {
-const int kInvalidPosixProcess = 0;
-}
+static const int kInvalidPosixProcess = 0;
 
 HostProcessPosix::HostProcessPosix()
     : HostNativeProcessBase(kInvalidPosixProcess) {}

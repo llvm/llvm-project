@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -32,6 +33,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -115,7 +117,7 @@ static void reportTranslationError(MachineFunction &MF,
     R << (" (in function: " + MF.getName() + ")").str();
 
   if (TPC.isGlobalISelAbortEnabled())
-    report_fatal_error(R.getMsg());
+    report_fatal_error(Twine(R.getMsg()));
   else
     ORE.emit(R);
 }
@@ -2699,6 +2701,28 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
+bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder) {
+    if (!MF->getTarget().Options.TrapUnreachable)
+    return true;
+
+  auto &UI = cast<UnreachableInst>(U);
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (MF->getTarget().Options.NoTrapAfterNoreturn) {
+    const BasicBlock &BB = *UI.getParent();
+    if (&UI != &BB.front()) {
+      BasicBlock::const_iterator PredI =
+        std::prev(BasicBlock::const_iterator(UI));
+      if (const CallInst *Call = dyn_cast<CallInst>(&*PredI)) {
+        if (Call->doesNotReturn())
+          return true;
+      }
+    }
+  }
+
+  MIRBuilder.buildIntrinsic(Intrinsic::trap, ArrayRef<Register>(), true);
+  return true;
+}
+
 bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
@@ -3008,7 +3032,8 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   return true;
 }
 
-void IRTranslator::finalizeBasicBlock() {
+bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,
+                                      MachineBasicBlock &MBB) {
   for (auto &BTB : SL->BitTestCases) {
     // Emit header first, if it wasn't already emitted.
     if (!BTB.Emitted)
@@ -3077,6 +3102,173 @@ void IRTranslator::finalizeBasicBlock() {
   for (auto &SwCase : SL->SwitchCases)
     emitSwitchCase(SwCase, &CurBuilder->getMBB(), *CurBuilder);
   SL->SwitchCases.clear();
+
+  // Check if we need to generate stack-protector guard checks.
+  StackProtector &SP = getAnalysis<StackProtector>();
+  if (SP.shouldEmitSDCheck(BB)) {
+    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
+    bool FunctionBasedInstrumentation =
+        TLI.getSSPStackGuardCheck(*MF->getFunction().getParent());
+    SPDescriptor.initialize(&BB, &MBB, FunctionBasedInstrumentation);
+  }
+  // Handle stack protector.
+  if (SPDescriptor.shouldEmitFunctionBasedCheckStackProtector()) {
+    LLVM_DEBUG(dbgs() << "Unimplemented stack protector case\n");
+    return false;
+  } else if (SPDescriptor.shouldEmitStackProtector()) {
+    MachineBasicBlock *ParentMBB = SPDescriptor.getParentMBB();
+    MachineBasicBlock *SuccessMBB = SPDescriptor.getSuccessMBB();
+
+    // Find the split point to split the parent mbb. At the same time copy all
+    // physical registers used in the tail of parent mbb into virtual registers
+    // before the split point and back into physical registers after the split
+    // point. This prevents us needing to deal with Live-ins and many other
+    // register allocation issues caused by us splitting the parent mbb. The
+    // register allocator will clean up said virtual copies later on.
+    MachineBasicBlock::iterator SplitPoint = findSplitPointForStackProtector(
+        ParentMBB, *MF->getSubtarget().getInstrInfo());
+
+    // Splice the terminator of ParentMBB into SuccessMBB.
+    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
+                       ParentMBB->end());
+
+    // Add compare/jump on neq/jump to the parent BB.
+    if (!emitSPDescriptorParent(SPDescriptor, ParentMBB))
+      return false;
+
+    // CodeGen Failure MBB if we have not codegened it yet.
+    MachineBasicBlock *FailureMBB = SPDescriptor.getFailureMBB();
+    if (FailureMBB->empty()) {
+      if (!emitSPDescriptorFailure(SPDescriptor, FailureMBB))
+        return false;
+    }
+
+    // Clear the Per-BB State.
+    SPDescriptor.resetPerBBState();
+  }
+  return true;
+}
+
+bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
+                                          MachineBasicBlock *ParentBB) {
+  CurBuilder->setInsertPt(*ParentBB, ParentBB->end());
+  // First create the loads to the guard/stack slot for the comparison.
+  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
+  Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
+  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  LLT PtrMemTy = getLLTForMVT(TLI.getPointerMemTy(*DL));
+
+  MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
+  int FI = MFI.getStackProtectorIndex();
+
+  Register Guard;
+  Register StackSlotPtr = CurBuilder->buildFrameIndex(PtrTy, FI).getReg(0);
+  const Module &M = *ParentBB->getParent()->getFunction().getParent();
+  Align Align = DL->getPrefTypeAlign(Type::getInt8PtrTy(M.getContext()));
+
+  // Generate code to load the content of the guard slot.
+  Register GuardVal =
+      CurBuilder
+          ->buildLoad(PtrMemTy, StackSlotPtr,
+                      MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                      MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
+          .getReg(0);
+
+  if (TLI.useStackGuardXorFP()) {
+    LLVM_DEBUG(dbgs() << "Stack protector xor'ing with FP not yet implemented");
+    return false;
+  }
+
+  // Retrieve guard check function, nullptr if instrumentation is inlined.
+  if (const Function *GuardCheckFn = TLI.getSSPStackGuardCheck(M)) {
+    // This path is currently untestable on GlobalISel, since the only platform
+    // that needs this seems to be Windows, and we fall back on that currently.
+    // The code still lives here in case that changes.
+    return false;
+#if 0
+    // The target provides a guard check function to validate the guard value.
+    // Generate a call to that function with the content of the guard slot as
+    // argument.
+    FunctionType *FnTy = GuardCheckFn->getFunctionType();
+    assert(FnTy->getNumParams() == 1 && "Invalid function signature");
+    ISD::ArgFlagsTy Flags;
+    if (GuardCheckFn->hasAttribute(1, Attribute::AttrKind::InReg))
+      Flags.setInReg();
+    CallLowering::ArgInfo GuardArgInfo(
+        {GuardVal, FnTy->getParamType(0), {Flags}});
+
+    CallLowering::CallLoweringInfo Info;
+    Info.OrigArgs.push_back(GuardArgInfo);
+    Info.CallConv = GuardCheckFn->getCallingConv();
+    Info.Callee = MachineOperand::CreateGA(GuardCheckFn, 0);
+    Info.OrigRet = {Register(), FnTy->getReturnType()};
+    if (!CLI->lowerCall(MIRBuilder, Info)) {
+      LLVM_DEBUG(dbgs() << "Failed to lower call to stack protector check\n");
+      return false;
+    }
+    return true;
+#endif
+  }
+
+  // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
+  // Otherwise, emit a volatile load to retrieve the stack guard value.
+  if (TLI.useLoadStackGuardNode()) {
+    Guard =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
+    getStackGuard(Guard, *CurBuilder);
+  } else {
+    // TODO: test using android subtarget when we support @llvm.thread.pointer.
+    const Value *IRGuard = TLI.getSDagStackGuard(M);
+    Register GuardPtr = getOrCreateVReg(*IRGuard);
+
+    Guard = CurBuilder
+                ->buildLoad(PtrMemTy, GuardPtr,
+                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                            MachineMemOperand::MOLoad |
+                                MachineMemOperand::MOVolatile)
+                .getReg(0);
+  }
+
+  // Perform the comparison.
+  auto Cmp =
+      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Guard, GuardVal);
+  // If the guard/stackslot do not equal, branch to failure MBB.
+  CurBuilder->buildBrCond(Cmp, *SPD.getFailureMBB());
+  // Otherwise branch to success MBB.
+  CurBuilder->buildBr(*SPD.getSuccessMBB());
+  return true;
+}
+
+bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
+                                           MachineBasicBlock *FailureBB) {
+  CurBuilder->setInsertPt(*FailureBB, FailureBB->end());
+  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
+
+  const RTLIB::Libcall Libcall = RTLIB::STACKPROTECTOR_CHECK_FAIL;
+  const char *Name = TLI.getLibcallName(Libcall);
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(Libcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = {Register(), Type::getVoidTy(MF->getFunction().getContext()),
+                  0};
+  if (!CLI->lowerCall(*CurBuilder, Info)) {
+    LLVM_DEBUG(dbgs() << "Failed to lower call to stack protector fail\n");
+    return false;
+  }
+
+  // On PS4, the "return address" must still be within the calling function,
+  // even if it's at the very end, so emit an explicit TRAP here.
+  // Passing 'true' for doesNotReturn above won't generate the trap for us.
+  // WebAssembly needs an unreachable instruction after a non-returning call,
+  // because the function return type can be different from __stack_chk_fail's
+  // return type (void).
+  const TargetMachine &TM = MF->getTarget();
+  if (TM.getTargetTriple().isPS4CPU() || TM.getTargetTriple().isWasm()) {
+    LLVM_DEBUG(dbgs() << "Unhandled trap emission for stack protector fail\n");
+    return false;
+  }
+  return true;
 }
 
 void IRTranslator::finalizeFunction() {
@@ -3092,6 +3284,7 @@ void IRTranslator::finalizeFunction() {
   EntryBuilder.reset();
   CurBuilder.reset();
   FuncInfo.clear();
+  SPDescriptor.resetPerFunctionState();
 }
 
 /// Returns true if a BasicBlock \p BB within a variadic function contains a
@@ -3278,7 +3471,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
         return false;
       }
 
-      finalizeBasicBlock();
+      if (!finalizeBasicBlock(*BB, MBB))
+        return false;
     }
 #ifndef NDEBUG
     WrapperObserver.removeObserver(&Verifier);

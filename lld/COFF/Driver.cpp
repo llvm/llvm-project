@@ -823,16 +823,12 @@ static void createImportLibrary(bool asLib) {
     exports.push_back(e2);
   }
 
-  auto handleError = [](Error &&e) {
-    handleAllErrors(std::move(e),
-                    [](ErrorInfoBase &eib) { error(eib.message()); });
-  };
   std::string libName = getImportName(asLib);
   std::string path = getImplibPath();
 
   if (!config->incremental) {
-    handleError(writeImportLibrary(libName, path, exports, config->machine,
-                                   config->mingw));
+    checkError(writeImportLibrary(libName, path, exports, config->machine,
+                                  config->mingw));
     return;
   }
 
@@ -841,8 +837,8 @@ static void createImportLibrary(bool asLib) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
       path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
-    handleError(writeImportLibrary(libName, path, exports, config->machine,
-                                   config->mingw));
+    checkError(writeImportLibrary(libName, path, exports, config->machine,
+                                  config->mingw));
     return;
   }
 
@@ -854,7 +850,7 @@ static void createImportLibrary(bool asLib) {
 
   if (Error e = writeImportLibrary(libName, tmpName, exports, config->machine,
                                    config->mingw)) {
-    handleError(std::move(e));
+    checkError(std::move(e));
     return;
   }
 
@@ -862,7 +858,7 @@ static void createImportLibrary(bool asLib) {
       tmpName, /*IsText=*/false, /*RequiresNullTerminator=*/false));
   if ((*oldBuf)->getBuffer() != newBuf->getBuffer()) {
     oldBuf->reset();
-    handleError(errorCodeToError(sys::fs::rename(tmpName, path)));
+    checkError(errorCodeToError(sys::fs::rename(tmpName, path)));
   } else {
     sys::fs::remove(tmpName);
   }
