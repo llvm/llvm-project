@@ -494,15 +494,17 @@ RangeSet RangeSet::Factory::deletePoint(RangeSet From,
   return intersect(From, Upper, Lower);
 }
 
-void Range::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void Range::dump(raw_ostream &OS) const {
   OS << '[' << toString(From(), 10) << ", " << toString(To(), 10) << ']';
 }
+LLVM_DUMP_METHOD void Range::dump() const { dump(llvm::errs()); }
 
-void RangeSet::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void RangeSet::dump(raw_ostream &OS) const {
   OS << "{ ";
   llvm::interleaveComma(*this, OS, [&OS](const Range &R) { R.dump(OS); });
   OS << " }";
 }
+LLVM_DUMP_METHOD void RangeSet::dump() const { dump(llvm::errs()); }
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
 
