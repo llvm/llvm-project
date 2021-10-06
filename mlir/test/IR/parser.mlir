@@ -1312,7 +1312,7 @@ func @pretty_names() {
 // operations like `test.default_dialect` can define a default dialect
 // used in nested region.
 // CHECK-LABEL: func @default_dialect
-func @default_dialect() {
+func @default_dialect(%bool : i1) {
   test.default_dialect {
     // The test dialect is the default in this region, the following two
     // operations are parsed identically.
@@ -1324,8 +1324,17 @@ func @default_dialect() {
     // example.
     // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
     "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+
+    // TODO: remove this after removing the special casing for std in the printer.
+    // Verify that operations in the standard dialect keep the `std.` prefix.
+    // CHECK: std.assert
+    assert %bool, "Assertion"
     "test.terminator"() : ()->()
   }
+  // The same operation outside of the region does not have an std. prefix.
+  // CHECK-NOT: std.assert
+  // CHECK: assert
+  assert %bool, "Assertion"
   return
 }
 
