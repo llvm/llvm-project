@@ -59,11 +59,11 @@ protected:
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
   // Valid alignments are powers of two from 2^0 to 2^MaxAlignmentExponent =
-  // 2^32. We store them as Log2(Alignment), so we need 6 bits to encode the 33
+  // 2^30. We store them as Log2(Alignment), so we need 5 bits to encode the 31
   // possible values.
   template <unsigned Offset>
   using AlignmentBitfieldElementT =
-      typename Bitfield::Element<unsigned, Offset, 6,
+      typename Bitfield::Element<unsigned, Offset, 5,
                                  Value::MaxAlignmentExponent>;
 
   template <unsigned Offset>

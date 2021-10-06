@@ -51,7 +51,7 @@ protected:
 
   Comdat *ObjComdat;
   enum {
-    LastAlignmentBit = 5,
+    LastAlignmentBit = 4,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,
@@ -68,7 +68,7 @@ public:
   GlobalObject(const GlobalObject &) = delete;
 
   /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
+  unsigned getAlignment() const {
     MaybeAlign Align = getAlign();
     return Align ? Align->value() : 0;
   }

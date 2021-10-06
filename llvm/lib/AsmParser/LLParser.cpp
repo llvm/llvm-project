@@ -1927,7 +1927,7 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   if (!EatIfPresent(lltok::kw_align))
     return false;
   LocTy AlignLoc = Lex.getLoc();
-  uint64_t Value = 0;
+  uint32_t Value = 0;
 
   LocTy ParenLoc = Lex.getLoc();
   bool HaveParens = false;
@@ -1936,13 +1936,13 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
       HaveParens = true;
   }
 
-  if (parseUInt64(Value))
+  if (parseUInt32(Value))
     return true;
 
   if (HaveParens && !EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
 
-  if (!isPowerOf2_64(Value))
+  if (!isPowerOf2_32(Value))
     return error(AlignLoc, "alignment is not a power of two");
   if (Value > Value::MaximumAlignment)
     return error(AlignLoc, "huge alignments are not supported yet");
