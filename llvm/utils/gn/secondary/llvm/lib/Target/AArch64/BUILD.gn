@@ -129,7 +129,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64LowerHomogeneousPrologEpilog.cpp",
     "AArch64MCInstLower.cpp",
-    "AArch64MIPeepholeOpt.cpp",
     "AArch64MachineFunctionInfo.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
