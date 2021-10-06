@@ -6597,11 +6597,37 @@ ScalarEvolution::getNonTrivialDefiningScopeBound(const SCEV *S) {
 
 const Instruction *
 ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
-  const Instruction *Bound = nullptr;
+  // Do a bounded search of the def relation of the requested SCEVs.
+  SmallSet<const SCEV *, 16> Visited;
+  SmallVector<const SCEV *> Worklist;
+  auto pushOp = [&](const SCEV *S) {
+    if (!Visited.insert(S).second)
+      return;
+    // Threshold of 30 here is arbitrary.
+    if (Visited.size() > 30)
+      return;
+    Worklist.push_back(S);
+  };
+
   for (auto *S : Ops)
-    if (auto *DefI = getNonTrivialDefiningScopeBound(S))
+    pushOp(S);
+
+  const Instruction *Bound = nullptr;
+  while (!Worklist.empty()) {
+    auto *S = Worklist.pop_back_val();
+    if (auto *DefI = getNonTrivialDefiningScopeBound(S)) {
       if (!Bound || DT.dominates(Bound, DefI))
         Bound = DefI;
+    } else if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+    else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+    else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+  }
   return Bound ? Bound : &*F.getEntryBlock().begin();
 }
 

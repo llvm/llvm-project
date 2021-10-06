@@ -81,6 +81,7 @@ copy("Headers") {
     "__clang_cuda_math.h",
     "__clang_cuda_math_forward_declares.h",
     "__clang_cuda_runtime_wrapper.h",
+    "__clang_cuda_texture_intrinsics.h",
     "__clang_hip_cmath.h",
     "__clang_hip_libdevice_declares.h",
     "__clang_hip_math.h",
