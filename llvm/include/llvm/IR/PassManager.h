@@ -548,8 +548,9 @@ public:
   }
 
   template <typename PassT>
-  std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-  addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE
+      std::enable_if_t<!std::is_same<PassT, PassManager>::value>
+      addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, PreservedAnalyses, AnalysisManagerT,
                           ExtraArgTs...>;
@@ -565,8 +566,9 @@ public:
   /// implementation complexity and avoid potential invalidation issues that may
   /// happen with nested pass managers of the same type.
   template <typename PassT>
-  std::enable_if_t<std::is_same<PassT, PassManager>::value>
-  addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE
+      std::enable_if_t<std::is_same<PassT, PassManager>::value>
+      addPass(PassT &&Pass) {
     for (auto &P : Pass.Passes)
       Passes.push_back(std::move(P));
   }
