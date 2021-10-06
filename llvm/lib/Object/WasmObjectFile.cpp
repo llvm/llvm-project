@@ -582,7 +582,6 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     const wasm::WasmSignature *Signature = nullptr;
     const wasm::WasmGlobalType *GlobalType = nullptr;
     const wasm::WasmTableType *TableType = nullptr;
-    const wasm::WasmTagType *TagType = nullptr;
 
     Info.Kind = readUint8(Ctx);
     Info.Flags = readVaruint32(Ctx);
@@ -727,8 +726,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         Info.Name = readString(Ctx);
         unsigned TagIndex = Info.ElementIndex - NumImportedTags;
         wasm::WasmTag &Tag = Tags[TagIndex];
-        Signature = &Signatures[Tag.Type.SigIndex];
-        TagType = &Tag.Type;
+        Signature = &Signatures[Tag.SigIndex];
         if (Tag.SymbolName.empty())
           Tag.SymbolName = Info.Name;
 
@@ -740,8 +738,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         } else {
           Info.Name = Import.Field;
         }
-        TagType = &Import.Tag;
-        Signature = &Signatures[TagType->SigIndex];
+        Signature = &Signatures[Import.SigIndex];
         if (!Import.Module.empty()) {
           Info.ImportModule = Import.Module;
         }
@@ -763,7 +760,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                                             object_error::parse_failed);
     LinkingData.SymbolTable.emplace_back(Info);
     Symbols.emplace_back(LinkingData.SymbolTable.back(), GlobalType, TableType,
-                         TagType, Signature);
+                         Signature);
     LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
   }
 
@@ -1090,6 +1087,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
+  uint32_t NumTypes = Signatures.size();
   Imports.reserve(Count);
   for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmImport Im;
@@ -1100,6 +1098,9 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
     case wasm::WASM_EXTERNAL_FUNCTION:
       NumImportedFunctions++;
       Im.SigIndex = readVaruint32(Ctx);
+      if (Im.SigIndex >= NumTypes)
+        return make_error<GenericBinaryError>("invalid function type",
+                                              object_error::parse_failed);
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
       NumImportedGlobals++;
@@ -1123,8 +1124,10 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
     }
     case wasm::WASM_EXTERNAL_TAG:
       NumImportedTags++;
-      Im.Tag.Attribute = readUint8(Ctx);
-      Im.Tag.SigIndex = readVarint32(Ctx);
+      Im.SigIndex = readVaruint32(Ctx);
+      if (Im.SigIndex >= NumTypes)
+        return make_error<GenericBinaryError>("invalid tag type",
+                                              object_error::parse_failed);
       break;
     default:
       return make_error<GenericBinaryError>("unexpected import kind",
@@ -1198,11 +1201,19 @@ Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
   TagSection = Sections.size();
   uint32_t Count = readVaruint32(Ctx);
   Tags.reserve(Count);
+  uint32_t NumTypes = Signatures.size();
   while (Count--) {
+    char Attr = readUint8(Ctx); // Reserved 'attribute' field
+    if (Attr != 0)
+      return make_error<GenericBinaryError>("invalid attribute",
+                                            object_error::parse_failed);
+    uint32_t Type = readVaruint32(Ctx);
+    if (Type >= NumTypes)
+      return make_error<GenericBinaryError>("invalid tag type",
+                                            object_error::parse_failed);
     wasm::WasmTag Tag;
     Tag.Index = NumImportedTags + Tags.size();
-    Tag.Type.Attribute = readUint8(Ctx);
-    Tag.Type.SigIndex = readVaruint32(Ctx);
+    Tag.SigIndex = Type;
     Tags.push_back(Tag);
   }
 

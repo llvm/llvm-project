@@ -37,15 +37,13 @@ public:
   WasmSymbol(const wasm::WasmSymbolInfo &Info,
              const wasm::WasmGlobalType *GlobalType,
              const wasm::WasmTableType *TableType,
-             const wasm::WasmTagType *TagType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        TagType(TagType), Signature(Signature) {}
+        Signature(Signature) {}
 
   const wasm::WasmSymbolInfo &Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
-  const wasm::WasmTagType *TagType;
   const wasm::WasmSignature *Signature;
 
   bool isTypeFunction() const {
@@ -274,7 +272,6 @@ private:
   wasm::WasmProducerInfo ProducerInfo;
   std::vector<wasm::WasmFeatureEntry> TargetFeatures;
   std::vector<wasm::WasmSignature> Signatures;
-  std::vector<uint32_t> FunctionTypes;
   std::vector<wasm::WasmTable> Tables;
   std::vector<wasm::WasmLimits> Memories;
   std::vector<wasm::WasmGlobal> Globals;
