@@ -18,7 +18,7 @@
 #include "types.h"
 
 constexpr bool test() {
-  std::ranges::drop_view<ContiguousView> dropView1;
+  std::ranges::drop_view<MoveOnlyView> dropView1;
   assert(std::ranges::begin(dropView1) == globalBuff);
 
   static_assert( std::is_default_constructible_v<std::ranges::drop_view<ForwardView>>);

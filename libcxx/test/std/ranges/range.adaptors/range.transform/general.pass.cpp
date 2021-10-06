@@ -32,9 +32,9 @@ template<class T, class F>
 concept ValidTransformView = requires { typename std::ranges::transform_view<T, F>; };
 
 struct BadFunction { };
-static_assert( ValidTransformView<ContiguousView, PlusOne>);
+static_assert( ValidTransformView<MoveOnlyView, PlusOne>);
 static_assert(!ValidTransformView<Range, PlusOne>);
-static_assert(!ValidTransformView<ContiguousView, BadFunction>);
+static_assert(!ValidTransformView<MoveOnlyView, BadFunction>);
 
 template<std::ranges::range R>
 auto toUpper(R range) {

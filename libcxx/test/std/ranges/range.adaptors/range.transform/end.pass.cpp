@@ -32,7 +32,7 @@ concept EndIsIter = requires(T t) { ++t.end(); };
 
 constexpr bool test() {
   {
-    std::ranges::transform_view transformView(ContiguousView{}, PlusOneMutable{});
+    std::ranges::transform_view transformView(MoveOnlyView{}, PlusOneMutable{});
     assert(transformView.end().base() == globalBuff + 8);
   }
 
@@ -47,21 +47,21 @@ constexpr bool test() {
   }
 
   {
-    const std::ranges::transform_view transformView(ContiguousView{}, PlusOne{});
+    const std::ranges::transform_view transformView(MoveOnlyView{}, PlusOne{});
     assert(transformView.end().base() == globalBuff + 8);
   }
 
-  static_assert(!EndInvocable<const std::ranges::transform_view<ContiguousView, PlusOneMutable>>);
-  static_assert( EndInvocable<      std::ranges::transform_view<ContiguousView, PlusOneMutable>>);
-  static_assert( EndInvocable<const std::ranges::transform_view<ContiguousView, PlusOne>>);
+  static_assert(!EndInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
+  static_assert( EndInvocable<      std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
+  static_assert( EndInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOne>>);
   static_assert(!EndInvocable<const std::ranges::transform_view<InputView, PlusOneMutable>>);
   static_assert( EndInvocable<      std::ranges::transform_view<InputView, PlusOneMutable>>);
   static_assert( EndInvocable<const std::ranges::transform_view<InputView, PlusOne>>);
 
   static_assert(!EndIsIter<const std::ranges::transform_view<InputView, PlusOne>>);
   static_assert(!EndIsIter<      std::ranges::transform_view<InputView, PlusOneMutable>>);
-  static_assert( EndIsIter<const std::ranges::transform_view<ContiguousView, PlusOne>>);
-  static_assert( EndIsIter<      std::ranges::transform_view<ContiguousView, PlusOneMutable>>);
+  static_assert( EndIsIter<const std::ranges::transform_view<MoveOnlyView, PlusOne>>);
+  static_assert( EndIsIter<      std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
 
   return true;
 }

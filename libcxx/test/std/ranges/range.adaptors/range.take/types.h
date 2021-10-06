@@ -7,19 +7,19 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-struct ContiguousView : std::ranges::view_base {
+struct MoveOnlyView : std::ranges::view_base {
   int *ptr_;
 
-  constexpr explicit ContiguousView(int* ptr) : ptr_(ptr) {}
-  ContiguousView(ContiguousView&&) = default;
-  ContiguousView& operator=(ContiguousView&&) = default;
+  constexpr explicit MoveOnlyView(int* ptr) : ptr_(ptr) {}
+  MoveOnlyView(MoveOnlyView&&) = default;
+  MoveOnlyView& operator=(MoveOnlyView&&) = default;
 
   constexpr int* begin() const {return ptr_;}
   constexpr sentinel_wrapper<int*> end() const {return sentinel_wrapper<int*>{ptr_ + 8};}
 };
-static_assert( std::ranges::view<ContiguousView>);
-static_assert( std::ranges::contiguous_range<ContiguousView>);
-static_assert(!std::copyable<ContiguousView>);
+static_assert( std::ranges::view<MoveOnlyView>);
+static_assert( std::ranges::contiguous_range<MoveOnlyView>);
+static_assert(!std::copyable<MoveOnlyView>);
 
 struct CopyableView : std::ranges::view_base {
   int *ptr_;

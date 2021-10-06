@@ -20,40 +20,40 @@
 int main(int, char**) {
   {
     int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    using View = std::ranges::transform_view<ContiguousView, PlusOne>;
-    View transformView(ContiguousView{buff}, PlusOne{});
+    using View = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+    View transformView(MoveOnlyView{buff}, PlusOne{});
     assert(*transformView.begin() == 1);
     static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
     int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    using View = std::ranges::transform_view<ContiguousView, PlusOneMutable>;
-    View transformView(ContiguousView{buff}, PlusOneMutable{});
+    using View = std::ranges::transform_view<MoveOnlyView, PlusOneMutable>;
+    View transformView(MoveOnlyView{buff}, PlusOneMutable{});
     assert(*transformView.begin() == 1);
     static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
     int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    using View = std::ranges::transform_view<ContiguousView, PlusOneNoexcept>;
-    View transformView(ContiguousView{buff}, PlusOneNoexcept{});
+    using View = std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>;
+    View transformView(MoveOnlyView{buff}, PlusOneNoexcept{});
     assert(*transformView.begin() == 1);
     static_assert(noexcept(*std::declval<std::ranges::iterator_t<View>>()));
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
     int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    using View = std::ranges::transform_view<ContiguousView, Increment>;
-    View transformView(ContiguousView{buff}, Increment{});
+    using View = std::ranges::transform_view<MoveOnlyView, Increment>;
+    View transformView(MoveOnlyView{buff}, Increment{});
     assert(*transformView.begin() == 1);
     static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
     ASSERT_SAME_TYPE(int&, decltype(*std::declval<View>().begin()));
   }
   {
     int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    using View = std::ranges::transform_view<ContiguousView, IncrementRvalueRef>;
-    View transformView(ContiguousView{buff}, IncrementRvalueRef{});
+    using View = std::ranges::transform_view<MoveOnlyView, IncrementRvalueRef>;
+    View transformView(MoveOnlyView{buff}, IncrementRvalueRef{});
     assert(*transformView.begin() == 1);
     static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
     ASSERT_SAME_TYPE(int&&, decltype(*std::declval<View>().begin()));

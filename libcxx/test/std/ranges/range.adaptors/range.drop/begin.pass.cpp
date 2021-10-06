@@ -26,7 +26,7 @@ concept BeginInvocable = requires(std::ranges::drop_view<T> t) { t.begin(); };
 
 constexpr bool test() {
   // random_access_range<const V> && sized_range<const V>
-  std::ranges::drop_view dropView1(ContiguousView(), 4);
+  std::ranges::drop_view dropView1(MoveOnlyView(), 4);
   assert(dropView1.begin() == globalBuff + 4);
 
   // !random_access_range<const V>
@@ -38,19 +38,19 @@ constexpr bool test() {
   assert(dropView3.begin().base() == globalBuff + 4);
 
   // random_access_range<const V> && sized_range<const V>
-  std::ranges::drop_view dropView4(ContiguousView(), 8);
+  std::ranges::drop_view dropView4(MoveOnlyView(), 8);
   assert(dropView4.begin() == globalBuff + 8);
 
   // random_access_range<const V> && sized_range<const V>
-  std::ranges::drop_view dropView5(ContiguousView(), 0);
+  std::ranges::drop_view dropView5(MoveOnlyView(), 0);
   assert(dropView5.begin() == globalBuff);
 
   // random_access_range<const V> && sized_range<const V>
-  const std::ranges::drop_view dropView6(ContiguousView(), 0);
+  const std::ranges::drop_view dropView6(MoveOnlyView(), 0);
   assert(dropView6.begin() == globalBuff);
 
   // random_access_range<const V> && sized_range<const V>
-  std::ranges::drop_view dropView7(ContiguousView(), 10);
+  std::ranges::drop_view dropView7(MoveOnlyView(), 10);
   assert(dropView7.begin() == globalBuff + 8);
 
   CountedView view8;

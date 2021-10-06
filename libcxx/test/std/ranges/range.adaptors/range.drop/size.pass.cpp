@@ -25,19 +25,19 @@ concept SizeInvocable = requires(std::ranges::drop_view<T> t) { t.size(); };
 
 constexpr bool test() {
   // sized_range<V>
-  std::ranges::drop_view dropView1(ContiguousView(), 4);
+  std::ranges::drop_view dropView1(MoveOnlyView(), 4);
   assert(dropView1.size() == 4);
 
   // sized_range<V>
-  std::ranges::drop_view dropView2(ContiguousView(), 0);
+  std::ranges::drop_view dropView2(MoveOnlyView(), 0);
   assert(dropView2.size() == 8);
 
   // sized_range<const V>
-  const std::ranges::drop_view dropView3(ContiguousView(), 8);
+  const std::ranges::drop_view dropView3(MoveOnlyView(), 8);
   assert(dropView3.size() == 0);
 
   // sized_range<const V>
-  const std::ranges::drop_view dropView4(ContiguousView(), 10);
+  const std::ranges::drop_view dropView4(MoveOnlyView(), 10);
   assert(dropView4.size() == 0);
 
   // Because ForwardView is not a sized_range.

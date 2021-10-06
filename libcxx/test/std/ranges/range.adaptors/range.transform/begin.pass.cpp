@@ -27,7 +27,7 @@ constexpr bool test() {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
   {
-    std::ranges::transform_view transformView(ContiguousView{buff}, PlusOneMutable{});
+    std::ranges::transform_view transformView(MoveOnlyView{buff}, PlusOneMutable{});
     assert(transformView.begin().base() == buff);
     assert(*transformView.begin() == 1);
   }
@@ -45,11 +45,11 @@ constexpr bool test() {
   }
 
   {
-    const std::ranges::transform_view transformView(ContiguousView{buff}, PlusOne{});
+    const std::ranges::transform_view transformView(MoveOnlyView{buff}, PlusOne{});
     assert(*transformView.begin() == 1);
   }
 
-  static_assert(!BeginInvocable<const std::ranges::transform_view<ContiguousView, PlusOneMutable>>);
+  static_assert(!BeginInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
 
   return true;
 }

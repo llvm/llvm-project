@@ -18,9 +18,9 @@
 #include "../types.h"
 
 constexpr bool test() {
-  std::ranges::transform_view<ContiguousView, PlusOneMutable> transformView1;
+  std::ranges::transform_view<MoveOnlyView, PlusOneMutable> transformView1;
   auto iter1 = std::move(transformView1).begin();
-  std::ranges::transform_view<ContiguousView, PlusOneMutable> transformView2;
+  std::ranges::transform_view<MoveOnlyView, PlusOneMutable> transformView2;
   auto iter2 = std::move(transformView2).begin();
   iter1 += 4;
   assert((iter1 + 1).base() == globalBuff + 5);

@@ -23,18 +23,18 @@ struct DefaultConstructibleView : std::ranges::view_base {
 static_assert(std::ranges::view<DefaultConstructibleView>);
 static_assert(std::default_initializable<DefaultConstructibleView>);
 
-struct ContiguousView : std::ranges::view_base {
+struct MoveOnlyView : std::ranges::view_base {
   int* begin_;
   int* end_;
-  constexpr explicit ContiguousView(int* b, int* e) : begin_(b), end_(e) { }
-  constexpr ContiguousView(ContiguousView&&) = default;
-  constexpr ContiguousView& operator=(ContiguousView&&) = default;
+  constexpr explicit MoveOnlyView(int* b, int* e) : begin_(b), end_(e) { }
+  constexpr MoveOnlyView(MoveOnlyView&&) = default;
+  constexpr MoveOnlyView& operator=(MoveOnlyView&&) = default;
   constexpr int *begin() const { return begin_; }
   constexpr auto end() const { return sentinel_wrapper<int*>(end_); }
 };
-static_assert( std::ranges::view<ContiguousView>);
-static_assert( std::ranges::contiguous_range<ContiguousView>);
-static_assert(!std::copyable<ContiguousView>);
+static_assert( std::ranges::view<MoveOnlyView>);
+static_assert( std::ranges::contiguous_range<MoveOnlyView>);
+static_assert(!std::copyable<MoveOnlyView>);
 
 struct CopyableView : std::ranges::view_base {
   int* begin_;

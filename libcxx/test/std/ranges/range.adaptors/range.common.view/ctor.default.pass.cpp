@@ -21,7 +21,7 @@
 #include "types.h"
 
 int main(int, char**) {
-  static_assert(!std::default_initializable<std::ranges::common_view<ContiguousView>>);
+  static_assert(!std::default_initializable<std::ranges::common_view<MoveOnlyView>>);
   static_assert( std::default_initializable<std::ranges::common_view<DefaultConstructibleView>>);
 
   std::ranges::common_view<DefaultConstructibleView> common;

@@ -39,8 +39,8 @@ constexpr bool test() {
   // Test `views::transform(f)(v)`
   {
     {
-      using Result = std::ranges::transform_view<ContiguousView, PlusOne>;
-      std::same_as<Result> auto result = std::views::transform(PlusOne{})(ContiguousView{buff});
+      using Result = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+      std::same_as<Result> auto result = std::views::transform(PlusOne{})(MoveOnlyView{buff});
       assert(result.begin().base() == buff);
       assert(result[0] == 1);
       assert(result[1] == 2);
@@ -48,8 +48,8 @@ constexpr bool test() {
     }
     {
       auto const partial = std::views::transform(PlusOne{});
-      using Result = std::ranges::transform_view<ContiguousView, PlusOne>;
-      std::same_as<Result> auto result = partial(ContiguousView{buff});
+      using Result = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+      std::same_as<Result> auto result = partial(MoveOnlyView{buff});
       assert(result.begin().base() == buff);
       assert(result[0] == 1);
       assert(result[1] == 2);
@@ -60,8 +60,8 @@ constexpr bool test() {
   // Test `v | views::transform(f)`
   {
     {
-      using Result = std::ranges::transform_view<ContiguousView, PlusOne>;
-      std::same_as<Result> auto result = ContiguousView{buff} | std::views::transform(PlusOne{});
+      using Result = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+      std::same_as<Result> auto result = MoveOnlyView{buff} | std::views::transform(PlusOne{});
       assert(result.begin().base() == buff);
       assert(result[0] == 1);
       assert(result[1] == 2);
@@ -69,8 +69,8 @@ constexpr bool test() {
     }
     {
       auto const partial = std::views::transform(PlusOne{});
-      using Result = std::ranges::transform_view<ContiguousView, PlusOne>;
-      std::same_as<Result> auto result = ContiguousView{buff} | partial;
+      using Result = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+      std::same_as<Result> auto result = MoveOnlyView{buff} | partial;
       assert(result.begin().base() == buff);
       assert(result[0] == 1);
       assert(result[1] == 2);
@@ -80,8 +80,8 @@ constexpr bool test() {
 
   // Test `views::transform(v, f)`
   {
-    using Result = std::ranges::transform_view<ContiguousView, PlusOne>;
-    std::same_as<Result> auto result = std::views::transform(ContiguousView{buff}, PlusOne{});
+    using Result = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+    std::same_as<Result> auto result = std::views::transform(MoveOnlyView{buff}, PlusOne{});
     assert(result.begin().base() == buff);
     assert(result[0] == 1);
     assert(result[1] == 2);
@@ -101,8 +101,8 @@ constexpr bool test() {
   // Test `adaptor | views::transform(f)`
   {
     {
-      using Result = std::ranges::transform_view<std::ranges::transform_view<ContiguousView, PlusOne>, TimesTwo>;
-      std::same_as<Result> auto result = ContiguousView{buff} | std::views::transform(PlusOne{}) | std::views::transform(TimesTwo{});
+      using Result = std::ranges::transform_view<std::ranges::transform_view<MoveOnlyView, PlusOne>, TimesTwo>;
+      std::same_as<Result> auto result = MoveOnlyView{buff} | std::views::transform(PlusOne{}) | std::views::transform(TimesTwo{});
       assert(result.begin().base().base() == buff);
       assert(result[0] == 2);
       assert(result[1] == 4);
@@ -110,8 +110,8 @@ constexpr bool test() {
     }
     {
       auto const partial = std::views::transform(PlusOne{}) | std::views::transform(TimesTwo{});
-      using Result = std::ranges::transform_view<std::ranges::transform_view<ContiguousView, PlusOne>, TimesTwo>;
-      std::same_as<Result> auto result = ContiguousView{buff} | partial;
+      using Result = std::ranges::transform_view<std::ranges::transform_view<MoveOnlyView, PlusOne>, TimesTwo>;
+      std::same_as<Result> auto result = MoveOnlyView{buff} | partial;
       assert(result.begin().base().base() == buff);
       assert(result[0] == 2);
       assert(result[1] == 4);
@@ -124,15 +124,15 @@ constexpr bool test() {
     struct NotAView { };
     struct NotInvocable { };
 
-    static_assert(!CanBePiped<ContiguousView, decltype(std::views::transform)>);
-    static_assert( CanBePiped<ContiguousView, decltype(std::views::transform(PlusOne{}))>);
+    static_assert(!CanBePiped<MoveOnlyView, decltype(std::views::transform)>);
+    static_assert( CanBePiped<MoveOnlyView, decltype(std::views::transform(PlusOne{}))>);
     static_assert(!CanBePiped<NotAView,       decltype(std::views::transform(PlusOne{}))>);
-    static_assert(!CanBePiped<ContiguousView, decltype(std::views::transform(NotInvocable{}))>);
+    static_assert(!CanBePiped<MoveOnlyView, decltype(std::views::transform(NotInvocable{}))>);
 
     static_assert(!std::is_invocable_v<decltype(std::views::transform)>);
-    static_assert(!std::is_invocable_v<decltype(std::views::transform), PlusOne, ContiguousView>);
-    static_assert( std::is_invocable_v<decltype(std::views::transform), ContiguousView, PlusOne>);
-    static_assert(!std::is_invocable_v<decltype(std::views::transform), ContiguousView, PlusOne, PlusOne>);
+    static_assert(!std::is_invocable_v<decltype(std::views::transform), PlusOne, MoveOnlyView>);
+    static_assert( std::is_invocable_v<decltype(std::views::transform), MoveOnlyView, PlusOne>);
+    static_assert(!std::is_invocable_v<decltype(std::views::transform), MoveOnlyView, PlusOne, PlusOne>);
     static_assert(!std::is_invocable_v<decltype(std::views::transform), NonCopyableFunction>);
   }
 

@@ -23,12 +23,12 @@ concept SizeInvocable = requires(T t) { t.size(); };
 
 constexpr bool test() {
   {
-    std::ranges::transform_view transformView(ContiguousView{}, PlusOne{});
+    std::ranges::transform_view transformView(MoveOnlyView{}, PlusOne{});
     assert(transformView.size() == 8);
   }
 
   {
-    const std::ranges::transform_view transformView(ContiguousView{globalBuff, 4}, PlusOne{});
+    const std::ranges::transform_view transformView(MoveOnlyView{globalBuff, 4}, PlusOne{});
     assert(transformView.size() == 4);
   }
 
