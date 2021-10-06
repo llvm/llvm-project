@@ -1,0 +1,20 @@
+// Test the CIR operations can parse and print correctly
+
+// RUN: cir-tool %s | cir-tool | FileCheck %s
+module  {
+  func.func @foo(%arg0: i32) -> i32 {
+    %0 = cir.alloca i32 = uninitialized, cir.ptr <i32>
+    cir.store %arg0, %0 : i32, cir.ptr <i32>
+    %1 = cir.load %0 : cir.ptr <i32>, i32
+    cir.return %1 : i32
+  }
+}
+
+// CHECK: module  {
+// CHECK-NEXT:   func.func @foo(%arg0: i32) -> i32 {
+// CHECK-NEXT:     %0 = cir.alloca i32 = uninitialized, cir.ptr <i32>
+// CHECK-NEXT:     cir.store %arg0, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     cir.return %1 : i32
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
