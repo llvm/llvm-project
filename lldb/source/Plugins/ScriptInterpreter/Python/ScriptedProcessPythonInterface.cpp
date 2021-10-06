@@ -19,6 +19,7 @@
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedProcessPythonInterface.h"
+#include "ScriptedThreadPythonInterface.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -71,18 +72,8 @@ bool ScriptedProcessPythonInterface::ShouldStop() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_alive", error);
 
-  auto error_with_message = [](llvm::StringRef message) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
-              "ScriptedProcess::%s ERROR = %s", __FUNCTION__, message.data());
-    return false;
-  };
-
-  if (!obj || !obj->IsValid() || error.Fail()) {
-    return error_with_message(llvm::Twine("Null or invalid object (" +
-                                          llvm::Twine(error.AsCString()) +
-                                          llvm::Twine(")."))
-                                  .str());
-  }
+  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+    return {};
 
   return obj->GetBooleanValue();
 }
@@ -100,24 +91,11 @@ ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
 
 StructuredData::DictionarySP
 ScriptedProcessPythonInterface::GetThreadWithID(lldb::tid_t tid) {
-  Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                 Locker::FreeLock);
-
-  auto error_with_message = [](llvm::StringRef message) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
-              "ScriptedProcess::%s ERROR = %s", __FUNCTION__, message.data());
-    return StructuredData::DictionarySP();
-  };
-
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_thread_with_id", error, tid);
 
-  if (!obj || !obj->IsValid() || error.Fail()) {
-    return error_with_message(llvm::Twine("Null or invalid object (" +
-                                          llvm::Twine(error.AsCString()) +
-                                          llvm::Twine(")."))
-                                  .str());
-  }
+  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+    return {};
 
   StructuredData::DictionarySP dict{obj->GetAsDictionary()};
 
@@ -145,18 +123,8 @@ lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_process_id", error);
 
-  auto error_with_message = [](llvm::StringRef message) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
-              "ScriptedProcess::%s ERROR = %s", __FUNCTION__, message.data());
+  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
     return LLDB_INVALID_PROCESS_ID;
-  };
-
-  if (!obj || !obj->IsValid() || error.Fail()) {
-    return error_with_message(llvm::Twine("Null or invalid object (" +
-                                          llvm::Twine(error.AsCString()) +
-                                          llvm::Twine(")."))
-                                  .str());
-  }
 
   return obj->GetIntegerValue(LLDB_INVALID_PROCESS_ID);
 }
@@ -165,20 +133,30 @@ bool ScriptedProcessPythonInterface::IsAlive() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_alive", error);
 
-  auto error_with_message = [](llvm::StringRef message) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
-              "ScriptedProcess::%s ERROR = %s", __FUNCTION__, message.data());
-    return false;
-  };
-
-  if (!obj || !obj->IsValid() || error.Fail()) {
-    return error_with_message(llvm::Twine("Null or invalid object (" +
-                                          llvm::Twine(error.AsCString()) +
-                                          llvm::Twine(")."))
-                                  .str());
-  }
+  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+    return {};
 
   return obj->GetBooleanValue();
+}
+
+llvm::Optional<std::string>
+ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("get_scripted_thread_plugin", error);
+
+  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+    return {};
+
+  return obj->GetStringValue().str();
+}
+
+lldb::ScriptedThreadInterfaceSP
+ScriptedProcessPythonInterface::GetScriptedThreadInterface() {
+  if (!m_scripted_thread_interface_sp)
+    m_scripted_thread_interface_sp =
+        std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
+
+  return m_scripted_thread_interface_sp;
 }
 
 #endif

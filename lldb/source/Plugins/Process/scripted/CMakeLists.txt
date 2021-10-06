@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginScriptedProcess PLUGIN
   ScriptedProcess.cpp
+  ScriptedThread.cpp
 
   LINK_LIBS
     lldbCore

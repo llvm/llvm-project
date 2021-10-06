@@ -21,8 +21,6 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
 
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/State.h"
 
 #include <mutex>
@@ -234,14 +232,9 @@ bool ScriptedProcess::IsAlive() {
 
 size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
-
-  auto error_with_message = [&error](llvm::StringRef message) {
-    error.SetErrorString(message);
-    return 0;
-  };
-
   if (!m_interpreter)
-    return error_with_message("No interpreter.");
+    return GetInterface().ErrorWithMessage<size_t>(__PRETTY_FUNCTION__,
+                                                   "No interpreter.", error);
 
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
@@ -253,7 +246,8 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
       0, data_extractor_sp->GetByteSize(), buf, size, GetByteOrder());
 
   if (!bytes_copied || bytes_copied == LLDB_INVALID_OFFSET)
-    return error_with_message("Failed to copy read memory to buffer.");
+    return GetInterface().ErrorWithMessage<size_t>(
+        __PRETTY_FUNCTION__, "Failed to copy read memory to buffer.", error);
 
   return size;
 }
@@ -292,6 +286,30 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   // This is supposed to get the current set of threads, if any of them are in
   // old_thread_list then they get copied to new_thread_list, and then any
   // actually new threads will get added to new_thread_list.
+
+  CheckInterpreterAndScriptObject();
+
+  Status error;
+  ScriptLanguage language = m_interpreter->GetLanguage();
+
+  if (language != eScriptLanguagePython)
+    return GetInterface().ErrorWithMessage<bool>(
+        __PRETTY_FUNCTION__,
+        llvm::Twine("ScriptInterpreter language (" +
+                    llvm::Twine(m_interpreter->LanguageToString(language)) +
+                    llvm::Twine(") not supported."))
+            .str(),
+        error);
+
+  lldb::ThreadSP thread_sp;
+  thread_sp = std::make_shared<ScriptedThread>(*this, error);
+
+  if (!thread_sp || error.Fail())
+    return GetInterface().ErrorWithMessage<bool>(__PRETTY_FUNCTION__,
+                                                 error.AsCString(), error);
+
+  new_thread_list.AddThread(thread_sp);
+
   return new_thread_list.GetSize(false) > 0;
 }
 
