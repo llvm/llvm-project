@@ -232,8 +232,8 @@ to opt-out, please let us know why, so we might be able to improve in the future
 Operational Details
 ^^^^^^^^^^^^^^^^^^^
 
-The code responsible for running the pre-merge flow can be found in the external
-repository  `https://github.com/google/llvm-premerge-checks`_.  For enhancement
+The code responsible for running the pre-merge flow can be found in the `external
+repository <https://github.com/google/llvm-premerge-checks>`_.  For enhancement
 ideas and most bugs, please file an issue on said repository.  For immediate
 operational problems, the point of contact is
 `Mikhail Goncharov <mailto:goncharo@google.com>`_.
