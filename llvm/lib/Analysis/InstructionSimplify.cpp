@@ -2042,11 +2042,19 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_c_Or(m_Specific(Op0), m_Value())))
     return Op0;
 
+  // (X | Y) & (X | ~Y) --> X (commuted 8 ways)
+  Value *X, *Y;
+  if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
+      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
+    return X;
+  if (match(Op1, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
+      match(Op0, m_c_Or(m_Deferred(X), m_Deferred(Y))))
+    return X;
+
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::And))
     return V;
 
   // A mask that only clears known zeros of a shifted value is a no-op.
-  Value *X;
   const APInt *Mask;
   const APInt *ShAmt;
   if (match(Op1, m_APInt(Mask))) {
@@ -2143,7 +2151,7 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   //     if Mask = ((1 << effective_width_of(X)) - 1) << A
   // SimplifyDemandedBits in InstCombine can optimize the general case.
   // This pattern aims to help other passes for a common case.
-  Value *Y, *XShifted;
+  Value *XShifted;
   if (match(Op1, m_APInt(Mask)) &&
       match(Op0, m_c_Or(m_CombineAnd(m_NUWShl(m_Value(X), m_APInt(ShAmt)),
                                      m_Value(XShifted)),
