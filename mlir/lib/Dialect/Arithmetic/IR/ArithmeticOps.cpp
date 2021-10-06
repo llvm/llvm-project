@@ -493,6 +493,55 @@ OpFoldResult arith::ExtSIOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+// TODO temporary fixes until second patch is in
+OpFoldResult arith::TruncFOp::fold(ArrayRef<Attribute> operands) {
+  return {};
+}
+
+bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
+  return {};
+}
+
+bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::ExtUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+OpFoldResult arith::ConstantOp::fold(ArrayRef<Attribute> operands) {
+  return {};
+}
+
+bool arith::SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::UIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
+bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
