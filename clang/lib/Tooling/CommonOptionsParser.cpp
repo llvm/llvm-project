@@ -170,7 +170,7 @@ CommonOptionsParser::CommonOptionsParser(
   llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
   if (Err) {
     llvm::report_fatal_error(
-        "CommonOptionsParser: failed to parse command-line arguments. " +
+        Twine("CommonOptionsParser: failed to parse command-line arguments. ") +
         llvm::toString(std::move(Err)));
   }
 }

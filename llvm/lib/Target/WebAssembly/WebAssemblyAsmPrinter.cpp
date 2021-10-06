@@ -161,7 +161,7 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
           "Emscripten EH/SjLj does not support multivalue returns: " +
           std::string(F->getName()) + ": " +
           WebAssembly::signatureToString(Sig);
-      report_fatal_error(Msg);
+      report_fatal_error(Twine(Msg));
     }
     WasmSym = cast<MCSymbolWasm>(
         GetExternalSymbolSymbol(getEmscriptenInvokeSymbolName(Sig)));

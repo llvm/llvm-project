@@ -3339,38 +3339,40 @@ SDValue X86TargetLowering::LowerCallResult(
 //  For info on fast calling convention see Fast Calling Convention (tail call)
 //  implementation LowerX86_32FastCCCallTo.
 
-/// CallIsStructReturn - Determines whether a call uses struct return
-/// semantics.
-enum StructReturnType {
-  NotStructReturn,
-  RegStructReturn,
-  StackStructReturn
-};
-static StructReturnType
-callIsStructReturn(ArrayRef<ISD::OutputArg> Outs, bool IsMCU) {
-  if (Outs.empty())
-    return NotStructReturn;
+/// Determines whether Args, either a set of outgoing arguments to a call, or a
+/// set of incoming args of a call, contains an sret pointer that the callee
+/// pops
+template <typename T>
+static bool hasCalleePopSRet(const SmallVectorImpl<T> &Args,
+                             const X86Subtarget &Subtarget) {
+  // Not C++20 (yet), so no concepts available.
+  static_assert(std::is_same<T, ISD::OutputArg>::value ||
+                    std::is_same<T, ISD::InputArg>::value,
+                "requires ISD::OutputArg or ISD::InputArg");
 
-  const ISD::ArgFlagsTy &Flags = Outs[0].Flags;
-  if (!Flags.isSRet())
-    return NotStructReturn;
-  if (Flags.isInReg() || IsMCU)
-    return RegStructReturn;
-  return StackStructReturn;
-}
+  // Only 32-bit pops the sret.  It's a 64-bit world these days, so early-out
+  // for most compilations.
+  if (!Subtarget.is32Bit())
+    return false;
 
-/// Determines whether a function uses struct return semantics.
-static StructReturnType
-argsAreStructReturn(ArrayRef<ISD::InputArg> Ins, bool IsMCU) {
-  if (Ins.empty())
-    return NotStructReturn;
+  if (Args.empty())
+    return false;
 
-  const ISD::ArgFlagsTy &Flags = Ins[0].Flags;
-  if (!Flags.isSRet())
-    return NotStructReturn;
-  if (Flags.isInReg() || IsMCU)
-    return RegStructReturn;
-  return StackStructReturn;
+  // Most calls do not have an sret argument, check the arg next.
+  const ISD::ArgFlagsTy &Flags = Args[0].Flags;
+  if (!Flags.isSRet() || Flags.isInReg())
+    return false;
+
+  // The MSVCabi does not pop the sret.
+  if (Subtarget.getTargetTriple().isOSMSVCRT())
+    return false;
+
+  // MCUs don't pop the sret
+  if (Subtarget.isTargetMCU())
+    return false;
+
+  // Callee pops argument
+  return true;
 }
 
 /// Make a copy of an aggregate at address specified by "Src" to address
@@ -4004,9 +4006,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   } else {
     FuncInfo->setBytesToPopOnReturn(0); // Callee pops nothing.
     // If this is an sret function, the return should pop the hidden pointer.
-    if (!Is64Bit && !canGuaranteeTCO(CallConv) &&
-        !Subtarget.getTargetTriple().isOSMSVCRT() &&
-        argsAreStructReturn(Ins, Subtarget.isTargetMCU()) == StackStructReturn)
+    if (!canGuaranteeTCO(CallConv) && hasCalleePopSRet(Ins, Subtarget))
       FuncInfo->setBytesToPopOnReturn(4);
   }
 
@@ -4125,10 +4125,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   bool Is64Bit        = Subtarget.is64Bit();
   bool IsWin64        = Subtarget.isCallingConvWin64(CallConv);
-  StructReturnType SR = callIsStructReturn(Outs, Subtarget.isTargetMCU());
   bool IsSibcall      = false;
   bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
       CallConv == CallingConv::Tail || CallConv == CallingConv::SwiftTail;
+  bool IsCalleePopSRet = !IsGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
@@ -4154,12 +4154,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-
   if (isTailCall && !IsMustTail) {
     // Check if it's really possible to do a tail call.
     isTailCall = IsEligibleForTailCallOptimization(
-        Callee, CallConv, SR == StackStructReturn, isVarArg, CLI.RetTy, Outs,
-        OutVals, Ins, DAG);
+        Callee, CallConv, IsCalleePopSRet, isVarArg, CLI.RetTy, Outs, OutVals,
+        Ins, DAG);
 
     // Sibcalls are automatically detected tailcalls which do not require
     // ABI changes.
@@ -4660,20 +4659,14 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       DAG.addHeapAllocSite(Chain.getNode(), HeapAlloc);
 
   // Create the CALLSEQ_END node.
-  unsigned NumBytesForCalleeToPop;
+  unsigned NumBytesForCalleeToPop = 0; // Callee pops nothing.
   if (X86::isCalleePop(CallConv, Is64Bit, isVarArg,
                        DAG.getTarget().Options.GuaranteedTailCallOpt))
     NumBytesForCalleeToPop = NumBytes;    // Callee pops everything
-  else if (!Is64Bit && !canGuaranteeTCO(CallConv) &&
-           !Subtarget.getTargetTriple().isOSMSVCRT() &&
-           SR == StackStructReturn)
-    // If this is a call to a struct-return function, the callee
-    // pops the hidden struct pointer, so we have to push it back.
-    // This is common for Darwin/X86, Linux & Mingw32 targets.
-    // For MSVC Win32 targets, the caller pops the hidden struct pointer.
+  else if (!canGuaranteeTCO(CallConv) && IsCalleePopSRet)
+    // If this call passes a struct-return pointer, the callee
+    // pops that struct pointer.
     NumBytesForCalleeToPop = 4;
-  else
-    NumBytesForCalleeToPop = 0;  // Callee pops nothing.
 
   // Returns a flag for retval copy to use.
   if (!IsSibcall) {
@@ -4832,7 +4825,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
 bool X86TargetLowering::IsEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleeStackStructRet,
+    SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleePopSRet,
     bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
@@ -4885,9 +4878,9 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     // needs to be (a) an sret function itself and (b) we pass our sret as its
     // sret. Condition #b is harder to determine.
     return false;
-  } else if (Subtarget.is32Bit() && IsCalleeStackStructRet)
-    // In the i686 ABI, the sret pointer is callee-pop, so we cannot tail-call,
-    // as our caller doesn't expect that.
+  } else if (IsCalleePopSRet)
+    // The callee pops an sret, so we cannot tail-call, as our caller doesn't
+    // expect that.
     return false;
 
   // Do not sibcall optimize vararg calls unless all arguments are passed via

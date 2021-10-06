@@ -71,7 +71,7 @@ bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix);
 [[noreturn]] inline void ReportLastErrorFatal(const char *Msg) {
   std::string ErrMsg;
   MakeErrMsg(&ErrMsg, Msg);
-  llvm::report_fatal_error(ErrMsg);
+  llvm::report_fatal_error(Twine(ErrMsg));
 }
 
 template <typename HandleTraits>

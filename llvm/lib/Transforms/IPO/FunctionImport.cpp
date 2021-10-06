@@ -1334,7 +1334,7 @@ Expected<bool> FunctionImporter::importFunctions(
             std::move(SrcModule), GlobalsToImport.getArrayRef(),
             [](GlobalValue &, IRMover::ValueAdder) {},
             /*IsPerformingImport=*/true))
-      report_fatal_error("Function Import: link error: " +
+      report_fatal_error(Twine("Function Import: link error: ") +
                          toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();

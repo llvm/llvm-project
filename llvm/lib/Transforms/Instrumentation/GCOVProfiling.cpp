@@ -86,7 +86,7 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.Atomic = AtomicCounter;
 
   if (DefaultGCOVVersion.size() != 4) {
-    llvm::report_fatal_error(std::string("Invalid -default-gcov-version: ") +
+    llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
                              DefaultGCOVVersion);
   }
   memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
