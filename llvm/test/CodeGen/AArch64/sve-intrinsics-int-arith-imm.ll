@@ -268,7 +268,7 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 define <vscale x 16 x i8> @subr_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: subr_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.b, z0.b, #127
+; CHECK-NEXT:    subr z0.b, z0.b, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %elt = insertelement <vscale x 16 x i8> undef, i8 127, i32 0
@@ -282,7 +282,7 @@ define <vscale x 16 x i8> @subr_i8(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i16> @subr_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: subr_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.h, z0.h, #127
+; CHECK-NEXT:    subr z0.h, z0.h, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %elt = insertelement <vscale x 8 x i16> undef, i16 127, i32 0
@@ -312,7 +312,7 @@ define <vscale x 8 x i16> @subr_i16_out_of_range(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i32> @subr_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: subr_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.s, z0.s, #127
+; CHECK-NEXT:    subr z0.s, z0.s, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %elt = insertelement <vscale x 4 x i32> undef, i32 127, i32 0
@@ -342,7 +342,7 @@ define <vscale x 4 x i32> @subr_i32_out_of_range(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @subr_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: subr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.d, z0.d, #127
+; CHECK-NEXT:    subr z0.d, z0.d, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %elt = insertelement <vscale x 2 x i64> undef, i64 127, i64 0
@@ -372,8 +372,9 @@ define <vscale x 2 x i64> @subr_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As subr_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @subr_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: subr_i32_ptrue_all_b:
-; CHECK: subr z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -386,8 +387,9 @@ define <vscale x 4 x i32> @subr_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As subr_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @subr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: subr_i32_ptrue_all_h:
-; CHECK: subr z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -402,10 +404,11 @@ define <vscale x 4 x i32> @subr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @subr_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: subr_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: subr z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    subr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
