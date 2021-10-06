@@ -326,9 +326,28 @@ defm SUBU : Arith<0b011001, "subu", sub>;
 
 def CMPrr : F_IRC<0b011111, 0b0, 0b0,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 "cmp",
-                 [], //[(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
-                 NoItinerary>;
+                 "cmp", [], NoItinerary>;
+def CMPri : F_II<0b011111,
+                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$imm16),
+                 "cmp", [], NoItinerary>;
+
+multiclass SetCCPat<CondCode CC, bits<10> w5o5> {
+  def : Pat<(setcc GPR:$lhs, GPR:$rhs, CC),
+            (EXTUrwo (CMPrr GPR:$lhs, GPROpnd:$rhs), w5o5)>;
+  def : Pat<(setcc GPR:$lhs, imm32zx16:$rhs, CC),
+            (EXTUrwo (CMPrr GPR:$lhs, imm32zx16:$rhs), w5o5)>;
+}
+
+defm : SetCCPat<SETEQ, 34>;
+defm : SetCCPat<SETNE, 35>;
+defm : SetCCPat<SETGT, 36>;
+defm : SetCCPat<SETLE, 37>;
+defm : SetCCPat<SETLT, 38>;
+defm : SetCCPat<SETGE, 39>;
+defm : SetCCPat<SETUGT, 40>;
+defm : SetCCPat<SETULE, 41>;
+defm : SetCCPat<SETULT, 42>;
+defm : SetCCPat<SETUGE, 43>;
 
 /*
 Addressing modes:
@@ -461,7 +480,66 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   let hasDelaySlot = 1 in
     def BRn : F_BRANCH<0b11000, 1, (outs), (ins brtarget26:$d26), "br.n",
                        [(br bb:$d26)]>;
+
+  def BB0 : F_BCOND<0b11010, /*next*/ 0,
+                    (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                    "bb0", []>;
+  def BB1 : F_BCOND<0b11011, /*next*/ 0,
+                    (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                    "bb1", []>;
+  def BCOND : F_BCOND<0b11101, /*next*/ 0,
+                      (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                      "bcnd", []>;
+  let hasDelaySlot = 1 in {
+    def BB0n : F_BCOND<0b11010, /*next*/ 1,
+                       (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                       "bb0.n", []>;
+    def BB1n : F_BCOND<0b11011, /*next*/ 1,
+                      (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                      "bb1.n", []>;
+    def BCONDn : F_BCOND<0b11101, /*next*/ 1,
+                        (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
+                        "bcnd.n", []>;
+  }
 }
+
+// Compares against zero use bcond instruction.
+def : Pat<(brcc SETEQ, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b00010, GPR:$rs1, bb:$dst)>;
+def : Pat<(brcc SETNE, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b01101, GPR:$rs1, bb:$dst)>;
+def : Pat<(brcc SETGT, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b00001, GPR:$rs1, bb:$dst)>;
+def : Pat<(brcc SETLT, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b01100, GPR:$rs1, bb:$dst)>;
+def : Pat<(brcc SETGE, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b00011, GPR:$rs1, bb:$dst)>;
+def : Pat<(brcc SETLE, GPR:$rs1, 0, bb:$dst),
+          (BCOND 0b01110, GPR:$rs1, bb:$dst)>;
+
+// Generate patterns for brcc and bcond nodes.
+multiclass BranchPat<CondCode CC, PatFrag ccop, bits<5> m5> {
+  def : Pat<(brcc CC, GPR:$rs1, GPR:$rs2, bb:$dst),
+             (BB1 m5, (CMPrr GPR:$rs1, GPR:$rs2), bb:$dst)>;
+  def : Pat<(brcc CC, GPR:$rs1, imm32zx16:$imm16, bb:$dst),
+             (BB1 m5, (CMPri GPR:$rs1, imm32zx16:$imm16), bb:$dst)>;
+  def : Pat<(brcond (i32 (ccop GPR:$lhs, GPR:$rhs)), bb:$dst),
+             (BB1 m5, (CMPrr GPR:$lhs, GPR:$rhs), bb:$dst)>;
+  def : Pat<(brcond (i32 (ccop GPR:$lhs, imm32zx16:$rhs)), bb:$dst),
+             (BB1 m5, (CMPri GPR:$lhs, imm32zx16:$rhs), bb:$dst)>;
+}
+
+// Compare integer registers / integer register and immediate.
+defm : BranchPat<SETEQ, seteq, 2>;
+defm : BranchPat<SETNE, setne, 3>;
+defm : BranchPat<SETGT, setgt, 4>;
+defm : BranchPat<SETLE, setle, 5>;
+defm : BranchPat<SETLT, setlt, 6>;
+defm : BranchPat<SETGE, setge, 7>;
+defm : BranchPat<SETUGT, setugt, 8>;
+defm : BranchPat<SETULE, setule, 9>;
+defm : BranchPat<SETULT, setult, 10>;
+defm : BranchPat<SETUGE, setuge, 11>;
 
 // Alias for no operation.
 def : InstAlias<"nop", (ORrr R0, R0, R0)>;

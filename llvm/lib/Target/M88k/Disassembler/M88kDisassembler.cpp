@@ -104,6 +104,11 @@ static DecodeStatus decodeU5ImmOOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<5>(Inst, Imm);
 }
 
+static DecodeStatus decodeU5ImmOperand(MCInst &Inst, uint64_t Imm,
+                                       uint64_t Address, const void *Decoder) {
+  return decodeUImmOperand<5>(Inst, Imm);
+}
+
 static DecodeStatus decodeU10ImmWOOperand(MCInst &Inst, uint64_t Imm,
                                           uint64_t Address,
                                           const void *Decoder) {
@@ -121,6 +126,15 @@ static DecodeStatus decodePC26BranchOperand(MCInst &Inst, uint64_t Imm,
   if (!isUInt<26>(Imm))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(SignExtend64<26>(Imm)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodePC16BranchOperand(MCInst &Inst, uint64_t Imm,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (!isUInt<16>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(SignExtend64<16>(Imm)));
   return MCDisassembler::Success;
 }
 

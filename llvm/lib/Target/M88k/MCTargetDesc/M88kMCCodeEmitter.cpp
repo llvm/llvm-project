@@ -63,6 +63,9 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  unsigned getPC16Encoding(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
   unsigned getPC26Encoding(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
@@ -112,6 +115,13 @@ M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   assert(isa<M88kMCExpr>(Expr) && "Expected M88kMCExpr");
   // Push fixup (all info is contained within)
   Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind(Expr))));
+  return 0;
+}
+
+unsigned M88kMCCodeEmitter::getPC16Encoding(const MCInst &MI, unsigned OpNo,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  // TODO Implement.
   return 0;
 }
 

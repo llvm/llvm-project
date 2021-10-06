@@ -95,6 +95,15 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(4));
   setPrefFunctionAlignment(Align(4));
 
+  // Branch operations.
+  setOperationAction(ISD::BR_CC, MVT::i32, Legal);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BRCOND, MVT::Other, Legal);
+  setOperationAction(ISD::SETCC, MVT::i32, Legal);
+  setOperationAction(ISD::SELECT, MVT::i32, Expand);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
+
+  // Add/sub with carry.
   // setOperationAction(ISD::CTLZ, MVT::i32, Custom);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
 

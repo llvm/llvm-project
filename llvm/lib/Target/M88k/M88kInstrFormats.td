@@ -232,7 +232,7 @@ class F_BRANCH<bits<5> func, bits<1> next,
 class F_BCOND<bits<5> func, bits<1> next,
                dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, "", pattern, itin> {
+   : InstM88k<outs, ins, asmstr, " $m5, $rs1, $d16", pattern, itin> {
   bits<5>  m5;
   bits<5>  rs1;
   bits<16> d16;
