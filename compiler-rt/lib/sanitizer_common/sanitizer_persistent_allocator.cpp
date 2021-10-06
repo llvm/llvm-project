@@ -13,8 +13,6 @@
 
 namespace __sanitizer {
 
-PersistentAllocator thePersistentAllocator;
-
 void *PersistentAllocator::refillAndAlloc(uptr size) {
   // If failed, lock, retry and alloc new superblock.
   SpinMutexLock l(&mtx);
@@ -27,6 +25,7 @@ void *PersistentAllocator::refillAndAlloc(uptr size) {
     if (allocsz < size)
       allocsz = size;
     uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
+    atomic_fetch_add(&mapped_size, allocsz, memory_order_relaxed);
     atomic_store(&region_end, mem + allocsz, memory_order_release);
     atomic_store(&region_pos, mem, memory_order_release);
   }

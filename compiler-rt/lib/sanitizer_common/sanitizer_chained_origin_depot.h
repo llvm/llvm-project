@@ -53,7 +53,9 @@ class ChainedOriginDepot {
 
     bool eq(hash_type hash, const args_type &args) const;
 
-    static uptr storage_size(const args_type &args);
+    static uptr allocated();
+
+    static ChainedOriginDepotNode *allocate(const args_type &args);
 
     static hash_type hash(const args_type &args);
 

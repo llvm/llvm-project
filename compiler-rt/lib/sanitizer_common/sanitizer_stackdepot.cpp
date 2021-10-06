@@ -14,9 +14,12 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_hash.h"
+#include "sanitizer_persistent_allocator.h"
 #include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
+
+static PersistentAllocator allocator;
 
 struct StackDepotNode {
   using hash_type = u64;
@@ -36,8 +39,10 @@ struct StackDepotNode {
   bool eq(hash_type hash, const args_type &args) const {
     return hash == stack_hash;
   }
-  static uptr storage_size(const args_type &args) {
-    return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
+  static uptr allocated() { return allocator.allocated(); }
+  static StackDepotNode *allocate(const args_type &args) {
+    uptr alloc_size = sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
+    return (StackDepotNode *)allocator.alloc(alloc_size);
   }
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
