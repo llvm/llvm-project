@@ -35,7 +35,9 @@ vector signed __int128 vsx = { 1 };
 vector unsigned __int128 vux = { 1 };
 
 vector float vfa = { 1.e-4f, -132.23f, -22.1, 32.00f };
+vector float vfb = { 1.e-4f, -132.23f, -22.1, 32.00f };
 vector double vda = { 1.e-11, -132.23e10 };
+vector double vdb = { 1.e-11, -132.23e10 };
 
 int res_i;
 double res_d;
@@ -1069,6 +1071,12 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
+  res_vf = vec_orc(vfa, vfb);
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: or <4 x i32> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
+
   res_vsll = vec_orc(vsll, vsll);
 // CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
@@ -1118,6 +1126,12 @@ void test1() {
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vd = vec_orc(vda, vbll);
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: or <2 x i64> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
+
+  res_vd = vec_orc(vda, vdb);
 // CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
 // CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
