@@ -6645,16 +6645,6 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 
 
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
-  // Here we check that I is in the header of the innermost loop containing I,
-  // since we only deal with instructions in the loop header. The actual loop we
-  // need to check later will come from an add recurrence, but getting that
-  // requires computing the SCEV of the operands, which can be expensive. This
-  // check we can do cheaply to rule out some cases early.
-  Loop *InnermostContainingLoop = LI.getLoopFor(I->getParent());
-  if (InnermostContainingLoop == nullptr ||
-      InnermostContainingLoop->getHeader() != I->getParent())
-    return false;
-
   // Only proceed if we can prove that I does not yield poison.
   if (!programUndefinedIfPoison(I))
     return false;
