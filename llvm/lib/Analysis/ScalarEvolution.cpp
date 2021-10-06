@@ -6668,9 +6668,7 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
       SCEVOps.push_back(getSCEV(Op));
   }
   auto *DefI = getDefiningScopeBound(SCEVOps);
-  if (isGuaranteedToTransferExecutionTo(DefI, I))
-    return true;
-  return false;
+  return isGuaranteedToTransferExecutionTo(DefI, I);
 }
 
 bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
