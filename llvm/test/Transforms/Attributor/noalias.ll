@@ -265,7 +265,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 declare void @use_i8(i8* nocapture)
 define internal void @test9a(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9a() {
-; CHECK-NEXT:    call void @use_i8(i8* noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    call void @use_i8(i8* noalias nocapture noundef align 1073741824 null)
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(i8* null)

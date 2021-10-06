@@ -38,7 +38,7 @@ entry:
 ; ALL: br i1 %tobool, label %entry.cond.end_crit_edge, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
 ; ALL: entry.cond.end_crit_edge:
 ; GVN: %.pre = load %struct.node*, %struct.node** null, align 8, !dbg [[LOC_16_13:![0-9]+]]
-; INSTCOMBINE:store %struct.node* poison, %struct.node** null, align 4294967296, !dbg [[LOC_16_13:![0-9]+]]
+; INSTCOMBINE:store %struct.node* poison, %struct.node** null, align 1073741824, !dbg [[LOC_16_13:![0-9]+]]
 
 cond.false:
   %0 = bitcast %struct.desc* %desc to i8***, !dbg !11

@@ -397,7 +397,7 @@ define void @callerC2() {
 }
 define void @callerD1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD1() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias nocapture noundef align 1073741824 null)
 ; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -407,7 +407,7 @@ define void @callerD1() {
 }
 define void @callerD2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD2() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias nocapture noundef align 1073741824 null)
 ; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
