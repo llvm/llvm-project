@@ -18,7 +18,7 @@ namespace object {
 static int64_t getELFAddend(RelocationRef R) {
   Expected<int64_t> AddendOrErr = ELFRelocationRef(R).getAddend();
   handleAllErrors(AddendOrErr.takeError(), [](const ErrorInfoBase &EI) {
-    report_fatal_error(EI.message());
+    report_fatal_error(Twine(EI.message()));
   });
   return *AddendOrErr;
 }

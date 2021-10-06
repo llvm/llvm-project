@@ -3851,7 +3851,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   Expected<unsigned> MaybeDeclCode = Record.readRecord(DeclsCursor, Code);
   if (!MaybeDeclCode)
     llvm::report_fatal_error(
-        "ASTReader::readDeclRecord failed reading decl code: " +
+        Twine("ASTReader::readDeclRecord failed reading decl code: ") +
         toString(MaybeDeclCode.takeError()));
   switch ((DeclCode)MaybeDeclCode.get()) {
   case DECL_CONTEXT_LEXICAL:
@@ -4236,12 +4236,12 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
       if (llvm::Error JumpFailed = Cursor.JumpToBit(Offset))
         // FIXME don't do a fatal error.
         llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed jumping: " +
+            Twine("ASTReader::loadDeclUpdateRecords failed jumping: ") +
             toString(std::move(JumpFailed)));
       Expected<unsigned> MaybeCode = Cursor.ReadCode();
       if (!MaybeCode)
         llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed reading code: " +
+            Twine("ASTReader::loadDeclUpdateRecords failed reading code: ") +
             toString(MaybeCode.takeError()));
       unsigned Code = MaybeCode.get();
       ASTRecordReader Record(*this, *F);
@@ -4250,7 +4250,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
                "Expected DECL_UPDATES record!");
       else
         llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed reading rec code: " +
+            Twine("ASTReader::loadDeclUpdateRecords failed reading rec code: ") +
             toString(MaybeCode.takeError()));
 
       ASTDeclReader Reader(*this, Record, RecordLocation(F, Offset), ID,
@@ -4317,14 +4317,14 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   SavedStreamPosition SavedPosition(Cursor);
   if (llvm::Error JumpFailed = Cursor.JumpToBit(LocalOffset))
     llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed jumping: " +
+        Twine("ASTReader::loadPendingDeclChain failed jumping: ") +
         toString(std::move(JumpFailed)));
 
   RecordData Record;
   Expected<unsigned> MaybeCode = Cursor.ReadCode();
   if (!MaybeCode)
     llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed reading code: " +
+        Twine("ASTReader::loadPendingDeclChain failed reading code: ") +
         toString(MaybeCode.takeError()));
   unsigned Code = MaybeCode.get();
   if (Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record))
@@ -4332,7 +4332,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
            "expected LOCAL_REDECLARATIONS record!");
   else
     llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed reading rec code: " +
+        Twine("ASTReader::loadPendingDeclChain failed reading rec code: ") +
         toString(MaybeCode.takeError()));
 
   // FIXME: We have several different dispatches on decl kind here; maybe

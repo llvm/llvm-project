@@ -145,7 +145,7 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> &Obj,
                               const object::ELFSectionRef &Sec) {
   auto PhdrRangeOrErr = Obj.program_headers();
   if (!PhdrRangeOrErr)
-    report_fatal_error(toString(PhdrRangeOrErr.takeError()));
+    report_fatal_error(Twine(toString(PhdrRangeOrErr.takeError())));
 
   // Search for a PT_LOAD segment containing the requested section. Use this
   // segment's p_addr to calculate the section's LMA.
