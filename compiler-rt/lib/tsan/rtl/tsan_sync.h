@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_deadlock_detector_interface.h"
-#include "tsan_clock.h"
 #include "tsan_defs.h"
 #include "tsan_dense_alloc.h"
 #include "tsan_shadow.h"

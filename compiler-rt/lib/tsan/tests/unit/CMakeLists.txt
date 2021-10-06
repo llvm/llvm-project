@@ -1,5 +1,4 @@
 set(TSAN_UNIT_TEST_SOURCES
-  tsan_clock_test.cpp
   tsan_dense_alloc_test.cpp
   tsan_flags_test.cpp
   tsan_ilist_test.cpp

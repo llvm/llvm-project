@@ -34,7 +34,6 @@
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
-#include "tsan_clock.h"
 #include "tsan_defs.h"
 #include "tsan_flags.h"
 #include "tsan_ignoreset.h"
@@ -322,8 +321,6 @@ struct Context {
   Mutex fired_suppressions_mtx;
   InternalMmapVector<FiredSuppression> fired_suppressions;
   DDetector *dd;
-
-  ClockAlloc clock_alloc;
 
   Flags flags;
   fd_t memprof_fd;
