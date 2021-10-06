@@ -29,6 +29,7 @@ enum DWARFProducer {
   eProducerClang,
   eProducerGCC,
   eProducerLLVMGCC,
+  eProducerSwift,
   eProducerOther
 };
 
