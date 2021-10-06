@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_X86_ABISYSV_I386_H
 #define LLDB_SOURCE_PLUGINS_ABI_X86_ABISYSV_I386_H
 
-#include "Plugins/ABI/X86/ABIX86.h"
+#include "Plugins/ABI/X86/ABIX86_i386.h"
 #include "lldb/lldb-private.h"
 
-class ABISysV_i386 : public ABIX86 {
+class ABISysV_i386 : public ABIX86_i386 {
 public:
   ~ABISysV_i386() override = default;
 
@@ -95,7 +95,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  using ABIX86::ABIX86; // Call CreateInstance instead.
+  using ABIX86_i386::ABIX86_i386; // Call CreateInstance instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_X86_ABISYSV_I386_H
