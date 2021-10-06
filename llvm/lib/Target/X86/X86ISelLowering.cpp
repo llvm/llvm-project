@@ -425,6 +425,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f128, MVT::f16, Expand);
 
   setOperationAction(ISD::PARITY, MVT::i8, Custom);
+  setOperationAction(ISD::PARITY, MVT::i16, Custom);
+  setOperationAction(ISD::PARITY, MVT::i32, Custom);
+  if (Subtarget.is64Bit())
+    setOperationAction(ISD::PARITY, MVT::i64, Custom);
   if (Subtarget.hasPOPCNT()) {
     setOperationPromotedToType(ISD::CTPOP, MVT::i8, MVT::i32);
   } else {
@@ -435,11 +439,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::CTPOP        , MVT::i64  , Expand);
     else
       setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
-
-    setOperationAction(ISD::PARITY, MVT::i16, Custom);
-    setOperationAction(ISD::PARITY, MVT::i32, Custom);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::PARITY, MVT::i64, Custom);
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
@@ -30468,6 +30467,10 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
     // Extend to the original type.
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Setnp);
   }
+
+  // If we have POPCNT, use the default expansion.
+  if (Subtarget.hasPOPCNT())
+    return SDValue();
 
   if (VT == MVT::i64) {
     // Xor the high and low 16-bits together using a 32-bit operation.

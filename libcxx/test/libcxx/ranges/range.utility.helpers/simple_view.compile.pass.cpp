@@ -18,29 +18,25 @@
 #include "test_iterators.h"
 
 struct SimpleView : std::ranges::view_base {
-  friend int* begin(SimpleView&);
-  friend int* begin(SimpleView const&);
-  friend int* end(SimpleView&);
-  friend int* end(SimpleView const&);
+  int *begin() const;
+  int *end() const;
 };
 
 struct WrongConstView : std::ranges::view_base {
-  friend       int* begin(WrongConstView&);
-  friend const int* begin(WrongConstView const&);
-  friend       int* end(WrongConstView&);
-  friend const int* end(WrongConstView const&);
+  int *begin();
+  const int *begin() const;
+  int *end();
+  const int *end() const;
 };
 
 struct NoConstView : std::ranges::view_base {
-  friend int* begin(NoConstView&);
-  friend int* end(NoConstView&);
+  int *begin();
+  int *end();
 };
 
 struct DifferentSentinel : std::ranges::view_base {
-  friend int* begin(DifferentSentinel&);
-  friend int* begin(DifferentSentinel const&);
-  friend sentinel_wrapper<int*> end(DifferentSentinel&);
-  friend sentinel_wrapper<int*> end(DifferentSentinel const&);
+  int *begin() const;
+  sentinel_wrapper<int*> end() const;
 };
 
 static_assert( std::ranges::__simple_view<SimpleView>);

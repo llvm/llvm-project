@@ -20,7 +20,7 @@
 
 namespace ranges = std::ranges;
 
-static_assert(std::same_as<decltype(ranges::drop_view(ContiguousView(), 0)), ranges::drop_view<ContiguousView>>);
+static_assert(std::same_as<decltype(ranges::drop_view(MoveOnlyView(), 0)), ranges::drop_view<MoveOnlyView>>);
 static_assert(std::same_as<decltype(ranges::drop_view(CopyableView(), 0)), ranges::drop_view<CopyableView>>);
 static_assert(std::same_as<decltype(ranges::drop_view(ForwardView(), 0)), ranges::drop_view<ForwardView>>);
 static_assert(std::same_as<decltype(ranges::drop_view(InputView(), 0)), ranges::drop_view<InputView>>);

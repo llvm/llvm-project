@@ -79,8 +79,8 @@ int main(int, char**) {
   }
 
   {
-    ContiguousView view{buf, buf + 8};
-    std::ranges::common_view<ContiguousView> common(std::move(view));
+    MoveOnlyView view{buf, buf + 8};
+    std::ranges::common_view<MoveOnlyView> common(std::move(view));
     using CommonIter = std::common_iterator<int*, sentinel_wrapper<int*>>;
     std::same_as<CommonIter> auto begin = common.begin();
     assert(begin == std::ranges::begin(view));

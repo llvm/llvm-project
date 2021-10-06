@@ -40,11 +40,11 @@ constexpr bool test() {
   }
 
   {
-    ContiguousView view{buf, buf + 8};
-    std::ranges::common_view<ContiguousView> common(std::move(view));
+    MoveOnlyView view{buf, buf + 8};
+    std::ranges::common_view<MoveOnlyView> common(std::move(view));
     assert(std::move(common).base().begin_ == buf);
 
-    ASSERT_SAME_TYPE(decltype(std::move(common).base()), ContiguousView);
+    ASSERT_SAME_TYPE(decltype(std::move(common).base()), MoveOnlyView);
     static_assert(!hasLValueQualifiedBase(common));
   }
 
