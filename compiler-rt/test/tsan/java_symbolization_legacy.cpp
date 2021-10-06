@@ -2,10 +2,9 @@
 #include "java.h"
 #include <memory.h>
 
-extern "C" bool __tsan_symbolize_external(jptr pc,
-                                          char *func_buf, jptr func_siz,
-                                          char *file_buf, jptr file_siz,
-                                          int *line, int *col) {
+extern "C" __attribute__((disable_sanitizer_instrumentation)) bool
+__tsan_symbolize_external(jptr pc, char *func_buf, jptr func_siz,
+                          char *file_buf, jptr file_siz, int *line, int *col) {
   if (pc == (1234 | kExternalPCBit)) {
     memcpy(func_buf, "MyFunc", sizeof("MyFunc"));
     memcpy(file_buf, "MyFile.java", sizeof("MyFile.java"));
