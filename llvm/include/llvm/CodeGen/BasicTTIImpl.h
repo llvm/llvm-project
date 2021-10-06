@@ -1826,9 +1826,9 @@ public:
       Type *OverflowTy = RetTy->getContainedType(1);
       unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
       Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
+      bool IsSigned = IID == Intrinsic::smul_with_overflow;
 
-      unsigned ExtOp =
-          IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
       TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
       InstructionCost Cost = 0;
@@ -1837,11 +1837,11 @@ public:
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
                                             CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, MulTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, ExtTy,
                                               CostKind, TTI::OK_AnyValue,
                                               TTI::OK_UniformConstantValue);
 
-      if (IID == Intrinsic::smul_with_overflow)
+      if (IsSigned)
         Cost += thisT()->getArithmeticInstrCost(Instruction::AShr, MulTy,
                                                 CostKind, TTI::OK_AnyValue,
                                                 TTI::OK_UniformConstantValue);
