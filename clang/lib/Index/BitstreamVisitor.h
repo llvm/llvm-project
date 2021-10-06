@@ -26,7 +26,7 @@ struct SavedStreamPosition {
 
   ~SavedStreamPosition() {
     if (llvm::Error Err = Cursor.JumpToBit(Offset))
-      llvm::report_fatal_error("SavedStreamPosition failed jumping: " +
+      llvm::report_fatal_error(Twine("SavedStreamPosition failed jumping: ") +
                                toString(std::move(Err)));
   }
 
