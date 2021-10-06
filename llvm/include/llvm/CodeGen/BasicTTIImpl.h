@@ -1809,12 +1809,15 @@ public:
       unsigned Opcode = IID == Intrinsic::uadd_with_overflow
                             ? BinaryOperator::Add
                             : BinaryOperator::Sub;
+      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
+                                    ? CmpInst::ICMP_ULT
+                                    : CmpInst::ICMP_UGT;
 
       InstructionCost Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                      Pred, CostKind);
       return Cost;
     }
     case Intrinsic::smul_with_overflow:
