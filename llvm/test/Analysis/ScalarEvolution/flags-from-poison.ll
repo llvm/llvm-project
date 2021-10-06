@@ -1654,9 +1654,23 @@ define noundef i32 @mul-basic(i32 %a, i32 %b) {
   ret i32 %res
 }
 
-define noundef i32 @add-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
+@gA = external global i32
+@gB = external global i32
+@gC = external global i32
+@gD = external global i32
+
+
+define noundef i32 @add-recurse() {
 ; CHECK-LABEL: 'add-recurse'
 ; CHECK-NEXT:  Classifying expressions for: @add-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %b = load i32, i32* @gB, align 4
+; CHECK-NEXT:    --> %b U: full-set S: full-set
+; CHECK-NEXT:    %c = load i32, i32* @gC, align 4
+; CHECK-NEXT:    --> %c U: full-set S: full-set
+; CHECK-NEXT:    %d = load i32, i32* @gD, align 4
+; CHECK-NEXT:    --> %d U: full-set S: full-set
 ; CHECK-NEXT:    %x = add i32 %a, %b
 ; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
 ; CHECK-NEXT:    %y = add i32 %c, %d
@@ -1665,49 +1679,91 @@ define noundef i32 @add-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    --> (%a + %b + %c + %d) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @add-recurse
 ;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %b = load i32, i32* @gB
+  %c = load i32, i32* @gC
+  %d = load i32, i32* @gD
+
   %x = add i32 %a, %b
   %y = add i32 %c, %d
   %res = add nuw i32 %x, %y
   ret i32 %res
 }
 
-define noundef i32 @sub-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
+define noundef i32 @sub-recurse() {
 ; CHECK-LABEL: 'sub-recurse'
 ; CHECK-NEXT:  Classifying expressions for: @sub-recurse
-; CHECK-NEXT:    %x = add i32 %a, %b
-; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
-; CHECK-NEXT:    %y = add i32 %c, %d
-; CHECK-NEXT:    --> (%c + %d) U: full-set S: full-set
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %b = load i32, i32* @gB, align 4
+; CHECK-NEXT:    --> %b U: full-set S: full-set
+; CHECK-NEXT:    %c = load i32, i32* @gC, align 4
+; CHECK-NEXT:    --> %c U: full-set S: full-set
+; CHECK-NEXT:    %d = load i32, i32* @gD, align 4
+; CHECK-NEXT:    --> %d U: full-set S: full-set
+; CHECK-NEXT:    %x = sub nuw i32 %a, %b
+; CHECK-NEXT:    --> ((-1 * %b) + %a) U: full-set S: full-set
+; CHECK-NEXT:    %y = sub nuw i32 %c, %d
+; CHECK-NEXT:    --> ((-1 * %d) + %c) U: full-set S: full-set
 ; CHECK-NEXT:    %res = sub nuw i32 %x, %y
-; CHECK-NEXT:    --> ((-1 * (%c + %d)) + %a + %b) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * %b) + (-1 * %c) + %a + %d) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub-recurse
 ;
-  %x = add i32 %a, %b
-  %y = add i32 %c, %d
+  call void @foo()
+  %a = load i32, i32* @gA
+  %b = load i32, i32* @gB
+  %c = load i32, i32* @gC
+  %d = load i32, i32* @gD
+
+  %x = sub nuw i32 %a, %b
+  %y = sub nuw i32 %c, %d
   %res = sub nuw i32 %x, %y
   ret i32 %res
 }
 
-define noundef i32 @mul-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
+define noundef i32 @mul-recurse() {
 ; CHECK-LABEL: 'mul-recurse'
 ; CHECK-NEXT:  Classifying expressions for: @mul-recurse
-; CHECK-NEXT:    %x = add i32 %a, %b
-; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
-; CHECK-NEXT:    %y = add i32 %c, %d
-; CHECK-NEXT:    --> (%c + %d) U: full-set S: full-set
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %b = load i32, i32* @gB, align 4
+; CHECK-NEXT:    --> %b U: full-set S: full-set
+; CHECK-NEXT:    %c = load i32, i32* @gC, align 4
+; CHECK-NEXT:    --> %c U: full-set S: full-set
+; CHECK-NEXT:    %d = load i32, i32* @gD, align 4
+; CHECK-NEXT:    --> %d U: full-set S: full-set
+; CHECK-NEXT:    %x = mul nuw i32 %a, %b
+; CHECK-NEXT:    --> (%a * %b) U: full-set S: full-set
+; CHECK-NEXT:    %y = mul nuw i32 %c, %d
+; CHECK-NEXT:    --> (%c * %d) U: full-set S: full-set
 ; CHECK-NEXT:    %res = mul nuw i32 %x, %y
-; CHECK-NEXT:    --> ((%a + %b) * (%c + %d)) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a * %b * %c * %d) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @mul-recurse
 ;
-  %x = add i32 %a, %b
-  %y = add i32 %c, %d
+  call void @foo()
+  %a = load i32, i32* @gA
+  %b = load i32, i32* @gB
+  %c = load i32, i32* @gC
+  %d = load i32, i32* @gD
+
+  %x = mul nuw i32 %a, %b
+  %y = mul nuw i32 %c, %d
   %res = mul nuw i32 %x, %y
   ret i32 %res
 }
 
-define noundef i32 @udiv-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
+define noundef i32 @udiv-recurse() {
 ; CHECK-LABEL: 'udiv-recurse'
 ; CHECK-NEXT:  Classifying expressions for: @udiv-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %b = load i32, i32* @gB, align 4
+; CHECK-NEXT:    --> %b U: full-set S: full-set
+; CHECK-NEXT:    %c = load i32, i32* @gC, align 4
+; CHECK-NEXT:    --> %c U: full-set S: full-set
+; CHECK-NEXT:    %d = load i32, i32* @gD, align 4
+; CHECK-NEXT:    --> %d U: full-set S: full-set
 ; CHECK-NEXT:    %x = add i32 %a, %b
 ; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
 ; CHECK-NEXT:    %y = add i32 %c, %d
@@ -1716,6 +1772,12 @@ define noundef i32 @udiv-recurse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    --> ((%a + %b) /u (%c + %d)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv-recurse
 ;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %b = load i32, i32* @gB
+  %c = load i32, i32* @gC
+  %d = load i32, i32* @gD
+
   %x = add i32 %a, %b
   %y = add i32 %c, %d
   %res = udiv exact i32 %x, %y
