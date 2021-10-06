@@ -659,8 +659,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned TypeSize =
           DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
-      Decomposed.Offset += LE.Offset.sextOrSelf(MaxIndexSize);
-      APInt Scale = LE.Scale.sextOrSelf(MaxIndexSize);
+      Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
+      APInt Scale = LE.Scale.sext(MaxIndexSize);
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:

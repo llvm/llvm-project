@@ -765,7 +765,7 @@ Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
   else
     T = Builder.getIntNTy(BitWidth);
 
-  APValue = APValue.sextOrSelf(T->getBitWidth());
+  APValue = APValue.sext(T->getBitWidth());
   V = ConstantInt::get(T, APValue);
 
   isl_ast_expr_free(Expr);

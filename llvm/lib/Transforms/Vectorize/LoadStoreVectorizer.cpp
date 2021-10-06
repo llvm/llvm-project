@@ -496,7 +496,7 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
   if (PtrDelta.urem(Stride) != 0)
     return false;
   unsigned IdxBitWidth = OpA->getType()->getScalarSizeInBits();
-  APInt IdxDiff = PtrDelta.udiv(Stride).zextOrSelf(IdxBitWidth);
+  APInt IdxDiff = PtrDelta.udiv(Stride).zext(IdxBitWidth);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))

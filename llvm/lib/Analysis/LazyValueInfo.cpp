@@ -1133,7 +1133,7 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     ConstantRange CR = ConstantRange::makeExactICmpRegion(EdgePred, *C);
     if (!CR.isEmptySet())
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
-          CR.getUnsignedMin().zextOrSelf(BitWidth), APInt(BitWidth, 0)));
+          CR.getUnsignedMin().zext(BitWidth), APInt(BitWidth, 0)));
   }
 
   return ValueLatticeElement::getOverdefined();

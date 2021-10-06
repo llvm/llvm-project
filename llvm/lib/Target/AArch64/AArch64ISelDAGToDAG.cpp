@@ -3148,7 +3148,7 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
   SDLoc DL(N);
   uint64_t Val = cast<ConstantSDNode>(N)
                      ->getAPIntValue()
-                     .truncOrSelf(VT.getFixedSizeInBits())
+                     .trunc(VT.getFixedSizeInBits())
                      .getZExtValue();
 
   switch (VT.SimpleTy) {
@@ -3188,7 +3188,7 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
   SDLoc DL(N);
   int64_t Val = cast<ConstantSDNode>(N)
                     ->getAPIntValue()
-                    .truncOrSelf(VT.getFixedSizeInBits())
+                    .trunc(VT.getFixedSizeInBits())
                     .getSExtValue();
 
   switch (VT.SimpleTy) {

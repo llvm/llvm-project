@@ -233,11 +233,11 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
   // Widen the LHS and RHS so we can perform a full multiplication.
   unsigned Wide = CommonFXSema.getWidth() * 2;
   if (CommonFXSema.isSigned()) {
-    ThisVal = ThisVal.sextOrSelf(Wide);
-    OtherVal = OtherVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
+    OtherVal = OtherVal.sext(Wide);
   } else {
-    ThisVal = ThisVal.zextOrSelf(Wide);
-    OtherVal = OtherVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
+    OtherVal = OtherVal.zext(Wide);
   }
 
   // Perform the full multiplication and downscale to get the same scale.
@@ -290,11 +290,11 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
   // Widen the LHS and RHS so we can perform a full division.
   unsigned Wide = CommonFXSema.getWidth() * 2;
   if (CommonFXSema.isSigned()) {
-    ThisVal = ThisVal.sextOrSelf(Wide);
-    OtherVal = OtherVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
+    OtherVal = OtherVal.sext(Wide);
   } else {
-    ThisVal = ThisVal.zextOrSelf(Wide);
-    OtherVal = OtherVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
+    OtherVal = OtherVal.zext(Wide);
   }
 
   // Upscale to compensate for the loss of precision from division, and
@@ -340,9 +340,9 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
   // Widen the LHS.
   unsigned Wide = Sema.getWidth() * 2;
   if (Sema.isSigned())
-    ThisVal = ThisVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
   else
-    ThisVal = ThisVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
 
   // Clamp the shift amount at the original width, and perform the shift.
   Amt = std::min(Amt, ThisVal.getBitWidth());

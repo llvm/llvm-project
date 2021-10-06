@@ -739,15 +739,23 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
   case Instruction::UIToFP: {
     // TODO: use input range if available
     auto BW = getBitWidth();
-    APInt Min = APInt::getMinValue(BW).zextOrSelf(ResultBitWidth);
-    APInt Max = APInt::getMaxValue(BW).zextOrSelf(ResultBitWidth);
+    APInt Min = APInt::getMinValue(BW);
+    APInt Max = APInt::getMaxValue(BW);
+    if (ResultBitWidth > BW) {
+      Min = Min.zext(ResultBitWidth);
+      Max = Max.zext(ResultBitWidth);
+    }
     return ConstantRange(std::move(Min), std::move(Max));
   }
   case Instruction::SIToFP: {
     // TODO: use input range if available
     auto BW = getBitWidth();
-    APInt SMin = APInt::getSignedMinValue(BW).sextOrSelf(ResultBitWidth);
-    APInt SMax = APInt::getSignedMaxValue(BW).sextOrSelf(ResultBitWidth);
+    APInt SMin = APInt::getSignedMinValue(BW);
+    APInt SMax = APInt::getSignedMaxValue(BW);
+    if (ResultBitWidth > BW) {
+      SMin = SMin.sext(ResultBitWidth);
+      SMax = SMax.sext(ResultBitWidth);
+    }
     return ConstantRange(std::move(SMin), std::move(SMax));
   }
   case Instruction::FPTrunc:
