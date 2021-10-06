@@ -4935,6 +4935,11 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
   return nullptr;
 }
 
+// TODO: Move this out to a header file:
+static inline bool canIgnoreSNaN(fp::ExceptionBehavior EB, FastMathFlags FMF) {
+  return (EB == fp::ebIgnore || FMF.noNaNs());
+}
+
 /// Given operands for an FAdd, see if we can fold the result.  If not, this
 /// returns null.
 static Value *
@@ -4949,12 +4954,19 @@ SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
     return C;
 
+  // fadd X, -0 ==> X
+  // With strict/constrained FP, we have these possible edge cases that do
+  // not simplify to Op0:
+  // fadd SNaN, -0.0 --> QNaN
+  // fadd +0.0, -0.0 --> -0.0 (but only with round toward negative)
+  if (canIgnoreSNaN(ExBehavior, FMF) &&
+      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
+       FMF.noSignedZeros()))
+    if (match(Op1, m_NegZeroFP()))
+      return Op0;
+
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
-
-  // fadd X, -0 ==> X
-  if (match(Op1, m_NegZeroFP()))
-    return Op0;
 
   // fadd X, 0 ==> X, when we know X is not -0
   if (match(Op1, m_PosZeroFP()) &&

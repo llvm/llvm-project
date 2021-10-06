@@ -101,8 +101,7 @@ define <2 x float> @fadd_vec_x_n0_dynamic(<2 x float> %a) #0 {
 ; Test one of the remaining rounding modes and the rest will be fine.
 define float @fadd_x_n0_towardzero(float %a) #0 {
 ; CHECK-LABEL: @fadd_x_n0_towardzero(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call float @llvm.experimental.constrained.fadd.f32(float %a, float -0.0, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
   ret float %ret
@@ -112,8 +111,7 @@ define float @fadd_x_n0_towardzero(float %a) #0 {
 ; Test one of the remaining rounding modes and the rest will be fine.
 define <2 x float> @fadd_vec_x_n0_towardzero(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fadd_vec_x_n0_towardzero(
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, metadata !"round.towardzero", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret <2 x float> [[RET]]
+; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
   %ret = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float><float -0.0, float -0.0>, metadata !"round.towardzero", metadata !"fpexcept.ignore") #0
   ret <2 x float> %ret
@@ -121,8 +119,7 @@ define <2 x float> @fadd_vec_x_n0_towardzero(<2 x float> %a) #0 {
 
 define float @fadd_nnan_x_n0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fadd_nnan_x_n0_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call nnan float @llvm.experimental.constrained.fadd.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret float %ret
@@ -130,8 +127,7 @@ define float @fadd_nnan_x_n0_ebmaytrap(float %a) #0 {
 
 define <2 x float> @fadd_vec_nnan_x_n0_ebmaytrap(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fadd_vec_nnan_x_n0_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret <2 x float> [[RET]]
+; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
   %ret = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float><float -0.0, float -0.0>, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret <2 x float> %ret
@@ -140,7 +136,7 @@ define <2 x float> @fadd_vec_nnan_x_n0_ebmaytrap(<2 x float> %a) #0 {
 define float @fadd_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fadd_nnan_x_n0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %ret = call nnan float @llvm.experimental.constrained.fadd.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %ret
@@ -149,7 +145,7 @@ define float @fadd_nnan_x_n0_ebstrict(float %a) #0 {
 define <2 x float> @fadd_vec_nnan_x_n0_ebstrict(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fadd_vec_nnan_x_n0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret <2 x float> [[RET]]
+; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %ret = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float><float -0.0, float -0.0>, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <2 x float> %ret
