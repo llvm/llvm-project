@@ -67,6 +67,26 @@ spv.module @name Logical GLSL450 {
   }
 }
 
+spv.module Logical GLSL450 {
+  // CHECK: llvm.mlir.global external @bar() {location = 1 : i32} : i32
+  // CHECK-LABEL: @foo
+  spv.GlobalVariable @bar {location = 1 : i32} : !spv.ptr<i32, Output>
+  spv.func @foo() "None" {
+    %0 = spv.mlir.addressof @bar : !spv.ptr<i32, Output>
+    spv.Return
+  }
+}
+
+spv.module Logical GLSL450 {
+  // CHECK: llvm.mlir.global external constant @bar() {location = 3 : i32} : f32
+  // CHECK-LABEL: @foo
+  spv.GlobalVariable @bar {descriptor_set = 0 : i32, location = 3 : i32} : !spv.ptr<f32, UniformConstant>
+  spv.func @foo() "None" {
+    %0 = spv.mlir.addressof @bar : !spv.ptr<f32, UniformConstant>
+    spv.Return
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // spv.Load
 //===----------------------------------------------------------------------===//

@@ -1068,6 +1068,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
       return false;
     Addr = BC->getOperand(0);
   }
+  // If we've ended up at a global/constant, bail. We shouldn't be looking at
+  // uselists for non-local Values in a loop pass.
+  if (isa<Constant>(Addr))
+    return false;
 
   unsigned UsesVisited = 0;
   // Traverse all uses of the load operand value, to see if invariant.start is

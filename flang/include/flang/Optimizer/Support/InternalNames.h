@@ -54,10 +54,10 @@ struct NameUniquer {
         : modules{modules.begin(), modules.end()}, host{host}, name{name},
           kinds{kinds.begin(), kinds.end()} {}
 
-    llvm::SmallVector<std::string, 2> modules;
+    llvm::SmallVector<std::string> modules;
     llvm::Optional<std::string> host;
     std::string name;
-    llvm::SmallVector<std::int64_t, 4> kinds;
+    llvm::SmallVector<std::int64_t> kinds;
   };
 
   /// Unique a common block name

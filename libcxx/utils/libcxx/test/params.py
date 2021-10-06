@@ -8,6 +8,7 @@
 
 from libcxx.test.dsl import *
 from libcxx.test.features import _isMSVC
+import re
 
 _warningFlags = [
   '-Werror',
@@ -91,11 +92,24 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-fno-rtti')
             ]),
 
-  Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
-            help="The C++ Standard Library implementation being tested.",
-            actions=lambda stdlib: [
-              AddFeature('stdlib={}'.format(stdlib))
-            ]),
+  Parameter(name='stdlib', choices=['llvm-libc++', 'libstdc++', 'msvc'], type=str, default='llvm-libc++',
+            help="""The C++ Standard Library implementation being tested.
+
+                 Note that this parameter can also be used to encode different 'flavors' of the same
+                 standard library, such as libc++ as shipped by a different vendor, if it has different
+                 properties worth testing.
+
+                 The Standard libraries currently supported are:
+                 - llvm-libc++: The 'upstream' libc++ as shipped with LLVM.
+                 - libstdc++: The GNU C++ library typically shipped with GCC.
+                 - msvc: The Microsoft implementation of the C++ Standard Library.
+                """,
+            actions=lambda stdlib: filter(None, [
+              AddFeature('stdlib={}'.format(stdlib)),
+              # Also add an umbrella feature 'stdlib=libc++' for all flavors of libc++, to simplify
+              # the test suite.
+              AddFeature('stdlib=libc++') if re.match('.+-libc\+\+', stdlib) else None
+            ])),
 
   Parameter(name='enable_warnings', choices=[True, False], type=bool, default=True,
             help="Whether to enable warnings when compiling the test suite.",

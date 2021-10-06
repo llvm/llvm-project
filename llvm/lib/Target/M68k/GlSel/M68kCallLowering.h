@@ -52,7 +52,7 @@ struct M68kIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override;
+                        CCValAssign VA) override;
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override;
