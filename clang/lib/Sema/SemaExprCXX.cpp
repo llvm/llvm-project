@@ -494,7 +494,7 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
     IdentifierInfo *II = Name.Identifier;
     ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
     SourceLocation Loc = Name.getEndLoc();
-    if (Status != ReservedIdentifierStatus::NotReserved &&
+    if (isReservedInAllContexts(Status) &&
         !PP.getSourceManager().isInSystemHeader(Loc)) {
       Diag(Loc, diag::warn_reserved_extern_symbol)
           << II << static_cast<int>(Status)

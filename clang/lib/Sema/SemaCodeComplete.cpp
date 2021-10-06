@@ -700,9 +700,7 @@ ResultBuilder::ShadowMapEntry::end() const {
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
   ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
-  if ((Status != ReservedIdentifierStatus::NotReserved) &&
-      (Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope) &&
-      ND->getLocation().isInvalid())
+  if (isReservedInAllContexts(Status) && ND->getLocation().isInvalid())
     return true;
 
   // For system headers ignore only double-underscore names.
