@@ -157,6 +157,8 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
       },
       nullptr,
       nullptr,
+      nullptr, // Dwarf expression opcode bytes pointer
+      0        // Dwarf expression opcode bytes length
   };
   Info.name = ConstString(Elements["name"]).GetCString();
   if (!Info.name)

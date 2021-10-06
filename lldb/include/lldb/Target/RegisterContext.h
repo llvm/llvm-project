@@ -31,6 +31,10 @@ public:
 
   virtual const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) = 0;
 
+  // Detect the register size dynamically.
+  uint32_t UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
+                                     RegisterInfo *reg_info);
+
   virtual size_t GetRegisterSetCount() = 0;
 
   virtual const RegisterSet *GetRegisterSet(size_t reg_set) = 0;
