@@ -2460,9 +2460,12 @@ unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
   unsigned RemovedSize = 0;
   while (I != MBB.end()) {
     MachineBasicBlock::iterator Next = std::next(I);
-    RemovedSize += getInstSizeInBytes(*I);
-    I->eraseFromParent();
-    ++Count;
+    // Skip over artificial terminators when removing instructions.
+    if (I->isBranch() || I->isReturn()) {
+      RemovedSize += getInstSizeInBytes(*I);
+      I->eraseFromParent();
+      ++Count;
+    }
     I = Next;
   }
 
