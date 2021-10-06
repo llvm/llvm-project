@@ -217,28 +217,3 @@ define void @f16() {
   call void @foo(i8* %dest, i8* %src)
   ret void
 }
-
-; Test a variable length loop.
-define void @f17(i8* %dest, i8* %src, i64 %Len) {
-; CHECK-LABEL: f17:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    aghi %r4, -1
-; CHECK-NEXT:    cgibe %r4, -1, 0(%r14)
-; CHECK-NEXT:  .LBB16_1:
-; CHECK-NEXT:    srlg %r0, %r4, 8
-; CHECK-NEXT:    cgije %r0, 0, .LBB16_3
-; CHECK-NEXT:  .LBB16_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    pfd 2, 768(%r2)
-; CHECK-NEXT:    mvc 0(256,%r2), 0(%r3)
-; CHECK-NEXT:    la %r2, 256(%r2)
-; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    brctg %r0, .LBB16_2
-; CHECK-NEXT:  .LBB16_3:
-; CHECK-NEXT:    exrl %r4, .Ltmp0
-; CHECK-NEXT:    br %r14
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %Len, i1 false)
-  ret void
-}
-
-; CHECK:       .Ltmp0:
-; CHECK-NEXT:    mvc 0(1,%r2), 0(%r3)
