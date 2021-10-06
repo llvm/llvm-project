@@ -26,14 +26,14 @@ constexpr bool test() {
 
   // sized_range && random_access_iterator
   {
-    std::ranges::take_view<SizedRandomAccessView> tv(SizedRandomAccessView{buffer}, 4);
-    assert(tv.begin() == begin(SizedRandomAccessView(buffer)));
+    std::ranges::take_view<SizedRandomAccessView> tv(SizedRandomAccessView(buffer), 4);
+    assert(tv.begin() == SizedRandomAccessView(buffer).begin());
     ASSERT_SAME_TYPE(decltype(tv.begin()), RandomAccessIter);
   }
 
   {
-    const std::ranges::take_view<SizedRandomAccessView> tv(SizedRandomAccessView{buffer}, 4);
-    assert(tv.begin() == begin(SizedRandomAccessView(buffer)));
+    const std::ranges::take_view<SizedRandomAccessView> tv(SizedRandomAccessView(buffer), 4);
+    assert(tv.begin() == SizedRandomAccessView(buffer).begin());
     ASSERT_SAME_TYPE(decltype(tv.begin()), RandomAccessIter);
   }
 
