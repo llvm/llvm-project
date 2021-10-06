@@ -1330,7 +1330,13 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if __has_attribute(init_priority)
-# define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
+    // TODO: Remove this once we drop support for building libc++ with old Clangs
+#   if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1200) || \
+       (defined(__apple_build_version__) && __apple_build_version__ < 13000000)
+#     define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
+#   else
+#     define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(100)))
+#   endif
 #else
 # define _LIBCPP_INIT_PRIORITY_MAX
 #endif
