@@ -1628,9 +1628,9 @@ define noundef i32 @add-basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'add-basic'
 ; CHECK-NEXT:  Classifying expressions for: @add-basic
 ; CHECK-NEXT:    %res = add nuw nsw i32 %a, %b
-; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a + %b)<nuw><nsw> U: full-set S: full-set
 ; CHECK-NEXT:    %res2 = udiv i32 255, %res
-; CHECK-NEXT:    --> (255 /u (%a + %b)) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> (255 /u (%a + %b)<nuw><nsw>) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-basic
 ;
   %res = add nuw nsw i32 %a, %b
@@ -1656,9 +1656,9 @@ define noundef i32 @mul-basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'mul-basic'
 ; CHECK-NEXT:  Classifying expressions for: @mul-basic
 ; CHECK-NEXT:    %res = mul nuw nsw i32 %a, %b
-; CHECK-NEXT:    --> (%a * %b) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a * %b)<nuw><nsw> U: full-set S: full-set
 ; CHECK-NEXT:    %res2 = udiv i32 255, %res
-; CHECK-NEXT:    --> (255 /u (%a * %b)) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> (255 /u (%a * %b)<nuw><nsw>) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul-basic
 ;
   %res = mul nuw nsw i32 %a, %b

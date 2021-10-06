@@ -8,10 +8,6 @@ target triple = "x86_64-apple-macosx10.9.0"
 @C = common global [2000 x float] zeroinitializer, align 16
 @D = common global [2000 x float] zeroinitializer, align 16
 
-; Currently SCEV isn't smart enough to figure out that accesses
-; A[3*i], A[3*i+1] and A[3*i+2] are consecutive, but in future
-; that would hopefully be fixed. For now, check that this isn't
-; vectorized.
 ; Function Attrs: nounwind ssp uwtable
 define void @foo_3double(i32 %u) #0 {
 ; CHECK-LABEL: @foo_3double(
@@ -21,26 +17,25 @@ define void @foo_3double(i32 %u) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[U]], 3
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    store double [[ADD5]], double* [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM12:%.*]] = sext i32 [[ADD11]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[ARRAYIDX13]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM12]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* [[ARRAYIDX17]], align 8
-; CHECK-NEXT:    [[ADD18:%.*]] = fadd double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store double [[ADD18]], double* [[ARRAYIDX13]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX4]] to <2 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[ADD24:%.*]] = add nsw i32 [[MUL]], 2
 ; CHECK-NEXT:    [[IDXPROM25:%.*]] = sext i32 [[ADD24]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @A, i32 0, i64 [[IDXPROM25]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, double* [[ARRAYIDX26]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load double, double* [[ARRAYIDX26]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds [2000 x double], [2000 x double]* @B, i32 0, i64 [[IDXPROM25]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, double* [[ARRAYIDX30]], align 8
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load double, double* [[ARRAYIDX30]], align 8
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd double [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    store double [[ADD31]], double* [[ARRAYIDX26]], align 8
 ; CHECK-NEXT:    ret void
 ;

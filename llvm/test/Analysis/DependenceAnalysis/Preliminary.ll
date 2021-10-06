@@ -623,7 +623,7 @@ entry:
 
 ; CHECK-LABEL: p9
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [|<]!
+; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
