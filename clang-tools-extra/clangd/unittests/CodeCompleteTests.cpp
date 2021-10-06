@@ -2622,6 +2622,104 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
   }
 }
 
+TEST(SignatureHelpTest, Variadic) {
+  const std::string Header = R"cpp(
+    void fun(int x, ...) {}
+    void test() {)cpp";
+  const std::string ExpectedSig = "fun([[int x]], [[...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicTemplate) {
+  const std::string Header = R"cpp(
+    template<typename T, typename ...Args>
+    void fun(T t, Args ...args) {}
+    void test() {)cpp";
+  const std::string ExpectedSig = "fun([[T t]], [[Args args...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicMethod) {
+  const std::string Header = R"cpp(
+  class C {
+    template<typename T, typename ...Args>
+    void fun(T t, Args ...args) {}
+  };
+    void test() {C c; )cpp";
+  const std::string ExpectedSig = "fun([[T t]], [[Args args...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "c.fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "c.fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "c.fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicType) {
+  const std::string Header = R"cpp(
+  void fun(int x, ...) {}
+  auto get_fun() { return fun; }
+  void test() {
+  )cpp";
+  const std::string ExpectedSig = "([[int]], [[...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "get_fun()(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "get_fun()(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "get_fun()(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
 TEST(CompletionTest, IncludedCompletionKinds) {
   Annotations Test(R"cpp(#include "^)cpp");
   auto TU = TestTU::withCode(Test.code());
