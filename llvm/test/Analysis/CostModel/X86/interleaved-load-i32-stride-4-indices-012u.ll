@@ -13,29 +13,28 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; SSE2: LV: Found an estimated cost of 29 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; SSE2: LV: Found an estimated cost of 59 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
-; SSE2: LV: Found an estimated cost of 118 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
+; SSE2: LV: Found an estimated cost of 21 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; SSE2: LV: Found an estimated cost of 45 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; SSE2: LV: Found an estimated cost of 90 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 26 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 54 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 110 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 220 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 16 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 32 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 70 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 140 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX2: LV: Found an estimated cost of 26 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX2: LV: Found an estimated cost of 54 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX2: LV: Found an estimated cost of 110 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX2: LV: Found an estimated cost of 220 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX2: LV: Found an estimated cost of 16 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX2: LV: Found an estimated cost of 32 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX2: LV: Found an estimated cost of 70 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX2: LV: Found an estimated cost of 140 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX512: LV: Found an estimated cost of 4 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX512: LV: Found an estimated cost of 6 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX512: LV: Found an estimated cost of 10 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX512: LV: Found an estimated cost of 20 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX512: LV: Found an estimated cost of 40 for VF 32 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX512: LV: Found an estimated cost of 80 for VF 64 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX512: LV: Found an estimated cost of 4 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX512: LV: Found an estimated cost of 6 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX512: LV: Found an estimated cost of 17 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX512: LV: Found an estimated cost of 71 for VF 32 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %v0 = load i32, i32* %in0, align 4
 
@@ -67,7 +66,7 @@ for.body:
   %out = getelementptr inbounds [1024 x i8], [1024 x i8]* @B, i64 0, i64 %iv.0
   store i8 %reduce.add.2.narrow, i8* %out
 
-  %iv.next = add nuw nsw i64 %iv.0, 4
+  %iv.next = add nuw nsw i64 %iv, 4
   %cmp = icmp ult i64 %iv.next, 1024
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
