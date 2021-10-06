@@ -230,10 +230,9 @@ void printIR(raw_ostream &OS, const Function *F) {
   OS << *F;
 }
 
-void printIR(raw_ostream &OS, const Module *M,
-             bool ShouldPreserveUseListOrder = false) {
+void printIR(raw_ostream &OS, const Module *M) {
   if (isFunctionInPrintList("*") || forcePrintModuleIR()) {
-    M->print(OS, nullptr, ShouldPreserveUseListOrder);
+    M->print(OS, nullptr);
   } else {
     for (const auto &F : M->functions()) {
       printIR(OS, &F);
@@ -323,21 +322,20 @@ bool shouldPrintIR(Any IR) {
 
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// llvm::Any and does actual print job.
-void unwrapAndPrint(raw_ostream &OS, Any IR,
-                    bool ShouldPreserveUseListOrder = false) {
+void unwrapAndPrint(raw_ostream &OS, Any IR) {
   if (!shouldPrintIR(IR))
     return;
 
   if (forcePrintModuleIR()) {
     auto *M = unwrapModule(IR);
     assert(M && "should have unwrapped module");
-    printIR(OS, M, ShouldPreserveUseListOrder);
+    printIR(OS, M);
     return;
   }
 
   if (any_isa<const Module *>(IR)) {
     const Module *M = any_cast<const Module *>(IR);
-    printIR(OS, M, ShouldPreserveUseListOrder);
+    printIR(OS, M);
     return;
   }
 
@@ -497,8 +495,7 @@ void TextChangeReporter<IRUnitT>::handleInitialIR(Any IR) {
   auto *M = unwrapModule(IR, /*Force=*/true);
   assert(M && "Expected module to be unwrapped when forced.");
   Out << "*** IR Dump At Start ***\n";
-  M->print(Out, nullptr,
-           /*ShouldPreserveUseListOrder=*/true);
+  M->print(Out, nullptr);
 }
 
 template <typename IRUnitT>
@@ -538,8 +535,7 @@ void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 void IRChangedPrinter::generateIRRepresentation(Any IR, StringRef PassID,
                                                 std::string &Output) {
   raw_string_ostream OS(Output);
-  unwrapAndPrint(OS, IR,
-                 /*ShouldPreserveUseListOrder=*/true);
+  unwrapAndPrint(OS, IR);
   OS.str();
 }
 
