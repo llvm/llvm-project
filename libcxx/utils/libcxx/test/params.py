@@ -60,6 +60,7 @@ DEFAULT_PARAMETERS = [
             actions=lambda triple: filter(None, [
               AddFeature('target={}'.format(triple)),
               AddFlagIfSupported('--target={}'.format(triple)),
+              AddSubstitution('%{triple}', triple)
             ])),
 
   Parameter(name='std', choices=_allStandards, type=str,
