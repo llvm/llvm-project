@@ -330,11 +330,17 @@ define <4 x double> @invalid_extractelement(<2 x double> %a, <4 x double> %b, do
   ret <4 x double> %r
 }
 
+; i32 is a desirable/supported type independent of data layout.
+
 define i8 @bitcast_scalar_supported_type_index0(i32 %x) {
-; ANY-LABEL: @bitcast_scalar_supported_type_index0(
-; ANY-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i8 0
-; ANY-NEXT:    ret i8 [[R]]
+; LE-LABEL: @bitcast_scalar_supported_type_index0(
+; LE-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i8
+; LE-NEXT:    ret i8 [[R]]
+;
+; BE-LABEL: @bitcast_scalar_supported_type_index0(
+; BE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 24
+; BE-NEXT:    [[R:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i8
+; BE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast i32 %x to <4 x i8>
   %r = extractelement <4 x i8> %v, i8 0
@@ -342,26 +348,40 @@ define i8 @bitcast_scalar_supported_type_index0(i32 %x) {
 }
 
 define i8 @bitcast_scalar_supported_type_index2(i32 %x) {
-; ANY-LABEL: @bitcast_scalar_supported_type_index2(
-; ANY-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 2
-; ANY-NEXT:    ret i8 [[R]]
+; LE-LABEL: @bitcast_scalar_supported_type_index2(
+; LE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 16
+; LE-NEXT:    [[R:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i8
+; LE-NEXT:    ret i8 [[R]]
+;
+; BE-LABEL: @bitcast_scalar_supported_type_index2(
+; BE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 8
+; BE-NEXT:    [[R:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i8
+; BE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast i32 %x to <4 x i8>
   %r = extractelement <4 x i8> %v, i64 2
   ret i8 %r
 }
 
+; i64 is legal based on data layout.
+
 define i4 @bitcast_scalar_legal_type_index3(i64 %x) {
-; ANY-LABEL: @bitcast_scalar_legal_type_index3(
-; ANY-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <16 x i4>
-; ANY-NEXT:    [[R:%.*]] = extractelement <16 x i4> [[V]], i64 3
-; ANY-NEXT:    ret i4 [[R]]
+; LE-LABEL: @bitcast_scalar_legal_type_index3(
+; LE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[X:%.*]], 12
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[EXTELT_OFFSET]] to i4
+; LE-NEXT:    ret i4 [[R]]
+;
+; BE-LABEL: @bitcast_scalar_legal_type_index3(
+; BE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[X:%.*]], 48
+; BE-NEXT:    [[R:%.*]] = trunc i64 [[EXTELT_OFFSET]] to i4
+; BE-NEXT:    ret i4 [[R]]
 ;
   %v = bitcast i64 %x to <16 x i4>
   %r = extractelement <16 x i4> %v, i64 3
   ret i4 %r
 }
+
+; negative test - don't create a shift for an illegal type.
 
 define i8 @bitcast_scalar_illegal_type_index1(i128 %x) {
 ; ANY-LABEL: @bitcast_scalar_illegal_type_index1(
@@ -374,6 +394,8 @@ define i8 @bitcast_scalar_illegal_type_index1(i128 %x) {
   ret i8 %r
 }
 
+; negative test - can't use shift/trunc on FP
+
 define i8 @bitcast_fp_index0(float %x) {
 ; ANY-LABEL: @bitcast_fp_index0(
 ; ANY-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
@@ -384,6 +406,8 @@ define i8 @bitcast_fp_index0(float %x) {
   %r = extractelement <4 x i8> %v, i8 0
   ret i8 %r
 }
+
+; negative test - can't have FP dest type without a cast
 
 define half @bitcast_fpvec_index0(i32 %x) {
 ; ANY-LABEL: @bitcast_fpvec_index0(
@@ -396,6 +420,8 @@ define half @bitcast_fpvec_index0(i32 %x) {
   ret half %r
 }
 
+; negative test - need constant index
+
 define i8 @bitcast_scalar_index_variable(i32 %x, i64 %y) {
 ; ANY-LABEL: @bitcast_scalar_index_variable(
 ; ANY-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <4 x i8>
@@ -406,6 +432,8 @@ define i8 @bitcast_scalar_index_variable(i32 %x, i64 %y) {
   %r = extractelement <4 x i8> %v, i64 %y
   ret i8 %r
 }
+
+; negative test - no extra uses
 
 define i8 @bitcast_scalar_index0_use(i64 %x) {
 ; ANY-LABEL: @bitcast_scalar_index0_use(
