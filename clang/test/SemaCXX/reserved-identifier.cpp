@@ -105,3 +105,10 @@ struct Any {
 #define _Reserved // expected-warning {{macro name is a reserved identifier}}
 #undef _not_reserved
 #undef _Reserved // expected-warning {{macro name is a reserved identifier}}
+
+namespace N {
+  int _namespace_a;
+  extern "C" int _namespace_b; // expected-warning {{identifier '_namespace_b' is reserved because it starts with '_' and has C language linkage}}
+  void _namespace_c();
+  extern "C" void _namespace_d(); // expected-warning {{identifier '_namespace_d' is reserved because it starts with '_' and has C language linkage}}
+}
