@@ -2328,6 +2328,7 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 void ASTStmtReader::VisitOMPLoopTransformationDirective(
     OMPLoopTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
+  D->setNumGeneratedLoops(Record.readUInt32());
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
