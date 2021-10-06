@@ -185,6 +185,20 @@ std::recursive_mutex g_log_mutex;
       }                                                                        \
   } while (0)
 
+#define SWIFT_LOG_PRINTF(FMT, ...)                                             \
+  LOG_PRINTF_IMPL(LIBLLDB_LOG_TYPES, false, FMT, ##__VA_ARGS__);               \
+  SWIFT_LOG_PRINTF_IMPL(FMT, ##__VA_ARGS__)
+#define SWIFT_LOG_PRINTF_IMPL(FMT, ...)                                        \
+  do {                                                                         \
+    if (Log *log = lldb_private::GetSwiftHealthLog()) {                        \
+      std::lock_guard<std::recursive_mutex> locker(g_log_mutex);               \
+      /* The format string is optimized for code size, not speed. */           \
+      log->Printf("%s::%s%s" FMT, m_description.c_str(),                       \
+                  IsLambda(__FUNCTION__) ? "" : __FUNCTION__,                  \
+                  (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);      \
+    }                                                                          \
+  } while (0)
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -5078,65 +5092,61 @@ void SwiftASTContext::ClearModuleDependentCaches() {
 void SwiftASTContext::LogConfiguration() {
   // It makes no sense to call VALID_OR_RETURN here. We specifically
   // want the logs in the error case!
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  if (!log)
-    return;
-
-  LOG_PRINTF(LIBLLDB_LOG_TYPES,
-             "(SwiftASTContext*)%p:", static_cast<void *>(this));
+  SWIFT_LOG_PRINTF("(SwiftASTContext*)%p:", static_cast<void *>(this));
 
   if (!m_ast_context_ap) {
-    log->Printf("  (no AST context)");
+    SWIFT_LOG_PRINTF("  (no AST context)");
     return;
   }
 
-  log->Printf("  Architecture                 : %s",
-              m_ast_context_ap->LangOpts.Target.getTriple().c_str());
-  log->Printf("  SDK path                     : %s",
-              m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
-  log->Printf("  Runtime resource path        : %s",
-              m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
-  log->Printf("  Runtime library paths        : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths.size());
+  SWIFT_LOG_PRINTF("  Architecture                 : %s",
+                   m_ast_context_ap->LangOpts.Target.getTriple().c_str());
+  SWIFT_LOG_PRINTF("  SDK path                     : %s",
+                   m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
+  SWIFT_LOG_PRINTF(
+      "  Runtime resource path        : %s",
+      m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
+  SWIFT_LOG_PRINTF("  Runtime library paths        : (%llu items)",
+                   (unsigned long long)m_ast_context_ap->SearchPathOpts
+                       .RuntimeLibraryPaths.size());
 
   for (const auto &runtime_library_path :
        m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths) {
-    log->Printf("    %s", runtime_library_path.c_str());
+    SWIFT_LOG_PRINTF("    %s", runtime_library_path.c_str());
   }
 
-  log->Printf("  Runtime library import paths : (%llu items)",
-              (unsigned long long)m_ast_context_ap->SearchPathOpts
-                  .RuntimeLibraryImportPaths.size());
+  SWIFT_LOG_PRINTF("  Runtime library import paths : (%llu items)",
+                   (unsigned long long)m_ast_context_ap->SearchPathOpts
+                       .RuntimeLibraryImportPaths.size());
 
   for (const auto &runtime_import_path :
        m_ast_context_ap->SearchPathOpts.RuntimeLibraryImportPaths) {
-    log->Printf("    %s", runtime_import_path.c_str());
+    SWIFT_LOG_PRINTF("    %s", runtime_import_path.c_str());
   }
 
-  log->Printf("  Framework search paths       : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size());
+  SWIFT_LOG_PRINTF("  Framework search paths       : (%llu items)",
+                   (unsigned long long)m_ast_context_ap->SearchPathOpts
+                       .FrameworkSearchPaths.size());
   for (const auto &framework_search_path :
        m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths) {
-    log->Printf("    %s", framework_search_path.Path.c_str());
+    SWIFT_LOG_PRINTF("    %s", framework_search_path.Path.c_str());
   }
 
-  log->Printf("  Import search paths          : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size());
+  SWIFT_LOG_PRINTF("  Import search paths          : (%llu items)",
+                   (unsigned long long)m_ast_context_ap->SearchPathOpts
+                       .ImportSearchPaths.size());
   for (std::string &import_search_path :
        m_ast_context_ap->SearchPathOpts.ImportSearchPaths) {
-    log->Printf("    %s", import_search_path.c_str());
+    SWIFT_LOG_PRINTF("    %s", import_search_path.c_str());
   }
 
   swift::ClangImporterOptions &clang_importer_options =
       GetClangImporterOptions();
 
-  log->Printf("  Extra clang arguments        : (%llu items)",
-              (unsigned long long)clang_importer_options.ExtraArgs.size());
+  SWIFT_LOG_PRINTF("  Extra clang arguments        : (%llu items)",
+                   (unsigned long long)clang_importer_options.ExtraArgs.size());
   for (std::string &extra_arg : clang_importer_options.ExtraArgs) {
-    log->Printf("    %s", extra_arg.c_str());
+    SWIFT_LOG_PRINTF("    %s", extra_arg.c_str());
   }
 }
 
