@@ -30,7 +30,7 @@ struct PassRemarksOpt {
       Pattern = std::make_shared<Regex>(Val);
       std::string RegexError;
       if (!Pattern->isValid(RegexError))
-        report_fatal_error("Invalid regular expression '" + Val +
+        report_fatal_error(Twine("Invalid regular expression '") + Val +
                                "' in -pass-remarks: " + RegexError,
                            false);
     }

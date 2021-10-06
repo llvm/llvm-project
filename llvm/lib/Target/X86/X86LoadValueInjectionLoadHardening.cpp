@@ -306,7 +306,8 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
       OptimizeDL = llvm::sys::DynamicLibrary::getPermanentLibrary(
           OptimizePluginPath.c_str(), &ErrorMsg);
       if (!ErrorMsg.empty())
-        report_fatal_error("Failed to load opt plugin: \"" + ErrorMsg + '\"');
+        report_fatal_error(Twine("Failed to load opt plugin: \"") + ErrorMsg +
+                           "\"");
       OptimizeCut = (OptimizeCutT)OptimizeDL.getAddressOfSymbol("optimize_cut");
       if (!OptimizeCut)
         report_fatal_error("Invalid optimization plugin");

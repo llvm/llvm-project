@@ -450,16 +450,16 @@ std::string AMDGPUTargetID::toString() const {
       } else if (Processor == "gfx801") {
         if (!isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " without XNACK");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " without XNACK");
       } else if (Processor == "gfx802") {
       } else if (Processor == "gfx803") {
       } else if (Processor == "gfx805") {
       } else if (Processor == "gfx810") {
         if (!isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " without XNACK");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " without XNACK");
       } else if (Processor == "gfx900") {
         if (isXnackOnOrAny())
           Processor = "gfx901";
@@ -475,11 +475,12 @@ std::string AMDGPUTargetID::toString() const {
       } else if (Processor == "gfx90c") {
         if (isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " with XNACK being ON or ANY");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " with XNACK being ON or ANY");
       } else {
         report_fatal_error(
-            "AMD GPU code object V2 does not support processor " + Processor);
+            "AMD GPU code object V2 does not support processor " +
+            Twine(Processor));
       }
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:

@@ -309,7 +309,7 @@ ExecutableFunction::ExecutableFunction(
               std::make_unique<TrackingSectionMemoryManager>(&CodeSize))
           .create(TM.release()));
   if (!ExecEngine)
-    report_fatal_error(Error);
+    report_fatal_error(Twine(Error));
   // Adding the generated object file containing the assembled function.
   // The ExecutionEngine makes sure the object file is copied into an
   // executable page.

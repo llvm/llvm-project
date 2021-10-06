@@ -680,7 +680,7 @@ unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
 
     Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
     if (!RelSecOrErr)
-      report_fatal_error(toString(RelSecOrErr.takeError()));
+      report_fatal_error(Twine(toString(RelSecOrErr.takeError())));
 
     section_iterator RelSecI = *RelSecOrErr;
     if (!(RelSecI == Section))
@@ -1139,7 +1139,7 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
 
       // FIXME: Implement error handling that doesn't kill the host program!
       if (!Addr && !Resolver.allowsZeroSymbols())
-        report_fatal_error("Program used external function '" + Name +
+        report_fatal_error(Twine("Program used external function '") + Name +
                            "' which could not be resolved!");
 
       // If Resolver returned UINT64_MAX, the client wants to handle this symbol

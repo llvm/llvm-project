@@ -1074,7 +1074,7 @@ void InstrProfiling::emitNameData() {
   std::string CompressedNameStr;
   if (Error E = collectPGOFuncNameStrings(ReferencedNames, CompressedNameStr,
                                           DoInstrProfNameCompression)) {
-    report_fatal_error(toString(std::move(E)), false);
+    report_fatal_error(Twine(toString(std::move(E))), false);
   }
 
   auto &Ctx = M->getContext();
