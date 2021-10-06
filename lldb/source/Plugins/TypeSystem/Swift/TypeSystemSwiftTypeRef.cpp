@@ -1680,6 +1680,8 @@ bool Equivalent(llvm::Optional<T> l, T r) {
       return result;                                                           \
     if (!m_swift_ast_context)                                                  \
       return result;                                                           \
+    if (ShouldSkipValidation(TYPE))                                            \
+      return result;                                                           \
     if ((TYPE) && !ReconstructType(TYPE))                                      \
       return result;                                                           \
     bool equivalent =                                                          \
@@ -1920,13 +1922,6 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
   if (!type)
     return false;
 
-  // This is a discrepancy with `SwiftASTContext`. The `impl` below correctly
-  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
-  // handling of `__C.NSNotificationName` can be removed when the
-  // `VALIDATE_AND_RETURN` is removed.
-  if (GetMangledTypeName(type) == "$sSo18NSNotificationNameaD")
-    return true;
-
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
@@ -2081,12 +2076,7 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     }
     return flags;
   };
-#ifndef NDEBUG
-  // This type has special behavior hardcoded in the Swift frontend
-  // that we can't reproduce here.
-  if (StringRef(AsMangledName(type)).equals("$sSo18NSNotificationNameaD"))
-    return impl();
-#endif
+
   VALIDATE_AND_RETURN(impl, GetTypeInfo, type, (ReconstructType(type), nullptr),
                       (ReconstructType(type), pointee_or_element_clang_type));
 }
@@ -2656,7 +2646,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (get_ast_num_children() <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return impl();
-
+  if (ShouldSkipValidation(type))
+    return impl();
 #ifndef NDEBUG
   std::string ast_child_name;
   uint32_t ast_child_byte_size = 0;
@@ -3368,32 +3359,6 @@ bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
                     node->getKind() == Node::Kind::BoundGenericTypeAlias);
   };
 
-#ifndef NDEBUG
-  // We skip validation when dealing with a builtin type since builtins are
-  // considered type aliases by Swift, which we're deviating from since
-  // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
-  // actual Builtin types, but mangled names always describe the underlying
-  // builtins directly.
-  using namespace swift::Demangle;
-  Demangler dem;
-  NodePointer node = GetDemangledType(dem, AsMangledName(type));
-  if (node && node->getKind() == Node::Kind::BuiltinTypeName)
-    return impl();
-
-  // This is a discrepancy with `SwiftASTContext`. `impl` correctly
-  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
-  // handling of `__C.NSNotificationName` and `__C.NSDecimal` can be removed
-  // when the `VALIDATE_AND_RETURN` is removed.
-  auto mangled_name = GetMangledTypeName(type);
-  if (mangled_name == "$sSo18NSNotificationNameaD" ||
-      mangled_name == "$sSo9NSDecimalaD")
-    return impl();
-
-  // SIMD types have some special handling in the compiler, causing divergences
-  // on the way SwiftASTContext and TypeSystemSwiftTypeRef view the same type.
-  if (IsSIMDNode(node))
-    return impl();
-#endif
   VALIDATE_AND_RETURN(impl, IsTypedefType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
 }
@@ -3419,32 +3384,6 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
     }
     return RemangleAsType(dem, type_node);
   };
-#ifndef NDEBUG
-  // We skip validation when dealing with a builtin type since builtins are
-  // considered type aliases by Swift, which we're deviating from since
-  // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
-  // actual Builtin types, but mangled names always describe the underlying
-  // builtins directly.
-  using namespace swift::Demangle;
-  Demangler dem;
-  NodePointer node = GetDemangledType(dem, AsMangledName(type));
-  if (node && node->getKind() == Node::Kind::BuiltinTypeName)
-    return impl();
-
-  // This is a discrepancy with `SwiftASTContext`. `impl` correctly
-  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
-  // handling of `__C.NSNotificationName` and `__C.NSDecimal` can be removed
-  // when the `VALIDATE_AND_RETURN` is removed.
-  auto mangled_name = GetMangledTypeName(type);
-  if (mangled_name == "$sSo18NSNotificationNameaD" ||
-      mangled_name == "$sSo9NSDecimalaD")
-    return impl();
-
-  // SIMD types have some special handling in the compiler, causing divergences
-  // on the way SwiftASTContext and TypeSystemSwiftTypeRef view the same type.
-  if (IsSIMDNode(node))
-    return impl();
-#endif
   VALIDATE_AND_RETURN(impl, GetTypedefedType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
 }
@@ -3541,3 +3480,35 @@ TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, GetGenericArgumentType, type, (ReconstructType(type), idx),
     (ReconstructType(type), idx));
 }
+#ifndef NDEBUG
+bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {                                                                               \
+  // NSNotificationName is a typedef to a NSString in clang type, but it's a 
+  // struct in SwiftASTContext. Skip validation in this case.
+  // $s10Foundation12NotificationV4NameaD is a typealias to NSNotificationName,
+  // so we skip validation in that casse as well.
+   auto mangled_name = GetMangledTypeName(type);
+   if (mangled_name == "$sSo18NSNotificationNameaD" ||
+       mangled_name == "$s10Foundation12NotificationV4NameaD" ||
+       mangled_name == "$sSo9NSDecimalaD")
+     return true;
+
+  // We skip validation when dealing with a builtin type since builtins are
+  // considered type aliases by Swift, which we're deviating from since
+  // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
+  // actual Builtin types, but mangled names always describe the underlying
+  // builtins directly.
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, AsMangledName(type));
+  if (node && node->getKind() == Node::Kind::BuiltinTypeName)
+    return true;
+
+  // SIMD types have some special handling in the compiler, causing divergences
+  // on the way SwiftASTContext and TypeSystemSwiftTypeRef view the same type.
+  if (node && IsSIMDNode(node))
+    return true;
+
+  return false;
+}
+#endif
+

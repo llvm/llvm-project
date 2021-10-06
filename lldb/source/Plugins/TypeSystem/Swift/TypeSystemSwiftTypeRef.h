@@ -335,6 +335,12 @@ private:
   clang::api_notes::APINotesManager *
   GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
 
+#ifndef NDEBUG
+  /// Check whether the type being dealt with is tricky to validate due to
+  /// discrepancies between TypeSystemSwiftTypeRef and SwiftASTContext.
+  bool ShouldSkipValidation(lldb::opaque_compiler_type_t type);
+#endif
+
   /// The sibling SwiftASTContext.
   SwiftASTContext *m_swift_ast_context = nullptr;
 
