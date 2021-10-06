@@ -62,7 +62,9 @@ Log *GetLogIfAllCategoriesSet(uint32_t mask);
 
 Log *GetLogIfAnyCategoriesSet(uint32_t mask);
 
+#ifdef LLDB_ENABLE_SWIFT
 Log *GetSwiftHealthLog();
+#endif
 
 void InitializeLldbChannel();
 
