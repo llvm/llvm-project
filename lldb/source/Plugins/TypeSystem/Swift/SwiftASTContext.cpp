@@ -4576,6 +4576,11 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
           alias_decl->getUnderlyingType());
       return ToCompilerType(swift_type.getPointer());
     }
+    case swift::DeclKind::OpaqueType: {
+      swift::TypeDecl *type_decl = swift::cast<swift::TypeDecl>(decl);
+      swift::Type swift_type = type_decl->getDeclaredInterfaceType();
+      return ToCompilerType(swift_type.getPointer());
+    }
     case swift::DeclKind::Enum:
     case swift::DeclKind::Struct:
     case swift::DeclKind::Class:
@@ -5630,12 +5635,28 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
   switch (type_kind) {
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::Module:
+  case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
   case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Unexpected type: %s",
+               swift_can_type.getString().c_str());
+    assert(false && "Internal compiler type");
     break;
   case swift::TypeKind::UnboundGeneric:
     swift_flags |= eTypeIsGeneric;
@@ -5648,6 +5669,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeIsPointer | eTypeHasValue;
     break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
     swift_flags |=
         eTypeIsBuiltIn | eTypeHasValue | eTypeIsScalar | eTypeIsInteger;
     break;
@@ -5740,11 +5762,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::DynamicSelf:
     swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasValue;
     break;
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
-    break;
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
@@ -5752,9 +5769,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
   return swift_flags;
@@ -5766,12 +5780,25 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
-  case swift::TypeKind::BuiltinInteger:
-  case swift::TypeKind::BuiltinFloat:
-  case swift::TypeKind::BuiltinRawPointer:
-  case swift::TypeKind::BuiltinNativeObject:
-  case swift::TypeKind::BuiltinUnsafeValueBuffer:
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
+    assert(false && "Internal compiler type");
+    break;
   case swift::TypeKind::BuiltinBridgeObject:
+  case swift::TypeKind::BuiltinFloat:
+  case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
+  case swift::TypeKind::BuiltinNativeObject:
+  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinUnsafeValueBuffer:
     return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinVector:
     return lldb::eTypeClassVector;
@@ -5798,21 +5825,20 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::SILBox:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
   case swift::TypeKind::Error:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::SILFunction:
     return lldb::eTypeClassFunction;
+  case swift::TypeKind::InOut:
   case swift::TypeKind::LValue:
     return lldb::eTypeClassReference;
 
@@ -5822,9 +5848,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
@@ -6241,15 +6264,31 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
     break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
     return lldb::eEncodingSint; // TODO: detect if an integer is unsigned
   case swift::TypeKind::BuiltinFloat:
     return lldb::eEncodingIEEE754; // TODO: detect if an integer is unsigned
 
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
@@ -6286,19 +6325,13 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
 
   case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
-  case swift::TypeKind::Module:
   case swift::TypeKind::ProtocolComposition:
     break;
   case swift::TypeKind::LValue:
     return lldb::eEncodingUint;
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -6307,9 +6340,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
   count = 0;
@@ -6323,8 +6353,23 @@ lldb::Format SwiftASTContext::GetFormat(opaque_compiler_type_t type) {
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
     break;
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinInteger:
     return eFormatDecimal; // TODO: detect if an integer is unsigned
   case swift::TypeKind::BuiltinFloat:
@@ -6336,6 +6381,7 @@ lldb::Format SwiftASTContext::GetFormat(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6368,20 +6414,14 @@ lldb::Format SwiftASTContext::GetFormat(opaque_compiler_type_t type) {
   case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::Module:
   case swift::TypeKind::ProtocolComposition:
     break;
   case swift::TypeKind::LValue:
     return lldb::eFormatHex;
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -6390,9 +6430,6 @@ lldb::Format SwiftASTContext::GetFormat(opaque_compiler_type_t type) {
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
   // We don't know hot to display this type.
@@ -6411,20 +6448,33 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+    break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::Module:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
     break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -6466,6 +6516,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
     return 0;
 
@@ -6487,12 +6538,6 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   case swift::TypeKind::UnboundGeneric:
     break;
-  case swift::TypeKind::TypeVariable:
-    break;
-
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
-    break;
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
@@ -6500,9 +6545,6 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
@@ -6536,8 +6578,24 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+    break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
@@ -6591,20 +6649,15 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     return 0;
 
-  case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -6613,9 +6666,6 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
@@ -6751,8 +6801,24 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+    break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
@@ -6879,20 +6945,15 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -6901,9 +6962,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
@@ -6923,9 +6981,24 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
     return 0;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
@@ -6947,9 +7020,9 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Class:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
@@ -6961,13 +7034,8 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BoundGenericClass:
   case swift::TypeKind::BoundGenericEnum:
   case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     return 0;
 
   case swift::TypeKind::Optional:
@@ -6976,9 +7044,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
@@ -7095,8 +7160,24 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+    break;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
@@ -7291,9 +7372,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
@@ -7319,15 +7400,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     }
     break;
   case swift::TypeKind::UnboundGeneric:
-    break;
-  case swift::TypeKind::TypeVariable:
-    break;
-
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -7336,9 +7409,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
   return CompilerType();
@@ -7391,8 +7461,24 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
+    case swift::TypeKind::BuiltinDefaultActorStorage:
+    case swift::TypeKind::BuiltinExecutor:
+    case swift::TypeKind::BuiltinJob:
+    case swift::TypeKind::BuiltinRawUnsafeContinuation:
     case swift::TypeKind::Error:
+    case swift::TypeKind::Module:
+    case swift::TypeKind::InOut:
+    case swift::TypeKind::VariadicSequence:
+    case swift::TypeKind::Placeholder:
+    case swift::TypeKind::SILBlockStorage:
+    case swift::TypeKind::SILBox:
+    case swift::TypeKind::SILFunction:
+    case swift::TypeKind::SILToken:
+    case swift::TypeKind::TypeVariable:
+    case swift::TypeKind::Unresolved:
+      break;
     case swift::TypeKind::BuiltinInteger:
+    case swift::TypeKind::BuiltinIntegerLiteral:
     case swift::TypeKind::BuiltinFloat:
     case swift::TypeKind::BuiltinRawPointer:
     case swift::TypeKind::BuiltinNativeObject:
@@ -7520,9 +7606,9 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Metatype:
       break;
 
-    case swift::TypeKind::Module:
     case swift::TypeKind::PrimaryArchetype:
     case swift::TypeKind::OpenedArchetype:
+    case swift::TypeKind::OpaqueTypeArchetype:
     case swift::TypeKind::NestedArchetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
@@ -7536,15 +7622,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       }
     } break;
     case swift::TypeKind::UnboundGeneric:
-      break;
-    case swift::TypeKind::TypeVariable:
-      break;
-
     case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::Unresolved:
       break;
 
     case swift::TypeKind::Optional:
@@ -7553,9 +7631,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Dictionary:
     case swift::TypeKind::ArraySlice:
       assert(false && "Not a canonical type");
-      break;
-
-    case swift::TypeKind::SILToken:
       break;
     }
   }
@@ -7756,7 +7831,21 @@ bool SwiftASTContext::DumpTypeValue(
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Class:
@@ -7767,12 +7856,14 @@ bool SwiftASTContext::DumpTypeValue(
       break;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
@@ -7887,16 +7978,10 @@ bool SwiftASTContext::DumpTypeValue(
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
 
-  case swift::TypeKind::Module:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::TypeVariable:
   case swift::TypeKind::DynamicSelf:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::Unresolved:
     break;
 
   case swift::TypeKind::Optional:
@@ -7905,9 +7990,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
-    break;
-
-  case swift::TypeKind::SILToken:
     break;
   }
 
