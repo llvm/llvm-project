@@ -1181,18 +1181,22 @@ TEST(APIntTest, SaturatingMath) {
   APInt AP_100 = APInt(8, 100);
   APInt AP_200 = APInt(8, 200);
 
+  EXPECT_EQ(APInt(8, 100), AP_100.truncUSat(8));
   EXPECT_EQ(APInt(7, 100), AP_100.truncUSat(7));
   EXPECT_EQ(APInt(6, 63), AP_100.truncUSat(6));
   EXPECT_EQ(APInt(5, 31), AP_100.truncUSat(5));
 
+  EXPECT_EQ(APInt(8, 200), AP_200.truncUSat(8));
   EXPECT_EQ(APInt(7, 127), AP_200.truncUSat(7));
   EXPECT_EQ(APInt(6, 63), AP_200.truncUSat(6));
   EXPECT_EQ(APInt(5, 31), AP_200.truncUSat(5));
 
+  EXPECT_EQ(APInt(8, 42), AP_42.truncSSat(8));
   EXPECT_EQ(APInt(7, 42), AP_42.truncSSat(7));
   EXPECT_EQ(APInt(6, 31), AP_42.truncSSat(6));
   EXPECT_EQ(APInt(5, 15), AP_42.truncSSat(5));
 
+  EXPECT_EQ(APInt(8, -56), AP_200.truncSSat(8));
   EXPECT_EQ(APInt(7, -56), AP_200.truncSSat(7));
   EXPECT_EQ(APInt(6, -32), AP_200.truncSSat(6));
   EXPECT_EQ(APInt(5, -16), AP_200.truncSSat(5));
@@ -2637,23 +2641,28 @@ TEST(APIntTest, sext) {
   EXPECT_EQ(~uint64_t(0), APInt(1, 1).sext(64));
 
   APInt i32_max(APInt::getSignedMaxValue(32).sext(63));
+  EXPECT_EQ(i32_max, i32_max.sext(63));
   EXPECT_EQ(32U, i32_max.countLeadingZeros());
   EXPECT_EQ(0U, i32_max.countTrailingZeros());
   EXPECT_EQ(31U, i32_max.countPopulation());
 
   APInt i32_min(APInt::getSignedMinValue(32).sext(63));
+  EXPECT_EQ(i32_min, i32_min.sext(63));
   EXPECT_EQ(32U, i32_min.countLeadingOnes());
   EXPECT_EQ(31U, i32_min.countTrailingZeros());
   EXPECT_EQ(32U, i32_min.countPopulation());
 
   APInt i32_neg1(APInt(32, ~uint64_t(0)).sext(63));
+  EXPECT_EQ(i32_neg1, i32_neg1.sext(63));
   EXPECT_EQ(63U, i32_neg1.countLeadingOnes());
   EXPECT_EQ(0U, i32_neg1.countTrailingZeros());
   EXPECT_EQ(63U, i32_neg1.countPopulation());
 }
 
-TEST(APIntTest, truncOrSelf) {
+TEST(APIntTest, trunc) {
   APInt val(32, 0xFFFFFFFF);
+  EXPECT_EQ(0xFFFF, val.trunc(16));
+  EXPECT_EQ(0xFFFFFFFF, val.trunc(32));
   EXPECT_EQ(0xFFFF, val.truncOrSelf(16));
   EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(32));
   EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));

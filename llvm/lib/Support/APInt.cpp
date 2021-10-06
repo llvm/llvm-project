@@ -896,10 +896,13 @@ double APInt::roundToDouble(bool isSigned) const {
 
 // Truncate to new width.
 APInt APInt::trunc(unsigned width) const {
-  assert(width < BitWidth && "Invalid APInt Truncate request");
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
 
   if (width <= APINT_BITS_PER_WORD)
     return APInt(width, getRawData()[0]);
+
+  if (width == BitWidth)
+    return *this;
 
   APInt Result(getMemory(getNumWords(width)), width);
 
@@ -918,7 +921,7 @@ APInt APInt::trunc(unsigned width) const {
 
 // Truncate to new width with unsigned saturation.
 APInt APInt::truncUSat(unsigned width) const {
-  assert(width < BitWidth && "Invalid APInt Truncate request");
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
 
   // Can we just losslessly truncate it?
   if (isIntN(width))
@@ -929,7 +932,7 @@ APInt APInt::truncUSat(unsigned width) const {
 
 // Truncate to new width with signed saturation.
 APInt APInt::truncSSat(unsigned width) const {
-  assert(width < BitWidth && "Invalid APInt Truncate request");
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
 
   // Can we just losslessly truncate it?
   if (isSignedIntN(width))
@@ -941,10 +944,13 @@ APInt APInt::truncSSat(unsigned width) const {
 
 // Sign extend to a new width.
 APInt APInt::sext(unsigned Width) const {
-  assert(Width > BitWidth && "Invalid APInt SignExtend request");
+  assert(Width >= BitWidth && "Invalid APInt SignExtend request");
 
   if (Width <= APINT_BITS_PER_WORD)
     return APInt(Width, SignExtend64(U.VAL, BitWidth));
+
+  if (Width == BitWidth)
+    return *this;
 
   APInt Result(getMemory(getNumWords(Width)), Width);
 
@@ -965,10 +971,13 @@ APInt APInt::sext(unsigned Width) const {
 
 //  Zero extend to a new width.
 APInt APInt::zext(unsigned width) const {
-  assert(width > BitWidth && "Invalid APInt ZeroExtend request");
+  assert(width >= BitWidth && "Invalid APInt ZeroExtend request");
 
   if (width <= APINT_BITS_PER_WORD)
     return APInt(width, U.VAL);
+
+  if (width == BitWidth)
+    return *this;
 
   APInt Result(getMemory(getNumWords(width)), width);
 
