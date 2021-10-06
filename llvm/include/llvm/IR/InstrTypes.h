@@ -1325,6 +1325,16 @@ public:
   bool arg_empty() const { return arg_end() == arg_begin(); }
   unsigned arg_size() const { return arg_end() - arg_begin(); }
 
+  // Legacy API names that duplicate the above and will be removed once users
+  // are migrated.
+  iterator_range<User::op_iterator> arg_operands() {
+    return make_range(arg_begin(), arg_end());
+  }
+  iterator_range<User::const_op_iterator> arg_operands() const {
+    return make_range(arg_begin(), arg_end());
+  }
+  unsigned getNumArgOperands() const { return arg_size(); }
+
   Value *getArgOperand(unsigned i) const {
     assert(i < arg_size() && "Out of bounds!");
     return getOperand(i);
