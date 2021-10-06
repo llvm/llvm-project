@@ -661,31 +661,31 @@ bool DWARFUnit::Supports_unnamed_objc_bitfields() {
 }
 
 void DWARFUnit::ParseProducerInfo() {
+  m_producer = eProducerOther;
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
-  if (die) {
-    const char *producer_cstr =
-        die->GetAttributeValueAsString(this, DW_AT_producer, nullptr);
-    llvm::StringRef producer(producer_cstr);
-    if (!producer.empty()) {
-      RegularExpression llvm_gcc_regex(
-          llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
-                          "Inc\\. build [0-9]+\\) \\(LLVM build "
-                          "[\\.0-9]+\\)$"));
-      if (llvm_gcc_regex.Execute(producer)) {
-        m_producer = eProducerLLVMGCC;
-      } else if (producer.contains("clang")) {
-        static RegularExpression g_clang_version_regex(
-            llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
-        llvm::SmallVector<llvm::StringRef, 4> matches;
-        if (g_clang_version_regex.Execute(producer, &matches))
-          m_producer_version.tryParse(matches[1]);
-        m_producer = eProducerClang;
-      } else if (producer.contains("GNU"))
-        m_producer = eProducerGCC;
-    }
-  }
-  if (m_producer == eProducerInvalid)
-    m_producer = eProducerOther;
+  if (!die)
+    return;
+
+  llvm::StringRef producer(
+      die->GetAttributeValueAsString(this, DW_AT_producer, nullptr));
+  if (producer.empty())
+    return;
+
+  static RegularExpression llvm_gcc_regex(
+      llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
+                      "Inc\\. build [0-9]+\\) \\(LLVM build "
+                      "[\\.0-9]+\\)$"));
+  if (llvm_gcc_regex.Execute(producer)) {
+    m_producer = eProducerLLVMGCC;
+  } else if (producer.contains("clang")) {
+    static RegularExpression g_clang_version_regex(
+        llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+    llvm::SmallVector<llvm::StringRef, 4> matches;
+    if (g_clang_version_regex.Execute(producer, &matches))
+      m_producer_version.tryParse(matches[1]);
+    m_producer = eProducerClang;
+  } else if (producer.contains("GNU"))
+    m_producer = eProducerGCC;
 }
 
 DWARFProducer DWARFUnit::GetProducer() {
