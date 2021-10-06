@@ -134,7 +134,7 @@ define void @non_zero_index_simple(i32* %p, i32* %q) {
 }
 
 ; CHECK-LABEL: non_zero_index_with_offset
-; CHECK: NoAlias: i32* %gep, i32* %p
+; CHECK: MayAlias: i32* %gep, i32* %p
 ; CHECK: NoAlias: i16* %gep.16, i32* %p
 define void @non_zero_index_with_offset(i32* %p, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
@@ -157,4 +157,4 @@ define void @non_zero_index_assume(i32* %p, i32 %knownnonzero) {
 
 declare void @llvm.assume(i1)
 
-!0 = !{ i32 1, i32 0 }
+!0 = !{ i32 1, i32 5 }

@@ -176,7 +176,8 @@ DEFAULT_PARAMETERS = [
             help="Whether to build the test suite in 32 bit mode even on a 64 bit target. This basically controls "
                  "whether -m32 is used when building the test suite.",
             actions=lambda enabled: [] if not enabled else [
-              AddFlag('-m32')
+              AddFlag('-m32'),
+              AddFeature('32bits-on-64bits')
             ]),
 
   Parameter(name='additional_features', type=list, default=[],
