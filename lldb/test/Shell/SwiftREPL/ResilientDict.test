@@ -9,14 +9,14 @@
 import Foundation
 
 let x : [URL:Int] = [URL(string: "https://github.com")!: 4, URL(string: "https://apple.com")!: 23]
-// DICT-LABEL: {{x}}: [URL : Int] = 2 key/value pairs {
+// DICT-LABEL: {{x}}: [Foundation.URL : Int] = 2 key/value pairs {
 // DICT:      [{{[0-1]}}] = {
 // DICT:         key = "https://apple.com"
 // DICT-NEXT:    value = 23
 // DICT-NEXT:  }
 
 let y : [URL:Int] = [URL(string: "https://github.com")!: 4, URL(string: "https://apple.com")!: 23]
-// DICT-LABEL: {{y}}: [URL : Int] = 2 key/value pairs {
+// DICT-LABEL: {{y}}: [Foundation.URL : Int] = 2 key/value pairs {
 // DICT:       [{{[0-1]}}] = {
 // DICT:          key = "https://github.com"
 // DICT-NEXT:     value = 4
