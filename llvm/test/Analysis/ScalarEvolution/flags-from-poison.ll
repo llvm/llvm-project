@@ -1678,7 +1678,7 @@ define noundef i64 @add-zext-recurse(i64 %arg) {
 ; CHECK-NEXT:    %x = zext i32 %a to i64
 ; CHECK-NEXT:    --> (zext i32 %a to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %res = add nuw i64 %x, %arg
-; CHECK-NEXT:    --> ((zext i32 %a to i64) + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> ((zext i32 %a to i64) + %arg)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @add-zext-recurse
 ;
   call void @foo()
@@ -1696,7 +1696,7 @@ define noundef i64 @add-sext-recurse(i64 %arg) {
 ; CHECK-NEXT:    %x = sext i32 %a to i64
 ; CHECK-NEXT:    --> (sext i32 %a to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %res = add nuw i64 %x, %arg
-; CHECK-NEXT:    --> ((sext i32 %a to i64) + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> ((sext i32 %a to i64) + %arg)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @add-sext-recurse
 ;
   call void @foo()
@@ -1714,7 +1714,7 @@ define noundef i16 @add-trunc-recurse() {
 ; CHECK-NEXT:    %x = trunc i32 %a to i16
 ; CHECK-NEXT:    --> (trunc i32 %a to i16) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i16 %x, 1
-; CHECK-NEXT:    --> (1 + (trunc i32 %a to i16)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (trunc i32 %a to i16))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-trunc-recurse
 ;
   call void @foo()
@@ -1732,7 +1732,7 @@ define noundef i32 @add-udiv-recurse(i32 %arg) {
 ; CHECK-NEXT:    %x = udiv i32 %a, %arg
 ; CHECK-NEXT:    --> (%a /u %arg) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (%a /u %arg)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (%a /u %arg))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-udiv-recurse
 ;
   call void @foo()
@@ -1750,7 +1750,7 @@ define noundef i32 @add-mul-recurse() {
 ; CHECK-NEXT:    %x = mul i32 %a, 3
 ; CHECK-NEXT:    --> (3 * %a) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (3 * %a)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (3 * %a))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-mul-recurse
 ;
   call void @foo()
@@ -1773,7 +1773,7 @@ define noundef i32 @add-smin-recurse(i32 %arg) {
 ; CHECK-NEXT:    %x = call i32 @llvm.smin.i32(i32 %a, i32 %arg)
 ; CHECK-NEXT:    --> (%arg smin %a) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (%arg smin %a)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (%arg smin %a))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-smin-recurse
 ;
   call void @foo()
@@ -1791,7 +1791,7 @@ define noundef i32 @add-smax-recurse(i32 %arg) {
 ; CHECK-NEXT:    %x = call i32 @llvm.smax.i32(i32 %a, i32 %arg)
 ; CHECK-NEXT:    --> (%arg smax %a) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (%arg smax %a)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (%arg smax %a))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-smax-recurse
 ;
   call void @foo()
@@ -1809,7 +1809,7 @@ define noundef i32 @add-umin-recurse(i32 %arg) {
 ; CHECK-NEXT:    %x = call i32 @llvm.umin.i32(i32 %a, i32 %arg)
 ; CHECK-NEXT:    --> (%arg umin %a) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (%arg umin %a)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (%arg umin %a))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-umin-recurse
 ;
   call void @foo()
@@ -1827,7 +1827,7 @@ define noundef i32 @add-umax-recurse(i32 %arg) {
 ; CHECK-NEXT:    %x = call i32 @llvm.umax.i32(i32 %a, i32 %arg)
 ; CHECK-NEXT:    --> (%arg umax %a) U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, 1
-; CHECK-NEXT:    --> (1 + (%arg umax %a)) U: full-set S: full-set
+; CHECK-NEXT:    --> (1 + (%arg umax %a))<nuw> U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @add-umax-recurse
 ;
   call void @foo()
@@ -1854,7 +1854,7 @@ define noundef i32 @add-recurse-inline() {
 ; CHECK-NEXT:    %y = add nuw i32 %c, %d
 ; CHECK-NEXT:    --> (%c + %d)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %res = add nuw i32 %x, %y
-; CHECK-NEXT:    --> (%a + %b + %c + %d) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a + %b + %c + %d)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @add-recurse-inline
 ;
   call void @foo()
