@@ -481,9 +481,8 @@ define i1 @not_select_bool(i1 %x, i1 %y, i1 %z) {
 
 define i1 @not_select_bool_const1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_select_bool_const1(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i1 [[Y_NOT]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sel = select i1 %x, i1 %y, i1 true
@@ -515,9 +514,8 @@ define i1 @not_select_bool_const3(i1 %x, i1 %y) {
 
 define i1 @not_select_bool_const4(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_select_bool_const4(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_X]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y_NOT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sel = select i1 %x, i1 false, i1 %y
@@ -527,9 +525,8 @@ define i1 @not_select_bool_const4(i1 %x, i1 %y) {
 
 define <2 x i1> @not_logicalAnd_not_op0(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_logicalAnd_not_op0(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[NOTX]], <2 x i1> [[Y:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[NOTAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 true>
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOTAND:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y_NOT]]
 ; CHECK-NEXT:    ret <2 x i1> [[NOTAND]]
 ;
   %notx = xor <2 x i1> %x, <i1 true, i1 true>
@@ -554,8 +551,8 @@ define i1 @not_logicalAnd_not_op0_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_logicalAnd_not_op0_use1(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NOTX]])
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOTX]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    [[NOTAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[NOTAND:%.*]] = select i1 [[X]], i1 true, i1 [[Y_NOT]]
 ; CHECK-NEXT:    ret i1 [[NOTAND]]
 ;
   %notx = xor i1 %x, true
@@ -564,6 +561,8 @@ define i1 @not_logicalAnd_not_op0_use1(i1 %x, i1 %y) {
   %notand = xor i1 %and, true
   ret i1 %notand
 }
+
+; negative test
 
 define i1 @not_logicalAnd_not_op0_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_logicalAnd_not_op0_use2(
@@ -582,9 +581,8 @@ define i1 @not_logicalAnd_not_op0_use2(i1 %x, i1 %y) {
 
 define <2 x i1> @not_logicalOr_not_op0(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_logicalOr_not_op0(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NOTX]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y:%.*]]
-; CHECK-NEXT:    [[NOTOR:%.*]] = xor <2 x i1> [[OR]], <i1 true, i1 true>
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOTOR:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y_NOT]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[NOTOR]]
 ;
   %notx = xor <2 x i1> %x, <i1 true, i1 true>
@@ -609,8 +607,8 @@ define i1 @not_logicalOr_not_op0_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_logicalOr_not_op0_use1(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NOTX]])
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[NOTX]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[NOTOR:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[NOTOR:%.*]] = select i1 [[X]], i1 [[Y_NOT]], i1 false
 ; CHECK-NEXT:    ret i1 [[NOTOR]]
 ;
   %notx = xor i1 %x, true
@@ -619,6 +617,8 @@ define i1 @not_logicalOr_not_op0_use1(i1 %x, i1 %y) {
   %notor = xor i1 %or, true
   ret i1 %notor
 }
+
+; negative test
 
 define i1 @not_logicalOr_not_op0_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_logicalOr_not_op0_use2(
