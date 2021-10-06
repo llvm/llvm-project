@@ -108,6 +108,7 @@ protected:
   name_collection m_set_names;
   reg_to_regs_map m_value_regs_map;
   reg_to_regs_map m_invalidate_regs_map;
+  dynamic_reg_size_map m_dynamic_reg_size_map;
   size_t m_reg_data_byte_size = 0u; // The number of bytes required to store
                                     // all registers
   bool m_finalized = false;
