@@ -14,11 +14,7 @@ declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata)
 !0 = !{i64 0, !"vfunc1.type"}
 !1 = !{i64 4, !"vfunc2.type"}
 
-; CHECK:      @vtable = internal unnamed_addr constant { [3 x i32] } { [3 x i32] [
-; CHECK-SAME:   i32 trunc (i64 sub (i64 0, i64 ptrtoint ({ [3 x i32] }* @vtable to i64)) to i32),
-; CHECK-SAME:   i32 trunc (i64 sub (i64 0, i64 ptrtoint ({ [3 x i32] }* @vtable to i64)) to i32),
-; CHECK-SAME:   i32 trunc (i64 sub (i64 0, i64 ptrtoint (void ()* @weird_ref_2 to i64)) to i32)
-; CHECK-SAME: ] }, align 8, !type !0, !type !1, !vcall_visibility !2
+; CHECK:      @vtable = internal unnamed_addr constant { [3 x i32] } zeroinitializer, align 8, !type !0, !type !1, !vcall_visibility !2
 
 define internal void @vfunc1() { ret void }
 define internal void @vfunc2() { ret void }
