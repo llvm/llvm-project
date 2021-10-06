@@ -391,6 +391,7 @@ def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
   "<ERROR>|" // ReservedIdentifierStatus::NotReserved
   "it starts with '_' at global scope|"
+  "it starts with '_' and has C language linkage|"
   "it starts with '__'|"
   "it starts with '_' followed by a capital letter|"
   "it contains '__'}1">,

@@ -43,6 +43,7 @@ class SourceLocation;
 enum class ReservedIdentifierStatus {
   NotReserved = 0,
   StartsWithUnderscoreAtGlobalScope,
+  StartsWithUnderscoreAndIsExternC,
   StartsWithDoubleUnderscore,
   StartsWithUnderscoreFollowedByCapitalLetter,
   ContainsDoubleUnderscore,
@@ -60,7 +61,8 @@ inline bool isReservedAtGlobalScope(ReservedIdentifierStatus Status) {
 /// example.
 inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
   return Status != ReservedIdentifierStatus::NotReserved &&
-         Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope;
+         Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope &&
+         Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
 
 /// A simple pair of identifier info and location.
