@@ -97,14 +97,20 @@ class TestSwiftRewriteClangPaths(TestBase):
         found_rel = 0
         found_abs = 0
         found_ovl = 0
+        in_scratch_context = False
         logfile = open(log, "r")
         for line in logfile:
             self.assertFalse("remapped -iquote" in line)
-            if " remapped " in line:
-                if line[:-1].endswith('/user'): found_abs += 1;
-                continue
             if "error: " in line and "Foo" in line:
                 errs += 1
+                continue
+            if line.startswith(" SwiftASTContextForExpressions"):
+                in_scratch_context = True
+                if " remapped " in line:
+                    if line[:-1].endswith('/user'):
+                        found_abs += 1;
+                    continue
+            if not in_scratch_context:
                 continue
             if 'user/iquote-path'      in line: found_iquote += 1; continue
             if 'user/I-single'         in line: found_i1 += 1;     continue
@@ -116,13 +122,13 @@ class TestSwiftRewriteClangPaths(TestBase):
 
         if remap:
             self.assertEqual(errs, 0, "expected no module import error")
-            # Module context + scratch context.
-            self.assertEqual(found_iquote, 2)
-            self.assertEqual(found_i1, 2)
-            self.assertEqual(found_i2, 2)
-            self.assertEqual(found_f, 2)
+            # Counting occurences in the scratch context.
+            self.assertEqual(found_iquote, 1)
+            self.assertEqual(found_i1, 1)
+            self.assertEqual(found_i2, 1)
+            self.assertEqual(found_f, 1)
             self.assertEqual(found_rel, 0)
             self.assertEqual(found_abs, 1)
-            self.assertEqual(found_ovl, 2)
+            self.assertEqual(found_ovl, 1)
         else:
-            self.assertTrue(errs > 0, "expected module import error")
+            self.assertGreater(errs, 0, "expected module import error")
