@@ -444,7 +444,6 @@ void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits)
 }
 
 APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
-  assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
          "Illegal bit extraction");
 
