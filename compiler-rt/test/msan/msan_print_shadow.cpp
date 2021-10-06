@@ -52,7 +52,7 @@ int main(void) {
   return 0;
 }
 
-// CHECK: Shadow map of [{{.*}}), 297 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 297 bytes:
 
 // CHECK-NO-ORIGINS: 0x{{.*}}: ..00ffff 00000000 ffffffff ffffffff
 // CHECK-NO-ORIGINS: 0x{{.*}}: ffffffff ffffffff ffffffff ffffffff
