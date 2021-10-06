@@ -4962,6 +4962,13 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
   }
 }
 
+bool SwiftASTContext::IsTupleType(lldb::opaque_compiler_type_t type) {
+  VALID_OR_RETURN(false);
+
+  auto swift_type = GetSwiftType(type);
+  return llvm::isa<::swift::TupleType>(swift_type);
+}
+
 CompilerType SwiftASTContext::GetErrorType() {
   VALID_OR_RETURN(CompilerType());
 

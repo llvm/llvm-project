@@ -240,6 +240,7 @@ public:
   GetAllocationStrategy(lldb::opaque_compiler_type_t type) override;
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
+  bool IsTupleType(lldb::opaque_compiler_type_t type) override;
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
       bool print_extensions_if_available,
