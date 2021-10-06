@@ -397,51 +397,6 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def Shape_JoinOp : Shape_Op<"join",
-    [Commutative, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-  let summary = "Returns the least general shape.shape of its operands";
-  let description = [{
-    An operation that computes the least general shape of input operands.
-    This effectively asserts that corresponding static dimensions are equal.
-    The behavior is to match each element of the `shape.shape` and propagate the
-    most restrictive information, returning an invalid shape if there are
-    contradictory requirements. E.g., using pseudo code
-
-    ```
-    shape.join([*], [*]) -> [*]
-    shape.join([*], [1, ?]) -> [1, ?]
-    shape.join([1, 2], [1, ?]) -> [1, 2]
-    shape.join([*], [1, 2]) -> [1, 2]
-    shape.join([], []) -> []
-    shape.join([], [*]) -> []
-    shape.join([], [?, ?]) -> [invalid]
-    shape.join([1, ?], [2, ?, ?]) -> [invalid]
-    ```
-
-    `shape.join` also allows specifying an optional error string, that may be
-    used to return an error to the user upon mismatch of dimensions.
-
-    ```mlir
-    %c = shape.join %a, %b, error="<reason>" : !shape.shape, !shape.shape -> !shape.shape
-    ```
-  }];
-
-  let arguments = (ins Shape_ShapeOrSizeType:$arg0, Shape_ShapeOrSizeType:$arg1,
-                   OptionalAttr<StrAttr>:$error);
-  let results = (outs Shape_ShapeOrSizeType:$result);
-
-  let assemblyFormat = [{
-    $arg0 `,` $arg1 (`,` `error` `=` $error^)? attr-dict `:`
-      type($arg0) `,` type($arg1) `->` type($result)
-  }];
-
-  let extraClassDeclaration = [{
-    // Returns when two result types are compatible for this op; method used by
-    // InferTypeOpInterface
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
-  }];
-}
-
 def Shape_MaxOp : Shape_Op<"max",
     [Commutative, NoSideEffect,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
@@ -461,6 +416,51 @@ def Shape_MaxOp : Shape_Op<"max",
   }];
 
   let hasFolder = 1;
+
+  let extraClassDeclaration = [{
+    // Returns when two result types are compatible for this op; method used by
+    // InferTypeOpInterface
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
+  }];
+}
+
+def Shape_MeetOp : Shape_Op<"meet",
+    [Commutative, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Returns the least general shape.shape of its operands";
+  let description = [{
+    An operation that computes the least general shape of input operands.
+    This effectively asserts that corresponding static dimensions are equal.
+    The behavior is to match each element of the `shape.shape` and propagate the
+    most restrictive information, returning an invalid shape if there are
+    contradictory requirements. E.g., using pseudo code
+
+    ```
+    shape.meet([*], [*]) -> [*]
+    shape.meet([*], [1, ?]) -> [1, ?]
+    shape.meet([1, 2], [1, ?]) -> [1, 2]
+    shape.meet([*], [1, 2]) -> [1, 2]
+    shape.meet([], []) -> []
+    shape.meet([], [*]) -> []
+    shape.meet([], [?, ?]) -> [invalid]
+    shape.meet([1, ?], [2, ?, ?]) -> [invalid]
+    ```
+
+    `shape.meet` also allows specifying an optional error string, that may be
+    used to return an error to the user upon mismatch of dimensions.
+
+    ```mlir
+    %c = shape.meet %a, %b, error="<reason>" : !shape.shape, !shape.shape -> !shape.shape
+    ```
+  }];
+
+  let arguments = (ins Shape_ShapeOrSizeType:$arg0, Shape_ShapeOrSizeType:$arg1,
+                   OptionalAttr<StrAttr>:$error);
+  let results = (outs Shape_ShapeOrSizeType:$result);
+
+  let assemblyFormat = [{
+    $arg0 `,` $arg1 (`,` `error` `=` $error^)? attr-dict `:`
+      type($arg0) `,` type($arg1) `->` type($result)
+  }];
 
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
