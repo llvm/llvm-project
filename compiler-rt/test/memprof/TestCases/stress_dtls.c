@@ -10,19 +10,19 @@
 // RUN: %env_memprof_opts=log_path=stderr:verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
 // RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
 // RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=0 %run %t 10 2 2>&1 | FileCheck %s --check-prefix=CHECK0
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 0
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 1
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 2
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 3
-// CHECK: __tls_get_addr
+// CHECK: ==__tls_get_addr:
 // Make sure that TLS slots don't leak
 // CHECK-NOT: num_live_dtls 5
 //
-// CHECK0-NOT: __tls_get_addr
+// CHECK0-NOT: ==__tls_get_addr:
 /*
 cc=your-compiler
 
