@@ -910,8 +910,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (substituting 0)\n",
-          object_name.AsCString());
+          "warning: `%s' is not accessible (substituting 0). %s\n",
+          object_name.AsCString(), object_ptr_error.AsCString());
       object_ptr = 0;
     }
 
