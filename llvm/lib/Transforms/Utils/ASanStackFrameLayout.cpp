@@ -33,7 +33,7 @@ static inline bool CompareVars(const ASanStackVariableDescription &a,
 
 // We also force minimal alignment for all vars to kMinAlignment so that vars
 // with e.g. alignment 1 and alignment 16 do not get reordered by CompareVars.
-static const size_t kMinAlignment = 16;
+static const uint64_t kMinAlignment = 16;
 
 // We want to add a full redzone after every variable.
 // The larger the variable Size the larger is the redzone.
