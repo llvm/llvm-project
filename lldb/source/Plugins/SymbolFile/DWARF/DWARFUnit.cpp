@@ -609,52 +609,38 @@ bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() {
 }
 
 bool DWARFUnit::Supports_unnamed_objc_bitfields() {
-  if (GetProducer() == eProducerClang) {
-    const uint32_t major_version = GetProducerVersionMajor();
-    return major_version > 425 ||
-           (major_version == 425 && GetProducerVersionUpdate() >= 13);
-  }
-  return true; // Assume all other compilers didn't have incorrect ObjC bitfield
-               // info
+  if (GetProducer() == eProducerClang)
+    return GetProducerVersion() >= llvm::VersionTuple(425, 0, 13);
+  // Assume all other compilers didn't have incorrect ObjC bitfield info.
+  return true;
 }
 
 void DWARFUnit::ParseProducerInfo() {
-  m_producer_version_major = UINT32_MAX;
-  m_producer_version_minor = UINT32_MAX;
-  m_producer_version_update = UINT32_MAX;
-
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
   if (die) {
-
     const char *producer_cstr =
         die->GetAttributeValueAsString(this, DW_AT_producer, nullptr);
-    if (producer_cstr) {
+    llvm::StringRef producer(producer_cstr);
+    if (!producer.empty()) {
       RegularExpression llvm_gcc_regex(
           llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
                           "Inc\\. build [0-9]+\\) \\(LLVM build "
                           "[\\.0-9]+\\)$"));
-      if (llvm_gcc_regex.Execute(llvm::StringRef(producer_cstr))) {
+      if (llvm_gcc_regex.Execute(producer)) {
         m_producer = eProducerLLVMGCC;
-      } else if (strstr(producer_cstr, "clang")) {
+      } else if (producer.contains("clang")) {
         static RegularExpression g_clang_version_regex(
-            llvm::StringRef("clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)"));
+            llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
         llvm::SmallVector<llvm::StringRef, 4> matches;
-        if (g_clang_version_regex.Execute(llvm::StringRef(producer_cstr),
-                                          &matches)) {
-          m_producer_version_major =
-              StringConvert::ToUInt32(matches[1].str().c_str(), UINT32_MAX, 10);
-          m_producer_version_minor =
-              StringConvert::ToUInt32(matches[2].str().c_str(), UINT32_MAX, 10);
-          m_producer_version_update =
-              StringConvert::ToUInt32(matches[3].str().c_str(), UINT32_MAX, 10);
-        }
+        if (g_clang_version_regex.Execute(producer, &matches))
+          m_producer_version.tryParse(matches[1]);
         m_producer = eProducerClang;
-      } else if (strstr(producer_cstr, "GNU"))
+      } else if (producer.contains("GNU"))
         m_producer = eProducerGCC;
     }
   }
   if (m_producer == eProducerInvalid)
-    m_producer = eProcucerOther;
+    m_producer = eProducerOther;
 }
 
 DWARFProducer DWARFUnit::GetProducer() {
@@ -663,22 +649,10 @@ DWARFProducer DWARFUnit::GetProducer() {
   return m_producer;
 }
 
-uint32_t DWARFUnit::GetProducerVersionMajor() {
-  if (m_producer_version_major == 0)
+llvm::VersionTuple DWARFUnit::GetProducerVersion() {
+  if (m_producer_version.empty())
     ParseProducerInfo();
-  return m_producer_version_major;
-}
-
-uint32_t DWARFUnit::GetProducerVersionMinor() {
-  if (m_producer_version_minor == 0)
-    ParseProducerInfo();
-  return m_producer_version_minor;
-}
-
-uint32_t DWARFUnit::GetProducerVersionUpdate() {
-  if (m_producer_version_update == 0)
-    ParseProducerInfo();
-  return m_producer_version_update;
+  return m_producer_version;
 }
 
 uint64_t DWARFUnit::GetDWARFLanguageType() {

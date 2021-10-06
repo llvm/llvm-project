@@ -29,7 +29,7 @@ enum DWARFProducer {
   eProducerClang,
   eProducerGCC,
   eProducerLLVMGCC,
-  eProcucerOther
+  eProducerOther
 };
 
 /// Base class describing the header of any kind of "unit."  Some information
@@ -194,11 +194,7 @@ public:
 
   DWARFProducer GetProducer();
 
-  uint32_t GetProducerVersionMajor();
-
-  uint32_t GetProducerVersionMinor();
-
-  uint32_t GetProducerVersionUpdate();
+  llvm::VersionTuple GetProducerVersion();
 
   uint64_t GetDWARFLanguageType();
 
@@ -308,9 +304,7 @@ protected:
   std::unique_ptr<DWARFDebugAranges> m_func_aranges_up;
   dw_addr_t m_base_addr = 0;
   DWARFProducer m_producer = eProducerInvalid;
-  uint32_t m_producer_version_major = 0;
-  uint32_t m_producer_version_minor = 0;
-  uint32_t m_producer_version_update = 0;
+  llvm::VersionTuple m_producer_version;
   llvm::Optional<uint64_t> m_language_type;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
   llvm::Optional<lldb_private::FileSpec> m_comp_dir;
