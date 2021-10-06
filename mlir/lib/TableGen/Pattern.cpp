@@ -820,5 +820,4 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
                       "unsupported right now",
                       treeName));
   }
-  return;
 }
