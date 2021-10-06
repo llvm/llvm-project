@@ -889,32 +889,28 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
-Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
-                            Value *Right) {
-  CmpInst::Predicate Pred;
+CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
   switch (RK) {
   default:
     llvm_unreachable("Unknown min/max recurrence kind");
   case RecurKind::UMin:
-    Pred = CmpInst::ICMP_ULT;
-    break;
+    return CmpInst::ICMP_ULT;
   case RecurKind::UMax:
-    Pred = CmpInst::ICMP_UGT;
-    break;
+    return CmpInst::ICMP_UGT;
   case RecurKind::SMin:
-    Pred = CmpInst::ICMP_SLT;
-    break;
+    return CmpInst::ICMP_SLT;
   case RecurKind::SMax:
-    Pred = CmpInst::ICMP_SGT;
-    break;
+    return CmpInst::ICMP_SGT;
   case RecurKind::FMin:
-    Pred = CmpInst::FCMP_OLT;
-    break;
+    return CmpInst::FCMP_OLT;
   case RecurKind::FMax:
-    Pred = CmpInst::FCMP_OGT;
-    break;
+    return CmpInst::FCMP_OGT;
   }
+}
 
+Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
+                            Value *Right) {
+  CmpInst::Predicate Pred = getMinMaxReductionPredicate(RK);
   Value *Cmp = Builder.CreateCmp(Pred, Left, Right, "rdx.minmax.cmp");
   Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
   return Select;

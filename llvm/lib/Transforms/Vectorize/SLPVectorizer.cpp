@@ -8579,28 +8579,32 @@ private:
     }
     case RecurKind::FMax:
     case RecurKind::FMin: {
+      auto *SclCondTy = CmpInst::makeCmpResultType(ScalarTy);
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
       VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
                                                /*unsigned=*/false, CostKind);
-      ScalarCost =
-          TTI->getCmpSelInstrCost(Instruction::FCmp, ScalarTy) +
-          TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
-                                  CmpInst::makeCmpResultType(ScalarTy));
+      CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
+      ScalarCost = TTI->getCmpSelInstrCost(Instruction::FCmp, ScalarTy,
+                                           SclCondTy, RdxPred, CostKind) +
+                   TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
+                                           SclCondTy, RdxPred, CostKind);
       break;
     }
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin: {
+      auto *SclCondTy = CmpInst::makeCmpResultType(ScalarTy);
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
       bool IsUnsigned =
           RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
       VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy, IsUnsigned,
                                                CostKind);
-      ScalarCost =
-          TTI->getCmpSelInstrCost(Instruction::ICmp, ScalarTy) +
-          TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
-                                  CmpInst::makeCmpResultType(ScalarTy));
+      CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
+      ScalarCost = TTI->getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
+                                           SclCondTy, RdxPred, CostKind) +
+                   TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
+                                           SclCondTy, RdxPred, CostKind);
       break;
     }
     default:
