@@ -41,10 +41,8 @@ void test_builtin_ppc_rlwimi() {
 }
 
 void test_builtin_ppc_rlwnm() {
-  unsigned int shift;
   unsigned int mask;
-  unsigned int res = __builtin_ppc_rlwnm(ui, shift, 7); // expected-error {{argument to '__builtin_ppc_rlwnm' must be a constant integer}}
-  res = __builtin_ppc_rlwnm(ui, 31, mask);              // expected-error {{argument to '__builtin_ppc_rlwnm' must be a constant integer}}
+  unsigned int res = __builtin_ppc_rlwnm(ui, 31, mask);              // expected-error {{argument to '__builtin_ppc_rlwnm' must be a constant integer}}
   res = __builtin_ppc_rlwnm(ui, 31, 0xFF0F0F00);        // expected-error {{argument 2 value should represent a contiguous bit field}}
 }
 
