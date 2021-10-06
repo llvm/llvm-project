@@ -439,8 +439,6 @@ class TagSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedTagKind; }
 
-  const WasmTagType *getTagType() const { return tagType; }
-
   // Get/set the tag index
   uint32_t getTagIndex() const;
   void setTagIndex(uint32_t index);
@@ -450,10 +448,9 @@ public:
 
 protected:
   TagSymbol(StringRef name, Kind k, uint32_t flags, InputFile *f,
-            const WasmTagType *tagType, const WasmSignature *sig)
-      : Symbol(name, k, flags, f), signature(sig), tagType(tagType) {}
+            const WasmSignature *sig)
+      : Symbol(name, k, flags, f), signature(sig) {}
 
-  const WasmTagType *tagType;
   uint32_t tagIndex = INVALID_INDEX;
 };
 

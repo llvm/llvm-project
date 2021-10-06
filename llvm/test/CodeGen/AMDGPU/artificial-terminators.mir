@@ -38,6 +38,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LT_I32_e64 [[V_ADD_U32_e64_3]], [[S_MOV_B32_1]], implicit $exec
   ; CHECK-NEXT:   [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 $exec_lo, [[V_CMP_LT_I32_e64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_XOR_B32_]]
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:

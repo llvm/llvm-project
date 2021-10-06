@@ -74,14 +74,9 @@ private:
 class InputTag : public InputElement {
 public:
   InputTag(const WasmSignature &s, const WasmTag &t, ObjFile *f)
-      : InputElement(t.SymbolName, f), signature(s), type(t.Type) {}
-
-  const WasmTagType &getType() const { return type; }
+      : InputElement(t.SymbolName, f), signature(s) {}
 
   const WasmSignature &signature;
-
-private:
-  WasmTagType type;
 };
 
 class InputTable : public InputElement {

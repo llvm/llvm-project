@@ -92,13 +92,18 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   switch (combiningKind) {
   case CombiningKind::ADD:
   case CombiningKind::MUL:
-  case CombiningKind::MIN:
-  case CombiningKind::MAX:
     return elementType.isIntOrIndexOrFloat();
+  case CombiningKind::MINUI:
+  case CombiningKind::MINSI:
+  case CombiningKind::MAXUI:
+  case CombiningKind::MAXSI:
   case CombiningKind::AND:
   case CombiningKind::OR:
   case CombiningKind::XOR:
     return elementType.isIntOrIndex();
+  case CombiningKind::MINF:
+  case CombiningKind::MAXF:
+    return elementType.isa<FloatType>();
   }
   return false;
 }
@@ -151,8 +156,12 @@ static constexpr const CombiningKind combiningKindsList[] = {
     // clang-format off
     CombiningKind::ADD,
     CombiningKind::MUL,
-    CombiningKind::MIN,
-    CombiningKind::MAX,
+    CombiningKind::MINUI,
+    CombiningKind::MINSI,
+    CombiningKind::MINF,
+    CombiningKind::MAXUI,
+    CombiningKind::MAXSI,
+    CombiningKind::MAXF,
     CombiningKind::AND,
     CombiningKind::OR,
     CombiningKind::XOR,
@@ -291,22 +300,20 @@ static LogicalResult verify(ReductionOp op) {
     return op.emitOpError("unsupported reduction rank: ") << rank;
 
   // Verify supported reduction kind.
-  auto kind = op.kind();
+  StringRef strKind = op.kind();
+  auto maybeKind = symbolizeCombiningKind(strKind);
+  if (!maybeKind)
+    return op.emitOpError("unknown reduction kind: ") << strKind;
+
   Type eltType = op.dest().getType();
-  if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (!eltType.isIntOrIndexOrFloat())
-      return op.emitOpError("unsupported reduction type");
-  } else if (kind == "and" || kind == "or" || kind == "xor") {
-    if (!eltType.isIntOrIndex())
-      return op.emitOpError("unsupported reduction type");
-  } else {
-    return op.emitOpError("unknown reduction kind: ") << kind;
-  }
+  if (!isSupportedCombiningKind(*maybeKind, eltType))
+    return op.emitOpError("unsupported reduction type '")
+           << eltType << "' for kind '" << op.kind() << "'";
 
   // Verify optional accumulator.
   if (!op.acc().empty()) {
-    if (kind != "add" && kind != "mul")
-      return op.emitOpError("no accumulator for reduction kind: ") << kind;
+    if (strKind != "add" && strKind != "mul")
+      return op.emitOpError("no accumulator for reduction kind: ") << strKind;
     if (!eltType.isa<FloatType>())
       return op.emitOpError("no accumulator for type: ") << eltType;
   }

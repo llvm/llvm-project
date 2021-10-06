@@ -45,7 +45,6 @@ class WasmSymbol;
 
 namespace wasm {
 struct WasmTag;
-struct WasmTagType;
 struct WasmFunction;
 struct WasmGlobal;
 struct WasmGlobalType;
@@ -97,7 +96,6 @@ using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmTable;
 using llvm::wasm::WasmTableType;
 using llvm::wasm::WasmTag;
-using llvm::wasm::WasmTagType;
 } // end namespace lld.
 
 namespace std {

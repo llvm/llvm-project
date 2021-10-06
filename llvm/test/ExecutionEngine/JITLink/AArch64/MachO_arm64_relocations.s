@@ -78,7 +78,8 @@ test_gotpageoff12_defined:
 # For the GOTPAGEOFF12 relocation we test the ADD instruction, all LDR/GPR
 # variants and all LDR/Neon variants.
 #
-# jitlink-check: decode_operand(test_page21, 1) = ((named_data + 256) - test_page21)[32:12]
+# jitlink-check: decode_operand(test_page21, 1)[20:0] = \
+# jitlink-check:     ((named_data + 256) - test_page21)[32:12]
 # jitlink-check: decode_operand(test_pageoff12add, 2) = (named_data + 256)[11:0]
 # jitlink-check: decode_operand(test_pageoff12gpr8, 2) = (named_data + 256)[11:0]
 # jitlink-cherk: decode_operand(test_pageoff12gpr8s, 2) = (named_data + 256)[11:0]
