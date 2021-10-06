@@ -276,18 +276,20 @@ public:
   }
 
   Value applyfn__max(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return emitCmpFAndSelect(lhs, rhs, CmpFPredicate::OGT);
+      return builder.create<MaxFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return emitCmpIAndSelect(lhs, rhs, CmpIPredicate::sgt);
+      return builder.create<MaxSIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
   Value applyfn__min(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return emitCmpFAndSelect(lhs, rhs, CmpFPredicate::OLT);
+      return builder.create<MinFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return emitCmpIAndSelect(lhs, rhs, CmpIPredicate::slt);
+      return builder.create<MinSIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
@@ -323,17 +325,6 @@ public:
 private:
   MLIRContext *context;
   Block &block;
-
-  Value emitCmpFAndSelect(Value lhs, Value rhs, CmpFPredicate predicate) {
-    OpBuilder builder = getBuilder();
-    Value condition = builder.create<CmpFOp>(lhs.getLoc(), predicate, lhs, rhs);
-    return builder.create<SelectOp>(lhs.getLoc(), condition, lhs, rhs);
-  }
-  Value emitCmpIAndSelect(Value lhs, Value rhs, CmpIPredicate predicate) {
-    OpBuilder builder = getBuilder();
-    Value condition = builder.create<CmpIOp>(lhs.getLoc(), predicate, lhs, rhs);
-    return builder.create<SelectOp>(lhs.getLoc(), condition, lhs, rhs);
-  }
 
   bool isFloatingPoint(Value value) { return value.getType().isa<FloatType>(); }
   bool isInteger(Value value) { return value.getType().isa<IntegerType>(); }

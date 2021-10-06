@@ -38,8 +38,7 @@ func @generalize_pooling_nhwc_max_f32(%input : tensor<1x4x16x1xf32>, %shape: ten
 
 // CHECK-LABEL: @generalize_pooling_nhwc_max_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[COND:.+]] = cmpf ogt, %[[OUT_ARG]], %[[IN_ARG]] : f32
-// CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   %[[MAX:.+]] = maxf %[[OUT_ARG]], %[[IN_ARG]] : f32
 // CHECK-NEXT:   linalg.yield %[[MAX]] : f32
 // CHECK-NEXT: -> tensor<1x2x4x1xf32>
 
@@ -53,8 +52,7 @@ func @generalize_pooling_nhwc_max_i32(%input : tensor<1x4x16x1xi32>, %shape: ten
 
 // CHECK-LABEL: @generalize_pooling_nhwc_max_i32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: i32, %[[SHAPE_ARG:.+]]: i32, %[[OUT_ARG:.+]]: i32)
-// CHECK-NEXT:   %[[COND:.+]] = cmpi sgt, %[[OUT_ARG]], %[[IN_ARG]] : i32
-// CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT_ARG]], %[[IN_ARG]] : i32
+// CHECK-NEXT:   %[[MAX:.+]] = maxsi %[[OUT_ARG]], %[[IN_ARG]] : i32
 // CHECK-NEXT:   linalg.yield %[[MAX]] : i32
 // CHECK-NEXT: -> tensor<1x2x4x1xi32>
 
@@ -68,9 +66,8 @@ func @generalize_pooling_nhwc_min_f32(%input : tensor<1x4x16x1xf32>, %shape: ten
 
 // CHECK-LABEL: @generalize_pooling_nhwc_min_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[COND:.+]] = cmpf olt, %[[OUT_ARG]], %[[IN_ARG]] : f32
-// CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT_ARG]], %[[IN_ARG]] : f32
-// CHECK-NEXT:   linalg.yield %[[MAX]] : f32
+// CHECK-NEXT:   %[[MIN:.+]] = minf %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   linalg.yield %[[MIN]] : f32
 // CHECK-NEXT: -> tensor<1x2x4x1xf32>
 
 // -----
@@ -83,9 +80,8 @@ func @generalize_pooling_nhwc_min_i32(%input : tensor<1x4x16x1xi32>, %shape: ten
 
 // CHECK-LABEL: @generalize_pooling_nhwc_min_i32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: i32, %[[SHAPE_ARG:.+]]: i32, %[[OUT_ARG:.+]]: i32)
-// CHECK-NEXT:   %[[COND:.+]] = cmpi slt, %[[OUT_ARG]], %[[IN_ARG]] : i32
-// CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT_ARG]], %[[IN_ARG]] : i32
-// CHECK-NEXT:   linalg.yield %[[MAX]] : i32
+// CHECK-NEXT:   %[[MIN:.+]] = minsi %[[OUT_ARG]], %[[IN_ARG]] : i32
+// CHECK-NEXT:   linalg.yield %[[MIN]] : i32
 // CHECK-NEXT: -> tensor<1x2x4x1xi32>
 
 // -----
