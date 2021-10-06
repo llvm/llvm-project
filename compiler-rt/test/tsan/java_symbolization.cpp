@@ -2,9 +2,11 @@
 #include "java.h"
 #include <memory.h>
 
-extern "C" void __tsan_symbolize_external_ex(
-    jptr pc, void (*add_frame)(void *, const char *, const char *, int, int),
-    void *ctx) {
+extern "C" __attribute__((disable_sanitizer_instrumentation)) void
+__tsan_symbolize_external_ex(jptr pc,
+                             void (*add_frame)(void *, const char *,
+                                               const char *, int, int),
+                             void *ctx) {
   if (pc == (1234 | kExternalPCBit)) {
     add_frame(ctx, "MyInnerFunc", "MyInnerFile.java", 1234, 56);
     add_frame(ctx, "MyOuterFunc", "MyOuterFile.java", 4321, 65);
