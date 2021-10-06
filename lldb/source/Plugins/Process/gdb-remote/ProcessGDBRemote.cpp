@@ -4257,7 +4257,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             reg_info.name.SetString(value);
           } else if (name == "bitsize") {
             if (llvm::to_integer(value, reg_info.byte_size))
-              reg_info.byte_size /= CHAR_BIT;
+              reg_info.byte_size =
+                  llvm::divideCeil(reg_info.byte_size, CHAR_BIT);
           } else if (name == "type") {
             gdb_type = value.str();
           } else if (name == "group") {
@@ -4319,7 +4320,11 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             assert(dwarf_opcode_len == ret_val);
             UNUSED_IF_ASSERT_DISABLED(ret_val);
           } else {
-            printf("unhandled attribute %s = %s\n", name.data(), value.data());
+            Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
+                GDBR_LOG_PROCESS));
+            LLDB_LOGF(log,
+                      "ProcessGDBRemote::%s unhandled reg attribute %s = %s",
+                      __FUNCTION__, name.data(), value.data());
           }
           return true; // Keep iterating through all attributes
         });
@@ -4353,8 +4358,15 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           }
         }
 
-        assert(reg_info.byte_size != 0);
-        registers.push_back(reg_info);
+        if (reg_info.byte_size == 0) {
+          Log *log(
+              ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+          LLDB_LOGF(log,
+                    "ProcessGDBRemote::%s Skipping zero bitsize register %s",
+                    __FUNCTION__, reg_info.name.AsCString());
+        } else
+          registers.push_back(reg_info);
+
         return true; // Keep iterating through all "reg" elements
       });
   return true;

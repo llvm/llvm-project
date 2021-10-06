@@ -38,6 +38,10 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                         <reg name="sp" bitsize="32" type="data_ptr" group="general"/>
                         <reg name="lr" bitsize="32" type="uint32" group="general"/>
                         <reg name="pc" bitsize="32" type="code_ptr" group="general"/>
+                        <reg name="SYS0" bitsize="9" regnum="21" type="uint32" group="system"/>
+                        <reg name="SYS1" bitsize="8" regnum="22" type="uint32" group="system"/>
+                        <reg name="SYS2" bitsize="1" regnum="23" type="uint32" group="system"/>
+                        <reg name="SYS3" bitsize="7" regnum="24" type="uint32" group="system"/>
                         <reg name="xpsr" bitsize="32" regnum="25" type="uint32" group="general"/>
                         <reg name="MSP" bitsize="32" regnum="26" type="uint32" group="general"/>
                         <reg name="PSP" bitsize="32" regnum="27" type="uint32" group="general"/>
@@ -87,7 +91,7 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
                 return "E01"
 
             def readRegisters(self):
-                return "20000000f8360020001000002fcb0008f8360020a0360020200c0020000000000000000000000000000000000000000000000000b87f0120b7d100082ed2000800000001b87f01200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                return "20000000f8360020001000002fcb0008f8360020a0360020200c0020000000000000000000000000000000000000000000000000b87f0120b7d100082ed20008addebeafbc00000001b87f01200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
             def haltReason(self):
                 return "S05"
@@ -129,3 +133,15 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
 
         pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
         self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800d22e)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS0")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xdead)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS1")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xbe)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS2")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xaf)
+
+        sys_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("SYS3")
+        self.assertEqual(sys_valobj.GetValueAsUnsigned(), 0xbc)
