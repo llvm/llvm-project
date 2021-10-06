@@ -3179,7 +3179,7 @@ Value *FunctionStackPoisoner::createAllocaForLayout(
     assert(Alloca->isStaticAlloca());
   }
   assert((ClRealignStack & (ClRealignStack - 1)) == 0);
-  size_t FrameAlignment = std::max(L.FrameAlignment, (size_t)ClRealignStack);
+  uint64_t FrameAlignment = std::max(L.FrameAlignment, uint64_t(ClRealignStack));
   Alloca->setAlignment(Align(FrameAlignment));
   return IRB.CreatePointerCast(Alloca, IntptrTy);
 }
