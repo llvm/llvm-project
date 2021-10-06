@@ -58,7 +58,7 @@ ProfileSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
   std::string Error;
   if (auto PSCL = create(Paths, VFS, Error))
     return PSCL;
-  llvm::report_fatal_error(Error);
+  llvm::report_fatal_error(llvm::Twine(Error));
 }
 
 }
