@@ -7836,11 +7836,9 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
 
   // When generating more than one CLC, all but the last will need to
   // branch to the end when a difference is found.
-  MachineBasicBlock *EndMBB =
-      (Opcode == SystemZ::CLC &&
-               (ImmLength > 256 || LenMinus1Reg != SystemZ::NoRegister)
-           ? SystemZ::splitBlockAfter(MI, MBB)
-           : nullptr);
+  MachineBasicBlock *EndMBB = (ImmLength > 256 && Opcode == SystemZ::CLC
+                                   ? SystemZ::splitBlockAfter(MI, MBB)
+                                   : nullptr);
 
   // Check for the loop form, in which operand 5 is the trip count.
   if (MI.getNumExplicitOperands() > 5) {
@@ -7882,8 +7880,8 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       AllDoneMBB = SystemZ::splitBlockBefore(MI, MBB);
       StartMBB = SystemZ::emitBlockAfter(MBB);
       LoopMBB = SystemZ::emitBlockAfter(StartMBB);
-      NextMBB = (EndMBB ? SystemZ::emitBlockAfter(LoopMBB) : LoopMBB);
-      DoneMBB = SystemZ::emitBlockAfter(NextMBB);
+      NextMBB = LoopMBB;
+      DoneMBB = SystemZ::emitBlockAfter(LoopMBB);
 
       //  MBB:
       //   # Jump to AllDoneMBB if LenMinus1Reg is -1, or fall thru to StartMBB.
@@ -8002,24 +8000,19 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
         : MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(MBB, DL, TII->get(SystemZ::PHI), RemDestReg)
         .addReg(StartDestReg).addMBB(StartMBB)
-        .addReg(NextDestReg).addMBB(NextMBB);
+        .addReg(NextDestReg).addMBB(LoopMBB);
       if (!HaveSingleBase)
         BuildMI(MBB, DL, TII->get(SystemZ::PHI), RemSrcReg)
           .addReg(StartSrcReg).addMBB(StartMBB)
-          .addReg(NextSrcReg).addMBB(NextMBB);
+          .addReg(NextSrcReg).addMBB(LoopMBB);
       MRI.constrainRegClass(LenMinus1Reg, &SystemZ::ADDR64BitRegClass);
-      MachineInstrBuilder EXRL_MIB =
-        BuildMI(MBB, DL, TII->get(SystemZ::EXRL_Pseudo))
-          .addImm(Opcode)
-          .addReg(LenMinus1Reg)
-          .addReg(RemDestReg).addImm(DestDisp)
-          .addReg(RemSrcReg).addImm(SrcDisp);
+      BuildMI(MBB, DL, TII->get(SystemZ::EXRL_Pseudo))
+        .addImm(Opcode)
+        .addReg(LenMinus1Reg)
+        .addReg(RemDestReg).addImm(DestDisp)
+        .addReg(RemSrcReg).addImm(SrcDisp);
       MBB->addSuccessor(AllDoneMBB);
       MBB = AllDoneMBB;
-      if (EndMBB) {
-        EXRL_MIB.addReg(SystemZ::CC, RegState::ImplicitDefine);
-        MBB->addLiveIn(SystemZ::CC);
-      }
     }
   }
 
@@ -8539,7 +8532,6 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitAtomicCmpSwapW(MI, MBB);
   case SystemZ::MVCSequence:
   case SystemZ::MVCLoop:
-  case SystemZ::MVCLoopVarLen:
     return emitMemMemWrapper(MI, MBB, SystemZ::MVC);
   case SystemZ::NCSequence:
   case SystemZ::NCLoop:
@@ -8553,7 +8545,6 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitMemMemWrapper(MI, MBB, SystemZ::XC);
   case SystemZ::CLCSequence:
   case SystemZ::CLCLoop:
-  case SystemZ::CLCLoopVarLen:
     return emitMemMemWrapper(MI, MBB, SystemZ::CLC);
   case SystemZ::CLSTLoop:
     return emitStringWrapper(MI, MBB, SystemZ::CLST);

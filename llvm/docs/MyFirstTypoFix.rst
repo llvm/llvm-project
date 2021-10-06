@@ -265,6 +265,8 @@ so it runs them all.
 
 Well, that makes sense… and the test output suggests it's looking for
 the old string "call itself" and finding our new message instead.
+Note that more tests may fail in a similar way as new tests are
+added time to time.
 
 Let's fix it by updating the expectation in the test.
 
@@ -272,8 +274,9 @@ Let's fix it by updating the expectation in the test.
 
    $ vi ../clang/test/SemaCXX/warn-infinite-recursion.cpp
 
-Everywhere we see // expected-warning{{call itself}}, let's replace it
-with // expected-warning{{to understand recursion}}.
+Everywhere we see `// expected-warning{{call itself}}` (or something similar
+from the original warning text), let's replace it with
+`// expected-warning{{to understand recursion}}`.
 
 Now we could run **all** the tests again, but this is a slow way to
 iterate on a change! Instead, let's find a way to re-run just the
@@ -289,7 +292,7 @@ clang/**test**/FixIt/dereference-addressof.c. Re-run like this:
 
    $ bin/llvm-lit -v ../clang/test/SemaCXX/warn-infinite-recursion.cpp
 
--  **unit tests** (e.g. ToolingTests/ReplacementText.CanDeleteAllText)
+-  **unit tests** (e.g. ToolingTests/ReplacementTest.CanDeleteAllText)
 
 These are C++ programs that call LLVM functions and verify the results.
 They live in suites like ToolingTests. Re-run like this:
@@ -297,7 +300,7 @@ They live in suites like ToolingTests. Re-run like this:
 .. code:: console
 
    $ ninja ToolingTests && tools/clang/unittests/Tooling/ToolingTests
-   --gtest_filter=ReplacementText.CanDeleteAllText
+   --gtest_filter=ReplacementTest.CanDeleteAllText
 
 
 Commit locally
