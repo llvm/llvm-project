@@ -3325,7 +3325,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
 
   // Minimal header size (left redzone) is 4 pointers,
   // i.e. 32 bytes on 64-bit platforms and 16 bytes in 32-bit platforms.
-  size_t Granularity = 1ULL << Mapping.Scale;
+  uint64_t Granularity = 1ULL << Mapping.Scale;
   size_t MinHeaderSize = std::max((size_t)ASan.LongSize / 2, Granularity);
   const ASanStackFrameLayout &L =
       ComputeASanStackFrameLayout(SVD, Granularity, MinHeaderSize);

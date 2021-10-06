@@ -33,7 +33,7 @@ static inline bool CompareVars(const ASanStackVariableDescription &a,
 
 // We also force minimal alignment for all vars to kMinAlignment so that vars
 // with e.g. alignment 1 and alignment 16 do not get reordered by CompareVars.
-static const size_t kMinAlignment = 16;
+static const uint64_t kMinAlignment = 16;
 
 // We want to add a full redzone after every variable.
 // The larger the variable Size the larger is the redzone.
@@ -52,7 +52,7 @@ static size_t VarAndRedzoneSize(size_t Size, size_t Granularity,
 
 ASanStackFrameLayout
 ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
-                            size_t Granularity, size_t MinHeaderSize) {
+                            uint64_t Granularity, size_t MinHeaderSize) {
   assert(Granularity >= 8 && Granularity <= 64 &&
          (Granularity & (Granularity - 1)) == 0);
   assert(MinHeaderSize >= 16 && (MinHeaderSize & (MinHeaderSize - 1)) == 0 &&
