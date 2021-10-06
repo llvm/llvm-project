@@ -39,10 +39,10 @@ func @entry() {
   %1 = vector.reduction "mul", %v9 : vector<10xi32> into i32
   vector.print %1 : i32
   // CHECK: -1228800
-  %2 = vector.reduction "min", %v9 : vector<10xi32> into i32
+  %2 = vector.reduction "minsi", %v9 : vector<10xi32> into i32
   vector.print %2 : i32
   // CHECK: -80
-  %3 = vector.reduction "max", %v9 : vector<10xi32> into i32
+  %3 = vector.reduction "maxsi", %v9 : vector<10xi32> into i32
   vector.print %3 : i32
   // CHECK: 5
   %4 = vector.reduction "and", %v9 : vector<10xi32> into i32
