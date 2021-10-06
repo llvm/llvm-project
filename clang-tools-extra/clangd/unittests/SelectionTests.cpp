@@ -473,7 +473,19 @@ TEST(SelectionTest, CommonAncestor) {
         [[@property(retain, nonnull) <:[My^Object2]:> *x]]; // error-ok
         @end
       )cpp",
-       "ObjCPropertyDecl"}};
+       "ObjCPropertyDecl"},
+
+      {R"cpp(
+        typedef int Foo;
+        enum Bar : [[Fo^o]] {};
+      )cpp",
+       "TypedefTypeLoc"},
+      {R"cpp(
+        typedef int Foo;
+        enum Bar : [[Fo^o]];
+      )cpp",
+       "TypedefTypeLoc"},
+  };
 
   for (const Case &C : Cases) {
     trace::TestTracer Tracer;
