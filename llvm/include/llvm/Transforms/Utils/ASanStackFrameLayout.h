@@ -33,7 +33,7 @@ struct ASanStackVariableDescription {
   uint64_t Size;       // Size of the variable in bytes.
   size_t LifetimeSize; // Size in bytes to use for lifetime analysis check.
                        // Will be rounded up to Granularity.
-  size_t Alignment;    // Alignment of the variable (power of 2).
+  uint64_t Alignment;  // Alignment of the variable (power of 2).
   AllocaInst *AI;      // The actual AllocaInst.
   size_t Offset;       // Offset from the beginning of the frame;
                        // set by ComputeASanStackFrameLayout.

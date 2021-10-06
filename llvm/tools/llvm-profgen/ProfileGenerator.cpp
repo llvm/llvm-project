@@ -32,6 +32,10 @@ cl::opt<bool> UseMD5(
     cl::desc("Use md5 to represent function names in the output profile (only "
              "meaningful for -extbinary)"));
 
+static cl::opt<bool> PopulateProfileSymbolList(
+    "populate-profile-symbol-list", cl::init(true), cl::Hidden,
+    cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
+
 static cl::opt<int32_t, true> RecursionCompression(
     "compress-recursion",
     cl::desc("Compressing recursion by deduplicating adjacent frame "
@@ -90,6 +94,22 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
 
 void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
                                  SampleProfileMap &ProfileMap) {
+  // Populate profile symbol list if extended binary format is used.
+  ProfileSymbolList SymbolList;
+
+  // Turn it off temporarily for CS profile.
+  if (FunctionSamples::ProfileIsCS &&
+      !PopulateProfileSymbolList.getNumOccurrences())
+    PopulateProfileSymbolList = false;
+
+  if (PopulateProfileSymbolList && OutputFormat == SPF_Ext_Binary) {
+    for (const auto &Item : ProfileMap) {
+      auto &Profile = Item.second;
+      SymbolList.add(Profile.getName(), true);
+    }
+    Writer->setProfileSymbolList(&SymbolList);
+  }
+
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
 }

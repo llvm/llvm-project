@@ -12,9 +12,6 @@
 #include "Plugins/ABI/X86/ABIX86.h"
 
 class ABIX86_64 : public ABIX86 {
-public:
-  uint32_t GetGenericNum(llvm::StringRef name) override;
-
 protected:
   std::string GetMCName(std::string name) override {
     MapRegisterName(name, "stmm", "st");

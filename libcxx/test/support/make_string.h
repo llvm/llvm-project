@@ -16,6 +16,7 @@
 #endif
 
 #include <string>
+#include <string_view>
 
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
 #define CHAR8_ONLY(x) x,
@@ -53,6 +54,11 @@ struct MultiStringType {
 // valid ASCII which means the input is also valid UTF-8.
 #define MAKE_STRING(CharT, Str)                                                \
   std::basic_string<CharT> {                                                   \
+    static_cast<const CharT*>(MultiStringType MKSTR(Str))                      \
+  }
+
+#define MAKE_STRING_VIEW(CharT, Str)                                           \
+  std::basic_string_view<CharT> {                                              \
     static_cast<const CharT*>(MultiStringType MKSTR(Str))                      \
   }
 

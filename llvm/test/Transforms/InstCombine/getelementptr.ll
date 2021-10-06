@@ -495,7 +495,7 @@ define i1 @test23() {
 define void @test25() {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 poison, i64* null, align 1073741824
+; CHECK-NEXT:    store i64 poison, i64* null, align 4294967296
 ; CHECK-NEXT:    tail call void @foo25(i32 0, i64 poison)
 ; CHECK-NEXT:    unreachable
 ;
@@ -613,7 +613,7 @@ declare i32 @printf(i8*, ...)
 define i32 @test29(i8* %start, i32 %X) nounwind {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 poison, i64* null, align 1073741824
+; CHECK-NEXT:    store i64 poison, i64* null, align 4294967296
 ; CHECK-NEXT:    br i1 poison, label [[IF_THEN216:%.*]], label [[IF_END363:%.*]]
 ; CHECK:       if.then216:
 ; CHECK-NEXT:    ret i32 1

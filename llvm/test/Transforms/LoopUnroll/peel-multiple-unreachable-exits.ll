@@ -334,5 +334,80 @@ unreachable.term:
   unreachable
 }
 
+define void @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(i32* %ptr, i32 %N, i32 %x, i1 %c.1) !prof !0 {
+; CHECK-LABEL: @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       then:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[EXIT_1:%.*]], label [[LOOP_LATCH]]
+; CHECK:       else:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 [[IV]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT_2:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT:%.*]], !prof [[PROF3]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       exit.1:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[UNREACHABLE_TERM:%.*]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[UNREACHABLE_TERM]]
+; CHECK:       unreachable.term:
+; CHECK-NEXT:    call void @baz()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ult i32 %iv, %N
+  br i1 %c, label %then, label %else, !prof !1
+
+then:
+  br i1 %c.1, label %exit.1, label %loop.latch
+
+else:
+  %c.2 = icmp eq i32 %iv, %x
+  br i1 %c.2, label %exit.2, label %loop.latch
+
+loop.latch:
+  %m = phi i32 [ 0, %then ], [ %x, %else ]
+  %gep = getelementptr i32, i32* %ptr, i32 %iv
+  store i32 %m, i32* %gep
+  %iv.next = add nuw nsw i32  %iv, 1
+  %c.3 = icmp ult i32 %iv.next, %N
+  br i1 %c.3, label %loop.header, label %exit, !prof !2
+
+exit:
+  ret void
+
+exit.1:
+  call void @foo()
+  br label %unreachable.term
+
+exit.2:
+  call void @bar()
+  br label %unreachable.term
+
+unreachable.term:
+  call void @baz()
+  unreachable
+}
+
 declare void @bar()
 declare void @baz()
+
+!0 = !{!"function_entry_count", i64 32768}
+!1 = !{!"branch_weights", i32 0, i32 1}
+!2 = !{!"branch_weights", i32 0, i32 1}

@@ -1921,9 +1921,10 @@ private:
   SCEV::NoWrapFlags getNoWrapFlagsFromUB(const Value *V);
 
   /// Return a scope which provides an upper bound on the defining scope of
-  /// 'S'.  Specifically, return the first instruction in said bounding scope.
+  /// 'S'. Specifically, return the first instruction in said bounding scope.
+  /// Return nullptr if the scope is trivial (function entry).
   /// (See scope definition rules associated with flag discussion above)
-  const Instruction *getDefiningScopeBound(const SCEV *S);
+  const Instruction *getNonTrivialDefiningScopeBound(const SCEV *S);
 
   /// Return a scope which provides an upper bound on the defining scope for
   /// a SCEV with the operands in Ops.

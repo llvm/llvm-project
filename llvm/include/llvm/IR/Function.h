@@ -444,7 +444,7 @@ public:
   /// Extract the alignment for a call or parameter (0=unknown).
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
-  unsigned getParamAlignment(unsigned ArgNo) const {
+  uint64_t getParamAlignment(unsigned ArgNo) const {
     if (const auto MA = getParamAlign(ArgNo))
       return MA->value();
     return 0;

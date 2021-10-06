@@ -130,6 +130,10 @@ endif()
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
+                 "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
+                 @ONLY)
+
   configure_lit_site_cfg(
     "${LIBCXX_TEST_CONFIG}"
     ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg

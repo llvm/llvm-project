@@ -45,10 +45,10 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    {0,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK:         Expressions re-written:
 ; CHECK-NEXT:    [PSE]  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom:
-; CHECK-NEXT:      ((4 * (zext i32 {1,+,1}<%for.body> to i64))<nuw><nsw> + %a)
+; CHECK-NEXT:      ((4 * (zext i32 {1,+,1}<%for.body> to i64))<nuw><nsw> + %a)<nuw>
 ; CHECK-NEXT:      --> {(4 + %a),+,4}<%for.body>
 ; CHECK-NEXT:    [PSE]  %arrayidx4 = getelementptr inbounds i32, i32* %b, i64 %conv11:
-; CHECK-NEXT:      ((4 * (zext i32 {0,+,1}<%for.body> to i64))<nuw><nsw> + %b)
+; CHECK-NEXT:      ((4 * (zext i32 {0,+,1}<%for.body> to i64))<nuw><nsw> + %b)<nuw>
 ; CHECK-NEXT:      --> {%b,+,4}<%for.body>
 define void @test1(i64 %x, i32* %a, i32* %b) {
 entry:

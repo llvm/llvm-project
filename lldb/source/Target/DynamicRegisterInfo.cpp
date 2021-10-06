@@ -42,6 +42,7 @@ void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
   m_set_names = std::move(info.m_set_names);
   m_value_regs_map = std::move(info.m_value_regs_map);
   m_invalidate_regs_map = std::move(info.m_invalidate_regs_map);
+  m_dynamic_reg_size_map = std::move(info.m_dynamic_reg_size_map);
 
   m_reg_data_byte_size = info.m_reg_data_byte_size;
   m_finalized = info.m_finalized;
@@ -272,6 +273,25 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     reg_info.byte_size = bitsize / 8;
 
+    llvm::StringRef dwarf_opcode_string;
+    if (reg_info_dict->GetValueForKeyAsString("dynamic_size_dwarf_expr_bytes",
+                                              dwarf_opcode_string)) {
+      reg_info.dynamic_size_dwarf_len = dwarf_opcode_string.size() / 2;
+      assert(reg_info.dynamic_size_dwarf_len > 0);
+
+      std::vector<uint8_t> dwarf_opcode_bytes(reg_info.dynamic_size_dwarf_len);
+      uint32_t j;
+      StringExtractor opcode_extractor(dwarf_opcode_string);
+      uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
+      UNUSED_IF_ASSERT_DISABLED(ret_val);
+      assert(ret_val == reg_info.dynamic_size_dwarf_len);
+
+      for (j = 0; j < reg_info.dynamic_size_dwarf_len; ++j)
+        m_dynamic_reg_size_map[i].push_back(dwarf_opcode_bytes[j]);
+
+      reg_info.dynamic_size_dwarf_expr_bytes = m_dynamic_reg_size_map[i].data();
+    }
+
     llvm::StringRef format_str;
     if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr)) {
       if (OptionArgParser::ToFormat(format_str.str().c_str(), reg_info.format,
@@ -398,6 +418,14 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
 
     // invalidate until Finalize() is called
     reg_info.invalidate_regs = nullptr;
+  }
+  if (reg_info.dynamic_size_dwarf_expr_bytes) {
+    for (i = 0; i < reg_info.dynamic_size_dwarf_len; ++i)
+      m_dynamic_reg_size_map[reg_num].push_back(
+          reg_info.dynamic_size_dwarf_expr_bytes[i]);
+
+    reg_info.dynamic_size_dwarf_expr_bytes =
+        m_dynamic_reg_size_map[reg_num].data();
   }
 
   m_regs.push_back(reg_info);
@@ -745,6 +773,7 @@ void DynamicRegisterInfo::Clear() {
   m_set_names.clear();
   m_value_regs_map.clear();
   m_invalidate_regs_map.clear();
+  m_dynamic_reg_size_map.clear();
   m_reg_data_byte_size = 0;
   m_finalized = false;
 }

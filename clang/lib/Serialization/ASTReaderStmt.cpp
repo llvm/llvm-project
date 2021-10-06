@@ -2324,12 +2324,18 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
-void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
+void ASTStmtReader::VisitOMPLoopTransformationDirective(
+    OMPLoopTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
+  D->setNumGeneratedLoops(Record.readUInt32());
+}
+
+void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
-  VisitOMPLoopBasedDirective(D);
+  VisitOMPLoopTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {

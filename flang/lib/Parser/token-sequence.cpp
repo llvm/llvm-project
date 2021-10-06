@@ -27,6 +27,8 @@ void TokenSequence::clear() {
 }
 
 void TokenSequence::pop_back() {
+  CHECK(!start_.empty());
+  CHECK(nextStart_ > start_.back());
   std::size_t bytes{nextStart_ - start_.back()};
   nextStart_ = start_.back();
   start_.pop_back();
@@ -80,16 +82,6 @@ bool TokenSequence::IsAnythingLeft(std::size_t at) const {
     }
   }
   return false;
-}
-
-void TokenSequence::RemoveLastToken() {
-  CHECK(!start_.empty());
-  CHECK(nextStart_ > start_.back());
-  std::size_t bytes{nextStart_ - start_.back()};
-  nextStart_ = start_.back();
-  start_.pop_back();
-  char_.erase(char_.begin() + nextStart_, char_.end());
-  provenances_.RemoveLastBytes(bytes);
 }
 
 void TokenSequence::Put(const TokenSequence &that) {
@@ -335,6 +327,43 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
             "bad character ('%c') in Fortran token"_err_en_US, ch);
       }
     }
+  }
+  return *this;
+}
+
+const TokenSequence &TokenSequence::CheckBadParentheses(
+    Messages &messages) const {
+  // First, a quick pass with no allocation for the common case
+  int nesting{0};
+  std::size_t tokens{SizeInTokens()};
+  for (std::size_t j{0}; j < tokens; ++j) {
+    CharBlock token{TokenAt(j)};
+    char ch{token.FirstNonBlank()};
+    if (ch == '(') {
+      ++nesting;
+    } else if (ch == ')') {
+      --nesting;
+    }
+  }
+  if (nesting != 0) {
+    // There's an error; diagnose it
+    std::vector<std::size_t> stack;
+    for (std::size_t j{0}; j < tokens; ++j) {
+      CharBlock token{TokenAt(j)};
+      char ch{token.FirstNonBlank()};
+      if (ch == '(') {
+        stack.push_back(j);
+      } else if (ch == ')') {
+        if (stack.empty()) {
+          messages.Say(GetTokenProvenanceRange(j), "Unmatched ')'"_err_en_US);
+          return *this;
+        }
+        stack.pop_back();
+      }
+    }
+    CHECK(!stack.empty());
+    messages.Say(
+        GetTokenProvenanceRange(stack.back()), "Unmatched '('"_err_en_US);
   }
   return *this;
 }

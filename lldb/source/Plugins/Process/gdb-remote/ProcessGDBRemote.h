@@ -58,6 +58,7 @@ struct RemoteRegisterInfo {
   uint32_t regnum_remote = LLDB_INVALID_REGNUM;
   std::vector<uint32_t> value_regs;
   std::vector<uint32_t> invalidate_regs;
+  std::vector<uint8_t> dwarf_opcode_bytes;
 };
 
 class ThreadGDBRemote;

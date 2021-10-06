@@ -366,6 +366,9 @@ if sanitizer_can_use_cxxabi:
 if not getattr(config, 'sanitizer_uses_static_cxxabi', False):
   config.available_features.add('shared_cxxabi')
 
+if not getattr(config, 'sanitizer_uses_static_unwind', False):
+  config.available_features.add('shared_unwind')
+
 if config.has_lld:
   config.available_features.add('lld-available')
 
