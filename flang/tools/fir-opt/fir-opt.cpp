@@ -13,11 +13,13 @@
 
 #include "mlir/Support/MlirOptMain.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 
 using namespace mlir;
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
+  fir::registerOptTransformPasses();
   DialectRegistry registry;
   fir::support::registerDialects(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",

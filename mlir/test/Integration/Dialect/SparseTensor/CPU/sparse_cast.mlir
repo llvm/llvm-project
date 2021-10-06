@@ -273,6 +273,22 @@ module {
     %v9 = vector.transfer_read %m9[%z], %i: memref<10xi32>, vector<10xi32>
     vector.print %v9 : vector<10xi32>
 
+    // Release the resources.
+    sparse_tensor.release %1 : tensor<10xi32, #SV>
+    sparse_tensor.release %3 : tensor<10xf32, #SV>
+    sparse_tensor.release %5 : tensor<10xf64, #SV>
+    sparse_tensor.release %7 : tensor<10xf64, #SV>
+    memref.dealloc %m0 : memref<10xf32>
+    memref.dealloc %m1 : memref<10xf32>
+    memref.dealloc %m2 : memref<10xi32>
+    memref.dealloc %m3 : memref<10xi32>
+    memref.dealloc %m4 : memref<10xf64>
+    memref.dealloc %m5 : memref<10xf32>
+    memref.dealloc %m6 : memref<10xi64>
+    memref.dealloc %m7 : memref<10xi64>
+    memref.dealloc %m8 : memref<10xi8>
+    memref.dealloc %m9 : memref<10xi32>
+
     return
   }
 }

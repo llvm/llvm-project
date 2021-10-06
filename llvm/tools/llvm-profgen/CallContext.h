@@ -18,12 +18,12 @@ namespace llvm {
 namespace sampleprof {
 
 inline std::string getCallSite(const SampleContextFrame &Callsite) {
-  std::string CallsiteStr = Callsite.CallerName.str();
+  std::string CallsiteStr = Callsite.FuncName.str();
   CallsiteStr += ":";
-  CallsiteStr += Twine(Callsite.Callsite.LineOffset).str();
-  if (Callsite.Callsite.Discriminator > 0) {
+  CallsiteStr += Twine(Callsite.Location.LineOffset).str();
+  if (Callsite.Location.Discriminator > 0) {
     CallsiteStr += ".";
-    CallsiteStr += Twine(Callsite.Callsite.Discriminator).str();
+    CallsiteStr += Twine(Callsite.Location.Discriminator).str();
   }
   return CallsiteStr;
 }

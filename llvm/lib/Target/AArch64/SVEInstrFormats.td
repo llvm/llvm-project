@@ -627,6 +627,8 @@ class sve_int_pfirst_next<bits<2> sz8_64, bits<5> opc, string asm,
 
   let Constraints = "$Pdn = $_Pdn";
   let Defs = [NZCV];
+  let isPTestLike = 1;
+  let ElementSize = pprty.ElementSize;
 }
 
 multiclass sve_int_pfirst<bits<5> opc, string asm, SDPatternOperator op> {

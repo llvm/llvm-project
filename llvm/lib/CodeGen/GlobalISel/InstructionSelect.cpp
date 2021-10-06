@@ -130,9 +130,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // Until then, keep track of the number of blocks to assert that we don't.
   const size_t NumBlocks = MF.size();
 #endif
+  // Keep track of selected blocks, so we can delete unreachable ones later.
+  DenseSet<MachineBasicBlock *> SelectedBlocks;
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     ISel->CurMBB = MBB;
+    SelectedBlocks.insert(MBB);
     if (MBB->empty())
       continue;
 
@@ -205,6 +208,15 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     if (MBB.empty())
       continue;
 
+    if (!SelectedBlocks.contains(&MBB)) {
+      // This is an unreachable block and therefore hasn't been selected, since
+      // the main selection loop above uses a postorder block traversal.
+      // We delete all the instructions in this block since it's unreachable.
+      MBB.clear();
+      // Don't delete the block in case the block has it's address taken or is
+      // still being referenced by a phi somewhere.
+      continue;
+    }
     // Try to find redundant copies b/w vregs of the same register class.
     bool ReachedBegin = false;
     for (auto MII = std::prev(MBB.end()), Begin = MBB.begin(); !ReachedBegin;) {

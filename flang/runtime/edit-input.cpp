@@ -137,7 +137,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   if (ScanNumericPrefix(io, edit, next, remaining)) {
     Put('-');
   }
-  if (!next) { // empty field means zero
+  if (next.value_or(' ') == ' ') { // empty/blank field means zero
+    remaining.reset();
     Put('0');
     return got;
   }

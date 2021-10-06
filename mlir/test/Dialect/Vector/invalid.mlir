@@ -1019,7 +1019,7 @@ func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) -> f3
 
 func @reduce_unsupported_accumulator_kind(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   // expected-error@+1 {{'vector.reduction' op no accumulator for reduction kind: min}}
-  %0 = vector.reduction "min", %arg0, %arg1 : vector<16xf32> into f32
+  %0 = vector.reduction "minf", %arg0, %arg1 : vector<16xf32> into f32
 }
 
 // -----

@@ -222,8 +222,7 @@ void LLVMMoveToContainingSection(LLVMSectionIteratorRef Sect,
    std::string Buf;
    raw_string_ostream OS(Buf);
    logAllUnhandledErrors(SecOrErr.takeError(), OS);
-   OS.flush();
-   report_fatal_error(Buf);
+   report_fatal_error(Twine(OS.str()));
   }
   *unwrap(Sect) = *SecOrErr;
 }
@@ -304,8 +303,7 @@ const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(Ret.takeError(), OS);
-    OS.flush();
-    report_fatal_error(Buf);
+    report_fatal_error(Twine(OS.str()));
   }
   return Ret->data();
 }
@@ -316,8 +314,7 @@ uint64_t LLVMGetSymbolAddress(LLVMSymbolIteratorRef SI) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(Ret.takeError(), OS);
-    OS.flush();
-    report_fatal_error(Buf);
+    report_fatal_error(Twine(OS.str()));
   }
   return *Ret;
 }

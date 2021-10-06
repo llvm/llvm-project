@@ -263,9 +263,16 @@ shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
 /// Emit ORE message.
 void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                      const BasicBlock *Block, const Function &Callee,
-                     const Function &Caller, const InlineCost &IC,
-                     bool ForProfileContext = false,
+                     const Function &Caller, bool IsMandatory,
+                     function_ref<void(OptimizationRemark &)> ExtraContext = {},
                      const char *PassName = nullptr);
+
+/// Emit ORE message based in cost (default heuristic).
+void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
+                                const BasicBlock *Block, const Function &Callee,
+                                const Function &Caller, const InlineCost &IC,
+                                bool ForProfileContext = false,
+                                const char *PassName = nullptr);
 
 /// get call site location as string
 std::string getCallSiteLocation(DebugLoc DLoc);

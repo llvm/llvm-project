@@ -204,8 +204,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
        std::string Buf;
        raw_string_ostream OS(Buf);
        logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
-       OS.flush();
-       report_fatal_error(Buf);
+       report_fatal_error(Twine(OS.str()));
       }
       if (SymbolUnique.lookup(*SymbolNameOrErr))
         Rel.SymbolName = *SymbolNameOrErr;

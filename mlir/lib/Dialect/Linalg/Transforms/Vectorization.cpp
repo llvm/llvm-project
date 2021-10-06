@@ -111,24 +111,40 @@ static VectorType extractVectorTypeFromShapedValue(Value v) {
   return VectorType::get(st.getShape(), st.getElementType());
 }
 
+static llvm::Optional<vector::CombiningKind>
+getKindForOp(Operation *reductionOp) {
+  if (!reductionOp)
+    return llvm::None;
+  return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
+             reductionOp)
+      .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
+      .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
+      .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
+      .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Default([&](auto op) { return llvm::None; });
+}
+
 /// Check whether `outputOperand` is a reduction with a single combiner
-/// operation. Return the combiner operation of the reduction, which is assumed
-/// to be a binary operation. Multiple reduction operations would impose an
-/// ordering between reduction dimensions and is currently unsupported in
-/// Linalg. This limitation is motivated by the fact that e.g. min(max(X)) !=
+/// operation. Return the combiner operation kind of the reduction, if
+/// supported. Return llvm::None, otherwise. Multiple reduction operations would
+/// impose an ordering between reduction dimensions and is currently unsupported
+/// in Linalg. This limitation is motivated by the fact that e.g. min(max(X)) !=
 /// max(min(X))
 // TODO: use in LinalgOp verification, there is a circular dependency atm.
-static Operation *getSingleBinaryOpAssumedReduction(OpOperand *outputOperand) {
+static llvm::Optional<vector::CombiningKind>
+matchLinalgReduction(OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   unsigned outputPos =
       outputOperand->getOperandNumber() - linalgOp.getNumInputs();
+  // Only single combiner operatios are supported for now.
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(linalgOp.getRegionOutputArgs(), outputPos, combinerOps) ||
       combinerOps.size() != 1)
-    return nullptr;
+    return llvm::None;
 
-  // TODO: also assert no other subsequent ops break the reduction.
-  return combinerOps[0];
+  // Return the combiner operation kind, if supported.
+  return getKindForOp(combinerOps[0]);
 }
 
 /// If `value` of assumed VectorType has a shape different than `shape`, try to
@@ -151,19 +167,6 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value,
                                        newVecType, value);
 }
 
-static llvm::Optional<vector::CombiningKind>
-getKindForOp(Operation *reductionOp) {
-  if (!reductionOp)
-    return llvm::None;
-  return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
-             reductionOp)
-      .Case<AddIOp, AddFOp>([&](auto op) {
-        return llvm::Optional<vector::CombiningKind>{
-            vector::CombiningKind::ADD};
-      })
-      .Default([&](auto op) { return llvm::None; });
-}
-
 /// If value of assumed VectorType has a shape different than `shape`, build and
 /// return a new vector.broadcast to `shape`.
 /// Otherwise, just return value.
@@ -173,9 +176,7 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
   auto vecType = value.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getShape() == targetVectorType.getShape())
     return value;
-  // At this point, we know we need to reduce. Detect the reduction operator.
-  // TODO: Use the generic reduction detection util.
-  Operation *reductionOp = getSingleBinaryOpAssumedReduction(outputOperand);
+
   unsigned pos = 0;
   MLIRContext *ctx = b.getContext();
   SmallVector<AffineExpr> exprs;
@@ -183,8 +184,9 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
     if (isParallelIterator(s))
       exprs.push_back(getAffineDimExpr(pos++, ctx));
   auto loc = value.getLoc();
-  // TODO: reuse common CombiningKing logic and support more than add.
-  auto maybeKind = getKindForOp(reductionOp);
+
+  // At this point, we know we need to reduce. Detect the reduction operator.
+  auto maybeKind = matchLinalgReduction(outputOperand);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
   unsigned idx = 0;
   SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
@@ -597,8 +599,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
   if (llvm::none_of(op.iterator_types(), isReductionIterator))
     return failure();
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    Operation *reductionOp = getSingleBinaryOpAssumedReduction(opOperand);
-    if (!getKindForOp(reductionOp))
+    if (!matchLinalgReduction(opOperand))
       return failure();
   }
   return success();

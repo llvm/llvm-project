@@ -78,3 +78,9 @@ vfneg.v v2, v1, v0.t
 # ALIAS:    vfabs.v         v2, v1, v0.t     # encoding: [0x57,0x91,0x10,0x28]
 # NO-ALIAS: vfsgnjx.vv      v2, v1, v1, v0.t # encoding: [0x57,0x91,0x10,0x28]
 vfabs.v v2, v1, v0.t
+# ALIAS:    vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
+# NO-ALIAS: vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
+vle1.v v8, (a0)
+# ALIAS:    vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
+# NO-ALIAS: vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
+vse1.v v8, (a0)

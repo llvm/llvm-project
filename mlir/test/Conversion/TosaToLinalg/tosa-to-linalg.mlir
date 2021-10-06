@@ -432,6 +432,18 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_simple_ui8
+func @test_simple_ui8(%arg0: tensor<1xui8>) -> () {
+
+  // CHECK: linalg.generic
+  // CHECK: uitofp
+  %0 = "tosa.cast"(%arg0) : (tensor<1xui8>) -> tensor<1xf32>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_i8
 func @test_i8(%arg0: tensor<1xi8>) -> () {
   // CHECK: linalg.generic

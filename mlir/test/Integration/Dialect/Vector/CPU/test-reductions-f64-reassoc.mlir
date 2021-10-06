@@ -27,10 +27,10 @@ func @entry() {
   %1 = vector.reduction "mul", %v2 : vector<64xf64> into f64
   vector.print %1 : f64
   // CHECK: 6
-  %2 = vector.reduction "min", %v2 : vector<64xf64> into f64
+  %2 = vector.reduction "minf", %v2 : vector<64xf64> into f64
   vector.print %2 : f64
   // CHECK: 1
-  %3 = vector.reduction "max", %v2 : vector<64xf64> into f64
+  %3 = vector.reduction "maxf", %v2 : vector<64xf64> into f64
   vector.print %3 : f64
   // CHECK: 3
 
