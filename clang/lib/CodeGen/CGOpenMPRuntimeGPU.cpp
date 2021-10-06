@@ -1024,6 +1024,34 @@ static void setPropertyWorkGroupSize(CodeGenModule &CGM, StringRef Name,
   CGM.addCompilerUsedGlobal(GVMode);
 }
 
+// Compute the correct number of threads in a team
+// to accommodate for a master thread.
+// Keep aligned with amdgpu plugin code located in function getLaunchVals
+static int ComputeGenericWorkgroupSize(CodeGenModule &CGM, int WorkgroupSize) {
+  assert(WorkgroupSize >= 0);
+  int MaxWorkGroupSz = CGM.getTarget().getGridValue().GV_Max_WG_Size;
+  int WorkgroupSizeWithMaster = -1;
+
+  // Add master thread in additional warp for GENERIC mode
+  // Only one additional thread is started, not an entire warp
+
+  if (WorkgroupSize >= MaxWorkGroupSz)
+    // Do not exceed max number of threads: sacrifice last warp for
+    // the thread master
+    WorkgroupSizeWithMaster =
+        MaxWorkGroupSz - CGM.getTarget().getGridValue().GV_Warp_Size + 1;
+  else if ((unsigned int)WorkgroupSize <
+           CGM.getTarget().getGridValue().GV_Warp_Size)
+    // Cap threadsPerGroup at WarpSize level as we need a master
+    WorkgroupSizeWithMaster = CGM.getTarget().getGridValue().GV_Warp_Size + 1;
+  else
+    WorkgroupSizeWithMaster =
+        CGM.getTarget().getGridValue().GV_Warp_Size *
+            (WorkgroupSize / CGM.getTarget().getGridValue().GV_Warp_Size) +
+        1;
+  return WorkgroupSizeWithMaster;
+}
+
 void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                                             const OMPExecutableDirective &D,
                                             llvm::Function *&OutlinedFn,
@@ -1039,8 +1067,6 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       isOpenMPParallelDirective(D.getDirectiveKind())) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-    int MaxWorkGroupSz =
-        CGM.getTarget().getGridValue().GV_Max_WG_Size;
     int compileTimeThreadLimit = 0;
     // Only one of thread_limit or num_threads is used, cant do it for both
     if (ThreadLimitClause && !NumThreadsClause) {
@@ -1058,22 +1084,28 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
     //       compileTimeThreadLimit);
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
     if (compileTimeThreadLimit > 0) {
-      // Add the WarpSize to gneric, to reflect what runtime dispatch does.
       if (IsGeneric)
-        compileTimeThreadLimit +=
-            CGM.getTarget().getGridValue().GV_Warp_Size;
-      if (compileTimeThreadLimit > MaxWorkGroupSz)
-        compileTimeThreadLimit = MaxWorkGroupSz;
+        compileTimeThreadLimit =
+            ComputeGenericWorkgroupSize(CGM, compileTimeThreadLimit);
       std::string AttrVal = llvm::utostr(compileTimeThreadLimit);
       FlatAttr = compileTimeThreadLimit;
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                             AttrVal + "," + AttrVal);
+      flatAttrEmitted = true;
     } // end   > 0
   } // end of amdgcn teams or parallel directive
 
   // emit amdgpu-flat-work-group-size if not emitted already.
   if (!flatAttrEmitted) {
-    std::string FlatAttrVal = llvm::utostr(DefaultWorkGroupSz);
+    // When outermost construct does not have teams or parallel
+    // workgroup size is still based on mode
+    int GenericModeWorkgroupSize = DefaultWorkGroupSz;
+    if (IsGeneric)
+      GenericModeWorkgroupSize =
+          ComputeGenericWorkgroupSize(CGM, DefaultWorkGroupSz);
+
+    std::string FlatAttrVal = llvm::utostr(GenericModeWorkgroupSize);
+    FlatAttr = GenericModeWorkgroupSize;
     OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                             FlatAttrVal + "," + FlatAttrVal);
   }

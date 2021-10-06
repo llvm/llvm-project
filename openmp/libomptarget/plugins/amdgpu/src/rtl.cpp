@@ -1995,16 +1995,15 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
     // Add master thread in additional warp for GENERIC mode
     // Only one additional thread is started, not an entire warp
 
-    // Do not exceed max number of threads: sacrifice last warp for
-    // the thread master
-    if (threadsPerGroup == RTLDeviceInfoTy::Max_WG_Size)
-      threadsPerGroup -= WarpSize - 1;
-    else {
+    if (threadsPerGroup >= RTLDeviceInfoTy::Max_WG_Size)
+      // Do not exceed max number of threads: sacrifice last warp for
+      // the thread master
+      threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size - WarpSize + 1;
+    else if (threadsPerGroup < WarpSize)
       // Cap threadsPerGroup at WarpSize level as we need a master
-      if (threadsPerGroup < WarpSize)
-        threadsPerGroup = WarpSize;
+      threadsPerGroup = WarpSize + 1;
+    else
       threadsPerGroup = WarpSize * (threadsPerGroup / WarpSize) + 1;
-    }
 
     DP("Adding master thread (+1)\n");
   }
