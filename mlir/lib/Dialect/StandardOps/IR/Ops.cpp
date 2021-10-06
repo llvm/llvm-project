@@ -1560,9 +1560,13 @@ OpFoldResult OrOp::fold(ArrayRef<Attribute> operands) {
   /// or(x, 0) -> x
   if (matchPattern(rhs(), m_Zero()))
     return lhs();
-  /// or(x,x) -> x
+  /// or(x, x) -> x
   if (lhs() == rhs())
     return rhs();
+  /// or(x, <all ones>) -> <all ones>
+  if (auto rhsAttr = operands[1].dyn_cast_or_null<IntegerAttr>())
+    if (rhsAttr.getValue().isAllOnes())
+      return rhsAttr;
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a | b; });
