@@ -138,9 +138,18 @@ bool OMPLoopBasedDirective::doForAllLoops(
 
       Stmt *TransformedStmt = Dir->getTransformedStmt();
       if (!TransformedStmt) {
-        // May happen if the loop transformation does not result in a
-        // generated loop (such as full unrolling).
-        break;
+        unsigned NumGeneratedLoops = Dir->getNumGeneratedLoops();
+        if (NumGeneratedLoops == 0) {
+          // May happen if the loop transformation does not result in a
+          // generated loop (such as full unrolling).
+          break;
+        }
+        if (NumGeneratedLoops > 0) {
+          // The loop transformation construct has generated loops, but these
+          // may not have been generated yet due to being in a dependent
+          // context.
+          return true;
+        }
       }
 
       CurStmt = TransformedStmt;
@@ -419,10 +428,13 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
 OMPUnrollDirective *
 OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                           Stmt *PreInits) {
+                           Stmt *AssociatedStmt, unsigned NumGeneratedLoops,
+                           Stmt *TransformedStmt, Stmt *PreInits) {
+  assert(NumGeneratedLoops <= 1 && "Unrolling generates at most one loop");
+
   auto *Dir = createDirective<OMPUnrollDirective>(
       C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+  Dir->setNumGeneratedLoops(NumGeneratedLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;

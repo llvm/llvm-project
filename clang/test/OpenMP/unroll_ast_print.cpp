@@ -124,4 +124,26 @@ void unroll_template() {
   unroll_templated<int,0,1024,1,4>();
 }
 
+
+// PRINT-LABEL: template <int Factor> void unroll_templated_factor(int start, int stop, int step) {
+// DUMP-LABEL:  FunctionTemplateDecl {{.*}} unroll_templated_factor
+template <int Factor>
+void unroll_templated_factor(int start, int stop, int step) {
+  // PRINT: #pragma omp unroll partial(Factor)
+  // DUMP:      OMPUnrollDirective
+  // DUMP-NEXT: OMPPartialClause
+  // DUMP-NEXT:   DeclRefExpr {{.*}} 'Factor' 'int'
+  #pragma omp unroll partial(Factor)
+    // PRINT-NEXT: for (int i = start; i < stop; i += step)
+    // DUMP-NEXT:  ForStmt
+    for (int i = start; i < stop; i += step)
+      // PRINT-NEXT: body(i);
+      // DUMP:  CallExpr
+      body(i);
+}
+void unroll_template_factor() {
+  unroll_templated_factor<4>(0, 42, 2);
+}
+
+
 #endif
