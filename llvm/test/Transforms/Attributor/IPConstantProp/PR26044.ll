@@ -153,7 +153,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
 ; IS__CGSCC_OPM:       if.end:
 ; IS__CGSCC_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
+; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 1073741824
 ; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
 ; IS__CGSCC_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND1]]
@@ -169,7 +169,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
 ; IS__CGSCC_NPM:       if.end:
 ; IS__CGSCC_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
+; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 1073741824
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND1]]
 ; IS__CGSCC_NPM:       exit:

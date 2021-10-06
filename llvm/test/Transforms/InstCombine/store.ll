@@ -4,7 +4,7 @@
 define void @test1(i32* %P) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    store i32 123, i32* undef, align 4
-; CHECK-NEXT:    store i32 poison, i32* null, align 4294967296
+; CHECK-NEXT:    store i32 poison, i32* null, align 1073741824
 ; CHECK-NEXT:    ret void
 ;
   store i32 undef, i32* %P

@@ -147,7 +147,7 @@ class SafeStack {
   ///
   /// 16 seems like a reasonable upper bound on the alignment of objects that we
   /// might expect to appear on the stack on most common targets.
-  static constexpr uint64_t StackAlignment = 16;
+  enum { StackAlignment = 16 };
 
   /// Return the value of the stack canary.
   Value *getStackGuard(IRBuilder<> &IRB, Function &F);
@@ -544,7 +544,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     // Ensure the object is properly aligned.
-    uint64_t Align = std::max(DL.getPrefTypeAlignment(Ty), AI->getAlignment());
+    unsigned Align =
+        std::max((unsigned)DL.getPrefTypeAlignment(Ty), AI->getAlignment());
 
     SSL.addObject(AI, Size, Align,
                   ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
@@ -675,9 +676,9 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     SP = IRB.CreateSub(SP, Size);
 
     // Align the SP value to satisfy the AllocaInst, type and stack alignments.
-    uint64_t Align =
-        std::max(std::max(DL.getPrefTypeAlignment(Ty), AI->getAlignment()),
-                 StackAlignment);
+    unsigned Align = std::max(
+        std::max((unsigned)DL.getPrefTypeAlignment(Ty), AI->getAlignment()),
+        (unsigned)StackAlignment);
 
     assert(isPowerOf2_32(Align));
     Value *NewTop = IRB.CreateIntToPtr(

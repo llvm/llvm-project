@@ -176,7 +176,7 @@ const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
 
-static const uint64_t kAllocaRzSize = 32;
+static const unsigned kAllocaRzSize = 32;
 
 // ASanAccessInfo implementation constants.
 constexpr size_t kCompileKernelShift = 0;
@@ -3580,7 +3580,7 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
 void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   IRBuilder<> IRB(AI);
 
-  const uint64_t Alignment = std::max(kAllocaRzSize, AI->getAlignment());
+  const unsigned Alignment = std::max(kAllocaRzSize, AI->getAlignment());
   const uint64_t AllocaRedzoneMask = kAllocaRzSize - 1;
 
   Value *Zero = Constant::getNullValue(IntptrTy);
