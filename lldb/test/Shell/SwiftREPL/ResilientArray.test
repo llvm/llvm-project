@@ -1,15 +1,12 @@
 // REQUIRES: system-darwin
 // REQUIRES: swift
 
-// rdar://82038873
-// XFAIL: *
-
 // RUN: %lldb --repl < %s | FileCheck %s
 
 import Foundation
 
 let x : [URL] = [URL(string: "https://github.com")!, URL(string: "https://apple.com")!]
-// CHECK: {{x}}: [URL] = 2 values {
+// CHECK: {{x}}: [Foundation.URL] = 2 values {
 // CHECK-NEXT:  [0] = "https://github.com"
 // CHECK-NEXT:  [1] = "https://apple.com"
 // CHECK-NEXT: }
