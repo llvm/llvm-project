@@ -2663,9 +2663,6 @@ TEST(APIntTest, trunc) {
   APInt val(32, 0xFFFFFFFF);
   EXPECT_EQ(0xFFFF, val.trunc(16));
   EXPECT_EQ(0xFFFFFFFF, val.trunc(32));
-  EXPECT_EQ(0xFFFF, val.truncOrSelf(16));
-  EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(32));
-  EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));
 }
 
 TEST(APIntTest, concat) {
