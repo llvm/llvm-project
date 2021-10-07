@@ -328,8 +328,9 @@ one list by the parser.
 Miscellaneous Attributes
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The attributes ``IsAddressTaken``, ``IsLandingPad`` and ``Alignment`` can be
-specified in brackets after the block's definition:
+The attributes ``IsAddressTaken``, ``IsLandingPad``,
+``IsInlineAsmBrIndirectTarget`` and ``Alignment`` can be specified in brackets
+after the block's definition:
 
 .. code-block:: text
 
@@ -338,6 +339,8 @@ specified in brackets after the block's definition:
     bb.2.else (align 4):
       <instructions>
     bb.3(landing-pad, align 4):
+      <instructions>
+    bb.4 (inlineasm-br-indirect-target):
       <instructions>
 
 .. TODO: Describe the way the reference to an unnamed LLVM IR block can be
