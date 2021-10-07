@@ -24,9 +24,9 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
-  // CHECK:   operands.append(variadic1)
-  // CHECK:   operands.append(non_variadic)
-  // CHECK:   if variadic2 is not None: operands.append(variadic2)
+  // CHECK:   operands.append(_get_op_results_or_values(variadic1))
+  // CHECK:   operands.append(_get_op_result_or_value(non_variadic))
+  // CHECK:   if variadic2 is not None: operands.append(_get_op_result_or_value(variadic2))
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -150,8 +150,8 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
-  // CHECK:   operands.append(_gen_arg_0)
-  // CHECK:   operands.append(_gen_arg_2)
+  // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_0))
+  // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_2))
   // CHECK:   if bool(in_): attributes["in"] = _ods_ir.UnitAttr.get(
   // CHECK:     _ods_get_default_loc_context(loc))
   // CHECK:   if is_ is not None: attributes["is"] = is_
@@ -197,9 +197,9 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK:   results.append(i32)
   // CHECK:   results.append(_gen_res_1)
   // CHECK:   results.append(i64)
-  // CHECK:   operands.append(_gen_arg_0)
-  // CHECK:   operands.append(f32)
-  // CHECK:   operands.append(_gen_arg_2)
+  // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_0))
+  // CHECK:   operands.append(_get_op_result_or_value(f32))
+  // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_2))
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -230,8 +230,8 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
-  // CHECK:   operands.append(non_variadic)
-  // CHECK:   operands.extend(variadic)
+  // CHECK:   operands.append(_get_op_result_or_value(non_variadic))
+  // CHECK:   operands.extend(_get_op_results_or_values(variadic))
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -285,7 +285,7 @@ def PythonKeywordOp : TestOp<"python_keyword"> {
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
-  // CHECK:   operands.append(in_)
+  // CHECK:   operands.append(_get_op_result_or_value(in_))
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -353,8 +353,8 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK:   attributes = {}
   // CHECK:   results.append(i64)
   // CHECK:   results.append(f64)
-  // CHECK:   operands.append(i32)
-  // CHECK:   operands.append(f32)
+  // CHECK:   operands.append(_get_op_result_or_value(i32))
+  // CHECK:   operands.append(_get_op_result_or_value(f32))
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
