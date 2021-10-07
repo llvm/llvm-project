@@ -267,8 +267,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "New standalone runtimes build"
-    command: "libcxx/utils/ci/run-buildbot new-standalone"
+  - label: "Legacy LLVM_ENABLE_PROJECTS build"
+    command: "libcxx/utils/ci/run-buildbot legacy-project-build"
     artifact_paths:
       - "**/test-results.xml"
     agents:

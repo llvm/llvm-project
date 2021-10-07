@@ -78,6 +78,7 @@ function clean() {
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
+          -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -88,8 +89,7 @@ function generate-cmake-base() {
 
 function generate-cmake() {
     generate-cmake-base \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_CXX_ABI=libcxxabi \
           "${@}"
 }
@@ -104,7 +104,7 @@ function generate-cmake-libcxx-win() {
     # even if it uses a non-permanent ABI.
 
     generate-cmake-base \
-          -S "${MONOREPO_ROOT}/libcxx" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx" \
           -DCMAKE_C_COMPILER=clang-cl \
           -DCMAKE_CXX_COMPILER=clang-cl \
           -DLIBCXX_ENABLE_FILESYSTEM=YES \
@@ -437,21 +437,6 @@ documentation)
     echo "+++ Generating documentation"
     ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
-new-standalone)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/runtimes" \
-          -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-          -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-
-    check-runtimes
-;;
 runtimes-build)
     clean
 
@@ -482,6 +467,21 @@ runtimes-build)
 legacy-test-config)
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="legacy.cfg.in"
+    check-runtimes
+;;
+legacy-project-build)
+    clean
+
+    echo "--- Generating CMake"
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
+          -DLIBCXX_CXX_ABI=libcxxabi
     check-runtimes
 ;;
 legacy-standalone)

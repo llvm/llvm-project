@@ -25,50 +25,58 @@ libc++ :ref:`here <using-libcxx>`.
 The default build
 =================
 
-By default, libc++ and libc++abi are built as sub-projects of the LLVM project.
-This can be achieved with the usual CMake invocation:
+The default way of building libc++, libc++abi and libunwind is to root the CMake
+invocation at ``<monorepo>/runtimes``. While those projects are under the LLVM
+umbrella, they are different in nature from other build tools, so it makes sense
+to treat them as a separate set of entities. The default build can be achieved
+with the following CMake invocation:
 
 .. code-block:: bash
 
   $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" # Configure
-  $ ninja -C build cxx cxxabi                                                 # Build
-  $ ninja -C build check-cxx check-cxxabi                                     # Test
-  $ ninja -C build install-cxx install-cxxabi                                 # Install
+  $ cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" # Configure
+  $ ninja -C build cxx cxxabi unwind                                                        # Build
+  $ ninja -C build check-cxx check-cxxabi check-unwind                                      # Test
+  $ ninja -C build install-cxx install-cxxabi install-unwind                                # Install
 
 .. note::
   See :ref:`CMake Options` below for more configuration options.
 
-After building the ``install-cxx`` and ``install-cxxabi`` targets, shared libraries
-for libc++ and libc++abi should now be present in ``<CMAKE_INSTALL_PREFIX>/lib``, and
-headers in ``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See :ref:`using an alternate
-libc++ installation <alternate libcxx>` for information on how to use this libc++ over
-the default one.
+After building the various ``install-XXX`` targets, shared libraries for libc++, libc++abi and
+libunwind should now be present in ``<CMAKE_INSTALL_PREFIX>/lib``, and headers in
+``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See :ref:`using an alternate libc++ installation
+<alternate libcxx>` for information on how to use this libc++ over the default one.
 
-In the default configuration, libc++ and libc++abi will be built using the compiler available
-by default on your system. It is also possible to bootstrap Clang and build libc++ with it.
+In the default configuration, the runtimes will be built using the compiler available by default
+on your system. Of course, you can change what compiler is being used with the usual CMake
+variables. If you wish to build the runtimes from a just-built Clang, the bootstrapping build
+explained below makes this task easy.
 
 
 Bootstrapping build
 ===================
 
-It is also possible to build Clang and then build libc++ and libc++abi using that
-just-built compiler. This is the correct way to build libc++ when putting together
-a toolchain, or when the system compiler is not adequate to build libc++ (too old,
-unsupported, etc.). This type of build is also commonly called a "Runtimes build":
+It is possible to build Clang and then build the runtimes using that just-built compiler in a
+single CMake invocation. This is usually the correct way to build the runtimes when putting together
+a toolchain, or when the system compiler is not adequate to build them (too old, unsupported, etc.).
+To do this, use the following CMake invocation, and in particular notice how we're now rooting the
+CMake invocation at ``<monorepo>/llvm``:
 
 .. code-block:: bash
 
   $ mkdir build
-  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="clang"            \  # Configure
-                                    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="clang"                      \  # Configure
+                                    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
                                     -DLLVM_RUNTIME_TARGETS="<target-triple>"
-  $ ninja -C build runtimes                                                      # Build
-  $ ninja -C build check-runtimes                                                # Test
-  $ ninja -C build install-runtimes                                              # Install
+  $ ninja -C build runtimes                                                                # Build
+  $ ninja -C build check-runtimes                                                          # Test
+  $ ninja -C build install-runtimes                                                        # Install
 
+.. note::
+  This type of build is also commonly called a "Runtimes build", but we would like to move
+  away from that terminology, which is too confusing.
 
 Support for Windows
 ===================
