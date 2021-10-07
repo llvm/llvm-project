@@ -198,6 +198,12 @@ public:
   /// hanging off of the globals.
   void removeDeadConstantUsers() const;
 
+  /// Return true if the constant has exactly one live use.
+  ///
+  /// This returns the same result as calling Value::hasOneUse after
+  /// Constant::removeDeadConstantUsers, but doesn't remove dead constants.
+  bool hasOneLiveUse() const;
+
   const Constant *stripPointerCasts() const {
     return cast<Constant>(Value::stripPointerCasts());
   }
