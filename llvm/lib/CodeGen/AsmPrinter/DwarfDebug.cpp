@@ -2102,12 +2102,22 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  for (const auto &MBB : *MF)
-    for (const auto &MI : MBB)
+  DebugLoc LineZeroLoc;
+  for (const auto &MBB : *MF) {
+    for (const auto &MI : MBB) {
       if (!MI.isMetaInstruction() && !MI.getFlag(MachineInstr::FrameSetup) &&
-          MI.getDebugLoc())
-        return MI.getDebugLoc();
-  return DebugLoc();
+          MI.getDebugLoc()) {
+        // Scan forward to try to find a non-zero line number. The prologue_end
+        // marks the first breakpoint in the function after the frame setup, and
+        // a compiler-generated line 0 location is not a meaningful breakpoint.
+        // If none is found, return the first location after the frame setup.
+        if (MI.getDebugLoc().getLine())
+          return MI.getDebugLoc();
+        LineZeroLoc = MI.getDebugLoc();
+      }
+    }
+  }
+  return LineZeroLoc;
 }
 
 /// Register a source line with debug info. Returns the  unique label that was
