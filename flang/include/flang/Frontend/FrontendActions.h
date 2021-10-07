@@ -84,6 +84,9 @@ class DebugDumpParseTreeNoSemaAction : public PrescanAndParseAction {
 
 //===----------------------------------------------------------------------===//
 // PrescanAndSema Actions
+//
+// These actions will parse the input, run the semantic checks and execute
+// their actions provided that no parsing or semantic errors were found.
 //===----------------------------------------------------------------------===//
 class PrescanAndSemaAction : public FrontendAction {
 
@@ -107,10 +110,6 @@ class DebugDumpParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 
-class DebugDumpAllAction : public PrescanAndSemaAction {
-  void ExecuteAction() override;
-};
-
 class DebugPreFIRTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
@@ -129,6 +128,22 @@ class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
 
 class PluginParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override = 0;
+};
+
+//===----------------------------------------------------------------------===//
+// PrescanAndSemaDebug Actions
+//
+// These actions will parse the input, run the semantic checks and execute
+// their actions regardless of whether any semantic errors are found.
+//===----------------------------------------------------------------------===//
+class PrescanAndSemaDebugAction : public FrontendAction {
+
+  void ExecuteAction() override = 0;
+  bool BeginSourceFileAction() override;
+};
+
+class DebugDumpAllAction : public PrescanAndSemaDebugAction {
+  void ExecuteAction() override;
 };
 
 } // namespace Fortran::frontend

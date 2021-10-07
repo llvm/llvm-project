@@ -40,6 +40,11 @@ bool PrescanAndSemaAction::BeginSourceFileAction() {
   return RunPrescan() && RunParse() && RunSemanticChecks();
 }
 
+bool PrescanAndSemaDebugAction::BeginSourceFileAction() {
+  // Semantic checks are made to succeed unconditionally.
+  return RunPrescan() && RunParse() && (RunSemanticChecks() || true);
+}
+
 //===----------------------------------------------------------------------===//
 // Custom ExecuteAction
 //===----------------------------------------------------------------------===//
