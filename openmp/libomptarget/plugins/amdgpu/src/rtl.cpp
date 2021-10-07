@@ -595,9 +595,7 @@ public:
       hsa_status_t Err = hsa_amd_agent_iterate_memory_pools(
           Agent, core::addMemoryPool, static_cast<void *>(&HostPools));
       if (Err != HSA_STATUS_SUCCESS) {
-        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-           "Iterate all memory pools", get_error_string(Err));
-        return Err;
+        DP("addMemoryPool returned %s, continuing\n", get_error_string(Err));
       }
     }
 

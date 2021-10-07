@@ -1205,12 +1205,12 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
       &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   Register SrcReg = Src.getReg();
+  isKill = MI.killsRegister(SrcReg);
 
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
   if (Opc != X86::LEA64_32r) {
     NewSrc = SrcReg;
-    isKill = Src.isKill();
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
     if (NewSrc.isVirtual() && !MF.getRegInfo().constrainRegClass(NewSrc, RC))
@@ -1225,8 +1225,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp = Src;
     ImplicitOp.setImplicit();
 
-    NewSrc = getX86SubSuperRegister(Src.getReg(), 64);
-    isKill = Src.isKill();
+    NewSrc = getX86SubSuperRegister(SrcReg, 64);
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
@@ -1235,7 +1234,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     MachineInstr *Copy =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY))
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
-            .add(Src);
+            .addReg(SrcReg, getKillRegState(isKill));
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
@@ -1532,13 +1531,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     else
       Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
-    bool isKill;
-    Register SrcReg;
-    MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
-                        SrcReg, isKill, ImplicitOp, LV))
-      return nullptr;
-
     const MachineOperand &Src2 = MI.getOperand(2);
     bool isKill2;
     Register SrcReg2;
@@ -1546,6 +1538,20 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/ false,
                         SrcReg2, isKill2, ImplicitOp2, LV))
       return nullptr;
+
+    bool isKill;
+    Register SrcReg;
+    MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
+    if (Src.getReg() == Src2.getReg()) {
+      // Don't call classify LEAReg a second time on the same register, in case
+      // the first call inserted a COPY from Src2 and marked it as killed.
+      isKill = isKill2;
+      SrcReg = SrcReg2;
+    } else {
+      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true,
+                          SrcReg, isKill, ImplicitOp, LV))
+        return nullptr;
+    }
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc)).add(Dest);
     if (ImplicitOp.getReg() != 0)
