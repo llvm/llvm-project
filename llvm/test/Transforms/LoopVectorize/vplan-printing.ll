@@ -125,7 +125,7 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT:   Successor(s): pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%3> = ir<%tmp4>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%tmp4>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): if.then.0
@@ -134,8 +134,8 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT: Successor(s): for.inc
 ; CHECK-EMPTY:
 ; CHECK-NEXT: for.inc:
-; CHECK-NEXT:   EMIT vp<%4> = not ir<%cmp>
-; CHECK-NEXT:   BLEND %d = ir<0>/vp<%4> vp<%3>/ir<%cmp>
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%cmp>
+; CHECK-NEXT:   BLEND %d = ir<0>/vp<[[NOT]]> vp<[[PRED]]>/ir<%cmp>
 ; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>
 ; CHECK-NEXT:   WIDEN store ir<%idx>, ir<%d>
 ; CHECK-NEXT: No successors
