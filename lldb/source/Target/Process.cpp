@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/AssertFrameRecognizer.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -70,6 +71,10 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
+
+#ifdef LLDB_ENABLE_SWIFT
+#include "swift/Basic/Version.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -297,6 +302,14 @@ bool ProcessProperties::GetWarningsUnsupportedLanguage() const {
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_process_properties[idx].default_uint_value != 0);
 }
+
+#ifdef LLDB_ENABLE_SWIFT
+bool ProcessProperties::GetWarningsToolchainMismatch() const {
+  const uint32_t idx = ePropertyWarningToolchainMismatch;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_process_properties[idx].default_uint_value != 0);
+}
+#endif
 
 bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
@@ -5907,12 +5920,31 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
   }
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 void Process::PrintWarningCantLoadSwiftModule(const Module &module,
                                               std::string details) {
   PrintWarning(Process::Warnings::eWarningsSwiftImport, (void *)&module,
                "%s: Cannot load Swift type information; %s\n",
                module.GetFileSpec().GetCString(), details.c_str());
 }
+
+void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
+  if (!GetWarningsToolchainMismatch())
+    return;
+  if (!sc.module_sp || !sc.comp_unit)
+    return;
+  if (sc.GetLanguage() != eLanguageTypeSwift)
+    return;
+  if (SymbolFile *sym_file = sc.module_sp->GetSymbolFile())
+    if (sym_file->GetProducerVersion(*sc.comp_unit) !=
+        swift::version::Version::getCurrentCompilerVersion())
+      PrintWarning(Process::Warnings::eWarningsToolchainMismatch,
+                   sc.module_sp.get(),
+                   "%s was compiled with a Swift compiler from a different "
+                   "toolchain. Swift expression evaluation may not work.\n",
+                   sc.module_sp->GetFileSpec().GetFilename().GetCString());
+}
+#endif
 
 void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   if (!GetWarningsUnsupportedLanguage())
