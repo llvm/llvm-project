@@ -83,6 +83,7 @@ class CrashLog(symbolication.Symbolicator):
             self.registers = dict()
             self.reason = None
             self.queue = None
+            self.crashed = False
             self.app_specific_backtrace = app_specific_backtrace
 
         def dump(self, prefix):
@@ -160,6 +161,9 @@ class CrashLog(symbolication.Symbolicator):
                 print()
                 for reg in self.registers.keys():
                     print("    %-8s = %#16.16x" % (reg, self.registers[reg]))
+            elif self.crashed:
+               print()
+               print("No thread state (register information) available")
 
         def add_ident(self, ident):
             if ident not in self.idents:
@@ -505,8 +509,10 @@ class JSONCrashLogParser:
                 thread.reason = json_thread['name']
             if json_thread.get('triggered', False):
                 self.crashlog.crashed_thread_idx = idx
-                thread.registers = self.parse_thread_registers(
-                    json_thread['threadState'])
+                thread.crashed = True
+                if 'threadState' in json_thread:
+                    thread.registers = self.parse_thread_registers(
+                        json_thread['threadState'])
             thread.queue = json_thread.get('queue')
             self.parse_frames(thread, json_thread.get('frames', []))
             self.crashlog.threads.append(thread)
