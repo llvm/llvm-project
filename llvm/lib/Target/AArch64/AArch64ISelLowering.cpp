@@ -7630,11 +7630,14 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
 
 SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
                                                   SelectionDAG &DAG) const {
-
   EVT Ty = Op.getValueType();
   auto Idx = Op.getConstantOperandAPInt(2);
-  if (Idx.sge(-1) && Idx.slt(Ty.getVectorMinNumElements()))
+
+  // This will select to an EXT instruction, which has a maximum immediate
+  // value of 255, hence 2048-bits is the maximum value we can lower.
+  if (Idx.sge(-1) && Idx.slt(2048 / Ty.getVectorElementType().getSizeInBits()))
     return Op;
+
   return SDValue();
 }
 

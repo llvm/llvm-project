@@ -714,28 +714,40 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   return Result;
 }
 
-/// If the specified constantexpr is dead, remove it. This involves recursively
-/// eliminating any dead users of the constantexpr.
-static bool removeDeadUsersOfConstant(const Constant *C) {
+/// Return true if the specified constantexpr is dead. This involves
+/// recursively traversing users of the constantexpr.
+/// If RemoveDeadUsers is true, also remove dead users at the same time.
+static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (isa<GlobalValue>(C)) return false; // Cannot remove this
 
-  while (!C->use_empty()) {
-    const Constant *User = dyn_cast<Constant>(C->user_back());
+  Value::const_user_iterator I = C->user_begin(), E = C->user_end();
+  while (I != E) {
+    const Constant *User = dyn_cast<Constant>(*I);
     if (!User) return false; // Non-constant usage;
-    if (!removeDeadUsersOfConstant(User))
+    if (!constantIsDead(User, RemoveDeadUsers))
       return false; // Constant wasn't dead
+
+    // Just removed User, so the iterator was invalidated.
+    // Since we return immediately upon finding a live user, we can always
+    // restart from user_begin().
+    if (RemoveDeadUsers)
+      I = C->user_begin();
+    else
+      ++I;
   }
 
-  // If C is only used by metadata, it should not be preserved but should have
-  // its uses replaced.
-  if (C->isUsedByMetadata()) {
-    const_cast<Constant *>(C)->replaceAllUsesWith(
-        UndefValue::get(C->getType()));
+  if (RemoveDeadUsers) {
+    // If C is only used by metadata, it should not be preserved but should
+    // have its uses replaced.
+    if (C->isUsedByMetadata()) {
+      const_cast<Constant *>(C)->replaceAllUsesWith(
+          UndefValue::get(C->getType()));
+    }
+    const_cast<Constant *>(C)->destroyConstant();
   }
-  const_cast<Constant*>(C)->destroyConstant();
+
   return true;
 }
-
 
 void Constant::removeDeadConstantUsers() const {
   Value::const_user_iterator I = user_begin(), E = user_end();
@@ -748,7 +760,7 @@ void Constant::removeDeadConstantUsers() const {
       continue;
     }
 
-    if (!removeDeadUsersOfConstant(User)) {
+    if (!constantIsDead(User, /* RemoveDeadUsers= */ true)) {
       // If the constant wasn't dead, remember that this was the last live use
       // and move on to the next constant.
       LastNonDeadUser = I;
@@ -762,6 +774,20 @@ void Constant::removeDeadConstantUsers() const {
     else
       I = std::next(LastNonDeadUser);
   }
+}
+
+bool Constant::hasOneLiveUse() const {
+  unsigned NumUses = 0;
+  for (const Use &use : uses()) {
+    const Constant *User = dyn_cast<Constant>(use.getUser());
+    if (!User || !constantIsDead(User, /* RemoveDeadUsers= */ false)) {
+      ++NumUses;
+
+      if (NumUses > 1)
+        return false;
+    }
+  }
+  return NumUses == 1;
 }
 
 Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
