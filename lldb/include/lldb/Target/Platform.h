@@ -55,7 +55,6 @@ private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
-typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
 typedef llvm::SmallVector<lldb::addr_t, 6> MmapArgList;
 
 /// \class Platform Platform.h "lldb/Target/Platform.h"
@@ -84,7 +83,7 @@ public:
 
   static void Terminate();
 
-  static const PlatformPropertiesSP &GetGlobalPlatformProperties();
+  static PlatformProperties &GetGlobalPlatformProperties();
 
   /// Get the native host platform plug-in.
   ///

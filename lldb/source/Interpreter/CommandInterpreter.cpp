@@ -2113,13 +2113,6 @@ static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {
   FileSystem::Instance().Resolve(init_file);
 }
 
-static LoadCWDlldbinitFile ShouldLoadCwdInitFile() {
-  lldb::TargetPropertiesSP properties = Target::GetGlobalProperties();
-  if (!properties)
-    return eLoadCWDlldbinitFalse;
-  return properties->GetLoadCWDlldbinitFile();
-}
-
 void CommandInterpreter::SourceInitFile(FileSpec file,
                                         CommandReturnObject &result) {
   assert(!m_skip_lldbinit_files);
@@ -2155,7 +2148,8 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
     return;
   }
 
-  LoadCWDlldbinitFile should_load = ShouldLoadCwdInitFile();
+  LoadCWDlldbinitFile should_load =
+      Target::GetGlobalProperties().GetLoadCWDlldbinitFile();
 
   switch (should_load) {
   case eLoadCWDlldbinitFalse:

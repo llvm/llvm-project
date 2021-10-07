@@ -723,10 +723,10 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       ConstString("target"),
       ConstString("Settings specify to debugging targets."), true,
-      Target::GetGlobalProperties()->GetValueProperties());
+      Target::GetGlobalProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("platform"), ConstString("Platform settings."), true,
-      Platform::GetGlobalPlatformProperties()->GetValueProperties());
+      Platform::GetGlobalPlatformProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("symbols"), ConstString("Symbol lookup and cache settings."),
       true, ModuleList::GetGlobalModuleListProperties().GetValueProperties());

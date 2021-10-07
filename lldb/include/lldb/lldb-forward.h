@@ -399,7 +399,6 @@ typedef std::shared_ptr<lldb_private::SyntheticChildrenFrontEnd>
     SyntheticChildrenFrontEndSP;
 typedef std::shared_ptr<lldb_private::Target> TargetSP;
 typedef std::weak_ptr<lldb_private::Target> TargetWP;
-typedef std::shared_ptr<lldb_private::TargetProperties> TargetPropertiesSP;
 typedef std::shared_ptr<lldb_private::Thread> ThreadSP;
 typedef std::weak_ptr<lldb_private::Thread> ThreadWP;
 typedef std::shared_ptr<lldb_private::ThreadCollection> ThreadCollectionSP;

@@ -165,13 +165,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
-
-static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
-  static ProcessKDPPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PluginProperties>();
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 } // namespace
@@ -213,7 +209,7 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
 }
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
-  return std::chrono::seconds(GetGlobalPluginProperties()->GetPacketTimeout());
+  return std::chrono::seconds(GetGlobalPluginProperties().GetPacketTimeout());
 }
 
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
@@ -302,12 +298,12 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
   }
 
   const uint64_t timeout_seconds =
-      GetGlobalPluginProperties()->GetPacketTimeout();
+      GetGlobalPluginProperties().GetPacketTimeout();
   if (timeout_seconds > 0)
     m_gdb_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 
   m_use_g_packet_for_reading =
-      GetGlobalPluginProperties()->GetUseGPacketForReading();
+      GetGlobalPluginProperties().GetUseGPacketForReading();
 }
 
 // Destructor
@@ -401,7 +397,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   // timeout is and can see it.
   const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
   if (host_packet_timeout > std::chrono::seconds(0)) {
-    GetGlobalPluginProperties()->SetPacketTimeout(host_packet_timeout.count());
+    GetGlobalPluginProperties().SetPacketTimeout(host_packet_timeout.count());
   }
 
   // Register info search order:
@@ -411,7 +407,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   //     3 - Fall back on the qRegisterInfo packets.
 
   FileSpec target_definition_fspec =
-      GetGlobalPluginProperties()->GetTargetDefinitionFile();
+      GetGlobalPluginProperties().GetTargetDefinitionFile();
   if (!FileSystem::Instance().Exists(target_definition_fspec)) {
     // If the filename doesn't exist, it may be a ~ not having been expanded -
     // try to resolve it.
@@ -3528,7 +3524,7 @@ void ProcessGDBRemote::DebuggerInitialize(Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the gdb-remote process plug-in."),
         is_global_setting);
   }
@@ -4564,7 +4560,7 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
 
   LoadedModuleInfoList list;
   GDBRemoteCommunicationClient &comm = m_gdb_comm;
-  bool can_use_svr4 = GetGlobalPluginProperties()->GetUseSVR4();
+  bool can_use_svr4 = GetGlobalPluginProperties().GetUseSVR4();
 
   // check that we have extended feature read support
   if (can_use_svr4 && comm.GetQXferLibrariesSVR4ReadSupported()) {

@@ -2345,35 +2345,22 @@ void Target::SettingsInitialize() { Process::SettingsInitialize(); }
 void Target::SettingsTerminate() { Process::SettingsTerminate(); }
 
 FileSpecList Target::GetDefaultExecutableSearchPaths() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetExecutableSearchPaths();
-  return FileSpecList();
+  return Target::GetGlobalProperties().GetExecutableSearchPaths();
 }
 
 FileSpecList Target::GetDefaultDebugFileSearchPaths() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetDebugFileSearchPaths();
-  return FileSpecList();
+  return Target::GetGlobalProperties().GetDebugFileSearchPaths();
 }
 
 ArchSpec Target::GetDefaultArchitecture() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetDefaultArchitecture();
-  return ArchSpec();
+  return Target::GetGlobalProperties().GetDefaultArchitecture();
 }
 
 void Target::SetDefaultArchitecture(const ArchSpec &arch) {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp) {
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
-             "Target::SetDefaultArchitecture setting target's "
-             "default architecture to  {0} ({1})",
-             arch.GetArchitectureName(), arch.GetTriple().getTriple());
-    return properties_sp->SetDefaultArchitecture(arch);
-  }
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+           "setting target's default architecture to  {0} ({1})",
+           arch.GetArchitectureName(), arch.GetTriple().getTriple());
+  Target::GetGlobalProperties().SetDefaultArchitecture(arch);
 }
 
 Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
@@ -2768,12 +2755,12 @@ bool Target::RunStopHooks() {
   return false;
 }
 
-const TargetPropertiesSP &Target::GetGlobalProperties() {
+TargetProperties &Target::GetGlobalProperties() {
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
-  static TargetPropertiesSP *g_settings_sp_ptr =
-      new TargetPropertiesSP(new TargetProperties(nullptr));
-  return *g_settings_sp_ptr;
+  static TargetProperties *g_settings_ptr =
+      new TargetProperties(nullptr);
+  return *g_settings_ptr;
 }
 
 Status Target::Install(ProcessLaunchInfo *launch_info) {
@@ -2936,17 +2923,9 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (launch_info.IsScriptedProcess()) {
-    TargetPropertiesSP properties_sp = GetGlobalProperties();
-
-    if (!properties_sp) {
-      LLDB_LOGF(log, "Target::%s Couldn't fetch target global properties.",
-                __FUNCTION__);
-      return error;
-    }
-
     // Only copy scripted process launch options.
-    ProcessLaunchInfo &default_launch_info =
-        const_cast<ProcessLaunchInfo &>(properties_sp->GetProcessLaunchInfo());
+    ProcessLaunchInfo &default_launch_info = const_cast<ProcessLaunchInfo &>(
+        GetGlobalProperties().GetProcessLaunchInfo());
 
     default_launch_info.SetProcessPluginName("ScriptedProcess");
     default_launch_info.SetScriptedProcessClassName(
@@ -3731,7 +3710,7 @@ TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info(), m_target(target) {
   if (target) {
     m_collection_sp =
-        OptionValueProperties::CreateLocalCopy(*Target::GetGlobalProperties());
+        OptionValueProperties::CreateLocalCopy(Target::GetGlobalProperties());
 
     // Set callbacks to update launch_info whenever "settins set" updated any
     // of these properties
@@ -3781,7 +3760,7 @@ TargetProperties::TargetProperties(Target *target)
         true, m_experimental_properties_up->GetValueProperties());
     m_collection_sp->AppendProperty(
         ConstString("process"), ConstString("Settings specific to processes."),
-        true, Process::GetGlobalProperties()->GetValueProperties());
+        true, Process::GetGlobalProperties().GetValueProperties());
   }
 }
 

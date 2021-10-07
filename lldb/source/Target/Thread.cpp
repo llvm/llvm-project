@@ -55,12 +55,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const ThreadPropertiesSP &Thread::GetGlobalProperties() {
+ThreadProperties &Thread::GetGlobalProperties() {
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
-  static ThreadPropertiesSP *g_settings_sp_ptr =
-      new ThreadPropertiesSP(new ThreadProperties(true));
-  return *g_settings_sp_ptr;
+  static ThreadProperties *g_settings_ptr = new ThreadProperties(true);
+  return *g_settings_ptr;
 }
 
 #define LLDB_PROPERTIES_thread
@@ -103,7 +102,7 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
     m_collection_sp->Initialize(g_thread_properties);
   } else
     m_collection_sp =
-        OptionValueProperties::CreateLocalCopy(*Thread::GetGlobalProperties());
+        OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());
 }
 
 ThreadProperties::~ThreadProperties() = default;

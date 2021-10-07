@@ -166,10 +166,10 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->Initialize(g_process_properties);
     m_collection_sp->AppendProperty(
         ConstString("thread"), ConstString("Settings specific to threads."),
-        true, Thread::GetGlobalProperties()->GetValueProperties());
+        true, Thread::GetGlobalProperties().GetValueProperties());
   } else {
     m_collection_sp =
-        OptionValueProperties::CreateLocalCopy(*Process::GetGlobalProperties());
+        OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
@@ -500,12 +500,12 @@ Process::~Process() {
   m_thread_list.Clear();
 }
 
-const ProcessPropertiesSP &Process::GetGlobalProperties() {
+ProcessProperties &Process::GetGlobalProperties() {
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
-  static ProcessPropertiesSP *g_settings_sp_ptr =
-      new ProcessPropertiesSP(new ProcessProperties(nullptr));
-  return *g_settings_sp_ptr;
+  static ProcessProperties *g_settings_ptr =
+      new ProcessProperties(nullptr);
+  return *g_settings_ptr;
 }
 
 void Process::Finalize() {
