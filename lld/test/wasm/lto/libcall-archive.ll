@@ -5,7 +5,7 @@
 ; RUN: wasm-ld -o %t %t.o %t.a
 ; RUN: obj2yaml %t | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define void @_start(i8* %a, i8* %b) {

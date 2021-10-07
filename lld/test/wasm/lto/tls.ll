@@ -7,7 +7,7 @@
 ; RUN: wasm-ld --export=tls_int --export=get_tls %t1.o -o %t
 ; RUN: obj2yaml %t | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-f128:64-n32:64-S128-ni:1:10:20"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-f128:64-n32:64-S128-ni:1:10:20"
 target triple = "wasm32-unknown-emscripten"
 
 @tls_int = dso_local thread_local global i32 99

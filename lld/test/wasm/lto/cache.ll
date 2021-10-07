@@ -36,7 +36,7 @@
 ; RUN: wasm-ld --thinlto-cache-dir=%t.cache --thinlto-cache-policy prune_after=0s:cache_size=0%:cache_size_files=1:prune_interval=0s -o %t.wasm %t2.o %t.o
 ; RUN: ls %t.cache | count 3
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
 define void @globalfunc() #0 {
