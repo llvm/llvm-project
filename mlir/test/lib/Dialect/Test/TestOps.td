@@ -2022,6 +2022,24 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
 }
 
 //===----------------------------------------------------------------------===//
+// InferTypeOpInterface type inference in assembly format
+
+def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
+  let results = (outs AnyType);
+  let assemblyFormat = "attr-dict";
+
+  let extraClassDeclaration = [{
+    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+      inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
+      return ::mlir::success();
+    }
+   }];
+}
+
+//===----------------------------------------------------------------------===//
 // Test SideEffects
 //===----------------------------------------------------------------------===//
 

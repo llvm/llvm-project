@@ -3,6 +3,7 @@
 // This file contains tests for the specification of the declarative op format.
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def TestDialect : Dialect {
   let name = "test";
@@ -566,4 +567,6 @@ def ZCoverageValidH : TestFormat_Op<[{
   operands type($result) attr-dict
 }], [AllTypesMatch<["operand", "result"]>]>,
      Arguments<(ins AnyMemRef:$operand)>, Results<(outs AnyMemRef:$result)>;
-
+def ZCoverageValidI : TestFormat_Op<[{
+  operands type(operands) attr-dict
+}], [InferTypeOpInterface]>, Arguments<(ins Variadic<I64>:$inputs)>, Results<(outs I64:$result)>;

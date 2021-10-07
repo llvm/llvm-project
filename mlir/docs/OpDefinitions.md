@@ -929,6 +929,11 @@ these equal constraints to discern the types of missing variables. The currently
 supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`, and
 `SameOperandsAndResultType`.
 
+*   InferTypeOpInterface
+
+Operations that implement `InferTypeOpInterface` can omit their result types in
+their assembly format since the result types can be inferred from the operands.
+
 ### `hasCanonicalizer`
 
 This boolean field indicate whether canonicalization patterns have been defined
