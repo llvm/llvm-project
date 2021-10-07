@@ -3184,6 +3184,9 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
     // This path is currently untestable on GlobalISel, since the only platform
     // that needs this seems to be Windows, and we fall back on that currently.
     // The code still lives here in case that changes.
+    // Silence warning about unused variable until the code below that uses
+    // 'GuardCheckFn' is enabled.
+    (void)GuardCheckFn;
     return false;
 #if 0
     // The target provides a guard check function to validate the guard value.
