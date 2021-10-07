@@ -23,6 +23,19 @@ import sys
 import shutil
 
 
+def copy_bindings(build_dir, source_dir, language, extensions=['.cpp']):
+    binding_build_dir = os.path.join(build_dir, 'bindings', language)
+    binding_source_dir = os.path.join(source_dir, 'bindings', language,
+                                      'static-binding')
+
+    for root, _, files in os.walk(binding_build_dir):
+        for file in files:
+            _, extension = os.path.splitext(file)
+            filepath = os.path.join(root, file)
+            if extension in extensions:
+                shutil.copy(filepath, os.path.join(binding_source_dir, file))
+
+
 def main():
     parser = argparse.ArgumentParser(description='Copy the static bindings')
     parser.add_argument('build_dir',
@@ -43,16 +56,8 @@ def main():
             source_dir))
         sys.exit(1)
 
-    binding_build_dir = os.path.join(build_dir, 'bindings', 'python')
-    binding_source_dir = os.path.join(source_dir, 'bindings', 'python',
-                                      'static-binding')
-
-    for root, _, files in os.walk(binding_build_dir):
-        for file in files:
-            _, extension = os.path.splitext(file)
-            filepath = os.path.join(root, file)
-            if extension == '.py' or extension == '.cpp':
-                shutil.copy(filepath, os.path.join(binding_source_dir, file))
+    copy_bindings(build_dir, source_dir, 'python', ['.py', '.cpp'])
+    copy_bindings(build_dir, source_dir, 'lua', ['.cpp'])
 
 
 if __name__ == "__main__":
