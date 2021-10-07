@@ -74,15 +74,22 @@ void DylinkSection::writeBody() {
     sub.writeTo(os);
   }
 
-  // Under certain circumstances we need to include extra information about the
-  // exports we are providing to the dynamic linker.  Currently this is only the
-  // case for TLS symbols where the exported value is relative to __tls_base
-  // rather than __memory_base.
+  // Under certain circumstances we need to include extra information about our
+  // exports and/or imports to the dynamic linker.
+  // For exports we need to notify the linker when an export is TLS since the
+  // exported value is relative to __tls_base rather than __memory_base.
+  // For imports we need to notify the dynamic linker when an import is weak
+  // so that knows not to report an error for such symbols.
+  std::vector<const Symbol *> importInfo;
   std::vector<const Symbol *> exportInfo;
   for (const Symbol *sym : symtab->getSymbols()) {
-    if (sym->isExported() && sym->isLive() && sym->isTLS() &&
-        isa<DefinedData>(sym)) {
-      exportInfo.push_back(sym);
+    if (sym->isLive()) {
+      if (sym->isExported() && sym->isTLS() && isa<DefinedData>(sym)) {
+        exportInfo.push_back(sym);
+      }
+      if (sym->isUndefWeak()) {
+        importInfo.push_back(sym);
+      }
     }
   }
 
@@ -99,6 +106,22 @@ void DylinkSection::writeBody() {
         }
       }
       writeStr(sub.os, name, "sym name");
+      writeUleb128(sub.os, sym->flags, "sym flags");
+    }
+
+    sub.writeTo(os);
+  }
+
+  if (!importInfo.empty()) {
+    SubSection sub(WASM_DYLINK_IMPORT_INFO);
+    writeUleb128(sub.os, importInfo.size(), "num imports");
+
+    for (const Symbol *sym : importInfo) {
+      LLVM_DEBUG(llvm::dbgs() << "imports info: " << toString(*sym) << "\n");
+      StringRef module = sym->importModule.getValueOr(defaultModule);
+      StringRef name = sym->importName.getValueOr(sym->getName());
+      writeStr(sub.os, module, "import module");
+      writeStr(sub.os, name, "import name");
       writeUleb128(sub.os, sym->flags, "sym flags");
     }
 
