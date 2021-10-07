@@ -100,15 +100,18 @@ template <class Node, int kReservedBits, int kTabSizeLog>
 typename StackDepotBase<Node, kReservedBits, kTabSizeLog>::handle_type
 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
                                                       bool *inserted) {
-  if (inserted) *inserted = false;
-  if (!Node::is_valid(args)) return handle_type();
+  if (inserted)
+    *inserted = false;
+  if (!LIKELY(Node::is_valid(args)))
+    return handle_type();
   hash_type h = Node::hash(args);
   atomic_uintptr_t *p = &tab[h % kTabSize];
   uptr v = atomic_load(p, memory_order_consume);
   Node *s = (Node *)(v & ~1);
   // First, try to find the existing stack.
   Node *node = find(s, args, h);
-  if (node) return node->get_handle();
+  if (LIKELY(node))
+    return node->get_handle();
   // If failed, lock, retry and insert new.
   Node *s2 = lock(p);
   if (s2 != s) {
