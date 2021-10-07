@@ -1417,6 +1417,7 @@ TEST(MachineInstr, MVEVecSize) {
     case MVE_VPNOT:
     case MVE_VPSEL:
     case MVE_VPST:
+    case MQPRCopy:
       return 0;
     case MVE_VABAVs16:
     case MVE_VABAVu16:
