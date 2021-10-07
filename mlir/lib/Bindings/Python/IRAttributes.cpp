@@ -497,9 +497,10 @@ public:
 
   py::buffer_info accessBuffer() {
     if (mlirDenseElementsAttrIsSplat(*this)) {
-      // TODO: Raise an exception.
+      // TODO: Currently crashes the program.
       // Reported as https://github.com/pybind/pybind11/issues/3336
-      return py::buffer_info();
+      throw std::invalid_argument(
+          "unsupported data type for conversion to Python buffer");
     }
 
     MlirType shapedType = mlirAttributeGetType(*this);
@@ -557,12 +558,10 @@ public:
       }
     }
 
-    // TODO: Currently crashes the program. Just returning an empty buffer
-    // for now.
+    // TODO: Currently crashes the program.
     // Reported as https://github.com/pybind/pybind11/issues/3336
-    // throw std::invalid_argument(
-    //     "unsupported data type for conversion to Python buffer");
-    return py::buffer_info();
+    throw std::invalid_argument(
+        "unsupported data type for conversion to Python buffer");
   }
 
   static void bindDerived(ClassTy &c) {
