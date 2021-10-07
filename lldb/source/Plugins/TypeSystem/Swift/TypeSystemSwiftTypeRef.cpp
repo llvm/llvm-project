@@ -1313,13 +1313,6 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
   return {this, (opaque_compiler_type_t)mangled_typename.AsCString()};
 }
 
-CompilerType
-TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
-                                               size_t idx) {
-  return m_swift_ast_context->GetGenericArgumentType(ReconstructType(type),
-                                                     idx);
-}
-
 lldb::TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
   return m_swift_ast_context->GetCachedType(mangled);
 }
@@ -3041,10 +3034,21 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     auto result = impl();
     if (!m_swift_ast_context)
       return result;
+    std::vector<TupleElement> ast_elements;
+    std::transform(elements.begin(), elements.end(),
+                   std::back_inserter(ast_elements), [&](TupleElement element) {
+                     return TupleElement(element.element_name,
+                                         ReconstructType(element.element_type));
+                   });
     bool equivalent =
-        Equivalent(result, m_swift_ast_context->CreateTupleType(elements));
-    if (!equivalent)
+        Equivalent(result, m_swift_ast_context->CreateTupleType(ast_elements));
+    if (!equivalent) {
+      result.dump();
+      auto a = m_swift_ast_context->CreateTupleType(elements);
+      llvm::dbgs() << "AST type: " << a.GetMangledTypeName() << "\n";
       llvm::dbgs() << "failing tuple type\n";
+    }
+
     assert(equivalent &&
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
     return result;
@@ -3052,6 +3056,17 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 #else
   return impl();
 #endif
+}
+
+bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
+  auto impl = [&] {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    return node->getKind() == Node::Kind::Tuple;
+  };
+  VALIDATE_AND_RETURN(impl, IsTupleType, type, (ReconstructType(type)), (ReconstructType(type)));
+  return false;
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
@@ -3482,4 +3497,37 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, IsReferenceType, type,
                       (ReconstructType(type), nullptr, nullptr),
                       (ReconstructType(type), pointee_type, is_rvalue));
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
+                                               size_t idx) {
+  auto impl = [&]() -> CompilerType {
+    Demangler dem;
+    NodePointer node = DemangleCanonicalType(dem, type);
+    if (!node || node->getNumChildren() != 2)
+      return {};
+
+    if (node->getKind() != Node::Kind::BoundGenericClass &&
+        node->getKind() != Node::Kind::BoundGenericStructure &&
+        node->getKind() != Node::Kind::BoundGenericEnum &&
+        node->getKind() != Node::Kind::BoundGenericFunction &&
+        node->getKind() != Node::Kind::BoundGenericProtocol &&
+        node->getKind() != Node::Kind::BoundGenericTypeAlias &&
+        node->getKind() != Node::Kind::BoundGenericProtocol)
+      return {};
+
+    NodePointer type_list = node->getChild(1);
+    if (!type_list || type_list->getNumChildren() <= idx)
+      return {};
+
+    NodePointer generic_argument_type = type_list->getChild(idx);
+    if (!generic_argument_type)
+      return {};
+
+    return RemangleAsType(dem, generic_argument_type);
+  };
+
+  VALIDATE_AND_RETURN(impl, GetGenericArgumentType, type, (ReconstructType(type), idx),
+    (ReconstructType(type), idx));
 }
