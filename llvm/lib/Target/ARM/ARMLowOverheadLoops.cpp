@@ -1764,12 +1764,14 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
                           ARM::D0 + (Dst - ARM::Q0) * 2)
                       .addReg(ARM::D0 + (Src - ARM::Q0) * 2)
                       .add(predOps(ARMCC::AL));
+      (void)MIB1;
       LLVM_DEBUG(dbgs() << " into " << *MIB1);
       auto MIB2 = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::VMOVD),
                           ARM::D0 + (Dst - ARM::Q0) * 2 + 1)
                       .addReg(ARM::D0 + (Src - ARM::Q0) * 2 + 1)
                       .add(predOps(ARMCC::AL));
       LLVM_DEBUG(dbgs() << " and  " << *MIB2);
+      (void)MIB2;
       MI->eraseFromParent();
     }
   };
