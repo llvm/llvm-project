@@ -719,6 +719,25 @@ func @affine_for_not_invariant(%in : memref<30x512xf32, 1>,
 
 // -----
 
+// CHECK-LABEL: func @use_of_iter_operands_invariant
+func @use_of_iter_operands_invariant(%m : memref<10xindex>) {
+  %sum_1 = constant 0 : index
+  %v0 = affine.for %arg1 = 0 to 11 iter_args (%prevAccum = %sum_1) -> index {
+    %prod = muli %sum_1, %sum_1 : index
+    %newAccum = addi %prevAccum, %prod : index
+    affine.yield %newAccum : index
+  }
+  return
+}
+
+// CHECK:       constant
+// CHECK-NEXT:  muli
+// CHECK-NEXT:  affine.for
+// CHECK-NEXT:    addi
+// CHECK-NEXT:    affine.yield
+
+// -----
+
 // CHECK-LABEL: func @use_of_iter_args_not_invariant
 func @use_of_iter_args_not_invariant(%m : memref<10xindex>) {
   %sum_1 = constant 0 : index
