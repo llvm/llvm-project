@@ -101,8 +101,6 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
           }
         }
         MO.setReg(VReg);
-        if (MO.getParent()->isDebugValue())
-          MO.setIsDebug();
         Changed = true;
       }
     }

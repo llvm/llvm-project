@@ -5534,7 +5534,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       // pointing at the VReg, which will be patched up later.
       auto &Inst = TII->get(TargetOpcode::DBG_INSTR_REF);
       auto MIB = BuildMI(MF, DL, Inst);
-      MIB.addReg(Reg, RegState::Debug);
+      MIB.addReg(Reg);
       MIB.addImm(0);
       MIB.addMetadata(Variable);
       auto *NewDIExpr = FragExpr;
