@@ -131,15 +131,32 @@ void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // TODO
-  // - f64 moves
-  // - moves between GPR and XPR
   if (M88k::GPRRegClass.contains(DestReg, SrcReg) ||
-      M88k::GPRF32RegClass.contains(DestReg, SrcReg)) {
+      M88k::FPR32RegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(M88k::ORrr), DestReg)
         .addReg(M88k::R0)
         .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
   }
+
+  unsigned Opc;
+  if (M88k::XRRegClass.contains(DestReg, SrcReg))
+    Opc = M88k::MOVxx;
+  else if (M88k::FPR32RegClass.contains(DestReg) &&
+           M88k::XRRegClass.contains(SrcReg))
+    Opc = M88k::MOVrxs;
+  else if (M88k::FPR64RegClass.contains(DestReg) &&
+           M88k::XRRegClass.contains(SrcReg))
+    Opc = M88k::MOVrxd;
+  else if (M88k::XRRegClass.contains(DestReg) &&
+           M88k::FPR32RegClass.contains(SrcReg))
+    Opc = M88k::MOVxrs;
+  else if (M88k::XRRegClass.contains(DestReg) &&
+           M88k::FPR64RegClass.contains(SrcReg))
+    Opc = M88k::MOVxrd;
   else
     llvm_unreachable("m88: Impossible reg-to-reg copy");
+
+  BuildMI(MBB, MBBI, DL, get(Opc), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }

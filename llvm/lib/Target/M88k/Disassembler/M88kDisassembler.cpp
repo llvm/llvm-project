@@ -61,6 +61,16 @@ static const uint16_t GPRDecoderTable[] = {
     M88k::R28, M88k::R29, M88k::R30, M88k::R31,
 };
 
+static const uint16_t XRDecoderTable[] = {
+    M88k::X0,  M88k::X1,  M88k::X2,  M88k::X3,  M88k::X4,  M88k::X5,
+    M88k::X6,  M88k::X7,  M88k::X8,  M88k::X9,  M88k::X10, M88k::X11,
+    M88k::X12, M88k::X13, M88k::X14, M88k::X15,
+
+    M88k::X16, M88k::X17, M88k::X18, M88k::X19, M88k::X20, M88k::X21,
+    M88k::X22, M88k::X23, M88k::X24, M88k::X25, M88k::X26, M88k::X27,
+    M88k::X28, M88k::X29, M88k::X30, M88k::X31,
+};
+
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
@@ -72,6 +82,17 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeXRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned Register = XRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
 // TODO More checks.
 static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
@@ -79,13 +100,13 @@ static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
                                               uint64_t Address,
                                               const void *Decoder) {
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeGPRF64RegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
                                               uint64_t Address,
                                               const void *Decoder) {
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);

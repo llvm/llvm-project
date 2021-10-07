@@ -275,6 +275,23 @@ class F_SFU1<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
   let Inst{6-5} = td;
 }
 
+// Format: Dyadic register.
+class F_SFU1D<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
+              dag outs, dag ins, string asmstr, list<dag> pattern,
+              InstrItinClass itin = NoItinerary>
+   : F_SFU<outs, ins, asmstr, " $rd, $rs2", pattern, itin> {
+  bits<1>  regfile;
+
+  let rs1 = 0b00000;
+
+  let Inst{28-26} = 0b001;
+  let Inst{15} = regfile;
+  let Inst{14-11} = func;
+  let Inst{10-9} = t1;
+  let Inst{8-7} = t2;
+  let Inst{6-5} = td;
+}
+
 // Format: Triadic register.
 class F_SFU2<bits<5> func, bits<2> sat, bits<2> ty,
                dag outs, dag ins, string asmstr, list<dag> pattern,

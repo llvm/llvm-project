@@ -20,7 +20,7 @@ class M88kRegWithSubregs<string n, list<Register> subregs>
 class M88kRegisterClass<list<ValueType> regTypes, int alignment,
                         bits<1> regFile, dag regList>
   : RegisterClass<"M88k", regTypes, alignment, regList> {
-  bits<1> HWRegFile = regFile; // HW register file: 0 = GPR, 1 = XPR    
+  bits<1> HWRegFile = regFile; // HW register file: 0 = GPR, 1 = XPR
 }
 
 let Namespace = "M88k" in {
@@ -56,13 +56,13 @@ def GPROpnd : RegisterOperand<GPR>;
 def GPR64Opnd : RegisterOperand<GPR64>;
 
 // Experimental: GPR with floating point types.
-def GPRF32 : M88kRegisterClass<[f32], 32, 0,
+def FPR32 : M88kRegisterClass<[f32], 32, 0,
                             (add GPR)>;
-def GPRF64 : M88kRegisterClass<[f64], 32, 0,
+def FPR64 : M88kRegisterClass<[f64], 32, 0,
                             (add GPR64)>;
 
-def GPRF32Opnd : RegisterOperand<GPRF32>;
-def GPRF64Opnd : RegisterOperand<GPRF64>;
+def FPR32Opnd : RegisterOperand<FPR32>;
+def FPR64Opnd : RegisterOperand<FPR64>;
 
 // Extended (floating point) registers.
 foreach I = 0-31 in {

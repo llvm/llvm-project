@@ -551,11 +551,11 @@ multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
     defvar S1 = D;
     defvar S2 = D;
     defvar DPrec = !if(D, "d", "s");
-    defvar DOpnd = !if(D, GPRF64Opnd, GPRF32Opnd);
+    defvar DOpnd = !if(D, FPR64Opnd, FPR32Opnd);
     defvar S1Prec = !if(S1, "d", "s");
-    defvar S1Opnd = !if(S1, GPRF64Opnd, GPRF32Opnd);
+    defvar S1Opnd = !if(S1, FPR64Opnd, FPR32Opnd);
     defvar S2Prec = !if(S2, "d", "s");
-    defvar S2Opnd = !if(S2, GPRF64Opnd, GPRF32Opnd);
+    defvar S2Opnd = !if(S2, FPR64Opnd, FPR32Opnd);
     let regfile = 0 in //!cast<M88kRegisterClass>(DOpnd).HWRegFile in
     def DPrec # S1Prec #S2Prec :
              F_SFU1<Func, D, S1, S2,
@@ -569,3 +569,31 @@ multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
 defm FMUL : FArith<0b0000, "fmul", fmul>;
 defm FADD : FArith<0b0101, "fadd", fadd>;
 defm FSUB : FArith<0b0110, "fsub", fsub>;
+defm FDIV : FArith<0b1110, "fdiv", fdiv>;
+
+let regfile = 1 in {
+def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
+                     (outs FPR32Opnd:$rd), (ins XROpnd:$rs2),
+                     "mov.s",
+                     [(set FPR32Opnd:$rd, (f32 XROpnd:$rs2))]>;
+def MOVrxd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b01,
+                     (outs FPR64Opnd:$rd), (ins XROpnd:$rs2),
+                     "mov.d",
+                     [(set FPR64Opnd:$rd, (f64 XROpnd:$rs2))]>;
+def MOVxx : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b11,
+                    (outs XROpnd:$rd), (ins XROpnd:$rs2),
+                    "mov",
+                    []>;
+//                    [(set XROpnd:$rd, XROpnd:$rs2)]>;
+}
+
+let regfile = 0 in {
+def MOVxrs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b00,
+                     (outs XROpnd:$rd), (ins FPR32Opnd:$rs2),
+                     "mov.s",
+                     [(set (f32 XROpnd:$rd), FPR32Opnd:$rs2)]>;
+def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
+                     (outs XROpnd:$rd), (ins FPR64Opnd:$rs2),
+                     "mov.d",
+                     [(set (f64 XROpnd:$rd), FPR64Opnd:$rs2)]>;
+}
