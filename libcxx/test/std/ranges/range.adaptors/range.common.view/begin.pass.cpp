@@ -69,13 +69,8 @@ int main(int, char**) {
     using CommonIter = std::common_iterator<ForwardIter, sized_sentinel<ForwardIter>>;
     std::same_as<CommonIter> auto begin = common.begin();
     assert(begin == std::ranges::begin(view));
-  }
-  {
-    SizedForwardView view{buf, buf + 8};
-    std::ranges::common_view<SizedForwardView> const common(view);
-    using CommonIter = std::common_iterator<ForwardIter, sized_sentinel<ForwardIter>>;
-    std::same_as<CommonIter> auto begin = common.begin();
-    assert(begin == std::ranges::begin(view));
+    std::same_as<CommonIter> auto cbegin = std::as_const(common).begin();
+    assert(cbegin == std::ranges::begin(view));
   }
 
   {

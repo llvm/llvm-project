@@ -24,20 +24,13 @@
 
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-  auto sw = sentinel_wrapper<int *>(buffer + 8); // Note: not 4, but that's OK.
-
   {
-    const std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
-    assert(base(tv.end().base()) == base(sw));
-    ASSERT_SAME_TYPE(decltype(tv.end().base()), sentinel_wrapper<int *>);
+    std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView(buffer), 4);
+    std::same_as<sentinel_wrapper<int*>> auto sw1 = tv.end().base();
+    assert(base(sw1) == buffer + 8);
+    std::same_as<sentinel_wrapper<int*>> auto sw2 = std::as_const(tv).end().base();
+    assert(base(sw2) == buffer + 8);
   }
-
-  {
-    std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
-    assert(base(tv.end().base()) == base(sw));
-    ASSERT_SAME_TYPE(decltype(tv.end().base()), sentinel_wrapper<int *>);
-  }
-
   return true;
 }
 

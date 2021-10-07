@@ -85,12 +85,11 @@ static_assert( std::ranges::borrowed_range<BorrowableRange>);
 struct InputView : std::ranges::view_base {
   int *ptr_;
   constexpr explicit InputView(int* ptr = globalBuff) : ptr_(ptr) {}
-  constexpr cpp20_input_iterator<int*> begin() const { return cpp20_input_iterator<int*>(ptr_); }
-  constexpr int *end() const { return ptr_ + 8; }
+  constexpr auto begin() const { return cpp20_input_iterator<int*>(ptr_); }
+  constexpr auto end() const { return sentinel_wrapper<cpp20_input_iterator<int*>>(cpp20_input_iterator<int*>(ptr_ + 8)); }
 };
-// TODO: remove these bogus operators
-constexpr bool operator==(const cpp20_input_iterator<int*> &lhs, int* rhs) { return lhs.base() == rhs; }
-constexpr bool operator==(int* lhs, const cpp20_input_iterator<int*> &rhs) { return rhs.base() == lhs; }
+static_assert( std::ranges::view<InputView>);
+static_assert(!std::ranges::sized_range<InputView>);
 
 struct SizedSentinelView : std::ranges::view_base {
   int count_;

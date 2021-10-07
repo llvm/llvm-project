@@ -25,44 +25,58 @@
 #include "types.h"
 
 template<class T>
-concept EndInvocable = requires(T t) { t.end(); };
-
-template<class T>
-concept EndIsIter = requires(T t) { ++t.end(); };
+concept HasConstQualifiedEnd = requires(const T& t) { t.end(); };
 
 constexpr bool test() {
   {
-    std::ranges::transform_view transformView(MoveOnlyView{}, PlusOneMutable{});
-    assert(transformView.end().base() == globalBuff + 8);
+    using TransformView = std::ranges::transform_view<ForwardView, PlusOneMutable>;
+    static_assert(std::ranges::common_range<TransformView>);
+    TransformView tv;
+    auto end = tv.end();
+    ASSERT_SAME_TYPE(decltype(end.base()), std::ranges::sentinel_t<ForwardView>);
+    assert(base(end.base()) == globalBuff + 8);
+    static_assert(!HasConstQualifiedEnd<TransformView>);
   }
-
   {
-    std::ranges::transform_view transformView(ForwardView{}, PlusOneMutable{});
-    assert(transformView.end().base().base() == globalBuff + 8);
+    using TransformView = std::ranges::transform_view<InputView, PlusOneMutable>;
+    static_assert(!std::ranges::common_range<TransformView>);
+    TransformView tv;
+    auto end = tv.end();
+    ASSERT_SAME_TYPE(decltype(end.base()), std::ranges::sentinel_t<InputView>);
+    assert(base(base(end.base())) == globalBuff + 8);
+    static_assert(!HasConstQualifiedEnd<TransformView>);
   }
-
   {
-    std::ranges::transform_view transformView(InputView{}, PlusOneMutable{});
-    assert(transformView.end().base() == globalBuff + 8);
+    using TransformView = std::ranges::transform_view<InputView, PlusOne>;
+    static_assert(!std::ranges::common_range<TransformView>);
+    TransformView tv;
+    auto end = tv.end();
+    ASSERT_SAME_TYPE(decltype(end.base()), std::ranges::sentinel_t<InputView>);
+    assert(base(base(end.base())) == globalBuff + 8);
+    auto cend = std::as_const(tv).end();
+    ASSERT_SAME_TYPE(decltype(cend.base()), std::ranges::sentinel_t<const InputView>);
+    assert(base(base(cend.base())) == globalBuff + 8);
   }
-
   {
-    const std::ranges::transform_view transformView(MoveOnlyView{}, PlusOne{});
-    assert(transformView.end().base() == globalBuff + 8);
+    using TransformView = std::ranges::transform_view<MoveOnlyView, PlusOneMutable>;
+    static_assert(std::ranges::common_range<TransformView>);
+    TransformView tv;
+    auto end = tv.end();
+    ASSERT_SAME_TYPE(decltype(end.base()), std::ranges::sentinel_t<MoveOnlyView>);
+    assert(end.base() == globalBuff + 8);
+    static_assert(!HasConstQualifiedEnd<TransformView>);
   }
-
-  static_assert(!EndInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
-  static_assert( EndInvocable<      std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
-  static_assert( EndInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOne>>);
-  static_assert(!EndInvocable<const std::ranges::transform_view<InputView, PlusOneMutable>>);
-  static_assert( EndInvocable<      std::ranges::transform_view<InputView, PlusOneMutable>>);
-  static_assert( EndInvocable<const std::ranges::transform_view<InputView, PlusOne>>);
-
-  static_assert(!EndIsIter<const std::ranges::transform_view<InputView, PlusOne>>);
-  static_assert(!EndIsIter<      std::ranges::transform_view<InputView, PlusOneMutable>>);
-  static_assert( EndIsIter<const std::ranges::transform_view<MoveOnlyView, PlusOne>>);
-  static_assert( EndIsIter<      std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);
-
+  {
+    using TransformView = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+    static_assert(std::ranges::common_range<TransformView>);
+    TransformView tv;
+    auto end = tv.end();
+    ASSERT_SAME_TYPE(decltype(end.base()), std::ranges::sentinel_t<MoveOnlyView>);
+    assert(end.base() == globalBuff + 8);
+    auto cend = std::as_const(tv).end();
+    ASSERT_SAME_TYPE(decltype(cend.base()), std::ranges::sentinel_t<const MoveOnlyView>);
+    assert(cend.base() == globalBuff + 8);
+  }
   return true;
 }
 
