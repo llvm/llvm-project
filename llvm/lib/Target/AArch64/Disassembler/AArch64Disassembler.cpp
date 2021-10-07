@@ -323,6 +323,22 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
       //                      ^ insert implicit 8-bit element tile
       MI.insert(MI.begin()+2, MCOperand::createReg(AArch64::ZAB0));
       break;
+    case AArch64::LD1_MXIPXX_H_Q:
+    case AArch64::LD1_MXIPXX_V_Q:
+    case AArch64::ST1_MXIPXX_H_Q:
+    case AArch64::ST1_MXIPXX_V_Q:
+      // 128-bit load/store have implicit zero vector index.
+      MI.insert(MI.begin()+2, MCOperand::createImm(0));
+      break;
+    // 128-bit mova have implicit zero vector index.
+    case AArch64::INSERT_MXIPZ_H_Q:
+    case AArch64::INSERT_MXIPZ_V_Q:
+      MI.insert(MI.begin()+2, MCOperand::createImm(0));
+      break;
+    case AArch64::EXTRACT_ZPMXI_H_Q:
+    case AArch64::EXTRACT_ZPMXI_V_Q:
+      MI.addOperand(MCOperand::createImm(0));
+      break;
     case AArch64::SMOVvi8to32_idx0:
     case AArch64::SMOVvi8to64_idx0:
     case AArch64::SMOVvi16to32_idx0:
