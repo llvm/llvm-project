@@ -250,6 +250,11 @@ void MachineOperand::ChangeToRegister(Register Reg, bool isDef, bool isImp,
   if (RegInfo && WasReg)
     RegInfo->removeRegOperandFromUseList(this);
 
+  // Ensure debug instructions set debug flag on register uses.
+  const MachineInstr *MI = getParent();
+  if (!isDef && MI && MI->isDebugInstr())
+    isDebug = true;
+
   // Change this to a register and set the reg#.
   assert(!(isDead && !isDef) && "Dead flag on non-def");
   assert(!(isKill && isDef) && "Kill flag on def");

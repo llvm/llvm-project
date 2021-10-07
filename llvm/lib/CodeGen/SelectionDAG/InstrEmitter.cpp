@@ -722,7 +722,7 @@ void InstrEmitter::AddDbgValueLocationOps(
       MIB.addFrameIndex(Op.getFrameIx());
       break;
     case SDDbgOperand::VREG:
-      MIB.addReg(Op.getVReg(), RegState::Debug);
+      MIB.addReg(Op.getVReg());
       break;
     case SDDbgOperand::SDNODE: {
       SDValue V = SDValue(Op.getSDNode(), Op.getResNo());
@@ -862,7 +862,7 @@ MachineInstr *InstrEmitter::EmitDbgNoLocation(SDDbgValue *SD) {
   DebugLoc DL = SD->getDebugLoc();
   auto MIB = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE));
   MIB.addReg(0U);
-  MIB.addReg(0U, RegState::Debug);
+  MIB.addReg(0U);
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);
   return &*MIB;
@@ -898,7 +898,7 @@ InstrEmitter::EmitDbgValueFromSingleOp(SDDbgValue *SD,
   if (SD->isIndirect())
     MIB.addImm(0U);
   else
-    MIB.addReg(0U, RegState::Debug);
+    MIB.addReg(0U);
 
   return MIB.addMetadata(Var).addMetadata(Expr);
 }

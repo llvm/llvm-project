@@ -1158,7 +1158,7 @@ auto MachineFunction::salvageCopySSA(MachineInstr &MI)
   // Create DBG_PHI for specified physreg.
   auto Builder = BuildMI(InsertBB, InsertBB.getFirstNonPHI(), DebugLoc(),
                          TII.get(TargetOpcode::DBG_PHI));
-  Builder.addReg(State.first, RegState::Debug);
+  Builder.addReg(State.first);
   unsigned NewNum = getNewDebugInstrNum();
   Builder.addImm(NewNum);
   return ApplySubregisters({NewNum, 0u});
@@ -1171,7 +1171,6 @@ void MachineFunction::finalizeDebugInstrRefs() {
     const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
     MI.setDesc(RefII);
     MI.getOperand(1).ChangeToRegister(0, false);
-    MI.getOperand(0).setIsDebug();
   };
 
   if (!useDebugInstrRef())

@@ -294,6 +294,9 @@ void MachineInstr::addOperand(MachineFunction &MF, const MachineOperand &Op) {
       if (MCID->getOperandConstraint(OpNo, MCOI::EARLY_CLOBBER) != -1)
         NewMO->setIsEarlyClobber(true);
     }
+    // Ensure debug instructions set debug flag on register uses.
+    if (NewMO->isUse() && isDebugInstr())
+      NewMO->setIsDebug();
   }
 }
 
@@ -2111,11 +2114,11 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  auto MIB = BuildMI(MF, DL, MCID).addReg(Reg, RegState::Debug);
+  auto MIB = BuildMI(MF, DL, MCID).addReg(Reg);
   if (IsIndirect)
     MIB.addImm(0U);
   else
-    MIB.addReg(0U, RegState::Debug);
+    MIB.addReg(0U);
   return MIB.addMetadata(Variable).addMetadata(Expr);
 }
 
@@ -2134,7 +2137,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   if (IsIndirect)
     MIB.addImm(0U);
   else
-    MIB.addReg(0U, RegState::Debug);
+    MIB.addReg(0U);
   return MIB.addMetadata(Variable).addMetadata(Expr);
 }
 
@@ -2153,7 +2156,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   MIB.addMetadata(Variable).addMetadata(Expr);
   for (const MachineOperand &MO : MOs)
     if (MO.isReg())
-      MIB.addReg(MO.getReg(), RegState::Debug);
+      MIB.addReg(MO.getReg());
     else
       MIB.add(MO);
   return MIB;
