@@ -120,9 +120,9 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
     m_device_id = std::string(host);
 
   m_socket_namespace.reset();
-  if (scheme == ConnectionFileDescriptor::UNIX_CONNECT_SCHEME)
+  if (scheme == "unix-connect")
     m_socket_namespace = AdbClient::UnixSocketNamespaceFileSystem;
-  else if (scheme == ConnectionFileDescriptor::UNIX_ABSTRACT_CONNECT_SCHEME)
+  else if (scheme == "unix-abstract-connect")
     m_socket_namespace = AdbClient::UnixSocketNamespaceAbstract;
 
   std::string connect_url;
