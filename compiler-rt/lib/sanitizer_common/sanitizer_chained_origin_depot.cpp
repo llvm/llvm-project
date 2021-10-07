@@ -13,14 +13,21 @@
 
 namespace __sanitizer {
 
+static PersistentAllocator allocator;
+
 bool ChainedOriginDepot::ChainedOriginDepotNode::eq(
     hash_type hash, const args_type &args) const {
   return here_id == args.here_id && prev_id == args.prev_id;
 }
 
-uptr ChainedOriginDepot::ChainedOriginDepotNode::storage_size(
-    const args_type &args) {
-  return sizeof(ChainedOriginDepotNode);
+uptr ChainedOriginDepot::ChainedOriginDepotNode::allocated() {
+  return allocator.allocated();
+}
+
+ChainedOriginDepot::ChainedOriginDepotNode *
+ChainedOriginDepot::ChainedOriginDepotNode::allocate(const args_type &args) {
+  return static_cast<ChainedOriginDepot::ChainedOriginDepotNode *>(
+      allocator.alloc(sizeof(ChainedOriginDepotNode)));
 }
 
 /* This is murmur2 hash for the 64->32 bit case.

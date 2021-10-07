@@ -33,7 +33,7 @@ class StackDepotBase {
   // Retrieves a stored stack trace by the id.
   args_type Get(u32 id);
 
-  StackDepotStats GetStats() const { return stats; }
+  StackDepotStats GetStats() const { return {n_uniq_ids, Node::allocated()}; }
 
   void LockAll();
   void UnlockAll();
@@ -55,7 +55,7 @@ class StackDepotBase {
   atomic_uintptr_t tab[kTabSize];   // Hash table of Node's.
   atomic_uint32_t seq[kPartCount];  // Unique id generators.
 
-  StackDepotStats stats;
+  uptr n_uniq_ids;
 
   friend class StackDepotReverseMap;
 };
@@ -120,14 +120,12 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   }
   uptr part = (h % kTabSize) / kPartSize;
   u32 id = atomic_fetch_add(&seq[part], 1, memory_order_relaxed) + 1;
-  stats.n_uniq_ids++;
+  n_uniq_ids++;
   CHECK_LT(id, kMaxId);
   id |= part << kPartShift;
   CHECK_NE(id, 0);
   CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
-  uptr memsz = Node::storage_size(args);
-  s = (Node *)PersistentAlloc(memsz);
-  stats.allocated += memsz;
+  s = Node::allocate(args);
   s->id = id;
   s->store(args, h);
   s->link = s2;
