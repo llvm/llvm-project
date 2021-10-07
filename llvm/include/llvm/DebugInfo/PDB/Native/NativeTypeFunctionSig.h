@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEFUNCTIONSIG_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEFUNCTIONSIG_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"

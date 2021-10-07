@@ -10,7 +10,6 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILEBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
