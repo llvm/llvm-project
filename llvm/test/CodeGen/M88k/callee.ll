@@ -24,16 +24,22 @@ define i32 @f1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
   ret i32 %sum7
 }
 
-; Registers r2 to r9 used, 1 parameter passed on stack.
-;define i32 @f2(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %a) {
-; COM: CHECK-LABEL: f2:
-; COM: CHECK: jmp %r1
-;  ret i32 %a
-;}
+; Registers r2 to r9 used, 2 parameter passed on stack.
+define i32 @f2(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %a, i32 %b) {
+; CHECK-LABEL: f2:
+; CHECK: ld %r2, %r31, 4
+; CHECK: ld %r3, %r31, 0
+; CHECK: or %r2, %r3, %r2
+; CHECK: jmp %r1
+  %sum = or i32 %a, %b
+  ret i32 %sum
+}
 
-; Floats in r2 and r3. Does not work yet.
+; Float arguments passed in r2 and r3.
 define float @f3(float %a, float %b) {
 ; CHECK-LABEL: f3:
+; CHECK: fadd.sss %r2, %r2, %r3
 ; CHECK: jmp %r1
-  ret float %a
+  %sum = fadd float %a, %b
+  ret float %sum
 }

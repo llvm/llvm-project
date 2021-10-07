@@ -58,9 +58,48 @@ M88kRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   return CSR_M88k_RegMask;
 }
 
-void M88kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+void M88kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                            int SPAdj, unsigned FIOperandNum,
-                                           RegScavenger *RS) const {}
+                                           RegScavenger *RS) const {
+  MachineInstr &MI = *II;
+  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  int MinCSFI = 0;
+  int MaxCSFI = -1;
+
+  if (CSI.size()) {
+    MinCSFI = CSI[0].getFrameIdx();
+    MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
+  }
+
+  Register FrameReg;
+
+  if (FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI)
+    FrameReg = M88k::R31;
+  else {
+    const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+    if (TFI->hasFP(MF)) {
+      FrameReg = M88k::R30;
+    } else {
+      FrameReg = M88k::R31;
+    }
+  }
+
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+  int64_t SPOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+
+  int64_t Offset;
+  bool IsKill = false;
+  Offset = SPOffset + (int64_t)StackSize;
+  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+
+  assert(isInt<16>(Offset) && "m88k: Larger offsets not yet supported.");
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false, IsKill);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+}
 
 Register M88kRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return M88k::R30;
