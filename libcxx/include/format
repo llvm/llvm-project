@@ -277,8 +277,9 @@ namespace std {
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
-#include <__format/parser_std_format_spec.h>
 #include <__format/formatter.h>
+#include <__format/formatter_string.h>
+#include <__format/parser_std_format_spec.h>
 #include <__variant/monostate.h>
 #include <array>
 #include <concepts>
@@ -350,43 +351,6 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_char {
     // TODO FMT Implement the parsed formatting arguments.
     auto __out_it = __ctx.out();
     *__out_it++ = _CharT(__c);
-    return __out_it;
-  }
-};
-
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_c_string {
-  _LIBCPP_HIDE_FROM_ABI
-  auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    // TODO FMT Implement this function.
-    return __parse_ctx.begin();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI
-  auto format(const _CharT* __str, auto& __ctx) -> decltype(__ctx.out()) {
-    // TODO FMT Implement the parsed formatting arguments.
-    auto __out_it = __ctx.out();
-    while (*__str)
-      *__out_it++ = *__str++;
-    return __out_it;
-  }
-};
-
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_string {
-  _LIBCPP_HIDE_FROM_ABI
-  auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    // TODO FMT Implement this function.
-    return __parse_ctx.begin();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI
-  auto format(basic_string_view<_CharT> __str, auto& __ctx)
-      -> decltype(__ctx.out()) {
-    // TODO FMT Implement the parsed formatting arguments.
-    auto __out_it = __ctx.out();
-    for (const auto __c : __str)
-      *__out_it++ = __c;
     return __out_it;
   }
 };
@@ -469,54 +433,6 @@ struct _LIBCPP_TEMPLATE_VIS formatter<char, wchar_t>
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t>
     : public __format::__formatter_char<wchar_t, wchar_t> {};
-
-// [format.formatter.spec]/2.2 For each charT, the string type specializations
-
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<_CharT*, _CharT>
-    : public __format::__formatter_c_string<_CharT> {
-  using _Base = __format::__formatter_c_string<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto format(_CharT* __str, auto& __ctx)
-      -> decltype(__ctx.out()) {
-    _LIBCPP_ASSERT(__str, "The basic_format_arg constructor should have "
-                          "prevented an invalid pointer");
-    return _Base::format(__str, __ctx);
-  }
-};
-
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<const _CharT*, _CharT>
-    : public __format::__formatter_c_string<_CharT> {};
-
-template <class _CharT, size_t _Size>
-struct _LIBCPP_TEMPLATE_VIS formatter<const _CharT[_Size], _CharT>
-    : public __format::__formatter_string<_CharT> {
-  using _Base = __format::__formatter_string<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto format(const _CharT __str[_Size], auto& __ctx)
-      -> decltype(__ctx.out()) {
-    return _Base::format(_VSTD::basic_string_view<_CharT>(__str, _Size), __ctx);
-  }
-};
-
-template <class _CharT, class _Traits, class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS
-    formatter<basic_string<_CharT, _Traits, _Allocator>, _CharT>
-    : public __format::__formatter_string<_CharT> {
-  using _Base = __format::__formatter_string<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto
-  format(const basic_string<_CharT, _Traits, _Allocator>& __str, auto& __ctx)
-      -> decltype(__ctx.out()) {
-    return _Base::format(_VSTD::basic_string_view<_CharT>(__str), __ctx);
-  }
-};
-
-template <class _CharT, class _Traits>
-struct _LIBCPP_TEMPLATE_VIS
-    formatter<basic_string_view<_CharT, _Traits>, _CharT>
-    : public __format::__formatter_string<_CharT> {};
 
 // [format.formatter.spec]/2.3
 // For each charT, for each cv-unqualified arithmetic type ArithmeticT other

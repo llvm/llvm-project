@@ -450,6 +450,7 @@ module std [system] {
       module format_parse_context   { private header "__format/format_parse_context.h"   }
       module format_string          { private header "__format/format_string.h"          }
       module formatter              { private header "__format/formatter.h"              }
+      module formatter_string       { private header "__format/formatter_string.h"       }
       module parser_std_format_spec { private header "__format/parser_std_format_spec.h" }
     }
   }

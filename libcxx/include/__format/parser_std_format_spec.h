@@ -238,6 +238,7 @@ __substitute_arg_id(basic_format_arg<_Context> __arg) {
               static_cast<_CT>(__format::__number_max))
             __throw_format_error("A format-spec arg-id replacement exceeds "
                                  "the maximum supported value");
+
           return __arg;
         } else if constexpr (same_as<_Type, monostate>)
           __throw_format_error("Argument index out of bounds");
