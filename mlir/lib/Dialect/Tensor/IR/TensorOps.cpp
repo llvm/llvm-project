@@ -277,9 +277,12 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   unsigned unsignedIndex = index.getValue().getZExtValue();
 
   if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
-    assert(sliceOp.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic slice size");
-    return sliceOp.getDynamicSize(unsignedIndex);
+    // Fold only for non-rank reduced ops. For the rank-reduced version, rely on
+    // `resolve-shaped-type-result-dims` pass.
+    if (sliceOp.getType().getRank() == sliceOp.getSourceType().getRank() &&
+        sliceOp.isDynamicSize(unsignedIndex)) {
+      return {sliceOp.getDynamicSize(unsignedIndex)};
+    }
   }
 
   // dim(cast) -> dim
@@ -893,6 +896,46 @@ getCanonicalSliceResultType(unsigned resultRank, RankedTensorType sourceType,
                      .cast<RankedTensorType>();
   }
   return resultType;
+}
+
+llvm::SmallDenseSet<unsigned> ExtractSliceOp::getDroppedDims() {
+  llvm::SmallDenseSet<unsigned> droppedDims;
+  ArrayRef<int64_t> resultShape = getType().getShape();
+  SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
+  unsigned shapePos = 0;
+  for (auto size : enumerate(mixedSizes)) {
+    Optional<int64_t> sizeVal = getConstantIntValue(size.value());
+    // If the size is not 1, or if the current matched dimension of the result
+    // is the same static shape as the size value (which is 1), then the
+    // dimension is preserved.
+    if (!sizeVal || sizeVal.getValue() != 1 ||
+        (shapePos < resultShape.size() && resultShape[shapePos] == 1)) {
+      shapePos++;
+      continue;
+    }
+    droppedDims.insert(size.index());
+  }
+  return droppedDims;
+}
+
+LogicalResult ExtractSliceOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1);
+  reifiedReturnShapes[0].reserve(getType().getRank());
+  SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
+  llvm::SmallDenseSet<unsigned> droppedDims = getDroppedDims();
+  Location loc = getLoc();
+  for (auto size : enumerate(mixedSizes)) {
+    if (droppedDims.count(size.index()))
+      continue;
+    if (auto attr = size.value().dyn_cast<Attribute>()) {
+      reifiedReturnShapes[0].push_back(builder.create<ConstantIndexOp>(
+          loc, attr.cast<IntegerAttr>().getInt()));
+      continue;
+    }
+    reifiedReturnShapes[0].push_back(size.value().get<Value>());
+  }
+  return success();
 }
 
 namespace {
