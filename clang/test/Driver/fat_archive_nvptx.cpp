@@ -10,7 +10,7 @@
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "nvptx64"{{.*}}"-target-cpu" "[[GPU:sm_[0-9]+]]"{{.*}}"-o" "[[HOSTBC:.*.s]]" "-x" "c++"{{.*}}.cpp
 // CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-inputs={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-nvptx64-[[GPU]]" "-outputs=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
 // CHECK: clang-nvlink-wrapper{{.*}}"-o" "{{.*}}.out" "-arch" "[[GPU]]" "{{.*}}[[DEVICESPECIFICARCHIVE]]"
-// CHECK: ld"{{.*}}" "-L{{.*}}/Inputs/openmp_static_device_link" "{{.*}} "-lFatArchive" "{{.*}}" "-lomp{{.*}}-lomptarget"
+// CHECK: ld"{{.*}}" "-L{{.*}}/Inputs/openmp_static_device_link" "{{.*}} "-lFatArchive" "{{.*}}" "-lomp{{.*}}"
 // expected-no-diagnostics
 
 #ifndef HEADER
