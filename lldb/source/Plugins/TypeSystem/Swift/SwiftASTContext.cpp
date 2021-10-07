@@ -170,12 +170,14 @@ std::recursive_mutex g_log_mutex;
 
 /// Similar to LLDB_LOG, but with richer contextual information.
 #define LOG_PRINTF(CHANNEL, FMT, ...)                                          \
-  LOG_PRINTF_IMPL(CHANNEL, false, FMT, ##__VA_ARGS__)
+  LOG_PRINTF_IMPL(lldb_private::GetLogIfAllCategoriesSet(CHANNEL), false, FMT, \
+                  ##__VA_ARGS__)
 #define LOG_VERBOSE_PRINTF(CHANNEL, FMT, ...)                                  \
-  LOG_PRINTF_IMPL(CHANNEL, true, FMT, ##__VA_ARGS__)
+  LOG_PRINTF_IMPL(lldb_private::GetLogIfAllCategoriesSet(CHANNEL), true, FMT,  \
+                  ##__VA_ARGS__)
 #define LOG_PRINTF_IMPL(CHANNEL, VERBOSE, FMT, ...)                            \
   do {                                                                         \
-    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(CHANNEL))            \
+    if (Log *log = CHANNEL)                                                    \
       if (!(VERBOSE) || log->GetVerbose()) {                                   \
         std::lock_guard<std::recursive_mutex> locker(g_log_mutex);             \
         /* The format string is optimized for code size, not speed. */         \
@@ -184,6 +186,10 @@ std::recursive_mutex g_log_mutex;
                     (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);    \
       }                                                                        \
   } while (0)
+
+#define HEALTH_LOG_PRINTF(FMT, ...)                                            \
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, FMT, ##__VA_ARGS__);                           \
+  LOG_PRINTF_IMPL(lldb_private::GetSwiftHealthLog(), false, FMT, ##__VA_ARGS__)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -5166,65 +5172,62 @@ void SwiftASTContext::ClearModuleDependentCaches() {
 void SwiftASTContext::LogConfiguration() {
   // It makes no sense to call VALID_OR_RETURN here. We specifically
   // want the logs in the error case!
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  if (!log)
-    return;
-
-  LOG_PRINTF(LIBLLDB_LOG_TYPES,
-             "(SwiftASTContext*)%p:", static_cast<void *>(this));
+  HEALTH_LOG_PRINTF("(SwiftASTContext*)%p:", static_cast<void *>(this));
 
   if (!m_ast_context_ap) {
-    log->Printf("  (no AST context)");
+    HEALTH_LOG_PRINTF("  (no AST context)");
     return;
   }
 
-  log->Printf("  Architecture                 : %s",
-              m_ast_context_ap->LangOpts.Target.getTriple().c_str());
-  log->Printf("  SDK path                     : %s",
-              m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
-  log->Printf("  Runtime resource path        : %s",
-              m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
-  log->Printf("  Runtime library paths        : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths.size());
+  HEALTH_LOG_PRINTF("  Architecture                 : %s",
+                    m_ast_context_ap->LangOpts.Target.getTriple().c_str());
+  HEALTH_LOG_PRINTF("  SDK path                     : %s",
+                    m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
+  HEALTH_LOG_PRINTF(
+      "  Runtime resource path        : %s",
+      m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
+  HEALTH_LOG_PRINTF("  Runtime library paths        : (%llu items)",
+                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                        .RuntimeLibraryPaths.size());
 
   for (const auto &runtime_library_path :
        m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths) {
-    log->Printf("    %s", runtime_library_path.c_str());
+    HEALTH_LOG_PRINTF("    %s", runtime_library_path.c_str());
   }
 
-  log->Printf("  Runtime library import paths : (%llu items)",
-              (unsigned long long)m_ast_context_ap->SearchPathOpts
-                  .RuntimeLibraryImportPaths.size());
+  HEALTH_LOG_PRINTF("  Runtime library import paths : (%llu items)",
+                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                        .RuntimeLibraryImportPaths.size());
 
   for (const auto &runtime_import_path :
        m_ast_context_ap->SearchPathOpts.RuntimeLibraryImportPaths) {
-    log->Printf("    %s", runtime_import_path.c_str());
+    HEALTH_LOG_PRINTF("    %s", runtime_import_path.c_str());
   }
 
-  log->Printf("  Framework search paths       : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size());
+  HEALTH_LOG_PRINTF("  Framework search paths       : (%llu items)",
+                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                        .FrameworkSearchPaths.size());
   for (const auto &framework_search_path :
        m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths) {
-    log->Printf("    %s", framework_search_path.Path.c_str());
+    HEALTH_LOG_PRINTF("    %s", framework_search_path.Path.c_str());
   }
 
-  log->Printf("  Import search paths          : (%llu items)",
-              (unsigned long long)
-                  m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size());
+  HEALTH_LOG_PRINTF("  Import search paths          : (%llu items)",
+                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                        .ImportSearchPaths.size());
   for (std::string &import_search_path :
        m_ast_context_ap->SearchPathOpts.ImportSearchPaths) {
-    log->Printf("    %s", import_search_path.c_str());
+    HEALTH_LOG_PRINTF("    %s", import_search_path.c_str());
   }
 
   swift::ClangImporterOptions &clang_importer_options =
       GetClangImporterOptions();
 
-  log->Printf("  Extra clang arguments        : (%llu items)",
-              (unsigned long long)clang_importer_options.ExtraArgs.size());
+  HEALTH_LOG_PRINTF(
+      "  Extra clang arguments        : (%llu items)",
+      (unsigned long long)clang_importer_options.ExtraArgs.size());
   for (std::string &extra_arg : clang_importer_options.ExtraArgs) {
-    log->Printf("    %s", extra_arg.c_str());
+    HEALTH_LOG_PRINTF("    %s", extra_arg.c_str());
   }
 }
 
