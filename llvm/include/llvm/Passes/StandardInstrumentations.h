@@ -187,17 +187,6 @@ protected:
   // Register required callbacks.
   void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
 
-  // Return true when this is a defined function for which printing
-  // of changes is desired.
-  bool isInterestingFunction(const Function &F);
-
-  // Return true when this is a pass for which printing of changes is desired.
-  bool isInterestingPass(StringRef PassID);
-
-  // Return true when this is a pass on IR for which printing
-  // of changes is desired.
-  bool isInteresting(Any IR, StringRef PassID);
-
   // Called on the first IR processed.
   virtual void handleInitialIR(Any IR) = 0;
   // Called before and after a pass to get the representation of the IR.
@@ -409,6 +398,25 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
+// Print IR on crash.
+class PrintCrashIRInstrumentation {
+public:
+  PrintCrashIRInstrumentation()
+      : SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
+  ~PrintCrashIRInstrumentation();
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void reportCrashIR();
+
+protected:
+  std::string SavedIR;
+
+private:
+  // The crash reporter that will report on a crash.
+  static PrintCrashIRInstrumentation *CrashReporter;
+  // Crash handler registered when print-on-crash is specified.
+  static void SignalHandler(void *);
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -421,6 +429,7 @@ class StandardInstrumentations {
   IRChangedPrinter PrintChangedIR;
   PseudoProbeVerifier PseudoProbeVerification;
   InLineChangePrinter PrintChangedDiff;
+  PrintCrashIRInstrumentation PrintCrashIR;
   VerifyInstrumentation Verify;
 
   bool VerifyEach;
