@@ -53,7 +53,8 @@ inline void *PersistentAllocator::tryAlloc(uptr size) {
 inline void *PersistentAllocator::alloc(uptr size) {
   // First, try to allocate optimisitically.
   void *s = tryAlloc(size);
-  if (s) return s;
+  if (LIKELY(s))
+    return s;
   return refillAndAlloc(size);
 }
 
