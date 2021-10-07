@@ -12,17 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
+#include "DeviceEnvironment.h"
 #include "State.h"
 #include "Types.h"
 
 using namespace _OMP;
-
-struct DeviceEnvironmentTy {
-  uint32_t DebugKind;
-  uint32_t NumDevices;
-  uint32_t DeviceNum;
-  uint64_t DynamicMemSize;
-};
 
 #pragma omp declare target
 

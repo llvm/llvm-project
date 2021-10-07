@@ -28,7 +28,6 @@
 #ifndef _OMPTARGET_NVPTX_DEBUG_H_
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
-#include "common/device_environment.h"
 #include "target_interface.h"
 
 ////////////////////////////////////////////////////////////////////////////////

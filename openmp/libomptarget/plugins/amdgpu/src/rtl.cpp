@@ -30,6 +30,7 @@
 #include "internal.h"
 #include "rt.h"
 
+#include "DeviceEnvironment.h"
 #include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
@@ -802,14 +803,6 @@ public:
 
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// TODO: May need to drop the trailing to fields until deviceRTL is updated
-struct omptarget_device_environmentTy {
-  int32_t debug_level; // gets value of envvar LIBOMPTARGET_DEVICE_RTL_DEBUG
-                       // only useful for Debug build of deviceRTLs
-  int32_t num_devices; // gets number of active offload devices
-  int32_t device_num;  // gets a value 0 to num_devices-1
-};
-
 static RTLDeviceInfoTy DeviceInfo;
 
 namespace {
@@ -1300,15 +1293,12 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
 }
 
 struct device_environment {
-  // initialise an omptarget_device_environmentTy in the deviceRTL
+  // initialise an DeviceEnvironmentTy in the deviceRTL
   // patches around differences in the deviceRTL between trunk, aomp,
   // rocmcc. Over time these differences will tend to zero and this class
   // simplified.
-  // Symbol may be in .data or .bss, and may be missing fields:
-  //  - aomp has debug_level, num_devices, device_num
-  //  - trunk has debug_level
-  //  - under review in trunk is debug_level, device_num
-  //  - rocmcc matches aomp, patch to swap num_devices and device_num
+  // Symbol may be in .data or .bss, and may be missing fields, todo:
+  // review aomp/trunk/rocm and simplify the following
 
   // The symbol may also have been deadstripped because the device side
   // accessors were unused.
@@ -1318,7 +1308,7 @@ struct device_environment {
   // gpu (trunk) and initialize after loading.
   const char *sym() { return "omptarget_device_environment"; }
 
-  omptarget_device_environmentTy host_device_env;
+  DeviceEnvironmentTy host_device_env;
   symbol_info si;
   bool valid = false;
 
@@ -1329,12 +1319,13 @@ struct device_environment {
                      __tgt_device_image *image, const size_t img_size)
       : image(image), img_size(img_size) {
 
-    host_device_env.num_devices = number_devices;
-    host_device_env.device_num = device_id;
-    host_device_env.debug_level = 0;
+    host_device_env.NumDevices = number_devices;
+    host_device_env.DeviceNum = device_id;
+    host_device_env.DebugKind = 0;
+    host_device_env.DynamicMemSize = 0;
 #ifdef OMPTARGET_DEBUG
     if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
-      host_device_env.debug_level = std::stoi(envStr);
+      host_device_env.DebugKind = std::stoi(envStr);
     }
 #endif
 
@@ -1374,7 +1365,7 @@ struct device_environment {
       if (!in_image()) {
         DP("Setting global device environment after load (%u bytes)\n",
            si.size);
-        int device_id = host_device_env.device_num;
+        int device_id = host_device_env.DeviceNum;
         auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
         void *state_ptr;
         uint32_t state_ptr_size;
@@ -1430,9 +1421,9 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   // This function loads the device image onto gpu[device_id] and does other
   // per-image initialization work. Specifically:
   //
-  // - Initialize an omptarget_device_environmentTy instance embedded in the
+  // - Initialize an DeviceEnvironmentTy instance embedded in the
   //   image at the symbol "omptarget_device_environment"
-  //   Fields debug_level, device_num, num_devices. Used by the deviceRTL.
+  //   Fields DebugKind, DeviceNum, NumDevices. Used by the deviceRTL.
   //
   // - Allocate a large array per-gpu (could be moved to init_device)
   //   - Read a uint64_t at symbol omptarget_nvptx_device_State_size
