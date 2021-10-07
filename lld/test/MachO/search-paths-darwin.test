@@ -1,5 +1,5 @@
 REQUIRES: x86
-REQUIRES: darwin
+REQUIRES: system-darwin
 
 RUN: mkdir -p %t1 %t2
 
@@ -7,6 +7,7 @@ RUN: not ld64.lld -arch x86_64 -v -L%t1 -F%t2 2>&1 | FileCheck -DLDIR=%t1 -DFDIR
 CHECK:      Library search paths:
 CHECK-NEXT: [[LDIR]]
 CHECK-NEXT: /usr/lib
+CHECK-NEXT: /usr/local/lib
 CHECK-NEXT: Framework search paths:
 CHECK-NEXT: [[FDIR]]
 CHECK-NEXT: /Library/Frameworks
