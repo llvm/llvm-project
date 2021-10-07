@@ -3847,27 +3847,35 @@ void mlir::vector::populateBubbleVectorBitCastOpPatterns(
                BubbleUpBitCastForStridedSliceInsert>(patterns.getContext());
 }
 
+void mlir::vector::populateVectorBroadcastLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<BroadcastOpLowering>(patterns.getContext());
+}
+
+void mlir::vector::populateVectorMaskOpLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<CreateMaskOpLowering, ConstantMaskOpLowering>(
+      patterns.getContext());
+}
+
+void mlir::vector::populateVectorShapeCastLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ShapeCastOp2DDownCastRewritePattern,
+               ShapeCastOp2DUpCastRewritePattern, ShapeCastOpRewritePattern>(
+      patterns.getContext());
+}
+
 void mlir::vector::populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions parameters) {
-  // clang-format off
-  patterns.add<BroadcastOpLowering,
-                  CreateMaskOpLowering,
-                  ConstantMaskOpLowering,
-                  OuterProductOpLowering,
-                  ShapeCastOp2DDownCastRewritePattern,
-                  ShapeCastOp2DUpCastRewritePattern,
-                  ShapeCastOpRewritePattern>(patterns.getContext());
-  patterns.add<ContractionOpLowering,
-                  ContractionOpToMatmulOpLowering,
-                  ContractionOpToOuterProductOpLowering>(parameters, patterns.getContext());
-  // clang-format on
+    RewritePatternSet &patterns, VectorTransformsOptions options) {
+  patterns.add<OuterProductOpLowering>(patterns.getContext());
+  patterns.add<ContractionOpLowering, ContractionOpToMatmulOpLowering,
+               ContractionOpToOuterProductOpLowering>(options,
+                                                      patterns.getContext());
 }
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions) {
-  patterns.add<TransposeOpLowering>(vectorTransformOptions,
-                                    patterns.getContext());
+    RewritePatternSet &patterns, VectorTransformsOptions options) {
+  patterns.add<TransposeOpLowering>(options, patterns.getContext());
 }
 
 void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(

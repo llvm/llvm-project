@@ -159,23 +159,29 @@ struct VectorTransformsOptions {
   }
 };
 
-/// Collect a set of transformation patterns that are related to contracting
-/// or expanding vector operations:
-///   ContractionOpLowering,
-///   ShapeCastOp2DDownCastRewritePattern,
-///   ShapeCastOp2DUpCastRewritePattern
-///   BroadcastOpLowering,
-///   OuterproductOpLowering
-/// These transformation express higher level vector ops in terms of more
-/// elementary extraction, insertion, reduction, product, and broadcast ops.
+/// Collects patterns to progressively lower vector.broadcast ops on high-D
+/// vectors to low-D vector ops.
+void populateVectorBroadcastLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collects patterns to progressively lower vector contraction ops on high-D
+/// into low-D reduction and product ops.
 void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions());
+
+/// Collects patterns to progressively lower vector mask ops into elementary
+/// selection and insertion ops.
+void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collects patterns to progressively lower vector.shape_cast ops on high-D
+/// vectors into 1-D/2-D vector ops by generating data movement extract/insert
+/// ops.
+void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns);
 
 /// Insert TransposeLowering patterns into extraction/insertion.
 void populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions());
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);

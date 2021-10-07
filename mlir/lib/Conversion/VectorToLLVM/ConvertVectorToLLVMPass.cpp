@@ -62,7 +62,10 @@ void LowerVectorToLLVMPass::runOnOperation() {
   {
     RewritePatternSet patterns(&getContext());
     populateVectorToVectorCanonicalizationPatterns(patterns);
+    populateVectorBroadcastLoweringPatterns(patterns);
     populateVectorContractLoweringPatterns(patterns);
+    populateVectorMaskOpLoweringPatterns(patterns);
+    populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorTransposeLoweringPatterns(patterns);
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);

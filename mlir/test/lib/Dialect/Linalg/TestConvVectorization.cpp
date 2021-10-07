@@ -112,8 +112,11 @@ void TestConvVectorization::runOnOperation() {
 
   // Programmatic controlled lowering of vector.contract only.
   RewritePatternSet vectorContractLoweringPatterns(context);
+  populateVectorBroadcastLoweringPatterns(vectorContractLoweringPatterns);
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
                                          vectorTransformOptions);
+  populateVectorMaskOpLoweringPatterns(vectorContractLoweringPatterns);
+  populateVectorShapeCastLoweringPatterns(vectorContractLoweringPatterns);
   populateVectorTransposeLoweringPatterns(vectorContractLoweringPatterns,
                                           vectorTransformOptions);
   (void)applyPatternsAndFoldGreedily(module,
