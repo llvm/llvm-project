@@ -125,11 +125,13 @@ class GlobalOp;
 // names. Duplicates are avoided.
 class GlobalCreator {
 public:
-  explicit GlobalCreator(ModuleOp module) : moduleOp(module) {}
+  GlobalCreator(ModuleOp module, unsigned alignment = 0)
+      : moduleOp(module), alignment(alignment) {}
   memref::GlobalOp getGlobalFor(ConstantOp constantOp);
 
 private:
   ModuleOp moduleOp;
+  unsigned alignment;
   // This could use memref::GlobalOp key but we avoid introducing a new
   // dependence to the memref dialect for this.
   DenseMap<Attribute, Operation *> globals;

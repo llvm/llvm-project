@@ -62,6 +62,10 @@ def TensorConstantBufferize : Pass<"tensor-constant-bufferize", "ModuleOp"> {
   }];
   let constructor = "mlir::createTensorConstantBufferizePass()";
   let dependentDialects = ["memref::MemRefDialect"];
+  let options = [
+    Option<"alignment", "alignment", "unsigned", /*default=*/"0",
+           "Create global memrefs with a specified alignment">,
+  ];
 }
 
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES

@@ -1,9 +1,17 @@
 // RUN: mlir-opt %s -tensor-constant-bufferize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -tensor-constant-bufferize=alignment=64 -split-input-file | FileCheck --check-prefix=ALIGNED %s
 
 // CHECK-LABEL: module {
+
 // We check the debug name too since we put some effort into making that readable.
 // The name isn't load-bearing though.
+
 // CHECK: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
+// CHECK-NOT: alignment
+
+// ALIGNED: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
+// ALIGNED-SAME: {alignment = 64 : i64}
+
 // CHECK: @basic
 func @basic() -> tensor<3x4xf32> {
   // CHECK: %[[MEMREF:.*]] = memref.get_global @__constant_3x4xf32 : memref<3x4xf32>
