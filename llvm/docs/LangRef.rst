@@ -907,7 +907,7 @@ IFunc may have an optional :ref:`linkage type <linkage>` and an optional
 
 Syntax::
 
-    @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
+    @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
 
 
 .. _langref_comdats:
