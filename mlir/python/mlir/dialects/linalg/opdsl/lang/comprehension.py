@@ -340,6 +340,8 @@ class PrimFn:
   max = PrimFnType("max")
   min = PrimFnType("min")
   sub = PrimFnType("sub")
+  max_unsigned = PrimFnType("max_unsigned")
+  min_unsigned = PrimFnType("min_unsigned")
 
 
 class ReduceFnType:
@@ -365,6 +367,8 @@ class ReduceFn:
   mul = PrimFn.mul.reduce
   max = PrimFn.max.reduce
   min = PrimFn.min.reduce
+  max_unsigned = PrimFn.max_unsigned.reduce
+  min_unsigned = PrimFn.min_unsigned.reduce
 
 
 class PrimApply(TensorExpression):
@@ -438,8 +442,8 @@ class cast(TensorExpression):
     self.operand = operand
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarSymbolicCast(self.to_type,
-                              self.operand.to_scalar_expression()).expr()
+    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
+                              False).expr()
 
   def visit_tensor_exprs(self, callback):
     super().visit_tensor_exprs(callback)
@@ -447,6 +451,17 @@ class cast(TensorExpression):
 
   def __repr__(self):
     return f"cast({self.to_type}, {repr(self.operand)})"
+
+
+class cast_unsigned(cast):
+  """Casts the element type to an unsigned type (typically symbolic TypeVar)."""
+
+  def to_scalar_expression(self) -> ScalarExpression:
+    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
+                              True).expr()
+
+  def __repr__(self):
+    return f"cast_unsigned({self.to_type}, {repr(self.operand)})"
 
 
 class ReduceApply(TensorExpression):

@@ -85,15 +85,17 @@ class ScalarIndex:
 class ScalarSymbolicCast:
   """A type of ScalarExpression that symbolically casts an operand to a TypeVar."""
 
-  def __init__(self, to_type: TypeVar, operand: "ScalarExpression"):
+  def __init__(self, to_type: TypeVar, operand: "ScalarExpression",
+               is_unsigned_cast: bool):
     self.to_type = to_type
     self.operand = operand
+    self.is_unsigned_cast = is_unsigned_cast
 
   def expr(self) -> "ScalarExpression":
     return ScalarExpression(symbolic_cast=self)
 
   def __repr__(self):
-    return f"ScalarSymbolicCast({self.to_type}, {self.operand})"
+    return f"ScalarSymbolicCast({self.to_type}, {self.operand}, {self.is_unsigned_cast})"
 
 
 class ScalarExpression(YAMLObject):
@@ -144,7 +146,8 @@ class ScalarExpression(YAMLObject):
       return dict(
           symbolic_cast=dict(
               type_var=self.symbolic_cast.to_type.name,
-              operands=[self.symbolic_cast.operand]))
+              operands=[self.symbolic_cast.operand],
+              is_unsigned_cast=self.symbolic_cast.is_unsigned_cast))
     else:
       raise ValueError(f"Unexpected ScalarExpression type: {self}")
 
