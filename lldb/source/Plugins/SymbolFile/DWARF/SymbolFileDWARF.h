@@ -108,6 +108,8 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
+  llvm::VersionTuple
+  GetProducerVersion(lldb_private::CompileUnit &comp_unit) override;
 
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;

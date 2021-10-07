@@ -93,6 +93,9 @@ public:
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
   bool GetWarningsUnsupportedLanguage() const;
+#ifdef LLDB_ENABLE_SWIFT
+  bool GetWarningsToolchainMismatch() const;
+#endif
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   std::chrono::seconds GetInterruptTimeout() const;
@@ -372,7 +375,8 @@ public:
   enum Warnings {
     eWarningsOptimization = 1,
     eWarningsUnsupportedLanguage = 2,
-    eWarningsSwiftImport
+    eWarningsSwiftImport,
+    eWarningsToolchainMismatch
   };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
@@ -1311,6 +1315,7 @@ public:
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
 
+#ifdef LLDB_ENABLE_SWIFT
   /// Prints a async warning message to the user one time per Process
   /// for a Module whose Swift AST sections couldn't be loaded because
   /// they aren't buildable on the current machine.
@@ -1320,6 +1325,11 @@ public:
   void PrintWarningCantLoadSwiftModule(const Module &module,
                                        std::string details);
 
+  /// Print a user-visible warning about Swift CUs compiled with a
+  /// different Swift compiler than the one embedded in LLDB.
+  void PrintWarningToolchainMismatch(const SymbolContext &sc);
+#endif
+  
   /// Print a user-visible warning about a function written in a
   /// language that this version of LLDB doesn't support.
   ///

@@ -131,6 +131,9 @@ public:
 
   Symtab *GetSymtab();
 
+  virtual llvm::VersionTuple GetProducerVersion(CompileUnit &comp_unit) {
+    return {};
+  }
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
   virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
