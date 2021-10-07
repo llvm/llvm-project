@@ -10,6 +10,7 @@
 #include "environment.h"
 #include "stat.h"
 #include "flang/Runtime/descriptor.h"
+#include <cstdlib>
 #include <limits>
 
 namespace Fortran::runtime {
@@ -78,5 +79,28 @@ std::int32_t RTNAME(ArgumentValue)(
   }
 
   return StatOk;
+}
+
+static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
+  std::size_t s{d.ElementBytes() - 1};
+  while (*d.OffsetElement(s) == ' ') {
+    --s;
+  }
+  return s + 1;
+}
+
+std::int64_t RTNAME(EnvVariableLength)(const Descriptor &name, bool trim_name) {
+  std::size_t nameLength{
+      trim_name ? LengthWithoutTrailingSpaces(name) : name.ElementBytes()};
+  if (nameLength == 0) {
+    return 0;
+  }
+
+  const char *value{
+      executionEnvironment.GetEnv(name.OffsetElement(), nameLength)};
+  if (!value) {
+    return 0;
+  }
+  return std::strlen(value);
 }
 } // namespace Fortran::runtime

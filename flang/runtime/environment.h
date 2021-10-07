@@ -29,6 +29,7 @@ std::optional<Convert> GetConvertFromString(const char *, std::size_t);
 
 struct ExecutionEnvironment {
   void Configure(int argc, const char *argv[], const char *envp[]);
+  const char *GetEnv(const char *name, std::size_t name_length);
 
   int argc;
   const char **argv;
