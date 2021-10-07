@@ -576,6 +576,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     MOUse.setReg(CopySrcReg);
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);
+    MOUse.setIsUndef(CopySrc.isUndef());
 
     LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
 
