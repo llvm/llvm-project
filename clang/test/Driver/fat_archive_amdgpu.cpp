@@ -10,7 +10,7 @@
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm-bc"{{.*}}"-target-cpu" "[[GPU:gfx[0-9]+]]"{{.*}}"-o" "[[HOSTBC:.*.bc]]" "-x" "c++"{{.*}}.cpp
 // CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-inputs={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-amdgcn-amd-amdhsa-[[GPU]]" "-outputs=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
 // CHECK: llvm-link{{.*}}"[[HOSTBC]]" "[[DEVICESPECIFICARCHIVE]]" "-o" "{{.*}}-[[GPU]]-linked-{{.*}}.bc"
-// CHECK: ld"{{.*}}" "-L{{.*}}/Inputs/openmp_static_device_link" "{{.*}} "-lFatArchive" "{{.*}}" "-lomp"
+// CHECK: ld"{{.*}}" "-L{{.*}}/Inputs/openmp_static_device_link" "{{.*}} "-lFatArchive" "{{.*}}" "-lomp{{.*}}-lomptarget"
 // expected-no-diagnostics
 
 #ifndef HEADER
