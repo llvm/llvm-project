@@ -6975,6 +6975,17 @@ let mayLoad = 1, hasSideEffects = 0 in {
 }
 }
 
+// Pseudo for lowering MVE Q register COPYs. These will usually get converted
+// to a "MVE_VORR dst, src, src", but may behave differently in tail predicated
+// loops to ensure the whole register is copied, not a subset from a
+// tail-predicated MVE_VORR. In the event we cannot prove a MVE_VORR is valid,
+// it will become a pair of VMOVD instructions for each half of the Q register.
+let Predicates = [HasMVEInt], hasSideEffects = 0, isMoveReg = 1,
+    D = MVEDomain in {
+  def MQPRCopy : t2PseudoInst<(outs MQPR:$dst), (ins MQPR:$src),
+                              8, NoItinerary, []>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // Patterns
