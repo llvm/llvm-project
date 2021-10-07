@@ -1,8 +1,6 @@
 /* Minimal declarations for CUDA support.  Testing purposes only. */
 #pragma once
 
-#include <stddef.h>
-
 // Make this file work with nvcc, for testing compatibility.
 
 #ifndef __NVCC__

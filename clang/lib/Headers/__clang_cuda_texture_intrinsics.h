@@ -17,8 +17,6 @@
 #error "This file is for CUDA compilation only."
 #endif
 
-#include <type_traits>
-
 // __nv_tex_surf_handler() provided by this header as a macro.
 #define __nv_tex_surf_handler(__op, __ptr, ...)                                \
   ::__cuda_tex::__tex_fetch<                                                   \
