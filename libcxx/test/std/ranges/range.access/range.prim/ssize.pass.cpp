@@ -30,8 +30,7 @@ static_assert(std::semiregular<std::remove_cv_t<RangeSSizeT>>);
 struct SizeMember {
   constexpr size_t size() { return 42; }
 };
-
-static_assert(!std::is_invocable_v<RangeSSizeT, const SizeMember>);
+static_assert(!std::is_invocable_v<decltype(std::ranges::ssize), const SizeMember&>);
 
 struct SizeFunction {
   friend constexpr size_t size(SizeFunction) { return 42; }
@@ -41,17 +40,11 @@ struct SizeFunctionSigned {
   friend constexpr std::ptrdiff_t size(SizeFunctionSigned) { return 42; }
 };
 
-struct sentinel {
-  bool operator==(std::input_or_output_iterator auto) const { return true; }
+struct SizedSentinelRange {
+  int data_[2] = {};
+  constexpr int *begin() { return data_; }
+  constexpr auto end() { return sized_sentinel<int*>(data_ + 2); }
 };
-
-struct RandomAccesslRange {
-  constexpr random_access_iterator<int*> begin() { return {}; }
-  constexpr sentinel end() { return {}; }
-};
-
-constexpr std::ptrdiff_t operator-(const sentinel, const random_access_iterator<int*>) { return 2; }
-constexpr std::ptrdiff_t operator-(const random_access_iterator<int*>, const sentinel) { return 2; }
 
 struct ShortUnsignedReturnType {
   constexpr unsigned short size() { return 42; }
@@ -75,7 +68,7 @@ constexpr bool test() {
   assert(std::ranges::ssize(SizeFunctionSigned()) == 42);
   ASSERT_SAME_TYPE(decltype(std::ranges::ssize(SizeFunctionSigned())), std::ptrdiff_t);
 
-  RandomAccesslRange b;
+  SizedSentinelRange b;
   assert(std::ranges::ssize(b) == 2);
   ASSERT_SAME_TYPE(decltype(std::ranges::ssize(b)), std::ptrdiff_t);
 
