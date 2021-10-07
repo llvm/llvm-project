@@ -3921,12 +3921,14 @@ Status ProcessGDBRemote::SendEventData(const char *data) {
 DataExtractor ProcessGDBRemote::GetAuxvData() {
   DataBufferSP buf;
   if (m_gdb_comm.GetQXferAuxvReadSupported()) {
-    std::string response_string;
-    Status ST;
-    if (m_gdb_comm.ReadExtFeature(ConstString("auxv"), ConstString(""),
-                                  response_string, ST))
-      buf = std::make_shared<DataBufferHeap>(response_string.c_str(),
-                                             response_string.length());
+    llvm::Expected<std::string> response = m_gdb_comm.ReadExtFeature("auxv", "");
+    if (response)
+      buf = std::make_shared<DataBufferHeap>(response->c_str(),
+                                             response->length());
+    else
+      LLDB_LOG_ERROR(
+          ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS),
+          response.takeError(), "{0}");
   }
   return DataExtractor(buf, GetByteOrder(), GetAddressByteSize());
 }
@@ -4356,17 +4358,14 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     ArchSpec &arch_to_use, std::string xml_filename, std::vector<RemoteRegisterInfo> &registers) {
   // request the target xml file
-  std::string raw;
-  lldb_private::Status lldberr;
-  if (!m_gdb_comm.ReadExtFeature(ConstString("features"),
-                                 ConstString(xml_filename.c_str()), raw,
-                                 lldberr)) {
+  llvm::Expected<std::string> raw = m_gdb_comm.ReadExtFeature("features", xml_filename);
+  if (errorToBool(raw.takeError()))
     return false;
-  }
 
   XMLDocument xml_document;
 
-  if (xml_document.ParseMemory(raw.c_str(), raw.size(), xml_filename.c_str())) {
+  if (xml_document.ParseMemory(raw->c_str(), raw->size(),
+                               xml_filename.c_str())) {
     GdbServerTargetInfo target_info;
     std::vector<XMLNode> feature_nodes;
 
@@ -4565,19 +4564,15 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
   // check that we have extended feature read support
   if (can_use_svr4 && comm.GetQXferLibrariesSVR4ReadSupported()) {
     // request the loaded library list
-    std::string raw;
-    lldb_private::Status lldberr;
-
-    if (!comm.ReadExtFeature(ConstString("libraries-svr4"), ConstString(""),
-                             raw, lldberr))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Error in libraries-svr4 packet");
+    llvm::Expected<std::string> raw = comm.ReadExtFeature("libraries-svr4", "");
+    if (!raw)
+      return raw.takeError();
 
     // parse the xml file in memory
-    LLDB_LOGF(log, "parsing: %s", raw.c_str());
+    LLDB_LOGF(log, "parsing: %s", raw->c_str());
     XMLDocument doc;
 
-    if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
+    if (!doc.ParseMemory(raw->c_str(), raw->size(), "noname.xml"))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Error reading noname.xml");
 
@@ -4656,18 +4651,15 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
     return list;
   } else if (comm.GetQXferLibrariesReadSupported()) {
     // request the loaded library list
-    std::string raw;
-    lldb_private::Status lldberr;
+    llvm::Expected<std::string> raw = comm.ReadExtFeature("libraries", "");
 
-    if (!comm.ReadExtFeature(ConstString("libraries"), ConstString(""), raw,
-                             lldberr))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Error in libraries packet");
+    if (!raw)
+      return raw.takeError();
 
-    LLDB_LOGF(log, "parsing: %s", raw.c_str());
+    LLDB_LOGF(log, "parsing: %s", raw->c_str());
     XMLDocument doc;
 
-    if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
+    if (!doc.ParseMemory(raw->c_str(), raw->size(), "noname.xml"))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Error reading noname.xml");
 
