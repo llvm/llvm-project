@@ -312,7 +312,7 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
   Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
                            options::OPT_nopie);
   if (!A)
-    return TC.isPIEDefault();
+    return TC.isPIEDefault(Args);
   return A->getOption().matches(options::OPT_pie);
 }
 
@@ -2723,7 +2723,9 @@ bool Generic_GCC::isPICDefault() const {
   }
 }
 
-bool Generic_GCC::isPIEDefault() const { return false; }
+bool Generic_GCC::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool Generic_GCC::isPICDefaultForced() const {
   return getArch() == llvm::Triple::x86_64 && getTriple().isOSWindows();

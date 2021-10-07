@@ -74,7 +74,7 @@ public:
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override;
   bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
-  bool isPIEDefault() const override;
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   SanitizerMask getSupportedSanitizers() const override;
   unsigned GetDefaultDwarfVersion() const override;
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,

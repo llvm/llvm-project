@@ -162,7 +162,7 @@ private:
   Tool *getOffloadBundler() const;
   Tool *getOffloadWrapper() const;
 
-  mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
+  mutable bool SanitizerArgsChecked = false;
   mutable std::unique_ptr<XRayArgs> XRayArguments;
 
   /// The effective clang triple for the current Job.
@@ -266,7 +266,7 @@ public:
 
   const Multilib &getMultilib() const { return SelectedMultilib; }
 
-  const SanitizerArgs& getSanitizerArgs() const;
+  SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
 
   const XRayArgs& getXRayArgs() const;
 
@@ -485,15 +485,15 @@ public:
   virtual bool isPICDefault() const = 0;
 
   /// Test whether this toolchain defaults to PIE.
-  virtual bool isPIEDefault() const = 0;
+  virtual bool isPIEDefault(const llvm::opt::ArgList &Args) const = 0;
 
   /// Test whether this toolchaind defaults to non-executable stacks.
   virtual bool isNoExecStackDefault() const;
 
   /// Tests whether this toolchain forces its default for PIC, PIE or
   /// non-PIC.  If this returns true, any PIC related flags should be ignored
-  /// and instead the results of \c isPICDefault() and \c isPIEDefault() are
-  /// used exclusively.
+  /// and instead the results of \c isPICDefault() and \c isPIEDefault(const
+  /// llvm::opt::ArgList &Args) are used exclusively.
   virtual bool isPICDefaultForced() const = 0;
 
   /// SupportsProfiling - Does this tool chain support -pg.

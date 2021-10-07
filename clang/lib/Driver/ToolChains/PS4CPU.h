@@ -23,7 +23,8 @@ namespace PS4cpu {
 void addProfileRTArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
-void addSanitizerArgs(const ToolChain &TC, llvm::opt::ArgStringList &CmdArgs);
+void addSanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                      llvm::opt::ArgStringList &CmdArgs);
 
 class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
 public:

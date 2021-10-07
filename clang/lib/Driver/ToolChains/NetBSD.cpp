@@ -264,7 +264,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
   if (SanArgs.needsSharedRt()) {
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
@@ -501,7 +501,7 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
 void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args,
                                    Action::OffloadKind) const {
-  const SanitizerArgs &SanArgs = getSanitizerArgs();
+  const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
 
