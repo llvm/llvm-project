@@ -1615,7 +1615,27 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(castOp);
 
-  Type sourceType = lookup(bvm, castOp.source()).getType();
+  // If castOp is not inPlace, allocate a new buffer.
+  auto inPlace = getInPlace(castOp->getResult(0));
+  Value newBuffer;
+  if (inPlace != InPlaceSpec::True) {
+    Location loc = castOp.getLoc();
+    // Alloc a copy for `writeOp.source()`, it will become the result buffer.
+    newBuffer = createNewAllocDeallocPairForShapedValue(b, loc, castOp.source(),
+                                                        aliasInfo);
+    if (!isInitTensorOp(castOp.source())) {
+      // Set insertion point now that potential alloc/dealloc are introduced.
+      b.setInsertionPoint(castOp);
+      b.create<CopyOp>(loc, lookup(bvm, castOp.source()), newBuffer);
+    }
+  } else {
+    // InPlace write will result in memref.tensor_load(x) which must
+    // canonicalize away with one of it uses.
+    newBuffer = lookup(bvm, castOp.source());
+    assert(newBuffer && "missing buffer");
+  }
+
+  Type sourceType = newBuffer.getType();
   auto rankedMemRefType = sourceType.dyn_cast<MemRefType>();
   auto unrankedMemRefType = sourceType.dyn_cast<UnrankedMemRefType>();
   assert(rankedMemRefType || unrankedMemRefType);
@@ -1629,8 +1649,7 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
           : ArrayRef<AffineMap>{};
   Type memRefType = getContiguousOrUnrankedMemRefType(
       castOp.getResult().getType(), affineMaps, memorySpace);
-  Value res = b.create<memref::CastOp>(castOp.getLoc(), memRefType,
-                                       lookup(bvm, castOp.source()));
+  Value res = b.create<memref::CastOp>(castOp.getLoc(), memRefType, newBuffer);
   aliasInfo.insertNewBufferEquivalence(res, castOp.getResult());
   map(bvm, castOp.getResult(), res);
   return success();
