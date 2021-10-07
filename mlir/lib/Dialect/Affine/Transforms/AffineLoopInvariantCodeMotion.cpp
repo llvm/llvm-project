@@ -195,7 +195,7 @@ bool checkInvarianceOfNestedIfOps(Operation *op, Value indVar,
 void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   auto *loopBody = forOp.getBody();
   auto indVar = forOp.getInductionVar();
-  ValueRange iterArgs = forOp.getIterOperands();
+  ValueRange iterArgs = forOp.getRegionIterArgs();
 
   // This is the place where hoisted instructions would reside.
   OpBuilder b(forOp.getOperation());
