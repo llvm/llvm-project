@@ -37,6 +37,8 @@ class CheckResult(gdb.Command):
             "print_and_compare", gdb.COMMAND_DATA)
 
     def invoke(self, arg, from_tty):
+        global has_run_tests
+
         try:
             has_run_tests = True
 
