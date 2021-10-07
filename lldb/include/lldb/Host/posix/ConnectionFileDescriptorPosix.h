@@ -88,6 +88,9 @@ protected:
 
   lldb::ConnectionStatus ConnectFile(llvm::StringRef args, Status *error_ptr);
 
+  lldb::ConnectionStatus ConnectSerialPort(llvm::StringRef args,
+                                           Status *error_ptr);
+
   lldb::IOObjectSP m_io_sp;
 
   Predicate<uint16_t>

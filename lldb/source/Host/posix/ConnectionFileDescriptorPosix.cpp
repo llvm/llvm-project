@@ -156,6 +156,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
 #if LLDB_ENABLE_POSIX
             .Case("fd", &ConnectionFileDescriptor::ConnectFD)
             .Case("file", &ConnectionFileDescriptor::ConnectFile)
+            .Case("serial", &ConnectionFileDescriptor::ConnectSerialPort)
 #endif
             .Default(nullptr);
 
@@ -730,6 +731,55 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(llvm::StringRef s,
   }
   m_io_sp =
       std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
+  return eConnectionStatusSuccess;
+#endif // LLDB_ENABLE_POSIX
+  llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
+}
+
+ConnectionStatus
+ConnectionFileDescriptor::ConnectSerialPort(llvm::StringRef s,
+                                            Status *error_ptr) {
+#if LLDB_ENABLE_POSIX
+  llvm::StringRef path, qs;
+  // serial:///PATH?k1=v1&k2=v2...
+  std::tie(path, qs) = s.split('?');
+
+  llvm::Expected<SerialPort::Options> serial_options =
+      SerialPort::OptionsFromURL(qs);
+  if (!serial_options) {
+    if (error_ptr)
+      *error_ptr = serial_options.takeError();
+    else
+      llvm::consumeError(serial_options.takeError());
+    return eConnectionStatusError;
+  }
+
+  int fd = llvm::sys::RetryAfterSignal(-1, ::open, path.str().c_str(), O_RDWR);
+  if (fd == -1) {
+    if (error_ptr)
+      error_ptr->SetErrorToErrno();
+    return eConnectionStatusError;
+  }
+
+  int flags = ::fcntl(fd, F_GETFL, 0);
+  if (flags >= 0) {
+    if ((flags & O_NONBLOCK) == 0) {
+      flags |= O_NONBLOCK;
+      ::fcntl(fd, F_SETFL, flags);
+    }
+  }
+
+  llvm::Expected<std::unique_ptr<SerialPort>> serial_sp = SerialPort::Create(
+      fd, File::eOpenOptionReadWrite, serial_options.get(), true);
+  if (!serial_sp) {
+    if (error_ptr)
+      *error_ptr = serial_sp.takeError();
+    else
+      llvm::consumeError(serial_sp.takeError());
+    return eConnectionStatusError;
+  }
+  m_io_sp = std::move(serial_sp.get());
+
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");

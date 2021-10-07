@@ -10,6 +10,7 @@
 #define LLDB_HOST_FILE_H
 
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Host/Terminal.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
@@ -431,6 +432,44 @@ protected:
 private:
   NativeFile(const NativeFile &) = delete;
   const NativeFile &operator=(const NativeFile &) = delete;
+};
+
+class SerialPort : public NativeFile {
+public:
+  struct Options {
+    llvm::Optional<unsigned int> BaudRate = llvm::None;
+    llvm::Optional<Terminal::Parity> Parity = llvm::None;
+    llvm::Optional<unsigned int> StopBits = llvm::None;
+  };
+
+  // Obtain Options corresponding to the passed URL query string
+  // (i.e. the part after '?').
+  static llvm::Expected<Options> OptionsFromURL(llvm::StringRef urlqs);
+
+  static llvm::Expected<std::unique_ptr<SerialPort>>
+  Create(int fd, OpenOptions options, Options serial_options,
+         bool transfer_ownership);
+
+  bool IsValid() const override {
+    return NativeFile::IsValid() && m_is_interactive == eLazyBoolYes;
+  }
+
+  Status Close() override;
+
+  static char ID;
+  virtual bool isA(const void *classID) const override {
+    return classID == &ID || File::isA(classID);
+  }
+  static bool classof(const File *file) { return file->isA(&ID); }
+
+private:
+  SerialPort(int fd, OpenOptions options, Options serial_options,
+             bool transfer_ownership);
+
+  SerialPort(const SerialPort &) = delete;
+  const SerialPort &operator=(const SerialPort &) = delete;
+
+  TerminalState m_state;
 };
 
 } // namespace lldb_private
