@@ -227,6 +227,56 @@ void test(std::basic_string<CharT> expected, std::locale loc,
   }
 }
 
+#ifndef _LIBCPP_HAS_NO_UNICODE
+template <class CharT>
+struct numpunct_unicode;
+
+template <>
+struct numpunct_unicode<char> : std::numpunct<char> {
+  string_type do_truename() const override { return "gültig"; }
+  string_type do_falsename() const override { return "ungültig"; }
+};
+
+template <>
+struct numpunct_unicode<wchar_t> : std::numpunct<wchar_t> {
+  string_type do_truename() const override { return L"gültig"; }
+  string_type do_falsename() const override { return L"ungültig"; }
+};
+#endif
+
+template <class CharT>
+void test_bool() {
+  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+
+  std::locale::global(std::locale(LOCALE_en_US_UTF_8));
+  assert(std::locale().name() == LOCALE_en_US_UTF_8);
+  test(STR("true"), STR("{:L}"), true);
+  test(STR("false"), STR("{:L}"), false);
+
+  test(STR("yes"), loc, STR("{:L}"), true);
+  test(STR("no"), loc, STR("{:L}"), false);
+
+  std::locale::global(loc);
+  test(STR("yes"), STR("{:L}"), true);
+  test(STR("no"), STR("{:L}"), false);
+
+  test(STR("true"), std::locale(LOCALE_en_US_UTF_8), STR("{:L}"), true);
+  test(STR("false"), std::locale(LOCALE_en_US_UTF_8), STR("{:L}"), false);
+
+#ifndef _LIBCPP_HAS_NO_UNICODE
+  std::locale loc_unicode =
+      std::locale(std::locale(), new numpunct_unicode<CharT>());
+
+  test(STR("gültig"), loc_unicode, STR("{:L}"), true);
+  test(STR("ungültig"), loc_unicode, STR("{:L}"), false);
+
+  test(STR("gültig   "), loc_unicode, STR("{:9L}"), true);
+  test(STR("gültig!!!"), loc_unicode, STR("{:!<9L}"), true);
+  test(STR("_gültig__"), loc_unicode, STR("{:_^9L}"), true);
+  test(STR("   gültig"), loc_unicode, STR("{:>9L}"), true);
+#endif
+}
+
 template <class CharT>
 void test_integer() {
   std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
@@ -557,6 +607,7 @@ void test_integer() {
 
 template <class CharT>
 void test() {
+  test_bool<CharT>();
   test_integer<CharT>();
 }
 

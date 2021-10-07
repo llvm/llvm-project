@@ -279,6 +279,7 @@ namespace std {
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/formatter.h>
+#include <__format/formatter_bool.h>
 #include <__format/formatter_char.h>
 #include <__format/formatter_integer.h>
 #include <__format/formatter_string.h>
@@ -388,28 +389,6 @@ private:
 
 // These specializations are helper stubs and not proper formatters.
 // TODO FMT Implement the proper formatter specializations.
-
-// [format.formatter.spec]/2.3
-// For each charT, for each cv-unqualified arithmetic type ArithmeticT other
-// than char, wchar_t, char8_t, char16_t, or char32_t, a specialization
-
-// Boolean.
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<bool, _CharT> {
-  _LIBCPP_HIDE_FROM_ABI
-  auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    // TODO FMT Implement
-    return __parse_ctx.begin();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI
-  auto format(bool __b, auto& __ctx) -> decltype(__ctx.out()) {
-    // TODO FMT Implement using formatting arguments
-    auto __out_it = __ctx.out();
-    *__out_it++ = _CharT('0') + __b;
-    return __out_it;
-  }
-};
 
 // Floating point types.
 // TODO FMT There are no replacements for the floating point stubs due to not
