@@ -41,76 +41,6 @@
     "triggered": true,
     "id": 6152004,
     "name": "Crashing Thread Name",
-    "threadState": {
-      "r13": {
-        "value": 0
-      },
-      "rax": {
-        "value": 0
-      },
-      "rflags": {
-        "value": 66054
-      },
-      "cpu": {
-        "value": 4
-      },
-      "r14": {
-        "value": 0
-      },
-      "rsi": {
-        "value": 140732860114304
-      },
-      "r8": {
-        "value": 0
-      },
-      "cr2": {
-        "value": 0
-      },
-      "rdx": {
-        "value": 140732860114320
-      },
-      "r10": {
-        "value": 0
-      },
-      "r9": {
-        "value": 0
-      },
-      "r15": {
-        "value": 0
-      },
-      "rbx": {
-        "value": 0
-      },
-      "trap": {
-        "value": 14,
-        "description": "(no mapping for user data write)"
-      },
-      "err": {
-        "value": 6
-      },
-      "r11": {
-        "value": 0
-      },
-      "rip": {
-        "value": 4355624816
-      },
-      "rbp": {
-        "value": 140732860114224
-      },
-      "rsp": {
-        "value": 140732860114224
-      },
-      "r12": {
-        "value": 0
-      },
-      "rcx": {
-        "value": 140732860114656
-      },
-      "flavor": "x86_THREAD_STATE",
-      "rdi": {
-        "value": 1
-      }
-    },
     "queue": "com.apple.main-thread",
     "frames": [
       {
@@ -170,9 +100,5 @@
   "threadTriggered" : {
     "queue" : "com.apple.main-thread"
   }
-},
-  "reportNotes" : [
-  "invalid foo",
-  "invalid bar"
-]
+}
 }
