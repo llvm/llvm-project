@@ -13,3 +13,5 @@
 # CHECK: [  1] {{.*}}out`bar + 8 at test.c
 # CHECK: [  2] {{.*}}out`main + 19 at test.c
 # CHECK: rbp = 0x00007ffeec22a530
+# CHECK: invalid foo
+# CHECK: invalid bar
