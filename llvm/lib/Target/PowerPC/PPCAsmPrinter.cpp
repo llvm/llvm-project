@@ -2528,7 +2528,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
 
   // Construct an aliasing list for each GlobalObject.
   for (const auto &Alias : M.aliases()) {
-    const GlobalObject *Base = Alias.getBaseObject();
+    const GlobalObject *Base = Alias.getAliaseeObject();
     if (!Base)
       report_fatal_error(
           "alias without a base object is not yet supported on AIX");

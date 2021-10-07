@@ -283,15 +283,15 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     Uncommon().CommonAlign = GVar->getAlignment();
   }
 
-  const GlobalObject *Base = GV->getBaseObject();
-  if (!Base) {
+  const GlobalObject *GO = GV->getAliaseeObject();
+  if (!GO) {
     if (isa<GlobalIFunc>(GV))
-      Base = cast<GlobalIFunc>(GV)->getResolverFunction();
-    if (!Base)
+      GO = cast<GlobalIFunc>(GV)->getResolverFunction();
+    if (!GO)
       return make_error<StringError>("Unable to determine comdat of alias!",
                                      inconvertibleErrorCode());
   }
-  if (const Comdat *C = Base->getComdat()) {
+  if (const Comdat *C = GO->getComdat()) {
     Expected<int> ComdatIndexOrErr = getComdatIndex(C, GV->getParent());
     if (!ComdatIndexOrErr)
       return ComdatIndexOrErr.takeError();
@@ -316,8 +316,8 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     }
   }
 
-  if (!Base->getSection().empty())
-    setStr(Uncommon().SectionName, Saver.save(Base->getSection()));
+  if (!GO->getSection().empty())
+    setStr(Uncommon().SectionName, Saver.save(GO->getSection()));
 
   return Error::success();
 }

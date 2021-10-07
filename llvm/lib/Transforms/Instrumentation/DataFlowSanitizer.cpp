@@ -1430,7 +1430,7 @@ bool DataFlowSanitizer::runImpl(Module &M) {
     ++AI;
     // Don't stop on weak.  We assume people aren't playing games with the
     // instrumentedness of overridden weak aliases.
-    auto *F = dyn_cast<Function>(GA->getBaseObject());
+    auto *F = dyn_cast<Function>(GA->getAliaseeObject());
     if (!F)
       continue;
 

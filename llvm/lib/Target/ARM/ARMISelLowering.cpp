@@ -3801,7 +3801,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
 
 bool ARMTargetLowering::isReadOnly(const GlobalValue *GV) const {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
-    if (!(GV = GA->getBaseObject()))
+    if (!(GV = GA->getAliaseeObject()))
       return false;
   if (const auto *V = dyn_cast<GlobalVariable>(GV))
     return V->isConstant();

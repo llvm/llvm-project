@@ -126,8 +126,8 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     // For aliases we should not separate them from their aliasees regardless
     // of linkage.
     if (auto *GIS = dyn_cast<GlobalAlias>(&GV)) {
-      if (const GlobalObject *Base = GIS->getBaseObject())
-        GVtoClusterMap.unionSets(&GV, Base);
+      if (const GlobalObject *Aliasee = GIS->getAliaseeObject())
+        GVtoClusterMap.unionSets(&GV, Aliasee);
     } else if (auto *GIS = dyn_cast<GlobalIFunc>(&GV)) {
       GVtoClusterMap.unionSets(&GV, GIS->getResolverFunction());
     }
@@ -228,7 +228,7 @@ static void externalize(GlobalValue *GV) {
 // Returns whether GV should be in partition (0-based) I of N.
 static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
   if (auto *GIS = dyn_cast<GlobalAlias>(GV)) {
-    if (const GlobalObject *Base = GIS->getBaseObject())
+    if (const GlobalObject *Base = GIS->getAliaseeObject())
       GV = Base;
   } else if (auto *GIS = dyn_cast<GlobalIFunc>(GV)) {
     GV = GIS->getResolverFunction();

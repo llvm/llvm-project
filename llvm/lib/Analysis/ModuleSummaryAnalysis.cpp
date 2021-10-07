@@ -342,7 +342,7 @@ static void computeFunctionSummary(
       // called aliasee for the checks below.
       if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
         assert(!CalledFunction && "Expected null called function in callsite for alias");
-        CalledFunction = dyn_cast<Function>(GA->getBaseObject());
+        CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
       }
       // Check if this is a direct call to a known function or a known
       // intrinsic, or an indirect call with profile data.
@@ -645,7 +645,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
       /* Live = */ false, A.isDSOLocal(),
       A.hasLinkOnceODRLinkage() && A.hasGlobalUnnamedAddr());
   auto AS = std::make_unique<AliasSummary>(Flags);
-  auto *Aliasee = A.getBaseObject();
+  auto *Aliasee = A.getAliaseeObject();
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
   assert(AliaseeVI.getSummaryList().size() == 1 &&

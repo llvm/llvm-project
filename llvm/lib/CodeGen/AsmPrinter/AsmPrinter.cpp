@@ -1666,9 +1666,9 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
     // size of the alias symbol from the type of the alias. We don't do this in
     // other situations as the alias and aliasee having differing types but same
     // size may be intentional.
-    const GlobalObject *BaseObject = GA->getBaseObject();
+    const GlobalObject *Aliasee = GA->getAliaseeObject();
     if (MAI->hasDotTypeDotSizeDirective() && GA->getValueType()->isSized() &&
-        (!BaseObject || BaseObject->hasPrivateLinkage())) {
+        (!Aliasee || Aliasee->hasPrivateLinkage())) {
       const DataLayout &DL = M.getDataLayout();
       uint64_t Size = DL.getTypeAllocSize(GA->getValueType());
       OutStreamer->emitELFSize(Name, MCConstantExpr::create(Size, OutContext));

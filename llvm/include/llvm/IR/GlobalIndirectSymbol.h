@@ -57,10 +57,10 @@ public:
           static_cast<const GlobalIndirectSymbol *>(this)->getIndirectSymbol());
   }
 
-  const GlobalObject *getBaseObject() const;
-  GlobalObject *getBaseObject() {
+  const GlobalObject *getAliaseeObject() const;
+  GlobalObject *getAliaseeObject() {
     return const_cast<GlobalObject *>(
-              static_cast<const GlobalIndirectSymbol *>(this)->getBaseObject());
+        static_cast<const GlobalIndirectSymbol *>(this)->getAliaseeObject());
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
