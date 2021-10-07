@@ -1,15 +1,20 @@
-; RUN: opt < %s -passes='print<scalar-evolution>,loop(loop-rotate),invalidate<scalar-evolution>,print<scalar-evolution>' -disable-output 2>&1 | FileCheck -check-prefixes CHECK-SCEV,CHECK-SCEV-OK %s
-; RUN: opt < %s -passes='print<scalar-evolution>,loop(loop-rotate),print<scalar-evolution>' -disable-output 2>&1 | FileCheck -check-prefixes CHECK-SCEV,CHECK-SCEV-NOK %s
-; FIXME (crashes): opt < %s -passes='loop(canon-freeze),loop(loop-rotate),print<scalar-evolution>' -disable-output
+; RUN: opt < %s -passes='print<scalar-evolution>,loop(loop-rotate),invalidate<scalar-evolution>,print<scalar-evolution>' -disable-output 2>&1 | FileCheck -check-prefixes CHECK-SCEV %s
+; RUN: opt < %s -passes='print<scalar-evolution>,loop(loop-rotate),print<scalar-evolution>' -disable-output 2>&1 | FileCheck -check-prefixes CHECK-SCEV %s
+; RUN: opt < %s -passes='loop(canon-freeze),loop(loop-rotate),print<scalar-evolution>' -disable-output
 
 ; In the first two RUN lines print<scalar-evolution> is used to populate the
-; analysis cache before loop-rotate. That seem to be enough to see the problem
-; by examining print<scalar-evolution> printouts after loop-rotate. However,
-; I've only seen the crashes when using canon-freeze as a trigger to populate
-; the analysis cache.
+; analysis cache before loop-rotate. That was enough to see the problem by
+; examining print<scalar-evolution> printouts after loop-rotate. However, the
+; crashes where only observed when using canon-freeze as a trigger to populate
+; the analysis cache, so that is why canon-freeze is used in the third RUN
+; line.
 
-; Verify that we get the same SCEV expressions after loop-rotate, regardless if we invalidate scalar-evolution before the final printing or not.
-; FIXME: As indicated by CHECK-SCEV-OK vs CHECK-SCEV-NOK this isn't currently true (PR51981).
+; Verify that we get the same SCEV expressions after loop-rotate, regardless
+; if we invalidate scalar-evolution before the final printing or not.
+;
+; This used to fail as described by PR51981 (some expressions still referred
+; to (trunc i32 %div210 to i16) but after the rotation it should be (trunc i32
+; %div2102 to i16).
 ;
 ; CHECK-SCEV: Classifying expressions for: @test_function
 ; CHECK-SCEV:   %wide = load i32, i32* @offset, align 1
@@ -25,11 +30,9 @@
 ; CHECK-SCEV:   %wide2 = phi i32 [ %wide1, %loop.inner.ph.lr.ph ], [ %wide, %loop.outer.latch ]
 ; CHECK-SCEV:   -->  %wide2 U: full-set S: full-set         Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %narrow = trunc i32 %wide2 to i16
-; CHECK-SCEV-OK:   -->  (trunc i32 %wide2 to i16) U: full-set S: full-set               Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
-; CHECK-SCEV-NOK:   -->  (trunc i32 %wide to i16) U: full-set S: full-set               Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
+; CHECK-SCEV:   -->  (trunc i32 %wide2 to i16) U: full-set S: full-set               Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %iv = phi i16 [ %narrow, %loop.inner.ph ], [ %iv.plus, %loop.inner ]
-; CHECK-SCEV-OK:   -->  {(trunc i32 %wide2 to i16),+,1}<%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide2 to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.inner.ph: Variant }
-; CHECK-SCEV-NOK:   -->  {(trunc i32 %wide to i16),+,1}<%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.inner.ph: Variant }
+; CHECK-SCEV:   -->  {(trunc i32 %wide2 to i16),+,1}<%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide2 to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.inner.ph: Variant }
 
 
 @offset = external dso_local global i32, align 1
