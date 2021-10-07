@@ -27,7 +27,7 @@ combined with other commands:
 
 .. option:: -d, --disassemble
 
-  Disassemble all text sections found in the input files.
+  Disassemble all executable sections found in the input files.
 
 .. option:: -D, --disassemble-all
 
@@ -92,6 +92,8 @@ combined with other commands:
 .. option:: -u, --unwind-info
 
   Display the unwind info of the input(s).
+  
+  This operation is only currently supported for COFF and Mach-O object files.
 
 .. option:: -v, --version
 
