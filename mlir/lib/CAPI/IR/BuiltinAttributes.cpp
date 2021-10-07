@@ -331,6 +331,21 @@ MlirAttribute mlirDenseElementsAttrGet(MlirType shapedType,
                              unwrapList(numElements, elements, attributes)));
 }
 
+MlirAttribute mlirDenseElementsAttrRawBufferGet(MlirType shapedType,
+                                                size_t rawBufferSize,
+                                                const void *rawBuffer) {
+  auto shapedTypeCpp = unwrap(shapedType).cast<ShapedType>();
+  ArrayRef<char> rawBufferCpp(static_cast<const char *>(rawBuffer),
+                              rawBufferSize);
+  bool isSplat = false;
+  if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp,
+                                           isSplat)) {
+    return mlirAttributeGetNull();
+  }
+  return wrap(DenseElementsAttr::getFromRawBuffer(shapedTypeCpp, rawBufferCpp,
+                                                  isSplat));
+}
+
 MlirAttribute mlirDenseElementsAttrSplatGet(MlirType shapedType,
                                             MlirAttribute element) {
   return wrap(DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(),
