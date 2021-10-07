@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIROpenMP
 
   DEPENDS
   MLIROpenMPOpsIncGen
+  MLIROpenMPOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

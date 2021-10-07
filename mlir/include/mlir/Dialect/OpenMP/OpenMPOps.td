@@ -20,6 +20,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenMP/OmpCommon.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
 
 def OpenMP_Dialect : Dialect {
   let name = "omp";
@@ -72,7 +73,8 @@ def ClauseDefault : StrEnumAttr<
   let cppNamespace = "::mlir::omp";
 }
 
-def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
+def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
+                 DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>]> {
   let summary = "parallel construct";
   let description = [{
     The parallel construct includes a region of code which is to be executed
