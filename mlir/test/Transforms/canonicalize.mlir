@@ -287,6 +287,18 @@ func @or_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
   return %1 : tensor<4x5xi32>
 }
 
+// CHECK-LABEL: func @or_all_ones
+func @or_all_ones(%arg0: i1, %arg1: i4) -> (i1, i4) {
+  // CHECK-DAG: %c-1_i4 = constant -1 : i4
+  // CHECK-DAG: %true = constant true
+  %c1_i1 = constant 1 : i1
+  %c15 = constant 15 : i4
+  // CHECK-NEXT: return %true
+  %1 = or %arg0, %c1_i1 : i1
+  %2 = or %arg1, %c15 : i4
+  return %1, %2 : i1, i4
+}
+
 //CHECK-LABEL: func @xor_self
 func @xor_self(%arg0: i32) -> i32 {
   //CHECK-NEXT: %c0_i32 = constant 0
