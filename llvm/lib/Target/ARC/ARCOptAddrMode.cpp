@@ -84,9 +84,9 @@ private:
   // instruction \p To
   bool canHoistLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
 
-  // Returns true if load/store instruction \p Ldst can be sunk down
-  // to instruction \p To
-  bool canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
+  // // Returns true if load/store instruction \p Ldst can be sunk down
+  // // to instruction \p To
+  // bool canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
 
   // Check if instructions \p Ldst and \p Add can be moved to become adjacent
   // If they can return instruction which need not to move.
@@ -424,30 +424,30 @@ bool ARCOptAddrMode::canHoistLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
   return true;
 }
 
-bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
-  // Can only sink load/store within same BB
-  if (Ldst->getParent() != To->getParent())
-    return false;
-  MachineBasicBlock::const_iterator MI(Ldst), ME(To),
-      End(Ldst->getParent()->end());
+// bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
+//   // Can only sink load/store within same BB
+//   if (Ldst->getParent() != To->getParent())
+//     return false;
+//   MachineBasicBlock::const_iterator MI(Ldst), ME(To),
+//       End(Ldst->getParent()->end());
 
-  bool IsStore = Ldst->mayStore();
-  bool IsLoad = Ldst->mayLoad();
+//   bool IsStore = Ldst->mayStore();
+//   bool IsLoad = Ldst->mayLoad();
 
-  Register ValReg = IsLoad ? Ldst->getOperand(0).getReg() : Register();
-  for (; MI != ME && MI != End; ++MI) {
-    if (MI->isDebugValue())
-      continue;
-    if (MI->mayStore() || MI->isCall() || MI->isInlineAsm() ||
-        MI->hasUnmodeledSideEffects())
-      return false;
-    if (IsStore && MI->mayLoad())
-      return false;
-    if (ValReg && MI->readsVirtualRegister(ValReg))
-      return false;
-  }
-  return true;
-}
+//   Register ValReg = IsLoad ? Ldst->getOperand(0).getReg() : Register();
+//   for (; MI != ME && MI != End; ++MI) {
+//     if (MI->isDebugValue())
+//       continue;
+//     if (MI->mayStore() || MI->isCall() || MI->isInlineAsm() ||
+//         MI->hasUnmodeledSideEffects())
+//       return false;
+//     if (IsStore && MI->mayLoad())
+//       return false;
+//     if (ValReg && MI->readsVirtualRegister(ValReg))
+//       return false;
+//   }
+//   return true;
+// }
 
 void ARCOptAddrMode::changeToAddrMode(MachineInstr &Ldst, unsigned NewOpcode,
                                       unsigned NewBase,

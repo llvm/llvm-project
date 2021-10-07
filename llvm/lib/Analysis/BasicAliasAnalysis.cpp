@@ -1168,14 +1168,14 @@ AliasResult BasicAAResult::aliasGEP(
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
   if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
-    return getBestAAResults().alias(
-        MemoryLocation(UnderlyingV1, V1Size),
-        MemoryLocation(UnderlyingV2, V2Size), AAQI);
+    return getBestAAResults().alias(MemoryLocation(DecompGEP1.Base, V1Size),
+                                    MemoryLocation(DecompGEP2.Base, V2Size),
+                                    AAQI);
 
   // Do the base pointers alias?
   AliasResult BaseAlias = getBestAAResults().alias(
-      MemoryLocation::getBeforeOrAfter(UnderlyingV1),
-      MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
+      MemoryLocation::getBeforeOrAfter(DecompGEP1.Base),
+      MemoryLocation::getBeforeOrAfter(DecompGEP2.Base), AAQI);
 
   // If we get a No or May, then return it immediately, no amount of analysis
   // will improve this situation.
