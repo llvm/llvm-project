@@ -540,6 +540,34 @@ entry:
  ; CHECK:   store i64* null, i64** [[ALLOCA]]
  ; CHECK:   call void @do_with_swifterror(i64** {{.*}}swifterror{{.*}} [[ALLOCA]])
 
+@undefined_coro_async_resume_fp = constant <{ i32, i32 }>
+  <{ i32 trunc (
+       i64 sub (
+         i64 ptrtoint (void (i8*)* @undefined_coro_async_resume to i64),
+         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @undefined_coro_async_resume_fp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 24
+}>
+
+declare void @crash()
+declare void @use(i8*)
+
+define swiftcc void @undefined_coro_async_resume(i8 *%async.ctx) {
+entry:
+  %id = call token @llvm.coro.id.async(i32 24, i32 16, i32 0, i8* bitcast (<{i32, i32}>* @undefined_coro_async_resume_fp to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %undefined_resume_pointer = call i8* @llvm.coro.async.resume()
+  call void @use(i8* %undefined_resume_pointer)
+  call void @crash()
+  %unused = call i1 (i8*, i1, ...) @llvm.coro.end.async(i8* %hdl, i1 false)
+  unreachable
+}
+; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
+; CHECK-NOT: @llvm.coro.async.resume
+; CHECK: call void @use(i8* null)
+; CHECK: unreachable
+
 declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)
 declare token @llvm.coro.id.async(i32, i32, i32, i8*)
