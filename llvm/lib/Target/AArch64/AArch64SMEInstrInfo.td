@@ -138,6 +138,6 @@ def REVD_ZPmZ : sve2_int_perm_revd<"revd">;
 defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0>;
 defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1>;
 
-defm DUP_PPzPRI : sve2_int_perm_dup_p<"dup">;
+defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel">;
 
 } // End let Predicates = [HasSME]
