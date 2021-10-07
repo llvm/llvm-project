@@ -345,6 +345,11 @@ func @mismatched_types() {
 
 // -----
 
+// expected-error @+1 {{alignment attribute value 63 is not a power of 2}}
+memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
+
+// -----
+
 func @copy_different_shape(%arg0: memref<2xf32>, %arg1: memref<3xf32>) {
   // expected-error @+1 {{op requires the same shape for all operands}}
   memref.copy %arg0, %arg1 : memref<2xf32> to memref<3xf32>

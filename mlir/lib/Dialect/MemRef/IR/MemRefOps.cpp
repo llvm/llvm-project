@@ -1176,6 +1176,14 @@ static LogicalResult verify(GlobalOp op) {
     }
   }
 
+  if (Optional<uint64_t> alignAttr = op.alignment()) {
+    uint64_t alignment = alignAttr.getValue();
+
+    if (!llvm::isPowerOf2_64(alignment))
+      return op->emitError() << "alignment attribute value " << alignment
+                             << " is not a power of 2";
+  }
+
   // TODO: verify visibility for declarations.
   return success();
 }

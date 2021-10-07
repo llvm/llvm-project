@@ -451,9 +451,11 @@ struct GlobalMemrefOpLowering
         initialValue = elementsAttr.getValue({});
     }
 
+    uint64_t alignment = global.alignment().getValueOr(0);
+
     auto newGlobal = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.constant(), linkage, global.sym_name(),
-        initialValue, /*alignment=*/0, type.getMemorySpaceAsInt());
+        initialValue, alignment, type.getMemorySpaceAsInt());
     if (!global.isExternal() && global.isUninitialized()) {
       Block *blk = new Block();
       newGlobal.getInitializerRegion().push_back(blk);

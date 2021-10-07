@@ -701,6 +701,10 @@ func @get_gv3_memref() {
   return
 }
 
+// Test scalar memref with an alignment.
+// CHECK: llvm.mlir.global private @gv4(1.000000e+00 : f32) {alignment = 64 : i64} : f32
+memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
+
 // -----
 
 func @collapse_shape_static(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf32> {

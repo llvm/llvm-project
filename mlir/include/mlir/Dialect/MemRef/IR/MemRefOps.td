@@ -839,6 +839,9 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
     // Private variable with an initial value.
     memref.global "private" @x : memref<2xf32> = dense<0.0,2.0>
 
+    // Private variable with an initial value and an alignment (power of 2).
+    memref.global "private" @x : memref<2xf32> = dense<0.0,2.0> {alignment = 64}
+
     // Declaration of an external variable.
     memref.global "private" @y : memref<4xi32>
 
@@ -855,7 +858,8 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
       OptionalAttr<StrAttr>:$sym_visibility,
       MemRefTypeAttr:$type,
       OptionalAttr<AnyAttr>:$initial_value,
-      UnitAttr:$constant
+      UnitAttr:$constant,
+      OptionalAttr<I64Attr>:$alignment
   );
 
   let assemblyFormat = [{
