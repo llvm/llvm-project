@@ -47,7 +47,7 @@ constexpr bool test() {
     auto sw = sentinel_wrapper<int *>(buffer + 6);
     using Sent = decltype(tv.end());
     Sent sent = Sent(sw);
-    assert(sent.base().base() == sw.base());
+    assert(base(sent.base()) == base(sw));
   }
 
   return true;

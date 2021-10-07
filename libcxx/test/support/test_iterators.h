@@ -838,68 +838,29 @@ private:
     difference_type stride_displacement_ = 0;
 };
 
-template<class T, class U>
-concept sentinel_for_base = requires(U const& u) {
-    u.base();
-    requires std::input_or_output_iterator<std::remove_cvref_t<decltype(u.base())>>;
-    requires std::equality_comparable_with<T, decltype(u.base())>;
-};
-
-template <std::input_or_output_iterator I>
+template <class It>
 class sentinel_wrapper {
 public:
-    sentinel_wrapper() = default;
-    constexpr explicit sentinel_wrapper(I base) : base_(std::move(base)) {}
-
-    constexpr bool operator==(const I& other) const requires std::equality_comparable<I> {
-        return base_ == other;
-    }
-
-    constexpr const I& base() const& { return base_; }
-    constexpr I base() && { return std::move(base_); }
-
-    template<std::input_or_output_iterator I2>
-        requires sentinel_for_base<I, I2>
-    constexpr bool operator==(const I2& other) const {
-        return base_ == other.base();
-    }
-
+    explicit sentinel_wrapper() = default;
+    constexpr explicit sentinel_wrapper(const It& it) : base_(base(it)) {}
+    constexpr bool operator==(const It& other) const { return base_ == base(other); }
+    friend constexpr It base(const sentinel_wrapper& s) { return It(s.base_); }
 private:
-    I base_ = I();
+    decltype(base(std::declval<It>())) base_;
 };
 
-template <std::input_or_output_iterator I>
+template <class It>
 class sized_sentinel {
 public:
-    sized_sentinel() = default;
-    constexpr explicit sized_sentinel(I base) : base_(std::move(base)) {}
-
-    constexpr bool operator==(const I& other) const requires std::equality_comparable<I> {
-        return base_ == other;
-    }
-
-    constexpr const I& base() const& { return base_; }
-    constexpr I base() && { return std::move(base_); }
-
-    template<std::input_or_output_iterator I2>
-        requires sentinel_for_base<I, I2>
-    constexpr bool operator==(const I2& other) const {
-        return base_ == other.base();
-    }
-
+    explicit sized_sentinel() = default;
+    constexpr explicit sized_sentinel(const It& it) : base_(base(it)) {}
+    constexpr bool operator==(const It& other) const { return base_ == base(other); }
+    friend constexpr auto operator-(const sized_sentinel& s, const It& i) { return s.base_ - base(i); }
+    friend constexpr auto operator-(const It& i, const sized_sentinel& s) { return base(i) - s.base_; }
+    friend constexpr It base(const sized_sentinel& s) { return It(s.base_); }
 private:
-    I base_ = I();
+    decltype(base(std::declval<It>())) base_;
 };
-
-template <std::input_or_output_iterator I>
-constexpr auto operator-(sized_sentinel<I> sent, std::input_or_output_iterator auto iter) {
-  return sent.base() - iter;
-}
-
-template <std::input_or_output_iterator I>
-constexpr auto operator-(std::input_or_output_iterator auto iter, sized_sentinel<I> sent) {
-  return iter - sent.base();
-}
 
 template <class It>
 class three_way_contiguous_iterator

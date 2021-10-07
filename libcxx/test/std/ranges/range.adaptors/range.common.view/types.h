@@ -52,15 +52,8 @@ struct SizedForwardView : std::ranges::view_base {
   int* end_;
   constexpr explicit SizedForwardView(int* b, int* e) : begin_(b), end_(e) { }
   constexpr auto begin() const { return forward_iterator<int*>(begin_); }
-  constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(end_)); }
+  constexpr auto end() const { return sized_sentinel<forward_iterator<int*>>(forward_iterator<int*>(end_)); }
 };
-// Required to make SizedForwardView a sized view.
-constexpr auto operator-(sentinel_wrapper<ForwardIter> sent, ForwardIter iter) {
-  return sent.base().base() - iter.base();
-}
-constexpr auto operator-(ForwardIter iter, sentinel_wrapper<ForwardIter> sent) {
-  return iter.base() - sent.base().base();
-}
 static_assert(std::ranges::view<SizedForwardView>);
 static_assert(std::ranges::forward_range<SizedForwardView>);
 static_assert(std::ranges::sized_range<SizedForwardView>);
@@ -71,15 +64,8 @@ struct SizedRandomAccessView : std::ranges::view_base {
   int* end_;
   constexpr explicit SizedRandomAccessView(int* b, int* e) : begin_(b), end_(e) { }
   constexpr auto begin() const { return random_access_iterator<int*>(begin_); }
-  constexpr auto end() const { return sentinel_wrapper<random_access_iterator<int*>>(random_access_iterator<int*>(end_)); }
+  constexpr auto end() const { return sized_sentinel<random_access_iterator<int*>>(random_access_iterator<int*>(end_)); }
 };
-// Required to make SizedRandomAccessView a sized view.
-constexpr auto operator-(sentinel_wrapper<RandomAccessIter> sent, RandomAccessIter iter) {
-  return sent.base().base() - iter.base();
-}
-constexpr auto operator-(RandomAccessIter iter, sentinel_wrapper<RandomAccessIter> sent) {
-  return iter.base() - sent.base().base();
-}
 static_assert(std::ranges::view<SizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<SizedRandomAccessView>);
 static_assert(std::ranges::sized_range<SizedRandomAccessView>);

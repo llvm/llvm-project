@@ -122,7 +122,7 @@ static_assert(!std::ranges::contiguous_range<SizedButNotContiguousRange>);
 static_assert(std::ranges::sized_range<SizedButNotContiguousRange>);
 static_assert(!std::is_constructible_v<std::string_view, SizedButNotContiguousRange>);
 
-using ContiguousButNotSizedRange = std::ranges::subrange<contiguous_iterator<char*>, sentinel_wrapper<char*>, std::ranges::subrange_kind::unsized>;
+using ContiguousButNotSizedRange = std::ranges::subrange<contiguous_iterator<char*>, sentinel_wrapper<contiguous_iterator<char*>>, std::ranges::subrange_kind::unsized>;
 static_assert(std::ranges::contiguous_range<ContiguousButNotSizedRange>);
 static_assert(!std::ranges::sized_range<ContiguousButNotSizedRange>);
 static_assert(!std::is_constructible_v<std::string_view, ContiguousButNotSizedRange>);
