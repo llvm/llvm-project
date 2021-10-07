@@ -129,7 +129,7 @@
 "`P1644 <https://wg21.link/P1644>`__","LWG","Add wait/notify to atomic<shared_ptr>","Cologne","",""
 "`P1650 <https://wg21.link/P1650>`__","LWG","Output std::chrono::days with 'd' suffix","Cologne","",""
 "`P1651 <https://wg21.link/P1651>`__","LWG","bind_front should not unwrap reference_wrapper","Cologne","|Complete|","13.0"
-"`P1652 <https://wg21.link/P1652>`__","LWG","Printf corner cases in std::format","Cologne","",""
+"`P1652 <https://wg21.link/P1652>`__","LWG","Printf corner cases in std::format","Cologne","|In Progress|",""
 "`P1661 <https://wg21.link/P1661>`__","LWG","Remove dedicated precalculated hash lookup interface","Cologne","|Nothing To Do|",""
 "`P1754 <https://wg21.link/P1754>`__","LWG","Rename concepts to standard_case for C++20, while we still can","Cologne","|In Progress|",""
 "","","","","",""

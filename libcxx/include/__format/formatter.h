@@ -148,6 +148,30 @@ __write(output_iterator<const _CharT&> auto __out_it, const _CharT* __first,
 }
 
 /**
+ * @overload
+ *
+ * Uses a transformation operation before writing an element.
+ *
+ * TODO FMT Fill will probably change to support Unicode grapheme cluster.
+ */
+template <class _CharT, class _UnaryOperation, class _Fill>
+_LIBCPP_HIDE_FROM_ABI auto
+__write(output_iterator<const _CharT&> auto __out_it, const _CharT* __first,
+        const _CharT* __last, size_t __size, _UnaryOperation __op,
+        size_t __width, _Fill __fill,
+        __format_spec::_Flags::_Alignment __alignment) -> decltype(__out_it) {
+
+  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT(__size < __width, "Precondition failure");
+
+  __padding_size_result __padding =
+      __padding_size(__size, __width, __alignment);
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before, __fill);
+  __out_it = _VSTD::transform(__first, __last, _VSTD::move(__out_it), __op);
+  return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after, __fill);
+}
+
+/**
  * Writes Unicode input to the output with the required padding.
  *
  * This function does almost the same as the @ref __write function, but handles

@@ -260,6 +260,333 @@ void format_string_tests(TestFunction check, ExceptionTest check_exception) {
   format_test_string_unicode<CharT>(check);
 }
 
+template <class I, class CharT, class TestFunction, class ExceptionTest>
+void format_test_integer_as_integer(TestFunction check,
+                                    ExceptionTest check_exception) {
+  // *** align-fill & width ***
+  check(STR("answer is '42'"), STR("answer is '{:<1}'"), I(42));
+  check(STR("answer is '42'"), STR("answer is '{:<2}'"), I(42));
+  check(STR("answer is '42 '"), STR("answer is '{:<3}'"), I(42));
+
+  check(STR("answer is '     42'"), STR("answer is '{:7}'"), I(42));
+  check(STR("answer is '     42'"), STR("answer is '{:>7}'"), I(42));
+  check(STR("answer is '42     '"), STR("answer is '{:<7}'"), I(42));
+  check(STR("answer is '  42   '"), STR("answer is '{:^7}'"), I(42));
+
+  check(STR("answer is '*****42'"), STR("answer is '{:*>7}'"), I(42));
+  check(STR("answer is '42*****'"), STR("answer is '{:*<7}'"), I(42));
+  check(STR("answer is '**42***'"), STR("answer is '{:*^7}'"), I(42));
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '     42'"), STR("answer is '{:>07}'"), I(42));
+  check(STR("answer is '42     '"), STR("answer is '{:<07}'"), I(42));
+  check(STR("answer is '  42   '"), STR("answer is '{:^07}'"), I(42));
+
+  // *** Sign ***
+  if constexpr (std::signed_integral<I>)
+    check(STR("answer is -42"), STR("answer is {}"), I(-42));
+  check(STR("answer is 0"), STR("answer is {}"), I(0));
+  check(STR("answer is 42"), STR("answer is {}"), I(42));
+
+  if constexpr (std::signed_integral<I>)
+    check(STR("answer is -42"), STR("answer is {:-}"), I(-42));
+  check(STR("answer is 0"), STR("answer is {:-}"), I(0));
+  check(STR("answer is 42"), STR("answer is {:-}"), I(42));
+
+  if constexpr (std::signed_integral<I>)
+    check(STR("answer is -42"), STR("answer is {:+}"), I(-42));
+  check(STR("answer is +0"), STR("answer is {:+}"), I(0));
+  check(STR("answer is +42"), STR("answer is {:+}"), I(42));
+
+  if constexpr (std::signed_integral<I>)
+    check(STR("answer is -42"), STR("answer is {: }"), I(-42));
+  check(STR("answer is  0"), STR("answer is {: }"), I(0));
+  check(STR("answer is  42"), STR("answer is {: }"), I(42));
+
+  // *** alternate form ***
+  if constexpr (std::signed_integral<I>) {
+    check(STR("answer is -42"), STR("answer is {:#}"), I(-42));
+    check(STR("answer is -42"), STR("answer is {:#d}"), I(-42));
+    check(STR("answer is -101010"), STR("answer is {:b}"), I(-42));
+    check(STR("answer is -0b101010"), STR("answer is {:#b}"), I(-42));
+    check(STR("answer is -0B101010"), STR("answer is {:#B}"), I(-42));
+    check(STR("answer is -52"), STR("answer is {:o}"), I(-42));
+    check(STR("answer is -052"), STR("answer is {:#o}"), I(-42));
+    check(STR("answer is -2a"), STR("answer is {:x}"), I(-42));
+    check(STR("answer is -0x2a"), STR("answer is {:#x}"), I(-42));
+    check(STR("answer is -2A"), STR("answer is {:X}"), I(-42));
+    check(STR("answer is -0X2A"), STR("answer is {:#X}"), I(-42));
+  }
+  check(STR("answer is 0"), STR("answer is {:#}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:#d}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:b}"), I(0));
+  check(STR("answer is 0b0"), STR("answer is {:#b}"), I(0));
+  check(STR("answer is 0B0"), STR("answer is {:#B}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:o}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:#o}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:x}"), I(0));
+  check(STR("answer is 0x0"), STR("answer is {:#x}"), I(0));
+  check(STR("answer is 0"), STR("answer is {:X}"), I(0));
+  check(STR("answer is 0X0"), STR("answer is {:#X}"), I(0));
+
+  check(STR("answer is +42"), STR("answer is {:+#}"), I(42));
+  check(STR("answer is +42"), STR("answer is {:+#d}"), I(42));
+  check(STR("answer is +101010"), STR("answer is {:+b}"), I(42));
+  check(STR("answer is +0b101010"), STR("answer is {:+#b}"), I(42));
+  check(STR("answer is +0B101010"), STR("answer is {:+#B}"), I(42));
+  check(STR("answer is +52"), STR("answer is {:+o}"), I(42));
+  check(STR("answer is +052"), STR("answer is {:+#o}"), I(42));
+  check(STR("answer is +2a"), STR("answer is {:+x}"), I(42));
+  check(STR("answer is +0x2a"), STR("answer is {:+#x}"), I(42));
+  check(STR("answer is +2A"), STR("answer is {:+X}"), I(42));
+  check(STR("answer is +0X2A"), STR("answer is {:+#X}"), I(42));
+
+  // *** zero-padding & width ***
+  if constexpr (std::signed_integral<I>) {
+    check(STR("answer is -00000000042"), STR("answer is {:#012}"), I(-42));
+    check(STR("answer is -00000000042"), STR("answer is {:#012d}"), I(-42));
+    check(STR("answer is -00000101010"), STR("answer is {:012b}"), I(-42));
+    check(STR("answer is -0b000101010"), STR("answer is {:#012b}"), I(-42));
+    check(STR("answer is -0B000101010"), STR("answer is {:#012B}"), I(-42));
+    check(STR("answer is -00000000052"), STR("answer is {:012o}"), I(-42));
+    check(STR("answer is -00000000052"), STR("answer is {:#012o}"), I(-42));
+    check(STR("answer is -0000000002a"), STR("answer is {:012x}"), I(-42));
+    check(STR("answer is -0x00000002a"), STR("answer is {:#012x}"), I(-42));
+    check(STR("answer is -0000000002A"), STR("answer is {:012X}"), I(-42));
+    check(STR("answer is -0X00000002A"), STR("answer is {:#012X}"), I(-42));
+  }
+
+  check(STR("answer is 000000000000"), STR("answer is {:#012}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:#012d}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:012b}"), I(0));
+  check(STR("answer is 0b0000000000"), STR("answer is {:#012b}"), I(0));
+  check(STR("answer is 0B0000000000"), STR("answer is {:#012B}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:012o}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:#012o}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:012x}"), I(0));
+  check(STR("answer is 0x0000000000"), STR("answer is {:#012x}"), I(0));
+  check(STR("answer is 000000000000"), STR("answer is {:012X}"), I(0));
+  check(STR("answer is 0X0000000000"), STR("answer is {:#012X}"), I(0));
+
+  check(STR("answer is +00000000042"), STR("answer is {:+#012}"), I(42));
+  check(STR("answer is +00000000042"), STR("answer is {:+#012d}"), I(42));
+  check(STR("answer is +00000101010"), STR("answer is {:+012b}"), I(42));
+  check(STR("answer is +0b000101010"), STR("answer is {:+#012b}"), I(42));
+  check(STR("answer is +0B000101010"), STR("answer is {:+#012B}"), I(42));
+  check(STR("answer is +00000000052"), STR("answer is {:+012o}"), I(42));
+  check(STR("answer is +00000000052"), STR("answer is {:+#012o}"), I(42));
+  check(STR("answer is +0000000002a"), STR("answer is {:+012x}"), I(42));
+  check(STR("answer is +0x00000002a"), STR("answer is {:+#012x}"), I(42));
+  check(STR("answer is +0000000002A"), STR("answer is {:+012X}"), I(42));
+  check(STR("answer is +0X00000002A"), STR("answer is {:+#012X}"), I(42));
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.}"), I(0));
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0}"), I(0));
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42}"), I(0));
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
+    check_exception(
+        "The format-spec type has a type not supported for an integer argument",
+        fmt, 42);
+}
+
+template <class I, class CharT, class TestFunction, class ExceptionTest>
+void format_test_integer_as_char(TestFunction check,
+                                 ExceptionTest check_exception) {
+  // *** align-fill & width ***
+  check(STR("answer is '*     '"), STR("answer is '{:6c}'"), I(42));
+  check(STR("answer is '     *'"), STR("answer is '{:>6c}'"), I(42));
+  check(STR("answer is '*     '"), STR("answer is '{:<6c}'"), I(42));
+  check(STR("answer is '  *   '"), STR("answer is '{:^6c}'"), I(42));
+
+  check(STR("answer is '-----*'"), STR("answer is '{:->6c}'"), I(42));
+  check(STR("answer is '*-----'"), STR("answer is '{:-<6c}'"), I(42));
+  check(STR("answer is '--*---'"), STR("answer is '{:-^6c}'"), I(42));
+
+  // *** Sign ***
+  check(STR("answer is *"), STR("answer is {:c}"), I(42));
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("answer is {:-c}"), I(42));
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("answer is {:+c}"), I(42));
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("answer is {: c}"), I(42));
+
+  // *** alternate form ***
+  check_exception("An alternate form field isn't allowed in this format-spec",
+                  STR("answer is {:#c}"), I(42));
+
+  // *** zero-padding & width ***
+  check_exception("A zero-padding field isn't allowed in this format-spec",
+                  STR("answer is {:01c}"), I(42));
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.c}"), I(0));
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0c}"), I(0));
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42c}"), I(0));
+
+  // *** locale-specific form ***
+  // Note it has no effect but it's allowed.
+  check(STR("answer is '*'"), STR("answer is '{:Lc}'"), I(42));
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
+    check_exception(
+        "The format-spec type has a type not supported for an integer argument",
+        fmt, I(42));
+
+  // *** Validate range ***
+  // TODO FMT Update test after adding 128-bit support.
+  if constexpr (sizeof(I) <= sizeof(long long)) {
+    // The code has some duplications to keep the if statement readable.
+    if constexpr (std::signed_integral<CharT>) {
+      if constexpr (std::signed_integral<I> && sizeof(I) > sizeof(CharT)) {
+        check_exception("Integral value outside the range of the char type",
+                        STR("{:c}"), std::numeric_limits<I>::min());
+        check_exception("Integral value outside the range of the char type",
+                        STR("{:c}"), std::numeric_limits<I>::max());
+      } else if constexpr (std::unsigned_integral<I> &&
+                           sizeof(I) >= sizeof(CharT)) {
+        check_exception("Integral value outside the range of the char type",
+                        STR("{:c}"), std::numeric_limits<I>::max());
+      }
+    } else if constexpr (sizeof(I) > sizeof(CharT)) {
+      check_exception("Integral value outside the range of the char type",
+                      STR("{:c}"), std::numeric_limits<I>::max());
+    }
+  }
+}
+
+template <class I, class CharT, class TestFunction, class ExceptionTest>
+void format_test_integer(TestFunction check, ExceptionTest check_exception) {
+  format_test_integer_as_integer<I, CharT>(check, check_exception);
+  format_test_integer_as_char<I, CharT>(check, check_exception);
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_signed_integer(TestFunction check,
+                                ExceptionTest check_exception) {
+  format_test_integer<signed char, CharT>(check, check_exception);
+  format_test_integer<short, CharT>(check, check_exception);
+  format_test_integer<int, CharT>(check, check_exception);
+  format_test_integer<long, CharT>(check, check_exception);
+  format_test_integer<long long, CharT>(check, check_exception);
+#ifndef _LIBCPP_HAS_NO_INT128
+  format_test_integer<__int128_t, CharT>(check, check_exception);
+#endif
+  // *** check the minma and maxima ***
+  check(STR("-0b10000000"), STR("{:#b}"), std::numeric_limits<int8_t>::min());
+  check(STR("-0200"), STR("{:#o}"), std::numeric_limits<int8_t>::min());
+  check(STR("-128"), STR("{:#}"), std::numeric_limits<int8_t>::min());
+  check(STR("-0x80"), STR("{:#x}"), std::numeric_limits<int8_t>::min());
+
+  check(STR("-0b1000000000000000"), STR("{:#b}"),
+        std::numeric_limits<int16_t>::min());
+  check(STR("-0100000"), STR("{:#o}"), std::numeric_limits<int16_t>::min());
+  check(STR("-32768"), STR("{:#}"), std::numeric_limits<int16_t>::min());
+  check(STR("-0x8000"), STR("{:#x}"), std::numeric_limits<int16_t>::min());
+
+  check(STR("-0b10000000000000000000000000000000"), STR("{:#b}"),
+        std::numeric_limits<int32_t>::min());
+  check(STR("-020000000000"), STR("{:#o}"),
+        std::numeric_limits<int32_t>::min());
+  check(STR("-2147483648"), STR("{:#}"), std::numeric_limits<int32_t>::min());
+  check(STR("-0x80000000"), STR("{:#x}"), std::numeric_limits<int32_t>::min());
+
+  check(STR("-0b100000000000000000000000000000000000000000000000000000000000000"
+            "0"),
+        STR("{:#b}"), std::numeric_limits<int64_t>::min());
+  check(STR("-01000000000000000000000"), STR("{:#o}"),
+        std::numeric_limits<int64_t>::min());
+  check(STR("-9223372036854775808"), STR("{:#}"),
+        std::numeric_limits<int64_t>::min());
+  check(STR("-0x8000000000000000"), STR("{:#x}"),
+        std::numeric_limits<int64_t>::min());
+
+  check(STR("0b1111111"), STR("{:#b}"), std::numeric_limits<int8_t>::max());
+  check(STR("0177"), STR("{:#o}"), std::numeric_limits<int8_t>::max());
+  check(STR("127"), STR("{:#}"), std::numeric_limits<int8_t>::max());
+  check(STR("0x7f"), STR("{:#x}"), std::numeric_limits<int8_t>::max());
+
+  check(STR("0b111111111111111"), STR("{:#b}"),
+        std::numeric_limits<int16_t>::max());
+  check(STR("077777"), STR("{:#o}"), std::numeric_limits<int16_t>::max());
+  check(STR("32767"), STR("{:#}"), std::numeric_limits<int16_t>::max());
+  check(STR("0x7fff"), STR("{:#x}"), std::numeric_limits<int16_t>::max());
+
+  check(STR("0b1111111111111111111111111111111"), STR("{:#b}"),
+        std::numeric_limits<int32_t>::max());
+  check(STR("017777777777"), STR("{:#o}"), std::numeric_limits<int32_t>::max());
+  check(STR("2147483647"), STR("{:#}"), std::numeric_limits<int32_t>::max());
+  check(STR("0x7fffffff"), STR("{:#x}"), std::numeric_limits<int32_t>::max());
+
+  check(
+      STR("0b111111111111111111111111111111111111111111111111111111111111111"),
+      STR("{:#b}"), std::numeric_limits<int64_t>::max());
+  check(STR("0777777777777777777777"), STR("{:#o}"),
+        std::numeric_limits<int64_t>::max());
+  check(STR("9223372036854775807"), STR("{:#}"),
+        std::numeric_limits<int64_t>::max());
+  check(STR("0x7fffffffffffffff"), STR("{:#x}"),
+        std::numeric_limits<int64_t>::max());
+
+  // TODO FMT Add __int128_t test after implementing full range.
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_unsigned_integer(TestFunction check,
+                                  ExceptionTest check_exception) {
+  format_test_integer<unsigned char, CharT>(check, check_exception);
+  format_test_integer<unsigned short, CharT>(check, check_exception);
+  format_test_integer<unsigned, CharT>(check, check_exception);
+  format_test_integer<unsigned long, CharT>(check, check_exception);
+  format_test_integer<unsigned long long, CharT>(check, check_exception);
+#ifndef _LIBCPP_HAS_NO_INT128
+  format_test_integer<__uint128_t, CharT>(check, check_exception);
+#endif
+  // *** test the maxima ***
+  check(STR("0b11111111"), STR("{:#b}"), std::numeric_limits<uint8_t>::max());
+  check(STR("0377"), STR("{:#o}"), std::numeric_limits<uint8_t>::max());
+  check(STR("255"), STR("{:#}"), std::numeric_limits<uint8_t>::max());
+  check(STR("0xff"), STR("{:#x}"), std::numeric_limits<uint8_t>::max());
+
+  check(STR("0b1111111111111111"), STR("{:#b}"),
+        std::numeric_limits<uint16_t>::max());
+  check(STR("0177777"), STR("{:#o}"), std::numeric_limits<uint16_t>::max());
+  check(STR("65535"), STR("{:#}"), std::numeric_limits<uint16_t>::max());
+  check(STR("0xffff"), STR("{:#x}"), std::numeric_limits<uint16_t>::max());
+
+  check(STR("0b11111111111111111111111111111111"), STR("{:#b}"),
+        std::numeric_limits<uint32_t>::max());
+  check(STR("037777777777"), STR("{:#o}"),
+        std::numeric_limits<uint32_t>::max());
+  check(STR("4294967295"), STR("{:#}"), std::numeric_limits<uint32_t>::max());
+  check(STR("0xffffffff"), STR("{:#x}"), std::numeric_limits<uint32_t>::max());
+
+  check(
+      STR("0b1111111111111111111111111111111111111111111111111111111111111111"),
+      STR("{:#b}"), std::numeric_limits<uint64_t>::max());
+  check(STR("01777777777777777777777"), STR("{:#o}"),
+        std::numeric_limits<uint64_t>::max());
+  check(STR("18446744073709551615"), STR("{:#}"),
+        std::numeric_limits<uint64_t>::max());
+  check(STR("0xffffffffffffffff"), STR("{:#x}"),
+        std::numeric_limits<uint64_t>::max());
+
+  // TODO FMT Add __uint128_t test after implementing full range.
+}
+
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
@@ -349,6 +676,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
         static_cast<__int128_t>(std::numeric_limits<long long>::max()) + 1);
   }
 #endif
+  format_test_signed_integer<CharT>(check, check_exception);
 
   // ** Test unsigned integral format argument ***
   check(STR("hello 42"), STR("hello {}"), static_cast<unsigned char>(42));
@@ -372,6 +700,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
                         1);
   }
 #endif
+  format_test_unsigned_integer<CharT>(check, check_exception);
 
   // *** Test floating point format argument ***
 // TODO FMT Enable after floating-point support has been enabled

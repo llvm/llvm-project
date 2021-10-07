@@ -205,7 +205,7 @@
 "`3242 <https://wg21.link/LWG3242>`__","``std::format``\ : missing rules for ``arg-id``\  in ``width``\  and ``precision``\ ","Prague","|Complete|","Clang 14"
 "`3243 <https://wg21.link/LWG3243>`__","``std::format``\  and negative zeroes","Prague","",""
 "`3247 <https://wg21.link/LWG3247>`__","``ranges::iter_move``\  should perform ADL-only lookup of ``iter_move``\ ","Prague","",""
-"`3248 <https://wg21.link/LWG3248>`__","``std::format``\  ``#b``\ , ``#B``\ , ``#o``\ , ``#x``\ , and ``#X``\   presentation types misformat negative numbers","Prague","",""
+"`3248 <https://wg21.link/LWG3248>`__","``std::format``\  ``#b``\ , ``#B``\ , ``#o``\ , ``#x``\ , and ``#X``\   presentation types misformat negative numbers","Prague","|Complete|","14.0"
 "`3250 <https://wg21.link/LWG3250>`__","``std::format``\ : ``#``\  (alternate form) for NaN and inf","Prague","",""
 "`3251 <https://wg21.link/LWG3251>`__","Are ``std::format``\  alignment specifiers applied to string arguments?","Prague","",""
 "`3252 <https://wg21.link/LWG3252>`__","Parse locale's aware modifiers for commands are not consistent with POSIX spec","Prague","",""
