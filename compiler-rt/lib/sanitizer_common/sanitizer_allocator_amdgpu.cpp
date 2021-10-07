@@ -15,7 +15,6 @@
 
 namespace __sanitizer {
 struct HsaMemoryFunctions {
-  bool inited_;
   hsa_status_t (*memory_pool_allocate)(hsa_amd_memory_pool_t memory_pool,
                                        size_t size, uint32_t flags, void **ptr);
   hsa_status_t (*memory_pool_free)(void *ptr);
@@ -26,25 +25,22 @@ struct HsaMemoryFunctions {
   hsa_status_t (*pointer_info_set_userdata)(void *ptr, void *userdata);
 };
 
-static HsaMemoryFunctions hsa_amd = {false};
+static HsaMemoryFunctions hsa_amd;
 
 // Always align to page boundary to match current ROCr behavior
 static const size_t kPageSize_ = 4096;
 
 bool AmdgpuMemFuncs::Init() {
-  if (!hsa_amd.inited_) {
-    hsa_amd.memory_pool_allocate =
-        (decltype(hsa_amd.memory_pool_allocate))dlsym(
-            RTLD_NEXT, "hsa_amd_memory_pool_allocate");
-    hsa_amd.memory_pool_free = (decltype(hsa_amd.memory_pool_free))dlsym(
-        RTLD_NEXT, "hsa_amd_memory_pool_free");
-    hsa_amd.pointer_info = (decltype(hsa_amd.pointer_info))dlsym(
-        RTLD_NEXT, "hsa_amd_pointer_info");
-    hsa_amd.pointer_info_set_userdata =
-        (decltype(hsa_amd.pointer_info_set_userdata))dlsym(
-            RTLD_NEXT, "hsa_amd_pointer_info_set_userdata");
-    hsa_amd.inited_ = true;
-  }
+  hsa_amd.memory_pool_allocate =
+      (decltype(hsa_amd.memory_pool_allocate))dlsym(
+          RTLD_NEXT, "hsa_amd_memory_pool_allocate");
+  hsa_amd.memory_pool_free = (decltype(hsa_amd.memory_pool_free))dlsym(
+      RTLD_NEXT, "hsa_amd_memory_pool_free");
+  hsa_amd.pointer_info = (decltype(hsa_amd.pointer_info))dlsym(
+      RTLD_NEXT, "hsa_amd_pointer_info");
+  hsa_amd.pointer_info_set_userdata =
+      (decltype(hsa_amd.pointer_info_set_userdata))dlsym(
+          RTLD_NEXT, "hsa_amd_pointer_info_set_userdata");
   if (!hsa_amd.memory_pool_allocate || !hsa_amd.memory_pool_free ||
       !hsa_amd.pointer_info || !hsa_amd.pointer_info_set_userdata)
     return false;
