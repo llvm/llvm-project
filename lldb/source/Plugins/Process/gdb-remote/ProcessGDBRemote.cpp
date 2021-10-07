@@ -509,17 +509,6 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
           } else if (name.equals("invalidate-regs")) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
-          } else if (name.equals("dynamic_size_dwarf_expr_bytes")) {
-            size_t dwarf_opcode_len = value.size() / 2;
-            assert(dwarf_opcode_len > 0);
-
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
-
-            StringExtractor opcode_extractor(value);
-            uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
-            assert(dwarf_opcode_len == ret_val);
-            UNUSED_IF_ASSERT_DISABLED(ret_val);
           }
         }
 
@@ -4308,17 +4297,6 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (name == "invalidate_regnums") {
             SplitCommaSeparatedRegisterNumberString(
                 value, reg_info.invalidate_regs, 0);
-          } else if (name == "dynamic_size_dwarf_expr_bytes") {
-            std::string opcode_string = value.str();
-            size_t dwarf_opcode_len = opcode_string.length() / 2;
-            assert(dwarf_opcode_len > 0);
-
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
-            StringExtractor opcode_extractor(opcode_string);
-            uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
-            assert(dwarf_opcode_len == ret_val);
-            UNUSED_IF_ASSERT_DISABLED(ret_val);
           } else {
             Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
                 GDBR_LOG_PROCESS));
@@ -4546,10 +4524,6 @@ void ProcessGDBRemote::AddRemoteRegisters(
            local_regnum},
           regs_with_sentinel(remote_reg_info.value_regs),
           regs_with_sentinel(remote_reg_info.invalidate_regs),
-          !remote_reg_info.dwarf_opcode_bytes.empty()
-              ? remote_reg_info.dwarf_opcode_bytes.data()
-              : nullptr,
-          remote_reg_info.dwarf_opcode_bytes.size(),
     };
 
     if (abi_sp)
