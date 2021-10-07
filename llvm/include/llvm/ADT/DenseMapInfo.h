@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 #include <utility>
 
 namespace llvm {

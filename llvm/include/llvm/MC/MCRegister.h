@@ -10,6 +10,7 @@
 #define LLVM_MC_MCREGISTER_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include <cassert>
 #include <limits>
 

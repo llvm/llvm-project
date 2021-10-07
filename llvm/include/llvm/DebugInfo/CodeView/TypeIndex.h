@@ -18,6 +18,7 @@
 namespace llvm {
 
 class ScopedPrinter;
+class StringRef;
 
 namespace codeview {
 
