@@ -26,7 +26,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 ;CHECK-LABEL: main:
-;CHECK: .loc 1 0 0 prologue_end
+;CHECK: .loc 1 8 2 prologue_end
 
 define i32 @main() nounwind ssp !dbg !6 {
 entry:
