@@ -657,12 +657,21 @@ GetCanonicalNode(SwiftASTContext *module_holder,
 
     case Node::Kind::BoundGenericTypeAlias:
     case Node::Kind::TypeAlias: {
-      auto node_clangtype = ResolveTypeAlias(module_holder, dem, node);
-      if (CompilerType clang_type = node_clangtype.second)
-        return GetClangTypeNode(clang_type, dem, module_holder);
-      if (node_clangtype.first)
-        return node_clangtype.first;
-      return node;
+      while (true) {
+        auto pair = ResolveTypeAlias(module_holder, dem, node);
+        if (auto clang_type = std::get<CompilerType>(pair))
+          return GetClangTypeNode(clang_type, dem, module_holder);
+        if (NodePointer swift_node = std::get<NodePointer>(pair)) {
+          // A swift typealias may resolve to a clang typealias, which we must
+          // then resolve.
+          if (swift_node && swift_node->getKind() == Node::Kind::TypeAlias)
+            node = swift_node;
+          else
+            return swift_node;
+        } else {
+          return node;
+        }
+      }
     }
     default:
       break;
