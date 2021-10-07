@@ -3,11 +3,7 @@
 
 define i1 @logical_and_of_or_commute0(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute0(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[X]], i1 true, i1 [[YNOT]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORY]], i1 [[XORYNOT]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %x, i1 true, i1 %y
@@ -18,11 +14,7 @@ define i1 @logical_and_of_or_commute0(i1 %x, i1 %y) {
 
 define <2 x i1> @logical_and_of_or_commute1(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute1(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 poison>
-; CHECK-NEXT:    [[XORY:%.*]] = select <2 x i1> [[Y]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X:%.*]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select <2 x i1> [[X]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[YNOT]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[XORY]], <2 x i1> [[XORYNOT]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[AND]]
+; CHECK-NEXT:    ret <2 x i1> [[X:%.*]]
 ;
   %ynot = xor <2 x i1> %y, <i1 -1, i1 poison>
   %xory = select <2 x i1> %y, <2 x i1> <i1 true, i1 true>, <2 x i1> %x
@@ -33,11 +25,7 @@ define <2 x i1> @logical_and_of_or_commute1(<2 x i1> %x, <2 x i1> %y) {
 
 define i1 @logical_and_of_or_commute2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute2(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[YNOT]], i1 true, i1 [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORY]], i1 [[XORYNOT]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %x, i1 true, i1 %y
@@ -48,11 +36,7 @@ define i1 @logical_and_of_or_commute2(i1 %x, i1 %y) {
 
 define i1 @logical_and_of_or_commute3(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute3(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[Y]], i1 true, i1 [[X:%.*]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[YNOT]], i1 true, i1 [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORY]], i1 [[XORYNOT]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %y, i1 true, i1 %x
@@ -63,11 +47,7 @@ define i1 @logical_and_of_or_commute3(i1 %x, i1 %y) {
 
 define i1 @logical_and_of_or_commute4(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute4(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[X]], i1 true, i1 [[YNOT]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XORY]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %x, i1 true, i1 %y
@@ -78,11 +58,7 @@ define i1 @logical_and_of_or_commute4(i1 %x, i1 %y) {
 
 define i1 @logical_and_of_or_commute5(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute5(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[Y]], i1 true, i1 [[X:%.*]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[X]], i1 true, i1 [[YNOT]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XORY]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %y, i1 true, i1 %x
@@ -93,11 +69,7 @@ define i1 @logical_and_of_or_commute5(i1 %x, i1 %y) {
 
 define i1 @logical_and_of_or_commute6(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute6(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[YNOT]], i1 true, i1 [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XORY]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %x, i1 true, i1 %y
@@ -108,15 +80,45 @@ define i1 @logical_and_of_or_commute6(i1 %x, i1 %y) {
 
 define i1 @logical_and_of_or_commute7(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_of_or_commute7(
-; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[XORY:%.*]] = select i1 [[Y]], i1 true, i1 [[X:%.*]]
-; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[YNOT]], i1 true, i1 [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XORY]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %ynot = xor i1 %y, -1
   %xory = select i1 %y, i1 true, i1 %x
   %xorynot = select i1 %ynot, i1 true, i1 %x
   %and = select i1 %xorynot, i1 %xory, i1 false
+  ret i1 %and
+}
+
+; negative test - wrong logic op
+
+define i1 @logical_and_of_or_and(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_and_of_or_and(
+; CHECK-NEXT:    [[XANDY:%.*]] = select i1 [[Y:%.*]], i1 [[X:%.*]], i1 false
+; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y]], true
+; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[YNOT]], i1 true, i1 [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XANDY]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %xandy = select i1 %y, i1 %x, i1 false
+  %ynot = xor i1 %y, -1
+  %xorynot = select i1 %ynot, i1 true, i1 %x
+  %and = select i1 %xorynot, i1 %xandy, i1 false
+  ret i1 %and
+}
+
+; negative test - must have common operands
+
+define i1 @logical_and_of_or_no_common_op(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @logical_and_of_or_no_common_op(
+; CHECK-NEXT:    [[XORZ:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Z:%.*]]
+; CHECK-NEXT:    [[YNOT:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[XORYNOT:%.*]] = select i1 [[X]], i1 true, i1 [[YNOT]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[XORYNOT]], i1 [[XORZ]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %xorz = select i1 %x, i1 true, i1 %z
+  %ynot = xor i1 %y, -1
+  %xorynot = select i1 %x, i1 true, i1 %ynot
+  %and = select i1 %xorynot, i1 %xorz, i1 false
   ret i1 %and
 }
