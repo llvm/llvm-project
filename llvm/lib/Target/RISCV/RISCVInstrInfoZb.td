@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoB.td - RISC-V 'B' instructions -------*- tablegen -*-===//
+//===-- RISCVInstrInfoZb.td - RISC-V Bitmanip instructions -*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the RISC-V instructions from the standard 'B' Bitmanip
-// extension, version 0.93.
-// This version is still experimental as the 'B' extension hasn't been
+// This file describes the RISC-V instructions from the standard Bitmanip
+// extensions, version 0.93.
+// This version is still experimental as the Bitmanip extensions haven't been
 // ratified yet.
 //
 //===----------------------------------------------------------------------===//
