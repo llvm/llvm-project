@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
