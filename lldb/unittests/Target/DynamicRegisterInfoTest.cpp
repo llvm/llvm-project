@@ -12,6 +12,8 @@
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 
+#include <functional>
+
 using namespace lldb_private;
 
 static std::vector<uint32_t> regs_to_vector(uint32_t *regs) {
@@ -69,9 +71,10 @@ protected:
   }
 };
 
-#define ASSERT_REG(reg, ...) { \
-  SCOPED_TRACE("at register " #reg); \
-  AssertRegisterInfo(reg, #reg, __VA_ARGS__); \
+#define ASSERT_REG(reg, ...)                                                   \
+  {                                                                            \
+    SCOPED_TRACE("at register " #reg);                                         \
+    AssertRegisterInfo(reg, #reg, __VA_ARGS__);                                \
   }
 
 TEST_F(DynamicRegisterInfoTest, finalize_regs) {
@@ -124,46 +127,62 @@ TEST_F(DynamicRegisterInfoTest, no_finalize_regs) {
   ASSERT_REG(i2, LLDB_INVALID_INDEX32);
 }
 
-TEST_F(DynamicRegisterInfoTest, add_supplementary_register) {
+class DynamicRegisterInfoRegisterTest : public ::testing::Test {
+protected:
+  std::vector<DynamicRegisterInfo::Register> m_regs;
+
+  uint32_t AddTestRegister(
+      const char *name, const char *group, uint32_t byte_size,
+      std::function<void(const DynamicRegisterInfo::Register &)> adder,
+      std::vector<uint32_t> value_regs = {},
+      std::vector<uint32_t> invalidate_regs = {}) {
+    DynamicRegisterInfo::Register new_reg{
+        ConstString(name),     ConstString(),
+        ConstString(group),    byte_size,
+        LLDB_INVALID_INDEX32,  lldb::eEncodingUint,
+        lldb::eFormatUnsigned, LLDB_INVALID_REGNUM,
+        LLDB_INVALID_REGNUM,   LLDB_INVALID_REGNUM,
+        LLDB_INVALID_REGNUM,   value_regs,
+        invalidate_regs};
+    adder(new_reg);
+    return m_regs.size() - 1;
+  }
+
+  void ExpectInRegs(uint32_t reg_num, const char *reg_name,
+                    std::vector<uint32_t> value_regs,
+                    std::vector<uint32_t> invalidate_regs) {
+    ASSERT_GT(m_regs.size(), reg_num);
+
+    const DynamicRegisterInfo::Register &reg = m_regs[reg_num];
+    ConstString expected_reg_name{reg_name};
+    EXPECT_EQ(reg.name, expected_reg_name);
+    EXPECT_EQ(reg.value_regs, value_regs);
+    EXPECT_EQ(reg.invalidate_regs, invalidate_regs);
+  }
+};
+
+#define EXPECT_IN_REGS(reg, ...)                                               \
+  {                                                                            \
+    SCOPED_TRACE("at register " #reg);                                         \
+    ExpectInRegs(reg, #reg, __VA_ARGS__);                                      \
+  }
+
+TEST_F(DynamicRegisterInfoRegisterTest, addSupplementaryRegister) {
   // Add a base register
-  uint32_t rax = AddTestRegister("rax", 8);
+  uint32_t rax = AddTestRegister(
+      "rax", "group", 8,
+      [this](const DynamicRegisterInfo::Register &r) { m_regs.push_back(r); });
 
-  // Register numbers
-  uint32_t eax = 1;
-  uint32_t ax = 2;
-  uint32_t al = 3;
-
-  ConstString group{"supplementary registers"};
-  uint32_t value_regs[2] = {rax, LLDB_INVALID_REGNUM};
-  struct RegisterInfo eax_reg {
-    "eax", nullptr, 4, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
-        lldb::eFormatUnsigned,
-        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, eax,
-         eax},
-        value_regs, nullptr
+  // Add supplementary registers
+  auto suppl_adder = [this](const DynamicRegisterInfo::Register &r) {
+    addSupplementaryRegister(m_regs, r);
   };
-  info.AddSupplementaryRegister(eax_reg, group);
+  uint32_t eax = AddTestRegister("eax", "supplementary", 4, suppl_adder, {rax});
+  uint32_t ax = AddTestRegister("ax", "supplementary", 2, suppl_adder, {rax});
+  uint32_t al = AddTestRegister("al", "supplementary", 1, suppl_adder, {rax});
 
-  struct RegisterInfo ax_reg {
-    "ax", nullptr, 2, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
-        lldb::eFormatUnsigned,
-        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, ax, ax},
-        value_regs, nullptr
-  };
-  info.AddSupplementaryRegister(ax_reg, group);
-
-  struct RegisterInfo al_reg {
-    "al", nullptr, 1, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
-        lldb::eFormatUnsigned,
-        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, al, al},
-        value_regs, nullptr
-  };
-  info.AddSupplementaryRegister(al_reg, group);
-
-  info.Finalize(lldb_private::ArchSpec());
-
-  ASSERT_REG(rax, 0, {}, {eax, ax, al});
-  ASSERT_REG(eax, 0, {rax}, {rax, ax, al});
-  ASSERT_REG(ax, 0, {rax}, {rax, eax, al});
-  ASSERT_REG(al, 0, {rax}, {rax, eax, ax});
+  EXPECT_IN_REGS(rax, {}, {eax, ax, al});
+  EXPECT_IN_REGS(eax, {rax}, {rax, ax, al});
+  EXPECT_IN_REGS(ax, {rax}, {rax, eax, al});
+  EXPECT_IN_REGS(al, {rax}, {rax, eax, ax});
 }
