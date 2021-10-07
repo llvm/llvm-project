@@ -10,10 +10,10 @@ define void @add_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; CHECK-LABEL: add_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vadd.vv v25, v25, v26
-; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
   %b = load <4 x i32>, <4 x i32>* %y
@@ -71,10 +71,10 @@ define void @add_v2i32(<2 x i32>* %x, <2 x i32>* %y) {
 ; CHECK-LABEL: add_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vadd.vv v25, v25, v26
-; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
@@ -118,10 +118,10 @@ define void @fadd_v4f32(<4 x float>* %x, <4 x float>* %y) {
 ; CHECK-LABEL: fadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vfadd.vv v25, v25, v26
-; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
@@ -155,10 +155,10 @@ define void @fadd_v2f32(<2 x float>* %x, <2 x float>* %y) {
 ; CHECK-LABEL: fadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vfadd.vv v25, v25, v26
-; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, <2 x float>* %x
   %b = load <2 x float>, <2 x float>* %y

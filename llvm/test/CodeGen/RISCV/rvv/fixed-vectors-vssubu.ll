@@ -469,8 +469,8 @@ define <2 x i64> @usub_v2i64_vx(<2 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v25, (a0), zero
-; RV32-NEXT:    vssubu.vv v8, v8, v25
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vssubu.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -519,8 +519,8 @@ define <4 x i64> @usub_v4i64_vx(<4 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
-; RV32-NEXT:    vssubu.vv v8, v8, v26
+; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vssubu.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -569,8 +569,8 @@ define <8 x i64> @usub_v8i64_vx(<8 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v28, (a0), zero
-; RV32-NEXT:    vssubu.vv v8, v8, v28
+; RV32-NEXT:    vlse64.v v12, (a0), zero
+; RV32-NEXT:    vssubu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;

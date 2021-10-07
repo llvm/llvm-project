@@ -20,14 +20,14 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    addi a1, a1, 16
 ; SPILL-O0-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
 ; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; SPILL-O0-NEXT:    vfadd.vv v25, v8, v9
+; SPILL-O0-NEXT:    vfadd.vv v8, v8, v9
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs1r.v v25, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O0-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O0-NEXT:    call puts@plt
 ; SPILL-O0-NEXT:    addi a1, sp, 16
-; SPILL-O0-NEXT:    vl1r.v v25, (a1) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl1r.v v9, (a1) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a1, vlenb
 ; SPILL-O0-NEXT:    add a1, sp, a1
 ; SPILL-O0-NEXT:    addi a1, a1, 16
@@ -35,7 +35,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    # kill: def $x11 killed $x10
 ; SPILL-O0-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
 ; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; SPILL-O0-NEXT:    vfadd.vv v8, v8, v25
+; SPILL-O0-NEXT:    vfadd.vv v8, v8, v9
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -55,11 +55,11 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    addi a1, sp, 8
 ; SPILL-O2-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; SPILL-O2-NEXT:    vfadd.vv v25, v8, v9
+; SPILL-O2-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    add a0, sp, a0
 ; SPILL-O2-NEXT:    addi a0, a0, 8
-; SPILL-O2-NEXT:    vs1r.v v25, (a0) # Unknown-size Folded Spill
+; SPILL-O2-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O2-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O2-NEXT:    call puts@plt
@@ -67,10 +67,10 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    add a0, sp, a0
 ; SPILL-O2-NEXT:    addi a0, a0, 8
-; SPILL-O2-NEXT:    vl1r.v v25, (a0) # Unknown-size Folded Reload
+; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    addi a0, sp, 8
-; SPILL-O2-NEXT:    vl1r.v v26, (a0) # Unknown-size Folded Reload
-; SPILL-O2-NEXT:    vfadd.vv v8, v26, v25
+; SPILL-O2-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; SPILL-O2-NEXT:    vfadd.vv v8, v9, v8
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0

@@ -409,9 +409,9 @@ define <vscale x 2 x i1> @extract_nxv64i1_nxv2i1_2(<vscale x 64 x i1> %mask) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vx v25, v8, a0
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %c = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1(<vscale x 64 x i1> %mask, i64 2)
   ret <vscale x 2 x i1> %c
@@ -429,14 +429,14 @@ define <vscale x 4 x i1> @extract_nxv4i1_nxv32i1_4(<vscale x 32 x i1> %x) {
 ; CHECK-LABEL: extract_nxv4i1_nxv32i1_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
-; CHECK-NEXT:    vmv.v.i v28, 0
-; CHECK-NEXT:    vmerge.vim v28, v28, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vx v25, v28, a0
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %c = call <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1(<vscale x 32 x i1> %x, i64 4)
   ret <vscale x 4 x i1> %c
@@ -480,15 +480,15 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vx v25, v10, a0
-; CHECK-NEXT:    vslidedown.vx v26, v9, a0
+; CHECK-NEXT:    vslidedown.vx v14, v10, a0
+; CHECK-NEXT:    vslidedown.vx v12, v9, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
-; CHECK-NEXT:    vslideup.vi v27, v25, 0
+; CHECK-NEXT:    vslideup.vi v13, v14, 0
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
-; CHECK-NEXT:    vslideup.vx v27, v25, a0
-; CHECK-NEXT:    vslideup.vx v26, v10, a0
-; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    vslideup.vx v13, v8, a0
+; CHECK-NEXT:    vslideup.vx v12, v10, a0
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = call <vscale x 6 x half> @llvm.experimental.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 6)
   ret <vscale x 6 x half> %res

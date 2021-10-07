@@ -19,7 +19,7 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lui a1, 262144
 ; RV32IFD-NEXT:    mv a0, zero
-; RV32IFD-NEXT:    call test
+; RV32IFD-NEXT:    call test@plt
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)

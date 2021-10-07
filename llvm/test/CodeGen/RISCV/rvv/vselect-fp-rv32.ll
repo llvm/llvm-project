@@ -408,13 +408,13 @@ define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %v
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vmseq.vi v25, v16, 0
+; CHECK-NEXT:    vmseq.vi v24, v16, 0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmseq.vi v0, v16, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
@@ -435,8 +435,8 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-LABEL: vselect_legalize_regression:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vlm.v v25, (a0)
-; CHECK-NEXT:    vmand.mm v1, v0, v25
+; CHECK-NEXT:    vlm.v v24, (a0)
+; CHECK-NEXT:    vmand.mm v1, v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 3
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, mu

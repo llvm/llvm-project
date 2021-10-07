@@ -895,8 +895,8 @@ define <vscale x 1 x i64> @intrinsic_vadc_vxm_nxv1i64_nxv1i64_i64(<vscale x 1 x 
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v25, (a0), zero
-; CHECK-NEXT:    vadc.vvm v8, v8, v25, v0
+; CHECK-NEXT:    vlse64.v v9, (a0), zero
+; CHECK-NEXT:    vadc.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -923,8 +923,8 @@ define <vscale x 2 x i64> @intrinsic_vadc_vxm_nxv2i64_nxv2i64_i64(<vscale x 2 x 
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v26, (a0), zero
-; CHECK-NEXT:    vadc.vvm v8, v8, v26, v0
+; CHECK-NEXT:    vlse64.v v10, (a0), zero
+; CHECK-NEXT:    vadc.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -951,8 +951,8 @@ define <vscale x 4 x i64> @intrinsic_vadc_vxm_nxv4i64_nxv4i64_i64(<vscale x 4 x 
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v28, (a0), zero
-; CHECK-NEXT:    vadc.vvm v8, v8, v28, v0
+; CHECK-NEXT:    vlse64.v v12, (a0), zero
+; CHECK-NEXT:    vadc.vvm v8, v8, v12, v0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:

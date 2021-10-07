@@ -8,15 +8,15 @@ define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq0(<vscale x 1 x i16> %x)
 ; RV32-NEXT:    lui a0, 1048571
 ; RV32-NEXT:    addi a0, a0, -1365
 ; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vmul.vx v25, v8, a0
-; RV32-NEXT:    vsll.vi v26, v25, 15
-; RV32-NEXT:    vsrl.vi v25, v25, 1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    vmul.vx v8, v8, a0
+; RV32-NEXT:    vsll.vi v9, v8, 15
+; RV32-NEXT:    vsrl.vi v8, v8, 1
+; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    lui a0, 3
 ; RV32-NEXT:    addi a0, a0, -1366
-; RV32-NEXT:    vmsgtu.vx v0, v25, a0
-; RV32-NEXT:    vmv.v.i v25, 0
-; RV32-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV32-NEXT:    vmsgtu.vx v0, v8, a0
+; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_urem_vec_even_divisor_eq0:
@@ -24,15 +24,15 @@ define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq0(<vscale x 1 x i16> %x)
 ; RV64-NEXT:    lui a0, 1048571
 ; RV64-NEXT:    addiw a0, a0, -1365
 ; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vmul.vx v25, v8, a0
-; RV64-NEXT:    vsll.vi v26, v25, 15
-; RV64-NEXT:    vsrl.vi v25, v25, 1
-; RV64-NEXT:    vor.vv v25, v25, v26
+; RV64-NEXT:    vmul.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v9, v8, 15
+; RV64-NEXT:    vsrl.vi v8, v8, 1
+; RV64-NEXT:    vor.vv v8, v8, v9
 ; RV64-NEXT:    lui a0, 3
 ; RV64-NEXT:    addiw a0, a0, -1366
-; RV64-NEXT:    vmsgtu.vx v0, v25, a0
-; RV64-NEXT:    vmv.v.i v25, 0
-; RV64-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV64-NEXT:    vmsgtu.vx v0, v8, a0
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    ret
   %ins1 = insertelement <vscale x 1 x i16> poison, i16 6, i32 0
   %splat1 = shufflevector <vscale x 1 x i16> %ins1, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
@@ -50,12 +50,12 @@ define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq0(<vscale x 1 x i16> %x) 
 ; RV32-NEXT:    lui a0, 1048573
 ; RV32-NEXT:    addi a0, a0, -819
 ; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vmul.vx v25, v8, a0
+; RV32-NEXT:    vmul.vx v8, v8, a0
 ; RV32-NEXT:    lui a0, 3
 ; RV32-NEXT:    addi a0, a0, 819
-; RV32-NEXT:    vmsgtu.vx v0, v25, a0
-; RV32-NEXT:    vmv.v.i v25, 0
-; RV32-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV32-NEXT:    vmsgtu.vx v0, v8, a0
+; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_urem_vec_odd_divisor_eq0:
@@ -63,12 +63,12 @@ define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq0(<vscale x 1 x i16> %x) 
 ; RV64-NEXT:    lui a0, 1048573
 ; RV64-NEXT:    addiw a0, a0, -819
 ; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vmul.vx v25, v8, a0
+; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    lui a0, 3
 ; RV64-NEXT:    addiw a0, a0, 819
-; RV64-NEXT:    vmsgtu.vx v0, v25, a0
-; RV64-NEXT:    vmv.v.i v25, 0
-; RV64-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV64-NEXT:    vmsgtu.vx v0, v8, a0
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    ret
   %ins1 = insertelement <vscale x 1 x i16> poison, i16 5, i32 0
   %splat1 = shufflevector <vscale x 1 x i16> %ins1, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
@@ -85,36 +85,36 @@ define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq1(<vscale x 1 x i16> %x)
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a0, zero, 1
 ; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vsub.vx v25, v8, a0
+; RV32-NEXT:    vsub.vx v8, v8, a0
 ; RV32-NEXT:    lui a0, 1048571
 ; RV32-NEXT:    addi a0, a0, -1365
-; RV32-NEXT:    vmul.vx v25, v25, a0
-; RV32-NEXT:    vsll.vi v26, v25, 15
-; RV32-NEXT:    vsrl.vi v25, v25, 1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    vmul.vx v8, v8, a0
+; RV32-NEXT:    vsll.vi v9, v8, 15
+; RV32-NEXT:    vsrl.vi v8, v8, 1
+; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    lui a0, 3
 ; RV32-NEXT:    addi a0, a0, -1366
-; RV32-NEXT:    vmsgtu.vx v0, v25, a0
-; RV32-NEXT:    vmv.v.i v25, 0
-; RV32-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV32-NEXT:    vmsgtu.vx v0, v8, a0
+; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_urem_vec_even_divisor_eq1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a0, zero, 1
 ; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vsub.vx v25, v8, a0
+; RV64-NEXT:    vsub.vx v8, v8, a0
 ; RV64-NEXT:    lui a0, 1048571
 ; RV64-NEXT:    addiw a0, a0, -1365
-; RV64-NEXT:    vmul.vx v25, v25, a0
-; RV64-NEXT:    vsll.vi v26, v25, 15
-; RV64-NEXT:    vsrl.vi v25, v25, 1
-; RV64-NEXT:    vor.vv v25, v25, v26
+; RV64-NEXT:    vmul.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v9, v8, 15
+; RV64-NEXT:    vsrl.vi v8, v8, 1
+; RV64-NEXT:    vor.vv v8, v8, v9
 ; RV64-NEXT:    lui a0, 3
 ; RV64-NEXT:    addiw a0, a0, -1366
-; RV64-NEXT:    vmsgtu.vx v0, v25, a0
-; RV64-NEXT:    vmv.v.i v25, 0
-; RV64-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV64-NEXT:    vmsgtu.vx v0, v8, a0
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    ret
   %ins1 = insertelement <vscale x 1 x i16> poison, i16 6, i32 0
   %splat1 = shufflevector <vscale x 1 x i16> %ins1, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
@@ -131,30 +131,30 @@ define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq1(<vscale x 1 x i16> %x) 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a0, zero, 1
 ; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vsub.vx v25, v8, a0
+; RV32-NEXT:    vsub.vx v8, v8, a0
 ; RV32-NEXT:    lui a0, 1048573
 ; RV32-NEXT:    addi a0, a0, -819
-; RV32-NEXT:    vmul.vx v25, v25, a0
+; RV32-NEXT:    vmul.vx v8, v8, a0
 ; RV32-NEXT:    lui a0, 3
 ; RV32-NEXT:    addi a0, a0, 818
-; RV32-NEXT:    vmsgtu.vx v0, v25, a0
-; RV32-NEXT:    vmv.v.i v25, 0
-; RV32-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV32-NEXT:    vmsgtu.vx v0, v8, a0
+; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_urem_vec_odd_divisor_eq1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a0, zero, 1
 ; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vsub.vx v25, v8, a0
+; RV64-NEXT:    vsub.vx v8, v8, a0
 ; RV64-NEXT:    lui a0, 1048573
 ; RV64-NEXT:    addiw a0, a0, -819
-; RV64-NEXT:    vmul.vx v25, v25, a0
+; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    lui a0, 3
 ; RV64-NEXT:    addiw a0, a0, 818
-; RV64-NEXT:    vmsgtu.vx v0, v25, a0
-; RV64-NEXT:    vmv.v.i v25, 0
-; RV64-NEXT:    vmerge.vim v8, v25, -1, v0
+; RV64-NEXT:    vmsgtu.vx v0, v8, a0
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    ret
   %ins1 = insertelement <vscale x 1 x i16> poison, i16 5, i32 0
   %splat1 = shufflevector <vscale x 1 x i16> %ins1, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer

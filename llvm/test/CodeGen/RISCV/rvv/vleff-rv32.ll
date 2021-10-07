@@ -1888,7 +1888,7 @@ define void @intrinsic_vleff_dead_value(<vscale x 1 x double>* %0, i32 %1, i32* 
 ; CHECK-LABEL: intrinsic_vleff_dead_value:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
-; CHECK-NEXT:    vle64ff.v v25, (a0)
+; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
@@ -1926,7 +1926,7 @@ define void @intrinsic_vleff_dead_all(<vscale x 1 x double>* %0, i32 %1, i32* %2
 ; CHECK-LABEL: intrinsic_vleff_dead_all:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
-; CHECK-NEXT:    vle64ff.v v25, (a0)
+; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %a = call { <vscale x 1 x double>, i32 } @llvm.riscv.vleff.nxv1f64(

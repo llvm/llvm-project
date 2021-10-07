@@ -8,13 +8,13 @@ define <vscale x 4 x i1> @srem_eq_fold_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, 42
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.x v25, a0
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    addi a1, zero, -85
-; CHECK-NEXT:    vmacc.vx v25, a1, v8
-; CHECK-NEXT:    vsll.vi v26, v25, 7
-; CHECK-NEXT:    vsrl.vi v25, v25, 1
-; CHECK-NEXT:    vor.vv v25, v25, v26
-; CHECK-NEXT:    vmsleu.vx v0, v25, a0
+; CHECK-NEXT:    vmacc.vx v9, a1, v8
+; CHECK-NEXT:    vsll.vi v8, v9, 7
+; CHECK-NEXT:    vsrl.vi v9, v9, 1
+; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    vmsleu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head_six = insertelement <vscale x 4 x i8> undef, i8 6, i32 0
   %splat_six = shufflevector <vscale x 4 x i8> %head_six, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
