@@ -1,5 +1,12 @@
 include "llvm/Option/OptParser.td"
 
+multiclass Eq<string name, string help> {
+  def NAME : Separate<["--"], name>;
+  def NAME #_eq : Joined<["--"], name #"=">,
+                  Alias<!cast<Separate>(NAME)>,
+                  HelpText<help>;
+}
+
 def help : Flag<["--"], "help">,
   HelpText<"Display available options (--help-hidden for more)">;
 
@@ -180,12 +187,12 @@ def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;
 def : Flag<["-"], "w">, Alias<wide>;
 
-def prefix : Separate<["--"], "prefix">,
-  HelpText<"Add prefix to absolute paths">;
-
-def prefix_strip : Separate<["--"], "prefix-strip">,
-  HelpText<"Strip out initial directories from absolute "
-           "paths. No effect without --prefix">;
+defm prefix : Eq<"prefix", "Add prefix to absolute paths">,
+              MetaVarName<"prefix">;
+defm prefix_strip
+    : Eq<"prefix-strip", "Strip out initial directories from absolute "
+                         "paths. No effect without --prefix">,
+      MetaVarName<"prefix">;
 
 def debug_vars_EQ : Joined<["--"], "debug-vars=">,
   Values<"unicode,ascii">;
