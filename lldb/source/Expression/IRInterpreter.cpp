@@ -1398,7 +1398,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       // Find number of arguments
-      const int numArgs = call_inst->getNumArgOperands();
+      const int numArgs = call_inst->arg_size();
 
       // We work with a fixed array of 16 arguments which is our upper limit
       static lldb_private::ABI::CallArgument rawArgs[16];
