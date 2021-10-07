@@ -35,7 +35,6 @@ func @test_shape_num_elements_unknown() {
 
 func @const_shape() {
   %0 = shape.const_shape [1, 2, 3] : !shape.shape
-  %1 = shape.const_shape [4, 5, 6] : tensor<?xindex>
   %2 = shape.const_shape [4, 5, 6] : tensor<3xindex>
   return
 }
@@ -55,11 +54,11 @@ func @test_broadcast_fixed() {
   return
 }
 
-func @test_broadcast_extents() -> tensor<?xindex> {
-  %0 = shape.const_shape [10, 1, 57, 92] : tensor<?xindex>
-  %1 = shape.const_shape [4, 57, 92] : tensor<?xindex>
-  %2 = shape.broadcast %0, %1 : tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
-  return %2 : tensor<?xindex>
+func @test_broadcast_extents() -> tensor<4xindex> {
+  %0 = shape.const_shape [10, 1, 57, 92] : tensor<4xindex>
+  %1 = shape.const_shape [4, 57, 92] : tensor<3xindex>
+  %2 = shape.broadcast %0, %1 : tensor<4xindex>, tensor<3xindex> -> tensor<4xindex>
+  return %2 : tensor<4xindex>
 }
 
 func @test_shape_any_fixed() {
@@ -89,7 +88,7 @@ func @test_shape_any_fixed_mismatch() {
 func @test_parse_const_shape() {
   %0 = shape.const_shape [] : !shape.shape
   %1 = shape.const_shape [1, 2, 3] : !shape.shape
-  %2 = shape.const_shape [1, 2, 3] : tensor<?xindex>
+  %2 = shape.const_shape [1, 2, 3] : tensor<3xindex>
   return
 }
 
@@ -222,9 +221,9 @@ func @any() {
   %0 = shape.const_shape [1, 2, 3] : !shape.shape
   %1 = shape.const_shape [4, 5, 6] : !shape.shape
   %2 = "shape.any"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
-  %3 = shape.const_shape [1, 2, 3] : tensor<?xindex>
-  %4 = shape.const_shape [4, 5, 6] : tensor<?xindex>
-  %5 = "shape.any"(%3, %4) : (tensor<?xindex>, tensor<?xindex>) -> tensor<?xindex>
+  %3 = shape.const_shape [1, 2, 3] : tensor<3xindex>
+  %4 = shape.const_shape [4, 5, 6] : tensor<3xindex>
+  %5 = "shape.any"(%3, %4) : (tensor<3xindex>, tensor<3xindex>) -> tensor<3xindex>
   return
 }
 
