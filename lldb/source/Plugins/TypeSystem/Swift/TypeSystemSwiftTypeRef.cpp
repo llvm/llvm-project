@@ -1718,9 +1718,8 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
     swift::Demangle::Demangler &dem, opaque_compiler_type_t opaque_type) {
   using namespace swift::Demangle;
-  NodePointer node = GetCanonicalDemangleTree(m_swift_ast_context, dem,
-                                              AsMangledName(opaque_type));
-  return GetType(node);
+  CompilerType type = GetCanonicalType(opaque_type);
+  return GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
 }
 
 bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
