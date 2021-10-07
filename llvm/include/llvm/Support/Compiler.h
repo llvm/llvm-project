@@ -212,6 +212,12 @@
 #define LLVM_READONLY
 #endif
 
+#if __has_attribute(minsize)
+#define LLVM_ATTRIBUTE_MINSIZE __attribute__((minsize))
+#else
+#define LLVM_ATTRIBUTE_MINSIZE
+#endif
+
 #if __has_builtin(__builtin_expect) || LLVM_GNUC_PREREQ(4, 0, 0)
 #define LLVM_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define LLVM_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)

@@ -16,6 +16,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TEST(IncludeCleaner, ReferencedLocations) {
   struct TestCase {
     std::string HeaderCode;
@@ -129,6 +131,40 @@ TEST(IncludeCleaner, ReferencedLocations) {
     EXPECT_EQ(Points, Header.points()) << T.HeaderCode << "\n---\n"
                                        << T.MainCode;
   }
+}
+
+TEST(IncludeCleaner, GetUnusedHeaders) {
+  llvm::StringLiteral MainFile = R"cpp(
+    #include "a.h"
+    #include "b.h"
+    #include "dir/c.h"
+    #include "dir/unused.h"
+    #include "unused.h"
+    void foo() {
+      a();
+      b();
+      c();
+    })cpp";
+  // Build expected ast with symbols coming from headers.
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.AdditionalFiles["foo.h"] = "void foo();";
+  TU.AdditionalFiles["a.h"] = "void a();";
+  TU.AdditionalFiles["b.h"] = "void b();";
+  TU.AdditionalFiles["dir/c.h"] = "void c();";
+  TU.AdditionalFiles["unused.h"] = "void unused();";
+  TU.AdditionalFiles["dir/unused.h"] = "void dirUnused();";
+  TU.AdditionalFiles["not_included.h"] = "void notIncluded();";
+  TU.ExtraArgs = {"-I" + testPath("dir")};
+  TU.Code = MainFile.str();
+  ParsedAST AST = TU.build();
+  auto UnusedIncludes = computeUnusedIncludes(AST);
+  std::vector<std::string> UnusedHeaders;
+  UnusedHeaders.reserve(UnusedIncludes.size());
+  for (const auto &Include : UnusedIncludes)
+    UnusedHeaders.push_back(Include->Written);
+  EXPECT_THAT(UnusedHeaders,
+              UnorderedElementsAre("\"unused.h\"", "\"dir/unused.h\""));
 }
 
 } // namespace

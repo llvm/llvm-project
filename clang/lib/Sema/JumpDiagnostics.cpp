@@ -377,11 +377,15 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   case Stmt::IfStmtClass: {
     IfStmt *IS = cast<IfStmt>(S);
-    if (!(IS->isConstexpr() || IS->isObjCAvailabilityCheck()))
+    if (!(IS->isConstexpr() || IS->isConsteval() ||
+          IS->isObjCAvailabilityCheck()))
       break;
 
-    unsigned Diag = IS->isConstexpr() ? diag::note_protected_by_constexpr_if
-                                      : diag::note_protected_by_if_available;
+    unsigned Diag = diag::note_protected_by_if_available;
+    if (IS->isConstexpr())
+      Diag = diag::note_protected_by_constexpr_if;
+    else if (IS->isConsteval())
+      Diag = diag::note_protected_by_consteval_if;
 
     if (VarDecl *Var = IS->getConditionVariable())
       BuildScopeInformation(Var, ParentScope);
@@ -389,7 +393,9 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // Cannot jump into the middle of the condition.
     unsigned NewParentScope = Scopes.size();
     Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getBeginLoc()));
-    BuildScopeInformation(IS->getCond(), NewParentScope);
+
+    if (!IS->isConsteval())
+      BuildScopeInformation(IS->getCond(), NewParentScope);
 
     // Jumps into either arm of an 'if constexpr' are not allowed.
     NewParentScope = Scopes.size();

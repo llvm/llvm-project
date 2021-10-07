@@ -302,3 +302,18 @@ fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
   }
   return {NameKind::NOT_UNIQUED, DeconstructedName(uniq)};
 }
+
+bool fir::NameUniquer::isExternalFacingUniquedName(
+    const std::pair<fir::NameUniquer::NameKind,
+                    fir::NameUniquer::DeconstructedName> &deconstructResult) {
+  return (deconstructResult.first == NameKind::PROCEDURE ||
+          deconstructResult.first == NameKind::COMMON) &&
+         deconstructResult.second.modules.empty() &&
+         !deconstructResult.second.host;
+}
+
+bool fir::NameUniquer::needExternalNameMangling(llvm::StringRef uniquedName) {
+  auto result = fir::NameUniquer::deconstruct(uniquedName);
+  return result.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
+         fir::NameUniquer::isExternalFacingUniquedName(result);
+}

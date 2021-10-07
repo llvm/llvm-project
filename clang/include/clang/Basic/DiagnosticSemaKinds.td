@@ -1499,6 +1499,10 @@ def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def err_static_assert_requirement_failed : Error<
   "static_assert failed due to requirement '%0'%select{ %2|}1">;
 
+def warn_consteval_if_always_true : Warning<
+  "consteval if is always true in an %select{unevaluated|immediate}0 context">,
+  InGroup<DiagGroup<"redundant-consteval-if">>;
+
 def ext_inline_variable : ExtWarn<
   "inline variables are a C++17 extension">, InGroup<CXX17>;
 def warn_cxx14_compat_inline_variable : Warning<
@@ -3306,11 +3310,11 @@ def warn_attribute_has_no_effect_on_infinite_loop : Warning<
    InGroup<IgnoredAttributes>;
 def note_attribute_has_no_effect_on_infinite_loop_here : Note<
   "annotating the infinite loop here">;
-def warn_attribute_has_no_effect_on_if_constexpr : Warning<
-  "attribute %0 has no effect when annotating an 'if constexpr' statement">,
+def warn_attribute_has_no_effect_on_compile_time_if : Warning<
+  "attribute %0 has no effect when annotating an 'if %select{constexpr|consteval}1' statement">,
    InGroup<IgnoredAttributes>;
-def note_attribute_has_no_effect_on_if_constexpr_here : Note<
-  "annotating the 'if constexpr' statement here">;
+def note_attribute_has_no_effect_on_compile_time_if_here : Note<
+  "annotating the 'if %select{constexpr|consteval}0' statement here">;
 def err_decl_attribute_invalid_on_stmt : Error<
   "%0 attribute cannot be applied to a statement">;
 def err_stmt_attribute_invalid_on_decl : Error<
@@ -5935,6 +5939,8 @@ def note_protected_by_vla_type_alias : Note<
   "jump bypasses initialization of VLA type alias">;
 def note_protected_by_constexpr_if : Note<
   "jump enters controlled statement of constexpr if">;
+def note_protected_by_consteval_if : Note<
+  "jump enters controlled statement of consteval if">;
 def note_protected_by_if_available : Note<
   "jump enters controlled statement of if available">;
 def note_protected_by_vla : Note<

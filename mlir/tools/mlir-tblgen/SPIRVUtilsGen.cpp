@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
@@ -45,6 +46,7 @@ using mlir::tblgen::EnumAttr;
 using mlir::tblgen::EnumAttrCase;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
+using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -61,6 +63,9 @@ public:
   // Returns the name of the direct TableGen class for this availability
   // instance.
   StringRef getClass() const;
+
+  // Returns the generated C++ interface's class namespace.
+  StringRef getInterfaceClassNamespace() const;
 
   // Returns the generated C++ interface's class name.
   StringRef getInterfaceClassName() const;
@@ -91,6 +96,9 @@ public:
   // Returns the concrete availability instance carried in this case.
   StringRef getMergeInstance() const;
 
+  // Returns the underlying LLVM TableGen Record.
+  const llvm::Record *getDef() const { return def; }
+
 private:
   // The TableGen definition of this availability.
   const llvm::Record *def;
@@ -110,6 +118,10 @@ StringRef Availability::getClass() const {
                     "expected to only have one direct superclass");
   }
   return parentClass.front()->getName();
+}
+
+StringRef Availability::getInterfaceClassNamespace() const {
+  return def->getValueAsString("cppNamespace");
 }
 
 StringRef Availability::getInterfaceClassName() const {
@@ -168,9 +180,16 @@ std::vector<Availability> getAvailabilities(const Record &def) {
 
 static void emitInterfaceDef(const Availability &availability,
                              raw_ostream &os) {
+
+  os << availability.getQueryFnRetType() << " ";
+
+  StringRef cppNamespace = availability.getInterfaceClassNamespace();
+  cppNamespace.consume_front("::");
+  if (!cppNamespace.empty())
+    os << cppNamespace << "::";
+
   StringRef methodName = availability.getQueryFnName();
-  os << availability.getQueryFnRetType() << " "
-     << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
+  os << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
      << "  return getImpl()->" << methodName << "(getImpl(), getOperation());\n"
      << "}\n";
 }
@@ -237,13 +256,16 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
+  StringRef cppNamespace = availability.getInterfaceClassNamespace();
+  NamespaceEmitter nsEmitter(os, cppNamespace);
+
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(availability, os);
   os << '\n';
   emitModelDecl(availability, os);
-  os << "};\n} // end namespace detail\n\n";
+  os << "};\n} // namespace detail\n\n";
 
   // Emit the main interface class declaration.
   os << "/*\n" << availability.getInterfaceDescription().trim() << "\n*/\n";

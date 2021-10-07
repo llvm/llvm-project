@@ -62,16 +62,13 @@ const char *ConnectionFileDescriptor::UNIX_ABSTRACT_CONNECT_SCHEME =
 const char *ConnectionFileDescriptor::FD_SCHEME = "fd";
 const char *ConnectionFileDescriptor::FILE_SCHEME = "file";
 
-namespace {
-
-llvm::Optional<llvm::StringRef> GetURLAddress(llvm::StringRef url,
-                                              llvm::StringRef scheme) {
+static llvm::Optional<llvm::StringRef> GetURLAddress(llvm::StringRef url,
+                                                     llvm::StringRef scheme) {
   if (!url.consume_front(scheme))
     return llvm::None;
   if (!url.consume_front("://"))
     return llvm::None;
   return url;
-}
 }
 
 ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)

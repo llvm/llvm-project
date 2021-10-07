@@ -107,15 +107,9 @@ struct WasmGlobal {
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmTagType {
-  // Kind of tag. Currently only WASM_TAG_ATTRIBUTE_EXCEPTION is possible.
-  uint8_t Attribute;
-  uint32_t SigIndex;
-};
-
 struct WasmTag {
   uint32_t Index;
-  WasmTagType Type;
+  uint32_t SigIndex;
   StringRef SymbolName; // from the "linking" section
 };
 
@@ -128,7 +122,6 @@ struct WasmImport {
     WasmGlobalType Global;
     WasmTableType Table;
     WasmLimits Memory;
-    WasmTagType Tag;
   };
 };
 
@@ -139,6 +132,7 @@ struct WasmLocalDecl {
 
 struct WasmFunction {
   uint32_t Index;
+  uint32_t SigIndex;
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;

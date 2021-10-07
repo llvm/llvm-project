@@ -19,11 +19,11 @@ func @entry() {
   vector.print %1 : ui4
   // CHECK: 0
 
-  %2 = vector.reduction "min", %v : vector<16xui4> into ui4
+  %2 = vector.reduction "minui", %v : vector<16xui4> into ui4
   vector.print %2 : ui4
   // CHECK: 0
 
-  %3 = vector.reduction "max", %v : vector<16xui4> into ui4
+  %3 = vector.reduction "maxui", %v : vector<16xui4> into ui4
   vector.print %3 : ui4
   // CHECK: 15
 

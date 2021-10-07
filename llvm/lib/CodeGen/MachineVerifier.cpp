@@ -2944,9 +2944,13 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     }
   }
 
-  // A live segment can only end at an early-clobber slot if it is being
-  // redefined by an early-clobber def.
-  if (S.end.isEarlyClobber()) {
+  // After tied operands are rewritten, a live segment can only end at an
+  // early-clobber slot if it is being redefined by an early-clobber def.
+  // TODO: Before tied operands are rewritten, a live segment can only end at an
+  // early-clobber slot if the last use is tied to an early-clobber def.
+  if (MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::TiedOpsRewritten) &&
+      S.end.isEarlyClobber()) {
     if (I+1 == LR.end() || (I+1)->start != S.end) {
       report("Live segment ending at early clobber slot must be "
              "redefined by an EC def in the same instruction", EndMBB);

@@ -1450,7 +1450,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (EarlyLiveIntervals)
-    addPass(&LiveIntervalsID, false);
+    addPass(&LiveIntervalsID);
 
   addPass(&TwoAddressInstructionPassID, false);
   addPass(&RegisterCoalescerID);

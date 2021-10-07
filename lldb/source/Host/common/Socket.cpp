@@ -59,15 +59,12 @@ typedef void *get_socket_option_arg_type;
 const NativeSocket Socket::kInvalidSocketValue = -1;
 #endif // #if defined(_WIN32)
 
-namespace {
-
-bool IsInterrupted() {
+static bool IsInterrupted() {
 #if defined(_WIN32)
   return ::WSAGetLastError() == WSAEINTR;
 #else
   return errno == EINTR;
 #endif
-}
 }
 
 Socket::Socket(SocketProtocol protocol, bool should_close,
