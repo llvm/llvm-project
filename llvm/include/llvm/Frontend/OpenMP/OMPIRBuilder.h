@@ -683,9 +683,8 @@ public:
                           omp::IdentFlag Flags = omp::IdentFlag(0),
                           unsigned Reserve2Flags = 0);
 
-  /// Create a global value containing the \p DebugLevel to control debuggin in
-  /// the module.
-  GlobalValue *createDebugKind(unsigned DebugLevel);
+  /// Create a global flag \p Namein the module with initial value \p Value.
+  GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
 
   /// Generate control flow and cleanup for cancellation.
   ///

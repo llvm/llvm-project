@@ -245,12 +245,12 @@ OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
-GlobalValue *OpenMPIRBuilder::createDebugKind(unsigned DebugKind) {
+GlobalValue *OpenMPIRBuilder::createGlobalFlag(unsigned Value, StringRef Name) {
   IntegerType *I32Ty = Type::getInt32Ty(M.getContext());
-  auto *GV = new GlobalVariable(
-      M, I32Ty,
-      /* isConstant = */ true, GlobalValue::WeakODRLinkage,
-      ConstantInt::get(I32Ty, DebugKind), "__omp_rtl_debug_kind");
+  auto *GV =
+      new GlobalVariable(M, I32Ty,
+                         /* isConstant = */ true, GlobalValue::WeakODRLinkage,
+                         ConstantInt::get(I32Ty, Value), Name);
 
   return GV;
 }
