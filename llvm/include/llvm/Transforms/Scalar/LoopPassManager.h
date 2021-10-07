@@ -281,8 +281,6 @@ public:
   /// state, this routine will mark that the current loop should be skipped by
   /// the rest of the pass management infrastructure.
   void markLoopAsDeleted(Loop &L, llvm::StringRef Name) {
-    assert((!LoopNestMode || CurrentL == &L) &&
-           "L should be a top-level loop in loop-nest mode.");
     LAM.clear(L, Name);
     assert((&L == CurrentL || CurrentL->contains(&L)) &&
            "Cannot delete a loop outside of the "
