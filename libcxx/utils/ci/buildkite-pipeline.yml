@@ -267,19 +267,6 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Unified standalone build"
-    command: "libcxx/utils/ci/run-buildbot unified-standalone"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "New standalone runtimes build"
     command: "libcxx/utils/ci/run-buildbot new-standalone"
     artifact_paths:

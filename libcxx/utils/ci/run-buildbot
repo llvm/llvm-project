@@ -411,21 +411,6 @@ documentation)
     echo "+++ Generating documentation"
     ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
-unified-standalone)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
-          -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi;libunwind" \
-          -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
-
-    check-runtimes
-;;
 new-standalone)
     clean
 
