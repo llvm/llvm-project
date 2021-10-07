@@ -20,15 +20,15 @@
 namespace __sanitizer {
 
 static PersistentAllocator allocator;
+static PersistentAllocator traceAllocator;
 
 struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   StackDepotNode *link;
+  uptr *stack_trace;
   u32 id;
-  u32 size;
   atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
-  uptr stack[1];  // [size]
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
   static const u32 kUseCountBits = 20;
@@ -39,10 +39,11 @@ struct StackDepotNode {
   bool eq(hash_type hash, const args_type &args) const {
     return hash == stack_hash;
   }
-  static uptr allocated() { return allocator.allocated(); }
+  static uptr allocated() {
+    return allocator.allocated() + traceAllocator.allocated();
+  }
   static StackDepotNode *allocate(const args_type &args) {
-    uptr alloc_size = sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
-    return (StackDepotNode *)allocator.alloc(alloc_size);
+    return (StackDepotNode *)allocator.alloc(sizeof(StackDepotNode));
   }
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
@@ -58,13 +59,14 @@ struct StackDepotNode {
     atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
                  memory_order_relaxed);
     stack_hash = hash;
-    size = args.size;
-    internal_memcpy(stack, args.trace, size * sizeof(uptr));
+    stack_trace = (uptr *)traceAllocator.alloc((args.size + 1) * sizeof(uptr));
+    *stack_trace = args.size;
+    internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   }
   args_type load() const {
     u32 tag =
         atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
-    return args_type(&stack[0], size, tag);
+    return args_type(stack_trace + 1, *stack_trace, tag);
   }
   StackDepotHandle get_handle() { return StackDepotHandle(this); }
 
