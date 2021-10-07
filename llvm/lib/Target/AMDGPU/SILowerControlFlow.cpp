@@ -52,6 +52,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -69,6 +70,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineDominatorTree *MDT = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
@@ -141,6 +143,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     // Should preserve the same set that TwoAddressInstructions does.
+    AU.addPreserved<MachineDominatorTree>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
@@ -471,6 +474,14 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock *SplitBB = &MBB;
   if (NeedBlockSplit) {
     SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/true, LIS);
+    if (MDT && SplitBB != &MBB) {
+      MachineDomTreeNode *MBBNode = (*MDT)[&MBB];
+      SmallVector<MachineDomTreeNode *> Children(MBBNode->begin(),
+                                                 MBBNode->end());
+      MachineDomTreeNode *SplitBBNode = MDT->addNewBlock(SplitBB, &MBB);
+      for (MachineDomTreeNode *Child : Children)
+        MDT->changeImmediateDominator(Child, SplitBBNode);
+    }
     Opcode = OrTermrOpc;
     InsPt = MI;
   }
@@ -757,6 +768,8 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
     for (auto &I : MBB.instrs())
       LIS->RemoveMachineInstrFromMaps(I);
   }
+  if (MDT)
+    MDT->eraseNode(&MBB);
   MBB.clear();
   MBB.eraseFromParent();
   if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
@@ -780,6 +793,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
+  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
 
