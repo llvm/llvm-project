@@ -7899,7 +7899,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     StringRef GPUArchName;
     if (Dep.DependentOffloadKind == Action::OFK_OpenMP) {
       // Extract GPUArch from -march argument in TC argument list.
-      for (unsigned ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
+      for (uint ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
         StringRef ArchStr = StringRef(TCArgs.getArgString(ArgIndex));
         auto Arch = ArchStr.startswith_insensitive("-march=");
         if (Arch) {
