@@ -65,27 +65,6 @@ public:
   // we are communicating with it.
   bool HandshakeWithServer(Status *error_ptr);
 
-  // For packets which specify a range of output to be returned,
-  // return all of the output via a series of request packets of the form
-  // <prefix>0,<size>
-  // <prefix><size>,<size>
-  // <prefix><size>*2,<size>
-  // <prefix><size>*3,<size>
-  // ...
-  // until a "$l..." packet is received, indicating the end.
-  // (size is in hex; this format is used by a standard gdbserver to
-  // return the given portion of the output specified by <prefix>;
-  // for example, "qXfer:libraries-svr4:read::fff,1000" means
-  // "return a chunk of the xml description file for shared
-  // library load addresses, where the chunk starts at offset 0xfff
-  // and continues for 0x1000 bytes").
-  // Concatenate the resulting server response packets together and
-  // return in response_string.  If any packet fails, the return value
-  // indicates that failure and the returned string value is undefined.
-  PacketResult
-  SendPacketsAndConcatenateResponses(const char *send_payload_prefix,
-                                     std::string &response_string);
-
   bool GetThreadSuffixSupported();
 
   // This packet is usually sent first and the boolean return value
