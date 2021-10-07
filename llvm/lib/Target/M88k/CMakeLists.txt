@@ -25,6 +25,22 @@ add_llvm_target(M88kCodeGen
   M88kRegisterInfo.cpp
   M88kSubtarget.cpp
   M88kTargetMachine.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  Scalar
+  SelectionDAG
+  Support
+  M88kDesc
+  M88kInfo
+  Target
+
+  ADD_TO_COMPONENT
+  M88k
   )
 
 add_subdirectory(AsmParser)

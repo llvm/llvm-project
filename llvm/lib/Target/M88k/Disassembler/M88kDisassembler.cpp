@@ -74,8 +74,8 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
 
 // TODO More checks.
 static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                              uint64_t Address,
-                                              const void *Decoder) {
+                                             uint64_t Address,
+                                             const void *Decoder) {
   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 

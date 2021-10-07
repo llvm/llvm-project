@@ -40,7 +40,8 @@ public:
                             const MCRelaxableFragment *Fragment,
                             const MCAsmLayout &Layout) const override;
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -133,7 +134,8 @@ bool M88kMCAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return false;
 }
 
-bool M88kMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool M88kMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                    const MCSubtargetInfo *STI) const {
   if ((Count % 4) != 0)
     return false;
 
