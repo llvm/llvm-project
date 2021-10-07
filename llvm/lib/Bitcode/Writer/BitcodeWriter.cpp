@@ -4041,7 +4041,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                                FSModVTableRefsAbbrev);
 
   for (const GlobalAlias &A : M.aliases()) {
-    auto *Aliasee = A.getBaseObject();
+    auto *Aliasee = A.getAliaseeObject();
     if (!Aliasee->hasName())
       // Nameless function don't have an entry in the summary, skip it.
       continue;

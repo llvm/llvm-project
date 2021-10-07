@@ -171,7 +171,7 @@ std::string GlobalValue::getGlobalIdentifier() const {
 StringRef GlobalValue::getSection() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
-    if (const GlobalObject *GO = GA->getBaseObject())
+    if (const GlobalObject *GO = GA->getAliaseeObject())
       return GO->getSection();
     return "";
   }
@@ -181,7 +181,7 @@ StringRef GlobalValue::getSection() const {
 const Comdat *GlobalValue::getComdat() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
-    if (const GlobalObject *GO = GA->getBaseObject())
+    if (const GlobalObject *GO = GA->getAliaseeObject())
       return const_cast<GlobalObject *>(GO)->getComdat();
     return nullptr;
   }
@@ -289,11 +289,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-const GlobalObject *GlobalValue::getBaseObject() const {
+const GlobalObject *GlobalValue::getAliaseeObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
   if (auto *GA = dyn_cast<GlobalAlias>(this))
-    return GA->getBaseObject();
+    return GA->getAliaseeObject();
   return nullptr;
 }
 
@@ -528,7 +528,7 @@ void GlobalAlias::setAliasee(Constant *Aliasee) {
   setIndirectSymbol(Aliasee);
 }
 
-const GlobalObject *GlobalAlias::getBaseObject() const {
+const GlobalObject *GlobalAlias::getAliaseeObject() const {
   DenseSet<const GlobalAlias *> Aliases;
   return findBaseObject(getOperand(0), Aliases);
 }
