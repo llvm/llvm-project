@@ -1465,10 +1465,10 @@ public:
         Type *CondTy = RetTy->getWithNewBitWidth(1);
         Cost +=
             thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                        CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                        CmpInst::ICMP_EQ, CostKind);
         Cost +=
             thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                        CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                        CmpInst::ICMP_EQ, CostKind);
       }
       return Cost;
     }
@@ -1724,6 +1724,7 @@ public:
       Intrinsic::ID OverflowOp = IID == Intrinsic::sadd_sat
                                      ? Intrinsic::sadd_with_overflow
                                      : Intrinsic::ssub_with_overflow;
+      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
 
       // SatMax -> Overflow && SumDiff < 0
       // SatMin -> Overflow && SumDiff >= 0
@@ -1731,12 +1732,10 @@ public:
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
                                     nullptr, ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(
-                      BinaryOperator::Select, RetTy, CondTy,
-                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
+                                              CondTy, Pred, CostKind);
       return Cost;
     }
     case Intrinsic::uadd_sat:
@@ -1809,12 +1808,15 @@ public:
       unsigned Opcode = IID == Intrinsic::uadd_with_overflow
                             ? BinaryOperator::Add
                             : BinaryOperator::Sub;
+      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
+                                    ? CmpInst::ICMP_ULT
+                                    : CmpInst::ICMP_UGT;
 
       InstructionCost Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                      Pred, CostKind);
       return Cost;
     }
     case Intrinsic::smul_with_overflow:
@@ -1823,9 +1825,9 @@ public:
       Type *OverflowTy = RetTy->getContainedType(1);
       unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
       Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
+      bool IsSigned = IID == Intrinsic::smul_with_overflow;
 
-      unsigned ExtOp =
-          IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
       TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
       InstructionCost Cost = 0;
@@ -1834,18 +1836,17 @@ public:
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
                                             CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, MulTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, ExtTy,
                                               CostKind, TTI::OK_AnyValue,
                                               TTI::OK_UniformConstantValue);
 
-      if (IID == Intrinsic::smul_with_overflow)
+      if (IsSigned)
         Cost += thisT()->getArithmeticInstrCost(Instruction::AShr, MulTy,
                                                 CostKind, TTI::OK_AnyValue,
                                                 TTI::OK_UniformConstantValue);
 
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, MulTy, OverflowTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(
+          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::ctpop:

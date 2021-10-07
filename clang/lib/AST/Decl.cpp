@@ -1090,13 +1090,29 @@ NamedDecl::isReserved(const LangOptions &LangOpts) const {
     return ReservedIdentifierStatus::NotReserved;
 
   ReservedIdentifierStatus Status = II->isReserved(LangOpts);
-  if (Status == ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope) {
-    // Check if we're at TU level or not.
+  if (isReservedAtGlobalScope(Status) && !isReservedInAllContexts(Status)) {
+    // This name is only reserved at global scope. Check if this declaration
+    // conflicts with a global scope declaration.
     if (isa<ParmVarDecl>(this) || isTemplateParameter())
       return ReservedIdentifierStatus::NotReserved;
+
+    // C++ [dcl.link]/7:
+    //   Two declarations [conflict] if [...] one declares a function or
+    //   variable with C language linkage, and the other declares [...] a
+    //   variable that belongs to the global scope.
+    //
+    // Therefore names that are reserved at global scope are also reserved as
+    // names of variables and functions with C language linkage.
     const DeclContext *DC = getDeclContext()->getRedeclContext();
-    if (!DC->isTranslationUnit())
-      return ReservedIdentifierStatus::NotReserved;
+    if (DC->isTranslationUnit())
+      return Status;
+    if (auto *VD = dyn_cast<VarDecl>(this))
+      if (VD->isExternC())
+        return ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
+    if (auto *FD = dyn_cast<FunctionDecl>(this))
+      if (FD->isExternC())
+        return ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
+    return ReservedIdentifierStatus::NotReserved;
   }
 
   return Status;

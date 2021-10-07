@@ -1351,7 +1351,7 @@ void FunctionPassManager::add(Pass *P) {
 ///
 bool FunctionPassManager::run(Function &F) {
   handleAllErrors(F.materialize(), [&](ErrorInfoBase &EIB) {
-    report_fatal_error("Error reading bitcode file: " + EIB.message());
+    report_fatal_error(Twine("Error reading bitcode file: ") + EIB.message());
   });
   return FPM->run(F);
 }

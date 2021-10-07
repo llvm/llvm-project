@@ -19,10 +19,10 @@
 namespace __sanitizer {
 
 struct StackDepotNode {
-  using hash_type = u32;
+  using hash_type = u64;
+  hash_type stack_hash;
   StackDepotNode *link;
   u32 id;
-  hash_type stack_hash;
   u32 size;
   atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
   uptr stack[1];  // [size]
@@ -34,22 +34,15 @@ struct StackDepotNode {
 
   typedef StackTrace args_type;
   bool eq(hash_type hash, const args_type &args) const {
-    u32 tag =
-        atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
-    if (stack_hash != hash || args.size != size || args.tag != tag)
-      return false;
-    uptr i = 0;
-    for (; i < size; i++) {
-      if (stack[i] != args.trace[i]) return false;
-    }
-    return true;
+    return hash == stack_hash;
   }
   static uptr storage_size(const args_type &args) {
     return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
   }
   static hash_type hash(const args_type &args) {
-    MurMur2HashBuilder H(args.size * sizeof(uptr));
+    MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
+    H.add(args.tag);
     return H.get();
   }
   static bool is_valid(const args_type &args) {

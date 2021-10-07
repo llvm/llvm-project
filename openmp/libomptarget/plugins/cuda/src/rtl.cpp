@@ -93,11 +93,6 @@ struct KernelTy {
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
 
-
-/// List that contains all the kernels.
-/// FIXME: we may need this to be per device and per library.
-std::list<KernelTy> KernelsList;
-
 namespace {
 bool checkResult(CUresult Err, const char *ErrMsg) {
   if (Err == CUDA_SUCCESS)

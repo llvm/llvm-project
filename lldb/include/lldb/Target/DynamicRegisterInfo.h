@@ -77,9 +77,13 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfo(llvm::StringRef reg_name) const;
 
+  typedef std::vector<lldb_private::RegisterInfo> reg_collection;
+  llvm::iterator_range<reg_collection::const_iterator> registers() const {
+    return llvm::iterator_range<reg_collection::const_iterator>(m_regs);
+  }
+
 protected:
   // Classes that inherit from DynamicRegisterInfo can see and modify these
-  typedef std::vector<lldb_private::RegisterInfo> reg_collection;
   typedef std::vector<lldb_private::RegisterSet> set_collection;
   typedef std::vector<uint32_t> reg_num_collection;
   typedef std::vector<reg_num_collection> set_reg_num_collection;
@@ -108,7 +112,6 @@ protected:
   name_collection m_set_names;
   reg_to_regs_map m_value_regs_map;
   reg_to_regs_map m_invalidate_regs_map;
-  dynamic_reg_size_map m_dynamic_reg_size_map;
   size_t m_reg_data_byte_size = 0u; // The number of bytes required to store
                                     // all registers
   bool m_finalized = false;

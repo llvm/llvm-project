@@ -92,8 +92,6 @@ public:
     start_.pop_back();
   }
 
-  void RemoveLastToken();
-
   void Put(const TokenSequence &);
   void Put(const TokenSequence &, ProvenanceRange);
   void Put(const TokenSequence &, std::size_t at, std::size_t tokens = 1);
@@ -119,6 +117,7 @@ public:
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(Messages &) const;
+  const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

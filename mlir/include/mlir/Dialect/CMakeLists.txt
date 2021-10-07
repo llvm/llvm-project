@@ -1,4 +1,5 @@
 add_subdirectory(Affine)
+add_subdirectory(Arithmetic)
 add_subdirectory(Async)
 add_subdirectory(ArmNeon)
 add_subdirectory(ArmSVE)

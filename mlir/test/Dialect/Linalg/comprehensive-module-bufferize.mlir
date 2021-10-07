@@ -737,3 +737,21 @@ func @matmul(
   }
   return %0 : tensor<128x192xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_cast_not_in_place(
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
+//       CHECK:   %[[alloc:.*]] = memref.alloc
+//       CHECK:   linalg.copy(%[[A]], %[[alloc]])
+//       CHECK:   %[[cast:.*]] = memref.cast %[[alloc]]
+func @tensor_cast_not_in_place(
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %B : tensor<?xf32>, %idx: index)
+  -> (tensor<?xf32>)
+{
+  %r0 = tensor.cast %A : tensor<?xf32> to tensor<4xf32>
+  %r1 = tensor.insert_slice %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1 : tensor<?xf32>
+}
+

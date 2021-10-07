@@ -39,14 +39,16 @@ Tester::isInteresting(ModuleOp module) const {
       llvm::sys::fs::createTemporaryFile("mlir-reduce", "mlir", fd, filepath);
 
   if (ec)
-    llvm::report_fatal_error("Error making unique filename: " + ec.message());
+    llvm::report_fatal_error(llvm::Twine("Error making unique filename: ") +
+                             ec.message());
 
   llvm::ToolOutputFile out(filepath, fd);
   module.print(out.os());
   out.os().close();
 
   if (out.os().has_error())
-    llvm::report_fatal_error("Error emitting the IR to file '" + filepath);
+    llvm::report_fatal_error(llvm::Twine("Error emitting the IR to file '") +
+                             filepath);
 
   size_t size = out.os().tell();
   return std::make_pair(isInteresting(filepath), size);
@@ -70,8 +72,8 @@ Tester::Interestingness Tester::isInteresting(StringRef testCase) const {
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
 
   if (result < 0)
-    llvm::report_fatal_error("Error running interestingness test: " + errMsg,
-                             false);
+    llvm::report_fatal_error(
+        llvm::Twine("Error running interestingness test: ") + errMsg, false);
 
   if (!result)
     return Interestingness::False;

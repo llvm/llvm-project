@@ -14,6 +14,7 @@
 #define _OMPTARGET_DEVICE_ENVIRONMENT_H_
 
 // deviceRTL uses <stdint> and DeviceRTL uses explicit definitions
+
 struct DeviceEnvironmentTy {
   uint32_t DebugKind;
   uint32_t NumDevices;

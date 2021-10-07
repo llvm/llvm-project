@@ -445,10 +445,14 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "vector types must have at least one dimension";
 
   if (!isValidElementType(elementType))
-    return emitError() << "vector elements must be int/index/float type";
+    return emitError()
+           << "vector elements must be int/index/float type but got "
+           << elementType;
 
   if (any_of(shape, [](int64_t i) { return i <= 0; }))
-    return emitError() << "vector types must have positive constant sizes";
+    return emitError()
+           << "vector types must have positive constant sizes but got "
+           << shape;
 
   return success();
 }

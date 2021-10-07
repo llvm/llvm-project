@@ -478,7 +478,7 @@ define i8* @test4_2(i8* %x4_2, i8* %y4_2, i8* %z4_2, i1 %c) {
 ; IS________OPM-SAME: (i8* nocapture nofree readnone [[X4_2:%.*]], i8* nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], i8* nocapture nofree readnone [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR7]] {
 ; IS________OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS________OPM:       t:
-; IS________OPM-NEXT:    call void @test4_1(i8* noalias nocapture nofree noundef readnone align 1073741824 null, i1 [[C]]) #[[ATTR7]]
+; IS________OPM-NEXT:    call void @test4_1(i8* noalias nocapture nofree noundef readnone align 4294967296 null, i1 [[C]]) #[[ATTR7]]
 ; IS________OPM-NEXT:    store i32* null, i32** @g, align 8
 ; IS________OPM-NEXT:    br label [[F]]
 ; IS________OPM:       f:
@@ -489,7 +489,7 @@ define i8* @test4_2(i8* %x4_2, i8* %y4_2, i8* %z4_2, i1 %c) {
 ; IS________NPM-SAME: (i8* nocapture nofree readnone [[X4_2:%.*]], i8* nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], i8* nocapture nofree readnone [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR7]] {
 ; IS________NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS________NPM:       t:
-; IS________NPM-NEXT:    call void @test4_1(i8* noalias nocapture nofree noundef readnone align 1073741824 null, i1 noundef [[C]]) #[[ATTR7]]
+; IS________NPM-NEXT:    call void @test4_1(i8* noalias nocapture nofree noundef readnone align 4294967296 null, i1 noundef [[C]]) #[[ATTR7]]
 ; IS________NPM-NEXT:    store i32* null, i32** @g, align 8
 ; IS________NPM-NEXT:    br label [[F]]
 ; IS________NPM:       f:
@@ -807,7 +807,7 @@ declare void @unknown(i8*)
 define void @test_callsite() {
 ; CHECK-LABEL: define {{[^@]+}}@test_callsite() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown(i8* noalias nocapture noundef align 1073741824 null)
+; CHECK-NEXT:    call void @unknown(i8* noalias nocapture noundef align 4294967296 null)
 ; CHECK-NEXT:    ret void
 ;
 entry:

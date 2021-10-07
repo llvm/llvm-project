@@ -350,7 +350,7 @@ struct SavedStreamPosition {
   ~SavedStreamPosition() {
     if (llvm::Error Err = Cursor.JumpToBit(Offset))
       llvm::report_fatal_error(
-          "Cursor should always be able to go back, failed: " +
+          llvm::Twine("Cursor should always be able to go back, failed: ") +
           toString(std::move(Err)));
   }
 

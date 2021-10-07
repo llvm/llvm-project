@@ -220,6 +220,10 @@ getRestoreLibCallName(const MachineFunction &MF,
   return RestoreLibCalls[LibCallID];
 }
 
+// Return true if the specified function should have a dedicated frame
+// pointer register.  This is true if frame pointer elimination is
+// disabled, if it needs dynamic stack realignment, if the function has
+// variable sized allocas, or if the frame address is taken.
 bool RISCVFrameLowering::hasFP(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 

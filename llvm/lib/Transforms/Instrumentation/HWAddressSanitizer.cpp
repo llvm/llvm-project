@@ -356,7 +356,7 @@ private:
     bool WithFrameRecord;
 
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
-    unsigned getObjectAlignment() const { return 1U << Scale; }
+    uint64_t getObjectAlignment() const { return 1ULL << Scale; }
   };
 
   ShadowMapping Mapping;

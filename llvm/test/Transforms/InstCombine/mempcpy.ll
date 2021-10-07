@@ -57,7 +57,7 @@ define i8* @memcpy_big_const_n(i8* %d, i8* nocapture readonly %s) {
 
 define i32 @PR48810() {
 ; CHECK-LABEL: @PR48810(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 undef, i8* align 1073741824 null, i64 undef, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 undef, i8* align 4294967296 null, i64 undef, i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
   %r = call dereferenceable(1) i8* @mempcpy(i8* undef, i8* null, i64 undef)

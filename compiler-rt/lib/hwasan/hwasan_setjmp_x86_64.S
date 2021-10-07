@@ -35,6 +35,7 @@
 ASM_TYPE_FUNCTION(__interceptor_setjmp)
 __interceptor_setjmp:
   CFI_STARTPROC
+  _CET_ENDBR
   xorl %esi, %esi
   jmp	__interceptor_sigsetjmp
   CFI_ENDPROC
@@ -44,6 +45,7 @@ ASM_SIZE(__interceptor_setjmp)
 ASM_TYPE_FUNCTION(__interceptor_sigsetjmp)
 __interceptor_sigsetjmp:
   CFI_STARTPROC
+  _CET_ENDBR
 
   // Save callee save registers.
   mov %rbx, (0*8)(%rdi)

@@ -95,8 +95,11 @@ enum {
 
 // Go linker does not support THREADLOCAL variables,
 // so we can't use per-thread state.
+// Disable checked locks on Darwin. Although Darwin platforms support
+// THREADLOCAL variables they are not usable early on during process init when
+// `__sanitizer::Mutex` is used.
 #define SANITIZER_CHECK_DEADLOCKS \
-  (SANITIZER_DEBUG && !SANITIZER_GO && SANITIZER_SUPPORTS_THREADLOCAL)
+  (SANITIZER_DEBUG && !SANITIZER_GO && SANITIZER_SUPPORTS_THREADLOCAL && !SANITIZER_MAC)
 
 #if SANITIZER_CHECK_DEADLOCKS
 struct MutexMeta {

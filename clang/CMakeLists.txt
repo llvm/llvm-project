@@ -639,7 +639,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
     # adding lld to clang-bootstrap-deps without having it enabled in
     # LLVM_ENABLE_PROJECTS just generates a cryptic error message.
     if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
-      message(FATAL_ERROR "LLD is enabled in the boostrap build, but lld is not in LLVM_ENABLE_PROJECTS")
+      message(FATAL_ERROR "LLD is enabled in the bootstrap build, but lld is not in LLVM_ENABLE_PROJECTS")
     endif()
     add_dependencies(clang-bootstrap-deps lld)
   endif()
