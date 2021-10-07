@@ -433,14 +433,20 @@ define i8 @bitcast_scalar_index_variable(i32 %x, i64 %y) {
   ret i8 %r
 }
 
-; negative test - no extra uses
+; extra use is ok if we don't need a shift
 
 define i8 @bitcast_scalar_index0_use(i64 %x) {
-; ANY-LABEL: @bitcast_scalar_index0_use(
-; ANY-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
-; ANY-NEXT:    call void @use(<8 x i8> [[V]])
-; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
-; ANY-NEXT:    ret i8 [[R]]
+; LE-LABEL: @bitcast_scalar_index0_use(
+; LE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; LE-NEXT:    call void @use(<8 x i8> [[V]])
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[X]] to i8
+; LE-NEXT:    ret i8 [[R]]
+;
+; BE-LABEL: @bitcast_scalar_index0_use(
+; BE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; BE-NEXT:    call void @use(<8 x i8> [[V]])
+; BE-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
+; BE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast i64 %x to <8 x i8>
   call void @use(<8 x i8> %v)
