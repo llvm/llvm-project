@@ -16,7 +16,7 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
         in_expr_log = 0
         found = 0
         for line in logfile:
-            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
+            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration(SwiftASTContext"):
                 in_expr_log += 1
             if in_expr_log and "SDK path" in line and expected_path in line:
                 found += 1
