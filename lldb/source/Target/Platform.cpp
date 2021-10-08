@@ -155,9 +155,9 @@ void Platform::Terminate() {
   }
 }
 
-const PlatformPropertiesSP &Platform::GetGlobalPlatformProperties() {
-  static const auto g_settings_sp(std::make_shared<PlatformProperties>());
-  return g_settings_sp;
+PlatformProperties &Platform::GetGlobalPlatformProperties() {
+  static PlatformProperties g_settings;
+  return g_settings;
 }
 
 void Platform::SetHostPlatform(const lldb::PlatformSP &platform_sp) {
@@ -1606,8 +1606,8 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
 bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
                                      bool *did_create_ptr) {
-  if (IsHost() || !GetGlobalPlatformProperties()->GetUseModuleCache() ||
-      !GetGlobalPlatformProperties()->GetModuleCacheDirectory())
+  if (IsHost() || !GetGlobalPlatformProperties().GetUseModuleCache() ||
+      !GetGlobalPlatformProperties().GetModuleCacheDirectory())
     return false;
 
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
@@ -1691,7 +1691,7 @@ Status Platform::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
 }
 
 FileSpec Platform::GetModuleCacheRoot() {
-  auto dir_spec = GetGlobalPlatformProperties()->GetModuleCacheDirectory();
+  auto dir_spec = GetGlobalPlatformProperties().GetModuleCacheDirectory();
   dir_spec.AppendPathComponent(GetName().AsCString());
   return dir_spec;
 }

@@ -106,8 +106,6 @@ protected:
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
 };
 
-typedef std::shared_ptr<ProcessProperties> ProcessPropertiesSP;
-
 // ProcessAttachInfo
 //
 // Describes any information that is required to attach to a process.
@@ -505,7 +503,7 @@ public:
 
   static void SettingsTerminate();
 
-  static const ProcessPropertiesSP &GetGlobalProperties();
+  static ProcessProperties &GetGlobalProperties();
 
   /// Find a Process plug-in that can debug \a module using the currently
   /// selected architecture.

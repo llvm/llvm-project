@@ -82,13 +82,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
-
-static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
-  static ProcessKDPPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PluginProperties>();
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 } // anonymous namespace end
@@ -161,7 +157,7 @@ ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
                                    "async thread continue");
   const uint64_t timeout_seconds =
-      GetGlobalPluginProperties()->GetPacketTimeout();
+      GetGlobalPluginProperties().GetPacketTimeout();
   if (timeout_seconds > 0)
     m_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
@@ -725,7 +721,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the kdp-remote process plug-in."),
         is_global_setting);
   }

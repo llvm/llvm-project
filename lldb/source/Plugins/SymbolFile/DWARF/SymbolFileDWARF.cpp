@@ -146,11 +146,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> SymbolFileDWARFPropertiesSP;
-
-static const SymbolFileDWARFPropertiesSP &GetGlobalPluginProperties() {
-  static const auto g_settings_sp(std::make_shared<PluginProperties>());
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 } // namespace
@@ -268,7 +266,7 @@ void SymbolFileDWARF::DebuggerInitialize(Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForSymbolFilePlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the dwarf symbol-file plug-in."),
         is_global_setting);
   }
@@ -471,7 +469,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
-  if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
+  if (!GetGlobalPluginProperties().IgnoreFileIndexes()) {
     StreamString module_desc;
     GetObjectFile()->GetModule()->GetDescription(module_desc.AsRawOstream(),
                                                  lldb::eDescriptionLevelBrief);
