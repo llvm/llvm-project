@@ -84,6 +84,10 @@ public:
       Operation *opToBufferize, DenseSet<OpOperand *> &usesRead,
       DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo) const;
 
+  /// Return true if bufferizing `opResult` inplace would create a write to a
+  /// non-writable buffer.
+  bool wouldCreateWriteToNonWritableBuffer(OpResult opResult) const;
+
   /// Assume that result bufferizes in-place with one of the operation's
   /// operands. Return true if it is possible to find an inplace write W (resp.
   /// a read R) among the uses of `aliasInfo[result]`, and a read R (resp. an

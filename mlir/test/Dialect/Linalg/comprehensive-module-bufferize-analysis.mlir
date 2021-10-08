@@ -620,9 +620,27 @@ func @read_dependence_through_scf_and_call(
   return
 }
 
+// -----
+
 //===----------------------------------------------------------------------===//
 // Transitive cases through extract_slice.
 //===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @write_into_constant_via_alias
+func @write_into_constant_via_alias(%v : vector<5xi32>,
+                                    %s1 : index, %s2 : index,
+                                    %s3 : index) -> tensor<?xi32> {
+  %A = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  %b = tensor.extract_slice %A[%s1][%s2][1] : tensor<4xi32> to tensor<?xi32>
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %r = vector.transfer_write %v, %b[%s3] : vector<5xi32>, tensor<?xi32>
+  return %r : tensor<?xi32>
+}
+
+// -----
 
 builtin.func @matmul_on_tensors(
     %arg0: tensor<518x518xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},

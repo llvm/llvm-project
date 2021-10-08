@@ -972,6 +972,34 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
                                                usesWrite, domInfo);
 }
 
+/// Return true if bufferizing `opResult` inplace would create a write to a
+/// non-writable buffer.
+bool BufferizationAliasInfo::wouldCreateWriteToNonWritableBuffer(
+    OpResult opResult) const {
+  Optional<OpOperand *> maybeAliasingOperand = getAliasingOpOperand(opResult);
+  if (!maybeAliasingOperand || !*maybeAliasingOperand)
+    return false;
+
+  // Certain buffers are not writeable:
+  //   1. A function bbArg that is not inplaceable or
+  //   2. A constant op.
+  assert(!aliasesNonWritableBuffer(opResult) &&
+         "expected that opResult does not alias non-writable buffer");
+  bool nonWritable = aliasesNonWritableBuffer((*maybeAliasingOperand)->get());
+  if (!nonWritable)
+    return false;
+
+  // This is a problem only if the buffer is written to via some alias.
+  bool hasWrite = aliasesInPlaceWrite(opResult) ||
+                  aliasesInPlaceWrite((*maybeAliasingOperand)->get()) ||
+                  bufferizesToMemoryWrite(**maybeAliasingOperand);
+  if (!hasWrite)
+    return false;
+
+  LDBG("->the corresponding buffer is not writeable\n");
+  return true;
+}
+
 /// Return true if the source of a `insertSliceOp` bufferizes to an
 /// equivalent ExtractSliceOp that bufferizes inplace.
 bool BufferizationAliasInfo::isSourceEquivalentToAMatchingInplaceExtractSliceOp(
@@ -2231,23 +2259,14 @@ bufferizableInPlaceAnalysis(ExtractSliceOp extractSliceOp,
   LDBG("Inplace analysis for extract_slice: "
        << printOperationInfo(extractSliceOp) << '\n');
 
-  // If `extractSliceOp` were to be bufferized inplace, it cannot end up
-  // aliasing a write into a non-writable buffer.
-  bool wouldCreateAliasingWriteToNonWritableBuffer =
-      aliasInfo.aliasesInPlaceWrite(extractSliceOp.result()) &&
-      aliasInfo.aliasesNonWritableBuffer(extractSliceOp.source());
-
-  if (wouldCreateAliasingWriteToNonWritableBuffer)
-    LDBG("->the corresponding buffer is not writable\n");
-  else
-    LDBG("->bufferizes to writable inplace buffer\n");
-
-  // In any of extractSliceOp.result's aliases, can we find 2 such that we hit
-  // an interfering write?
   OpResult r = extractSliceOp->getResult(0);
   OpOperand &s = extractSliceOp->getOpOperand(0);
   bool foundInterference =
-      wouldCreateAliasingWriteToNonWritableBuffer ||
+      /* If `extractSliceOp` were to be bufferized inplace, it cannot end up
+         aliasing a write into a non-writable buffer.*/
+      aliasInfo.wouldCreateWriteToNonWritableBuffer(r) ||
+      /* In any of extractSliceOp.result's aliases, can we find 2 such that we
+         hit an interfering write? */
       aliasInfo.wouldCreateReadAfterWriteInterference(r, domInfo);
   if (foundInterference)
     aliasInfo.bufferizeOutOfPlace(r);
@@ -2282,20 +2301,8 @@ bufferizableInPlaceAnalysis(OpOperand &operand,
                                    << operand.getOperandNumber() << " in "
                                    << printValueInfo(result) << '\n');
 
-  // `result` must bufferize to a writable buffer to be a candidate.
-  // This means the operand  must not alias either:
-  //   1. a function bbArg that is not inplaceable or
-  //   2. a constant op.
-  // to be considered for inplace bufferization
-  bool wouldCreateAliasingWriteToNonWritableBuffer =
-      aliasInfo.aliasesNonWritableBuffer(operand.get());
-  if (wouldCreateAliasingWriteToNonWritableBuffer)
-    LDBG("->the corresponding buffer is not writable\n");
-  else
-    LDBG("->bufferizes to writable inplace buffer\n");
-
   bool foundInterference =
-      wouldCreateAliasingWriteToNonWritableBuffer ||
+      aliasInfo.wouldCreateWriteToNonWritableBuffer(result) ||
       aliasInfo.wouldCreateReadAfterWriteInterference(result, domInfo);
 
   if (foundInterference)
