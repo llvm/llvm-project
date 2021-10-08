@@ -48,9 +48,9 @@ struct StringEqTransparent : StringEq {
 
 using umap_type = std::unordered_map<std::string, int, StringHash, StringEq>;
 using umap_type_hetero = std::unordered_map<std::string, int, StringHashTransparent, StringEqTransparent>;
-std::size_t num_measurements = 11;
+std::size_t num_measurements = 1001;
 std::size_t num_insertions = 100000;
-std::size_t string_size = 10000;
+std::size_t string_size = 10;
 
 template <typename MapType>
 double test_try_emplace() {
@@ -81,7 +81,11 @@ double test_try_emplace() {
     }
 
     std::sort(measurements.begin(), measurements.end());
-    std::cerr << std::endl << "\tMedian time " << measurements[num_measurements / 2] << std::endl << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "\tLowest time " << measurements.front() << std::endl;
+    std::cerr << "\tMedian time " << measurements[num_measurements / 2] << std::endl;
+    std::cerr << "\tHighest time " << measurements.back() << std::endl << std::endl;
+
     return measurements[num_measurements / 2];
 }
 

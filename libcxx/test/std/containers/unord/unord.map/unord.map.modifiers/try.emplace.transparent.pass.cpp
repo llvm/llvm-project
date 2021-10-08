@@ -28,17 +28,17 @@
 int main(int, char**) {
     using key_type = StoredType2<int>;
 
-    // {
-    //     using map_type = unord_map_type2<std::unordered_map, transparent_hash,
-    //                                      std::equal_to<> >;
-    //     test_transparent_try_emplace<map_type>();
-    // }
+    {
+        using map_type = unord_map_type2<std::unordered_map, transparent_hash,
+                                         std::equal_to<> >;
+        test_transparent_try_emplace<map_type>();
+    }
 
-    // {
-    //     using map_type = unord_map_type2<std::unordered_map, transparent_hash_final,
-    //                                      transparent_equal_final>;
-    //     test_transparent_try_emplace<map_type>();
-    // }
+    {
+        using map_type = unord_map_type2<std::unordered_map, transparent_hash_final,
+                                         transparent_equal_final>;
+        test_transparent_try_emplace<map_type>();
+    }
 
     {
         using map_type = unord_map_type2<std::unordered_map, non_transparent_hash,
@@ -46,15 +46,15 @@ int main(int, char**) {
         test_non_transparent_try_emplace<map_type>();
     }
 
-    // {
-    //     using map_type = unord_map_type2<std::unordered_map, transparent_hash,
-    //                                      std::equal_to<key_type> >;
-    //     test_non_transparent_try_emplace<map_type>();
-    // }
+    {
+        using map_type = unord_map_type2<std::unordered_map, transparent_hash,
+                                         std::equal_to<key_type> >;
+        test_non_transparent_try_emplace<map_type>();
+    }
 
-    // {
-    //     using map_type = unord_map_type2<std::unordered_map, non_transparent_hash,
-    //                                      std::equal_to<key_type> >;
-    //     test_non_transparent_try_emplace<map_type>();
-    // }
+    {
+        using map_type = unord_map_type2<std::unordered_map, non_transparent_hash,
+                                         std::equal_to<key_type> >;
+        test_non_transparent_try_emplace<map_type>();
+    }
 }

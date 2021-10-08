@@ -137,9 +137,9 @@ void test_non_transparent_equal_range(Args&&... args) {
 }
 
 template <typename It, typename T, typename U>
-void test_try_emplace_basic(It actual_result, const T& expected_key,
-                            const U& expected_value, StoredCtorType expected_construction,
-                            int expected_n_constructions)
+void test_hetero_insertion_basic(It actual_result, const T& expected_key,
+                                 const U& expected_value, StoredCtorType expected_construction,
+                                 int expected_n_constructions)
 {
   assert(actual_result->first.get_value() == expected_key);
   assert(actual_result->second == expected_value);
@@ -157,46 +157,46 @@ void test_transparent_try_emplace() {
   auto result1 = c.try_emplace(searched, 2);
   assert(result1.first != c.end());
   assert(result1.second);
-  test_try_emplace_basic(result1.first, 1, 2, StoredCtorType::ST_LSearched, 1);
+  test_hetero_insertion_basic(result1.first, 1, 2, StoredCtorType::ST_LSearched, 1);
 
   // Test unsuccessful copy insertion
   auto result2 = c.try_emplace(searched, 3);
   assert(result2.first == result1.first);
   assert(!result2.second);
-  test_try_emplace_basic(result2.first, 1, 2, StoredCtorType::ST_LSearched, 0);
+  test_hetero_insertion_basic(result2.first, 1, 2, StoredCtorType::ST_LSearched, 0);
 
   // Test successful insertion move
   auto result3 = c.try_emplace(SearchedType<int>(2, nullptr), 3);
   assert(result3.first != c.end());
   assert(result3.second);
-  test_try_emplace_basic(result3.first, 2, 3, StoredCtorType::ST_RSearched, 1);
+  test_hetero_insertion_basic(result3.first, 2, 3, StoredCtorType::ST_RSearched, 1);
 
   // Test unsuccessful insertion move
   auto result4 = c.try_emplace(SearchedType<int>(2, nullptr), 4);
   assert(result4.first == result3.first);
   assert(!result4.second);
-  test_try_emplace_basic(result4.first, 2, 3, StoredCtorType::ST_RSearched, 0);
+  test_hetero_insertion_basic(result4.first, 2, 3, StoredCtorType::ST_RSearched, 0);
 
   c.clear();
   // Test successful insertion copy hint
   auto result5 = c.try_emplace(c.begin(), searched, 2);
   assert(result5 != c.end());
-  test_try_emplace_basic(result5, 1, 2, StoredCtorType::ST_LSearched, 1);
+  test_hetero_insertion_basic(result5, 1, 2, StoredCtorType::ST_LSearched, 1);
 
   // Test unsuccessful insertion copy hint
   auto result6 = c.try_emplace(c.begin(), searched, 3);
   assert(result6 == result5);
-  test_try_emplace_basic(result6, 1, 2, StoredCtorType::ST_LSearched, 0);
+  test_hetero_insertion_basic(result6, 1, 2, StoredCtorType::ST_LSearched, 0);
 
   // Test successful insertion move hint
   auto result7 = c.try_emplace(c.begin(), SearchedType<int>(2, nullptr), 3);
   assert(result7 != c.end());
-  test_try_emplace_basic(result7, 2, 3, StoredCtorType::ST_RSearched, 1);
+  test_hetero_insertion_basic(result7, 2, 3, StoredCtorType::ST_RSearched, 1);
 
   // Test unsuccessful insertion move hint
   auto result8 = c.try_emplace(c.begin(), SearchedType<int>(2, nullptr), 4);
   assert(result8 == result7);
-  test_try_emplace_basic(result8, 2, 3, StoredCtorType::ST_RSearched, 0);
+  test_hetero_insertion_basic(result8, 2, 3, StoredCtorType::ST_RSearched, 0);
 }
 
 template <typename Container>
@@ -208,46 +208,177 @@ void test_non_transparent_try_emplace() {
   auto result1 = c.try_emplace(searched, 2);
   assert(result1.first != c.end());
   assert(result1.second);
-  test_try_emplace_basic(result1.first, 1, 2, StoredCtorType::ST_Move, 2);
+  test_hetero_insertion_basic(result1.first, 1, 2, StoredCtorType::ST_Move, 2);
 
   // Test unsuccessful copy insertion
   auto result2 = c.try_emplace(searched, 3);
   assert(result2.first == result1.first);
   assert(!result2.second);
-  test_try_emplace_basic(result2.first, 1, 2, StoredCtorType::ST_Move, 1);
+  test_hetero_insertion_basic(result2.first, 1, 2, StoredCtorType::ST_Move, 1);
 
   // Test successful insertion move
   auto result3 = c.try_emplace(SearchedType<int>(2, nullptr), 3);
   assert(result3.first != c.end());
   assert(result3.second);
-  test_try_emplace_basic(result3.first, 2, 3, StoredCtorType::ST_Move, 2);
+  test_hetero_insertion_basic(result3.first, 2, 3, StoredCtorType::ST_Move, 2);
 
   // Test unsuccessful insertion move
   auto result4 = c.try_emplace(SearchedType<int>(2, nullptr), 4);
   assert(result4.first == result3.first);
   assert(!result4.second);
-  test_try_emplace_basic(result4.first, 2, 3, StoredCtorType::ST_Move, 1);
+  test_hetero_insertion_basic(result4.first, 2, 3, StoredCtorType::ST_Move, 1);
 
   c.clear();
   // Test successful insertion copy hint
   auto result5 = c.try_emplace(c.begin(), searched, 2);
   assert(result5 != c.end());
-  test_try_emplace_basic(result5, 1, 2, StoredCtorType::ST_Move, 2);
+  test_hetero_insertion_basic(result5, 1, 2, StoredCtorType::ST_Move, 2);
 
   // Test unsuccessful insertion copy hint
   auto result6 = c.try_emplace(c.begin(), searched, 3);
   assert(result6 == result5);
-  test_try_emplace_basic(result6, 1, 2, StoredCtorType::ST_Move, 1);
+  test_hetero_insertion_basic(result6, 1, 2, StoredCtorType::ST_Move, 1);
 
   // Test successful insertion move hint
   auto result7 = c.try_emplace(c.begin(), SearchedType<int>(2, nullptr), 3);
   assert(result7 != c.end());
-  test_try_emplace_basic(result7, 2, 3, StoredCtorType::ST_Move, 2);
+  test_hetero_insertion_basic(result7, 2, 3, StoredCtorType::ST_Move, 2);
 
   // Test unsuccessful insertion move hint
   auto result8 = c.try_emplace(c.begin(), SearchedType<int>(2, nullptr), 4);
   assert(result8 == result7);
-  test_try_emplace_basic(result8, 2, 3, StoredCtorType::ST_Move, 1);
+  test_hetero_insertion_basic(result8, 2, 3, StoredCtorType::ST_Move, 1);
+}
+
+enum class AssignTrackerType {
+  ST_NotAssigned = 0;
+  ST_LAssigned = 1,
+  ST_RAssigned = 2
+};
+
+struct AssignTracker {
+  AssignTracker(int) : assign_state(AssignTrackerType::ST_NotAssigned) {}
+
+  AssignTracker* operator=(const int&) {
+    assign_state = AssignTrackerType::ST_LAssigned;
+    return *this;
+  };
+
+  AssignTracker* operator=(int&&) {
+    assign_state = AssignTrackerType::ST_RAssigned;
+    return *this;
+  }
+
+  AssignTrackerType assign_state;
+};
+
+template <typename Container>
+void test_transparent_insert_or_assign() {
+  Container c;
+
+  // Test lvalue - expect insertion
+  SearchedType<int> searched(1, nullptr);
+  auto result1 = c.insert_or_assign(searched, 2);
+  assert(result1.first != c.end());
+  assert(result1.second);
+  assert(result1.first->second.assign_state == AssignTrackerType::ST_NotAssigned);
+  test_hetero_insertion_basic(result1.first, 1, 2, StoredCtorType::ST_LSearched, 1);
+
+  // Test lvalue - expect assignment
+  auto result2 = c.insert_or_assign(searched, 3);
+  assert(result2.first == result1.first);
+  assert(!result2.second);
+  assert(result1.first->second.assign_state == AssignTrackerType::ST_RAssigned);
+  test_hetero_insertion_basic(result2.first, 1, 3, StoredCtorType::ST_LSearched, 0);
+
+  // Test rvalue - expect insertion
+  int value = 1, value2 = 2;
+  auto result3 = c.insert_or_assign(SearchedType<int>(2, nullptr), value);
+  assert(result3.first != c.end());
+  assert(result3.second);
+  assert(result1.first->second.assign_state == AssignTrackerType::ST_NotAssigned);
+  test_hetero_insertion_basic(result3.first, 2, 1, StoredCtorType::ST_RSearched, 1);
+
+  // Test rvalue - expect assignment
+  auto result4 = c.insert_or_assign(SearchedType<int>(2, nullptr), value2);
+  assert(result4.first == result3.first);
+  assert(!result4.second);
+  assert(result1.first->second.assign_state == AssignTrackerType::ST_LAssigned);
+  test_hetero_insertion_basic(result4.first, 2, 2, StoredCtorType::ST_RSeached, 0);
+
+  c.clear();
+
+  // Test lvalue & hint - expect insertion
+  auto result5 = c.insert_or_assign(c.begin(), searched, 2);
+  assert(result5 != c.end());
+  test_hetero_insertion_basic(result5, 1, 2, StoredCtorType::ST_LSearched, 1);
+
+  // Test lvalue & hint - expect assignment
+  auto result6 = c.insert_or_assign(c.begin(), seached, 3);
+  assert(result6 == result5);
+  test_hetero_insertion_basic(result6, 1, 3, StoredCtorType::ST_LSearched, 0);
+
+  // Test rvalue & hint - expect insertion
+  auto result7 = c.insert_or_assign(c.begin(), SearchedType<int>(2, nullptr), 1);
+  assert(result7 != c.end());
+  test_hetero_insertion_basic(result7, 2, 1, StoredCtorType::ST_RSearched, 1);
+
+  // Test rvalue & hint - expect assignment
+  auto result8 = c.insert_or_assign(c.begin(), SearchedType<int>(2, nullptr), 2);
+  assert(result8 == result7);
+  test_hetero_insertion_basic(result8, 2, 2, StoredCtorType::ST_RSearched, 0);
+}
+
+template <typename Container>
+void test_non_transparent_insert_or_assign() {
+  Container c;
+
+  // Test lvalue - expect insertion
+  SearchedType<int> searched(1, nullptr);
+  auto result1 = c.insert_or_assign(searched, 2);
+  assert(result1.first != c.end());
+  assert(result1.second);
+  test_hetero_insertion_basic(result1.first, 1, 2, StoredCtorType::ST_Move, 2);
+
+  // Test lvalue - expect assignment
+  auto result2 = c.insert_or_assign(searched, 3);
+  assert(result2.first == result1.first);
+  assert(!result2.second);
+  test_hetero_insertion_basic(result2.first, 1, 3, StoredCtorType::ST_Move, 1);
+
+  // Test rvalue - expect insertion
+  auto result3 = c.insert_or_assign(SearchedType<int>(2, nullptr), 1);
+  assert(result3.first != c.end());
+  assert(result3.second);
+  test_hetero_insertion_basic(result3.first, 2, 1, StoredCtorType::ST_Move, 2);
+
+  // Test rvalue - expect assignment
+  auto result4 = c.insert_or_assign(SearchedType<int>(2, nullptr), 2);
+  assert(result4.first == result3.first);
+  assert(!result4.second);
+  test_hetero_insertion_basic(result4.first, 2, 2, StoredCtorType::ST_Move, 1);
+
+  c.clear();
+
+  // Test lvalue & hint - expect insertion
+  auto result5 = c.insert_or_assign(c.begin(), searched, 2);
+  assert(result5 != c.end());
+  test_hetero_insertion_basic(result5, 1, 2, StoredCtorType::ST_Move, 2);
+
+  // Test lvalue & hint - expect assignment
+  auto result6 = c.insert_or_assign(c.begin(), seached, 3);
+  assert(result6 == result5);
+  test_hetero_insertion_basic(result6, 1, 3, StoredCtorType::ST_Move, 1);
+
+  // Test rvalue & hint - expect insertion
+  auto result7 = c.insert_or_assign(c.begin(), SearchedType<int>(2, nullptr), 1);
+  assert(result7 != c.end());
+  test_hetero_insertion_basic(result7, 2, 1, StoredCtorType::ST_Move, 2);
+
+  // Test rvalue & hint - expect assignment
+  auto result8 = c.insert_or_assign(c.begin(), SearchedType<int>(2, nullptr), 2);
+  assert(result8 == result7);
+  test_hetero_insertion_basic(result8, 2, 2, StoredCtorType::ST_Move, 1);
 }
 
 #endif // TEST_STD_VER > 17
