@@ -124,14 +124,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<DynamicLoaderDarwinKernelProperties>
-    DynamicLoaderDarwinKernelPropertiesSP;
-
-static const DynamicLoaderDarwinKernelPropertiesSP &GetGlobalProperties() {
-  static DynamicLoaderDarwinKernelPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<DynamicLoaderDarwinKernelProperties>();
-  return g_settings_sp;
+static DynamicLoaderDarwinKernelProperties &GetGlobalProperties() {
+  static DynamicLoaderDarwinKernelProperties g_settings;
+  return g_settings;
 }
 
 // Create an instance of this class. This function is filled into the plugin
@@ -240,7 +235,7 @@ DynamicLoaderDarwinKernel::SearchForKernelAtSameLoadAddr(Process *process) {
 // address of the kernel if one was found, else LLDB_INVALID_ADDRESS.
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
-  if (GetGlobalProperties()->GetScanType() == eKASLRScanNone)
+  if (GetGlobalProperties().GetScanType() == eKASLRScanNone)
     return LLDB_INVALID_ADDRESS;
 
   Status read_err;
@@ -292,8 +287,8 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
 // LLDB_INVALID_ADDRESS.
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
-  if (GetGlobalProperties()->GetScanType() == eKASLRScanNone ||
-      GetGlobalProperties()->GetScanType() == eKASLRScanLowgloAddresses) {
+  if (GetGlobalProperties().GetScanType() == eKASLRScanNone ||
+      GetGlobalProperties().GetScanType() == eKASLRScanLowgloAddresses) {
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -350,7 +345,7 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
 // kernel if one was found, else LLDB_INVALID_ADDRESS.
 lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
     Process *process) {
-  if (GetGlobalProperties()->GetScanType() != eKASLRScanExhaustiveScan) {
+  if (GetGlobalProperties().GetScanType() != eKASLRScanExhaustiveScan) {
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -1177,7 +1172,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   // read the plugin.dynamic-loader.darwin-kernel.load-kexts setting -- if the
   // user requested no kext loading, don't print any messages about kexts &
   // don't try to read them.
-  const bool load_kexts = GetGlobalProperties()->GetLoadKexts();
+  const bool load_kexts = GetGlobalProperties().GetLoadKexts();
 
   // By default, all kexts we've loaded in the past are marked as "remove" and
   // all of the kexts we just found out about from ReadKextSummaries are marked
@@ -1548,7 +1543,7 @@ void DynamicLoaderDarwinKernel::DebuggerInitialize(
           debugger, DynamicLoaderDarwinKernelProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger, GetGlobalProperties()->GetValueProperties(),
+        debugger, GetGlobalProperties().GetValueProperties(),
         ConstString("Properties for the DynamicLoaderDarwinKernel plug-in."),
         is_global_setting);
   }

@@ -86,6 +86,12 @@ struct TestLinalgCodegenStrategy
       *this, "register-promote-full-tile-pad",
       llvm::cl::desc("Pad the small aligned memory buffer to the tile sizes."),
       llvm::cl::init(false)};
+  Option<bool> generalize{*this, "generalize",
+                          llvm::cl::desc("Generalize named operations."),
+                          llvm::cl::init(false)};
+  ListOption<int64_t> iteratorInterchange{
+      *this, "iterator-interchange", llvm::cl::MiscFlags::CommaSeparated,
+      llvm::cl::desc("Specifies the iterator interchange.")};
   Option<bool> vectorize{
       *this, "vectorize",
       llvm::cl::desc("Rewrite the linalg op as a vector operation."),
@@ -133,6 +139,7 @@ void TestLinalgCodegenStrategy::runStrategy(
     vector::VectorTransferSplit vectorTransferSplit) {
   assert(!anchorOpName.empty());
   CodegenStrategy strategy;
+  StringRef genericOpName = GenericOp::getOperationName();
   strategy.tileIf(!tileSizes.empty(), anchorOpName, tilingOptions)
       .promoteIf(promote, anchorOpName,
                  LinalgPromotionOptions()
@@ -143,7 +150,9 @@ void TestLinalgCodegenStrategy::runStrategy(
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .vectorizeIf(vectorize, anchorOpName)
+      .generalizeIf(generalize, anchorOpName)
+      .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
+      .vectorizeIf(vectorize, generalize ? genericOpName : anchorOpName)
       .setEnableVectorTransferPartialRewrite(true)
       .setEnableVectorContractLowering(true)
       .setEnableVectorToSCFConversion(true)

@@ -92,10 +92,6 @@ static cl::opt<int> MaxCoefficient(
     cl::desc("The maximal coefficient allowed (-1 is unlimited)"), cl::Hidden,
     cl::init(20), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::opt<std::string> FusionStrategy(
-    "polly-opt-fusion", cl::desc("The fusion strategy to choose (min/max)"),
-    cl::Hidden, cl::init("min"), cl::ZeroOrMore, cl::cat(PollyCategory));
-
 static cl::opt<std::string>
     MaximizeBandDepth("polly-opt-maximize-bands",
                       cl::desc("Maximize the band depth (yes/no)"), cl::Hidden,

@@ -69,6 +69,16 @@ static unsigned littleEndianByteAt(const unsigned ByteWidth, const unsigned I) {
   return I;
 }
 
+/// Determines the LogBase2 value for a non-null input value using the
+/// transform: LogBase2(V) = (EltBits - 1) - ctlz(V).
+static Register buildLogBase2(Register V, MachineIRBuilder &MIB) {
+  auto &MRI = *MIB.getMRI();
+  LLT Ty = MRI.getType(V);
+  auto Ctlz = MIB.buildCTLZ(Ty, V);
+  auto Base = MIB.buildConstant(Ty, Ty.getScalarSizeInBits() - 1);
+  return MIB.buildSub(Ty, Base, Ctlz).getReg(0);
+}
+
 /// \returns The big endian in-memory byte position of byte \p I in a
 /// \p ByteWidth bytes wide type.
 ///
@@ -4578,6 +4588,36 @@ void CombinerHelper::applyUDivByConst(MachineInstr &MI) {
   auto *NewMI = buildUDivUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
+
+bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UMULH);
+  Register RHS = MI.getOperand(2).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  auto CstVal = isConstantOrConstantSplatVector(*MRI.getVRegDef(RHS), MRI);
+  if (!CstVal || CstVal->isOne() || !isPowerOf2_64(CstVal->getZExtValue()))
+    return false;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}});
+}
+
+void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  unsigned NumEltBits = Ty.getScalarSizeInBits();
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto LogBase2 = buildLogBase2(RHS, Builder);
+  auto ShiftAmt =
+      Builder.buildSub(Ty, Builder.buildConstant(Ty, NumEltBits), LogBase2);
+  auto Trunc = Builder.buildZExtOrTrunc(ShiftAmtTy, ShiftAmt);
+  Builder.buildLShr(Dst, LHS, Trunc);
+  MI.eraseFromParent();
+}
+
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))

@@ -487,6 +487,9 @@ public:
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
 
+  /// True if the method has a parameter that's destroyed in the callee.
+  bool hasParamDestroyedInCallee() const;
+
   /// Returns the property associated with this method's selector.
   ///
   /// Note that even if this particular method is not marked as a property

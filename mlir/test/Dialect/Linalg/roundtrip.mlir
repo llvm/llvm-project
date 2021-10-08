@@ -14,7 +14,6 @@
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECK-DAG: #[[$strided3DT:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>
-// CHECK-DAG: #[[$strided6D:.*]] = affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5 + d5)>
 
 func @pad_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
                   %pad_value: f32) -> tensor<6x?x?x?xf32> {
@@ -208,64 +207,6 @@ func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
 //  CHECK-SAME:     outputPermutation = #[[$permute_1]]} :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>,
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>
-
-// -----
-
-
-func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-                 %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-                 %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.conv(%arg0, %arg1, %arg2) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-                                     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-                                     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @conv_view3(
-//       CHECK:   linalg.conv(%{{.*}}, %{{.*}}, %{{.*}}) :
-//  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>,
-//  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>,
-//  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>
-
-// -----
-
-
-func @conv_view6(%arg0: memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>,
-                 %arg1: memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>,
-                 %arg2: memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>) {
-  linalg.conv(%arg0, %arg1, %arg2) {dilations = [4, 4, 5, 5], strides = [2, 2, 3, 3]} :
-    memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>,
-    memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>,
-    memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @conv_view6(
-//       CHECK:   linalg.conv(%{{.*}}, %{{.*}}, %{{.*}}) {
-//  CHECK-SAME:     dilations = [4, 4, 5, 5], strides = [2, 2, 3, 3]} :
-//  CHECK-SAME:     memref<?x?x?x?x?x?xf32, #[[$strided6D]]>,
-//  CHECK-SAME:     memref<?x?x?x?x?x?xf32, #[[$strided6D]]>,
-//  CHECK-SAME:     memref<?x?x?x?x?x?xf32, #[[$strided6D]]>
-
-// -----
-
-func @conv_padding(%arg0: memref<?x?x?x?xf32>,
-                   %arg1: memref<?x?x?x?xf32>,
-                   %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv(%arg0, %arg1, %arg2) {dilations = [1, 1],
-                                    padding = dense<[[0, 1], [1, 1]]> : tensor<2x2xi64>,
-                                    strides = [1, 1]} :
-    memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
-  return
-}
-
-// CHECK-LABEL: func @conv_padding(
-//       CHECK:   linalg.conv(%{{.*}}, %{{.*}}, %{{.*}}) {
-//  CHECK-SAME:     dilations = [1, 1],
-//  CHECK-SAME:     padding = dense<[
-//  CHECK-SAME:                      [0, 1], [1, 1]]> : tensor<2x2xi64>,
-//  CHECK-SAME:     strides = [1, 1]} :
-//  CHECK-SAME:     memref<?x?x?x?xf32>,
-//  CHECK-SAME:     memref<?x?x?x?xf32>,
-//  CHECK-SAME:     memref<?x?x?x?xf32>
 
 // -----
 
