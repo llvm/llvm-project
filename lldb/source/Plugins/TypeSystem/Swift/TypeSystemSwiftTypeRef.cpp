@@ -3219,6 +3219,16 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           ReconstructType(type), s, format, data, data_offset, data_byte_size,
           bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
     }
+    case Node::Kind::TypeAlias:
+    case Node::Kind::BoundGenericTypeAlias: {
+      // This means we have an unresolved type alias that even
+      // SwiftASTContext couldn't resolve. This happens for ObjC
+      // typedefs such as CFString in the REPL. More investigation is
+      // needed.
+      return m_swift_ast_context->DumpTypeValue(
+          ReconstructType(type), s, format, data, data_offset, data_byte_size,
+          bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+    }
     default:
       assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
@@ -3487,16 +3497,23 @@ TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
     (ReconstructType(type), idx));
 }
 #ifndef NDEBUG
-bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {                                                                               \
-  // NSNotificationName is a typedef to a NSString in clang type, but it's a 
+bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {
+  auto mangled_name = GetMangledTypeName(type);
+  // NSNotificationName is a typedef to a NSString in clang type, but it's a
   // struct in SwiftASTContext. Skip validation in this case.
+  if (mangled_name == "$sSo18NSNotificationNameaD")
+    return true;
+
   // $s10Foundation12NotificationV4NameaD is a typealias to NSNotificationName,
   // so we skip validation in that casse as well.
-   auto mangled_name = GetMangledTypeName(type);
-   if (mangled_name == "$sSo18NSNotificationNameaD" ||
-       mangled_name == "$s10Foundation12NotificationV4NameaD" ||
-       mangled_name == "$sSo9NSDecimalaD")
-     return true;
+  if (mangled_name == "$s10Foundation12NotificationV4NameaD")
+    return true;
+  if (mangled_name == "$sSo9NSDecimalaD")
+    return true;
+  // Reconstruct($sSo11CFStringRefaD) returns a non-typealias type, breaking
+  // isTypedef().
+  if (mangled_name == "$sSo11CFStringRefaD")
+    return true;
 
   // We skip validation when dealing with a builtin type since builtins are
   // considered type aliases by Swift, which we're deviating from since
