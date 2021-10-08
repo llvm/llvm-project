@@ -41,6 +41,20 @@ def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
   ];
 }
 
+def AffineDialectDemotion : FunctionPass<"demote-affine"> {
+  let summary = "Converts `affine.{load,store}` back to fir operations";
+  let description = [{
+    Affine dialect's default lowering for loads and stores is different from
+    fir as it uses the `memref` type. The `memref` type is not compatible with
+    the Fortran runtime. Therefore, conversion of memory operations back to
+    `fir.load` and `fir.store` with `!fir.ref<?>` types is required.
+  }];
+  let constructor = "::fir::createAffineDemotionPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+  ];
+}
+
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let summary = "Convert name for external interoperability";
   let description = [{
