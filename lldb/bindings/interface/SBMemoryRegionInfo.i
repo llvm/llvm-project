@@ -20,6 +20,9 @@ public:
 
     SBMemoryRegionInfo (const lldb::SBMemoryRegionInfo &rhs);
 
+    SBMemoryRegionInfo::SBMemoryRegionInfo(const char *name, lldb::addr_t begin,
+    lldb::addr_t end, uint32_t permissions, bool mapped, bool stack_memory);
+
     ~SBMemoryRegionInfo ();
 
     void

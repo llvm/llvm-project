@@ -16,6 +16,10 @@ class ScriptedProcess:
                 THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
+    memory_regions = None
+    stack_memory_dump = None
+    loaded_images = None
+
     @abstractmethod
     def __init__(self, target, args):
         """ Construct a scripted process.
@@ -91,7 +95,6 @@ class ScriptedProcess:
         """
         pass
 
-    @abstractmethod
     def get_loaded_images(self):
         """ Get the list of loaded images for the scripted process.
 
@@ -110,7 +113,7 @@ class ScriptedProcess:
                 an `lldb.SBFileSpec` and a load address.
                 None if the list is empty.
         """
-        pass
+        return self.loaded_images
 
     def get_process_id(self):
         """ Get the scripted process identifier.

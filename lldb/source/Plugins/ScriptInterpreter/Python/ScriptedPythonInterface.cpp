@@ -63,11 +63,30 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
       LLDBSWIGPython_CastPyObjectToSBData(p.get()));
 
   if (!sb_data) {
-    error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
+    error.SetErrorString(
+        "Couldn't cast lldb::SBData to lldb::DataExtractorSP.");
     return nullptr;
   }
 
   return m_interpreter.GetDataExtractorFromSBData(*sb_data);
+}
+
+template <>
+llvm::Optional<MemoryRegionInfo>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    llvm::Optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {
+
+  lldb::SBMemoryRegionInfo *sb_mem_reg_info =
+      reinterpret_cast<lldb::SBMemoryRegionInfo *>(
+          LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(p.get()));
+
+  if (!sb_mem_reg_info) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
 }
 
 #endif

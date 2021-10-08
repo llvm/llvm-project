@@ -7,11 +7,22 @@ from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
 class MyScriptedProcess(ScriptedProcess):
+    memory_regions = [
+        lldb.SBMemoryRegionInfo("stack", 0x1040b2000, 0x1040b4000, 0b110, True,
+                                True)
+    ]
+
+    stack_memory_dump = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     'main.stack-dump')
+
     def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
         super().__init__(target, args)
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return self.memory_regions[0]
+        for region in self.memory_regions:
+            if region.GetRegionBase() <= addr < region.GetRegionEnd():
+                return region
+        return None
 
     def get_thread_with_id(self, tid: int):
         return {}
@@ -20,10 +31,25 @@ class MyScriptedProcess(ScriptedProcess):
         return {}
 
     def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
-        data = lldb.SBData().CreateDataFromCString(
+        data = lldb.SBData()
+
+        with open(self.stack_memory_dump, 'rb') as f:
+            stack_mem = f.read(-1)
+            if not stack_mem:
+                return data
+
+            mem_region = self.get_memory_region_containing_address(addr)
+
+            if not mem_region or addr + size > mem_region.GetRegionEnd():
+                return data
+
+            offset = addr - mem_region.GetRegionBase()
+            shrunk_stack_mem = stack_mem[offset:offset + size]
+
+            error = lldb.SBError()
+            data.SetData(error, shrunk_stack_mem,
                                     self.target.GetByteOrder(),
-                                    self.target.GetCodeByteSize(),
-                                    "Hello, world!")
+                                    self.target.GetAddressByteSize())
         return data
 
     def get_loaded_images(self):
@@ -43,6 +69,30 @@ class MyScriptedProcess(ScriptedProcess):
 
 
 class MyScriptedThread(ScriptedThread):
+    registers = {
+        "rax":0x00000000000006e4,
+        "rbx":0x00000001040b6060,
+        "rcx":0x00000001040b2e00,
+        "rdx":0x00000001040b2ba8,
+        "rdi":0x000000000000002a,
+        "rsi":0x00000001040b2b98,
+        "rbp":0x00000001040b2a20,
+        "rsp":0x00000001040b2a20,
+        "r8":0x00000000003e131e,
+        "r9":0xffffffff00000000,
+        "r10":0x0000000000000000,
+        "r11":0x0000000000000246,
+        "r12":0x000000010007c3a0,
+        "r13":0x00000001040b2b18,
+        "r14":0x0000000100003f90,
+        "r15":0x00000001040b2b88,
+        "rip":0x0000000100003f61,
+        "rflags":0x0000000000000206,
+        "cs":0x000000000000002b,
+        "fs":0x0000000000000000,
+        "gs":0x0000000000000000,
+    }
+
     def __init__(self, target):
         super().__init__(target)
 
@@ -73,8 +123,7 @@ class MyScriptedThread(ScriptedThread):
         return self.frame_zero[0:0]
 
     def get_register_context(self) -> str:
-        return struct.pack(
-                '21Q', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+        return struct.pack("{}Q".format(len(self.registers)), *self.registers.values())
 
 
 def __lldb_init_module(debugger, dict):

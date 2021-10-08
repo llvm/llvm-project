@@ -12,6 +12,7 @@
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Interpreter/ScriptedInterface.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 
 #include "lldb/lldb-private.h"
 
@@ -34,9 +35,10 @@ public:
 
   virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
 
-  virtual lldb::MemoryRegionInfoSP
-  GetMemoryRegionContainingAddress(lldb::addr_t address) {
-    return nullptr;
+  virtual llvm::Optional<MemoryRegionInfo>
+  GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
+    error.SetErrorString("ScriptedProcess have no memory region.");
+    return {};
   }
 
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {

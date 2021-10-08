@@ -166,6 +166,10 @@ extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data) {
   return nullptr;
 }
 
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(void *data) {
+  return nullptr;
+}
+
 extern lldb::ValueObjectSP
 LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data) {
   return nullptr;
