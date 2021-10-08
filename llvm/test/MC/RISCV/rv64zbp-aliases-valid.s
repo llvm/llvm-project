@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-b -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbp -riscv-no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
-# RUN: llvm-mc %s  -triple=riscv64 -mattr=+experimental-b \
+# RUN: llvm-mc %s  -triple=riscv64 -mattr=+experimental-zbp \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+experimental-b - \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zbp < %s \
+# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+experimental-zbp - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump -d -r --mattr=+experimental-b - \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zbp < %s \
+# RUN:     | llvm-objdump -d -r --mattr=+experimental-zbp - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 
 # The following check prefixes are used in this test:
@@ -15,17 +15,9 @@
 # CHECK-S-OBJ-NOALIAS    Match both the .s and objdumped object output with
 #                        aliases disabled
 
-# CHECK-S-OBJ-NOALIAS: andi t0, t1, 255
-# CHECK-S-OBJ: andi t0, t1, 255
-zext.b x5, x6
-
 # CHECK-S-OBJ-NOALIAS: zext.h t0, t1
 # CHECK-S-OBJ: zext.h t0, t1
 zext.h x5, x6
-
-# CHECK-S-OBJ-NOALIAS: add.uw t0, t1, zero
-# CHECK-S-OBJ: zext.w t0, t1
-zext.w x5, x6
 
 # CHECK-S-OBJ-NOALIAS: grevi t0, t1, 1
 # CHECK-S-OBJ: rev.p t0, t1
@@ -323,22 +315,6 @@ ror x5, x6, 8
 # CHECK-S-OBJ: roriw t0, t1, 8
 rorw x5, x6, 8
 
-# CHECK-S-OBJ-NOALIAS: bseti t0, t1, 8
-# CHECK-S-OBJ: bseti t0, t1, 8
-bset x5, x6, 8
-
-# CHECK-S-OBJ-NOALIAS: bclri t0, t1, 8
-# CHECK-S-OBJ: bclri t0, t1, 8
-bclr x5, x6, 8
-
-# CHECK-S-OBJ-NOALIAS: binvi t0, t1, 8
-# CHECK-S-OBJ: binvi t0, t1, 8
-binv x5, x6, 8
-
-# CHECK-S-OBJ-NOALIAS: bexti t0, t1, 8
-# CHECK-S-OBJ: bexti t0, t1, 8
-bext x5, x6, 8
-
 # CHECK-S-OBJ-NOALIAS: grevi t0, t1, 13
 # CHECK-S-OBJ: grevi t0, t1, 13
 grev x5, x6, 13
@@ -362,17 +338,3 @@ grevw x5, x6, 13
 # CHECK-S-OBJ-NOALIAS: gorciw t0, t1, 13
 # CHECK-S-OBJ: gorciw t0, t1, 13
 gorcw x5, x6, 13
-
-# CHECK-S-OBJ-NOALIAS: addi t1, zero, -2
-# CHECK-S-OBJ-NOALIAS-NEXT: add.uw t1, t1, zero
-# CHECK-S-OBJ: addi t1, zero, -2
-# CHECK-S-OBJ-NEXT: zext.w t1, t1
-li x6, 0xfffffffe
-
-# CHECK-S-OBJ-NOALIAS: lui t2, 699051
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t2, t2, -1366
-# CHECK-S-OBJ-NOALIAS-NEXT: add.uw t2, t2, zero
-# CHECK-S-OBJ: lui t2, 699051
-# CHECK-S-OBJ-NEXT: addiw t2, t2, -1366
-# CHECK-S-OBJ-NEXT: zext.w t2, t2
-li x7, 0xaaaaaaaa
