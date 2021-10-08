@@ -30,7 +30,6 @@ protected:
   bool HasF = false;
   bool HasD = false;
   bool HasC = false;
-  bool HasB = false;
   bool HasV = false;
   bool HasZba = false;
   bool HasZbb = false;

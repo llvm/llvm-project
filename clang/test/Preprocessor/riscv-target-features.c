@@ -100,25 +100,6 @@
 // CHECK-C-EXT: __riscv_compressed 1
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv32ib0p93 -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv64ib0p93 -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
-// CHECK-B-EXT: __riscv_b 93000
-// CHECK-B-EXT: __riscv_bitmanip 1
-// CHECK-B-EXT: __riscv_zba 93000
-// CHECK-B-EXT: __riscv_zbb 93000
-// CHECK-B-EXT: __riscv_zbc 93000
-// CHECK-B-EXT: __riscv_zbe 93000
-// CHECK-B-EXT: __riscv_zbf 93000
-// CHECK-B-EXT: __riscv_zbm 93000
-// CHECK-B-EXT: __riscv_zbp 93000
-// CHECK-B-EXT: __riscv_zbr 93000
-// CHECK-B-EXT: __riscv_zbs 93000
-// CHECK-B-EXT: __riscv_zbt 93000
-
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
 // RUN: -march=rv32izba0p93 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBA-EXT %s
 // RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
