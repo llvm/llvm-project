@@ -981,21 +981,25 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     }
     break;
 
-  case DW_ATE_complex_float:
-    if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatComplexTy))
-      return GetType(ast.FloatComplexTy);
-    else if (QualTypeMatchesBitSize(bit_size, ast, ast.DoubleComplexTy))
-      return GetType(ast.DoubleComplexTy);
-    else if (QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleComplexTy))
-      return GetType(ast.LongDoubleComplexTy);
-    else {
-      CompilerType complex_float_clang_type =
-          GetBuiltinTypeForDWARFEncodingAndBitSize("float", DW_ATE_float,
-                                                   bit_size / 2);
-      return GetType(
-          ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type)));
-    }
-    break;
+  case DW_ATE_complex_float: {
+    CanQualType FloatComplexTy = ast.getComplexType(ast.FloatTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, FloatComplexTy))
+      return GetType(FloatComplexTy);
+
+    CanQualType DoubleComplexTy = ast.getComplexType(ast.DoubleTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, DoubleComplexTy))
+      return GetType(DoubleComplexTy);
+
+    CanQualType LongDoubleComplexTy = ast.getComplexType(ast.LongDoubleTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, LongDoubleComplexTy))
+      return GetType(LongDoubleComplexTy);
+
+    CompilerType complex_float_clang_type =
+        GetBuiltinTypeForDWARFEncodingAndBitSize("float", DW_ATE_float,
+                                                 bit_size / 2);
+    return GetType(
+        ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type)));
+  }
 
   case DW_ATE_float:
     if (type_name == "float" &&
@@ -2051,11 +2055,11 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
   case eBasicTypeLongDouble:
     return ast->LongDoubleTy.getAsOpaquePtr();
   case eBasicTypeFloatComplex:
-    return ast->FloatComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->FloatTy).getAsOpaquePtr();
   case eBasicTypeDoubleComplex:
-    return ast->DoubleComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->DoubleTy).getAsOpaquePtr();
   case eBasicTypeLongDoubleComplex:
-    return ast->LongDoubleComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->LongDoubleTy).getAsOpaquePtr();
   case eBasicTypeObjCID:
     return ast->getObjCIdType().getAsOpaquePtr();
   case eBasicTypeObjCClass:

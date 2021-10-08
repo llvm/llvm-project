@@ -60,11 +60,11 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeDouble),
                                   context.DoubleTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeDoubleComplex),
-                                  context.DoubleComplexTy));
+                                  context.getComplexType(context.DoubleTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeFloat), context.FloatTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeFloatComplex),
-                                  context.FloatComplexTy));
+                                  context.getComplexType(context.FloatTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeHalf), context.HalfTy));
   EXPECT_TRUE(
@@ -75,8 +75,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
       context.hasSameType(GetBasicQualType(eBasicTypeLong), context.LongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongDouble),
                                   context.LongDoubleTy));
-  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongDoubleComplex),
-                                  context.LongDoubleComplexTy));
+  EXPECT_TRUE(
+      context.hasSameType(GetBasicQualType(eBasicTypeLongDoubleComplex),
+                          context.getComplexType(context.LongDoubleTy)));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongLong),
                                   context.LongLongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeNullPtr),
