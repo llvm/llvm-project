@@ -18,7 +18,6 @@
 #include "sanitizer_atomic.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_mutex.h"
-#include "sanitizer_persistent_allocator.h"
 
 namespace __sanitizer {
 
