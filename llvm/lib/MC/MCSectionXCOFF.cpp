@@ -118,6 +118,10 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 bool MCSectionXCOFF::UseCodeAlign() const { return getKind().isText(); }
 
 bool MCSectionXCOFF::isVirtualSection() const {
-  assert(isCsect() && "Only csect section can be virtual!");
+  // DWARF sections are always not virtual.
+  if (isDwarfSect())
+    return false;
+  assert(isCsect() &&
+         "Handling for isVirtualSection not implemented for this section!");
   return XCOFF::XTY_CM == CsectProp->Type;
 }
