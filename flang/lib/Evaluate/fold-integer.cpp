@@ -615,7 +615,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     // Second argument can be of any kind. However, it must be smaller or
     // equal than BIT_SIZE. It can be converted to Int4 to simplify.
     auto fptr{&Scalar<T>::ISHFT};
-    if (name == "ISHFT") { // done in fptr definition
+    if (name == "ishft") { // done in fptr definition
     } else if (name == "shifta") {
       fptr = &Scalar<T>::SHIFTA;
     } else if (name == "shiftr") {
