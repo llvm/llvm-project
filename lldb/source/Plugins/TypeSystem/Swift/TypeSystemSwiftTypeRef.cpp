@@ -106,6 +106,38 @@ TypeSystemSwiftTypeRef::CanonicalizeSugar(swift::Demangle::Demangler &dem,
   });
 }
 
+llvm::StringRef
+TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+    
+  using namespace swift::Demangle;
+  switch (node->getKind()) {
+  case Node::Kind::Structure:
+  case Node::Kind::Class: {
+    if (node->getNumChildren() != 2)
+      return {};
+    NodePointer ident = node->getChild(1);
+    if (ident && ident->hasText())
+      return ident->getText();
+    if (ident->getKind() == Node::Kind::PrivateDeclName ||
+        ident->getKind() == Node::Kind::LocalDeclName) {
+      if (ident->getNumChildren() != 2)
+        return {};
+      ident = ident->getChild(1);
+      if (ident && ident->hasText())
+        return ident->getText();
+    }
+    return {};
+  }
+  default:
+    // Visit the child nodes.
+    for (NodePointer child : *node)
+      return GetBaseName(child);
+    return {};
+  }
+}
+
 /// Create a mangled name for a type alias node.
 static swift::Demangle::ManglingErrorOr<std::string>
 GetTypeAlias(swift::Demangle::Demangler &dem,

@@ -1167,36 +1167,6 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   }
 }
 
-/// Return the base name of the topmost nominal type.
-static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node) {
-  if (!node)
-    return {};
-  using namespace swift::Demangle;
-  switch (node->getKind()) {
-  case Node::Kind::Structure:
-  case Node::Kind::Class: {
-    if (node->getNumChildren() != 2)
-      return {};
-    NodePointer ident = node->getChild(1);
-    if (ident && ident->hasText())
-      return ident->getText();
-    if (ident->getKind() == Node::Kind::PrivateDeclName) {
-      if (ident->getNumChildren() != 2)
-        return {};
-      ident = ident->getChild(1);
-      if (ident && ident->hasText())
-        return ident->getText();
-    }
-    return {};
-  }
-  default:
-    // Visit the child nodes.
-    for (NodePointer child : *node)
-      return GetBaseName(child);
-    return {};
-  }
-}
-
 static CompilerType
 GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
                    const swift::reflection::TypeRef *type_ref) {
@@ -1488,7 +1458,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     Demangler dem;
     auto mangled = type.GetMangledTypeName().GetStringRef();
     NodePointer type_node = dem.demangleSymbol(mangled);
-    llvm::StringRef type_name = GetBaseName(ts->CanonicalizeSugar(dem, type_node));
+    llvm::StringRef type_name = TypeSystemSwiftTypeRef::GetBaseName(
+        ts->CanonicalizeSugar(dem, type_node));
     llvm::SmallVector<SuperClassType, 2> supers;
     ForEachSuperClassType(*valobj, [&](SuperClassType sc) -> bool {
       if (!found_start) {
@@ -1497,7 +1468,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         // reach the requested type.
         if (auto *tr = sc.get_typeref()) {
           NodePointer base_class = tr->getDemangling(dem);
-          if (GetBaseName(base_class) != type_name)
+          if (TypeSystemSwiftTypeRef::GetBaseName(base_class) != type_name)
             return false;
           found_start = true;
         }
