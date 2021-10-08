@@ -693,9 +693,9 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
     PrintInvalidOriginWarning(label, addr);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE size_t
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr
 dfsan_sprint_origin_trace(const void *addr, const char *description,
-                          char *out_buf, size_t out_buf_size) {
+                          char *out_buf, uptr out_buf_size) {
   CHECK(out_buf);
 
   if (!dfsan_get_track_origins()) {
@@ -764,8 +764,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
   stack.Print();
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE size_t
-dfsan_sprint_stack_trace(char *out_buf, size_t out_buf_size) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr
+dfsan_sprint_stack_trace(char *out_buf, uptr out_buf_size) {
   CHECK(out_buf);
   GET_CALLER_PC_BP;
   GET_STORE_STACK_TRACE_PC_BP(pc, bp);
