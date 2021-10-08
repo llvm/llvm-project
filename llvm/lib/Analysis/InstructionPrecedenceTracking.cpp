@@ -19,10 +19,14 @@
 
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "ipt"
+STATISTIC(NumInstScanned, "Number of insts scanned while updating ibt");
 
 #ifndef NDEBUG
 static cl::opt<bool> ExpensiveAsserts(
@@ -64,11 +68,13 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
 
 void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
   FirstSpecialInsts.erase(BB);
-  for (auto &I : *BB)
+  for (auto &I : *BB) {
+    NumInstScanned++;
     if (isSpecialInstruction(&I)) {
       FirstSpecialInsts[BB] = &I;
       return;
     }
+  }
 
   // Mark this block as having no special instructions.
   FirstSpecialInsts[BB] = nullptr;
