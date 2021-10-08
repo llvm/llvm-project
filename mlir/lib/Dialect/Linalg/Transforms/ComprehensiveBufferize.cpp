@@ -561,7 +561,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
     return None;
   return TypeSwitch<Operation *, OpOperand *>(result.getDefiningOp())
       .Case([&](tensor::CastOp op) { return &op->getOpOperand(0); })
-      .Case([&](ConstantOp op) { return &op->getOpOperand(0); })
+      .Case([&](ConstantOp op) { return nullptr; })
       .Case([&](ExtractSliceOp op) { return &op->getOpOperand(0); })
       // In the case of scf::ForOp, this currently assumes the iter_args / yield
       // are 1-1. This may fail and is verified at the end.
@@ -580,6 +580,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
                                  op.getNumInputs() + result.getResultNumber());
       })
       .Case([&](vector::TransferWriteOp op) { return &op->getOpOperand(1); })
+      .Case([&](CallOpInterface op) { return nullptr; })
       .Default([&](Operation *op) {
         op->dump();
         llvm_unreachable("unexpected defining op");
