@@ -1915,22 +1915,13 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in
   // profile summary.
-  const uint64_t HotCutoff = 990000;
   ProfileSummary &BasePS = BaseReader->getSummary();
-  for (const auto &SummaryEntry : BasePS.getDetailedSummary()) {
-    if (SummaryEntry.Cutoff == HotCutoff) {
-      BaseHotThreshold = SummaryEntry.MinCount;
-      break;
-    }
-  }
-
   ProfileSummary &TestPS = TestReader->getSummary();
-  for (const auto &SummaryEntry : TestPS.getDetailedSummary()) {
-    if (SummaryEntry.Cutoff == HotCutoff) {
-      TestHotThreshold = SummaryEntry.MinCount;
-      break;
-    }
-  }
+  BaseHotThreshold =
+      ProfileSummaryBuilder::getHotCountThreshold(BasePS.getDetailedSummary());
+  TestHotThreshold =
+      ProfileSummaryBuilder::getHotCountThreshold(TestPS.getDetailedSummary());
+
   return std::error_code();
 }
 
