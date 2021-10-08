@@ -18,7 +18,7 @@
 #include "types.h"
 
 constexpr bool test() {
-  std::ranges::drop_view dropView1(ContiguousView(), 4);
+  std::ranges::drop_view dropView1(MoveOnlyView(), 4);
   assert(dropView1.size() == 4);
   assert(dropView1.begin() == globalBuff + 4);
 

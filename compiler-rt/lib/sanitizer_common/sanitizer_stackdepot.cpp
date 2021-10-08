@@ -14,18 +14,21 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_hash.h"
+#include "sanitizer_persistent_allocator.h"
 #include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
 
+static PersistentAllocator allocator;
+static PersistentAllocator traceAllocator;
+
 struct StackDepotNode {
-  using hash_type = u32;
-  StackDepotNode *link;
-  u32 id;
+  using hash_type = u64;
   hash_type stack_hash;
-  u32 size;
+  StackDepotNode *link;
+  uptr *stack_trace;
+  u32 id;
   atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
-  uptr stack[1];  // [size]
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
   static const u32 kUseCountBits = 20;
@@ -34,22 +37,18 @@ struct StackDepotNode {
 
   typedef StackTrace args_type;
   bool eq(hash_type hash, const args_type &args) const {
-    u32 tag =
-        atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
-    if (stack_hash != hash || args.size != size || args.tag != tag)
-      return false;
-    uptr i = 0;
-    for (; i < size; i++) {
-      if (stack[i] != args.trace[i]) return false;
-    }
-    return true;
+    return hash == stack_hash;
   }
-  static uptr storage_size(const args_type &args) {
-    return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
+  static uptr allocated() {
+    return allocator.allocated() + traceAllocator.allocated();
+  }
+  static StackDepotNode *allocate(const args_type &args) {
+    return (StackDepotNode *)allocator.alloc(sizeof(StackDepotNode));
   }
   static hash_type hash(const args_type &args) {
-    MurMur2HashBuilder H(args.size * sizeof(uptr));
+    MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
+    H.add(args.tag);
     return H.get();
   }
   static bool is_valid(const args_type &args) {
@@ -60,13 +59,14 @@ struct StackDepotNode {
     atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
                  memory_order_relaxed);
     stack_hash = hash;
-    size = args.size;
-    internal_memcpy(stack, args.trace, size * sizeof(uptr));
+    stack_trace = (uptr *)traceAllocator.alloc((args.size + 1) * sizeof(uptr));
+    *stack_trace = args.size;
+    internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   }
   args_type load() const {
     u32 tag =
         atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
-    return args_type(&stack[0], size, tag);
+    return args_type(stack_trace + 1, *stack_trace, tag);
   }
   StackDepotHandle get_handle() { return StackDepotHandle(this); }
 

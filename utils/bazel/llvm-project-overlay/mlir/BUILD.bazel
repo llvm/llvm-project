@@ -5599,6 +5599,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
+        "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
     ],
     deps = [
         ":LLVMOpsTdFiles",
@@ -5658,6 +5659,24 @@ gentbl_cc_library(
     deps = [":OpenMPOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "OpenMPInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
+    deps = [":OpenMPOpsTdFiles"],
+)
+
 cc_library(
     name = "OpenMPDialect",
     srcs = glob(
@@ -5674,6 +5693,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LLVMDialect",
+        ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
         ":SideEffectInterfaces",
         ":StandardOps",
@@ -6672,6 +6692,118 @@ exports_files([
     "include/mlir/Interfaces/ControlFlowInterfaces.h",
     "include/mlir/Transforms/InliningUtils.h",
 ])
+
+td_library(
+    name = "ArithmeticOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Arithmetic/IR/ArithmeticBase.td",
+        "include/mlir/Dialect/Arithmetic/IR/ArithmeticOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+        ":VectorInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ArithmeticBaseIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Arithmetic/IR/ArithmeticBase.td",
+    deps = [":ArithmeticOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArithmeticOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Arithmetic/IR/ArithmeticOps.td",
+    deps = [
+        ":ArithmeticOpsTdFiles",
+        ":CastInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ArithmeticCanonicalizationIncGen",
+    strip_include_prefix = "include/mlir/Dialect/Arithmetic/IR",
+    tbl_outs = [
+        (
+            ["-gen-rewriters"],
+            "include/mlir/Dialect/Arithmetic/IR/ArithmeticCanonicalization.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "lib/Dialect/Arithmetic/IR/ArithmeticCanonicalization.td",
+    deps = [
+        ":ArithmeticOpsTdFiles",
+        ":CastInterfacesTdFiles",
+        ":StdOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "ArithmeticDialect",
+    srcs = glob(
+        [
+            "lib/Dialect/Arithmetic/IR/*.cpp",
+            "lib/Dialect/Arithmetic/IR/*.h",
+        ],
+    ),
+    hdrs = [
+        "include/mlir/Dialect/Arithmetic/IR/Arithmetic.h",
+        "include/mlir/Transforms/InliningUtils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithmeticBaseIncGen",
+        ":ArithmeticCanonicalizationIncGen",
+        ":ArithmeticOpsIncGen",
+        ":CommonFolders",
+        ":IR",
+        ":SideEffectInterfaces",
+        ":StandardOps",
+        ":Support",
+        ":VectorInterfaces",
+        "//llvm:Support",
+    ],
+)
 
 td_library(
     name = "MathOpsTdFiles",

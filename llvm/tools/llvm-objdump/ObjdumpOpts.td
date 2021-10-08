@@ -1,5 +1,12 @@
 include "llvm/Option/OptParser.td"
 
+multiclass Eq<string name, string help> {
+  def NAME : Separate<["--"], name>;
+  def NAME #_eq : Joined<["--"], name #"=">,
+                  Alias<!cast<Separate>(NAME)>,
+                  HelpText<help>;
+}
+
 def help : Flag<["--"], "help">,
   HelpText<"Display available options (--help-hidden for more)">;
 
@@ -16,7 +23,8 @@ def adjust_vma_EQ : Joined<["--"], "adjust-vma=">,
   HelpText<"Increase the displayed address by the specified offset">;
 
 def all_headers : Flag<["--"], "all-headers">,
-  HelpText<"Display all available header information">;
+  HelpText<"Display all available header information, "
+           "relocation entries and the symbol table">;
 def : Flag<["-"], "x">, Alias<all_headers>, HelpText<"Alias for --all-headers">;
 
 def arch_name_EQ : Joined<["--"], "arch-name=">,
@@ -32,11 +40,11 @@ def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
 def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">;
 
 def disassemble : Flag<["--"], "disassemble">,
-  HelpText<"Display assembler mnemonics for the machine instructions">;
+  HelpText<"Disassemble all executable sections found in the input files">;
 def : Flag<["-"], "d">, Alias<disassemble>, HelpText<"Alias for --disassemble">;
 
 def disassemble_all : Flag<["--"], "disassemble-all">,
-  HelpText<"Display assembler mnemonics for the machine instructions">;
+  HelpText<"Disassemble all sections found in the input files">;
 def : Flag<["-"], "D">, Alias<disassemble_all>,
   HelpText<"Alias for --disassemble-all">;
 
@@ -66,10 +74,12 @@ def : Flag<["-"], "R">, Alias<dynamic_reloc>,
   HelpText<"Alias for --dynamic-reloc">;
 
 def dwarf_EQ : Joined<["--"], "dwarf=">,
-  HelpText<"Dump of dwarf debug sections">, Values<"frames">;
+  HelpText<"Dump the specified DWARF debug sections. The "
+           "only supported value is 'frames'">,
+  Values<"frames">;
 
 def fault_map_section : Flag<["--"], "fault-map-section">,
-  HelpText<"Display contents of faultmap section">;
+  HelpText<"Display the content of the fault map section">;
 
 def file_headers : Flag<["--"], "file-headers">,
   HelpText<"Display the contents of the overall file header">;
@@ -82,9 +92,10 @@ def : Flag<["-"], "s">, Alias<full_contents>,
   HelpText<"Alias for --full-contents">;
 
 def line_numbers : Flag<["--"], "line-numbers">,
-  HelpText<"Display source line numbers with "
-            "disassembly. Implies disassemble object">;
-def : Flag<["-"], "l">, Alias<line_numbers>,
+  HelpText<"When disassembling, display source line numbers. "
+           "Implies --disassemble">;
+def : Flag<["-"], "l">,
+  Alias<line_numbers>,
   HelpText<"Alias for --line-numbers">;
 
 def macho : Flag<["--"], "macho">,
@@ -104,7 +115,7 @@ def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
            "do not print the instruction bytes.">;
 
 def no_leading_addr : Flag<["--"], "no-leading-addr">,
-  HelpText<"Print no leading address">;
+  HelpText<"When disassembling, do not print leading addresses">;
 
 def raw_clang_ast : Flag<["--"], "raw-clang-ast">,
   HelpText<"Dump the raw binary contents of the clang AST section">;
@@ -143,15 +154,18 @@ def show_lma : Flag<["--"], "show-lma">,
   HelpText<"Display LMA column when dumping ELF section headers">;
 
 def source : Flag<["--"], "source">,
-  HelpText<"Display source inlined with disassembly. Implies disassemble object">;
+  HelpText<"When disassembling, display source interleaved with the "
+           "disassembly. Implies --disassemble">;
 def : Flag<["-"], "S">, Alias<source>, HelpText<"Alias for --source">;
 
 def start_address_EQ : Joined<["--"], "start-address=">,
   MetaVarName<"address">,
-  HelpText<"Disassemble beginning at address">;
+  HelpText<"Set the start address for disassembling, "
+           "printing relocations and printing symbols">;
 def stop_address_EQ : Joined<["--"], "stop-address=">,
   MetaVarName<"address">,
-  HelpText<"Stop disassembly at address">;
+  HelpText<"Set the stop address for disassembling, "
+           "printing relocations and printing symbols">;
 
 def syms : Flag<["--"], "syms">,
   HelpText<"Display the symbol table">;
@@ -180,19 +194,19 @@ def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;
 def : Flag<["-"], "w">, Alias<wide>;
 
-def prefix : Separate<["--"], "prefix">,
-  HelpText<"Add prefix to absolute paths">;
-
-def prefix_strip : Separate<["--"], "prefix-strip">,
-  HelpText<"Strip out initial directories from absolute "
-           "paths. No effect without --prefix">;
+defm prefix : Eq<"prefix", "Add prefix to absolute paths">,
+              MetaVarName<"prefix">;
+defm prefix_strip
+    : Eq<"prefix-strip", "Strip out initial directories from absolute "
+                         "paths. No effect without --prefix">,
+      MetaVarName<"prefix">;
 
 def debug_vars_EQ : Joined<["--"], "debug-vars=">,
-  Values<"unicode,ascii">;
-def : Flag<["--"], "debug-vars">,
   HelpText<"Print the locations (in registers or memory) of "
-           "source-level variables alongside disassembly">,
-  Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
+           "source-level variables alongside disassembly. "
+           "Supported formats: ascii, unicode (default)">,
+  Values<"unicode,ascii">;
+def : Flag<["--"], "debug-vars">, Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
 
 def debug_vars_indent_EQ : Joined<["--"], "debug-vars-indent=">,
   HelpText<"Distance to indent the source-level variable display, "

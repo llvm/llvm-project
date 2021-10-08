@@ -95,6 +95,7 @@ struct ScalarSymbolicCast {
   // NOTE: This must be of arity 1, but to break the self-referential cycle,
   // we use a heap allocated vector.
   std::vector<ScalarExpression> operands;
+  bool isUnsignedCast;
 };
 
 struct ScalarExpression {
@@ -278,6 +279,7 @@ struct MappingTraits<ScalarSymbolicCast> {
   static void mapping(IO &io, ScalarSymbolicCast &info) {
     io.mapRequired("type_var", info.typeVar);
     io.mapRequired("operands", info.operands);
+    io.mapRequired("is_unsigned_cast", info.isUnsignedCast);
   }
 };
 
@@ -986,9 +988,10 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
             return None;
           }
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
-          stmts.push_back(llvm::formatv("Value {0} = helper.cast({1}, {2});",
-                                        cppIdent, typeCppValue.getValue(),
-                                        *operandCppValue));
+          stmts.push_back(
+              llvm::formatv("Value {0} = helper.cast({1}, {2}, {3});", cppIdent,
+                            typeCppValue.getValue(), *operandCppValue,
+                            expression.symbolicCast->isUnsignedCast));
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";

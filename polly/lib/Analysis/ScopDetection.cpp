@@ -329,7 +329,8 @@ static bool doesStringMatchAnyRegex(StringRef Str,
 
     std::string Err;
     if (!R.isValid(Err))
-      report_fatal_error("invalid regex given as input to polly: " + Err, true);
+      report_fatal_error(Twine("invalid regex given as input to polly: ") + Err,
+                         true);
 
     if (R.match(Str))
       return true;

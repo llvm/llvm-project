@@ -24,7 +24,7 @@ concept BaseInvocable = requires(std::ranges::iterator_t<std::ranges::transform_
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, PlusOneMutable> transformView;
+    std::ranges::transform_view<MoveOnlyView, PlusOneMutable> transformView;
     auto iter = std::move(transformView).begin();
     ASSERT_SAME_TYPE(int*, decltype(iter.base()));
     assert(iter.base() == globalBuff);

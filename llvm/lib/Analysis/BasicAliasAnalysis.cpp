@@ -31,7 +31,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -68,15 +67,6 @@ using namespace llvm;
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
                                           cl::init(true));
-
-/// By default, even on 32-bit architectures we use 64-bit integers for
-/// calculations. This will allow us to more-aggressively decompose indexing
-/// expressions calculated using i64 values (e.g., long long in C) which is
-/// common enough to worry about.
-static cl::opt<bool> ForceAtLeast64Bits("basic-aa-force-at-least-64b",
-                                        cl::Hidden, cl::init(true));
-static cl::opt<bool> DoubleCalcBits("basic-aa-double-calc-bits",
-                                    cl::Hidden, cl::init(false));
 
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
@@ -322,14 +312,6 @@ struct ExtendedValue {
     return N;
   }
 
-  ConstantRange evaluateWith(ConstantRange N) const {
-    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
-           "Incompatible bit width");
-    if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
-    if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
-    return N;
-  }
-
   bool canDistributeOver(bool NUW, bool NSW) const {
     // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
     // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
@@ -468,14 +450,6 @@ static APInt adjustToPointerSize(const APInt &Offset, unsigned PointerSize) {
   return (Offset << ShiftBits).ashr(ShiftBits);
 }
 
-static unsigned getMaxPointerSize(const DataLayout &DL) {
-  unsigned MaxPointerSize = DL.getMaxPointerSizeInBits();
-  if (MaxPointerSize < 64 && ForceAtLeast64Bits) MaxPointerSize = 64;
-  if (DoubleCalcBits) MaxPointerSize *= 2;
-
-  return MaxPointerSize;
-}
-
 namespace {
 // A linear transformation of a Value; this class represents
 // ZExt(SExt(V, SExtBits), ZExtBits) * Scale.
@@ -556,7 +530,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   SearchTimes++;
   const Instruction *CxtI = dyn_cast<Instruction>(V);
 
-  unsigned MaxPointerSize = getMaxPointerSize(DL);
+  unsigned MaxPointerSize = DL.getMaxPointerSizeInBits();
   DecomposedGEP Decomposed;
   Decomposed.Offset = APInt(MaxPointerSize, 0);
   Decomposed.HasCompileTimeConstantScale = true;
@@ -1194,14 +1168,14 @@ AliasResult BasicAAResult::aliasGEP(
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
   if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
-    return getBestAAResults().alias(
-        MemoryLocation(UnderlyingV1, V1Size),
-        MemoryLocation(UnderlyingV2, V2Size), AAQI);
+    return getBestAAResults().alias(MemoryLocation(DecompGEP1.Base, V1Size),
+                                    MemoryLocation(DecompGEP2.Base, V2Size),
+                                    AAQI);
 
   // Do the base pointers alias?
   AliasResult BaseAlias = getBestAAResults().alias(
-      MemoryLocation::getBeforeOrAfter(UnderlyingV1),
-      MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
+      MemoryLocation::getBeforeOrAfter(DecompGEP1.Base),
+      MemoryLocation::getBeforeOrAfter(DecompGEP2.Base), AAQI);
 
   // If we get a No or May, then return it immediately, no amount of analysis
   // will improve this situation.
@@ -1317,24 +1291,13 @@ AliasResult BasicAAResult::aliasGEP(
       return AliasResult::NoAlias;
 
     if (V1Size.hasValue() && V2Size.hasValue()) {
-      // Try to determine the range of values for VarIndex.
-      // VarIndexRange is such that:
-      //    (VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex) &&
-      //    VarIndexRange.contains(VarIndex)
+      // Try to determine whether abs(VarIndex) > 0.
       Optional<APInt> MinAbsVarIndex;
-      Optional<ConstantRange> VarIndexRange;
       if (DecompGEP1.VarIndices.size() == 1) {
-        // VarIndex = Scale*V.
+        // VarIndex = Scale*V. If V != 0 then abs(VarIndex) >= abs(Scale).
         const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-        if (isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-          // If V != 0 then abs(VarIndex) >= abs(Scale).
+        if (isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT))
           MinAbsVarIndex = Var.Scale.abs();
-        }
-        ConstantRange R = Var.Val.evaluateWith(
-            computeConstantRange(Var.Val.V, true, &AC, Var.CxtI));
-        if (!R.isFullSet() && !R.isEmptySet())
-          VarIndexRange = R.sextOrTrunc(Var.Scale.getBitWidth())
-                              .multiply(ConstantRange(Var.Scale));
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).
@@ -1353,24 +1316,10 @@ AliasResult BasicAAResult::aliasGEP(
         // The constant offset will have added at least +/-MinAbsVarIndex to it.
         APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
         APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
-        // We know that Offset <= OffsetLo || Offset >= OffsetHi
+        // Check that an access at OffsetLo or lower, and an access at OffsetHi
+        // or higher both do not alias.
         if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
             OffsetHi.isNonNegative() && OffsetHi.uge(V2Size.getValue()))
-          return AliasResult::NoAlias;
-      }
-
-      if (VarIndexRange) {
-        ConstantRange OffsetRange =
-            VarIndexRange->add(ConstantRange(DecompGEP1.Offset));
-
-        // We know that Offset >= MinOffset.
-        // (MinOffset >= V2Size) => (Offset >= V2Size) => NoAlias.
-        if (OffsetRange.getSignedMin().sge(V2Size.getValue()))
-          return AliasResult::NoAlias;
-
-        // We know that Offset <= MaxOffset.
-        // (MaxOffset <= -V1Size) => (Offset <= -V1Size) => NoAlias.
-        if (OffsetRange.getSignedMax().sle(-V1Size.getValue()))
           return AliasResult::NoAlias;
       }
     }

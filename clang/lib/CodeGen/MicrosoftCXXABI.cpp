@@ -1844,7 +1844,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
     VFTablesMap[ID] = VFTable;
     VTable = VTableAliasIsRequred
                  ? cast<llvm::GlobalVariable>(
-                       cast<llvm::GlobalAlias>(VFTable)->getBaseObject())
+                       cast<llvm::GlobalAlias>(VFTable)->getAliaseeObject())
                  : cast<llvm::GlobalVariable>(VFTable);
     return VTable;
   }

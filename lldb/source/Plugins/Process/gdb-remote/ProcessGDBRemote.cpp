@@ -3926,9 +3926,9 @@ DataExtractor ProcessGDBRemote::GetAuxvData() {
   DataBufferSP buf;
   if (m_gdb_comm.GetQXferAuxvReadSupported()) {
     std::string response_string;
-    if (m_gdb_comm.SendPacketsAndConcatenateResponses("qXfer:auxv:read::",
-                                                      response_string) ==
-        GDBRemoteCommunication::PacketResult::Success)
+    Status ST;
+    if (m_gdb_comm.ReadExtFeature(ConstString("auxv"), ConstString(""),
+                                  response_string, ST))
       buf = std::make_shared<DataBufferHeap>(response_string.c_str(),
                                              response_string.length());
   }

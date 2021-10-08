@@ -178,24 +178,46 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   return &EI;
 }
 
-static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
-                                      InstCombiner::BuilderTy &Builder,
-                                      bool IsBigEndian) {
+Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   Value *X;
   uint64_t ExtIndexC;
   if (!match(Ext.getVectorOperand(), m_BitCast(m_Value(X))) ||
-      !X->getType()->isVectorTy() ||
       !match(Ext.getIndexOperand(), m_ConstantInt(ExtIndexC)))
+    return nullptr;
+
+  ElementCount NumElts =
+      cast<VectorType>(Ext.getVectorOperandType())->getElementCount();
+  Type *DestTy = Ext.getType();
+  bool IsBigEndian = DL.isBigEndian();
+
+  // If we are casting an integer to vector and extracting a portion, that is
+  // a shift-right and truncate.
+  // TODO: Allow FP dest type by casting the trunc to FP?
+  if (X->getType()->isIntegerTy() && DestTy->isIntegerTy() &&
+      isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) {
+    assert(isa<FixedVectorType>(Ext.getVectorOperand()->getType()) &&
+           "Expected fixed vector type for bitcast from scalar integer");
+
+    // Big endian requires adjusting the extract index since MSB is at index 0.
+    // LittleEndian: extelt (bitcast i32 X to v4i8), 0 -> trunc i32 X to i8
+    // BigEndian: extelt (bitcast i32 X to v4i8), 0 -> trunc i32 (X >> 24) to i8
+    if (IsBigEndian)
+      ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
+    unsigned ShiftAmountC = ExtIndexC * DestTy->getPrimitiveSizeInBits();
+    if (!ShiftAmountC || Ext.getVectorOperand()->hasOneUse()) {
+      Value *Lshr = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
+      return new TruncInst(Lshr, DestTy);
+    }
+  }
+
+  if (!X->getType()->isVectorTy())
     return nullptr;
 
   // If this extractelement is using a bitcast from a vector of the same number
   // of elements, see if we can find the source element from the source vector:
   // extelt (bitcast VecX), IndexC --> bitcast X[IndexC]
   auto *SrcTy = cast<VectorType>(X->getType());
-  Type *DestTy = Ext.getType();
   ElementCount NumSrcElts = SrcTy->getElementCount();
-  ElementCount NumElts =
-      cast<VectorType>(Ext.getVectorOperandType())->getElementCount();
   if (NumSrcElts == NumElts)
     if (Value *Elt = findScalarElement(X, ExtIndexC))
       return new BitCastInst(Elt, DestTy);
@@ -410,7 +432,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    if (Instruction *I = foldBitcastExtElt(EI, Builder, DL.isBigEndian()))
+    if (Instruction *I = foldBitcastExtElt(EI))
       return I;
 
     // If there's a vector PHI feeding a scalar use through this extractelement

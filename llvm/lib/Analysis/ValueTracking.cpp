@@ -5418,7 +5418,10 @@ void llvm::getGuaranteedWellDefinedOps(
       }
       break;
     }
-
+    case Instruction::Ret:
+      if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
+        Operands.insert(I->getOperand(0));
+      break;
     default:
       break;
   }

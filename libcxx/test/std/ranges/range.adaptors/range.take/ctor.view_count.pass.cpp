@@ -30,7 +30,7 @@ constexpr bool test() {
   }
 
   {
-    std::ranges::take_view<ContiguousView> tv(ContiguousView{buffer}, 1);
+    std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 1);
     assert(std::move(tv).base().ptr_ == buffer);
     assert(std::ranges::next(tv.begin(), 1) == tv.end()); // Checking we have correct size.
   }

@@ -32,6 +32,10 @@ cl::opt<bool> UseMD5(
     cl::desc("Use md5 to represent function names in the output profile (only "
              "meaningful for -extbinary)"));
 
+static cl::opt<bool> PopulateProfileSymbolList(
+    "populate-profile-symbol-list", cl::init(true), cl::Hidden,
+    cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
+
 static cl::opt<int32_t, true> RecursionCompression(
     "compress-recursion",
     cl::desc("Compressing recursion by deduplicating adjacent frame "
@@ -90,6 +94,22 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
 
 void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
                                  SampleProfileMap &ProfileMap) {
+  // Populate profile symbol list if extended binary format is used.
+  ProfileSymbolList SymbolList;
+
+  // Turn it off temporarily for CS profile.
+  if (FunctionSamples::ProfileIsCS &&
+      !PopulateProfileSymbolList.getNumOccurrences())
+    PopulateProfileSymbolList = false;
+
+  if (PopulateProfileSymbolList && OutputFormat == SPF_Ext_Binary) {
+    for (const auto &Item : ProfileMap) {
+      auto &Profile = Item.second;
+      SymbolList.add(Profile.getName(), true);
+    }
+    Writer->setProfileSymbolList(&SymbolList);
+  }
+
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
 }
@@ -377,6 +397,24 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
   }
 }
 
+static bool isOutlinedFunction(StringRef CalleeName) {
+  // Check whether it's from hot-cold func split or coro split.
+  return CalleeName.find(".resume") != StringRef::npos ||
+         CalleeName.find(".cold") != StringRef::npos;
+}
+
+StringRef ProfileGeneratorBase::getCalleeNameForOffset(uint64_t TargetOffset) {
+  // Get the callee name by branch target if it's a call branch.
+  StringRef CalleeName = FunctionSamples::getCanonicalFnName(
+      Binary->getFuncFromStartOffset(TargetOffset));
+
+  // We won't accumulate sample count againt outlined function.
+  if (CalleeName.size() == 0 || isOutlinedFunction(CalleeName))
+    return StringRef();
+
+  return CalleeName;
+}
+
 void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const BranchSample &BranchCounters) {
   for (auto Entry : BranchCounters) {
@@ -385,9 +423,7 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     uint64_t Count = Entry.second;
     assert(Count != 0 && "Unexpected zero weight branch");
 
-    // Get the callee name by branch target if it's a call branch.
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
     // Record called target sample and its count.
@@ -531,9 +567,7 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     uint64_t Count = Entry.second;
     assert(Count != 0 && "Unexpected zero weight branch");
 
-    // Get the callee name by branch target if it's a call branch
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
 
@@ -784,8 +818,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
         getFunctionProfileForLeafProbe(ContextStack, CallProbe);
     FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(), 0, CalleeName,

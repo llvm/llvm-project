@@ -494,15 +494,17 @@ RangeSet RangeSet::Factory::deletePoint(RangeSet From,
   return intersect(From, Upper, Lower);
 }
 
-void Range::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void Range::dump(raw_ostream &OS) const {
   OS << '[' << toString(From(), 10) << ", " << toString(To(), 10) << ']';
 }
+LLVM_DUMP_METHOD void Range::dump() const { dump(llvm::errs()); }
 
-void RangeSet::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void RangeSet::dump(raw_ostream &OS) const {
   OS << "{ ";
   llvm::interleaveComma(*this, OS, [&OS](const Range &R) { R.dump(OS); });
   OS << " }";
 }
+LLVM_DUMP_METHOD void RangeSet::dump() const { dump(llvm::errs()); }
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
 
@@ -1112,7 +1114,7 @@ private:
     if (!SSE)
       return llvm::None;
 
-    BinaryOperatorKind CurrentOP = SSE->getOpcode();
+    const BinaryOperatorKind CurrentOP = SSE->getOpcode();
 
     // We currently do not support <=> (C++20).
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
@@ -1126,7 +1128,12 @@ private:
 
     SymbolManager &SymMgr = State->getSymbolManager();
 
-    int UnknownStates = 0;
+    // We use this variable to store the last queried operator (`QueriedOP`)
+    // for which the `getCmpOpState` returned with `Unknown`. If there are two
+    // different OPs that returned `Unknown` then we have to query the special
+    // `UnknownX2` column. We assume that `getCmpOpState(CurrentOP, CurrentOP)`
+    // never returns `Unknown`, so `CurrentOP` is a good initial value.
+    BinaryOperatorKind LastQueriedOpToUnknown = CurrentOP;
 
     // Loop goes through all of the columns exept the last one ('UnknownX2').
     // We treat `UnknownX2` column separately at the end of the loop body.
@@ -1163,15 +1170,18 @@ private:
           CmpOpTable.getCmpOpState(CurrentOP, QueriedOP);
 
       if (BranchState == OperatorRelationsTable::Unknown) {
-        if (++UnknownStates == 2)
-          // If we met both Unknown states.
+        if (LastQueriedOpToUnknown != CurrentOP &&
+            LastQueriedOpToUnknown != QueriedOP) {
+          // If we got the Unknown state for both different operators.
           // if (x <= y)    // assume true
           //   if (x != y)  // assume true
           //     if (x < y) // would be also true
           // Get a state from `UnknownX2` column.
           BranchState = CmpOpTable.getCmpOpStateForUnknownX2(CurrentOP);
-        else
+        } else {
+          LastQueriedOpToUnknown = QueriedOP;
           continue;
+        }
       }
 
       return (BranchState == OperatorRelationsTable::True) ? getTrueRange(T)

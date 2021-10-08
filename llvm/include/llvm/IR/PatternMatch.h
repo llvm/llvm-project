@@ -2456,7 +2456,7 @@ inline VScaleVal_match m_VScale(const DataLayout &DL) {
   return VScaleVal_match(DL);
 }
 
-template <typename LHS, typename RHS, unsigned Opcode>
+template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>
 struct LogicalOp_match {
   LHS L;
   RHS R;
@@ -2464,27 +2464,32 @@ struct LogicalOp_match {
   LogicalOp_match(const LHS &L, const RHS &R) : L(L), R(R) {}
 
   template <typename T> bool match(T *V) {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      if (!I->getType()->isIntOrIntVectorTy(1))
-        return false;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !I->getType()->isIntOrIntVectorTy(1))
+      return false;
 
-      if (I->getOpcode() == Opcode && L.match(I->getOperand(0)) &&
-          R.match(I->getOperand(1)))
-        return true;
+    if (I->getOpcode() == Opcode) {
+      auto *Op0 = I->getOperand(0);
+      auto *Op1 = I->getOperand(1);
+      return (L.match(Op0) && R.match(Op1)) ||
+             (Commutable && L.match(Op1) && R.match(Op0));
+    }
 
-      if (auto *SI = dyn_cast<SelectInst>(I)) {
-        if (Opcode == Instruction::And) {
-          if (const auto *C = dyn_cast<Constant>(SI->getFalseValue()))
-            if (C->isNullValue() && L.match(SI->getCondition()) &&
-                R.match(SI->getTrueValue()))
-              return true;
-        } else {
-          assert(Opcode == Instruction::Or);
-          if (const auto *C = dyn_cast<Constant>(SI->getTrueValue()))
-            if (C->isOneValue() && L.match(SI->getCondition()) &&
-                R.match(SI->getFalseValue()))
-              return true;
-        }
+    if (auto *Select = dyn_cast<SelectInst>(I)) {
+      auto *Cond = Select->getCondition();
+      auto *TVal = Select->getTrueValue();
+      auto *FVal = Select->getFalseValue();
+      if (Opcode == Instruction::And) {
+        auto *C = dyn_cast<Constant>(FVal);
+        if (C && C->isNullValue())
+          return (L.match(Cond) && R.match(TVal)) ||
+                 (Commutable && L.match(TVal) && R.match(Cond));
+      } else {
+        assert(Opcode == Instruction::Or);
+        auto *C = dyn_cast<Constant>(TVal);
+        if (C && C->isOneValue())
+          return (L.match(Cond) && R.match(FVal)) ||
+                 (Commutable && L.match(FVal) && R.match(Cond));
       }
     }
 
@@ -2503,6 +2508,13 @@ m_LogicalAnd(const LHS &L, const RHS &R) {
 /// Matches L && R where L and R are arbitrary values.
 inline auto m_LogicalAnd() { return m_LogicalAnd(m_Value(), m_Value()); }
 
+/// Matches L && R with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline LogicalOp_match<LHS, RHS, Instruction::And, true>
+m_c_LogicalAnd(const LHS &L, const RHS &R) {
+  return LogicalOp_match<LHS, RHS, Instruction::And, true>(L, R);
+}
+
 /// Matches L || R either in the form of L | R or L ? true : R.
 /// Note that the latter form is poison-blocking.
 template <typename LHS, typename RHS>
@@ -2512,8 +2524,13 @@ m_LogicalOr(const LHS &L, const RHS &R) {
 }
 
 /// Matches L || R where L and R are arbitrary values.
-inline auto m_LogicalOr() {
-  return m_LogicalOr(m_Value(), m_Value());
+inline auto m_LogicalOr() { return m_LogicalOr(m_Value(), m_Value()); }
+
+/// Matches L || R with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline LogicalOp_match<LHS, RHS, Instruction::Or, true>
+m_c_LogicalOr(const LHS &L, const RHS &R) {
+  return LogicalOp_match<LHS, RHS, Instruction::Or, true>(L, R);
 }
 
 } // end namespace PatternMatch

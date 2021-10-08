@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include <tuple>
 
@@ -4420,6 +4421,162 @@ bool CombinerHelper::matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) {
     Observer.changedInstr(MI);
   };
   return true;
+}
+
+MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UDIV);
+  auto &UDiv = cast<GenericMachineInstr>(MI);
+  Register Dst = UDiv.getReg(0);
+  Register LHS = UDiv.getReg(1);
+  Register RHS = UDiv.getReg(2);
+  LLT Ty = MRI.getType(Dst);
+  LLT ScalarTy = Ty.getScalarType();
+  const unsigned EltBits = ScalarTy.getScalarSizeInBits();
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
+  auto &MIB = Builder;
+  MIB.setInstrAndDebugLoc(MI);
+
+  bool UseNPQ = false;
+  SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
+
+  auto BuildUDIVPattern = [&](const Constant *C) {
+    auto *CI = cast<ConstantInt>(C);
+    const APInt &Divisor = CI->getValue();
+    UnsignedDivisonByConstantInfo magics =
+        UnsignedDivisonByConstantInfo::get(Divisor);
+    unsigned PreShift = 0, PostShift = 0;
+
+    // If the divisor is even, we can avoid using the expensive fixup by
+    // shifting the divided value upfront.
+    if (magics.IsAdd != 0 && !Divisor[0]) {
+      PreShift = Divisor.countTrailingZeros();
+      // Get magic number for the shifted divisor.
+      magics =
+          UnsignedDivisonByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
+      assert(magics.IsAdd == 0 && "Should use cheap fixup now");
+    }
+
+    APInt Magic = magics.Magic;
+
+    unsigned SelNPQ;
+    if (magics.IsAdd == 0 || Divisor.isOneValue()) {
+      assert(magics.ShiftAmount < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      PostShift = magics.ShiftAmount;
+      SelNPQ = false;
+    } else {
+      PostShift = magics.ShiftAmount - 1;
+      SelNPQ = true;
+    }
+
+    PreShifts.push_back(
+        MIB.buildConstant(ScalarShiftAmtTy, PreShift).getReg(0));
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magic).getReg(0));
+    NPQFactors.push_back(
+        MIB.buildConstant(ScalarTy,
+                          SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)
+                                 : APInt::getZero(EltBits))
+            .getReg(0));
+    PostShifts.push_back(
+        MIB.buildConstant(ScalarShiftAmtTy, PostShift).getReg(0));
+    UseNPQ |= SelNPQ;
+    return true;
+  };
+
+  // Collect the shifts/magic values from each element.
+  bool Matched = matchUnaryPredicate(MRI, RHS, BuildUDIVPattern);
+  (void)Matched;
+  assert(Matched && "Expected unary predicate match to succeed");
+
+  Register PreShift, PostShift, MagicFactor, NPQFactor;
+  auto *RHSDef = getOpcodeDef<GBuildVector>(RHS, MRI);
+  if (RHSDef) {
+    PreShift = MIB.buildBuildVector(ShiftAmtTy, PreShifts).getReg(0);
+    MagicFactor = MIB.buildBuildVector(Ty, MagicFactors).getReg(0);
+    NPQFactor = MIB.buildBuildVector(Ty, NPQFactors).getReg(0);
+    PostShift = MIB.buildBuildVector(ShiftAmtTy, PostShifts).getReg(0);
+  } else {
+    assert(MRI.getType(RHS).isScalar() &&
+           "Non-build_vector operation should have been a scalar");
+    PreShift = PreShifts[0];
+    MagicFactor = MagicFactors[0];
+    PostShift = PostShifts[0];
+  }
+
+  Register Q = LHS;
+  Q = MIB.buildLShr(Ty, Q, PreShift).getReg(0);
+
+  // Multiply the numerator (operand 0) by the magic value.
+  Q = MIB.buildUMulH(Ty, Q, MagicFactor).getReg(0);
+
+  if (UseNPQ) {
+    Register NPQ = MIB.buildSub(Ty, LHS, Q).getReg(0);
+
+    // For vectors we might have a mix of non-NPQ/NPQ paths, so use
+    // G_UMULH to act as a SRL-by-1 for NPQ, else multiply by zero.
+    if (Ty.isVector())
+      NPQ = MIB.buildUMulH(Ty, NPQ, NPQFactor).getReg(0);
+    else
+      NPQ = MIB.buildLShr(Ty, NPQ, MIB.buildConstant(ShiftAmtTy, 1)).getReg(0);
+
+    Q = MIB.buildAdd(Ty, NPQ, Q).getReg(0);
+  }
+
+  Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
+  auto One = MIB.buildConstant(Ty, 1);
+  auto IsOne = MIB.buildICmp(
+      CmpInst::Predicate::ICMP_EQ,
+      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+  return MIB.buildSelect(Ty, IsOne, LHS, Q);
+}
+
+bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UDIV);
+  Register Dst = MI.getOperand(0).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  auto *RHSDef = MRI.getVRegDef(RHS);
+  if (!isConstantOrConstantVector(*RHSDef, MRI))
+    return false;
+
+  auto &MF = *MI.getMF();
+  AttributeList Attr = MF.getFunction().getAttributes();
+  const auto &TLI = getTargetLowering();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+    return false;
+
+  // Don't do this for minsize because the instruction sequence is usually
+  // larger.
+  if (MF.getFunction().hasMinSize())
+    return false;
+
+  // Don't do this if the types are not going to be legal.
+  if (LI) {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
+      return false;
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMULH, {DstTy}}))
+      return false;
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_ICMP,
+             {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
+              DstTy}}))
+      return false;
+  }
+
+  auto CheckEltValue = [&](const Constant *C) {
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(C))
+      return !CI->isZero();
+    return false;
+  };
+  return matchUnaryPredicate(MRI, RHS, CheckEltValue);
+}
+
+void CombinerHelper::applyUDivByConst(MachineInstr &MI) {
+  auto *NewMI = buildUDivUsingMul(MI);
+  replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

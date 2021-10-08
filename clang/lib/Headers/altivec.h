@@ -2482,7 +2482,7 @@ vec_cmplt(vector unsigned long long __a, vector unsigned long long __b) {
 #ifdef __POWER8_VECTOR__
 /* vec_popcnt */
 
-static __inline__ vector signed char __ATTRS_o_ai
+static __inline__ vector unsigned char __ATTRS_o_ai
 vec_popcnt(vector signed char __a) {
   return __builtin_altivec_vpopcntb(__a);
 }
@@ -2490,7 +2490,7 @@ static __inline__ vector unsigned char __ATTRS_o_ai
 vec_popcnt(vector unsigned char __a) {
   return __builtin_altivec_vpopcntb(__a);
 }
-static __inline__ vector signed short __ATTRS_o_ai
+static __inline__ vector unsigned short __ATTRS_o_ai
 vec_popcnt(vector signed short __a) {
   return __builtin_altivec_vpopcnth(__a);
 }
@@ -2498,7 +2498,7 @@ static __inline__ vector unsigned short __ATTRS_o_ai
 vec_popcnt(vector unsigned short __a) {
   return __builtin_altivec_vpopcnth(__a);
 }
-static __inline__ vector signed int __ATTRS_o_ai
+static __inline__ vector unsigned int __ATTRS_o_ai
 vec_popcnt(vector signed int __a) {
   return __builtin_altivec_vpopcntw(__a);
 }
@@ -2506,7 +2506,7 @@ static __inline__ vector unsigned int __ATTRS_o_ai
 vec_popcnt(vector unsigned int __a) {
   return __builtin_altivec_vpopcntw(__a);
 }
-static __inline__ vector signed long long __ATTRS_o_ai
+static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_popcnt(vector signed long long __a) {
   return __builtin_altivec_vpopcntd(__a);
 }

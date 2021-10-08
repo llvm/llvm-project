@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
@@ -1457,15 +1456,15 @@ private:
       LoopDispositions;
 
   struct LoopProperties {
-    /// Set to true if the loop contains no instruction that can have side
-    /// effects (i.e. via throwing an exception, volatile or atomic access).
-    bool HasNoAbnormalExits;
-
     /// Set to true if the loop contains no instruction that can abnormally exit
     /// the loop (i.e. via throwing an exception, by terminating the thread
     /// cleanly or by infinite looping in a called function).  Strictly
     /// speaking, the last one is not leaving the loop, but is identical to
     /// leaving the loop for reasoning about undefined behavior.
+    bool HasNoAbnormalExits;
+
+    /// Set to true if the loop contains no instruction that can have side
+    /// effects (i.e. via throwing an exception, volatile or atomic access).
     bool HasNoSideEffects;
   };
 
@@ -1921,9 +1920,10 @@ private:
   SCEV::NoWrapFlags getNoWrapFlagsFromUB(const Value *V);
 
   /// Return a scope which provides an upper bound on the defining scope of
-  /// 'S'.  Specifically, return the first instruction in said bounding scope.
+  /// 'S'. Specifically, return the first instruction in said bounding scope.
+  /// Return nullptr if the scope is trivial (function entry).
   /// (See scope definition rules associated with flag discussion above)
-  const Instruction *getDefiningScopeBound(const SCEV *S);
+  const Instruction *getNonTrivialDefiningScopeBound(const SCEV *S);
 
   /// Return a scope which provides an upper bound on the defining scope for
   /// a SCEV with the operands in Ops.

@@ -7,6 +7,7 @@ import site
 
 config.cxx_under_test           = "@CMAKE_CXX_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
+config.install_root             = "@CMAKE_BINARY_DIR@"
 config.libunwind_src_root       = "@LIBUNWIND_SOURCE_DIR@"
 config.libunwind_obj_root       = "@LIBUNWIND_BINARY_DIR@"
 config.abi_library_root         = "@LIBUNWIND_LIBRARY_DIR@"

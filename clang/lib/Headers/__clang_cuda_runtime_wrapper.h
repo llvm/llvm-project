@@ -41,6 +41,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
+#include <string.h>
 #undef __CUDACC__
 
 // Preserve common macros that will be changed below by us or by CUDA
@@ -64,9 +65,9 @@
 #endif
 
 // Make largest subset of device functions available during host
-// compilation -- SM_35 for the time being.
+// compilation.
 #ifndef __CUDA_ARCH__
-#define __CUDA_ARCH__ 350
+#define __CUDA_ARCH__ 9999
 #endif
 
 #include "__clang_cuda_builtin_vars.h"
@@ -205,11 +206,6 @@ inline __host__ double __signbitd(double x) {
 #endif
 
 #if CUDA_VERSION >= 9000
-// CUDA-9.2 needs host-side memcpy for some host functions in
-// device_functions.hpp
-#if CUDA_VERSION >= 9020
-#include <string.h>
-#endif
 #include "crt/math_functions.hpp"
 #else
 #include "math_functions.hpp"
@@ -330,6 +326,34 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 
 #pragma pop_macro("__host__")
 
+// __clang_cuda_texture_intrinsics.h must be included first in order to provide
+// implementation for __nv_tex_surf_handler that CUDA's headers depend on.
+// The implementation requires c++11 and only works with CUDA-9 or newer.
+#if __cplusplus >= 201103L && CUDA_VERSION >= 9000
+// clang-format off
+#include <__clang_cuda_texture_intrinsics.h>
+// clang-format on
+#else
+#if CUDA_VERSION >= 9000
+// Provide a hint that texture support needs C++11.
+template <typename T> struct __nv_tex_needs_cxx11 {
+  const static bool value = false;
+};
+template <class T>
+__host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
+                                               cudaTextureObject_t obj,
+                                               float x) {
+  _Static_assert(__nv_tex_needs_cxx11<T>::value,
+                 "Texture support requires C++11");
+}
+#else
+// Textures in CUDA-8 and older are not supported by clang.There's no
+// convenient way to intercept texture use in these versions, so we can't
+// produce a meaningful error. The source code that attempts to use textures
+// will continue to fail as it does now.
+#endif // CUDA_VERSION
+#endif // __cplusplus >= 201103L && CUDA_VERSION >= 9000
+#include "texture_fetch_functions.h"
 #include "texture_indirect_functions.h"
 
 // Restore state of __CUDA_ARCH__ and __THROW we had on entry.

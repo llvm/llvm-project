@@ -686,54 +686,6 @@ bool GDBRemoteCommunicationClient::GetxPacketSupported() {
   return m_supports_x;
 }
 
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses(
-    const char *payload_prefix, std::string &response_string) {
-  Lock lock(*this);
-  if (!lock) {
-    Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
-                                                           GDBR_LOG_PACKETS));
-    LLDB_LOGF(log,
-              "error: failed to get packet sequence mutex, not sending "
-              "packets with prefix '%s'",
-              payload_prefix);
-    return PacketResult::ErrorNoSequenceLock;
-  }
-
-  response_string = "";
-  std::string payload_prefix_str(payload_prefix);
-  unsigned int response_size = 0x1000;
-  if (response_size > GetRemoteMaxPacketSize()) { // May send qSupported packet
-    response_size = GetRemoteMaxPacketSize();
-  }
-
-  for (unsigned int offset = 0; true; offset += response_size) {
-    StringExtractorGDBRemote this_response;
-    // Construct payload
-    char sizeDescriptor[128];
-    snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset,
-             response_size);
-    PacketResult result = SendPacketAndWaitForResponseNoLock(
-        payload_prefix_str + sizeDescriptor, this_response);
-    if (result != PacketResult::Success)
-      return result;
-
-    const std::string &this_string = std::string(this_response.GetStringRef());
-
-    // Check for m or l as first character; l seems to mean this is the last
-    // chunk
-    char first_char = *this_string.c_str();
-    if (first_char != 'm' && first_char != 'l') {
-      return PacketResult::ErrorReplyInvalid;
-    }
-    // Concatenate the result so far (skipping 'm' or 'l')
-    response_string.append(this_string, 1, std::string::npos);
-    if (first_char == 'l')
-      // We're done
-      return PacketResult::Success;
-  }
-}
-
 lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
   if (allow_lazy && m_curr_pid_is_valid == eLazyBoolYes)
     return m_curr_pid;
@@ -3982,8 +3934,7 @@ bool GDBRemoteCommunicationClient::ReadExtFeature(
 
     // more chunks
     case ('m'):
-      if (str.length() > 1)
-        output << &str[1];
+      output << str.substr(1);
       offset += str.length() - 1;
       break;
 

@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_ERRORHANDLING_H
 
 #include "llvm/Support/Compiler.h"
-#include <string>
 
 namespace llvm {
   class StringRef;
@@ -68,9 +67,8 @@ namespace llvm {
 /// standard error, followed by a newline.
 /// After the error handler is called this function will call abort(), it
 /// does not return.
+/// NOTE: The std::string variant was removed to avoid a <string> dependency.
 [[noreturn]] void report_fatal_error(const char *reason,
-                                     bool gen_crash_diag = true);
-[[noreturn]] void report_fatal_error(const std::string &reason,
                                      bool gen_crash_diag = true);
 [[noreturn]] void report_fatal_error(StringRef reason,
                                      bool gen_crash_diag = true);

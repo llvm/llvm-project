@@ -238,6 +238,7 @@ __substitute_arg_id(basic_format_arg<_Context> __arg) {
               static_cast<_CT>(__format::__number_max))
             __throw_format_error("A format-spec arg-id replacement exceeds "
                                  "the maximum supported value");
+
           return __arg;
         } else if constexpr (same_as<_Type, monostate>)
           __throw_format_error("Argument index out of bounds");
@@ -605,9 +606,7 @@ class _LIBCPP_TEMPLATE_VIS __parser_integral
 public:
   using char_type = _CharT;
 
-  // TODO FMT This class probably doesn't need public member functions after
-  // format.string.std/std_format_spec_integral.pass.cpp has been retired.
-
+protected:
   /**
    * The low-level std-format-spec parse function.
    *
@@ -618,7 +617,7 @@ public:
    *
    * @returns The iterator pointing at the last parsed character.
    */
-  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(auto& __parse_ctx)
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(auto& __parse_ctx)
       -> decltype(__parse_ctx.begin()) {
     auto __begin = __parse_ctx.begin();
     auto __end = __parse_ctx.end();
@@ -660,7 +659,6 @@ public:
     return __begin;
   }
 
-protected:
   /**
    * Handles the post-parsing updates for the integer types.
    *
