@@ -174,6 +174,21 @@ def LinalgTiling : FunctionPass<"linalg-tile"> {
   ];
 }
 
+def LinalgMemoryFootprintReduction : FunctionPass<"linalg-memory-footprint-reduce"> {
+  let summary = "Brings the LinalgOps memory footprint below maxMemFootprint";
+  let constructor = "mlir::createLinalgMemoryFootprintReductionPass()";
+  let options = [
+    ListOption<"maxMemFootprint", "linalg-max-memory-footprint", "int64_t", 
+               "Max memory footprint in bytes", "llvm::cl::Optional">
+  ];
+  let dependentDialects = [
+    "AffineDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect"
+  ];
+}
+
 def LinalgTilingToParallelLoops
     : FunctionPass<"linalg-tile-to-parallel-loops"> {
   let summary = "Tile operations in the linalg dialect to parallel loops";

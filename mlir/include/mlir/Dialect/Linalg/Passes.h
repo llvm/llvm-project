@@ -21,6 +21,7 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertElementwiseToLinalgPass();
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
 
 std::unique_ptr<Pass> createLinalgElementwiseOpFusionPass();
+
 std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
 
 std::unique_ptr<OperationPass<FuncOp>>
@@ -34,7 +35,14 @@ createLinalgTilingToTiledLoopPass(ArrayRef<int64_t> tileSizes = {},
                                   ArrayRef<StringRef> distributionTypes = {});
 
 std::unique_ptr<OperationPass<FuncOp>>
+createMemoryFootPrintReducePass(int64_t maxFootprint = 0);
+
+std::unique_ptr<OperationPass<FuncOp>>
+createLinalgMemoryFootprintReductionPass(int64_t maxFootprint = 0);
+
+std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);
+
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
 
 std::unique_ptr<OperationPass<FuncOp>> createLinalgInlineScalarOperandsPass();
