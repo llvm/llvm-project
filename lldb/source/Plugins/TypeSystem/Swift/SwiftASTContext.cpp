@@ -5120,7 +5120,7 @@ void SwiftASTContext::ModulesDidLoad(ModuleList &module_list) {
                   module_search_paths, framework_search_paths,
                   extra_clang_args);
     // If the use-all-compiler-flags setting is enabled, the expression
-    // context is supposed to merge all search paths form all dylibs.
+    // context is supposed to merge all search paths from all dylibs.
     if (use_all_compiler_flags && !extra_clang_args.empty()) {
       // We cannot reconfigure ClangImporter after its creation.
       // Instead poison the SwiftASTContext so it gets recreated.
