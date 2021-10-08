@@ -42,20 +42,26 @@ class Tool(ToolBase):
         self.options = self.context.options
         Timer.display = self.options.time_report
 
+    def raise_debugger_error(self, action, debugger):
+        msg = '<d>could not {} {}</> ({})\n'.format(
+            action, debugger.name, debugger.loading_error)
+        if self.options.verbose:
+            msg = '{}\n    {}'.format(
+                msg, '    '.join(debugger.loading_error_trace))
+        raise Error(msg)
+
     def go(self) -> ReturnCode:
         with Timer('loading debugger'):
             debugger = Debuggers(self.context).load(self.options.debugger)
 
         with Timer('running debugger'):
             if not debugger.is_available:
-                msg = '<d>could not load {}</> ({})\n'.format(
-                    debugger.name, debugger.loading_error)
-                if self.options.verbose:
-                    msg = '{}\n    {}'.format(
-                        msg, '    '.join(debugger.loading_error_trace))
-                raise Error(msg)
+                self.raise_debugger_error('load', debugger)
 
-        self.debugger_controller.run_debugger(debugger)
+            self.debugger_controller.run_debugger(debugger)
+
+            if debugger.loading_error:
+                self.raise_debugger_error('run', debugger)
 
         with open(self.controller_path, 'wb') as fp:
             pickle.dump(self.debugger_controller, fp)

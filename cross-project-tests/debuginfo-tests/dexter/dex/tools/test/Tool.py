@@ -108,8 +108,12 @@ class Tool(TestToolBase):
         """Build an executable from the test source with the given --builder
         script and flags (--cflags, --ldflags) in the working directory.
         Or, if the --binary option has been given, copy the executable provided
-        into the working directory and rename it to match the --builder output.
+        into the working directory and rename it to match the --builder output
+        or skip if --vs-solution was passed on the command line.
         """
+
+        if self.context.options.vs_solution:
+            return
 
         options = self.context.options
         if options.binary:

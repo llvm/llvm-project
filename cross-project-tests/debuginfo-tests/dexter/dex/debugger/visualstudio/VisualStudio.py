@@ -67,6 +67,23 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
 
         super(VisualStudio, self).__init__(*args)
 
+    def _create_solution(self):
+        self._solution.Create(self.context.working_directory.path,
+                              'DexterSolution')
+        try:
+            self._solution.AddFromFile(self._project_file)
+        except OSError:
+            raise LoadDebuggerException(
+                'could not debug the specified executable', sys.exc_info())
+
+    def _load_solution(self):
+        try:
+            self._solution.Open(self.context.options.vs_solution)
+        except:
+            raise LoadDebuggerException(
+                    'could not load specified vs solution at {}'.
+                    format(self.context.options.vs_solution), sys.exc_info())
+
     def _custom_init(self):
         try:
             self._debugger = self._interface.Debugger
@@ -76,14 +93,10 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
                 self.context.options.show_debugger)
 
             self._solution = self._interface.Solution
-            self._solution.Create(self.context.working_directory.path,
-                                  'DexterSolution')
-
-            try:
-                self._solution.AddFromFile(self._project_file)
-            except OSError:
-                raise LoadDebuggerException(
-                    'could not debug the specified executable', sys.exc_info())
+            if self.context.options.vs_solution is None:
+                self._create_solution()
+            else:
+                self._load_solution()
 
             self._fn_step = self._debugger.StepInto
             self._fn_go = self._debugger.Go

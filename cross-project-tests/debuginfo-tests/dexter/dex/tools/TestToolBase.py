@@ -58,7 +58,12 @@ class TestToolBase(ToolBase):
             warn(self.context, '--cflags and --ldflags will be ignored when not'
                                ' using --builder')
 
-        if options.binary:
+        if options.vs_solution:
+            options.vs_solution = os.path.abspath(options.vs_solution)
+            if not os.path.isfile(options.vs_solution):
+                raise Error('<d>could not find VS solution file</> <r>"{}"</>'
+                            .format(options.vs_solution))
+        elif options.binary:
             options.binary = os.path.abspath(options.binary)
             if not os.path.isfile(options.binary):
                 raise Error('<d>could not find binary file</> <r>"{}"</>'
