@@ -2662,6 +2662,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     if (suffix.consume_front("__ObjC."))
       ast_child_name = suffix.str();
     assert((llvm::StringRef(child_name).contains('.') ||
+            llvm::StringRef(ast_child_name).contains('.') ||
             Equivalent(child_name, ast_child_name)));
     assert(ast_language_flags ||
            (Equivalent(llvm::Optional<uint64_t>(child_byte_size),
