@@ -102,6 +102,15 @@ FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;
 
+FunctionPass *createAMDGPUPromoteKernelArgumentsPass();
+void initializeAMDGPUPromoteKernelArgumentsPass(PassRegistry &);
+extern char &AMDGPUPromoteKernelArgumentsID;
+
+struct AMDGPUPromoteKernelArgumentsPass
+    : PassInfoMixin<AMDGPUPromoteKernelArgumentsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 ModulePass *createAMDGPULowerKernelAttributesPass();
 void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
 extern char &AMDGPULowerKernelAttributesID;
