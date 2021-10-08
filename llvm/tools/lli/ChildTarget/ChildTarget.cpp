@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
           [](SimpleRemoteEPCServer::Setup &S) -> Error {
             S.setDispatcher(
-                std::make_unique<DynamicThreadPoolSimpleRemoteEPCDispatcher>());
+                std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
             S.bootstrapSymbols() =
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
             S.services().push_back(
