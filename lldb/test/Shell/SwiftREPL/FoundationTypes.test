@@ -4,6 +4,9 @@
 // REQUIRES: system-darwin
 // REQUIRES: swift
 
+// rdar://83647328
+// XFAIL: *
+
 // RUN: %lldb --repl < %s | FileCheck %s
 
 import Foundation
