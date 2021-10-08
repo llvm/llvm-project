@@ -59,7 +59,7 @@ struct ChainedOriginDepotNode {
 
 }  // namespace
 
-static PersistentAllocator allocator;
+static PersistentAllocator<ChainedOriginDepotNode> allocator;
 
 static StackDepotBase<ChainedOriginDepotNode, 4, 20> depot;
 
@@ -71,8 +71,7 @@ uptr ChainedOriginDepotNode::allocated() { return allocator.allocated(); }
 
 ChainedOriginDepotNode *ChainedOriginDepotNode::allocate(
     const args_type &args) {
-  return static_cast<ChainedOriginDepotNode *>(
-      allocator.alloc(sizeof(ChainedOriginDepotNode)));
+  return allocator.alloc();
 }
 
 /* This is murmur2 hash for the 64->32 bit case.
