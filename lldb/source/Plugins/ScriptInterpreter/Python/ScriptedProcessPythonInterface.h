@@ -35,8 +35,9 @@ public:
 
   Status Stop() override;
 
-  lldb::MemoryRegionInfoSP
-  GetMemoryRegionContainingAddress(lldb::addr_t address) override;
+  llvm::Optional<MemoryRegionInfo>
+  GetMemoryRegionContainingAddress(lldb::addr_t address,
+                                   Status &error) override;
 
   StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
 

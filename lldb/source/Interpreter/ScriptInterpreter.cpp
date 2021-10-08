@@ -83,6 +83,14 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
+llvm::Optional<MemoryRegionInfo>
+ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
+    const lldb::SBMemoryRegionInfo &mem_region) const {
+  if (!mem_region.m_opaque_up)
+    return llvm::None;
+  return *mem_region.m_opaque_up.get();
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))

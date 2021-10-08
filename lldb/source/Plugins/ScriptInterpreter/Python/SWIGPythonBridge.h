@@ -53,6 +53,7 @@ extern "C" void *LLDBSwigPythonCreateScriptedThread(
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBData(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBError(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data);
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(void *data);
 
 } // namespace lldb_private
 

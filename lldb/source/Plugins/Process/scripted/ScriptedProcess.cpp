@@ -239,7 +239,7 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
     return 0;
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
@@ -258,24 +258,34 @@ ArchSpec ScriptedProcess::GetArchitecture() {
 
 Status ScriptedProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                             MemoryRegionInfo &region) {
-  // TODO: Implement
-  return Status();
+  CheckInterpreterAndScriptObject();
+
+  Status error;
+  if (auto region_or_err =
+          GetInterface().GetMemoryRegionContainingAddress(load_addr, error))
+    region = *region_or_err;
+
+  return error;
 }
 
 Status ScriptedProcess::GetMemoryRegions(MemoryRegionInfos &region_list) {
   CheckInterpreterAndScriptObject();
 
+  Status error;
   lldb::addr_t address = 0;
-  lldb::MemoryRegionInfoSP mem_region_sp = nullptr;
 
-  while ((mem_region_sp =
-              GetInterface().GetMemoryRegionContainingAddress(address))) {
-    auto range = mem_region_sp->GetRange();
+  while (auto region_or_err =
+             GetInterface().GetMemoryRegionContainingAddress(address, error)) {
+    if (error.Fail())
+      break;
+
+    MemoryRegionInfo &mem_region = *region_or_err;
+    auto range = mem_region.GetRange();
     address += range.GetRangeBase() + range.GetByteSize();
-    region_list.push_back(*mem_region_sp.get());
+    region_list.push_back(mem_region);
   }
 
-  return {};
+  return error;
 }
 
 void ScriptedProcess::Clear() { Process::m_thread_list.Clear(); }
