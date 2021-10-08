@@ -1,3 +1,4 @@
+; XFAIL: -aix
 ; Source text provided by IR should be passed through to asm.
 ; It is emitted to an object file only for DWARF 5 or later.
 
