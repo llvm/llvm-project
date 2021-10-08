@@ -4184,7 +4184,6 @@ recurse:
   case Expr::ArrayInitIndexExprClass:
   case Expr::NoInitExprClass:
   case Expr::ParenListExprClass:
-  case Expr::LambdaExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
   case Expr::TypoExprClass: // This should no longer exist in the AST by now.
@@ -4975,6 +4974,15 @@ recurse:
     // <expr-primary>
     Out << "LDnE";
     break;
+  }
+
+  case Expr::LambdaExprClass: {
+    // A lambda-expression can't appear in the signature of an
+    // externally-visible declaration, so there's no standard mangling for
+    // this, but mangling as a literal of the closure type seems reasonable.
+    Out << "L";
+    mangleType(Context.getASTContext().getRecordType(cast<LambdaExpr>(E)->getLambdaClass()));
+    Out << "E";
   }
 
   case Expr::PackExpansionExprClass:
