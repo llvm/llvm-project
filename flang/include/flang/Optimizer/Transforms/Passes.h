@@ -22,6 +22,7 @@ class Region;
 
 namespace fir {
 
+std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
 
 /// Support for inlining on FIR.

@@ -1,4 +1,5 @@
 add_flang_library(FIRTransforms
+  AffinePromotion.cpp
   Inliner.cpp
   ExternalNameConversion.cpp
 
