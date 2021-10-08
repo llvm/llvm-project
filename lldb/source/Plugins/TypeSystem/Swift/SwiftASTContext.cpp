@@ -4326,8 +4326,11 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   // that look like they might be come from Objective-C (or C) as
   // Clang types. LLDB's Objective-C part is very robust against
   // malformed object pointers, so this isn't very risky.
+  Module *module = GetModule();
+  if (!module)
+    return {};
   auto type_system_or_err =
-      GetModule()->GetTypeSystemForLanguage(eLanguageTypeObjC);
+      module->GetTypeSystemForLanguage(eLanguageTypeObjC);
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     return {};
@@ -4348,8 +4351,10 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   // Import the Clang type into the Clang context.
   if (!clang_type)
     return {};
-  clang_type =
-      clang_ast_parser->GetClangASTImporter().CopyType(*clang_ctx, clang_type);
+
+  if (clang_type.GetTypeSystem() != clang_ctx)
+    clang_type = clang_ast_parser->GetClangASTImporter().CopyType(*clang_ctx,
+                                                                  clang_type);
   // Swift doesn't know pointers. Convert top-level
   // Objective-C object types to object pointers for Clang.
   auto qual_type =
@@ -4421,6 +4426,31 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
   found_type = swift::Demangle::getTypeForMangling(
                    *ast_ctx, mangled_typename.GetStringRef())
                    .getPointer();
+
+  // Objective-C classes sometimes have private subclasses that are invisible to the Swift compiler because they are declared and defined in a .m file. If we can't reconstruct an ObjC type, walk up the type hierarchy until we find something we can import, or until we run out of types
+  while (!found_type) {
+    CompilerType clang_type = GetAsClangType(mangled_typename);
+    if (!clang_type)
+      break;
+
+    auto *clang_ctx =
+        llvm::dyn_cast_or_null<TypeSystemClang>(clang_type.GetTypeSystem());
+    if (!clang_ctx)
+      break;
+    auto *interface_decl = TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
+    if (!interface_decl)
+      break;
+    auto *super_interface_decl = interface_decl->getSuperClass();
+    if (!super_interface_decl)
+      break;
+    CompilerType super_type = clang_ctx->GetTypeForDecl(super_interface_decl);
+    if (!super_type)
+      break;
+    auto super_mangled_typename = super_type.GetMangledTypeName();
+    found_type = swift::Demangle::getTypeForMangling(
+                     *ast_ctx, super_mangled_typename.GetStringRef())
+                     .getPointer();
+  }
 
   if (found_type) {
     swift::TypeBase *ast_type =
