@@ -1042,6 +1042,7 @@ static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
 static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
                                 swift::Demangle::Demangler &dem,
                                 swift::Demangle::NodePointer node,
+                                bool &unresolved_typealias,
                                 bool generic_walk = false) {
   LLDB_SCOPED_TIMER();
   if (!node)
@@ -1073,7 +1074,8 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
     if ((type_class & eTypeClassBuiltin)) {
       swift_flags &= ~eTypeIsStructUnion;
       swift_flags |= collectTypeInfo(
-          module_holder, dem, GetClangTypeNode(clang_type, dem, module_holder));
+          module_holder, dem, GetClangTypeNode(clang_type, dem, module_holder),
+          unresolved_typealias);
       return;
     }
   };
@@ -1253,6 +1255,11 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
         collect_clang_type(clang_type);
         return swift_flags;
       }
+      if (!node_clangtype.first) {
+        // If this is a typealias defined in the expression evaluator,
+        // then we don't have debug info to resolve it from.
+        unresolved_typealias = true;
+      }
       swift_flags |= collectTypeInfo(module_holder, dem, node_clangtype.first,
                                      generic_walk);
       return swift_flags;
@@ -1267,7 +1274,8 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
 
   // Visit the child nodes.
   for (unsigned i = 0; i < node->getNumChildren(); ++i)
-    swift_flags |= collectTypeInfo(module_holder, dem, node->getChild(i), generic_walk);
+    swift_flags |= collectTypeInfo(module_holder, dem, node->getChild(i),
+                                   unresolved_typealias, generic_walk);
 
   return swift_flags;
 }
@@ -2058,7 +2066,16 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = dem.demangleSymbol(AsMangledName(type));
-    return collectTypeInfo(m_swift_ast_context, dem, node);
+    bool unresolved_typealias = false;
+    uint32_t flags =
+        collectTypeInfo(m_swift_ast_context, dem, node, unresolved_typealias);
+    if (unresolved_typealias) {
+      // If this is a typealias defined in the expression evaluator,
+      // then we don't have debug info to resolve it from.
+      return m_swift_ast_context->GetTypeInfo(ReconstructType(type),
+                                              pointee_or_element_clang_type);
+    }
+    return flags;
   };
 
   VALIDATE_AND_RETURN(impl, GetTypeInfo, type, (ReconstructType(type), nullptr),
