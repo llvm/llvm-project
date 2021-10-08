@@ -19,6 +19,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
@@ -3314,6 +3315,36 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   return {};
 }
 
+#ifndef NDEBUG
+static bool IsSIMDNode(NodePointer node) {
+  // A SIMD vector is a clang typealias whose identifier starts with "simd_".
+  if (node->getKind() == Node::Kind::TypeAlias && node->getNumChildren() >= 2) {
+    NodePointer module = node->getFirstChild();
+    NodePointer identifier = node->getChild(1);
+    return module->getKind() == Node::Kind::Module &&
+           module->getText() == "__C" &&
+           identifier->getKind() == Node::Kind::Identifier &&
+           identifier->getText().startswith("simd_");
+  }
+  // A SIMD matrix is a BoundGenericStructure whose inner identifier starts with
+  // SIMD.
+  if (node->getKind() == Node::Kind::BoundGenericStructure &&
+      node->hasChildren()) {
+    NodePointer type = node->getFirstChild();
+    if (type->getKind() == Node::Kind::Type && node->hasChildren()) {
+      NodePointer structure = type->getFirstChild();
+      if (structure->getKind() == Node::Kind::Structure &&
+          structure->getNumChildren() >= 2) {
+        NodePointer identifier = structure->getChild(1);
+        return identifier->getKind() == Node::Kind::Identifier &&
+               identifier->getText().startswith("SIMD");
+      }
+    }
+  }
+  return false;
+}
+#endif
+
 bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   auto impl = [&]() {
     using namespace swift::Demangle;
@@ -3342,6 +3373,11 @@ bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   auto mangled_name = GetMangledTypeName(type);
   if (mangled_name == "$sSo18NSNotificationNameaD" ||
       mangled_name == "$sSo9NSDecimalaD")
+    return impl();
+
+  // SIMD types have some special handling in the compiler, causing divergences
+  // on the way SwiftASTContext and TypeSystemSwiftTypeRef view the same type.
+  if (IsSIMDNode(node))
     return impl();
 #endif
   VALIDATE_AND_RETURN(impl, IsTypedefType, type, (ReconstructType(type)),
@@ -3388,6 +3424,11 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
   auto mangled_name = GetMangledTypeName(type);
   if (mangled_name == "$sSo18NSNotificationNameaD" ||
       mangled_name == "$sSo9NSDecimalaD")
+    return impl();
+
+  // SIMD types have some special handling in the compiler, causing divergences
+  // on the way SwiftASTContext and TypeSystemSwiftTypeRef view the same type.
+  if (IsSIMDNode(node))
     return impl();
 #endif
   VALIDATE_AND_RETURN(impl, GetTypedefedType, type, (ReconstructType(type)),
