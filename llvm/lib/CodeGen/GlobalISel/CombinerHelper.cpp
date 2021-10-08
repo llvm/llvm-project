@@ -4618,6 +4618,51 @@ void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
+                                               BuildFnTy &MatchInfo) {
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_FADD || Opc == TargetOpcode::G_FSUB ||
+         Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
+         Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
+  LLT Type = MRI.getType(Dst);
+
+  // fold (fadd x, fneg(y)) -> (fsub x, y)
+  // fold (fadd fneg(y), x) -> (fsub x, y)
+  // G_ADD is commutative so both cases are checked by m_GFAdd
+  if (mi_match(Dst, MRI, m_GFAdd(m_Reg(X), m_GFNeg(m_Reg(Y)))) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_FSUB, {Type}})) {
+    Opc = TargetOpcode::G_FSUB;
+  }
+  /// fold (fsub x, fneg(y)) -> (fadd x, y)
+  else if (mi_match(Dst, MRI, m_GFSub(m_Reg(X), m_GFNeg(m_Reg(Y)))) &&
+           isLegalOrBeforeLegalizer({TargetOpcode::G_FADD, {Type}})) {
+    Opc = TargetOpcode::G_FADD;
+  }
+  // fold (fmul fneg(x), fneg(y)) -> (fmul x, y)
+  // fold (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
+  // fold (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
+  // fold (fma fneg(x), fneg(y), z) -> (fma x, y, z)
+  else if ((Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
+            Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA) &&
+           mi_match(X, MRI, m_GFNeg(m_Reg(X))) &&
+           mi_match(Y, MRI, m_GFNeg(m_Reg(Y)))) {
+    // no opcode change
+  } else
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(Opc));
+    MI.getOperand(1).setReg(X);
+    MI.getOperand(2).setReg(Y);
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))

@@ -716,18 +716,72 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
   if (isShader(F.getCallingConv())) {
+    bool IsPixelShader =
+        F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
+
+    // Calculate the number of VGPR registers based on the SPI input registers
+    uint32_t InputEna = 0;
+    uint32_t InputAddr = 0;
+    unsigned LastEna = 0;
+
+    if (IsPixelShader) {
+      // Note for IsPixelShader:
+      // By this stage, all enabled inputs are tagged in InputAddr as well.
+      // We will use InputAddr to determine whether the input counts against the
+      // vgpr total and only use the InputEnable to determine the last input
+      // that is relevant - if extra arguments are used, then we have to honour
+      // the InputAddr for any intermediate non-enabled inputs.
+      InputEna = MFI->getPSInputEnable();
+      InputAddr = MFI->getPSInputAddr();
+
+      // We only need to consider input args up to the last used arg.
+      assert((InputEna || InputAddr) &&
+             "PSInputAddr and PSInputEnable should "
+             "never both be 0 for AMDGPU_PS shaders");
+      // There are some rare circumstances where InputAddr is non-zero and
+      // InputEna can be set to 0. In this case we default to setting LastEna
+      // to 1.
+      LastEna = InputEna ? findLastSet(InputEna) + 1 : 1;
+    }
+
     // FIXME: We should be using the number of registers determined during
     // calling convention lowering to legalize the types.
     const DataLayout &DL = F.getParent()->getDataLayout();
+    unsigned PSArgCount = 0;
+    unsigned IntermediateVGPR = 0;
     for (auto &Arg : F.args()) {
       unsigned NumRegs = (DL.getTypeSizeInBits(Arg.getType()) + 31) / 32;
-      if (Arg.hasAttribute(Attribute::InReg))
+      if (Arg.hasAttribute(Attribute::InReg)) {
         WaveDispatchNumSGPR += NumRegs;
-      else
-        WaveDispatchNumVGPR += NumRegs;
+      } else {
+        // If this is a PS shader and we're processing the PS Input args (first
+        // 16 VGPR), use the InputEna and InputAddr bits to define how many
+        // VGPRs are actually used.
+        // Any extra VGPR arguments are handled as normal arguments (and
+        // contribute to the VGPR count whether they're used or not).
+        if (IsPixelShader && PSArgCount < 16) {
+          if ((1 << PSArgCount) & InputAddr) {
+            if (PSArgCount < LastEna)
+              WaveDispatchNumVGPR += NumRegs;
+            else
+              IntermediateVGPR += NumRegs;
+          }
+          PSArgCount++;
+        } else {
+          // If there are extra arguments we have to include the allocation for
+          // the non-used (but enabled with InputAddr) input arguments
+          if (IntermediateVGPR) {
+            WaveDispatchNumVGPR += IntermediateVGPR;
+            IntermediateVGPR = 0;
+          }
+          WaveDispatchNumVGPR += NumRegs;
+        }
+      }
     }
     ProgInfo.NumSGPR = std::max(ProgInfo.NumSGPR, WaveDispatchNumSGPR);
-    ProgInfo.NumVGPR = std::max(ProgInfo.NumVGPR, WaveDispatchNumVGPR);
+    ProgInfo.NumArchVGPR = std::max(ProgInfo.NumVGPR, WaveDispatchNumVGPR);
+    ProgInfo.NumVGPR =
+        Info.getTotalNumVGPRs(STM, Info.NumAGPR, ProgInfo.NumArchVGPR);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum

@@ -83,10 +83,15 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
+    const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
+  if (ST.hasGFX90AInsts() && ArgNumAGPR)
+    return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
+  return std::max(ArgNumVGPR, ArgNumAGPR);
+}
+
+int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
     const GCNSubtarget &ST) const {
-  if (ST.hasGFX90AInsts() && NumAGPR)
-    return alignTo(NumVGPR, 4) + NumAGPR;
-  return std::max(NumVGPR, NumAGPR);
+  return getTotalNumVGPRs(ST, NumAGPR, NumVGPR);
 }
 
 bool AMDGPUResourceUsageAnalysis::runOnSCC(CallGraphSCC &SCC) {
