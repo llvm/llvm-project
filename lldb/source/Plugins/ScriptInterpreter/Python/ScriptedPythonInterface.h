@@ -140,6 +140,11 @@ lldb::DataExtractorSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     python::PythonObject &p, Status &error);
 
+template <>
+llvm::Optional<MemoryRegionInfo>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    llvm::Optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);
+
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON

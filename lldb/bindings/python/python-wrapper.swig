@@ -974,6 +974,22 @@ LLDBSWIGPython_CastPyObjectToSBValue
     return sb_ptr;
 }
 
+SWIGEXPORT void*
+LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo
+(
+    PyObject* data
+)
+{
+    lldb::SBMemoryRegionInfo* sb_ptr = NULL;
+
+    int valid_cast = SWIG_ConvertPtr(data, (void**)&sb_ptr, SWIGTYPE_p_lldb__SBMemoryRegionInfo, 0);
+
+    if (valid_cast == -1)
+        return NULL;
+
+    return sb_ptr;
+}
+
 SWIGEXPORT bool
 LLDBSwigPythonCallCommand
 (

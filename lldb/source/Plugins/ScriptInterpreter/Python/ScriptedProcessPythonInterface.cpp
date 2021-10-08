@@ -82,11 +82,18 @@ Status ScriptedProcessPythonInterface::Stop() {
   return GetStatusFromMethod("stop");
 }
 
-lldb::MemoryRegionInfoSP
+llvm::Optional<MemoryRegionInfo>
 ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
-    lldb::addr_t address) {
-  // TODO: Implement
-  return {};
+    lldb::addr_t address, Status &error) {
+  auto mem_region = Dispatch<llvm::Optional<MemoryRegionInfo>>(
+      "get_memory_region_containing_address", error, address);
+
+  if (error.Fail()) {
+    return ErrorWithMessage<MemoryRegionInfo>(__PRETTY_FUNCTION__,
+                                              error.AsCString(), error);
+  }
+
+  return mem_region;
 }
 
 StructuredData::DictionarySP

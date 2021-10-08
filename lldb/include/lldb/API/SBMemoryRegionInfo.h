@@ -20,6 +20,10 @@ public:
 
   SBMemoryRegionInfo(const lldb::SBMemoryRegionInfo &rhs);
 
+  SBMemoryRegionInfo(const char *name, lldb::addr_t begin, lldb::addr_t end,
+                     uint32_t permissions, bool mapped,
+                     bool stack_memory = false);
+
   ~SBMemoryRegionInfo();
 
   const lldb::SBMemoryRegionInfo &
@@ -116,6 +120,8 @@ public:
 private:
   friend class SBProcess;
   friend class SBMemoryRegionInfoList;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::MemoryRegionInfo &ref();
 
