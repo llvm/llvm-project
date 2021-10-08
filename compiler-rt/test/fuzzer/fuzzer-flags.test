@@ -1,7 +1,3 @@
-# Binutils < 2.32 fails with undefined reference to `__start_<...>`
-# AArch64 bots currently use 2.30.
-UNSUPPORTED: aarch64-linux
-
 RUN: %cpp_compiler %S/FlagsTest.cpp -o %t-FlagsTest
 RUN: %run %t-FlagsTest -runs=10 -foo_bar=1 2>&1 | FileCheck %s --check-prefix=FOO_BAR
 FOO_BAR: WARNING: unrecognized flag '-foo_bar=1'; use -help=1 to list all flags
