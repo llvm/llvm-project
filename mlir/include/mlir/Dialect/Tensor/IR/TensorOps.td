@@ -158,8 +158,10 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
 //===----------------------------------------------------------------------===//
 
 def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
-    Tensor_Dialect, "extract_slice", [NoSideEffect, AttrSizedOperandSegments,
-                                      OffsetSizeAndStrideOpInterface]> {
+    Tensor_Dialect, "extract_slice",
+    [NoSideEffect, AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     OffsetSizeAndStrideOpInterface]> {
   let summary = "extract slice operation";
   let description = [{
     The "extract_slice" operation extract a tensor from another tensor as
@@ -284,6 +286,11 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
     /// Return the number of leading operands before the `offsets`, `sizes` and
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    /// Return the dimensions of the source that are dropped in the
+    /// result when the result is rank-reduced.
+    llvm::SmallDenseSet<unsigned> getDroppedDims();
+
   }];
 
   let hasCanonicalizer = 1;
