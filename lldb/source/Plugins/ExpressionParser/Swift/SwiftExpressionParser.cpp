@@ -1318,8 +1318,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   if (!SwiftASTContext::GetImplicitImports(*swift_ast_context, sc, exe_scope,
                                            stack_frame_wp, additional_imports,
                                            implicit_import_error)) {
+    const char *msg = implicit_import_error.AsCString();
+    if (!msg)
+      msg = "error status positive, but import still failed";
     return make_error<ModuleImportError>(llvm::Twine("in implicit-import:\n") +
-                                         implicit_import_error.AsCString());
+                                         msg);
   }
 
   swift::ImplicitImportInfo importInfo;
@@ -1465,8 +1468,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     if (!SwiftASTContext::CacheUserImports(*swift_ast_context, sc, exe_scope,
                                            stack_frame_wp, *source_file,
                                            auto_import_error)) {
-      return make_error<ModuleImportError>(llvm::Twine("in user-import:\n") +
-                                           auto_import_error.AsCString());
+          const char *msg = auto_import_error.AsCString();
+          if (!msg)
+            msg = "error status positive, but import still failed";
+          return make_error<ModuleImportError>(
+              llvm::Twine("in user-import:\n") + msg);
     }
   }
 

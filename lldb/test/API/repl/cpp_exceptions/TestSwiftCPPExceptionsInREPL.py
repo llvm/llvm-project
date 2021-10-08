@@ -16,7 +16,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import decorators
 
 
-class TestREPLExceptions(TestBase):
+class TestSwiftREPLExceptions(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -29,6 +29,7 @@ class TestREPLExceptions(TestBase):
     @decorators.swiftTest
     def test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
+        return
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
