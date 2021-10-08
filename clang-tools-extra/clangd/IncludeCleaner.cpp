@@ -161,7 +161,10 @@ getUnused(const IncludeStructure &Structure,
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : Structure.MainFileIncludes) {
     // FIXME: Skip includes that are not self-contained.
-    assert(MFI.HeaderID);
+    if (!MFI.HeaderID) {
+      elog("File {0} not found.", MFI.Written);
+      continue;
+    }
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     if (!ReferencedFiles.contains(IncludeID)) {
       Unused.push_back(&MFI);
