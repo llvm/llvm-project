@@ -60,7 +60,7 @@ Type PointerType::parse(mlir::AsmParser &parser) {
 }
 
 void PointerType::print(mlir::AsmPrinter &printer) const {
-  printer << getMnemonic() << "<";
+  printer << "<";
   printer.printType(getPointee());
   printer << '>';
 }

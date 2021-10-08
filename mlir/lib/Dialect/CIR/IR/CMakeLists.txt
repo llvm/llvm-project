@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRCIR
 
   DEPENDS
   MLIRCIROpsIncGen
+  MLIRSymbolInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
