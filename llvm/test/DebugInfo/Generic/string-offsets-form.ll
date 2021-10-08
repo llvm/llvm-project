@@ -1,3 +1,4 @@
+; XFAIL: -aix
 ; RUN: %llc_dwarf -filetype=obj < %s | llvm-dwarfdump -all -show-form -v - \
 ; RUN:   | FileCheck %s
 ;
