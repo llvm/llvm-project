@@ -160,12 +160,6 @@ using _64 = __llvm_libc::Repeated<_8, 8>;
 using _128 = __llvm_libc::Repeated<_8, 16>;
 #endif
 
-struct Accelerator {
-  static void Copy(char *dst, const char *src, size_t count) {
-    asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
-  }
-};
-
 } // namespace x86
 } // namespace __llvm_libc
 
