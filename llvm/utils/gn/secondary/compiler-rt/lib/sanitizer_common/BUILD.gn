@@ -84,7 +84,6 @@ source_set("sources") {
     "sanitizer_mutex.cpp",
     "sanitizer_mutex.h",
     "sanitizer_netbsd.cpp",
-    "sanitizer_persistent_allocator.cpp",
     "sanitizer_persistent_allocator.h",
     "sanitizer_placement_new.h",
     "sanitizer_platform.h",

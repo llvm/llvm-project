@@ -25,7 +25,6 @@ type ^
   ..\..\sanitizer_common\sanitizer_win.cpp ^
   ..\..\sanitizer_common\sanitizer_deadlock_detector1.cpp ^
   ..\..\sanitizer_common\sanitizer_stackdepot.cpp ^
-  ..\..\sanitizer_common\sanitizer_persistent_allocator.cpp ^
   ..\..\sanitizer_common\sanitizer_flag_parser.cpp ^
   ..\..\sanitizer_common\sanitizer_symbolizer.cpp ^
   ..\..\sanitizer_common\sanitizer_termination.cpp ^

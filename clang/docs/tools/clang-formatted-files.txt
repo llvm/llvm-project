@@ -1591,7 +1591,6 @@ compiler-rt/lib/sanitizer_common/sanitizer_errno.h
 compiler-rt/lib/sanitizer_common/sanitizer_errno_codes.h
 compiler-rt/lib/sanitizer_common/sanitizer_local_address_space_view.h
 compiler-rt/lib/sanitizer_common/sanitizer_openbsd.cpp
-compiler-rt/lib/sanitizer_common/sanitizer_persistent_allocator.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_placement_new.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_freebsd.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_openbsd.cpp
