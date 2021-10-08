@@ -160,116 +160,6 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
                                                 indexing, outputBuffers);
 }
 
-// Create a padded view into the given `input` tensor using the 'indices'
-// to access the tensor. `skipPadding` lists the dimensions for which no padding
-// is needed e.g. the non-spatial dimensions for convolutions.
-Value getPaddedInput(OpBuilder &b, Location loc, Value input,
-                     ArrayRef<Value> indices, ArrayRef<int> skipPadding,
-                     Value padValue) {
-  Value zeroIndex = b.create<ConstantIndexOp>(loc, 0);
-  SmallVector<Value> conds;
-  SmallVector<Value> clampedImIdx;
-  for (auto iter : llvm::enumerate(indices)) {
-    int idx = iter.index();
-    auto dim = iter.value();
-    if (is_contained(skipPadding, idx)) {
-      clampedImIdx.push_back(dim);
-      continue;
-    }
-
-    Value leftOutOfBound =
-        b.create<CmpIOp>(loc, CmpIPredicate::slt, dim, zeroIndex);
-    if (conds.empty())
-      conds.push_back(leftOutOfBound);
-    else
-      conds.push_back(b.create<OrOp>(loc, conds.back(), leftOutOfBound));
-    Value rightBound = createOrFoldDimOp(b, loc, input, idx);
-    Value rightOutOfBound =
-        b.create<CmpIOp>(loc, CmpIPredicate::sge, dim, rightBound);
-    conds.push_back(b.create<OrOp>(loc, conds.back(), rightOutOfBound));
-
-    // When padding is involved, the indices will only be shifted to negative,
-    // so having a max op is enough.
-    MLIRContext *ctx = input.getContext();
-    AffineExpr m = getAffineDimExpr(/*position=*/0, ctx),
-               zero = getAffineConstantExpr(0, ctx);
-    AffineMap maxMap =
-        AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>>{{m, zero}})
-            .front();
-    clampedImIdx.push_back(b.create<AffineMaxOp>(loc, maxMap, ValueRange{dim}));
-  }
-
-  Value readInput = b.create<memref::LoadOp>(loc, input, clampedImIdx);
-  if (conds.empty())
-    return readInput;
-
-  return b.create<SelectOp>(loc, conds.back(), padValue, readInput);
-}
-
-namespace {
-
-/// The padding value for a given Op depends on the semantics of the Op.
-/// The identity value for ConvOp is 0.
-template <typename OpType> Attribute getPadValueAttr(Type type) {
-  llvm_unreachable("Unexpected op type for getPadValueAttr");
-  return {};
-}
-
-template <> Attribute getPadValueAttr<ConvOp>(Type type) {
-  return OpBuilder(type.getContext()).getZeroAttr(type);
-}
-
-} // namespace
-
-/// Returns true is `convOp` has a non-zero padding.
-static bool hasPadding(ConvOp convOp) {
-  for (unsigned i = 0, e = convOp.getNumSpatialDimensions(); i < e; ++i) {
-    if (convOp.getLowPad(i) > 0 || convOp.getHighPad(i) > 0)
-      return true;
-  }
-  return false;
-}
-
-template <typename LoadOpTy, typename StoreOpTy>
-static void emitScalarImplementation(OpBuilder &b, Location loc,
-                                     ArrayRef<Value> allIvs, ConvOp convOp) {
-  assert(convOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto mapsRange = convOp.indexing_maps().getAsRange<AffineMapAttr>();
-  auto maps = llvm::to_vector<8>(
-      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  SmallVector<Value> fIdx(makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
-  SmallVector<Value> imIdx(makeCanonicalAffineApplies(b, loc, maps[1], allIvs));
-  SmallVector<Value> oIdx(makeCanonicalAffineApplies(b, loc, maps[2], allIvs));
-
-  Value filter = convOp.filter(), output = convOp.output();
-
-  // Emit scalar form. Padded conv involves an affine.max in the memory access
-  // which is not allowed by affine.load. Override to use an MemRefIndexedValue
-  // when there is non-zero padding.
-  if (hasPadding(convOp)) {
-    Type type = convOp.input().getType().cast<MemRefType>().getElementType();
-    Value padValue =
-        b.create<ConstantOp>(loc, type, getPadValueAttr<ConvOp>(type));
-    Value paddedInput =
-        getPaddedInput(b, loc, convOp.input(), imIdx,
-                       /* Only need to pad the window dimensions */
-                       {0, static_cast<int>(imIdx.size()) - 1}, padValue);
-    Value filterVal = b.create<LoadOpTy>(loc, filter, fIdx);
-    Value mulVal = ArithBuilder(b, loc).mul(filterVal, paddedInput);
-    Value outputVal = b.create<LoadOpTy>(loc, output, oIdx);
-    Value addVal = ArithBuilder(b, loc).add(mulVal, outputVal);
-    b.create<StoreOpTy>(loc, addVal, output, oIdx);
-  } else {
-    Value inputVal = b.create<LoadOpTy>(loc, convOp.input(), imIdx);
-    Value filterVal = b.create<LoadOpTy>(loc, filter, fIdx);
-    Value mulVal = ArithBuilder(b, loc).mul(filterVal, inputVal);
-    Value outputVal = b.create<LoadOpTy>(loc, output, oIdx);
-    Value addVal = ArithBuilder(b, loc).add(mulVal, outputVal);
-    b.create<StoreOpTy>(loc, addVal, output, oIdx);
-  }
-}
-
 /// Replace the index operations in the body of the loop nest by the matching
 /// induction variables.
 static void replaceIndexOpsByInductionVariables(LinalgOp linalgOp,
@@ -328,11 +218,7 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
         assert(operandValuesToUse == linalgOp->getOperands() &&
                "expect operands are captured and not passed by loop argument");
         allIvs.append(ivs.begin(), ivs.end());
-        llvm::TypeSwitch<Operation *>(linalgOp)
-            .Case<ConvOp, LinalgOp>([&](auto op) {
-              emitScalarImplementation<LoadOpTy, StoreOpTy>(b, loc, allIvs, op);
-            })
-            .Default([&](Operation *op) { assert(false && "unexpected op"); });
+        emitScalarImplementation<LoadOpTy, StoreOpTy>(b, loc, allIvs, linalgOp);
         return scf::ValueVector{};
       });
   // Number of loop ops might be different from the number of ivs since some

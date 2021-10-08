@@ -1114,8 +1114,6 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   return success();
 }
 
-using ConvOpConst = ConvOpVectorization<Conv1DOp, 1>;
-
 /// Inserts tiling, promotion and vectorization pattern for ConvOp
 /// conversion into corresponding pattern lists.
 template <typename ConvOp, unsigned N>

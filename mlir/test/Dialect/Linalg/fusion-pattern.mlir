@@ -441,14 +441,12 @@ module {
 // -----
 
 module {
-  func @basic_conv_fusion(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>,
-                          %arg2: memref<?x?x?x?xf32>) {
+  func @basic_conv_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
+                          %arg2: memref<?x?xf32>) {
     %cst = constant 0.000000e+00 : f32
-    linalg.fill(%cst, %arg2) : f32, memref<?x?x?x?xf32>
-    linalg.conv(%arg0, %arg1, %arg2) {
-      dilations = [1, 1], strides = [1, 1],
-      __internal_linalg_transform__ = "basic_fusion"} :
-      memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
+    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
+    linalg.conv_2d {__internal_linalg_transform__ = "basic_fusion"}
+      ins(%arg1, %arg0 : memref<?x?xf32>, memref<?x?xf32>) outs(%arg2 : memref<?x?xf32>)
     return
   }
 }
@@ -459,8 +457,8 @@ module {
 // CHECK-SAME:  {
 //      CHECK:    linalg.fill
 // CHECK-SAME:      __internal_linalg_transform__ = "after_basic_fusion_producer"
-//      CHECK:    linalg.conv
+//      CHECK:    linalg.conv_2d
 // CHECK-SAME:      __internal_linalg_transform__ = "after_basic_fusion"
 //      CHECK:  }
-//      CHECK:  linalg.conv
+//      CHECK:  linalg.conv_2d
 // CHECK-SAME:    __internal_linalg_transform__ = "after_basic_fusion_original"

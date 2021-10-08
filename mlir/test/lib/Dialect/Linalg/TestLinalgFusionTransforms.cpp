@@ -26,7 +26,7 @@ static void fillFusionPatterns(MLIRContext *context,
                                const LinalgDependenceGraph &dependenceGraph,
                                RewritePatternSet &patterns) {
   patterns.add<LinalgTileAndFusePattern<MatmulOp>,
-               LinalgTileAndFusePattern<ConvOp>>(
+               LinalgTileAndFusePattern<Conv2DOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({2}),

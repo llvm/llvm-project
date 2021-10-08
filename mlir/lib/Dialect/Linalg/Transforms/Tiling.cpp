@@ -162,13 +162,6 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   if (llvm::all_of(tileSizes, isZero))
     return llvm::None;
 
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // For conv op only support tiling along batch dimension (which is the first
-    // loop).
-    if (convOp.padding() && !llvm::all_of(tileSizes.drop_front(), isZero))
-      return llvm::None;
-  }
-
   // 1. Build the tiled loop ranges.
   auto allShapeSizes = op.createFlatListOfOperandDims(b, op.getLoc());
   AffineMap shapeSizesToLoopsMap = op.getShapesToLoopsMap();

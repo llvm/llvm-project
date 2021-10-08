@@ -7,24 +7,12 @@
 // CHECK-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
-// CHECK-DAG: #[[$strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
-// CHECK-DAG: #[[$clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
-
 // CHECK-DAG: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0  + d1)>
-// CHECK-DAG: #[[$stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
-// CHECK-DAG: #[[$stride2Dilation4:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
-// CHECK-DAG: #[[$stride3Dilation5:.*]] = affine_map<(d0, d1) -> (d0 * 3 + d1 * 5)>
 
 // CHECKPARALLEL-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECKPARALLEL-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECKPARALLEL-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
-// CHECKPARALLEL-DAG: #[[$strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
-// CHECKPARALLEL-DAG: #[[$clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
-
 // CHECKPARALLEL-DAG: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0  + d1)>
-// CHECKPARALLEL-DAG: #[[$stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
-// CHECKPARALLEL-DAG: #[[$stride2Dilation4:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
-// CHECKPARALLEL-DAG: #[[$stride3Dilation5:.*]] = affine_map<(d0, d1) -> (d0 * 3 + d1 * 5)>
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
@@ -264,163 +252,6 @@ func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 //       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}, %{{.*}}) {
 //       CHECKPARALLEL:     %[[L:.*]] = memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
 //       CHECKPARALLEL:     store %[[L]], {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-
-func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.conv(%arg0, %arg1, %arg2) {strides = [2]}: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @conv_view3(
-//       CHECK: %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
-//       CHECK:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:   %[[Q:.*]] = memref.dim %arg0, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:   %[[K:.*]] = memref.dim %arg0, %c2 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:   %[[B:.*]] = memref.dim %arg1, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:   scf.for {{.*}} to %[[B]]
-//       CHECK:     scf.for {{.*}} to %[[X0]]
-//       CHECK:       scf.for {{.*}} to %[[K]]
-//       CHECK:         scf.for {{.*}} to %[[Q]]
-//       CHECK:           scf.for {{.*}} to %[[Z0]]
-//       CHECK:             %[[SUM:.*]] = affine.apply #[[$stride2Dilation1]]
-//       CHECK:             memref.load %{{.*}}[%{{.*}}, %[[SUM]], %{{.*}}] : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:             memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:             mulf
-//       CHECK:             memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:             addf
-//       CHECK:             store %{{.*}}, {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-
-// CHECKPARALLEL-LABEL: func @conv_view3(
-//       CHECKPARALLEL: %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
-//       CHECKPARALLEL:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:   %[[Q:.*]] = memref.dim %arg0, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:   %[[K:.*]] = memref.dim %arg0, %c2 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:   %[[B:.*]] = memref.dim %arg1, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}) to (%[[B]], %[[X0]], %[[K]]) step (%{{.*}}, %{{.*}}, %{{.*}}) {
-//       CHECKPARALLEL:     scf.for {{.*}} to %[[Q]]
-//       CHECKPARALLEL:       scf.for {{.*}} to %[[Z0]]
-//       CHECKPARALLEL:         %[[SUM:.*]] = affine.apply #[[$stride2Dilation1]]
-//       CHECKPARALLEL:         memref.load %{{.*}}[%{{.*}}, %[[SUM]], %{{.*}}] : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:         memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:         mulf
-//       CHECKPARALLEL:         memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:         addf
-//       CHECKPARALLEL:         store %{{.*}}, {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-
-func @conv_view4(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg2: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>) {
-  linalg.conv(%arg0, %arg1, %arg2) {dilations = [4, 5], strides = [2, 3]} : memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @conv_view4(
-//       CHECK: %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>, %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>, %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>) {
-//       CHECK:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[Z1:.*]] = memref.dim %arg0, %c1 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[Q:.*]] = memref.dim %arg0, %c2 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[K:.*]] = memref.dim %arg0, %c3 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[B:.*]] = memref.dim %arg1, %c0 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   %[[X1:.*]] = memref.dim %arg2, %c2 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:   scf.for {{.*}} to %[[B]]
-//       CHECK:     scf.for {{.*}} to %[[X0]]
-//       CHECK:       scf.for {{.*}} to %[[X1]]
-//       CHECK:         scf.for {{.*}} to %[[K]]
-//       CHECK:           scf.for {{.*}} to %[[Q]]
-//       CHECK:             scf.for {{.*}} to %[[Z0]]
-//       CHECK:               scf.for {{.*}} to %[[Z1]]
-//       CHECK:                 %[[SUM0:.*]] = affine.apply #[[$stride2Dilation4]]
-//       CHECK:                 %[[SUM1:.*]] = affine.apply #[[$stride3Dilation5]]
-//       CHECK:                 memref.load %{{.*}}[%{{.*}}, %[[SUM0]], %[[SUM1]], %{{.*}}] : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:                 memref.load {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:                 mulf
-//       CHECK:                 memref.load {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECK:                 addf
-//       CHECK:                 store %{{.*}}, {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-
-// CHECKPARALLEL-LABEL: func @conv_view4(
-//       CHECKPARALLEL: %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>, %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>, %{{.*}}: memref<?x?x?x?xf32, #[[$strided4D]]>) {
-//       CHECKPARALLEL:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[Z1:.*]] = memref.dim %arg0, %c1 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[Q:.*]] = memref.dim %arg0, %c2 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[K:.*]] = memref.dim %arg0, %c3 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[B:.*]] = memref.dim %arg1, %c0 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   %[[X1:.*]] = memref.dim %arg2, %c2 : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) to (%[[B]], %[[X0]], %[[X1]], %[[K]]) step (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {
-//       CHECKPARALLEL:     scf.for {{.*}} to %[[Q]]
-//       CHECKPARALLEL:       scf.for {{.*}} to %[[Z0]]
-//       CHECKPARALLEL:         scf.for {{.*}} to %[[Z1]]
-//       CHECKPARALLEL:           %[[SUM0:.*]] = affine.apply #[[$stride2Dilation4]]
-//       CHECKPARALLEL:           %[[SUM1:.*]] = affine.apply #[[$stride3Dilation5]]
-//       CHECKPARALLEL:           memref.load %{{.*}}[%{{.*}}, %[[SUM0]], %[[SUM1]], %{{.*}}] : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:           memref.load {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:           mulf
-//       CHECKPARALLEL:           memref.load {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-//       CHECKPARALLEL:           addf
-//       CHECKPARALLEL:           store %{{.*}}, {{.*}} : memref<?x?x?x?xf32, #[[$strided4D]]>
-
-func @conv_padding(%arg0: memref<?x?x?x?xf32>,
-                   %arg1: memref<?x?x?x?xf32>,
-                   %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv(%arg0, %arg1, %arg2) {dilations = [1, 1],
-                                    padding = dense<[[0, 1], [1, 1]]> : tensor<2x2xi64>,
-                                    strides = [1, 1]} :
-    memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
-  return
-}
-// CHECK-LABEL: func @conv_padding
-//       CHECK: %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>) {
-//       CHECK:   %[[ZERO:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Z1:.*]] = memref.dim %arg0, %c1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Q:.*]] =  memref.dim %arg0, %c2 : memref<?x?x?x?xf32>
-//       CHECK:   %[[K:.*]] =  memref.dim %arg0, %c3 : memref<?x?x?x?xf32>
-//       CHECK:   %[[B:.*]] =  memref.dim %arg1, %c0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X1:.*]] = memref.dim %arg2, %c2 : memref<?x?x?x?xf32>
-//       CHECK:   scf.for {{.*}} to %[[B]]
-//       CHECK:     scf.for {{.*}} to %[[X0]]
-//       CHECK:       scf.for {{.*}} to %[[X1]]
-//       CHECK:         scf.for {{.*}} to %[[K]]
-//       CHECK:           scf.for {{.*}} to %[[Q]]
-//       CHECK:             scf.for {{.*}} to %[[Z0]]
-//       CHECK:               scf.for {{.*}} to %[[Z1]]
-//       CHECK:                 %[[SUM0:.*]] = affine.apply #{{.*}}
-//       CHECK:                 %[[SUM1:.*]] = affine.apply #{{.*}}
-//       CHECK:                 %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[SUM0]])
-//       CHECK:                 %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[SUM1]])
-//       CHECK:                 memref.load %{{.*}}[%{{.*}}, %[[IDX]], %[[IDY]], %{{.*}}] : memref<?x?x?x?xf32>
-//       CHECK:                 select %{{.*}},
-//       CHECK:                 memref.load {{.*}} : memref<?x?x?x?xf32>
-//       CHECK:                 mulf
-//       CHECK:                 memref.load {{.*}} : memref<?x?x?x?xf32>
-//       CHECK:                 addf
-//       CHECK:                 store %{{.*}}, {{.*}} : memref<?x?x?x?xf32>
-
-// CHECKPARALLEL-LABEL: func @conv_padding
-//       CHECKPARALLEL: %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>) {
-//       CHECKPARALLEL:   %[[ZERO:.*]] = constant 0.000000e+00 : f32
-//       CHECKPARALLEL:   %[[Z0:.*]] = memref.dim %arg0, %c0 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[Z1:.*]] = memref.dim %arg0, %c1 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[Q:.*]] =  memref.dim %arg0, %c2 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[K:.*]] =  memref.dim %arg0, %c3 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[B:.*]] =  memref.dim %arg1, %c0 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[X0:.*]] = memref.dim %arg2, %c1 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   %[[X1:.*]] = memref.dim %arg2, %c2 : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) to (%[[B]], %[[X0]], %[[X1]], %[[K]]) step (%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {
-//       CHECKPARALLEL:     scf.for {{.*}} to %[[Q]]
-//       CHECKPARALLEL:       scf.for {{.*}} to %[[Z0]]
-//       CHECKPARALLEL:         scf.for {{.*}} to %[[Z1]]
-//       CHECKPARALLEL:           %[[SUM0:.*]] = affine.apply #{{.*}}
-//       CHECKPARALLEL:           %[[SUM1:.*]] = affine.apply #{{.*}}
-//       CHECKPARALLEL:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[SUM0]])
-//       CHECKPARALLEL:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[SUM1]])
-//       CHECKPARALLEL:           memref.load %{{.*}}[%{{.*}}, %[[IDX]], %[[IDY]], %{{.*}}] : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:           select %{{.*}},
-//       CHECKPARALLEL:           memref.load {{.*}} : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:           mulf
-//       CHECKPARALLEL:           memref.load {{.*}} : memref<?x?x?x?xf32>
-//       CHECKPARALLEL:           addf
-//       CHECKPARALLEL:           store %{{.*}}, {{.*}} : memref<?x?x?x?xf32>
 
 #accesses = [
   affine_map<(i, j, k) -> (i, j)>,

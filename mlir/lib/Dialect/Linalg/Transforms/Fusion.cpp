@@ -324,16 +324,6 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
                << *producer.getOperation());
     return false;
   }
-  if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return false;
-  }
-  if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return false;
-  }
   return true;
 }
 
