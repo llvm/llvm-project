@@ -5,7 +5,7 @@
 // STDLIB: error: invalid library name in argument '-stdlib=nostdlib'
 // STDLIB-EMPTY:
 
-// RUN: not %clangxx --target=i386-unknown-linux -rtlib=nortlib %s 2>&1 | FileCheck --check-prefix=RTLIB %s
+// RUN: not %clangxx --target=i386-unknown-linux -rtlib=nortlib --unwindlib=libgcc %s 2>&1 | FileCheck --check-prefix=RTLIB %s
 // RTLIB: error: invalid runtime library name in argument '-rtlib=nortlib'
 // RTLIB-EMPTY:
 
