@@ -304,12 +304,6 @@ promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
                 LinalgOpInstancePromotionOptions options, DataLayout &layout) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
 
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return {};
-  }
-
   // 1. Promote the specified views and use them in the new op.
   auto promotedBuffersAndViews = promoteSubViews(b, options, layout);
   if (!promotedBuffersAndViews ||
