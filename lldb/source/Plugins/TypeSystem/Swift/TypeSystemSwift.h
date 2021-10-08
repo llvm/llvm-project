@@ -125,9 +125,14 @@ public:
   struct TupleElement {
     ConstString element_name;
     CompilerType element_type;
+    
+    TupleElement() = default;
+    TupleElement(ConstString name, CompilerType type)
+        : element_name(name), element_type(type) {}
   };
   virtual CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) = 0;
+  virtual bool IsTupleType(lldb::opaque_compiler_type_t type) = 0;
   using TypeSystem::DumpTypeDescription;
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
