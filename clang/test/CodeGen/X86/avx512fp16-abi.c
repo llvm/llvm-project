@@ -197,3 +197,44 @@ _Float16 fs2(struct shalf2 s) {
   // CHECK-CPP: define{{.*}} @_Z3fs26shalf2(double {{.*}}
   return s.a;
 };
+
+struct fsd {
+  float a;
+  struct {};
+  double b;
+};
+
+struct fsd pr52011() {
+  // CHECK: define{{.*}} { float, double } @
+}
+
+struct hsd {
+  _Float16 a;
+  struct {};
+  double b;
+};
+
+struct hsd pr52011_2() {
+  // CHECK: define{{.*}} { half, double } @
+}
+
+struct hsf {
+  _Float16 a;
+  struct {};
+  float b;
+};
+
+struct hsf pr52011_3() {
+  // CHECK: define{{.*}} <4 x half> @
+}
+
+struct fds {
+  float a;
+  double b;
+  struct {};
+};
+
+struct fds pr52011_4() {
+  // CHECK-C: define{{.*}} { float, double } @pr52011_4
+  // CHECK-CPP: define{{.*}} void @_Z9pr52011_4v({{.*}} sret
+}
