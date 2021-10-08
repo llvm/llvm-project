@@ -517,6 +517,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "landing-pad";
       hasAttributes = true;
     }
+    if (isInlineAsmBrIndirectTarget()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "inlineasm-br-indirect-target";
+      hasAttributes = true;
+    }
     if (isEHFuncletEntry()) {
       os << (hasAttributes ? ", " : " (");
       os << "ehfunclet-entry";

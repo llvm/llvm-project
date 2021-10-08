@@ -4254,14 +4254,27 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       return FalseVal;
   }
 
-  // select i1 Cond, i1 true, i1 false --> i1 Cond
   assert(Cond->getType()->isIntOrIntVectorTy(1) &&
          "Select must have bool or bool vector condition");
   assert(TrueVal->getType() == FalseVal->getType() &&
          "Select must have same types for true/false ops");
-  if (Cond->getType() == TrueVal->getType() &&
-      match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
-    return Cond;
+
+  if (Cond->getType() == TrueVal->getType()) {
+    // select i1 Cond, i1 true, i1 false --> i1 Cond
+    if (match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
+      return Cond;
+
+    // (X || Y) && (X || !Y) --> X (commuted 8 ways)
+    Value *X, *Y;
+    if (match(FalseVal, m_ZeroInt())) {
+      if (match(Cond, m_c_LogicalOr(m_Value(X), m_Not(m_Value(Y)))) &&
+          match(TrueVal, m_c_LogicalOr(m_Specific(X), m_Specific(Y))))
+        return X;
+      if (match(TrueVal, m_c_LogicalOr(m_Value(X), m_Not(m_Value(Y)))) &&
+          match(Cond, m_c_LogicalOr(m_Specific(X), m_Specific(Y))))
+        return X;
+    }
+  }
 
   // select ?, X, X -> X
   if (TrueVal == FalseVal)

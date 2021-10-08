@@ -136,6 +136,12 @@ using namespace llvm;
 /// worst cases before LSR burns too much compile time and stack space.
 static const unsigned MaxIVUsers = 200;
 
+/// Limit the size of expression that SCEV-based salvaging will attempt to
+/// translate into a DIExpression.
+/// Choose a maximum size such that debuginfo is not excessively increased and
+/// the salvaging is not too expensive for the compiler.
+static const unsigned MaxSCEVSalvageExpressionSize = 64;
+
 // Temporary flag to cleanup congruent phis after LSR phi expansion.
 // It's currently disabled until we can determine whether it's truly useful or
 // not. The flag should be removed after the v3.0 release.
@@ -6152,6 +6158,9 @@ static void RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
   if (!Rec->isAffine())
     return;
 
+  if (CachedDVI.SCEV->getExpressionSize() > MaxSCEVSalvageExpressionSize)
+    return;
+
   // Initialise a new builder with the iteration count expression. In
   // combination with the value's SCEV this enables recovery.
   SCEVDbgValueBuilder RecoverValue(IterationCount);
@@ -6196,7 +6205,10 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
     if (!IVAddRec->isAffine())
       return;
 
-    // The iteratioun count is required to recover location values.
+    if (IVAddRec->getExpressionSize() > MaxSCEVSalvageExpressionSize)
+      return;
+
+    // The iteration count is required to recover location values.
     SCEVDbgValueBuilder IterCountExpr;
     IterCountExpr.pushValue(LSRInductionVar);
     if (!IterCountExpr.SCEVToIterCountExpr(*IVAddRec, SE))

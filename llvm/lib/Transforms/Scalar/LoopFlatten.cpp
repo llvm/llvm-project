@@ -815,7 +815,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  return getLoopPassPreservedAnalyses();
 }
 
 namespace {

@@ -74,7 +74,7 @@ protected:
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
-
+  StringRef getCalleeNameForOffset(uint64_t TargetOffset);
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
 
