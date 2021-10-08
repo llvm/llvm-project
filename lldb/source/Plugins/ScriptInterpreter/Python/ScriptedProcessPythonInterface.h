@@ -50,6 +50,11 @@ public:
   lldb::pid_t GetProcessID() override;
 
   bool IsAlive() override;
+
+  llvm::Optional<std::string> GetScriptedThreadPluginName() override;
+
+private:
+  lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() override;
 };
 } // namespace lldb_private
 
