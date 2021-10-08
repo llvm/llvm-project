@@ -200,3 +200,7 @@
 "`P2281R1 <https://wg21.link/P2281R1>`__","LWG",Clarifying range adaptor objects,"June 2021","",""
 "`P2328R1 <https://wg21.link/P2328R1>`__","LWG",join_view should join all views of ranges,"June 2021","",""
 "`P2367R0 <https://wg21.link/P2367R0>`__","LWG",Remove misuses of list-initialization from Clause 24,"June 2021","",""
+"`P2372 <https://wg21.link/P2372>`__","LWG","Fixing locale handling in chrono formatters","October 2021","",""
+"`P2415 <https://wg21.link/P2415>`__","LWG","What is a ``view``","October 2021","",""
+"`P2418 <https://wg21.link/P2418>`__","LWG","Add support for ``std::generator``-like types to ``std::format``","October 2021","",""
+"`P2432 <https://wg21.link/P2432>`__","LWG","Fix ``istream_view``","October 2021","",""

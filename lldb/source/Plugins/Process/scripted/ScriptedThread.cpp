@@ -141,13 +141,13 @@ bool ScriptedThread::CalculateStopInfo() {
 
   if (!dict_sp->GetValueForKeyAsInteger("type", stop_reason_type))
     return GetInterface()->ErrorWithMessage<bool>(
-        __PRETTY_FUNCTION__,
+        LLVM_PRETTY_FUNCTION,
         "Couldn't find value for key 'type' in stop reason dictionary.", error);
 
   StructuredData::Dictionary *data_dict;
   if (!dict_sp->GetValueForKeyAsDictionary("data", data_dict))
     return GetInterface()->ErrorWithMessage<bool>(
-        __PRETTY_FUNCTION__,
+        LLVM_PRETTY_FUNCTION,
         "Couldn't find value for key 'type' in stop reason dictionary.", error);
 
   switch (stop_reason_type) {
@@ -171,7 +171,7 @@ bool ScriptedThread::CalculateStopInfo() {
   } break;
   default:
     return GetInterface()->ErrorWithMessage<bool>(
-        __PRETTY_FUNCTION__,
+        LLVM_PRETTY_FUNCTION,
         llvm::Twine("Unsupported stop reason type (" +
                     llvm::Twine(stop_reason_type) + llvm::Twine(")."))
             .str(),

@@ -437,7 +437,11 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8AllForms) {
   TestAllForms<4, AddrType, RefAddrType>();
 }
 
+#ifdef _AIX
+TEST(DWARFDebigInfo, DISABLED_TestDWARF32Version5Addr4AllForms) {
+#else
 TEST(DWARFDebugInfo, TestDWARF32Version5Addr4AllForms) {
+#endif
   // Test that we can decode all forms for DWARF32, version 5, with 4 byte
   // addresses.
   typedef uint32_t AddrType;
@@ -446,7 +450,11 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr4AllForms) {
   TestAllForms<5, AddrType, RefAddrType>();
 }
 
+#ifdef _AIX
+TEST(DWARFDebigInfo, DISABLED_TestDWARF32Version5Addr8AllForms) {
+#else
 TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
+#endif
   // Test that we can decode all forms for DWARF32, version 5, with 8 byte
   // addresses.
   typedef uint64_t AddrType;
@@ -1007,7 +1015,11 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
   TestAddresses<4, AddrType>();
 }
 
+#ifdef _AIX
+TEST(DWARFDebugInfo, DISABLED_TestStringOffsets) {
+#else
 TEST(DWARFDebugInfo, TestStringOffsets) {
+#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isObjectEmissionSupported(Triple))
     return;

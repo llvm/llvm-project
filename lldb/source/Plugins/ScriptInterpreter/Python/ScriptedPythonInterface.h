@@ -39,7 +39,7 @@ protected:
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
     std::string caller_signature =
-        llvm::Twine(__PRETTY_FUNCTION__ + llvm::Twine(" (") +
+        llvm::Twine(LLVM_PRETTY_FUNCTION + llvm::Twine(" (") +
                     llvm::Twine(method_name) + llvm::Twine(")"))
             .str();
     if (!m_object_instance_sp)
