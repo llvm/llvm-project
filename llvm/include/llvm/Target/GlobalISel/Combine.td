@@ -732,6 +732,12 @@ def mulh_to_lshr : GICombineRule<
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
 
+def redundant_neg_operands: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMAD, G_FMA):$root,
+    [{ return Helper.matchRedundantNegOperands(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -779,7 +785,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
-    intdiv_combines, mulh_combines]>;
+    intdiv_combines, mulh_combines, redundant_neg_operands]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
