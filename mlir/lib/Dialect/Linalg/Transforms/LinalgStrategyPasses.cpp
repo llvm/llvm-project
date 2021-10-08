@@ -68,6 +68,39 @@ struct LinalgStrategyTilePass
   LinalgTransformationFilter filter;
 };
 
+/// Configurable pass to apply pattern-based linalg generalization.
+struct LinalgStrategyGeneralizePass
+    : public LinalgStrategyGeneralizePassBase<LinalgStrategyGeneralizePass> {
+
+  LinalgStrategyGeneralizePass() = default;
+
+  LinalgStrategyGeneralizePass(StringRef opName,
+                               LinalgTransformationFilter filter)
+      : filter(filter) {
+    this->anchorOpName.setValue(opName.str());
+  }
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+
+    RewritePatternSet generalizationPattern(funcOp.getContext());
+    if (!anchorOpName.empty()) {
+      generalizationPattern.add<LinalgGeneralizationPattern>(
+          anchorOpName, funcOp.getContext(), filter);
+    } else {
+      generalizationPattern.add<LinalgGeneralizationPattern>(
+          funcOp.getContext(), filter);
+    }
+    if (failed(applyPatternsAndFoldGreedily(funcOp,
+                                            std::move(generalizationPattern))))
+      signalPassFailure();
+  }
+
+  LinalgTransformationFilter filter;
+};
+
 /// Configurable pass to apply pattern-based linalg promotion.
 struct LinalgStrategyPromotePass
     : public LinalgStrategyPromotePassBase<LinalgStrategyPromotePass> {
@@ -231,6 +264,13 @@ mlir::createLinalgStrategyPromotePass(StringRef opName,
                                       LinalgPromotionOptions opt,
                                       LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyPromotePass>(opName, opt, filter);
+}
+
+/// Create a LinalgStrategyGeneralizePass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyGeneralizePass(StringRef opName,
+                                         LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
 }
 
 /// Create a LinalgStrategyVectorizePass.
