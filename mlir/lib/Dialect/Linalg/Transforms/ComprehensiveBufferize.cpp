@@ -136,6 +136,8 @@ using namespace mlir;
 using namespace linalg;
 using namespace tensor;
 
+using BufferRelation = BufferizationAliasInfo::BufferRelation;
+
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
@@ -421,8 +423,10 @@ static std::string printValueInfo(Value value, bool prefix) {
 //      buffers in memory.
 //   3. Whether an op operand, when bufferized inplace, aliases a return value.
 //   4. Whether an op return value, when bufferized inplace, aliases an operand.
-//   5. Wheher an op bufferizes to a memory read.
-//   6. Wheher an op bufferizes to a memory write.
+//   5. Whether an op bufferizes to a memory read.
+//   6. Whether an op bufferizes to a memory write.
+//   7. The buffer relationship between an operand and it corresponding result
+//      (in case of in-place bufferization).
 // These interfaces are necessary to distinguish between various cases and allow
 // special inplace behavior for (ExtractSliceOp, InsertSliceOp) pairs.
 //===----------------------------------------------------------------------===//
@@ -557,7 +561,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
     return None;
   return TypeSwitch<Operation *, OpOperand *>(result.getDefiningOp())
       .Case([&](tensor::CastOp op) { return &op->getOpOperand(0); })
-      .Case([&](ConstantOp op) { return &op->getOpOperand(0); })
+      .Case([&](ConstantOp op) { return nullptr; })
       .Case([&](ExtractSliceOp op) { return &op->getOpOperand(0); })
       // In the case of scf::ForOp, this currently assumes the iter_args / yield
       // are 1-1. This may fail and is verified at the end.
@@ -576,6 +580,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
                                  op.getNumInputs() + result.getResultNumber());
       })
       .Case([&](vector::TransferWriteOp op) { return &op->getOpOperand(1); })
+      .Case([&](CallOpInterface op) { return nullptr; })
       .Default([&](Operation *op) {
         op->dump();
         llvm_unreachable("unexpected defining op");
@@ -682,6 +687,16 @@ bufferizesToMemoryWrite(OpOperand &opOperand,
          getInPlace(opResult) == inPlaceSpec;
 }
 
+/// Returns the relationship between the operand and the its corresponding
+/// OpResult that it may alias with.
+static BufferRelation bufferRelation(OpOperand &operand) {
+  return TypeSwitch<Operation *, BufferRelation>(operand.getOwner())
+      // ExtractSliceOp returns a subview of the original tensor.
+      .Case([&](ExtractSliceOp op) { return BufferRelation::None; })
+      // All other ops: Buffers are equivalent.
+      .Default([&](Operation *op) { return BufferRelation::Equivalent; });
+}
+
 //===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
 //===----------------------------------------------------------------------===//
@@ -721,40 +736,36 @@ void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
   equivalentInfo.unionSets(newValue, alias);
 }
 
-/// Return true if the buffer to which `operand` would bufferize aliases a
-/// buffer that is known to not be writable. This implies that the matching
-/// OpResult cannot be bufferized inplace.
-bool BufferizationAliasInfo::aliasesNonWritableBuffer(
-    OpOperand &operand) const {
+/// Return true if, under current bufferization decisions, the buffer of `value`
+/// is not writable.
+bool BufferizationAliasInfo::aliasesNonWritableBuffer(Value value) const {
   LDBG("----Start aliasesNonWritableBuffer\n");
-  LDBG("-------for -> #" << operand.getOperandNumber() << ": "
-                         << printOperationInfo(operand.getOwner()) << '\n');
-  for (Value v : getAliases(operand.get())) {
+  for (Value v : getAliases(value)) {
     LDBG("-----------examine: " << printValueInfo(v) << '\n');
     if (bufferizesToWritableMemory(v)) {
-      LDBG("-----------Value is known to be writeable -> skip: "
+      LDBG("-----------Value is known to be writable -> skip: "
            << printValueInfo(v) << '\n');
       continue;
     }
 
     if (auto bbArg = v.dyn_cast<BlockArgument>()) {
       if (getInPlace(bbArg) == InPlaceSpec::True) {
-        LDBG("-----------bbArg is writeable -> skip: " << printValueInfo(bbArg)
-                                                       << '\n');
+        LDBG("-----------bbArg is writable -> skip: " << printValueInfo(bbArg)
+                                                      << '\n');
         continue;
       }
-      LDBG("-----------notWriteable\n");
+      LDBG("-----------notWritable bbArg\n");
       return true;
     }
 
     if (Operation *op = v.getDefiningOp()) {
       if (isa<ConstantOp>(op) || !hasKnownBufferizationAliasingBehavior(op)) {
-        LDBG("-----------notWritable\n");
+        LDBG("-----------notWritable op\n");
         return true;
       }
     }
   }
-  LDBG("---->operand is writable\n");
+  LDBG("---->value is writable\n");
   return false;
 }
 
@@ -787,13 +798,12 @@ bool BufferizationAliasInfo::aliasesInPlaceWrite(Value value) const {
 
 /// Set the inPlace bufferization spec to true.
 void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
-                                              OpOperand &operand,
-                                              BufferRelation bufferRelation) {
+                                              OpOperand &operand) {
   setInPlaceOpResult(result, InPlaceSpec::True);
   aliasInfo.unionSets(result, operand.get());
   // Dump the updated alias analysis.
   LLVM_DEBUG(dumpAliases());
-  if (bufferRelation == BufferRelation::Equivalent)
+  if (bufferRelation(operand) == BufferRelation::Equivalent)
     equivalentInfo.unionSets(result, operand.get());
   // Dump the updated equivalence analysis.
   LLVM_DEBUG(dumpEquivalences());
@@ -2225,7 +2235,7 @@ bufferizableInPlaceAnalysis(ExtractSliceOp extractSliceOp,
   // aliasing a write into a non-writable buffer.
   bool wouldCreateAliasingWriteToNonWritableBuffer =
       aliasInfo.aliasesInPlaceWrite(extractSliceOp.result()) &&
-      aliasInfo.aliasesNonWritableBuffer(extractSliceOp->getOpOperand(0));
+      aliasInfo.aliasesNonWritableBuffer(extractSliceOp.source());
 
   if (wouldCreateAliasingWriteToNonWritableBuffer)
     LDBG("->the corresponding buffer is not writable\n");
@@ -2278,7 +2288,7 @@ bufferizableInPlaceAnalysis(OpOperand &operand,
   //   2. a constant op.
   // to be considered for inplace bufferization
   bool wouldCreateAliasingWriteToNonWritableBuffer =
-      aliasInfo.aliasesNonWritableBuffer(operand);
+      aliasInfo.aliasesNonWritableBuffer(operand.get());
   if (wouldCreateAliasingWriteToNonWritableBuffer)
     LDBG("->the corresponding buffer is not writable\n");
   else
@@ -2293,8 +2303,7 @@ bufferizableInPlaceAnalysis(OpOperand &operand,
   else
     // TODO: Atm, all inplace bufferizations yield equivalent tensors. Support
     // more cases on a per-need basis.
-    aliasInfo.bufferizeInPlace(
-        result, operand, BufferizationAliasInfo::BufferRelation::Equivalent);
+    aliasInfo.bufferizeInPlace(result, operand);
 
   LDBG("Done inplace analysis for result #" << resultNumber << '\n');
 

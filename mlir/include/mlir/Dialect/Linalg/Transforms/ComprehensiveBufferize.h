@@ -56,10 +56,9 @@ public:
   /// `alias`. Additionally, merge their equivalence classes.
   void insertNewBufferEquivalence(Value newValue, Value alias);
 
-  /// Return true if the buffer to which `operand` would bufferize aliases a
-  /// buffer that is known to not be writable. This implies that the matching
-  /// OpResult cannot be bufferized inplace.
-  bool aliasesNonWritableBuffer(OpOperand &operand) const;
+  /// Return true if, under current bufferization decisions, the buffer of
+  /// `value` is not writable.
+  bool aliasesNonWritableBuffer(Value value) const;
 
   /// Return true if the buffer to which `operand` would bufferize is equivalent
   /// to some buffer write.
@@ -67,8 +66,7 @@ public:
 
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
-  void bufferizeInPlace(OpResult result, OpOperand &operand,
-                        BufferRelation bufferRelation = BufferRelation::None);
+  void bufferizeInPlace(OpResult result, OpOperand &operand);
 
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpResult result);
