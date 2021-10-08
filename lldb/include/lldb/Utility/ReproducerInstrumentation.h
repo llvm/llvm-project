@@ -868,17 +868,14 @@ public:
 
   /// Mark the current thread as a private thread and pretend that everything
   /// on this thread is behind happening behind the API boundary.
-  static void PrivateThread() { g_global_boundary = true; }
+  static void PrivateThread();
 
 private:
   static unsigned GetNextSequenceNumber() { return g_sequence++; }
   unsigned GetSequenceNumber() const;
 
   template <typename T> friend struct replay;
-  void UpdateBoundary() {
-    if (m_local_boundary)
-      g_global_boundary = false;
-  }
+  void UpdateBoundary();
 
 #ifdef LLDB_REPRO_INSTR_TRACE
   void Log(unsigned id) {
@@ -901,9 +898,6 @@ private:
 
   /// The sequence number for this pair of function and result.
   unsigned m_sequence;
-
-  /// Whether we're currently across the API boundary.
-  static thread_local bool g_global_boundary;
 
   /// Global mutex to protect concurrent access.
   static std::mutex g_mutex;
