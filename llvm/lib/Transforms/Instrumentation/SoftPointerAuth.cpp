@@ -136,7 +136,7 @@ private:
     if (!hasType(call, resultTypeTag))
       return false;
 
-    if (call->getNumArgOperands() != argTypeTags.size())
+    if (call->arg_size() != argTypeTags.size())
       return false;
     for (unsigned i = 0, e = argTypeTags.size(); i != e; ++i) {
       if (!hasType(call->getArgOperand(i), argTypeTags[i]))
