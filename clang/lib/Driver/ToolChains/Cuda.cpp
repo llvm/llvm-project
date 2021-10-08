@@ -556,9 +556,6 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(TC.getTriple().isNVPTX() && "Wrong platform");
 
   ArgStringList CmdArgs;
-  const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
-  CmdArgs.push_back(Exec);
 
   // OpenMP uses nvlink to link cubin files. The result will be embedded in the
   // host binary by the host linker.
@@ -613,7 +610,7 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
-  AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
                       false, false);
 
   // Find nvlink and pass it as "--nvlink-path=" argument of
@@ -752,7 +749,7 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
-    AddStaticDeviceLibs(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
+    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
                         /* bitcode SDL?*/ true, /* PostClang Link? */ true);
   }
 }
