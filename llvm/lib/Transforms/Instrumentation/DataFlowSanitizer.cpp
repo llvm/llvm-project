@@ -462,7 +462,6 @@ class DataFlowSanitizer {
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   bool isForceZeroLabels(const Function *F);
-  FunctionType *getArgsFunctionType(FunctionType *T);
   FunctionType *getTrampolineFunctionType(FunctionType *T);
   TransformedFunction getCustomFunctionType(FunctionType *T);
   WrapperKind getWrapperKind(Function *F);
@@ -769,17 +768,6 @@ DataFlowSanitizer::DataFlowSanitizer(
   // FIXME: should we propagate vfs::FileSystem to this constructor?
   ABIList.set(
       SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
-}
-
-FunctionType *DataFlowSanitizer::getArgsFunctionType(FunctionType *T) {
-  SmallVector<Type *, 4> ArgTypes(T->param_begin(), T->param_end());
-  ArgTypes.append(T->getNumParams(), PrimitiveShadowTy);
-  if (T->isVarArg())
-    ArgTypes.push_back(PrimitiveShadowPtrTy);
-  Type *RetType = T->getReturnType();
-  if (!RetType->isVoidTy())
-    RetType = StructType::get(RetType, PrimitiveShadowTy);
-  return FunctionType::get(RetType, ArgTypes, T->isVarArg());
 }
 
 FunctionType *DataFlowSanitizer::getTrampolineFunctionType(FunctionType *T) {
