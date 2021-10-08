@@ -1412,12 +1412,6 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
-  // C99 6.2.5p11.
-  FloatComplexTy      = getComplexType(FloatTy);
-  DoubleComplexTy     = getComplexType(DoubleTy);
-  LongDoubleComplexTy = getComplexType(LongDoubleTy);
-  Float128ComplexTy   = getComplexType(Float128Ty);
-
   // Builtin types for 'id', 'Class', and 'SEL'.
   InitBuiltinType(ObjCBuiltinIdTy, BuiltinType::ObjCId);
   InitBuiltinType(ObjCBuiltinClassTy, BuiltinType::ObjCClass);
@@ -6350,10 +6344,10 @@ QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
     case Float16Rank:
     case HalfRank: llvm_unreachable("Complex half is not supported");
     case Ibm128Rank: llvm_unreachable("Complex __ibm128 is not supported");
-    case FloatRank:      return FloatComplexTy;
-    case DoubleRank:     return DoubleComplexTy;
-    case LongDoubleRank: return LongDoubleComplexTy;
-    case Float128Rank:   return Float128ComplexTy;
+    case FloatRank:      return getComplexType(FloatTy);
+    case DoubleRank:     return getComplexType(DoubleTy);
+    case LongDoubleRank: return getComplexType(LongDoubleTy);
+    case Float128Rank:   return getComplexType(Float128Ty);
     }
   }
 
