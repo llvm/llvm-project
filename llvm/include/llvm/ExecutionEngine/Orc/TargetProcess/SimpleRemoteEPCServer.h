@@ -37,6 +37,28 @@ class SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
 public:
   using ReportErrorFunction = unique_function<void(Error)>;
 
+  /// Dispatches calls to runWrapper.
+  class Dispatcher {
+  public:
+    virtual ~Dispatcher();
+    virtual void dispatch(unique_function<void()> Work) = 0;
+    virtual void shutdown() = 0;
+  };
+
+#if LLVM_ENABLE_THREADS
+  class ThreadDispatcher : public Dispatcher {
+  public:
+    void dispatch(unique_function<void()> Work) override;
+    void shutdown() override;
+
+  private:
+    std::mutex DispatchMutex;
+    bool Running = true;
+    size_t Outstanding = 0;
+    std::condition_variable OutstandingCV;
+  };
+#endif
+
   class Setup {
     friend class SimpleRemoteEPCServer;
 
@@ -46,9 +68,7 @@ public:
     std::vector<std::unique_ptr<ExecutorBootstrapService>> &services() {
       return Services;
     }
-    void setDispatcher(std::unique_ptr<SimpleRemoteEPCDispatcher> D) {
-      S.D = std::move(D);
-    }
+    void setDispatcher(std::unique_ptr<Dispatcher> D) { S.D = std::move(D); }
     void setErrorReporter(unique_function<void(Error)> ReportError) {
       S.ReportError = std::move(ReportError);
     }
@@ -146,7 +166,7 @@ private:
   enum { ServerRunning, ServerShuttingDown, ServerShutDown } RunState;
   Error ShutdownErr = Error::success();
   std::unique_ptr<SimpleRemoteEPCTransport> T;
-  std::unique_ptr<SimpleRemoteEPCDispatcher> D;
+  std::unique_ptr<Dispatcher> D;
   std::vector<std::unique_ptr<ExecutorBootstrapService>> Services;
   ReportErrorFunction ReportError;
 
