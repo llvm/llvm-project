@@ -722,7 +722,7 @@ void FormatManager::LoadSystemFormatters() {
       new StringSummaryFormat(string_flags, "${var%s}"));
 
   lldb::TypeSummaryImplSP string_array_format(
-      new StringSummaryFormat(string_array_flags, "${var%s}"));
+      new StringSummaryFormat(string_array_flags, "${var%char[]}"));
 
   RegularExpression any_size_char_arr(llvm::StringRef("char \\[[0-9]+\\]"));
 
