@@ -1356,6 +1356,16 @@ StringRef sys::getHostCPUName() {
     return "generic";
   }
 }
+#elif defined(__riscv)
+StringRef sys::getHostCPUName() {
+#if __riscv_xlen == 64
+  return "generic-rv64";
+#elif __riscv_xlen == 32
+  return "generic-rv32";
+#else
+#error "Unhandled value of __riscv_xlen"
+#endif
+}
 #else
 StringRef sys::getHostCPUName() { return "generic"; }
 namespace llvm {
