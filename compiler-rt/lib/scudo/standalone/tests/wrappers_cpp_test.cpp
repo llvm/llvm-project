@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -131,6 +132,22 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
 
 #if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCppTest, AllocAfterFork) {
+  // This test can fail flakily when ran as a part of large number of
+  // other tests if the maxmimum number of mappings allowed is low.
+  // We tried to reduce the number of iterations of the loops with
+  // moderate success, so we will now skip this test under those
+  // circumstances.
+  if (SCUDO_LINUX) {
+    long MaxMapCount = 0;
+    // If the file can't be accessed, we proceed with the test.
+    std::ifstream Stream("/proc/sys/vm/max_map_count");
+    if (Stream.good()) {
+      Stream >> MaxMapCount;
+      if (MaxMapCount < 200000)
+        return;
+    }
+  }
+
   std::atomic_bool Stop;
 
   // Create threads that simply allocate and free different sizes.
