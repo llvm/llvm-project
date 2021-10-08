@@ -16,6 +16,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
