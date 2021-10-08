@@ -19,8 +19,8 @@
 
 namespace __sanitizer {
 
-static PersistentAllocator allocator;
-static PersistentAllocator traceAllocator;
+static PersistentAllocator<StackDepotNode> allocator;
+static PersistentAllocator<uptr> traceAllocator;
 
 struct StackDepotNode {
   using hash_type = u64;
@@ -43,7 +43,7 @@ struct StackDepotNode {
     return allocator.allocated() + traceAllocator.allocated();
   }
   static StackDepotNode *allocate(const args_type &args) {
-    return (StackDepotNode *)allocator.alloc(sizeof(StackDepotNode));
+    return allocator.alloc();
   }
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
@@ -59,7 +59,7 @@ struct StackDepotNode {
     atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
                  memory_order_relaxed);
     stack_hash = hash;
-    stack_trace = (uptr *)traceAllocator.alloc((args.size + 1) * sizeof(uptr));
+    stack_trace = traceAllocator.alloc(args.size + 1);
     *stack_trace = args.size;
     internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   }
