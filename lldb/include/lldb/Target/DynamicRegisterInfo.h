@@ -53,6 +53,9 @@ public:
   size_t SetRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                          const lldb_private::ArchSpec &arch);
 
+  size_t SetRegisterInfo(std::vector<Register> &&regs,
+                         const lldb_private::ArchSpec &arch);
+
   void AddRegister(lldb_private::RegisterInfo reg_info,
                    lldb_private::ConstString &set_name);
 
@@ -68,7 +71,7 @@ public:
 
   const lldb_private::RegisterSet *GetRegisterSet(uint32_t i) const;
 
-  uint32_t GetRegisterSetIndexByName(lldb_private::ConstString &set_name,
+  uint32_t GetRegisterSetIndexByName(const lldb_private::ConstString &set_name,
                                      bool can_create);
 
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,

@@ -379,6 +379,45 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   return m_regs.size();
 }
 
+size_t DynamicRegisterInfo::SetRegisterInfo(
+    std::vector<DynamicRegisterInfo::Register> &&regs,
+    const ArchSpec &arch) {
+  assert(!m_finalized);
+
+  for (auto it : llvm::enumerate(regs)) {
+    uint32_t local_regnum = it.index();
+    const DynamicRegisterInfo::Register &reg = it.value();
+
+    assert(reg.name);
+    assert(reg.set_name);
+
+    if (!reg.value_regs.empty())
+      m_value_regs_map[local_regnum] = std::move(reg.value_regs);
+    if (!reg.invalidate_regs.empty())
+      m_invalidate_regs_map[local_regnum] = std::move(reg.invalidate_regs);
+
+    struct RegisterInfo reg_info {
+      reg.name.AsCString(), reg.alt_name.AsCString(), reg.byte_size,
+          reg.byte_offset, reg.encoding, reg.format,
+          {reg.regnum_ehframe, reg.regnum_dwarf, reg.regnum_generic,
+           reg.regnum_remote, local_regnum},
+          // value_regs and invalidate_regs are filled by Finalize()
+          nullptr, nullptr
+    };
+
+    m_regs.push_back(reg_info);
+
+    uint32_t set = GetRegisterSetIndexByName(reg.set_name, true);
+    assert(set < m_sets.size());
+    assert(set < m_set_reg_nums.size());
+    assert(set < m_set_names.size());
+    m_set_reg_nums[set].push_back(local_regnum);
+  };
+
+  Finalize(arch);
+  return m_regs.size();
+}
+
 void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
                                       ConstString &set_name) {
   assert(!m_finalized);
@@ -682,8 +721,9 @@ const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
   return nullptr;
 }
 
-uint32_t DynamicRegisterInfo::GetRegisterSetIndexByName(ConstString &set_name,
-                                                        bool can_create) {
+uint32_t
+DynamicRegisterInfo::GetRegisterSetIndexByName(const ConstString &set_name,
+                                               bool can_create) {
   name_collection::iterator pos, end = m_set_names.end();
   for (pos = m_set_names.begin(); pos != end; ++pos) {
     if (*pos == set_name)
