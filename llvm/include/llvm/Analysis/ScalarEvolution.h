@@ -1524,22 +1524,22 @@ private:
   /// copied if its needed for longer.
   const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Stop}.
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
   /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
+  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
                                     const SCEV *MaxBECount, unsigned BitWidth);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
-  /// Start,+,\p Stop}<nw>.
+  /// Start,+,\p Step}<nw>.
   ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
                                                   const SCEV *MaxBECount,
                                                   unsigned BitWidth,
                                                   RangeSignHint SignHint);
 
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
-  /// Stop} by "factoring out" a ternary expression from the add recurrence.
+  /// Step} by "factoring out" a ternary expression from the add recurrence.
   /// Helper called by \c getRange.
-  ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Stop,
+  ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Step,
                                      const SCEV *MaxBECount, unsigned BitWidth);
 
   /// If the unknown expression U corresponds to a simple recurrence, return
