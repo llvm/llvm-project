@@ -70,6 +70,11 @@
 // CHECK-NO-NANS-NO-FAST-MATH: "-cc1"
 // CHECK-NO-NANS-NO-FAST-MATH-NOT: "-menable-no-nans"
 //
+// RUN: %clang -### -fapprox-func -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC %s
+// CHECK-APPROX-FUNC: "-cc1"
+// CHECK-APPROX-FUNC: "-fapprox-func"
+//
 // RUN: %clang -### -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
 // CHECK-MATH-ERRNO: "-cc1"
