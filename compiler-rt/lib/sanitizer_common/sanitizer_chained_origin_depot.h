@@ -13,8 +13,6 @@
 #define SANITIZER_CHAINED_ORIGIN_DEPOT_H
 
 #include "sanitizer_common.h"
-#include "sanitizer_persistent_allocator.h"
-#include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
 

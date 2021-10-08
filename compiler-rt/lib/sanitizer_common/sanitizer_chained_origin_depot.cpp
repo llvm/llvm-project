@@ -11,6 +11,9 @@
 
 #include "sanitizer_chained_origin_depot.h"
 
+#include "sanitizer_persistent_allocator.h"
+#include "sanitizer_stackdepotbase.h"
+
 namespace __sanitizer {
 
 namespace {
