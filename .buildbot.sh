@@ -21,6 +21,11 @@ make -j `nproc` install
 make -j `nproc` check-all
 cd ..
 
+# clang-format any new files that we've introduced ourselves.
+PATH=${INST_DIR}/bin:${PATH}
+sh yk_format_new_files.sh
+git diff --exit-code
+
 # FIXME The commented code below should run the `test-suite` tests, as
 # described at https://llvm.org/docs/TestSuiteGuide.html.
 #

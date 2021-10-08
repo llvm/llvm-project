@@ -40,6 +40,7 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/Transforms/Yk/ControlPoint.h"
 
 using namespace llvm;
 
@@ -162,6 +163,11 @@ cl::opt<AttributorRunOption> AttributorRun(
                           "enable call graph SCC attributor runs"),
                clEnumValN(AttributorRunOption::NONE, "none",
                           "disable attributor runs")));
+
+static cl::opt<bool>
+YkPatchCtrlPoint("yk-patch-control-point",
+  cl::init(false), cl::NotHidden,
+  cl::desc("Patch yk_control_point()"));
 
 extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
@@ -601,6 +607,14 @@ void PassManagerBuilder::populateModulePassManager(
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
 
     MPM.add(createAnnotationRemarksLegacyPass());
+
+    // We add the yk control point pass late in the pipeline (after all
+    // optimisation and just before verification and codegen) so that no IR
+    // optimisation passes have a chance to change the interface to the control
+    // point. The JIT runtime relies on the signature not being changed.
+    if (YkPatchCtrlPoint)
+      MPM.add(createYkControlPointPass());
+
     return;
   }
 
@@ -798,6 +812,13 @@ void PassManagerBuilder::populateModulePassManager(
   addExtensionsToPM(EP_OptimizerLast, MPM);
 
   MPM.add(createAnnotationRemarksLegacyPass());
+
+  // We add the yk control point pass late in the pipeline (after all
+  // optimisation and just before verification and codegen) so that no IR
+  // optimisation passes have a chance to change the interface to the control
+  // point. The JIT runtime relies on the signature not being changed.
+  if (YkPatchCtrlPoint)
+    MPM.add(createYkControlPointPass());
 }
 
 LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate() {

@@ -73,4 +73,5 @@ add_llvm_component_library(LLVMipo
   Vectorize
   Instrumentation
   Scalar
+  YkControlPoint
   )
