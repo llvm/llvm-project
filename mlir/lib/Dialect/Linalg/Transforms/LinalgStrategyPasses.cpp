@@ -101,6 +101,37 @@ struct LinalgStrategyGeneralizePass
   LinalgTransformationFilter filter;
 };
 
+/// Configurable pass to apply pattern-based linalg generalization.
+struct LinalgStrategyInterchangePass
+    : public LinalgStrategyInterchangePassBase<LinalgStrategyInterchangePass> {
+
+  LinalgStrategyInterchangePass() = default;
+
+  LinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange,
+                                LinalgTransformationFilter filter)
+      : iteratorInterchange(iteratorInterchange.begin(),
+                            iteratorInterchange.end()),
+        filter(filter) {}
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+
+    SmallVector<unsigned> interchangeVector(iteratorInterchange.begin(),
+                                            iteratorInterchange.end());
+    RewritePatternSet interchangePattern(funcOp.getContext());
+    interchangePattern.add<GenericOpInterchangePattern>(
+        funcOp.getContext(), interchangeVector, filter);
+    if (failed(applyPatternsAndFoldGreedily(funcOp,
+                                            std::move(interchangePattern))))
+      signalPassFailure();
+  }
+
+  SmallVector<int64_t> iteratorInterchange;
+  LinalgTransformationFilter filter;
+};
+
 /// Configurable pass to apply pattern-based linalg promotion.
 struct LinalgStrategyPromotePass
     : public LinalgStrategyPromotePassBase<LinalgStrategyPromotePass> {
@@ -271,6 +302,14 @@ std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgStrategyGeneralizePass(StringRef opName,
                                          LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
+}
+
+/// Create a LinalgStrategyInterchangePass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange,
+                                          LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyInterchangePass>(iteratorInterchange,
+                                                         filter);
 }
 
 /// Create a LinalgStrategyVectorizePass.

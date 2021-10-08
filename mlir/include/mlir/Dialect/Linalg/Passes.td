@@ -268,6 +268,17 @@ def LinalgStrategyGeneralizePass
   ];
 }
 
+def LinalgStrategyInterchangePass
+    : FunctionPass<"linalg-strategy-interchange-pass"> {
+  let summary = "Configurable pass to apply pattern-based iterator interchange.";
+  let constructor = "mlir::createLinalgStrategyInterchangePass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+  ];
+}
+
 def LinalgStrategyVectorizePass
     : FunctionPass<"linalg-strategy-vectorize-pass"> {
   let summary = "Configurable pass to apply pattern-based linalg vectorization.";
