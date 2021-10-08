@@ -21,8 +21,6 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
 
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/State.h"
 
 #include <mutex>
@@ -234,26 +232,22 @@ bool ScriptedProcess::IsAlive() {
 
 size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
-
-  auto error_with_message = [&error](llvm::StringRef message) {
-    error.SetErrorString(message);
-    return 0;
-  };
-
   if (!m_interpreter)
-    return error_with_message("No interpreter.");
+    return GetInterface().ErrorWithMessage<size_t>(__PRETTY_FUNCTION__,
+                                                   "No interpreter.", error);
 
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
     return 0;
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
       0, data_extractor_sp->GetByteSize(), buf, size, GetByteOrder());
 
   if (!bytes_copied || bytes_copied == LLDB_INVALID_OFFSET)
-    return error_with_message("Failed to copy read memory to buffer.");
+    return GetInterface().ErrorWithMessage<size_t>(
+        __PRETTY_FUNCTION__, "Failed to copy read memory to buffer.", error);
 
   return size;
 }
@@ -264,24 +258,34 @@ ArchSpec ScriptedProcess::GetArchitecture() {
 
 Status ScriptedProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                             MemoryRegionInfo &region) {
-  // TODO: Implement
-  return Status();
+  CheckInterpreterAndScriptObject();
+
+  Status error;
+  if (auto region_or_err =
+          GetInterface().GetMemoryRegionContainingAddress(load_addr, error))
+    region = *region_or_err;
+
+  return error;
 }
 
 Status ScriptedProcess::GetMemoryRegions(MemoryRegionInfos &region_list) {
   CheckInterpreterAndScriptObject();
 
+  Status error;
   lldb::addr_t address = 0;
-  lldb::MemoryRegionInfoSP mem_region_sp = nullptr;
 
-  while ((mem_region_sp =
-              GetInterface().GetMemoryRegionContainingAddress(address))) {
-    auto range = mem_region_sp->GetRange();
+  while (auto region_or_err =
+             GetInterface().GetMemoryRegionContainingAddress(address, error)) {
+    if (error.Fail())
+      break;
+
+    MemoryRegionInfo &mem_region = *region_or_err;
+    auto range = mem_region.GetRange();
     address += range.GetRangeBase() + range.GetByteSize();
-    region_list.push_back(*mem_region_sp.get());
+    region_list.push_back(mem_region);
   }
 
-  return {};
+  return error;
 }
 
 void ScriptedProcess::Clear() { Process::m_thread_list.Clear(); }
@@ -292,6 +296,30 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   // This is supposed to get the current set of threads, if any of them are in
   // old_thread_list then they get copied to new_thread_list, and then any
   // actually new threads will get added to new_thread_list.
+
+  CheckInterpreterAndScriptObject();
+
+  Status error;
+  ScriptLanguage language = m_interpreter->GetLanguage();
+
+  if (language != eScriptLanguagePython)
+    return GetInterface().ErrorWithMessage<bool>(
+        __PRETTY_FUNCTION__,
+        llvm::Twine("ScriptInterpreter language (" +
+                    llvm::Twine(m_interpreter->LanguageToString(language)) +
+                    llvm::Twine(") not supported."))
+            .str(),
+        error);
+
+  lldb::ThreadSP thread_sp;
+  thread_sp = std::make_shared<ScriptedThread>(*this, error);
+
+  if (!thread_sp || error.Fail())
+    return GetInterface().ErrorWithMessage<bool>(__PRETTY_FUNCTION__,
+                                                 error.AsCString(), error);
+
+  new_thread_list.AddThread(thread_sp);
+
   return new_thread_list.GetSize(false) > 0;
 }
 

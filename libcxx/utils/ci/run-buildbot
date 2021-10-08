@@ -287,14 +287,15 @@ generic-gcc)
     export CC=gcc-11
     export CXX=g++-11
     clean
-    generate-cmake
+    generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-gcc.cfg.in"
     check-runtimes
 ;;
 generic-gcc-cxx11)
     export CC=gcc-11
     export CXX=g++-11
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
+                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-gcc.cfg.in"
     check-runtimes
 ;;
 generic-asan)
@@ -366,14 +367,6 @@ generic-no-unicode)
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
-    check-runtimes
-;;
-x86_64-apple-system-noexceptions)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
     check-runtimes
 ;;

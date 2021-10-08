@@ -316,7 +316,6 @@
 ; GCN-O1-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O1-NEXT:        Two-Address instruction pass
-; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
@@ -600,7 +599,6 @@
 ; GCN-O1-OPTS-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-OPTS-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O1-OPTS-NEXT:        Two-Address instruction pass
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
@@ -886,7 +884,6 @@
 ; GCN-O2-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O2-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O2-NEXT:        Two-Address instruction pass
-; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
@@ -1186,7 +1183,6 @@
 ; GCN-O3-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O3-NEXT:        Two-Address instruction pass
-; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        Machine Natural Loop Construction

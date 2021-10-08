@@ -165,13 +165,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
-
-static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
-  static ProcessKDPPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PluginProperties>();
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 } // namespace
@@ -213,7 +209,7 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
 }
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
-  return std::chrono::seconds(GetGlobalPluginProperties()->GetPacketTimeout());
+  return std::chrono::seconds(GetGlobalPluginProperties().GetPacketTimeout());
 }
 
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
@@ -302,12 +298,12 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
   }
 
   const uint64_t timeout_seconds =
-      GetGlobalPluginProperties()->GetPacketTimeout();
+      GetGlobalPluginProperties().GetPacketTimeout();
   if (timeout_seconds > 0)
     m_gdb_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 
   m_use_g_packet_for_reading =
-      GetGlobalPluginProperties()->GetUseGPacketForReading();
+      GetGlobalPluginProperties().GetUseGPacketForReading();
 }
 
 // Destructor
@@ -401,7 +397,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   // timeout is and can see it.
   const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
   if (host_packet_timeout > std::chrono::seconds(0)) {
-    GetGlobalPluginProperties()->SetPacketTimeout(host_packet_timeout.count());
+    GetGlobalPluginProperties().SetPacketTimeout(host_packet_timeout.count());
   }
 
   // Register info search order:
@@ -411,7 +407,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   //     3 - Fall back on the qRegisterInfo packets.
 
   FileSpec target_definition_fspec =
-      GetGlobalPluginProperties()->GetTargetDefinitionFile();
+      GetGlobalPluginProperties().GetTargetDefinitionFile();
   if (!FileSystem::Instance().Exists(target_definition_fspec)) {
     // If the filename doesn't exist, it may be a ~ not having been expanded -
     // try to resolve it.
@@ -509,17 +505,6 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
           } else if (name.equals("invalidate-regs")) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
-          } else if (name.equals("dynamic_size_dwarf_expr_bytes")) {
-            size_t dwarf_opcode_len = value.size() / 2;
-            assert(dwarf_opcode_len > 0);
-
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
-
-            StringExtractor opcode_extractor(value);
-            uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
-            assert(dwarf_opcode_len == ret_val);
-            UNUSED_IF_ASSERT_DISABLED(ret_val);
           }
         }
 
@@ -3539,7 +3524,7 @@ void ProcessGDBRemote::DebuggerInitialize(Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the gdb-remote process plug-in."),
         is_global_setting);
   }
@@ -3936,12 +3921,14 @@ Status ProcessGDBRemote::SendEventData(const char *data) {
 DataExtractor ProcessGDBRemote::GetAuxvData() {
   DataBufferSP buf;
   if (m_gdb_comm.GetQXferAuxvReadSupported()) {
-    std::string response_string;
-    if (m_gdb_comm.SendPacketsAndConcatenateResponses("qXfer:auxv:read::",
-                                                      response_string) ==
-        GDBRemoteCommunication::PacketResult::Success)
-      buf = std::make_shared<DataBufferHeap>(response_string.c_str(),
-                                             response_string.length());
+    llvm::Expected<std::string> response = m_gdb_comm.ReadExtFeature("auxv", "");
+    if (response)
+      buf = std::make_shared<DataBufferHeap>(response->c_str(),
+                                             response->length());
+    else
+      LLDB_LOG_ERROR(
+          ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS),
+          response.takeError(), "{0}");
   }
   return DataExtractor(buf, GetByteOrder(), GetAddressByteSize());
 }
@@ -4308,17 +4295,6 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (name == "invalidate_regnums") {
             SplitCommaSeparatedRegisterNumberString(
                 value, reg_info.invalidate_regs, 0);
-          } else if (name == "dynamic_size_dwarf_expr_bytes") {
-            std::string opcode_string = value.str();
-            size_t dwarf_opcode_len = opcode_string.length() / 2;
-            assert(dwarf_opcode_len > 0);
-
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
-            StringExtractor opcode_extractor(opcode_string);
-            uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
-            assert(dwarf_opcode_len == ret_val);
-            UNUSED_IF_ASSERT_DISABLED(ret_val);
           } else {
             Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
                 GDBR_LOG_PROCESS));
@@ -4382,17 +4358,14 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     ArchSpec &arch_to_use, std::string xml_filename, std::vector<RemoteRegisterInfo> &registers) {
   // request the target xml file
-  std::string raw;
-  lldb_private::Status lldberr;
-  if (!m_gdb_comm.ReadExtFeature(ConstString("features"),
-                                 ConstString(xml_filename.c_str()), raw,
-                                 lldberr)) {
+  llvm::Expected<std::string> raw = m_gdb_comm.ReadExtFeature("features", xml_filename);
+  if (errorToBool(raw.takeError()))
     return false;
-  }
 
   XMLDocument xml_document;
 
-  if (xml_document.ParseMemory(raw.c_str(), raw.size(), xml_filename.c_str())) {
+  if (xml_document.ParseMemory(raw->c_str(), raw->size(),
+                               xml_filename.c_str())) {
     GdbServerTargetInfo target_info;
     std::vector<XMLNode> feature_nodes;
 
@@ -4546,10 +4519,6 @@ void ProcessGDBRemote::AddRemoteRegisters(
            local_regnum},
           regs_with_sentinel(remote_reg_info.value_regs),
           regs_with_sentinel(remote_reg_info.invalidate_regs),
-          !remote_reg_info.dwarf_opcode_bytes.empty()
-              ? remote_reg_info.dwarf_opcode_bytes.data()
-              : nullptr,
-          remote_reg_info.dwarf_opcode_bytes.size(),
     };
 
     if (abi_sp)
@@ -4590,24 +4559,20 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
 
   LoadedModuleInfoList list;
   GDBRemoteCommunicationClient &comm = m_gdb_comm;
-  bool can_use_svr4 = GetGlobalPluginProperties()->GetUseSVR4();
+  bool can_use_svr4 = GetGlobalPluginProperties().GetUseSVR4();
 
   // check that we have extended feature read support
   if (can_use_svr4 && comm.GetQXferLibrariesSVR4ReadSupported()) {
     // request the loaded library list
-    std::string raw;
-    lldb_private::Status lldberr;
-
-    if (!comm.ReadExtFeature(ConstString("libraries-svr4"), ConstString(""),
-                             raw, lldberr))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Error in libraries-svr4 packet");
+    llvm::Expected<std::string> raw = comm.ReadExtFeature("libraries-svr4", "");
+    if (!raw)
+      return raw.takeError();
 
     // parse the xml file in memory
-    LLDB_LOGF(log, "parsing: %s", raw.c_str());
+    LLDB_LOGF(log, "parsing: %s", raw->c_str());
     XMLDocument doc;
 
-    if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
+    if (!doc.ParseMemory(raw->c_str(), raw->size(), "noname.xml"))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Error reading noname.xml");
 
@@ -4686,18 +4651,15 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
     return list;
   } else if (comm.GetQXferLibrariesReadSupported()) {
     // request the loaded library list
-    std::string raw;
-    lldb_private::Status lldberr;
+    llvm::Expected<std::string> raw = comm.ReadExtFeature("libraries", "");
 
-    if (!comm.ReadExtFeature(ConstString("libraries"), ConstString(""), raw,
-                             lldberr))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Error in libraries packet");
+    if (!raw)
+      return raw.takeError();
 
-    LLDB_LOGF(log, "parsing: %s", raw.c_str());
+    LLDB_LOGF(log, "parsing: %s", raw->c_str());
     XMLDocument doc;
 
-    if (!doc.ParseMemory(raw.c_str(), raw.size(), "noname.xml"))
+    if (!doc.ParseMemory(raw->c_str(), raw->size(), "noname.xml"))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Error reading noname.xml");
 

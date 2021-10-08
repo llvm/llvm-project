@@ -83,6 +83,30 @@ void test_string_type() {
 
   std::basic_string<CharT> s(CSTR("abc\0abc"), 7);
   test_termination_condition<T, ArgumentT>(s, STR("}"), s);
+
+  test_termination_condition<T, ArgumentT>(STR("world"), STR("}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("world"), STR("_>}"),
+                                           STR("world"));
+
+  test_termination_condition<T, ArgumentT>(STR("   world"), STR(">8}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("___world"), STR("_>8}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("_world__"), STR("_^8}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("world___"), STR("_<8}"),
+                                           STR("world"));
+
+  test_termination_condition<T, ArgumentT>(STR("world"), STR(".5}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("unive"), STR(".5}"),
+                                           STR("universe"));
+
+  test_termination_condition<T, ArgumentT>(STR("%world%"), STR("%^7.7}"),
+                                           STR("world"));
+  test_termination_condition<T, ArgumentT>(STR("univers"), STR("%^7.7}"),
+                                           STR("universe"));
 }
 
 template <class CharT>

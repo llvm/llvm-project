@@ -23,12 +23,19 @@ namespace __sanitizer {
 class PersistentAllocator {
  public:
   void *alloc(uptr size);
+  uptr allocated() const {
+    SpinMutexLock l(&mtx);
+    return atomic_load_relaxed(&mapped_size) +
+           atomic_load_relaxed(&region_pos) - atomic_load_relaxed(&region_end);
+  }
 
  private:
   void *tryAlloc(uptr size);
-  StaticSpinMutex mtx;  // Protects alloc of new blocks for region allocator.
+  void *refillAndAlloc(uptr size);
+  mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.
   atomic_uintptr_t region_pos;  // Region allocator for Node's.
   atomic_uintptr_t region_end;
+  atomic_uintptr_t mapped_size;
 };
 
 inline void *PersistentAllocator::tryAlloc(uptr size) {
@@ -46,24 +53,9 @@ inline void *PersistentAllocator::tryAlloc(uptr size) {
 inline void *PersistentAllocator::alloc(uptr size) {
   // First, try to allocate optimisitically.
   void *s = tryAlloc(size);
-  if (s) return s;
-  // If failed, lock, retry and alloc new superblock.
-  SpinMutexLock l(&mtx);
-  for (;;) {
-    s = tryAlloc(size);
-    if (s) return s;
-    atomic_store(&region_pos, 0, memory_order_relaxed);
-    uptr allocsz = 64 * 1024;
-    if (allocsz < size) allocsz = size;
-    uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
-    atomic_store(&region_end, mem + allocsz, memory_order_release);
-    atomic_store(&region_pos, mem, memory_order_release);
-  }
-}
-
-extern PersistentAllocator thePersistentAllocator;
-inline void *PersistentAlloc(uptr sz) {
-  return thePersistentAllocator.alloc(sz);
+  if (LIKELY(s))
+    return s;
+  return refillAndAlloc(size);
 }
 
 } // namespace __sanitizer

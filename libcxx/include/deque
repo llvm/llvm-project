@@ -1649,7 +1649,7 @@ template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>&
 deque<_Tp, _Allocator>::operator=(const deque& __c)
 {
-    if (this != &__c)
+    if (this != _VSTD::addressof(__c))
     {
         __copy_assign_alloc(__c);
         assign(__c.begin(), __c.end());

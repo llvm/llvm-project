@@ -726,6 +726,37 @@ Optional<APFloat> llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
   return None;
 }
 
+Optional<SmallVector<unsigned>>
+llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Src);
+  SmallVector<unsigned> FoldedCTLZs;
+  auto tryFoldScalar = [&](Register R) -> Optional<unsigned> {
+    auto MaybeCst = getIConstantVRegVal(R, MRI);
+    if (!MaybeCst)
+      return None;
+    return MaybeCst->countLeadingZeros();
+  };
+  if (Ty.isVector()) {
+    // Try to constant fold each element.
+    auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
+    if (!BV)
+      return None;
+    for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+      if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
+        FoldedCTLZs.emplace_back(*MaybeFold);
+        continue;
+      }
+      return None;
+    }
+    return FoldedCTLZs;
+  }
+  if (auto MaybeCst = tryFoldScalar(Src)) {
+    FoldedCTLZs.emplace_back(*MaybeCst);
+    return FoldedCTLZs;
+  }
+  return None;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   Optional<DefinitionAndSourceRegister> DefSrcReg =
@@ -1014,6 +1045,23 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return None;
   return RegOrConstant(Reg);
+}
+
+bool llvm::isConstantOrConstantVector(MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI) {
+  Register Def = MI.getOperand(0).getReg();
+  if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
+    return true;
+  GBuildVector *BV = dyn_cast<GBuildVector>(&MI);
+  if (!BV)
+    return false;
+  for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+    if (getIConstantVRegValWithLookThrough(BV->getSourceReg(SrcIdx), MRI) ||
+        getOpcodeDef<GImplicitDef>(BV->getSourceReg(SrcIdx), MRI))
+      continue;
+    return false;
+  }
+  return true;
 }
 
 Optional<APInt>

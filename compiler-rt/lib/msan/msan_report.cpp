@@ -201,15 +201,18 @@ void DescribeMemoryRange(const void *x, uptr size) {
 
   Decorator d;
   Printf("%s", d.Warning());
-  Printf("Shadow map of [%p, %p), %zu bytes:\n",
+  uptr start_x = reinterpret_cast<uptr>(x);
+  Printf("Shadow map [%p, %p) of [%p, %p), %zu bytes:\n",
          reinterpret_cast<void *>(start), reinterpret_cast<void *>(end),
-         end - start);
+         reinterpret_cast<void *>(start_x),
+         reinterpret_cast<void *>(start_x + end - start), end - start);
   Printf("%s", d.Default());
   while (s < e) {
     // Line start.
     if (pos % 16 == 0) {
       for (int i = 0; i < 4; ++i) origin_ids[i] = -1;
-      Printf("%p:", reinterpret_cast<void *>(s));
+      Printf("%p[%p]:", reinterpret_cast<void *>(s),
+             reinterpret_cast<void *>(start_x - start + s));
     }
     // Group start.
     if (pos % 4 == 0) {

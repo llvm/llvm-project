@@ -686,54 +686,6 @@ bool GDBRemoteCommunicationClient::GetxPacketSupported() {
   return m_supports_x;
 }
 
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses(
-    const char *payload_prefix, std::string &response_string) {
-  Lock lock(*this);
-  if (!lock) {
-    Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
-                                                           GDBR_LOG_PACKETS));
-    LLDB_LOGF(log,
-              "error: failed to get packet sequence mutex, not sending "
-              "packets with prefix '%s'",
-              payload_prefix);
-    return PacketResult::ErrorNoSequenceLock;
-  }
-
-  response_string = "";
-  std::string payload_prefix_str(payload_prefix);
-  unsigned int response_size = 0x1000;
-  if (response_size > GetRemoteMaxPacketSize()) { // May send qSupported packet
-    response_size = GetRemoteMaxPacketSize();
-  }
-
-  for (unsigned int offset = 0; true; offset += response_size) {
-    StringExtractorGDBRemote this_response;
-    // Construct payload
-    char sizeDescriptor[128];
-    snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset,
-             response_size);
-    PacketResult result = SendPacketAndWaitForResponseNoLock(
-        payload_prefix_str + sizeDescriptor, this_response);
-    if (result != PacketResult::Success)
-      return result;
-
-    const std::string &this_string = std::string(this_response.GetStringRef());
-
-    // Check for m or l as first character; l seems to mean this is the last
-    // chunk
-    char first_char = *this_string.c_str();
-    if (first_char != 'm' && first_char != 'l') {
-      return PacketResult::ErrorReplyInvalid;
-    }
-    // Concatenate the result so far (skipping 'm' or 'l')
-    response_string.append(this_string, 1, std::string::npos);
-    if (first_char == 'l')
-      // We're done
-      return PacketResult::Success;
-  }
-}
-
 lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
   if (allow_lazy && m_curr_pid_is_valid == eLazyBoolYes)
     return m_curr_pid;
@@ -1751,17 +1703,13 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
     return error;
   }
 
-  std::string xml;
-  lldb_private::Status lldberr;
-  if (!ReadExtFeature(ConstString("memory-map"), ConstString(""), xml,
-                      lldberr)) {
-    error.SetErrorString("Failed to read memory map");
-    return error;
-  }
+  llvm::Expected<std::string> xml = ReadExtFeature("memory-map", "");
+  if (!xml)
+    return Status(xml.takeError());
 
   XMLDocument xml_document;
 
-  if (!xml_document.ParseMemory(xml.c_str(), xml.size())) {
+  if (!xml_document.ParseMemory(xml->c_str(), xml->size())) {
     error.SetErrorString("Failed to parse memory map xml");
     return error;
   }
@@ -3931,15 +3879,14 @@ GDBRemoteCommunicationClient::GetModulesInfo(
 
 // query the target remote for extended information using the qXfer packet
 //
-// example: object='features', annex='target.xml', out=<xml output> return:
-// 'true'  on success
-//          'false' on failure (err set)
-bool GDBRemoteCommunicationClient::ReadExtFeature(
-    const lldb_private::ConstString object,
-    const lldb_private::ConstString annex, std::string &out,
-    lldb_private::Status &err) {
+// example: object='features', annex='target.xml'
+// return: <xml output> or error
+llvm::Expected<std::string>
+GDBRemoteCommunicationClient::ReadExtFeature(llvm::StringRef object,
+                                             llvm::StringRef annex) {
 
-  std::stringstream output;
+  std::string output;
+  llvm::raw_string_ostream output_stream(output);
   StringExtractorGDBRemote chunk;
 
   uint64_t size = GetRemoteMaxPacketSize();
@@ -3953,28 +3900,22 @@ bool GDBRemoteCommunicationClient::ReadExtFeature(
   while (active) {
 
     // send query extended feature packet
-    std::stringstream packet;
-    packet << "qXfer:" << object.AsCString("")
-           << ":read:" << annex.AsCString("") << ":" << std::hex << offset
-           << "," << std::hex << size;
+    std::string packet =
+        ("qXfer:" + object + ":read:" + annex + ":" +
+         llvm::Twine::utohexstr(offset) + "," + llvm::Twine::utohexstr(size))
+            .str();
 
     GDBRemoteCommunication::PacketResult res =
-        SendPacketAndWaitForResponse(packet.str(), chunk);
+        SendPacketAndWaitForResponse(packet, chunk);
 
-    if (res != GDBRemoteCommunication::PacketResult::Success) {
-      err.SetErrorString("Error sending $qXfer packet");
-      return false;
-    }
-
-    const std::string &str = std::string(chunk.GetStringRef());
-    if (str.length() == 0) {
-      // should have some data in chunk
-      err.SetErrorString("Empty response from $qXfer packet");
-      return false;
+    if (res != GDBRemoteCommunication::PacketResult::Success ||
+        chunk.GetStringRef().empty()) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Error sending $qXfer packet");
     }
 
     // check packet code
-    switch (str[0]) {
+    switch (chunk.GetStringRef()[0]) {
     // last chunk
     case ('l'):
       active = false;
@@ -3982,21 +3923,19 @@ bool GDBRemoteCommunicationClient::ReadExtFeature(
 
     // more chunks
     case ('m'):
-      if (str.length() > 1)
-        output << &str[1];
-      offset += str.length() - 1;
+      output_stream << chunk.GetStringRef().drop_front();
+      offset += chunk.GetStringRef().size() - 1;
       break;
 
     // unknown chunk
     default:
-      err.SetErrorString("Invalid continuation code from $qXfer packet");
-      return false;
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Invalid continuation code from $qXfer packet");
     }
   }
 
-  out = output.str();
-  err.Success();
-  return true;
+  return output_stream.str();
 }
 
 // Notify the target that gdb is prepared to serve symbol lookup requests.

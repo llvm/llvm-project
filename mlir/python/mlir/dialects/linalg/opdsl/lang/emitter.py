@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence, Tuple, Union
 
 from .....ir import *
 from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
@@ -10,6 +10,7 @@ from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
 from .... import linalg
 from .... import std
 from .... import math
+from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
 
 from .scalar_expr import *
 from .config import *
@@ -18,8 +19,10 @@ import numpy as np
 __all__ = [
     "emit_generic_structured_op",
     "emit_named_structured_op",
+    "ValueList",
 ]
 
+ValueList = Union[Sequence[Value], OpResultList]
 
 def isa(cls: Type, ty: Type):
   try:
@@ -30,17 +33,18 @@ def isa(cls: Type, ty: Type):
 
 
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
-                                 *ins: Value, outs: Sequence[Value],
+                                 *ins: Value, outs: ValueList,
                                  **attrs: Sequence[int]):
   all_arg_defs = op_config.ordered_operands
   in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "InputOperand"]
   out_arg_defs = [arg for arg in all_arg_defs if arg.usage == "OutputOperand"]
   attr_arg_defs = [arg for arg in all_arg_defs if arg.usage == "IndexAttribute"]
 
-  # Verify outs is a sequence.
-  if not isinstance(outs, Sequence):
-    raise ValueError(f"Expected named argument outs to have type Sequence "
-                     f"but got {type(outs)}")
+  # Verify outs is a sequence or a list of results.
+  if not isinstance(outs, (Sequence, OpResultList)):
+    raise ValueError(
+        f"Expected named argument outs to have type Sequence or OpResultLis but got {type(outs)}"
+    )
 
   # Arity validation.
   if len(ins) != len(in_arg_defs):
@@ -122,7 +126,7 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
-                               outs: Sequence[Value], **attrs: Sequence[int]):
+                               outs: ValueList, **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
   indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
@@ -153,8 +157,8 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
 
 
 def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
-                             op_class_name: str, *ins: Value,
-                             outs: Sequence[Value], **attrs: Sequence[int]):
+                             op_class_name: str, *ins: Value, outs: ValueList,
+                             **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
   indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
@@ -355,11 +359,11 @@ class _BodyBuilder:
       return std.MinUIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
 
-def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
-                           in_arg_defs: Sequence[OperandDefConfig],
-                           ins: Sequence[Value],
-                           out_arg_defs: Sequence[OperandDefConfig],
-                           outs: Sequence[Value]):
+def _infer_structured_outs(
+    op_config: LinalgStructuredOpConfig,
+    in_arg_defs: Sequence[OperandDefConfig], ins: Sequence[Value],
+    out_arg_defs: Sequence[OperandDefConfig],
+    outs: Union[Sequence[Value], OpResultList]) -> Tuple[ValueList, List[Type]]:
   """Infers implicit outs and output types.
 
   Respects existing contents of outs if not empty.

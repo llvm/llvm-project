@@ -173,6 +173,7 @@ set(bc_flags -S -x c++ -O1 -std=c++14
              -I${devicertl_base_directory}
              -I${devicertl_common_directory}/include
              -I${devicertl_nvptx_directory}/src
+             -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_NVPTX})
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})

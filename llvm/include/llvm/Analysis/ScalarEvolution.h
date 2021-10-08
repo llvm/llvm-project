@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
@@ -1457,15 +1456,15 @@ private:
       LoopDispositions;
 
   struct LoopProperties {
-    /// Set to true if the loop contains no instruction that can have side
-    /// effects (i.e. via throwing an exception, volatile or atomic access).
-    bool HasNoAbnormalExits;
-
     /// Set to true if the loop contains no instruction that can abnormally exit
     /// the loop (i.e. via throwing an exception, by terminating the thread
     /// cleanly or by infinite looping in a called function).  Strictly
     /// speaking, the last one is not leaving the loop, but is identical to
     /// leaving the loop for reasoning about undefined behavior.
+    bool HasNoAbnormalExits;
+
+    /// Set to true if the loop contains no instruction that can have side
+    /// effects (i.e. via throwing an exception, volatile or atomic access).
     bool HasNoSideEffects;
   };
 
@@ -1525,22 +1524,22 @@ private:
   /// copied if its needed for longer.
   const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Stop}.
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
   /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
+  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
                                     const SCEV *MaxBECount, unsigned BitWidth);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
-  /// Start,+,\p Stop}<nw>.
+  /// Start,+,\p Step}<nw>.
   ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
                                                   const SCEV *MaxBECount,
                                                   unsigned BitWidth,
                                                   RangeSignHint SignHint);
 
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
-  /// Stop} by "factoring out" a ternary expression from the add recurrence.
+  /// Step} by "factoring out" a ternary expression from the add recurrence.
   /// Helper called by \c getRange.
-  ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Stop,
+  ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Step,
                                      const SCEV *MaxBECount, unsigned BitWidth);
 
   /// If the unknown expression U corresponds to a simple recurrence, return

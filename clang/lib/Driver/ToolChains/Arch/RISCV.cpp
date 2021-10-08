@@ -58,9 +58,9 @@ static StringRef getExtensionType(StringRef Ext) {
 // extension that the compiler currently supports.
 static Optional<RISCVExtensionVersion>
 isExperimentalExtension(StringRef Ext) {
-  if (Ext == "b" || Ext == "zba" || Ext == "zbb" || Ext == "zbc" ||
-      Ext == "zbe" || Ext == "zbf" || Ext == "zbm" || Ext == "zbp" ||
-      Ext == "zbr" || Ext == "zbs" || Ext == "zbt")
+  if (Ext == "zba" || Ext == "zbb" || Ext == "zbc" || Ext == "zbe" ||
+      Ext == "zbf" || Ext == "zbm" || Ext == "zbp" || Ext == "zbr" ||
+      Ext == "zbs" || Ext == "zbt")
     return RISCVExtensionVersion{"0", "93"};
   if (Ext == "v" || Ext == "zvamo" || Ext == "zvlsseg")
     return RISCVExtensionVersion{"0", "10"};
@@ -416,19 +416,6 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
       break;
     case 'c':
       Features.push_back("+c");
-      break;
-    case 'b':
-      Features.push_back("+experimental-b");
-      Features.push_back("+experimental-zba");
-      Features.push_back("+experimental-zbb");
-      Features.push_back("+experimental-zbc");
-      Features.push_back("+experimental-zbe");
-      Features.push_back("+experimental-zbf");
-      Features.push_back("+experimental-zbm");
-      Features.push_back("+experimental-zbp");
-      Features.push_back("+experimental-zbr");
-      Features.push_back("+experimental-zbs");
-      Features.push_back("+experimental-zbt");
       break;
     case 'v':
       Features.push_back("+experimental-v");

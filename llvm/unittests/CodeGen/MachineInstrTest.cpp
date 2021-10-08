@@ -386,6 +386,32 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getHeapAllocMarker());
 }
 
+TEST(MachineInstrDebugValue, AddDebugValueOperand) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+
+  for (const unsigned short Opcode :
+       {TargetOpcode::DBG_VALUE, TargetOpcode::DBG_VALUE_LIST,
+        TargetOpcode::DBG_INSTR_REF, TargetOpcode::DBG_PHI,
+        TargetOpcode::DBG_LABEL}) {
+    const MCInstrDesc MCID = {
+        Opcode, 0,       0,
+        0,      0,       (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
+        0,      nullptr, nullptr,
+        nullptr};
+
+    auto *MI = MF->CreateMachineInstr(MCID, DebugLoc());
+    MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ false));
+
+    MI->addOperand(*MF, MachineOperand::CreateImm(0));
+    MI->getOperand(1).ChangeToRegister(0, false);
+
+    ASSERT_TRUE(MI->getOperand(0).isDebug());
+    ASSERT_TRUE(MI->getOperand(1).isDebug());
+  }
+}
+
 static_assert(std::is_trivially_copyable<MCOperand>::value,
               "trivially copyable");
 

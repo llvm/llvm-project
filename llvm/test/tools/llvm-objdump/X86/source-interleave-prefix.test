@@ -89,3 +89,10 @@
 
 ; RUN: not llvm-objdump --prefix %p --prefix-strip foo --source %t-missing-prefix.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-INVALID-PREFIX-STRIP -DOPTION='foo'
+
+;; Test use of --prefix= and --prefix-strip=
+
+; RUN: sed -e "s,SRC_COMPDIR,/extra/Inputs,g" %p/Inputs/source-interleave.ll > %t-extra-path-prefix.ll
+; RUN: llc -o %t-extra-path-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-extra-path-prefix.ll
+; RUN: llvm-objdump --prefix=%p --prefix-strip=1 --source %t-extra-path-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX

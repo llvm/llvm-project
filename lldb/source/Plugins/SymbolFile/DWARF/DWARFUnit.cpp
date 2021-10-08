@@ -671,22 +671,28 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static RegularExpression g_llvm_gcc_regex(
+  static const RegularExpression g_swiftlang_version_regex(
+      llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_clang_version_regex(
+      llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_llvm_gcc_regex(
       llvm::StringRef(R"(4\.[012]\.[01] )"
                       R"(\(Based on Apple Inc\. build [0-9]+\) )"
                       R"(\(LLVM build [\.0-9]+\)$)"));
-  static RegularExpression g_clang_version_regex(
-      llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
 
-  if (g_llvm_gcc_regex.Execute(producer)) {
-    m_producer = eProducerLLVMGCC;
+  llvm::SmallVector<llvm::StringRef, 3> matches;
+  if (g_swiftlang_version_regex.Execute(producer, &matches)) {
+      m_producer_version.tryParse(matches[1]);
+    m_producer = eProducerSwift;
   } else if (producer.contains("clang")) {
-    llvm::SmallVector<llvm::StringRef, 3> matches;
     if (g_clang_version_regex.Execute(producer, &matches))
       m_producer_version.tryParse(matches[1]);
     m_producer = eProducerClang;
-  } else if (producer.contains("GNU"))
+  } else if (producer.contains("GNU")) {
     m_producer = eProducerGCC;
+  } else if (g_llvm_gcc_regex.Execute(producer)) {
+    m_producer = eProducerLLVMGCC;
+  }
 }
 
 DWARFProducer DWARFUnit::GetProducer() {
