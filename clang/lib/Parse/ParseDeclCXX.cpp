@@ -678,7 +678,10 @@ Parser::ParseUsingDeclaration(
     SourceLocation UsingLoc, SourceLocation &DeclEnd,
     ParsedAttributesWithRange &PrefixAttrs, AccessSpecifier AS) {
   SourceLocation UELoc;
-  if (TryConsumeToken(tok::kw_enum, UELoc)) {
+  bool InInitStatement = Context == DeclaratorContext::SelectionInit ||
+                         Context == DeclaratorContext::ForInit;
+
+  if (TryConsumeToken(tok::kw_enum, UELoc) && !InInitStatement) {
     // C++20 using-enum
     Diag(UELoc, getLangOpts().CPlusPlus20
                     ? diag::warn_cxx17_compat_using_enum_declaration
@@ -714,6 +717,9 @@ Parser::ParseUsingDeclaration(
   ParsedAttributesWithRange MisplacedAttrs(AttrFactory);
   MaybeParseCXX11Attributes(MisplacedAttrs);
 
+  if (InInitStatement && Tok.isNot(tok::identifier))
+    return nullptr;
+
   UsingDeclarator D;
   bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
 
@@ -732,7 +738,7 @@ Parser::ParseUsingDeclaration(
   }
 
   // Maybe this is an alias-declaration.
-  if (Tok.is(tok::equal)) {
+  if (Tok.is(tok::equal) || InInitStatement) {
     if (InvalidDeclarator) {
       SkipUntil(tok::semi);
       return nullptr;
