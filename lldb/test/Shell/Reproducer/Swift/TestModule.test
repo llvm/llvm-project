@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-freebsd
+# UNSUPPORTED: system-windows, system-freebsd, linux
 # REQUIRES: swift
 
 # This tests replaying a Swift reproducer with bridging.
