@@ -691,12 +691,6 @@ DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) const {
   return nullptr;
 }
 
-RegisterInfo *DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) {
-  if (i < m_regs.size())
-    return &m_regs[i];
-  return nullptr;
-}
-
 const RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(uint32_t kind,
                                                          uint32_t num) const {
   uint32_t reg_index = ConvertRegisterKindToRegisterNumber(kind, num);

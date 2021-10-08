@@ -55,8 +55,6 @@ public:
 
   const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(uint32_t i) const;
 
-  lldb_private::RegisterInfo *GetRegisterInfoAtIndex(uint32_t i);
-
   const lldb_private::RegisterSet *GetRegisterSet(uint32_t i) const;
 
   uint32_t GetRegisterSetIndexByName(lldb_private::ConstString &set_name,
