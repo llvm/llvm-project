@@ -1,5 +1,5 @@
 #include "AArch64Subtarget.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gtest/gtest.h"

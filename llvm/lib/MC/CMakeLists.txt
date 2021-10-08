@@ -60,6 +60,7 @@ add_llvm_component_library(LLVMMC
   MachObjectWriter.cpp
   StringTableBuilder.cpp
   SubtargetFeature.cpp
+  TargetRegistry.cpp
   WasmObjectWriter.cpp
   WinCOFFObjectWriter.cpp
   XCOFFObjectWriter.cpp

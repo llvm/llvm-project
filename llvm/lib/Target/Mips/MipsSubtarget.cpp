@@ -12,17 +12,17 @@
 
 #include "MipsSubtarget.h"
 #include "Mips.h"
-#include "MipsMachineFunction.h"
-#include "MipsRegisterInfo.h"
-#include "MipsTargetMachine.h"
 #include "MipsCallLowering.h"
 #include "MipsLegalizerInfo.h"
+#include "MipsMachineFunction.h"
 #include "MipsRegisterBankInfo.h"
+#include "MipsRegisterInfo.h"
+#include "MipsTargetMachine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

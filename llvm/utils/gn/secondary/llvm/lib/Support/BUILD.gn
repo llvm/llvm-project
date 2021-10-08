@@ -168,7 +168,6 @@ static_library("Support") {
     "Process.cpp",
     "Program.cpp",
     "Signals.cpp",
-    "TargetRegistry.cpp",
     "ThreadLocal.cpp",
     "Threading.cpp",
     "Valgrind.cpp",

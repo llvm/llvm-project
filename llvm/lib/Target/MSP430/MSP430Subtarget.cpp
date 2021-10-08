@@ -12,7 +12,7 @@
 
 #include "MSP430Subtarget.h"
 #include "MSP430.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 

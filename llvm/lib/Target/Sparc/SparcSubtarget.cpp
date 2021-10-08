@@ -12,8 +12,8 @@
 
 #include "SparcSubtarget.h"
 #include "Sparc.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 

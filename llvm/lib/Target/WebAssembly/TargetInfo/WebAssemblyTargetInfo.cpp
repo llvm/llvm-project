@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-target-info"
