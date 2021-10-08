@@ -28,6 +28,10 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+//
+// Interop between linalg/sparse leaves some issues to be revolved:
+// UNSUPPORTED: asan
+
 
 #SM = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
 
@@ -162,6 +166,11 @@ module {
         : memref<8x8xf64>, vector<8x8xf64>
     vector.print %v0 : vector<8x8xf64>
     vector.print %v1 : vector<8x8xf64>
+
+    // Release the resources.
+    sparse_tensor.release %s : tensor<8x8xf64, #SM>
+    memref.dealloc %m0 : memref<8x8xf64>
+    memref.dealloc %m1 : memref<8x8xf64>
 
     return
   }

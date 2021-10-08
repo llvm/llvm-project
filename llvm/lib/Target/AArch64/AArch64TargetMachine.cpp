@@ -195,7 +195,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
-  initializeAArch64MIPeepholeOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
@@ -481,7 +480,6 @@ public:
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
-  void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
@@ -656,14 +654,6 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createAArch64PostSelectOptimize());
   return false;
-}
-
-void AArch64PassConfig::addMachineSSAOptimization() {
-  // Run default MachineSSAOptimization first.
-  TargetPassConfig::addMachineSSAOptimization();
-
-  if (TM->getOptLevel() != CodeGenOpt::None)
-    addPass(createAArch64MIPeepholeOptPass());
 }
 
 bool AArch64PassConfig::addILPOpts() {

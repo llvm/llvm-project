@@ -700,7 +700,7 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
 
     Expected<section_iterator> RelSecOrErr = si->getRelocatedSection();
     if (!RelSecOrErr)
-      report_fatal_error(toString(RelSecOrErr.takeError()));
+      report_fatal_error(Twine(toString(RelSecOrErr.takeError())));
 
     section_iterator RelSecI = *RelSecOrErr;
     if (RelSecI == Obj.section_end())
@@ -1236,8 +1236,7 @@ RuntimeDyldELF::processRelocationRef(
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     SymType = *SymTypeOrErr;
   }
@@ -1257,8 +1256,7 @@ RuntimeDyldELF::processRelocationRef(
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(SectionOrErr.takeError(), OS);
-        OS.flush();
-        report_fatal_error(Buf);
+        report_fatal_error(Twine(OS.str()));
       }
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())

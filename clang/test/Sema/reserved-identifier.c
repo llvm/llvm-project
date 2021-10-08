@@ -16,6 +16,8 @@ void foo(unsigned int _Reserved) { // expected-warning {{identifier '_Reserved' 
   goto __reserved;                 // expected-warning {{identifier '__reserved' is reserved because it starts with '__'}}
 __reserved: // expected-warning {{identifier '__reserved' is reserved because it starts with '__'}}
             ;
+  goto _not_reserved;
+_not_reserved: ;
 }
 
 void foot(unsigned int _not_reserved) {} // no-warning

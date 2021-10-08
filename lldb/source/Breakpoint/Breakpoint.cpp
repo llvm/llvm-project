@@ -602,7 +602,6 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
   }
 }
 
-namespace {
 static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
                                             SymbolContext &new_sc) {
   bool equivalent_scs = false;
@@ -640,7 +639,6 @@ static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
   }
   return equivalent_scs;
 }
-} // anonymous namespace
 
 void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
                                 ModuleSP new_module_sp) {

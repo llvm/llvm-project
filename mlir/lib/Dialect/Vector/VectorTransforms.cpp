@@ -821,15 +821,17 @@ private:
     case CombiningKind::MUL:
       combinedResult = rewriter.create<MulIOp>(loc, mul, acc);
       break;
-    case CombiningKind::MIN:
-      combinedResult = rewriter.create<SelectOp>(
-          loc, rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, mul, acc), mul,
-          acc);
+    case CombiningKind::MINUI:
+      combinedResult = rewriter.create<MinUIOp>(loc, mul, acc);
       break;
-    case CombiningKind::MAX:
-      combinedResult = rewriter.create<SelectOp>(
-          loc, rewriter.create<CmpIOp>(loc, CmpIPredicate::sge, mul, acc), mul,
-          acc);
+    case CombiningKind::MINSI:
+      combinedResult = rewriter.create<MinSIOp>(loc, mul, acc);
+      break;
+    case CombiningKind::MAXUI:
+      combinedResult = rewriter.create<MaxUIOp>(loc, mul, acc);
+      break;
+    case CombiningKind::MAXSI:
+      combinedResult = rewriter.create<MaxSIOp>(loc, mul, acc);
       break;
     case CombiningKind::AND:
       combinedResult = rewriter.create<AndOp>(loc, mul, acc);
@@ -840,6 +842,9 @@ private:
     case CombiningKind::XOR:
       combinedResult = rewriter.create<XOrOp>(loc, mul, acc);
       break;
+    case CombiningKind::MINF: // Only valid for floating point types.
+    case CombiningKind::MAXF: // Only valid for floating point types.
+      return Optional<Value>();
     }
     return Optional<Value>(combinedResult);
   }
@@ -864,18 +869,18 @@ private:
     case CombiningKind::MUL:
       combinedResult = rewriter.create<MulFOp>(loc, mul, acc);
       break;
-    case CombiningKind::MIN:
-      combinedResult = rewriter.create<SelectOp>(
-          loc, rewriter.create<CmpFOp>(loc, CmpFPredicate::OLE, mul, acc), mul,
-          acc);
+    case CombiningKind::MINF:
+      combinedResult = rewriter.create<MinFOp>(loc, mul, acc);
       break;
-    case CombiningKind::MAX:
-      combinedResult = rewriter.create<SelectOp>(
-          loc, rewriter.create<CmpFOp>(loc, CmpFPredicate::OGT, mul, acc), mul,
-          acc);
+    case CombiningKind::MAXF:
+      combinedResult = rewriter.create<MaxFOp>(loc, mul, acc);
       break;
     case CombiningKind::ADD: // Already handled this special case above.
     case CombiningKind::AND: // Only valid for integer types.
+    case CombiningKind::MINUI: // Only valid for integer types.
+    case CombiningKind::MINSI: // Only valid for integer types.
+    case CombiningKind::MAXUI: // Only valid for integer types.
+    case CombiningKind::MAXSI: // Only valid for integer types.
     case CombiningKind::OR:  // Only valid for integer types.
     case CombiningKind::XOR: // Only valid for integer types.
       return Optional<Value>();
@@ -3697,23 +3702,23 @@ struct UnrollOuterMultiReduction
         else
           result = rewriter.create<MulFOp>(loc, operand, result);
         break;
-      case vector::CombiningKind::MIN:
-        if (elementType.isIntOrIndex())
-          condition =
-              rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, operand, result);
-        else
-          condition =
-              rewriter.create<CmpFOp>(loc, CmpFPredicate::OLT, operand, result);
-        result = rewriter.create<SelectOp>(loc, condition, operand, result);
+      case vector::CombiningKind::MINUI:
+        result = rewriter.create<MinUIOp>(loc, operand, result);
         break;
-      case vector::CombiningKind::MAX:
-        if (elementType.isIntOrIndex())
-          condition =
-              rewriter.create<CmpIOp>(loc, CmpIPredicate::sge, operand, result);
-        else
-          condition =
-              rewriter.create<CmpFOp>(loc, CmpFPredicate::OGE, operand, result);
-        result = rewriter.create<SelectOp>(loc, condition, operand, result);
+      case vector::CombiningKind::MINSI:
+        result = rewriter.create<MinSIOp>(loc, operand, result);
+        break;
+      case vector::CombiningKind::MINF:
+        result = rewriter.create<MinFOp>(loc, operand, result);
+        break;
+      case vector::CombiningKind::MAXUI:
+        result = rewriter.create<MaxUIOp>(loc, operand, result);
+        break;
+      case vector::CombiningKind::MAXSI:
+        result = rewriter.create<MaxSIOp>(loc, operand, result);
+        break;
+      case vector::CombiningKind::MAXF:
+        result = rewriter.create<MaxFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::AND:
         result = rewriter.create<AndOp>(loc, operand, result);
@@ -3771,10 +3776,18 @@ struct TwoDimMultiReductionToReduction
         return "add";
       case vector::CombiningKind::MUL:
         return "mul";
-      case vector::CombiningKind::MIN:
-        return "min";
-      case vector::CombiningKind::MAX:
-        return "max";
+      case vector::CombiningKind::MINUI:
+        return "minui";
+      case vector::CombiningKind::MINSI:
+        return "minsi";
+      case vector::CombiningKind::MINF:
+        return "minf";
+      case vector::CombiningKind::MAXUI:
+        return "maxui";
+      case vector::CombiningKind::MAXSI:
+        return "maxsi";
+      case vector::CombiningKind::MAXF:
+        return "maxf";
       case vector::CombiningKind::AND:
         return "and";
       case vector::CombiningKind::OR:
@@ -3834,27 +3847,35 @@ void mlir::vector::populateBubbleVectorBitCastOpPatterns(
                BubbleUpBitCastForStridedSliceInsert>(patterns.getContext());
 }
 
+void mlir::vector::populateVectorBroadcastLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<BroadcastOpLowering>(patterns.getContext());
+}
+
+void mlir::vector::populateVectorMaskOpLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<CreateMaskOpLowering, ConstantMaskOpLowering>(
+      patterns.getContext());
+}
+
+void mlir::vector::populateVectorShapeCastLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ShapeCastOp2DDownCastRewritePattern,
+               ShapeCastOp2DUpCastRewritePattern, ShapeCastOpRewritePattern>(
+      patterns.getContext());
+}
+
 void mlir::vector::populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions parameters) {
-  // clang-format off
-  patterns.add<BroadcastOpLowering,
-                  CreateMaskOpLowering,
-                  ConstantMaskOpLowering,
-                  OuterProductOpLowering,
-                  ShapeCastOp2DDownCastRewritePattern,
-                  ShapeCastOp2DUpCastRewritePattern,
-                  ShapeCastOpRewritePattern>(patterns.getContext());
-  patterns.add<ContractionOpLowering,
-                  ContractionOpToMatmulOpLowering,
-                  ContractionOpToOuterProductOpLowering>(parameters, patterns.getContext());
-  // clang-format on
+    RewritePatternSet &patterns, VectorTransformsOptions options) {
+  patterns.add<OuterProductOpLowering>(patterns.getContext());
+  patterns.add<ContractionOpLowering, ContractionOpToMatmulOpLowering,
+               ContractionOpToOuterProductOpLowering>(options,
+                                                      patterns.getContext());
 }
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions) {
-  patterns.add<TransposeOpLowering>(vectorTransformOptions,
-                                    patterns.getContext());
+    RewritePatternSet &patterns, VectorTransformsOptions options) {
+  patterns.add<TransposeOpLowering>(options, patterns.getContext());
 }
 
 void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(

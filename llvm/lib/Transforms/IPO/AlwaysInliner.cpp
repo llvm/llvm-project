@@ -73,8 +73,8 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
             },
             ORE);
         assert(OIC);
-        emitInlinedInto(ORE, CB->getDebugLoc(), CB->getParent(), F, *Caller,
-                        *OIC, false, DEBUG_TYPE);
+        emitInlinedIntoBasedOnCost(ORE, CB->getDebugLoc(), CB->getParent(), F,
+                                   *Caller, *OIC, false, DEBUG_TYPE);
 
         InlineFunctionInfo IFI(
             /*cg=*/nullptr, GetAssumptionCache, &PSI,

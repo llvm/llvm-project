@@ -426,7 +426,7 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
 
       auto Ret = ELF.getSection(*Symbol, SymTab, ShndxTable);
       if (!Ret)
-        report_fatal_error(errorToErrorCode(Ret.takeError()).message());
+        report_fatal_error(Twine(errorToErrorCode(Ret.takeError()).message()));
       return *Ret;
     }
   }

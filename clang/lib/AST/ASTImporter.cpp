@@ -6401,7 +6401,7 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
   if (Err)
     return std::move(Err);
 
-  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->isConstexpr(),
+  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->getStatementKind(),
                         ToInit, ToConditionVariable, ToCond, ToLParenLoc,
                         ToRParenLoc, ToThen, ToElseLoc, ToElse);
 }
@@ -8513,7 +8513,8 @@ private:
 };
 
 class AttrImporter {
-  Error Err = Error::success();
+  Error Err{Error::success()};
+  Attr *ToAttr = nullptr;
   ASTImporter &Importer;
   ASTNodeImporter NImporter;
 
@@ -8522,15 +8523,14 @@ public:
 
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function
-  // 'createImpoprtedAttr', in the order that is expected by the attribute
-  // class.
+  // 'importAttr', in the order that is expected by the attribute class.
   template <class T> AttrArgImporter<T> importArg(const T &From) {
     return AttrArgImporter<T>(NImporter, Err, From);
   }
 
   // Create an "importer" for an attribute parameter that has array type.
   // Result of the 'value()' of that object is to be passed to the function
-  // 'createImpoprtedAttr', then the size of the array as next argument.
+  // 'importAttr', then the size of the array as next argument.
   template <typename T>
   AttrArgArrayImporter<T> importArrayArg(const llvm::iterator_range<T *> &From,
                                          unsigned ArraySize) {
@@ -8543,10 +8543,13 @@ public:
   // (The 'Create' with 'ASTContext' first and 'AttributeCommonInfo' last is
   // used here.) As much data is copied or imported from the old attribute
   // as possible. The passed arguments should be already imported.
+  // If an import error happens, the internal error is set to it, and any
+  // further import attempt is ignored.
   template <typename T, typename... Arg>
-  Expected<Attr *> createImportedAttr(const T *FromAttr, Arg &&...ImportedArg) {
+  void importAttr(const T *FromAttr, Arg &&...ImportedArg) {
     static_assert(std::is_base_of<Attr, T>::value,
                   "T should be subclass of Attr.");
+    assert(!ToAttr && "Use one AttrImporter to import one Attribute object.");
 
     const IdentifierInfo *ToAttrName = Importer.Import(FromAttr->getAttrName());
     const IdentifierInfo *ToScopeName =
@@ -8557,94 +8560,177 @@ public:
         NImporter.importChecked(Err, FromAttr->getScopeLoc());
 
     if (Err)
-      return std::move(Err);
+      return;
 
     AttributeCommonInfo ToI(ToAttrName, ToScopeName, ToAttrRange, ToScopeLoc,
                             FromAttr->getParsedKind(), FromAttr->getSyntax(),
                             FromAttr->getAttributeSpellingListIndex());
     // The "SemanticSpelling" is not needed to be passed to the constructor.
     // That value is recalculated from the SpellingListIndex if needed.
-    T *ToAttr = T::Create(Importer.getToContext(),
-                          std::forward<Arg>(ImportedArg)..., ToI);
+    ToAttr = T::Create(Importer.getToContext(),
+                       std::forward<Arg>(ImportedArg)..., ToI);
 
     ToAttr->setImplicit(FromAttr->isImplicit());
     ToAttr->setPackExpansion(FromAttr->isPackExpansion());
     if (auto *ToInheritableAttr = dyn_cast<InheritableAttr>(ToAttr))
       ToInheritableAttr->setInherited(FromAttr->isInherited());
+  }
 
+  // Create a clone of the 'FromAttr' and import its source range only.
+  // This causes objects with invalid references to be created if the 'FromAttr'
+  // contains other data that should be imported.
+  void cloneAttr(const Attr *FromAttr) {
+    assert(!ToAttr && "Use one AttrImporter to import one Attribute object.");
+
+    SourceRange ToRange = NImporter.importChecked(Err, FromAttr->getRange());
+    if (Err)
+      return;
+
+    ToAttr = FromAttr->clone(Importer.getToContext());
+    ToAttr->setRange(ToRange);
+  }
+
+  // Get the result of the previous import attempt (can be used only once).
+  llvm::Expected<Attr *> getResult() && {
+    if (Err)
+      return std::move(Err);
+    assert(ToAttr && "Attribute should be created.");
     return ToAttr;
   }
 };
 
 Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
-  Attr *ToAttr = nullptr;
-  // FIXME: Use AttrImporter as much as possible, try to remove the import
-  // of range from here.
-  SourceRange ToRange;
-  if (Error Err = importInto(ToRange, FromAttr->getRange()))
-    return std::move(Err);
+  AttrImporter AI(*this);
 
   // FIXME: Is there some kind of AttrVisitor to use here?
   switch (FromAttr->getKind()) {
   case attr::Aligned: {
     auto *From = cast<AlignedAttr>(FromAttr);
-    AlignedAttr *To;
-    auto CreateAlign = [&](bool IsAlignmentExpr, void *Alignment) {
-      return AlignedAttr::Create(ToContext, IsAlignmentExpr, Alignment, ToRange,
-                                 From->getSyntax(),
-                                 From->getSemanticSpelling());
-    };
-    if (From->isAlignmentExpr()) {
-      if (auto ToEOrErr = Import(From->getAlignmentExpr()))
-        To = CreateAlign(true, *ToEOrErr);
-      else
-        return ToEOrErr.takeError();
-    } else {
-      if (auto ToTOrErr = Import(From->getAlignmentType()))
-        To = CreateAlign(false, *ToTOrErr);
-      else
-        return ToTOrErr.takeError();
-    }
-    To->setInherited(From->isInherited());
-    To->setPackExpansion(From->isPackExpansion());
-    To->setImplicit(From->isImplicit());
-    ToAttr = To;
+    if (From->isAlignmentExpr())
+      AI.importAttr(From, true, AI.importArg(From->getAlignmentExpr()).value());
+    else
+      AI.importAttr(From, false,
+                    AI.importArg(From->getAlignmentType()).value());
     break;
   }
+
   case attr::Format: {
     const auto *From = cast<FormatAttr>(FromAttr);
-    FormatAttr *To;
-    IdentifierInfo *ToAttrType = Import(From->getType());
-    To = FormatAttr::Create(ToContext, ToAttrType, From->getFormatIdx(),
-                            From->getFirstArg(), ToRange, From->getSyntax());
-    To->setInherited(From->isInherited());
-    ToAttr = To;
+    AI.importAttr(From, Import(From->getType()), From->getFormatIdx(),
+                  From->getFirstArg());
     break;
   }
 
   case attr::AssertCapability: {
     const auto *From = cast<AssertCapabilityAttr>(FromAttr);
-    AttrImporter AI(*this);
-    Expected<Attr *> ToAttrOrErr = AI.createImportedAttr(
-        From, AI.importArrayArg(From->args(), From->args_size()).value(),
-        From->args_size());
-    if (ToAttrOrErr)
-      ToAttr = *ToAttrOrErr;
-    else
-      return ToAttrOrErr.takeError();
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::AcquireCapability: {
+    const auto *From = cast<AcquireCapabilityAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::TryAcquireCapability: {
+    const auto *From = cast<TryAcquireCapabilityAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::ReleaseCapability: {
+    const auto *From = cast<ReleaseCapabilityAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::RequiresCapability: {
+    const auto *From = cast<RequiresCapabilityAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::GuardedBy: {
+    const auto *From = cast<GuardedByAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    break;
+  }
+  case attr::PtGuardedBy: {
+    const auto *From = cast<PtGuardedByAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    break;
+  }
+  case attr::AcquiredAfter: {
+    const auto *From = cast<AcquiredAfterAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::AcquiredBefore: {
+    const auto *From = cast<AcquiredBeforeAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::AssertExclusiveLock: {
+    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::AssertSharedLock: {
+    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::ExclusiveTrylockFunction: {
+    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::SharedTrylockFunction: {
+    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::LockReturned: {
+    const auto *From = cast<LockReturnedAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    break;
+  }
+  case attr::LocksExcluded: {
+    const auto *From = cast<LocksExcludedAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
 
-  default:
-    // FIXME: 'clone' copies every member but some of them should be imported.
-    // Handle other Attrs that have parameters that should be imported.
-    ToAttr = FromAttr->clone(ToContext);
-    ToAttr->setRange(ToRange);
+  default: {
+    // The default branch works for attributes that have no arguments to import.
+    // FIXME: Handle every attribute type that has arguments of type to import
+    // (most often Expr* or Decl* or type) in the switch above.
+    AI.cloneAttr(FromAttr);
     break;
   }
-  assert(ToAttr && "Attribute should be created.");
-  
-  return ToAttr;
+  }
+
+  return std::move(AI).getResult();
 }
 
 Decl *ASTImporter::GetAlreadyImportedOrNull(const Decl *FromD) const {

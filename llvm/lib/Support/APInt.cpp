@@ -345,7 +345,7 @@ void APInt::flipAllBitsSlowCase() {
 /// In the slow case, we know the result is large.
 APInt APInt::concatSlowCase(const APInt &NewLSB) const {
   unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
-  APInt Result = NewLSB.zext(NewWidth);
+  APInt Result = NewLSB.zextOrSelf(NewWidth);
   Result.insertBits(*this, NewLSB.getBitWidth());
   return Result;
 }
@@ -360,8 +360,11 @@ void APInt::flipBit(unsigned bitPosition) {
 
 void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   unsigned subBitWidth = subBits.getBitWidth();
-  assert(0 < subBitWidth && (subBitWidth + bitPosition) <= BitWidth &&
-         "Illegal bit insertion");
+  assert((subBitWidth + bitPosition) <= BitWidth && "Illegal bit insertion");
+
+  // inserting no bits is a noop.
+  if (subBitWidth == 0)
+    return;
 
   // Insertion is a direct copy.
   if (subBitWidth == BitWidth) {
@@ -441,7 +444,6 @@ void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits)
 }
 
 APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
-  assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
          "Illegal bit extraction");
 

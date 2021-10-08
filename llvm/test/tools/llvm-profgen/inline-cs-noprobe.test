@@ -5,7 +5,14 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 
-; CHECK:[main:1 @ foo]:309:0
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --populate-profile-symbol-list=1
+; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
+
+; CHECK-SYM-LIST: Dump profile symbol list
+; CHECK-SYM-LIST: bar
+; CHECK-SYM-LIST: foo
+
+; CHECK:[main:1 @ foo]:225:0
 ; CHECK: 2.1: 14
 ; CHECK: 3: 15
 ; CHECK: 3.1: 14 bar:14
@@ -13,24 +20,11 @@
 ; CHECK:[main:1 @ foo:3.1 @ bar]:84:0
 ; CHECK: 1: 14
 
-; CHECK-STRIP-CTX: main:379:0
-; CHECK-STRIP-CTX:  0: 0
-; CHECK-STRIP-CTX:  2: 0
-; CHECK-STRIP-CTX:  1: foo:379
-; CHECK-STRIP-CTX:   2.1: 14
-; CHECK-STRIP-CTX:   3: 15
-; CHECK-STRIP-CTX:   3.2: 1
-; CHECK-STRIP-CTX:   4: 0
-; CHECK-STRIP-CTX:   7: 0
-; CHECK-STRIP-CTX:   3.1: bar:84
-; CHECK-STRIP-CTX:    1: 14
-
 ; CHECK-UNWINDER: [main:1 @ foo]
-; CHECK-UNWINDER:   4
-; CHECK-UNWINDER:   670-6ad:1
-; CHECK-UNWINDER:   67e-69b:1
-; CHECK-UNWINDER:   67e-6ad:13
-; CHECK-UNWINDER:   6bd-6c8:14
+; CHECK-UNWINDER:   3
+; CHECK-UNWINDER:   670-69b:1
+; CHECK-UNWINDER:   67e-69b:14
+; CHECK-UNWINDER:   6bf-6c8:14
 ; CHECK-UNWINDER:   2
 ; CHECK-UNWINDER:   69b->670:1
 ; CHECK-UNWINDER:   6c8->67e:15
@@ -38,6 +32,18 @@
 ; CHECK-UNWINDER:   1
 ; CHECK-UNWINDER:   6af-6bb:14
 ; CHECK-UNWINDER:   0
+
+; CHECK-STRIP-CTX: main:295:0
+; CHECK-STRIP-CTX:  0: 0
+; CHECK-STRIP-CTX:  2: 0
+; CHECK-STRIP-CTX:  1: foo:295
+; CHECK-STRIP-CTX:   2.1: 14
+; CHECK-STRIP-CTX:   3: 15
+; CHECK-STRIP-CTX:   3.2: 1
+; CHECK-STRIP-CTX:   4: 0
+; CHECK-STRIP-CTX:   7: 0
+; CHECK-STRIP-CTX:   3.1: bar:84
+; CHECK-STRIP-CTX:    1: 14
 
 ; original code:
 ; clang -O3 -g test.c -o a.out

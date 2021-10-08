@@ -56,6 +56,7 @@ CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
 
+CODEGENOPT(ClearASTBeforeBackend , 1, 0) ///< Free the AST before running backend code generation. Only works with -disable-free.
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
 CODEGENOPT(DiscardValueNames , 1, 0) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableLLVMPasses , 1, 0) ///< Don't run any LLVM IR passes to get

@@ -19,51 +19,46 @@
 namespace __sanitizer {
 
 struct StackDepotNode {
+  using hash_type = u64;
+  hash_type stack_hash;
   StackDepotNode *link;
   u32 id;
-  atomic_uint32_t hash_and_use_count; // hash_bits : 12; use_count : 20;
   u32 size;
-  u32 tag;
+  atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
   uptr stack[1];  // [size]
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
-  // Lower kTabSizeLog bits are equal for all items in one bucket.
-  // We use these bits to store the per-stack use counter.
-  static const u32 kUseCountBits = kTabSizeLog;
+  static const u32 kUseCountBits = 20;
   static const u32 kMaxUseCount = 1 << kUseCountBits;
   static const u32 kUseCountMask = (1 << kUseCountBits) - 1;
-  static const u32 kHashMask = ~kUseCountMask;
 
   typedef StackTrace args_type;
-  bool eq(u32 hash, const args_type &args) const {
-    u32 hash_bits =
-        atomic_load(&hash_and_use_count, memory_order_relaxed) & kHashMask;
-    if ((hash & kHashMask) != hash_bits || args.size != size || args.tag != tag)
-      return false;
-    uptr i = 0;
-    for (; i < size; i++) {
-      if (stack[i] != args.trace[i]) return false;
-    }
-    return true;
+  bool eq(hash_type hash, const args_type &args) const {
+    return hash == stack_hash;
   }
   static uptr storage_size(const args_type &args) {
     return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
   }
-  static u32 hash(const args_type &args) {
-    MurMur2HashBuilder H(args.size * sizeof(uptr));
+  static hash_type hash(const args_type &args) {
+    MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
+    H.add(args.tag);
     return H.get();
   }
   static bool is_valid(const args_type &args) {
     return args.size > 0 && args.trace;
   }
-  void store(const args_type &args, u32 hash) {
-    atomic_store(&hash_and_use_count, hash & kHashMask, memory_order_relaxed);
+  void store(const args_type &args, hash_type hash) {
+    CHECK_EQ(args.tag & (~kUseCountMask >> kUseCountBits), args.tag);
+    atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
+                 memory_order_relaxed);
+    stack_hash = hash;
     size = args.size;
-    tag = args.tag;
     internal_memcpy(stack, args.trace, size * sizeof(uptr));
   }
   args_type load() const {
+    u32 tag =
+        atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
     return args_type(&stack[0], size, tag);
   }
   StackDepotHandle get_handle() { return StackDepotHandle(this); }
@@ -71,16 +66,16 @@ struct StackDepotNode {
   typedef StackDepotHandle handle_type;
 };
 
-COMPILER_CHECK(StackDepotNode::kMaxUseCount == (u32)kStackDepotMaxUseCount);
+COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
 u32 StackDepotHandle::id() { return node_->id; }
 int StackDepotHandle::use_count() {
-  return atomic_load(&node_->hash_and_use_count, memory_order_relaxed) &
+  return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
 }
 void StackDepotHandle::inc_use_count_unsafe() {
   u32 prev =
-      atomic_fetch_add(&node_->hash_and_use_count, 1, memory_order_relaxed) &
+      atomic_fetch_add(&node_->tag_and_use_count, 1, memory_order_relaxed) &
       StackDepotNode::kUseCountMask;
   CHECK_LT(prev + 1, StackDepotNode::kMaxUseCount);
 }

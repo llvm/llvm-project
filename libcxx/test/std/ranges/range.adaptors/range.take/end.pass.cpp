@@ -52,7 +52,7 @@ constexpr bool test() {
 
   // !sized_range
   {
-    std::ranges::take_view<ContiguousView> tv(ContiguousView{buffer}, 4);
+    std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
     assert(tv.end() == std::ranges::next(tv.begin(), 4));
 
     // The <sentinel> type.
@@ -61,7 +61,7 @@ constexpr bool test() {
   }
 
   {
-    const std::ranges::take_view<ContiguousView> tv(ContiguousView{buffer}, 5);
+    const std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 5);
     assert(tv.end() == std::ranges::next(tv.begin(), 5));
   }
 

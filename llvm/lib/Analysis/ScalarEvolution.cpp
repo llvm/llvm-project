@@ -2802,12 +2802,13 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       // Proving that entry to the outer scope neccesitates entry to the inner
       // scope, thus proves the program undefined if the flags would be violated
       // in the outer scope.
-      const bool CanPropagateFlags = llvm::any_of(LIOps, [&](const SCEV *S) {
+      SCEV::NoWrapFlags AddFlags = Flags;
+      if (AddFlags != SCEV::FlagAnyWrap) {
+        auto *DefI = getDefiningScopeBound(LIOps);
         auto *ReachI = &*AddRecLoop->getHeader()->begin();
-        auto *DefI = getDefiningScopeBound(S);
-        return isGuaranteedToTransferExecutionTo(DefI, ReachI);
-      });
-      auto AddFlags = CanPropagateFlags ? Flags : SCEV::FlagAnyWrap;
+        if (!isGuaranteedToTransferExecutionTo(DefI, ReachI))
+          AddFlags = SCEV::FlagAnyWrap;
+      }
       AddRecOps[0] = getAddExpr(LIOps, AddFlags, Depth + 1);
 
       // Build the new addrec. Propagate the NUW and NSW flags if both the
@@ -6584,15 +6585,52 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
 }
 
-const Instruction *ScalarEvolution::getDefiningScopeBound(const SCEV *S) {
+const Instruction *
+ScalarEvolution::getNonTrivialDefiningScopeBound(const SCEV *S) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     return &*AddRec->getLoop()->getHeader()->begin();
   if (auto *U = dyn_cast<SCEVUnknown>(S))
     if (auto *I = dyn_cast<Instruction>(U->getValue()))
       return I;
-  // All SCEVs are bound by the entry to F
-  return &*F.getEntryBlock().begin();
+  return nullptr;
 }
+
+const Instruction *
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+  // Do a bounded search of the def relation of the requested SCEVs.
+  SmallSet<const SCEV *, 16> Visited;
+  SmallVector<const SCEV *> Worklist;
+  auto pushOp = [&](const SCEV *S) {
+    if (!Visited.insert(S).second)
+      return;
+    // Threshold of 30 here is arbitrary.
+    if (Visited.size() > 30)
+      return;
+    Worklist.push_back(S);
+  };
+
+  for (auto *S : Ops)
+    pushOp(S);
+
+  const Instruction *Bound = nullptr;
+  while (!Worklist.empty()) {
+    auto *S = Worklist.pop_back_val();
+    if (auto *DefI = getNonTrivialDefiningScopeBound(S)) {
+      if (!Bound || DT.dominates(Bound, DefI))
+        Bound = DefI;
+    } else if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+    else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+    else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
+      for (auto *Op : S2->operands())
+        pushOp(Op);
+  }
+  return Bound ? Bound : &*F.getEntryBlock().begin();
+}
+
 
 static bool
 isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
@@ -6632,16 +6670,6 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 
 
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
-  // Here we check that I is in the header of the innermost loop containing I,
-  // since we only deal with instructions in the loop header. The actual loop we
-  // need to check later will come from an add recurrence, but getting that
-  // requires computing the SCEV of the operands, which can be expensive. This
-  // check we can do cheaply to rule out some cases early.
-  Loop *InnermostContainingLoop = LI.getLoopFor(I->getParent());
-  if (InnermostContainingLoop == nullptr ||
-      InnermostContainingLoop->getHeader() != I->getParent())
-    return false;
-
   // Only proceed if we can prove that I does not yield poison.
   if (!programUndefinedIfPoison(I))
     return false;
@@ -6657,16 +6685,15 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // executed every time we enter that scope.  When the bounding scope is a
   // loop (the common case), this is equivalent to proving I executes on every
   // iteration of that loop.
+  SmallVector<const SCEV *> SCEVOps;
   for (const Use &Op : I->operands()) {
     // I could be an extractvalue from a call to an overflow intrinsic.
     // TODO: We can do better here in some cases.
-    if (!isSCEVable(Op->getType()))
-      return false;
-    auto *DefI = getDefiningScopeBound(getSCEV(Op));
-    if (isGuaranteedToTransferExecutionTo(DefI, I))
-      return true;
+    if (isSCEVable(Op->getType()))
+      SCEVOps.push_back(getSCEV(Op));
   }
-  return false;
+  auto *DefI = getDefiningScopeBound(SCEVOps);
+  return isGuaranteedToTransferExecutionTo(DefI, I);
 }
 
 bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {

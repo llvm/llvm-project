@@ -374,6 +374,29 @@ func @main() {
 
 //      CHECK: #[[$DYN_1D_MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
+//      CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]>
+//      CHECK: func private @some_external_func_within_scf_execute(memref<4xi32, #[[$DYN_1D_MAP]]>)
+func private @some_external_func_within_scf_execute(tensor<4xi32>)
+
+//      CHECK: func @main()
+func @main() {
+//      CHECK:   %[[A:.*]] = memref.get_global @__constant_4xi32 : memref<4xi32>
+  %A = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+
+//      CHECK:   %[[B:.*]] = memref.cast %[[A]] : memref<4xi32> to memref<4xi32, #[[$DYN_1D_MAP]]>
+//      CHECK:   call @some_external_func_within_scf_execute(%[[B]]) : (memref<4xi32, #[[$DYN_1D_MAP]]>) -> ()
+  scf.execute_region {
+    call @some_external_func_within_scf_execute(%A) : (tensor<4xi32>) -> ()
+    scf.yield
+  }
+
+  return
+}
+
+// -----
+
+//      CHECK: #[[$DYN_1D_MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+
 //      CHECK:  func private @some_external_func(memref<?xf32, #[[$DYN_1D_MAP]]>)
 func private @some_external_func(tensor<?xf32>)
 
@@ -714,3 +737,21 @@ func @matmul(
   }
   return %0 : tensor<128x192xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_cast_not_in_place(
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
+//       CHECK:   %[[alloc:.*]] = memref.alloc
+//       CHECK:   linalg.copy(%[[A]], %[[alloc]])
+//       CHECK:   %[[cast:.*]] = memref.cast %[[alloc]]
+func @tensor_cast_not_in_place(
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %B : tensor<?xf32>, %idx: index)
+  -> (tensor<?xf32>)
+{
+  %r0 = tensor.cast %A : tensor<?xf32> to tensor<4xf32>
+  %r1 = tensor.insert_slice %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1 : tensor<?xf32>
+}
+

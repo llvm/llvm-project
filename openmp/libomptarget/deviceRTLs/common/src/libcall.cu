@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
-#include "common/device_environment.h"
+#include <stdint.h>
+
+#include "DeviceEnvironment.h"
 #include "common/omptarget.h"
 #include "target_impl.h"
 
@@ -301,13 +303,13 @@ EXTERN int omp_get_default_device(void) {
 #ifdef __AMDGCN__
 EXTERN int omp_get_num_devices(void) {
   PRINT(LD_IO, "call omp_get_num_devices() returns device_size %d\n",
-        omptarget_device_environment.num_devices);
-  return omptarget_device_environment.num_devices;
+        omptarget_device_environment.NumDevices);
+  return omptarget_device_environment.NumDevices;
 }
 EXTERN int omp_get_device_num(void) {
   PRINT(LD_IO, "call omp_get_device_num() returns device_num %d\n",
-        omptarget_device_environment.device_num);
-  return omptarget_device_environment.device_num;
+        omptarget_device_environment.DeviceNum);
+  return omptarget_device_environment.DeviceNum;
 }
 #endif
 

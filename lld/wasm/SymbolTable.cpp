@@ -169,7 +169,6 @@ static void checkGlobalType(const Symbol *existing, const InputFile *file,
 }
 
 static void checkTagType(const Symbol *existing, const InputFile *file,
-                         const WasmTagType *newType,
                          const WasmSignature *newSig) {
   const auto *existingTag = dyn_cast<TagSymbol>(existing);
   if (!isa<TagSymbol>(existing)) {
@@ -177,12 +176,7 @@ static void checkTagType(const Symbol *existing, const InputFile *file,
     return;
   }
 
-  const WasmTagType *oldType = cast<TagSymbol>(existing)->getTagType();
   const WasmSignature *oldSig = existingTag->signature;
-  if (newType->Attribute != oldType->Attribute)
-    error("Tag type mismatch: " + existing->getName() + "\n>>> defined as " +
-          toString(*oldType) + " in " + toString(existing->getFile()) +
-          "\n>>> defined as " + toString(*newType) + " in " + toString(file));
   if (*newSig != *oldSig)
     warn("Tag signature mismatch: " + existing->getName() +
          "\n>>> defined as " + toString(*oldSig) + " in " +
@@ -258,11 +252,11 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global) {
-  LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
-                    << "\n");
   Symbol *s = find(name);
   if (!s || s->isDefined())
     return nullptr;
+  LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
+                    << "\n");
   syntheticGlobals.emplace_back(global);
   return replaceSymbol<DefinedGlobal>(s, name, WASM_SYMBOL_VISIBILITY_HIDDEN,
                                       nullptr, global);
@@ -430,7 +424,7 @@ Symbol *SymbolTable::addDefinedTag(StringRef name, uint32_t flags,
     return s;
   }
 
-  checkTagType(s, file, &tag->getType(), &tag->signature);
+  checkTagType(s, file, &tag->signature);
 
   if (shouldReplace(s, file, flags))
     replaceSym();

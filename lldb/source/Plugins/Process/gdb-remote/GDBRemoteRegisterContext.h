@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "Plugins/Process/Utility/DynamicRegisterInfo.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"

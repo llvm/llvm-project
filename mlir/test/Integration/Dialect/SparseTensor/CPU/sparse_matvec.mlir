@@ -54,7 +54,8 @@ module {
   //
   func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
                       %argb: tensor<?xi32>,
-                      %argx: tensor<?xi32>) -> tensor<?xi32> {
+                      %argx: tensor<?xi32> {linalg.inplaceable = true})
+		      -> tensor<?xi32> {
     %0 = linalg.generic #matvec
       ins(%arga, %argb: tensor<?x?xi32, #SparseMatrix>, tensor<?xi32>)
       outs(%argx: tensor<?xi32>) {
@@ -111,6 +112,7 @@ module {
     // Release the resources.
     memref.dealloc %bdata : memref<?xi32>
     memref.dealloc %xdata : memref<?xi32>
+    sparse_tensor.release %a : tensor<?x?xi32, #SparseMatrix>
 
     return
   }

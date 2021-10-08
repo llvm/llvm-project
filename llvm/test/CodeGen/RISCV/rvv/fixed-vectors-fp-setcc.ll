@@ -9,7 +9,7 @@ define void @fcmp_oeq_vv_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vmfeq.vv v25, v25, v26
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
@@ -25,7 +25,7 @@ define void @fcmp_oeq_vv_v8f16_nonans(<8 x half>* %x, <8 x half>* %y, <8 x i1>* 
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vmfeq.vv v25, v25, v26
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
@@ -50,7 +50,7 @@ define void @fcmp_une_vv_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
@@ -75,7 +75,7 @@ define void @fcmp_une_vv_v4f32_nonans(<4 x float>* %x, <4 x float>* %y, <4 x i1>
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
@@ -100,7 +100,7 @@ define void @fcmp_ogt_vv_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
@@ -125,7 +125,7 @@ define void @fcmp_ogt_vv_v2f64_nonans(<2 x double>* %x, <2 x double>* %y, <2 x i
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
@@ -141,7 +141,7 @@ define void @fcmp_olt_vv_v16f16(<16 x half>* %x, <16 x half>* %y, <16 x i1>* %z)
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vle16.v v28, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v26, v28
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = load <16 x half>, <16 x half>* %y
@@ -157,7 +157,7 @@ define void @fcmp_olt_vv_v16f16_nonans(<16 x half>* %x, <16 x half>* %y, <16 x i
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vle16.v v28, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v26, v28
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = load <16 x half>, <16 x half>* %y
@@ -173,7 +173,7 @@ define void @fcmp_oge_vv_v8f32(<8 x float>* %x, <8 x float>* %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v28, v26
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = load <8 x float>, <8 x float>* %y
@@ -189,7 +189,7 @@ define void @fcmp_oge_vv_v8f32_nonans(<8 x float>* %x, <8 x float>* %y, <8 x i1>
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v28, v26
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = load <8 x float>, <8 x float>* %y
@@ -214,7 +214,7 @@ define void @fcmp_ole_vv_v4f64(<4 x double>* %x, <4 x double>* %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = load <4 x double>, <4 x double>* %y
@@ -239,7 +239,7 @@ define void @fcmp_ole_vv_v4f64_nonans(<4 x double>* %x, <4 x double>* %y, <4 x i
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = load <4 x double>, <4 x double>* %y
@@ -257,7 +257,7 @@ define void @fcmp_ule_vv_v32f16(<32 x half>* %x, <32 x half>* %y, <32 x i1>* %z)
 ; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v8, v28
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = load <32 x half>, <32 x half>* %y
@@ -274,7 +274,7 @@ define void @fcmp_ule_vv_v32f16_nonans(<32 x half>* %x, <32 x half>* %y, <32 x i
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v28, v8
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = load <32 x half>, <32 x half>* %y
@@ -291,7 +291,7 @@ define void @fcmp_uge_vv_v16f32(<16 x float>* %x, <16 x float>* %y, <16 x i1>* %
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v28, v8
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = load <16 x float>, <16 x float>* %y
@@ -307,7 +307,7 @@ define void @fcmp_uge_vv_v16f32_nonans(<16 x float>* %x, <16 x float>* %y, <16 x
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v8, v28
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = load <16 x float>, <16 x float>* %y
@@ -324,7 +324,7 @@ define void @fcmp_ult_vv_v8f64(<8 x double>* %x, <8 x double>* %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v8, v28
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = load <8 x double>, <8 x double>* %y
@@ -340,7 +340,7 @@ define void @fcmp_ult_vv_v8f64_nonans(<8 x double>* %x, <8 x double>* %y, <8 x i
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v28, v8
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = load <8 x double>, <8 x double>* %y
@@ -358,7 +358,7 @@ define void @fcmp_ugt_vv_v64f16(<64 x half>* %x, <64 x half>* %y, <64 x i1>* %z)
 ; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v8, v16
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = load <64 x half>, <64 x half>* %y
@@ -375,7 +375,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(<64 x half>* %x, <64 x half>* %y, <64 x i
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vmflt.vv v25, v16, v8
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = load <64 x half>, <64 x half>* %y
@@ -394,7 +394,7 @@ define void @fcmp_ueq_vv_v32f32(<32 x float>* %x, <32 x float>* %y, <32 x i1>* %
 ; CHECK-NEXT:    vmflt.vv v25, v8, v16
 ; CHECK-NEXT:    vmflt.vv v26, v16, v8
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = load <32 x float>, <32 x float>* %y
@@ -411,7 +411,7 @@ define void @fcmp_ueq_vv_v32f32_nonans(<32 x float>* %x, <32 x float>* %y, <32 x
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
 ; CHECK-NEXT:    vmfeq.vv v25, v8, v16
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = load <32 x float>, <32 x float>* %y
@@ -429,7 +429,7 @@ define void @fcmp_one_vv_v8f64(<16 x double>* %x, <16 x double>* %y, <16 x i1>* 
 ; CHECK-NEXT:    vmflt.vv v25, v8, v16
 ; CHECK-NEXT:    vmflt.vv v26, v16, v8
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = load <16 x double>, <16 x double>* %y
@@ -445,7 +445,7 @@ define void @fcmp_one_vv_v8f64_nonans(<16 x double>* %x, <16 x double>* %y, <16 
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vle64.v v16, (a1)
 ; CHECK-NEXT:    vmfne.vv v25, v8, v16
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = load <16 x double>, <16 x double>* %y
@@ -472,7 +472,7 @@ define void @fcmp_ord_vv_v4f16(<4 x half>* %x, <4 x half>* %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
   %b = load <4 x half>, <4 x half>* %y
@@ -499,7 +499,7 @@ define void @fcmp_uno_vv_v4f16(<2 x half>* %x, <2 x half>* %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a2)
+; CHECK-NEXT:    vsm.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
   %b = load <2 x half>, <2 x half>* %y
@@ -514,7 +514,7 @@ define void @fcmp_oeq_vf_v8f16(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v25, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = insertelement <8 x half> undef, half %y, i32 0
@@ -530,7 +530,7 @@ define void @fcmp_oeq_vf_v8f16_nonans(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v25, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = insertelement <8 x half> undef, half %y, i32 0
@@ -555,7 +555,7 @@ define void @fcmp_une_vf_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = insertelement <4 x float> undef, float %y, i32 0
@@ -580,7 +580,7 @@ define void @fcmp_une_vf_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = insertelement <4 x float> undef, float %y, i32 0
@@ -605,7 +605,7 @@ define void @fcmp_ogt_vf_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = insertelement <2 x double> undef, double %y, i32 0
@@ -630,7 +630,7 @@ define void @fcmp_ogt_vf_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = insertelement <2 x double> undef, double %y, i32 0
@@ -646,7 +646,7 @@ define void @fcmp_olt_vf_v16f16(<16 x half>* %x, half %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = insertelement <16 x half> undef, half %y, i32 0
@@ -662,7 +662,7 @@ define void @fcmp_olt_vf_v16f16_nonans(<16 x half>* %x, half %y, <16 x i1>* %z) 
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = insertelement <16 x half> undef, half %y, i32 0
@@ -678,7 +678,7 @@ define void @fcmp_oge_vf_v8f32(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = insertelement <8 x float> undef, float %y, i32 0
@@ -694,7 +694,7 @@ define void @fcmp_oge_vf_v8f32_nonans(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = insertelement <8 x float> undef, float %y, i32 0
@@ -719,7 +719,7 @@ define void @fcmp_ole_vf_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = insertelement <4 x double> undef, double %y, i32 0
@@ -744,7 +744,7 @@ define void @fcmp_ole_vf_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = insertelement <4 x double> undef, double %y, i32 0
@@ -762,7 +762,7 @@ define void @fcmp_ule_vf_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = insertelement <32 x half> undef, half %y, i32 0
@@ -779,7 +779,7 @@ define void @fcmp_ule_vf_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) 
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = insertelement <32 x half> undef, half %y, i32 0
@@ -796,7 +796,7 @@ define void @fcmp_uge_vf_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = insertelement <16 x float> undef, float %y, i32 0
@@ -812,7 +812,7 @@ define void @fcmp_uge_vf_v16f32_nonans(<16 x float>* %x, float %y, <16 x i1>* %z
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = insertelement <16 x float> undef, float %y, i32 0
@@ -829,7 +829,7 @@ define void @fcmp_ult_vf_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = insertelement <8 x double> undef, double %y, i32 0
@@ -845,7 +845,7 @@ define void @fcmp_ult_vf_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = insertelement <8 x double> undef, double %y, i32 0
@@ -863,7 +863,7 @@ define void @fcmp_ugt_vf_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v8, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = insertelement <64 x half> undef, half %y, i32 0
@@ -880,7 +880,7 @@ define void @fcmp_ugt_vf_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = insertelement <64 x half> undef, half %y, i32 0
@@ -899,7 +899,7 @@ define void @fcmp_ueq_vf_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = insertelement <32 x float> undef, float %y, i32 0
@@ -916,7 +916,7 @@ define void @fcmp_ueq_vf_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = insertelement <32 x float> undef, float %y, i32 0
@@ -934,7 +934,7 @@ define void @fcmp_one_vf_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = insertelement <16 x double> undef, double %y, i32 0
@@ -950,7 +950,7 @@ define void @fcmp_one_vf_v8f64_nonans(<16 x double>* %x, double %y, <16 x i1>* %
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vmfne.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = insertelement <16 x double> undef, double %y, i32 0
@@ -978,7 +978,7 @@ define void @fcmp_ord_vf_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
   %b = insertelement <4 x half> undef, half %y, i32 0
@@ -1006,7 +1006,7 @@ define void @fcmp_uno_vf_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
   %b = insertelement <2 x half> undef, half %y, i32 0
@@ -1022,7 +1022,7 @@ define void @fcmp_oeq_fv_v8f16(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v25, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = insertelement <8 x half> undef, half %y, i32 0
@@ -1038,7 +1038,7 @@ define void @fcmp_oeq_fv_v8f16_nonans(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v25, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = insertelement <8 x half> undef, half %y, i32 0
@@ -1063,7 +1063,7 @@ define void @fcmp_une_fv_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = insertelement <4 x float> undef, float %y, i32 0
@@ -1088,7 +1088,7 @@ define void @fcmp_une_fv_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = insertelement <4 x float> undef, float %y, i32 0
@@ -1113,7 +1113,7 @@ define void @fcmp_ogt_fv_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = insertelement <2 x double> undef, double %y, i32 0
@@ -1138,7 +1138,7 @@ define void @fcmp_ogt_fv_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = insertelement <2 x double> undef, double %y, i32 0
@@ -1154,7 +1154,7 @@ define void @fcmp_olt_fv_v16f16(<16 x half>* %x, half %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = insertelement <16 x half> undef, half %y, i32 0
@@ -1170,7 +1170,7 @@ define void @fcmp_olt_fv_v16f16_nonans(<16 x half>* %x, half %y, <16 x i1>* %z) 
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
   %b = insertelement <16 x half> undef, half %y, i32 0
@@ -1186,7 +1186,7 @@ define void @fcmp_oge_fv_v8f32(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = insertelement <8 x float> undef, float %y, i32 0
@@ -1202,7 +1202,7 @@ define void @fcmp_oge_fv_v8f32_nonans(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v26, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %b = insertelement <8 x float> undef, float %y, i32 0
@@ -1227,7 +1227,7 @@ define void @fcmp_ole_fv_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = insertelement <4 x double> undef, double %y, i32 0
@@ -1252,7 +1252,7 @@ define void @fcmp_ole_fv_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
   %b = insertelement <4 x double> undef, double %y, i32 0
@@ -1270,7 +1270,7 @@ define void @fcmp_ule_fv_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = insertelement <32 x half> undef, half %y, i32 0
@@ -1287,7 +1287,7 @@ define void @fcmp_ule_fv_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) 
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
   %b = insertelement <32 x half> undef, half %y, i32 0
@@ -1304,7 +1304,7 @@ define void @fcmp_uge_fv_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = insertelement <16 x float> undef, float %y, i32 0
@@ -1320,7 +1320,7 @@ define void @fcmp_uge_fv_v16f32_nonans(<16 x float>* %x, float %y, <16 x i1>* %z
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
   %b = insertelement <16 x float> undef, float %y, i32 0
@@ -1337,7 +1337,7 @@ define void @fcmp_ult_fv_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v28, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = insertelement <8 x double> undef, double %y, i32 0
@@ -1353,7 +1353,7 @@ define void @fcmp_ult_fv_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmfgt.vf v25, v28, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
   %b = insertelement <8 x double> undef, double %y, i32 0
@@ -1371,7 +1371,7 @@ define void @fcmp_ugt_fv_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v8, fa0
 ; CHECK-NEXT:    vmnand.mm v25, v25, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = insertelement <64 x half> undef, half %y, i32 0
@@ -1388,7 +1388,7 @@ define void @fcmp_ugt_fv_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = insertelement <64 x half> undef, half %y, i32 0
@@ -1407,7 +1407,7 @@ define void @fcmp_ueq_fv_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmflt.vf v26, v8, fa0
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = insertelement <32 x float> undef, float %y, i32 0
@@ -1424,7 +1424,7 @@ define void @fcmp_ueq_fv_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfeq.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = insertelement <32 x float> undef, float %y, i32 0
@@ -1442,7 +1442,7 @@ define void @fcmp_one_fv_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmflt.vf v26, v8, fa0
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = insertelement <16 x double> undef, double %y, i32 0
@@ -1458,7 +1458,7 @@ define void @fcmp_one_fv_v8f64_nonans(<16 x double>* %x, double %y, <16 x i1>* %
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vmfne.vf v25, v8, fa0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = insertelement <16 x double> undef, double %y, i32 0
@@ -1486,7 +1486,7 @@ define void @fcmp_ord_fv_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
   %b = insertelement <4 x half> undef, half %y, i32 0
@@ -1514,7 +1514,7 @@ define void @fcmp_uno_fv_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
-; CHECK-NEXT:    vse1.v v25, (a1)
+; CHECK-NEXT:    vsm.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
   %b = insertelement <2 x half> undef, half %y, i32 0

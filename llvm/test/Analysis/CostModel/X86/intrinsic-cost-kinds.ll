@@ -48,7 +48,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 define void @umul(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ; THRU-LABEL: 'umul'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %v = call { <16 x i32>, <16 x i1> } @llvm.umul.with.overflow.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v = call { <16 x i32>, <16 x i1> } @llvm.umul.with.overflow.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'umul'
@@ -74,7 +74,7 @@ define void @umul(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 define void @smax(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ; THRU-LABEL: 'smax'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'smax'

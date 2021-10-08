@@ -12,15 +12,14 @@
 #pragma omp declare target
 
 #include "common/allocator.h"
-#include "common/device_environment.h"
 #include "common/omptarget.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // global device environment
 ////////////////////////////////////////////////////////////////////////////////
 
-//PLUGIN_ACCESSIBLE
-omptarget_device_environmentTy omptarget_device_environment;
+PLUGIN_ACCESSIBLE
+DeviceEnvironmentTy omptarget_device_environment;
 
 ////////////////////////////////////////////////////////////////////////////////
 // global data holding OpenMP state information

@@ -15,7 +15,8 @@ class TestGdbSaveCore(gdbremote_testcase.GdbRemoteTestCaseBase):
         procs = self.prep_debug_monitor_and_inferior()
         self.add_qSupported_packets()
         ret = self.expect_gdbremote_sequence()
-        self.assertIn("qSaveCore+", ret["qSupported_response"])
+        if "qSaveCore+" not in ret["qSupported_response"]:
+            self.skipTest("qSaveCore not supported by lldb-server")
         self.reset_test_sequence()
 
         packet = "$qSaveCore"

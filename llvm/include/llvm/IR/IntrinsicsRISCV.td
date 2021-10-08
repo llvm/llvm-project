@@ -973,8 +973,8 @@ let TargetPrefix = "riscv" in {
   defm vsoxei : RISCVIStore;
   defm vsuxei : RISCVIStore;
 
-  def int_riscv_vle1 : RISCVUSLoad;
-  def int_riscv_vse1 : RISCVUSStore;
+  def int_riscv_vlm : RISCVUSLoad;
+  def int_riscv_vsm : RISCVUSStore;
 
   defm vamoswap : RISCVAMO;
   defm vamoadd : RISCVAMO;

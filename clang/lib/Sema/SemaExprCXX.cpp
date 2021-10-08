@@ -494,7 +494,7 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
     IdentifierInfo *II = Name.Identifier;
     ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
     SourceLocation Loc = Name.getEndLoc();
-    if (Status != ReservedIdentifierStatus::NotReserved &&
+    if (isReservedInAllContexts(Status) &&
         !PP.getSourceManager().isInSystemHeader(Loc)) {
       Diag(Loc, diag::warn_reserved_extern_symbol)
           << II << static_cast<int>(Status)
@@ -6674,8 +6674,15 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       } else if (Steps.size() == 1) {
         bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2);
         bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1);
-        if (MaybeQ1 == MaybeQ2)
-          return QualType(); // No unique best address space.
+        if (MaybeQ1 == MaybeQ2) {
+          // Exception for ptr size address spaces. Should be able to choose
+          // either address space during comparison.
+          if (isPtrSizeAddressSpace(Q1.getAddressSpace()) ||
+              isPtrSizeAddressSpace(Q2.getAddressSpace()))
+            MaybeQ1 = true;
+          else
+            return QualType(); // No unique best address space.
+        }
         Quals.setAddressSpace(MaybeQ1 ? Q1.getAddressSpace()
                                       : Q2.getAddressSpace());
       } else {

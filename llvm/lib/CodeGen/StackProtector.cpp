@@ -436,9 +436,8 @@ bool StackProtector::InsertStackProtectors() {
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
       TLI->useStackGuardXorFP() ||
-      (EnableSelectionDAGSP && !TM->Options.EnableFastISel &&
-       !TM->Options.EnableGlobalISel);
-  AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
+      (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
+  AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
 
   for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
     ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());

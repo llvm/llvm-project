@@ -317,6 +317,7 @@ private:
 
   Value *EmitGEPOffset(User *GEP);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
+  Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
@@ -324,6 +325,7 @@ private:
   Instruction *narrowFunnelShift(TruncInst &Trunc);
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(Instruction &MinMax1);
+  Instruction *foldNot(BinaryOperator &I);
 
   void freelyInvertAllUsersOf(Value *V);
 

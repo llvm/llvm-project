@@ -230,10 +230,12 @@ class _BodyBuilder:
       return fn(*operand_values)
     elif expr.symbolic_cast:
       operand_value = self.expression(expr.symbolic_cast.operand)
-      return self.cast(expr.symbolic_cast.to_type.name, operand_value)
+      return self.cast(expr.symbolic_cast.to_type.name, operand_value,
+                       expr.symbolic_cast.is_unsigned_cast)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
-  def cast(self, type_var_name: str, operand: Value) -> Value:
+  def cast(self, type_var_name: str, operand: Value,
+           is_unsigned_cast: bool) -> Value:
     try:
       to_type = self.type_mapping[type_var_name]
     except KeyError:
@@ -242,29 +244,37 @@ class _BodyBuilder:
     if operand.type == to_type:
       return operand
     if _is_integer_type(to_type):
-      return self._cast_to_integer(to_type, operand)
+      return self._cast_to_integer(to_type, operand, is_unsigned_cast)
     elif _is_floating_point_type(to_type):
-      return self._cast_to_floating_point(to_type, operand)
+      return self._cast_to_floating_point(to_type, operand, is_unsigned_cast)
 
-  def _cast_to_integer(self, to_type: Type, operand: Value) -> Value:
+  def _cast_to_integer(self, to_type: Type, operand: Value,
+                       is_unsigned_cast: bool) -> Value:
     to_width = IntegerType(to_type).width
     operand_type = operand.type
     if _is_floating_point_type(operand_type):
+      if is_unsigned_cast:
+        return std.FPToUIOp(to_type, operand).result
       return std.FPToSIOp(to_type, operand).result
     if _is_index_type(operand_type):
       return std.IndexCastOp(to_type, operand).result
     # Assume integer.
     from_width = IntegerType(operand_type).width
     if to_width > from_width:
+      if is_unsigned_cast:
+        return std.ZeroExtendIOp(to_type, operand).result
       return std.SignExtendIOp(to_type, operand).result
     elif to_width < from_width:
       return std.TruncateIOp(to_type, operand).result
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
-  def _cast_to_floating_point(self, to_type: Type, operand: Value) -> Value:
+  def _cast_to_floating_point(self, to_type: Type, operand: Value,
+                              is_unsigned_cast: bool) -> Value:
     operand_type = operand.type
     if _is_integer_type(operand_type):
+      if is_unsigned_cast:
+        return std.UIToFPOp(to_type, operand).result
       return std.SIToFPOp(to_type, operand).result
     # Assume FloatType.
     to_width = _get_floating_point_width(to_type)
@@ -319,22 +329,31 @@ class _BodyBuilder:
 
   def _eval_max(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      ogt_attr = IntegerAttr.get(IntegerType.get_signless(64), 2)
-      return _emit_cmpf_and_select(lhs, rhs, ogt_attr)
+      return std.MaxFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      sgt_attr = IntegerAttr.get(IntegerType.get_signless(64), 4)
-      return _emit_cmpi_and_select(lhs, rhs, sgt_attr)
+      return std.MaxSIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'max' operand: {lhs}")
+
+  def _eval_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
+    if _is_floating_point_type(lhs.type):
+      return std.MaxFOp(lhs.type, lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      return std.MaxUIOp(lhs.type, lhs, rhs).result
+    raise NotImplementedError("Unsupported 'max_unsigned' operand: {lhs}")
 
   def _eval_min(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      olt_attr = IntegerAttr.get(IntegerType.get_signless(64), 4)
-      return _emit_cmpf_and_select(lhs, rhs, olt_attr)
+      return std.MinFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      slt_attr = IntegerAttr.get(IntegerType.get_signless(64), 2)
-      return _emit_cmpi_and_select(lhs, rhs, slt_attr)
+      return std.MinSIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'min' operand: {lhs}")
 
+  def _eval_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
+    if _is_floating_point_type(lhs.type):
+      return std.MinFOp(lhs.type, lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      return std.MinUIOp(lhs.type, lhs, rhs).result
+    raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
 
 def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
                            in_arg_defs: Sequence[OperandDefConfig],
@@ -413,13 +432,3 @@ def _get_floating_point_width(t: Type) -> int:
   if BF16Type.isinstance(t):
     return 16
   raise NotImplementedError(f"Unhandled floating point type switch {t}")
-
-
-def _emit_cmpf_and_select(lhs: Value, rhs: Value, pred: IntegerAttr) -> Value:
-  cond = std.CmpFOp(IntegerType.get_signless(1), pred, lhs, rhs).result
-  return std.SelectOp(lhs.type, cond, lhs, rhs).result
-
-
-def _emit_cmpi_and_select(lhs: Value, rhs: Value, pred: IntegerAttr) -> Value:
-  cond = std.CmpIOp(IntegerType.get_signless(1), pred, lhs, rhs).result
-  return std.SelectOp(lhs.type, cond, lhs, rhs).result

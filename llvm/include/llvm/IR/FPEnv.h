@@ -58,5 +58,11 @@ Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior);
 inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
   return EB == fp::ebIgnore && RM == RoundingMode::NearestTiesToEven;
 }
+
+/// Returns true if the rounding mode RM may be QRM at compile time or
+/// at run time.
+inline bool canRoundingModeBe(RoundingMode RM, RoundingMode QRM) {
+  return RM == QRM || RM == RoundingMode::Dynamic;
+}
 }
 #endif

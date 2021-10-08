@@ -20,12 +20,6 @@
 #error CLOCKS_PER_SEC not defined
 #endif
 
-#if TEST_STD_VER > 14
-#ifndef TIME_UTC
-#error TIME_UTC not defined
-#endif
-#endif
-
 int main(int, char**)
 {
     std::clock_t c = 0;

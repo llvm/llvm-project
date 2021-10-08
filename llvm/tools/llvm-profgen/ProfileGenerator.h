@@ -38,6 +38,16 @@ public:
   virtual void generateProfile() = 0;
   void write();
 
+  static uint32_t getDuplicationFactor(unsigned Discriminator) {
+    return llvm::DILocation::getDuplicationFactorFromDiscriminator(
+        Discriminator);
+  }
+
+  static uint32_t getBaseDiscriminator(unsigned Discriminator) {
+    return DILocation::getBaseDiscriminatorFromDiscriminator(
+        Discriminator, /* IsFSDiscriminator */ false);
+  }
+
 protected:
   // Use SampleProfileWriter to serialize profile map
   void write(std::unique_ptr<SampleProfileWriter> Writer,

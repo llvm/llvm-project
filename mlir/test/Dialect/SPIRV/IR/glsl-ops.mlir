@@ -51,24 +51,42 @@ func @exp(%arg0 : i32) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.GLSL.FMax
+// spv.GLSL.{F|S|U}{Max|Min}
 //===----------------------------------------------------------------------===//
 
-func @fmax(%arg0 : f32, %arg1 : f32) -> () {
+func @fmaxmin(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.GLSL.FMax {{%.*}}, {{%.*}} : f32
-  %2 = spv.GLSL.FMax %arg0, %arg1 : f32
+  %1 = spv.GLSL.FMax %arg0, %arg1 : f32
+  // CHECK: spv.GLSL.FMin {{%.*}}, {{%.*}} : f32
+  %2 = spv.GLSL.FMin %arg0, %arg1 : f32
   return
 }
 
-func @fmaxvec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) -> () {
+func @fmaxminvec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) {
   // CHECK: spv.GLSL.FMax {{%.*}}, {{%.*}} : vector<3xf16>
-  %2 = spv.GLSL.FMax %arg0, %arg1 : vector<3xf16>
+  %1 = spv.GLSL.FMax %arg0, %arg1 : vector<3xf16>
+  // CHECK: spv.GLSL.FMin {{%.*}}, {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.FMin %arg0, %arg1 : vector<3xf16>
   return
 }
 
-func @fmaxf64(%arg0 : f64, %arg1 : f64) -> () {
+func @fmaxminf64(%arg0 : f64, %arg1 : f64) {
   // CHECK: spv.GLSL.FMax {{%.*}}, {{%.*}} : f64
-  %2 = spv.GLSL.FMax %arg0, %arg1 : f64
+  %1 = spv.GLSL.FMax %arg0, %arg1 : f64
+  // CHECK: spv.GLSL.FMin {{%.*}}, {{%.*}} : f64
+  %2 = spv.GLSL.FMin %arg0, %arg1 : f64
+  return
+}
+
+func @iminmax(%arg0: i32, %arg1: i32) {
+  // CHECK: spv.GLSL.SMax {{%.*}}, {{%.*}} : i32
+  %1 = spv.GLSL.SMax %arg0, %arg1 : i32
+  // CHECK: spv.GLSL.UMax {{%.*}}, {{%.*}} : i32
+  %2 = spv.GLSL.UMax %arg0, %arg1 : i32
+  // CHECK: spv.GLSL.SMin {{%.*}}, {{%.*}} : i32
+  %3 = spv.GLSL.SMin %arg0, %arg1 : i32
+  // CHECK: spv.GLSL.UMin {{%.*}}, {{%.*}} : i32
+  %4 = spv.GLSL.UMin %arg0, %arg1 : i32
   return
 }
 

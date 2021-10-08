@@ -1,8 +1,6 @@
 /* Minimal declarations for CUDA support.  Testing purposes only. */
 #pragma once
 
-#include <stddef.h>
-
 // Make this file work with nvcc, for testing compatibility.
 
 #ifndef __NVCC__
@@ -85,7 +83,6 @@ struct uint4 {
   __host__ __device__ uint4(unsigned x = 0, unsigned y = 0, unsigned z = 0, unsigned w = 0) : x(x), y(y), z(z), w(w) {}
 };
 
-
 struct longlong2 {
   long long x, y;
   __host__ __device__ longlong2(long long x = 0, long long y = 0) : x(x), y(y) {}
@@ -103,7 +100,6 @@ struct ulonglong4 {
   unsigned long long x, y, z, w;
   __host__ __device__ ulonglong4(unsigned long long x = 0, unsigned long long y = 0, unsigned long long z = 0, unsigned long long w = 0) : x(x), y(y), z(z), w(w) {}
 };
-
 
 struct float2 {
   float x, y;
@@ -123,5 +119,27 @@ struct double4 {
   __host__ __device__ double4(double x = 0, double y = 0, double z = 0, double w = 0) : x(x), y(y), z(z), w(w) {}
 };
 
+typedef unsigned long long cudaTextureObject_t;
+
+enum cudaTextureReadMode {
+  cudaReadModeNormalizedFloat,
+  cudaReadModeElementType
+};
+
+enum {
+  cudaTextureType1D,
+  cudaTextureType2D,
+  cudaTextureType3D,
+  cudaTextureTypeCubemap,
+  cudaTextureType1DLayered,
+  cudaTextureType2DLayered,
+  cudaTextureTypeCubemapLayered
+};
+
+struct textureReference {};
+template <class T, int texType = cudaTextureType1D,
+          enum cudaTextureReadMode mode = cudaReadModeElementType>
+struct __attribute__((device_builtin_texture_type)) texture
+    : public textureReference {};
 
 #endif // !__NVCC__

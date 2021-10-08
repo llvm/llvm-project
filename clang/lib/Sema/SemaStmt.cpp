@@ -547,7 +547,7 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   }
 
   ReservedIdentifierStatus Status = TheDecl->isReserved(getLangOpts());
-  if (Status != ReservedIdentifierStatus::NotReserved &&
+  if (isReservedInAllContexts(Status) &&
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
@@ -862,7 +862,8 @@ public:
 };
 }
 
-StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
+StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
+                             IfStatementKind StatementKind,
                              SourceLocation LParenLoc, Stmt *InitStmt,
                              ConditionResult Cond, SourceLocation RParenLoc,
                              Stmt *thenStmt, SourceLocation ElseLoc,
@@ -875,25 +876,36 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
                      IfLoc),
         false);
 
+  bool ConstevalOrNegatedConsteval =
+      StatementKind == IfStatementKind::ConstevalNonNegated ||
+      StatementKind == IfStatementKind::ConstevalNegated;
+
   Expr *CondExpr = Cond.get().second;
+  assert((CondExpr || ConstevalOrNegatedConsteval) &&
+         "If statement: missing condition");
   // Only call the CommaVisitor when not C89 due to differences in scope flags.
-  if ((getLangOpts().C99 || getLangOpts().CPlusPlus) &&
+  if (CondExpr && (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
       !Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
     CommaVisitor(*this).Visit(CondExpr);
 
-  if (!elseStmt)
+  if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(CondExpr->getEndLoc(), thenStmt,
                           diag::warn_empty_if_body);
 
-  if (IsConstexpr) {
+  if (ConstevalOrNegatedConsteval ||
+      StatementKind == IfStatementKind::Constexpr) {
     auto DiagnoseLikelihood = [&](const Stmt *S) {
       if (const Attr *A = Stmt::getLikelihoodAttr(S)) {
         Diags.Report(A->getLocation(),
-                     diag::warn_attribute_has_no_effect_on_if_constexpr)
-            << A << A->getRange();
+                     diag::warn_attribute_has_no_effect_on_compile_time_if)
+            << A << ConstevalOrNegatedConsteval << A->getRange();
         Diags.Report(IfLoc,
-                     diag::note_attribute_has_no_effect_on_if_constexpr_here)
-            << SourceRange(IfLoc, LParenLoc.getLocWithOffset(-1));
+                     diag::note_attribute_has_no_effect_on_compile_time_if_here)
+            << ConstevalOrNegatedConsteval
+            << SourceRange(IfLoc, (ConstevalOrNegatedConsteval
+                                       ? thenStmt->getBeginLoc()
+                                       : LParenLoc)
+                                      .getLocWithOffset(-1));
       }
     };
     DiagnoseLikelihood(thenStmt);
@@ -912,11 +924,24 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
     }
   }
 
-  return BuildIfStmt(IfLoc, IsConstexpr, LParenLoc, InitStmt, Cond, RParenLoc,
+  if (ConstevalOrNegatedConsteval) {
+    bool Immediate = isImmediateFunctionContext();
+    if (CurContext->isFunctionOrMethod()) {
+      const auto *FD =
+          dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
+      if (FD && FD->isConsteval())
+        Immediate = true;
+    }
+    if (isUnevaluatedContext() || Immediate)
+      Diags.Report(IfLoc, diag::warn_consteval_if_always_true) << Immediate;
+  }
+
+  return BuildIfStmt(IfLoc, StatementKind, LParenLoc, InitStmt, Cond, RParenLoc,
                      thenStmt, ElseLoc, elseStmt);
 }
 
-StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
+StmtResult Sema::BuildIfStmt(SourceLocation IfLoc,
+                             IfStatementKind StatementKind,
                              SourceLocation LParenLoc, Stmt *InitStmt,
                              ConditionResult Cond, SourceLocation RParenLoc,
                              Stmt *thenStmt, SourceLocation ElseLoc,
@@ -924,12 +949,13 @@ StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
   if (Cond.isInvalid())
     return StmtError();
 
-  if (IsConstexpr || isa<ObjCAvailabilityCheckExpr>(Cond.get().second))
+  if (StatementKind != IfStatementKind::Ordinary ||
+      isa<ObjCAvailabilityCheckExpr>(Cond.get().second))
     setFunctionHasBranchProtectedScope();
 
-  return IfStmt::Create(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
-                        Cond.get().second, LParenLoc, RParenLoc, thenStmt,
-                        ElseLoc, elseStmt);
+  return IfStmt::Create(Context, IfLoc, StatementKind, InitStmt,
+                        Cond.get().first, Cond.get().second, LParenLoc,
+                        RParenLoc, thenStmt, ElseLoc, elseStmt);
 }
 
 namespace {

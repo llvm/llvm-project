@@ -133,7 +133,7 @@ bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
                                    const GlobalVariable *&GVar) {
   const GlobalValue *GVal = M.getNamedValue(ComdatName);
   if (const auto *GA = dyn_cast_or_null<GlobalAlias>(GVal)) {
-    GVal = GA->getBaseObject();
+    GVal = GA->getAliaseeObject();
     if (!GVal)
       // We cannot resolve the size of the aliasee yet.
       return emitError("Linking COMDATs named '" + ComdatName +

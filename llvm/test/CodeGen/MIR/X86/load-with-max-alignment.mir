@@ -1,0 +1,44 @@
+# RUN: llc -march=x86-64 -run-pass=none -o - %s | FileCheck %s
+
+# CHECK: name:            truly_aligned_load
+# CHECK: MOV32rm {{.*}} :: (load (s32), align 4294967296)
+
+# CHECK: name:            basealigned_load
+# CHECK: MOV32rm {{.*}} :: (load (s32) from unknown-address + 4, basealign 4294967296)
+
+---
+name:            truly_aligned_load
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 0, $noreg :: (load (s32) from unknown-address, align 4294967296)
+    RETQ $eax
+
+...
+---
+name:            basealigned_load
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 0, $noreg :: (load (s32) from unknown-address + 4, basealign 4294967296)
+    RETQ $eax
+
+...

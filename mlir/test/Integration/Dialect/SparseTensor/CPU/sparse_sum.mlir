@@ -35,7 +35,7 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
-                          %argx: tensor<f64>) -> tensor<f64> {
+                          %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%argx: tensor<f64>) {
@@ -79,6 +79,7 @@ module {
 
     // Release the resources.
     memref.dealloc %xdata : memref<f64>
+    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
 
     return
   }

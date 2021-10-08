@@ -43,12 +43,14 @@ structured_op: !LinalgStructuredOpConfig
             operands:
             - !ScalarExpression
               scalar_const: '42 : i64'
+            is_unsigned_cast: false
         - !ScalarExpression
           symbolic_cast:
             type_var: T
             operands:
             - !ScalarExpression
               scalar_index: 1
+            is_unsigned_cast: true
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
@@ -84,9 +86,9 @@ structured_op: !LinalgStructuredOpConfig
 # IMPL-LABEL:  void Test1Op::regionBuilder(
 #       IMPL:    ImplicitLocOpBuilder &b, Block &block)
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
-#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]]);
+#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]], false);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
-#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL2]]);
+#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL2]], true);
 #   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.applyfn__add([[VAL1]], [[VAL3]]);
 
 

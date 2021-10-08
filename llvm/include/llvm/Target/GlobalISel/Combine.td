@@ -519,6 +519,13 @@ def fabs_fabs_fold: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// Fold (fabs (fneg x)) -> (fabs x).
+def fabs_fneg_fold: GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FABS):$root,
+         [{ return Helper.matchCombineFAbsOfFNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // Fold (unmerge cst) -> cst1, cst2, ...
 def unmerge_cst_matchinfo : GIDefMatchData<"SmallVector<APInt, 8>">;
 def unmerge_cst : GICombineRule<
@@ -754,7 +761,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
-    form_bitfield_extract, constant_fold]>;
+    form_bitfield_extract, constant_fold, fabs_fneg_fold]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

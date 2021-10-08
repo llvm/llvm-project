@@ -18,7 +18,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __basic_string_common<true>;
+void __basic_string_common<true>::__throw_length_error() const {
+    _VSTD::__throw_length_error("basic_string");
+}
+
+void __basic_string_common<true>::__throw_out_of_range() const {
+    _VSTD::__throw_out_of_range("basic_string");
+}
 
 #define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION

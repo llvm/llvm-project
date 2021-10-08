@@ -2462,6 +2462,11 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
           ExtraCost = 3;
         }
         break;
+      case CmpInst::Predicate::BAD_ICMP_PREDICATE:
+      case CmpInst::Predicate::BAD_FCMP_PREDICATE:
+        // Assume worst case scenario and add the maximum extra cost.
+        ExtraCost = 3;
+        break;
       default:
         break;
       }
@@ -5128,6 +5133,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {4, MVT::v16i16, 75}, // (load 64i16 and) deinterleave into 4 x 16i16
       {4, MVT::v32i16, 150}, // (load 128i16 and) deinterleave into 4 x 32i16
 
+      {4, MVT::v2i32, 4}, // (load 8i32 and) deinterleave into 4 x 2i32
+      {4, MVT::v4i32, 8}, // (load 16i32 and) deinterleave into 4 x 4i32
+      {4, MVT::v8i32, 16}, // (load 32i32 and) deinterleave into 4 x 8i32
+      {4, MVT::v16i32, 32}, // (load 64i32 and) deinterleave into 4 x 16i32
+
+      {4, MVT::v2i64, 6}, // (load 8i64 and) deinterleave into 4 x 2i64
+      {4, MVT::v4i64, 8}, // (load 16i64 and) deinterleave into 4 x 4i64
+      {4, MVT::v8i64, 20}, // (load 32i64 and) deinterleave into 4 x 8i64
+
       {6, MVT::v2i8, 6}, // (load 12i8 and) deinterleave into 6 x 2i8
       {6, MVT::v4i8, 14}, // (load 24i8 and) deinterleave into 6 x 4i8
       {6, MVT::v8i8, 18}, // (load 48i8 and) deinterleave into 6 x 8i8
@@ -5138,6 +5152,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {6, MVT::v4i16, 9}, // (load 24i16 and) deinterleave into 6 x 4i16
       {6, MVT::v8i16, 39}, // (load 48i16 and) deinterleave into 6 x 8i16
       {6, MVT::v16i16, 106}, // (load 96i16 and) deinterleave into 6 x 16i16
+
+      {6, MVT::v2i32, 6}, // (load 12i32 and) deinterleave into 6 x 2i32
+      {6, MVT::v4i32, 15}, // (load 24i32 and) deinterleave into 6 x 4i32
+      {6, MVT::v8i32, 31}, // (load 48i32 and) deinterleave into 6 x 8i32
+      {6, MVT::v16i32, 64}, // (load 96i32 and) deinterleave into 6 x 16i32
+
+      {6, MVT::v2i64, 6}, // (load 12i64 and) deinterleave into 6 x 2i64
+      {6, MVT::v4i64, 18}, // (load 24i64 and) deinterleave into 6 x 4i64
+      {6, MVT::v8i64, 36}, // (load 48i64 and) deinterleave into 6 x 8i64
 
       {8, MVT::v8i32, 40} // (load 64i32 and) deinterleave into 8 x 8i32
   };
@@ -5200,6 +5223,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {4, MVT::v16i16, 32},  // interleave 4 x 16i16 into 64i16 (and store)
       {4, MVT::v32i16, 64},  // interleave 4 x 32i16 into 128i16 (and store)
 
+      {4, MVT::v2i32, 5},  // interleave 4 x 2i32 into 8i32 (and store)
+      {4, MVT::v4i32, 6},  // interleave 4 x 4i32 into 16i32 (and store)
+      {4, MVT::v8i32, 16},  // interleave 4 x 8i32 into 32i32 (and store)
+      {4, MVT::v16i32, 32},  // interleave 4 x 16i32 into 64i32 (and store)
+
+      {4, MVT::v2i64, 6},  // interleave 4 x 2i64 into 8i64 (and store)
+      {4, MVT::v4i64, 8},  // interleave 4 x 4i64 into 16i64 (and store)
+      {4, MVT::v8i64, 20},  // interleave 4 x 8i64 into 32i64 (and store)
+
       {6, MVT::v2i8, 7},  // interleave 6 x 2i8 into 12i8 (and store)
       {6, MVT::v4i8, 9},  // interleave 6 x 4i8 into 24i8 (and store)
       {6, MVT::v8i8, 16},  // interleave 6 x 8i8 into 48i8 (and store)
@@ -5210,6 +5242,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
       {6, MVT::v4i16, 15},  // interleave 6 x 4i16 into 24i16 (and store)
       {6, MVT::v8i16, 21},  // interleave 6 x 8i16 into 48i16 (and store)
       {6, MVT::v16i16, 58},  // interleave 6 x 16i16 into 96i16 (and store)
+
+      {6, MVT::v2i32, 9},  // interleave 6 x 2i32 into 12i32 (and store)
+      {6, MVT::v4i32, 12},  // interleave 6 x 4i32 into 24i32 (and store)
+      {6, MVT::v8i32, 33},  // interleave 6 x 8i32 into 48i32 (and store)
+      {6, MVT::v16i32, 66},  // interleave 6 x 16i32 into 96i32 (and store)
+
+      {6, MVT::v2i64, 8},  // interleave 6 x 2i64 into 12i64 (and store)
+      {6, MVT::v4i64, 15},  // interleave 6 x 4i64 into 24i64 (and store)
+      {6, MVT::v8i64, 30},  // interleave 6 x 8i64 into 48i64 (and store)
   };
 
   if (Opcode == Instruction::Load) {

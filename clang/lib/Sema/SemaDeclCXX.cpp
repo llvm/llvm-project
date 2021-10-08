@@ -2050,6 +2050,13 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     ReturnStmts.push_back(S->getBeginLoc());
     return true;
 
+  case Stmt::AttributedStmtClass:
+    // Attributes on a statement don't affect its formal kind and hence don't
+    // affect its validity in a constexpr function.
+    return CheckConstexprFunctionStmt(SemaRef, Dcl,
+                                      cast<AttributedStmt>(S)->getSubStmt(),
+                                      ReturnStmts, Cxx1yLoc, Cxx2aLoc, Kind);
+
   case Stmt::CompoundStmtClass: {
     // C++1y allows compound-statements.
     if (!Cxx1yLoc.isValid())
@@ -2063,11 +2070,6 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     }
     return true;
   }
-
-  case Stmt::AttributedStmtClass:
-    if (!Cxx1yLoc.isValid())
-      Cxx1yLoc = S->getBeginLoc();
-    return true;
 
   case Stmt::IfStmtClass: {
     // C++1y allows if-statements.
@@ -8202,7 +8204,7 @@ private:
     if (ReturnFalse.isInvalid())
       return StmtError();
 
-    return S.ActOnIfStmt(Loc, false, Loc, nullptr,
+    return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, nullptr,
                          S.ActOnCondition(nullptr, Loc, NotCond.get(),
                                           Sema::ConditionKind::Boolean),
                          Loc, ReturnFalse.get(), SourceLocation(), nullptr);
@@ -8357,8 +8359,8 @@ private:
         return StmtError();
 
       // if (...)
-      return S.ActOnIfStmt(Loc, /*IsConstexpr=*/false, Loc, InitStmt, Cond, Loc,
-                           ReturnStmt.get(),
+      return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, InitStmt, Cond,
+                           Loc, ReturnStmt.get(),
                            /*ElseLoc=*/SourceLocation(), /*Else=*/nullptr);
     }
 

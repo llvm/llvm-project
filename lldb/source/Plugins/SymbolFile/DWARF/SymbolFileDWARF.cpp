@@ -3538,12 +3538,11 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
   if (!die || !sc.function)
     return 0;
 
-  Block *block =
-      sc.function->GetBlock(/*can_create=*/true).FindBlockByID(die.GetID());
-  const bool can_create = false;
-  VariableListSP variable_list_sp = block->GetBlockVariableList(can_create);
+  VariableList empty_variable_list;
+  // Since |die| corresponds to a Block instance, the recursive call will get
+  // a variable list from the block. |empty_variable_list| should remain empty.
   return ParseVariablesInFunctionContextRecursive(sc, die, func_low_pc,
-                                                  *variable_list_sp);
+                                                  empty_variable_list);
 }
 
 size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(

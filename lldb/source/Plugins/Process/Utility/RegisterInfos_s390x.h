@@ -27,7 +27,7 @@
     #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
         {dwarf_##name##_s390x, dwarf_##name##_s390x, generic,                  \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_GPR_NODWARF(name, size, offset, alt, generic)                   \
@@ -35,7 +35,7 @@
     #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, generic,                    \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_FPR(name, size, offset)                                         \
@@ -43,7 +43,7 @@
     #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
         {dwarf_##name##_s390x, dwarf_##name##_s390x, LLDB_INVALID_REGNUM,      \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_FPR_NODWARF(name, size, offset)                                 \
@@ -51,7 +51,7 @@
     #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,        \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 static RegisterInfo g_register_infos_s390x[] = {

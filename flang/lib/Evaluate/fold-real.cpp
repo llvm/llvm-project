@@ -143,7 +143,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::TINY()};
   }
   // TODO: dim, dot_product, fraction, matmul,
-  // maxloc, minloc, modulo, nearest, norm2, rrspacing, scale,
+  // modulo, nearest, norm2, rrspacing, scale,
+  // __builtin_next_after/down/up,
   // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};

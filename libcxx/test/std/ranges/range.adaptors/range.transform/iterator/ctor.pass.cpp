@@ -57,15 +57,15 @@ struct IterNoDefaultInitView : std::ranges::view_base {
 };
 
 constexpr bool test() {
-  std::ranges::transform_view<ContiguousView, PlusOne> transformView;
+  std::ranges::transform_view<MoveOnlyView, PlusOne> transformView;
   auto iter = std::move(transformView).begin();
-  std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, PlusOne>> i2(iter);
+  std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOne>> i2(iter);
   (void)i2;
-  std::ranges::iterator_t<const std::ranges::transform_view<ContiguousView, PlusOne>> constIter(iter);
+  std::ranges::iterator_t<const std::ranges::transform_view<MoveOnlyView, PlusOne>> constIter(iter);
   (void)constIter;
 
 
-  static_assert( std::default_initializable<std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, PlusOne>>>);
+  static_assert( std::default_initializable<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOne>>>);
   static_assert(!std::default_initializable<std::ranges::iterator_t<std::ranges::transform_view<IterNoDefaultInitView, PlusOne>>>);
 
   return true;

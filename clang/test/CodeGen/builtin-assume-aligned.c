@@ -117,7 +117,7 @@ int test6() {
 // CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 1073741824) ]
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 4294967296) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP2]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[A_ADDR]], align 8

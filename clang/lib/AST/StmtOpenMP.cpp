@@ -125,28 +125,34 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
     llvm::function_ref<bool(unsigned, Stmt *)> Callback,
-    llvm::function_ref<void(OMPLoopBasedDirective *)>
+    llvm::function_ref<void(OMPLoopTransformationDirective *)>
         OnTransformationCallback) {
   CurStmt = CurStmt->IgnoreContainers();
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
-      auto *OrigStmt = CurStmt;
-      if (auto *Dir = dyn_cast<OMPTileDirective>(OrigStmt)) {
-        OnTransformationCallback(Dir);
-        CurStmt = Dir->getTransformedStmt();
-      } else if (auto *Dir = dyn_cast<OMPUnrollDirective>(OrigStmt)) {
-        OnTransformationCallback(Dir);
-        CurStmt = Dir->getTransformedStmt();
-      } else {
+      auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
+      if (!Dir)
         break;
+
+      OnTransformationCallback(Dir);
+
+      Stmt *TransformedStmt = Dir->getTransformedStmt();
+      if (!TransformedStmt) {
+        unsigned NumGeneratedLoops = Dir->getNumGeneratedLoops();
+        if (NumGeneratedLoops == 0) {
+          // May happen if the loop transformation does not result in a
+          // generated loop (such as full unrolling).
+          break;
+        }
+        if (NumGeneratedLoops > 0) {
+          // The loop transformation construct has generated loops, but these
+          // may not have been generated yet due to being in a dependent
+          // context.
+          return true;
+        }
       }
 
-      if (!CurStmt) {
-        // May happen if the loop transformation does not result in a generated
-        // loop (such as full unrolling).
-        CurStmt = OrigStmt;
-        break;
-      }
+      CurStmt = TransformedStmt;
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
@@ -363,6 +369,32 @@ OMPForDirective *OMPForDirective::Create(
   return Dir;
 }
 
+Stmt *OMPLoopTransformationDirective::getTransformedStmt() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getTransformedStmt();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation");
+  }
+}
+
+Stmt *OMPLoopTransformationDirective::getPreInits() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getPreInits();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation");
+  }
+}
+
 OMPForDirective *OMPForDirective::CreateEmpty(const ASTContext &C,
                                               unsigned NumClauses,
                                               unsigned CollapsedNum,
@@ -396,10 +428,13 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
 OMPUnrollDirective *
 OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                           Stmt *PreInits) {
+                           Stmt *AssociatedStmt, unsigned NumGeneratedLoops,
+                           Stmt *TransformedStmt, Stmt *PreInits) {
+  assert(NumGeneratedLoops <= 1 && "Unrolling generates at most one loop");
+
   auto *Dir = createDirective<OMPUnrollDirective>(
       C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+  Dir->setNumGeneratedLoops(NumGeneratedLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;

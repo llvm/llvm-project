@@ -176,9 +176,9 @@ define <4 x i1> @ins_fcmp_ext_ext(<4 x float> %a, <4 x i1> %b) {
 
 define <4 x i1> @ins_icmp_ext_ext(<4 x i32> %a, <4 x i1> %b) {
 ; CHECK-LABEL: @ins_icmp_ext_ext(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i32> [[SHIFT]], [[A]]
-; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i32> [[A]], i32 2
+; CHECK-NEXT:    [[A23:%.*]] = icmp ule i32 [[A2]], [[A3]]
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[A23]], i32 3
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;

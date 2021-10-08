@@ -63,6 +63,9 @@ static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
   auto Int64Ty = Builder.getInt64Ty();
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_begin", Int64Ty, Int64Ty);
+  if (!M->getModuleFlag("amdgpu_hostcall")) {
+    M->addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
+  }
   return Builder.CreateCall(Fn, Version);
 }
 

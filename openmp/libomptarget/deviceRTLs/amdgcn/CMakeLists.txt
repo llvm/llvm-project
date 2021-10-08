@@ -146,7 +146,6 @@ set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.h
   ${devicertl_base_directory}/common/debug.h
-  ${devicertl_base_directory}/common/device_environment.h
   ${devicertl_base_directory}/common/omptarget.h
   ${devicertl_base_directory}/common/omptargeti.h
   ${devicertl_base_directory}/common/state-queue.h
@@ -230,6 +229,7 @@ macro(add_cuda_bc_library)
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory}/common/include
     -I${devicertl_base_directory}
+    -I${devicertl_base_directory}/../include
     ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_AMDGCN})
 
   set(bc1_files)
