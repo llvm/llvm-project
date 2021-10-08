@@ -67,8 +67,7 @@ public:
 
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
-  void bufferizeInPlace(OpResult result, OpOperand &operand,
-                        BufferRelation bufferRelation = BufferRelation::None);
+  void bufferizeInPlace(OpResult result, OpOperand &operand);
 
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpResult result);
