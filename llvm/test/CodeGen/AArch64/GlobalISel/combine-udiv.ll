@@ -22,14 +22,16 @@ define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
 ; GISEL-NEXT:    adrp x8, .LCPI0_0
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI0_0]
-; GISEL-NEXT:    umull2 v3.4s, v0.8h, v1.8h
-; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
-; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v3.8h
-; GISEL-NEXT:    sub v0.8h, v0.8h, v1.8h
-; GISEL-NEXT:    umull2 v3.4s, v0.8h, v2.8h
-; GISEL-NEXT:    umull v0.4s, v0.4h, v2.4h
-; GISEL-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
-; GISEL-NEXT:    add v0.8h, v0.8h, v1.8h
+; GISEL-NEXT:    adrp x8, .LCPI0_2
+; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI0_2]
+; GISEL-NEXT:    sub v1.8h, v2.8h, v1.8h
+; GISEL-NEXT:    neg v1.8h, v1.8h
+; GISEL-NEXT:    umull2 v2.4s, v0.8h, v3.8h
+; GISEL-NEXT:    umull v3.4s, v0.4h, v3.4h
+; GISEL-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
+; GISEL-NEXT:    sub v0.8h, v0.8h, v2.8h
+; GISEL-NEXT:    ushl v0.8h, v0.8h, v1.8h
+; GISEL-NEXT:    add v0.8h, v0.8h, v2.8h
 ; GISEL-NEXT:    ushr v0.8h, v0.8h, #4
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23>
@@ -155,28 +157,30 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 ;
 ; GISEL-LABEL: combine_vec_udiv_nonuniform3:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI3_5
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_5]
 ; GISEL-NEXT:    adrp x8, .LCPI3_4
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_4]
-; GISEL-NEXT:    adrp x8, .LCPI3_3
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_3]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_4]
 ; GISEL-NEXT:    adrp x8, .LCPI3_2
 ; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI3_2]
 ; GISEL-NEXT:    adrp x8, .LCPI3_1
 ; GISEL-NEXT:    ldr q4, [x8, :lo12:.LCPI3_1]
+; GISEL-NEXT:    adrp x8, .LCPI3_3
+; GISEL-NEXT:    ldr q5, [x8, :lo12:.LCPI3_3]
 ; GISEL-NEXT:    adrp x8, .LCPI3_0
-; GISEL-NEXT:    ldr q5, [x8, :lo12:.LCPI3_0]
-; GISEL-NEXT:    umull2 v6.4s, v0.8h, v2.8h
+; GISEL-NEXT:    ldr q6, [x8, :lo12:.LCPI3_0]
+; GISEL-NEXT:    sub v3.8h, v4.8h, v3.8h
+; GISEL-NEXT:    umull2 v4.4s, v0.8h, v2.8h
 ; GISEL-NEXT:    umull v2.4s, v0.4h, v2.4h
-; GISEL-NEXT:    uzp2 v2.8h, v2.8h, v6.8h
-; GISEL-NEXT:    cmeq v1.8h, v1.8h, v5.8h
-; GISEL-NEXT:    sub v5.8h, v0.8h, v2.8h
-; GISEL-NEXT:    umull2 v6.4s, v5.8h, v3.8h
-; GISEL-NEXT:    umull v3.4s, v5.4h, v3.4h
-; GISEL-NEXT:    uzp2 v3.8h, v3.8h, v6.8h
-; GISEL-NEXT:    neg v4.8h, v4.8h
+; GISEL-NEXT:    uzp2 v2.8h, v2.8h, v4.8h
+; GISEL-NEXT:    neg v3.8h, v3.8h
+; GISEL-NEXT:    sub v4.8h, v0.8h, v2.8h
+; GISEL-NEXT:    cmeq v1.8h, v1.8h, v6.8h
+; GISEL-NEXT:    ushl v3.8h, v4.8h, v3.8h
+; GISEL-NEXT:    neg v5.8h, v5.8h
 ; GISEL-NEXT:    shl v1.8h, v1.8h, #15
 ; GISEL-NEXT:    add v2.8h, v3.8h, v2.8h
-; GISEL-NEXT:    ushl v2.8h, v2.8h, v4.8h
+; GISEL-NEXT:    ushl v2.8h, v2.8h, v5.8h
 ; GISEL-NEXT:    sshr v1.8h, v1.8h, #15
 ; GISEL-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; GISEL-NEXT:    ret

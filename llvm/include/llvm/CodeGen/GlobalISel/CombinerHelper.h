@@ -610,6 +610,10 @@ public:
   bool matchUDivByConst(MachineInstr &MI);
   void applyUDivByConst(MachineInstr &MI);
 
+  // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
+  bool matchUMulHToLShr(MachineInstr &MI);
+  void applyUMulHToLShr(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
