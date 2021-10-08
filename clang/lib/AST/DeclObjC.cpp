@@ -855,6 +855,14 @@ bool ObjCMethodDecl::isDesignatedInitializerForTheInterface(
   return false;
 }
 
+bool ObjCMethodDecl::hasParamDestroyedInCallee() const {
+  for (auto param : parameters()) {
+    if (param->isDestroyedInCallee())
+      return true;
+  }
+  return false;
+}
+
 Stmt *ObjCMethodDecl::getBody() const {
   return Body.get(getASTContext().getExternalSource());
 }
