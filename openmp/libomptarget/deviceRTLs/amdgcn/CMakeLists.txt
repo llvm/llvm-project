@@ -15,7 +15,6 @@ find_package(LLVM QUIET CONFIG
   ${LLVM_INSTALL_PREFIX}
   $ENV{AOMP}
   $ENV{HOME}/rocm/aomp
-  /opt/rocm/aomp
   /usr/lib/rocm/aomp
   ${LIBOMPTARGET_NVPTX_CUDA_COMPILER_DIR}
   ${LIBOMPTARGET_NVPTX_CUDA_LINKER_DIR}
