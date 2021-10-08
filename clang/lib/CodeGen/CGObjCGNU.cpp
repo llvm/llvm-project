@@ -2651,35 +2651,6 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     }
   }
 
-  // If the return type is something that goes in an integer register, the
-  // runtime will handle 0 returns.  For other cases, we fill in the 0 value
-  // ourselves.
-  //
-  // The language spec says the result of this kind of message send is
-  // undefined, but lots of people seem to have forgotten to read that
-  // paragraph and insist on sending messages to nil that have structure
-  // returns.  With GCC, this generates a random return value (whatever happens
-  // to be on the stack / in those registers at the time) on most platforms,
-  // and generates an illegal instruction trap on SPARC.  With LLVM it corrupts
-  // the stack.
-  bool isPointerSizedReturn = (ResultType->isAnyPointerType() ||
-      ResultType->isIntegralOrEnumerationType() || ResultType->isVoidType());
-
-  llvm::BasicBlock *startBB = nullptr;
-  llvm::BasicBlock *messageBB = nullptr;
-  llvm::BasicBlock *continueBB = nullptr;
-
-  if (!isPointerSizedReturn) {
-    startBB = Builder.GetInsertBlock();
-    messageBB = CGF.createBasicBlock("msgSend");
-    continueBB = CGF.createBasicBlock("continue");
-
-    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
-            llvm::Constant::getNullValue(Receiver->getType()));
-    Builder.CreateCondBr(isNil, continueBB, messageBB);
-    CGF.EmitBlock(messageBB);
-  }
-
   IdTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(ASTIdTy));
   llvm::Value *cmd;
   if (Method)
@@ -2702,6 +2673,96 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   ActualArgs.addFrom(CallArgs);
 
   MessageSendInfo MSI = getMessageSendInfo(Method, ResultType, ActualArgs);
+
+  // Message sends are expected to return a zero value when the
+  // receiver is nil.  At one point, this was only guaranteed for
+  // simple integer and pointer types, but expectations have grown
+  // over time.
+  //
+  // Given a nil receiver, the GNU runtime's message lookup will
+  // return a stub function that simply sets various return-value
+  // registers to zero and then returns.  That's good enough for us
+  // if and only if (1) the calling conventions of that stub are
+  // compatible with the signature we're using and (2) the registers
+  // it sets are sufficient to produce a zero value of the return type.
+  // Rather than doing a whole target-specific analysis, we assume it
+  // only works for void, integer, and pointer types, and in all
+  // other cases we do an explicit nil check is emitted code.  In
+  // addition to ensuring we produe a zero value for other types, this
+  // sidesteps the few outright CC incompatibilities we know about that
+  // could otherwise lead to crashes, like when a method is expected to
+  // return on the x87 floating point stack or adjust the stack pointer
+  // because of an indirect return.
+  bool hasParamDestroyedInCallee = false;
+  bool requiresExplicitZeroResult = false;
+  bool requiresNilReceiverCheck = [&] {
+    // We never need a check if we statically know the receiver isn't nil.
+    if (!canMessageReceiverBeNull(CGF, Method, /*IsSuper*/ false,
+                                  Class, Receiver))
+      return false;
+
+    // If there's a consumed argument, we need a nil check.
+    if (Method && Method->hasParamDestroyedInCallee()) {
+      hasParamDestroyedInCallee = true;
+    }
+
+    // If the return value isn't flagged as unused, and the result
+    // type isn't in our narrow set where we assume compatibility,
+    // we need a nil check to ensure a nil value.
+    if (!Return.isUnused()) {
+      if (ResultType->isVoidType()) {
+        // void results are definitely okay.
+      } else if (ResultType->hasPointerRepresentation() &&
+                 CGM.getTypes().isZeroInitializable(ResultType)) {
+        // Pointer types should be fine as long as they have
+        // bitwise-zero null pointers.  But do we need to worry
+        // about unusual address spaces?
+      } else if (ResultType->isIntegralOrEnumerationType()) {
+        // Bitwise zero should always be zero for integral types.
+        // FIXME: we probably need a size limit here, but we've
+        // never imposed one before
+      } else {
+        // Otherwise, use an explicit check just to be sure.
+        requiresExplicitZeroResult = true;
+      }
+    }
+
+    return hasParamDestroyedInCallee || requiresExplicitZeroResult;
+  }();
+
+  // We will need to explicitly zero-initialize an aggregate result slot
+  // if we generally require explicit zeroing and we have an aggregate
+  // result.
+  bool requiresExplicitAggZeroing =
+    requiresExplicitZeroResult && CGF.hasAggregateEvaluationKind(ResultType);
+
+  // The block we're going to end up in after any message send or nil path.
+  llvm::BasicBlock *continueBB = nullptr;
+  // The block that eventually branched to continueBB along the nil path.
+  llvm::BasicBlock *nilPathBB = nullptr;
+  // The block to do explicit work in along the nil path, if necessary.
+  llvm::BasicBlock *nilCleanupBB = nullptr;
+
+  // Emit the nil-receiver check.
+  if (requiresNilReceiverCheck) {
+    llvm::BasicBlock *messageBB = CGF.createBasicBlock("msgSend");
+    continueBB = CGF.createBasicBlock("continue");
+
+    // If we need to zero-initialize an aggregate result or destroy
+    // consumed arguments, we'll need a separate cleanup block.
+    // Otherwise we can just branch directly to the continuation block.
+    if (requiresExplicitAggZeroing || hasParamDestroyedInCallee) {
+      nilCleanupBB = CGF.createBasicBlock("nilReceiverCleanup");
+    } else {
+      nilPathBB = Builder.GetInsertBlock();
+    }
+
+    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
+            llvm::Constant::getNullValue(Receiver->getType()));
+    Builder.CreateCondBr(isNil, nilCleanupBB ? nilCleanupBB : continueBB,
+                         messageBB);
+    CGF.EmitBlock(messageBB);
+  }
 
   // Get the IMP to call
   llvm::Value *imp;
@@ -2744,36 +2805,48 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
 
-
-  if (!isPointerSizedReturn) {
-    messageBB = CGF.Builder.GetInsertBlock();
+  if (requiresNilReceiverCheck) {
+    llvm::BasicBlock *nonNilPathBB = CGF.Builder.GetInsertBlock();
     CGF.Builder.CreateBr(continueBB);
+
+    // Emit the nil path if we decided it was necessary above.
+    if (nilCleanupBB) {
+      CGF.EmitBlock(nilCleanupBB);
+
+      if (hasParamDestroyedInCallee) {
+        destroyCalleeDestroyedArguments(CGF, Method, CallArgs);
+      }
+
+      if (requiresExplicitAggZeroing) {
+        assert(msgRet.isAggregate());
+        Address addr = msgRet.getAggregateAddress();
+        CGF.EmitNullInitialization(addr, ResultType);
+      }
+
+      nilPathBB = CGF.Builder.GetInsertBlock();
+      CGF.Builder.CreateBr(continueBB);
+    }
+
+    // Enter the continuation block and emit a phi if required.
     CGF.EmitBlock(continueBB);
     if (msgRet.isScalar()) {
       llvm::Value *v = msgRet.getScalarVal();
       llvm::PHINode *phi = Builder.CreatePHI(v->getType(), 2);
-      phi->addIncoming(v, messageBB);
-      phi->addIncoming(llvm::Constant::getNullValue(v->getType()), startBB);
+      phi->addIncoming(v, nonNilPathBB);
+      phi->addIncoming(CGM.EmitNullConstant(ResultType), nilPathBB);
       msgRet = RValue::get(phi);
     } else if (msgRet.isAggregate()) {
-      Address v = msgRet.getAggregateAddress();
-      llvm::PHINode *phi = Builder.CreatePHI(v.getType(), 2);
-      llvm::Type *RetTy = v.getElementType();
-      Address NullVal = CGF.CreateTempAlloca(RetTy, v.getAlignment(), "null");
-      CGF.InitTempAlloca(NullVal, llvm::Constant::getNullValue(RetTy));
-      phi->addIncoming(v.getPointer(), messageBB);
-      phi->addIncoming(NullVal.getPointer(), startBB);
-      msgRet = RValue::getAggregate(Address(phi, v.getAlignment()));
+      // Aggregate zeroing is handled in nilCleanupBB when it's required.
     } else /* isComplex() */ {
       std::pair<llvm::Value*,llvm::Value*> v = msgRet.getComplexVal();
       llvm::PHINode *phi = Builder.CreatePHI(v.first->getType(), 2);
-      phi->addIncoming(v.first, messageBB);
+      phi->addIncoming(v.first, nonNilPathBB);
       phi->addIncoming(llvm::Constant::getNullValue(v.first->getType()),
-          startBB);
+                       nilPathBB);
       llvm::PHINode *phi2 = Builder.CreatePHI(v.second->getType(), 2);
-      phi2->addIncoming(v.second, messageBB);
+      phi2->addIncoming(v.second, nonNilPathBB);
       phi2->addIncoming(llvm::Constant::getNullValue(v.second->getType()),
-          startBB);
+                        nilPathBB);
       msgRet = RValue::getComplex(phi, phi2);
     }
   }
