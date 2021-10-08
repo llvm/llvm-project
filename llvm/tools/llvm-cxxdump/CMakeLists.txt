@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
+  MC
   Object
   Support
   )
