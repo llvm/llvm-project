@@ -24,33 +24,6 @@ namespace orc {
 
 ExecutorBootstrapService::~ExecutorBootstrapService() {}
 
-SimpleRemoteEPCServer::Dispatcher::~Dispatcher() {}
-
-#if LLVM_ENABLE_THREADS
-void SimpleRemoteEPCServer::ThreadDispatcher::dispatch(
-    unique_function<void()> Work) {
-  {
-    std::lock_guard<std::mutex> Lock(DispatchMutex);
-    if (!Running)
-      return;
-    ++Outstanding;
-  }
-
-  std::thread([this, Work = std::move(Work)]() mutable {
-    Work();
-    std::lock_guard<std::mutex> Lock(DispatchMutex);
-    --Outstanding;
-    OutstandingCV.notify_all();
-  }).detach();
-}
-
-void SimpleRemoteEPCServer::ThreadDispatcher::shutdown() {
-  std::unique_lock<std::mutex> Lock(DispatchMutex);
-  Running = false;
-  OutstandingCV.wait(Lock, [this]() { return Outstanding == 0; });
-}
-#endif
-
 StringMap<ExecutorAddr> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
   StringMap<ExecutorAddr> DBS;
   rt_bootstrap::addTo(DBS);
