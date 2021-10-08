@@ -46,7 +46,7 @@ int test8(int *a, int j) {
 void test_void_assume_aligned(void) __attribute__((assume_aligned(32))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 int test_int_assume_aligned(void) __attribute__((assume_aligned(16))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(64))); // no-warning
-void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(2147483648))); // expected-warning {{requested alignment must be 1073741824 bytes or smaller; maximum alignment assumed}}
+void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(8589934592))); // expected-warning {{requested alignment must be 4294967296 bytes or smaller; maximum alignment assumed}}
 
 int j __attribute__((assume_aligned(8))); // expected-warning {{'assume_aligned' attribute only applies to Objective-C methods and functions}}
 void *test_no_fn_proto() __attribute__((assume_aligned(32))); // no-warning
@@ -60,6 +60,6 @@ void *test_no_fn_proto() __attribute__((assume_aligned())); // expected-error {{
 void *test_no_fn_proto() __attribute__((assume_aligned(32, 45, 37))); // expected-error {{'assume_aligned' attribute takes no more than 2 arguments}}
 
 int pr43638(int *a) {
-  a = __builtin_assume_aligned(a, 2147483648); // expected-warning {{requested alignment must be 1073741824 bytes or smaller; maximum alignment assumed}}
+  a = __builtin_assume_aligned(a, 8589934592); // expected-warning {{requested alignment must be 4294967296 bytes or smaller; maximum alignment assumed}}
   return a[0];
 }
