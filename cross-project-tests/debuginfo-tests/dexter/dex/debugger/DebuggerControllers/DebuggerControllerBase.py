@@ -21,7 +21,9 @@ class DebuggerControllerBase(object, metaclass=abc.ABCMeta):
         """
         self.debugger = debugger
         with self.debugger:
-            self._run_debugger_custom()
+            if not self.debugger.loading_error:
+                self._run_debugger_custom()
+
         # We may need to pickle this debugger controller after running the
         # debugger. Debuggers are not picklable objects, so set to None.
         self.debugger = None
