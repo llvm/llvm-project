@@ -322,16 +322,24 @@ std::string PerfReaderBase::convertPerfDataToTrace(ProfiledBinary *Binary,
   // Collect the PIDs
   TraceStream TraceIt(PerfTraceFile);
   std::string PIDs;
+  std::unordered_set<uint32_t> PIDSet;
   while (!TraceIt.isAtEoF()) {
     MMapEvent MMap;
     if (isMMap2Event(TraceIt.getCurrentLine()) &&
         extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-      if (!PIDs.empty()) {
-        PIDs.append(",");
+      auto It = PIDSet.emplace(MMap.PID);
+      if (It.second) {
+        if (!PIDs.empty()) {
+          PIDs.append(",");
+        }
+        PIDs.append(utostr(MMap.PID));
       }
-      PIDs.append(utostr(MMap.PID));
     }
     TraceIt.advance();
+  }
+
+  if (PIDs.empty()) {
+    exitWithError("No relevant mmap event is found in perf data.");
   }
 
   // Run perf script again to retrieve events for PIDs collected above
