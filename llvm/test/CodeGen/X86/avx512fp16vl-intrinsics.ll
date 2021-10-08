@@ -958,6 +958,17 @@ define <8 x half> @test_sqrt_ph_128(<8 x half> %a0) {
   ret <8 x half> %1
 }
 
+define <8 x half> @test_sqrt_ph_128_fast(<8 x half> %a0, <8 x half> %a1) {
+; CHECK-LABEL: test_sqrt_ph_128_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %xmm0, %xmm0
+; CHECK-NEXT:    vmulph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %1 = call fast <8 x half> @llvm.sqrt.v8f16(<8 x half> %a0)
+  %2 = fdiv fast <8 x half> %a1, %1
+  ret <8 x half> %2
+}
+
 define <8 x half> @test_mask_sqrt_ph_128(<8 x half> %a0, <8 x half> %passthru, i8 %mask) {
 ; CHECK-LABEL: test_mask_sqrt_ph_128:
 ; CHECK:       # %bb.0:
@@ -990,6 +1001,17 @@ define <16 x half> @test_sqrt_ph_256(<16 x half> %a0) {
 ; CHECK-NEXT:    retq
   %1 = call <16 x half> @llvm.sqrt.v16f16(<16 x half> %a0)
   ret <16 x half> %1
+}
+
+define <16 x half> @test_sqrt_ph_256_fast(<16 x half> %a0, <16 x half> %a1) {
+; CHECK-LABEL: test_sqrt_ph_256_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %ymm0, %ymm0
+; CHECK-NEXT:    vmulph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %1 = call fast <16 x half> @llvm.sqrt.v16f16(<16 x half> %a0)
+  %2 = fdiv fast <16 x half> %a1, %1
+  ret <16 x half> %2
 }
 
 define <16 x half> @test_mask_sqrt_ph_256(<16 x half> %a0, <16 x half> %passthru, i16 %mask) {

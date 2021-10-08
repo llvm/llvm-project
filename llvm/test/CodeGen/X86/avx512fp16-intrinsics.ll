@@ -24,6 +24,17 @@ define <32 x half> @test_sqrt_ph_512(<32 x half> %a0) {
   ret <32 x half> %1
 }
 
+define <32 x half> @test_sqrt_ph_512_fast(<32 x half> %a0, <32 x half> %a1) {
+; CHECK-LABEL: test_sqrt_ph_512_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %zmm0, %zmm0
+; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call fast <32 x half> @llvm.sqrt.v32f16(<32 x half> %a0)
+  %2 = fdiv fast <32 x half> %a1, %1
+  ret <32 x half> %2
+}
+
 define <32 x half> @test_mask_sqrt_ph_512(<32 x half> %a0, <32 x half> %passthru, i32 %mask) {
 ; CHECK-LABEL: test_mask_sqrt_ph_512:
 ; CHECK:       # %bb.0:
@@ -97,6 +108,19 @@ define <8 x half> @test_sqrt_sh(<8 x half> %a0, <8 x half> %a1, <8 x half> %a2, 
   %res = call <8 x half> @llvm.x86.avx512fp16.mask.sqrt.sh(<8 x half> %a0, <8 x half> %a1, <8 x half> %a2, i8 %mask, i32 4)
   ret <8 x half> %res
 }
+
+define half @test_sqrt_sh2(half %a0, half %a1) {
+; CHECK-LABEL: test_sqrt_sh2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtsh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %1 = call fast half @llvm.sqrt.f16(half %a0)
+  %2 = fdiv fast half %a1, %1
+  ret half %2
+}
+
+declare half @llvm.sqrt.f16(half)
 
 define <8 x half> @test_sqrt_sh_r(<8 x half> %a0, <8 x half> %a1, <8 x half> %a2, i8 %mask) {
 ; CHECK-LABEL: test_sqrt_sh_r:

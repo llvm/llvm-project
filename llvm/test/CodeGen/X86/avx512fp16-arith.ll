@@ -154,6 +154,16 @@ define <32 x half> @vdivph_512_test(<32 x half> %i, <32 x half> %j) nounwind rea
   ret <32 x half> %x
 }
 
+define <32 x half> @vdivph_512_test_fast(<32 x half> %i, <32 x half> %j) nounwind readnone {
+; CHECK-LABEL: vdivph_512_test_fast:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrcpph %zmm1, %zmm1
+; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %x = fdiv fast <32 x half> %i, %j
+  ret <32 x half> %x
+}
+
 define half @add_sh(half %i, half %j, half* %x.ptr) nounwind readnone {
 ; CHECK-LABEL: add_sh:
 ; CHECK:       ## %bb.0:
@@ -225,6 +235,16 @@ define half @div_sh_2(half %i, half %j, half* %x.ptr) nounwind readnone {
   %x = load half, half* %x.ptr
   %y = fdiv  half %i, %j
   %r = fdiv  half %y, %x
+  ret half %r
+}
+
+define half @div_sh_3(half %i, half %j) nounwind readnone {
+; CHECK-LABEL: div_sh_3:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrcpsh %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmulsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %r = fdiv fast half %i, %j
   ret half %r
 }
 
