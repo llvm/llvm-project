@@ -771,6 +771,19 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTemplateParmDecl>
 const internal::VariadicAllOfMatcher<QualType> qualType;
 const internal::VariadicAllOfMatcher<Type> type;
 const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;
+
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, QualifiedTypeLoc>
+    qualifiedTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
+    pointerTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
+    referenceTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc,
+                                            TemplateSpecializationTypeLoc>
+    templateSpecializationTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
+    elaboratedTypeLoc;
+
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
 const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;

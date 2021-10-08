@@ -5764,5 +5764,454 @@ TEST(CXXNewExpr, PlacementArgs) {
                          IsPlacementNew));
 }
 
+TEST(HasUnqualifiedLoc, BindsToConstIntVarDecl) {
+  EXPECT_TRUE(matches(
+      "const int x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("int"))))))));
+}
+
+TEST(HasUnqualifiedLoc, BindsToVolatileIntVarDecl) {
+  EXPECT_TRUE(matches(
+      "volatile int x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("int"))))))));
+}
+
+TEST(HasUnqualifiedLoc, BindsToConstVolatileIntVarDecl) {
+  EXPECT_TRUE(matches(
+      "const volatile int x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("int"))))))));
+}
+
+TEST(HasUnqualifiedLoc, BindsToConstPointerVarDecl) {
+  auto matcher = varDecl(
+      hasName("x"),
+      hasTypeLoc(qualifiedTypeLoc(hasUnqualifiedLoc(pointerTypeLoc()))));
+  EXPECT_TRUE(matches("int* const x = 0;", matcher));
+  EXPECT_TRUE(notMatches("int const x = 0;", matcher));
+}
+
+TEST(HasUnqualifiedLoc, BindsToPointerToConstVolatileIntVarDecl) {
+  EXPECT_TRUE(
+      matches("const volatile int* x = 0;",
+              varDecl(hasName("x"),
+                      hasTypeLoc(pointerTypeLoc(hasPointeeLoc(qualifiedTypeLoc(
+                          hasUnqualifiedLoc(loc(asString("int"))))))))));
+}
+
+TEST(HasUnqualifiedLoc, BindsToConstIntFunctionDecl) {
+  EXPECT_TRUE(
+      matches("const int f() { return 5; }",
+              functionDecl(hasName("f"),
+                           hasReturnTypeLoc(qualifiedTypeLoc(
+                               hasUnqualifiedLoc(loc(asString("int"))))))));
+}
+
+TEST(HasUnqualifiedLoc, FloatBindsToConstFloatVarDecl) {
+  EXPECT_TRUE(matches(
+      "const float x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("float"))))))));
+}
+
+TEST(HasUnqualifiedLoc, FloatDoesNotBindToIntVarDecl) {
+  EXPECT_TRUE(notMatches(
+      "int x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("float"))))))));
+}
+
+TEST(HasUnqualifiedLoc, FloatDoesNotBindToConstIntVarDecl) {
+  EXPECT_TRUE(notMatches(
+      "const int x = 0;",
+      varDecl(hasName("x"), hasTypeLoc(qualifiedTypeLoc(
+                                hasUnqualifiedLoc(loc(asString("float"))))))));
+}
+
+TEST(HasReturnTypeLoc, BindsToIntReturnTypeLoc) {
+  EXPECT_TRUE(matches(
+      "int f() { return 5; }",
+      functionDecl(hasName("f"), hasReturnTypeLoc(loc(asString("int"))))));
+}
+
+TEST(HasReturnTypeLoc, BindsToFloatReturnTypeLoc) {
+  EXPECT_TRUE(matches(
+      "float f() { return 5.0; }",
+      functionDecl(hasName("f"), hasReturnTypeLoc(loc(asString("float"))))));
+}
+
+TEST(HasReturnTypeLoc, BindsToVoidReturnTypeLoc) {
+  EXPECT_TRUE(matches(
+      "void f() {}",
+      functionDecl(hasName("f"), hasReturnTypeLoc(loc(asString("void"))))));
+}
+
+TEST(HasReturnTypeLoc, FloatDoesNotBindToIntReturnTypeLoc) {
+  EXPECT_TRUE(notMatches(
+      "int f() { return 5; }",
+      functionDecl(hasName("f"), hasReturnTypeLoc(loc(asString("float"))))));
+}
+
+TEST(HasReturnTypeLoc, IntDoesNotBindToFloatReturnTypeLoc) {
+  EXPECT_TRUE(notMatches(
+      "float f() { return 5.0; }",
+      functionDecl(hasName("f"), hasReturnTypeLoc(loc(asString("int"))))));
+}
+
+TEST(HasPointeeLoc, BindsToAnyPointeeTypeLoc) {
+  auto matcher = varDecl(hasName("x"),
+                         hasTypeLoc(pointerTypeLoc(hasPointeeLoc(typeLoc()))));
+  EXPECT_TRUE(matches("int* x;", matcher));
+  EXPECT_TRUE(matches("float* x;", matcher));
+  EXPECT_TRUE(matches("char* x;", matcher));
+  EXPECT_TRUE(matches("void* x;", matcher));
+}
+
+TEST(HasPointeeLoc, DoesNotBindToTypeLocWithoutPointee) {
+  auto matcher = varDecl(hasName("x"),
+                         hasTypeLoc(pointerTypeLoc(hasPointeeLoc(typeLoc()))));
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("float x;", matcher));
+  EXPECT_TRUE(notMatches("char x;", matcher));
+}
+
+TEST(HasPointeeLoc, BindsToTypeLocPointingToInt) {
+  EXPECT_TRUE(
+      matches("int* x;", pointerTypeLoc(hasPointeeLoc(loc(asString("int"))))));
+}
+
+TEST(HasPointeeLoc, BindsToTypeLocPointingToIntPointer) {
+  EXPECT_TRUE(matches("int** x;",
+                      pointerTypeLoc(hasPointeeLoc(loc(asString("int *"))))));
+}
+
+TEST(HasPointeeLoc, BindsToTypeLocPointingToTypeLocPointingToInt) {
+  EXPECT_TRUE(matches("int** x;", pointerTypeLoc(hasPointeeLoc(pointerTypeLoc(
+                                      hasPointeeLoc(loc(asString("int"))))))));
+}
+
+TEST(HasPointeeLoc, BindsToTypeLocPointingToFloat) {
+  EXPECT_TRUE(matches("float* x;",
+                      pointerTypeLoc(hasPointeeLoc(loc(asString("float"))))));
+}
+
+TEST(HasPointeeLoc, IntPointeeDoesNotBindToTypeLocPointingToFloat) {
+  EXPECT_TRUE(notMatches("float* x;",
+                         pointerTypeLoc(hasPointeeLoc(loc(asString("int"))))));
+}
+
+TEST(HasPointeeLoc, FloatPointeeDoesNotBindToTypeLocPointingToInt) {
+  EXPECT_TRUE(notMatches(
+      "int* x;", pointerTypeLoc(hasPointeeLoc(loc(asString("float"))))));
+}
+
+TEST(HasReferentLoc, BindsToAnyReferentTypeLoc) {
+  auto matcher = varDecl(
+      hasName("r"), hasTypeLoc(referenceTypeLoc(hasReferentLoc(typeLoc()))));
+  EXPECT_TRUE(matches("int rr = 3; int& r = rr;", matcher));
+  EXPECT_TRUE(matches("int rr = 3; auto& r = rr;", matcher));
+  EXPECT_TRUE(matches("int rr = 3; const int& r = rr;", matcher));
+  EXPECT_TRUE(matches("float rr = 3.0; float& r = rr;", matcher));
+  EXPECT_TRUE(matches("char rr = 'a'; char& r = rr;", matcher));
+}
+
+TEST(HasReferentLoc, DoesNotBindToTypeLocWithoutReferent) {
+  auto matcher = varDecl(
+      hasName("r"), hasTypeLoc(referenceTypeLoc(hasReferentLoc(typeLoc()))));
+  EXPECT_TRUE(notMatches("int r;", matcher));
+  EXPECT_TRUE(notMatches("int r = 3;", matcher));
+  EXPECT_TRUE(notMatches("const int r = 3;", matcher));
+  EXPECT_TRUE(notMatches("int* r;", matcher));
+  EXPECT_TRUE(notMatches("float r;", matcher));
+  EXPECT_TRUE(notMatches("char r;", matcher));
+}
+
+TEST(HasReferentLoc, BindsToAnyRvalueReference) {
+  auto matcher = varDecl(
+      hasName("r"), hasTypeLoc(referenceTypeLoc(hasReferentLoc(typeLoc()))));
+  EXPECT_TRUE(matches("int&& r = 3;", matcher));
+  EXPECT_TRUE(matches("auto&& r = 3;", matcher));
+  EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
+}
+
+TEST(HasReferentLoc, BindsToIntReferenceTypeLoc) {
+  EXPECT_TRUE(matches("int rr = 3; int& r = rr;",
+                      referenceTypeLoc(hasReferentLoc(loc(asString("int"))))));
+}
+
+TEST(HasReferentLoc, BindsToIntRvalueReferenceTypeLoc) {
+  EXPECT_TRUE(matches("int&& r = 3;",
+                      referenceTypeLoc(hasReferentLoc(loc(asString("int"))))));
+}
+
+TEST(HasReferentLoc, BindsToFloatReferenceTypeLoc) {
+  EXPECT_TRUE(
+      matches("float rr = 3.0; float& r = rr;",
+              referenceTypeLoc(hasReferentLoc(loc(asString("float"))))));
+}
+
+TEST(HasReferentLoc, BindsToParameterWithIntReferenceTypeLoc) {
+  EXPECT_TRUE(matches(
+      "int f(int& r) { return r; }",
+      parmVarDecl(hasName("r"), hasTypeLoc(referenceTypeLoc(
+                                    hasReferentLoc(loc(asString("int"))))))));
+}
+
+TEST(HasReferentLoc, IntReferenceDoesNotBindToFloatReferenceTypeLoc) {
+  EXPECT_TRUE(
+      notMatches("float rr = 3.0; float& r = rr;",
+                 referenceTypeLoc(hasReferentLoc(loc(asString("int"))))));
+}
+
+TEST(HasReferentLoc, FloatReferenceDoesNotBindToIntReferenceTypeLoc) {
+  EXPECT_TRUE(
+      notMatches("int rr = 3; int& r = rr;",
+                 referenceTypeLoc(hasReferentLoc(loc(asString("float"))))));
+}
+
+TEST(HasReferentLoc, DoesNotBindToParameterWithoutIntReferenceTypeLoc) {
+  EXPECT_TRUE(notMatches(
+      "int f(int r) { return r; }",
+      parmVarDecl(hasName("r"), hasTypeLoc(referenceTypeLoc(
+                                    hasReferentLoc(loc(asString("int"))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<int> a;",
+              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
+                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                            loc(asString("int")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<double> a;",
+              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
+                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                            loc(asString("double")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(
+              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc,
+     BindsToExplicitSpecializationWithDoubleArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<double> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+              hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
+  auto code = R"(
+  template<typename T, typename U> class A {};
+  template<> class A<double, int> {};
+  )";
+  EXPECT_TRUE(
+      matches(code, classTemplateSpecializationDecl(
+                        hasName("A"), hasTypeLoc(templateSpecializationTypeLoc(
+                                          hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                              loc(asString("double")))))))));
+  EXPECT_TRUE(matches(
+      code,
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(
+              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; A<int> a;",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+              hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasAnyTemplateArgumentLoc,
+     DoesNotBindToExplicitSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+              hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<int> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                  0, hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<double> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                  0, hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(
+              hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<double> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+              0, hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
+  auto code = R"(
+  template<typename T, typename U> class A {};
+  template<> class A<double, int> {};
+  )";
+  EXPECT_TRUE(matches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    0, hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(matches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    1, hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; A<int> a;",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+              0, hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasTemplateArgumentLoc,
+     DoesNotBindToExplicitSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+              0, hasTypeLoc(loc(asString("double")))))))));
+}
+
+TEST(HasTemplateArgumentLoc,
+     DoesNotBindToSpecializationWithMisplacedArguments) {
+  auto code = R"(
+  template<typename T, typename U> class A {};
+  template<> class A<double, int> {};
+  )";
+  EXPECT_TRUE(notMatches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    1, hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(notMatches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    0, hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
+  auto code = R"(
+  template<typename T, typename U> class A {};
+  template<> class A<double, int> {};
+  )";
+  EXPECT_TRUE(notMatches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    -1, hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(notMatches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                    100, hasTypeLoc(loc(asString("int")))))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToDeclRefExprWithIntArgument) {
+  EXPECT_TRUE(matches(R"(
+      template<typename T> T f(T t) { return t; }
+      int g() { int i = f<int>(3); return i; }
+      )",
+                      declRefExpr(to(functionDecl(hasName("f"))),
+                                  hasTemplateArgumentLoc(
+                                      0, hasTypeLoc(loc(asString("int")))))));
+}
+
+TEST(HasTemplateArgumentLoc, BindsToDeclRefExprWithDoubleArgument) {
+  EXPECT_TRUE(matches(
+      R"(
+      template<typename T> T f(T t) { return t; }
+      double g() { double i = f<double>(3.0); return i; }
+      )",
+      declRefExpr(
+          to(functionDecl(hasName("f"))),
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
+}
+
+TEST(HasTemplateArgumentLoc, DoesNotBindToDeclRefExprWithDoubleArgument) {
+  EXPECT_TRUE(notMatches(
+      R"(
+      template<typename T> T f(T t) { return t; }
+      double g() { double i = f<double>(3.0); return i; }
+      )",
+      declRefExpr(
+          to(functionDecl(hasName("f"))),
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
+}
+
+TEST(HasNamedTypeLoc, BindsToElaboratedObjectDeclaration) {
+  EXPECT_TRUE(matches(
+      R"(
+      template <typename T>
+      class C {};
+      class C<int> c;
+      )",
+      varDecl(hasName("c"),
+              hasTypeLoc(elaboratedTypeLoc(
+                  hasNamedTypeLoc(templateSpecializationTypeLoc(
+                      hasAnyTemplateArgumentLoc(templateArgumentLoc()))))))));
+}
+
+TEST(HasNamedTypeLoc, DoesNotBindToNonElaboratedObjectDeclaration) {
+  EXPECT_TRUE(notMatches(
+      R"(
+      template <typename T>
+      class C {};
+      C<int> c;
+      )",
+      varDecl(hasName("c"),
+              hasTypeLoc(elaboratedTypeLoc(
+                  hasNamedTypeLoc(templateSpecializationTypeLoc(
+                      hasAnyTemplateArgumentLoc(templateArgumentLoc()))))))));
+}
+
 } // namespace ast_matchers
 } // namespace clang
