@@ -241,5 +241,32 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
   C.handleDisconnect(std::move(Err));
 }
 
+SimpleRemoteEPCDispatcher::~SimpleRemoteEPCDispatcher() {}
+
+#if LLVM_ENABLE_THREADS
+void DynamicThreadPoolSimpleRemoteEPCDispatcher::dispatch(
+    unique_function<void()> Work) {
+  {
+    std::lock_guard<std::mutex> Lock(DispatchMutex);
+    if (!Running)
+      return;
+    ++Outstanding;
+  }
+
+  std::thread([this, Work = std::move(Work)]() mutable {
+    Work();
+    std::lock_guard<std::mutex> Lock(DispatchMutex);
+    --Outstanding;
+    OutstandingCV.notify_all();
+  }).detach();
+}
+
+void DynamicThreadPoolSimpleRemoteEPCDispatcher::shutdown() {
+  std::unique_lock<std::mutex> Lock(DispatchMutex);
+  Running = false;
+  OutstandingCV.wait(Lock, [this]() { return Outstanding == 0; });
+}
+#endif
+
 } // end namespace orc
 } // end namespace llvm
