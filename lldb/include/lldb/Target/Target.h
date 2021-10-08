@@ -173,6 +173,8 @@ public:
 
   bool GetUseAllCompilerFlags() const;
 
+  void SetUseAllCompilerFlags(bool b);
+
   ImportStdModule GetImportStdModule() const;
 
   bool GetEnableAutoApplyFixIts() const;
