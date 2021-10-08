@@ -192,17 +192,28 @@ private:
   /// wasn't declared yet.
   mlir::LogicalResult declare(const Decl *var, QualType T, mlir::Value value,
                               mlir::Location loc) {
+    const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+    assert(namedVar && "Needs a named decl");
+
     if (symbolTable.count(var))
       return mlir::failure();
 
-    mlir::MemRefType type = mlir::MemRefType::get({}, getCIRType(T));
-    auto alloc = builder.create<mlir::memref::AllocaOp>(loc, type);
-    auto *parentBlock = alloc->getBlock();
-    alloc->moveBefore(&parentBlock->front());
+    // TODO: track "constant"
+    auto localVarTy = getCIRType(T);
+    auto localVarPtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), localVarTy);
+
+    auto localVarAddr = builder.create<mlir::cir::AllocaOp>(
+        loc, /*addr type*/ localVarPtrTy, /*var type*/ localVarTy,
+        /*initial_value*/ mlir::UnitAttr::get(builder.getContext()),
+        /*constant*/ false);
+
+    auto *parentBlock = localVarAddr->getBlock();
+    localVarAddr->moveBefore(&parentBlock->front());
 
     // Insert into the symbol table, allocate some stack space in the
     // function entry block.
-    symbolTable.insert(var, alloc);
+    symbolTable.insert(var, localVarAddr);
 
     return mlir::success();
   }
@@ -338,8 +349,9 @@ public:
     /// Emits the address of the l-value, then loads and returns the result.
     mlir::Value buildLoadOfLValue(const Expr *E) {
       LValue LV = EmitLValue(E);
-      auto load = Builder.builder.create<mlir::memref::LoadOp>(
-          Builder.getLoc(E->getExprLoc()), LV.getPointer());
+      auto load = Builder.builder.create<mlir::cir::LoadOp>(
+          Builder.getLoc(E->getExprLoc()), Builder.getCIRType(E->getType()),
+          LV.getPointer());
       // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
       return load;
     }
@@ -499,7 +511,7 @@ public:
       // Store params in local storage. FIXME: is this really needed
       // at this level of representation?
       mlir::Value addr = symbolTable.lookup(paramVar);
-      builder.create<mlir::memref::StoreOp>(loc, paramVal, addr);
+      builder.create<mlir::cir::StoreOp>(loc, paramVal, addr);
     }
 
     // Emit the body of the function.

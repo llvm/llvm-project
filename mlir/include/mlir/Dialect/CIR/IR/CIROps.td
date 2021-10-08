@@ -18,6 +18,7 @@ include "mlir/Dialect/CIR/IR/CIRDialect.td"
 include "mlir/Dialect/CIR/IR/CIRTypes.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Ops
@@ -27,7 +28,120 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-// CIR Operations
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+// FIXME: add alignment, bool attr on being param, automatic scope?.
+def AllocaOp : CIR_Op<"alloca", []> {
+  let summary = "define a local variable";
+  let description = [{
+    The `cir.alloca` operation defines a local variable. The `initial_value`
+    can either be a unit attribute to represent a definition of an uninitialized
+    local variable, or constant to represent the definition of a
+    variable with an initial value. It can also be marked constant using the
+    `constant` unit attribute.
+
+    The result is a pointer type for the original input type.
+
+    Example:
+
+    ```mlir
+    // Local variable with an initial value.
+    %0 = cir.alloca i32 = 1, !cir.ptr<i32>
+
+    // Uninitialized local variable.
+    %0 = cir.alloca f32 = uninitialized, !cir.ptr<f32>
+
+    // Constant local variable.
+    %0 = cir.alloca constant i8 = 3, !cir.ptr<i8>
+    ```
+  }];
+
+  let arguments = (ins
+      TypeAttr:$type,
+      AnyAttr:$initial_value,
+      UnitAttr:$constant
+  );
+
+  let results = (outs Res<CIR_PointerType, "",
+                      [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+
+  let assemblyFormat = [{
+    (`constant` $constant^)?
+    custom<AllocaOpTypeAndInitialValue>($type, $initial_value)
+    attr-dict `,` `cir.ptr` type($addr)
+  }];
+
+  let extraClassDeclaration = [{
+    bool isUninitialized() {
+      return getInitialValue().isa<UnitAttr>();
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+def LoadOp : CIR_Op<"load", [
+  TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
+                 "addr", "result",
+                 "$_self.cast<PointerType>().getPointee()">]> {
+
+  let summary = "load operation";
+  let description = [{
+    `cir.load` reads a variable using a pointer type.
+
+    Example:
+
+    ```mlir
+
+    // Read from local variable, address in %0.
+    %1 = cir.load %0 : !cir.ptr<i32>, i32
+    ```
+  }];
+
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
+                           [MemRead]>:$addr);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat =
+      "$addr attr-dict `:` `cir.ptr` type($addr) `,` type($result)";
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+def StoreOp : CIR_Op<"store", [
+  TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
+                 "addr", "value",
+                 "$_self.cast<PointerType>().getPointee()">]> {
+
+  let summary = "store operation";
+  let description = [{
+    `cir.load` reads a variable using a pointer type.
+
+    Example:
+
+    ```mlir
+
+    // Store to local variable, address in %0.
+    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+  }];
+
+  let arguments = (ins AnyType:$value,
+                       Arg<CIR_PointerType, "the address to store the value",
+                           [MemWrite]>:$addr);
+
+  let assemblyFormat =
+      "$value `,` $addr attr-dict `:` type($value) `,` `cir.ptr` type($addr)";
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
 //===----------------------------------------------------------------------===//
 
 def ReturnOp : CIR_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
