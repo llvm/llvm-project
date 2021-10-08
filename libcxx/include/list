@@ -1392,7 +1392,7 @@ inline
 list<_Tp, _Alloc>&
 list<_Tp, _Alloc>::operator=(const list& __c)
 {
-    if (this != &__c)
+    if (this != _VSTD::addressof(__c))
     {
         base::__copy_assign_alloc(__c);
         assign(__c.begin(), __c.end());

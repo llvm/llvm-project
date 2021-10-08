@@ -1518,7 +1518,6 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
           if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
               SpillFIs[MI.getOperand(0).getIndex()]) {
             MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
-            MI.getOperand(0).setIsDebug();
           }
         }
       }

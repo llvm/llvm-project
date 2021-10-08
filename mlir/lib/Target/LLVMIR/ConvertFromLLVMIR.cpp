@@ -653,7 +653,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     llvm::CallInst *ci = cast<llvm::CallInst>(inst);
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands());
-    for (auto &op : ci->arg_operands()) {
+    for (auto &op : ci->args()) {
       Value arg = processValue(op.get());
       if (!arg)
         return failure();
@@ -705,7 +705,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands() + 1);
-    for (auto &op : ii->arg_operands())
+    for (auto &op : ii->args())
       ops.push_back(processValue(op.get()));
 
     SmallVector<Value, 4> normalArgs, unwindArgs;
