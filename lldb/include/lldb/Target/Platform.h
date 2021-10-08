@@ -719,6 +719,24 @@ public:
   ///     A list of symbol names.  The list may be empty.
   virtual const std::vector<ConstString> &GetTrapHandlerSymbolNames();
 
+  /// Try to get a specific unwind plan for a named trap handler.
+  /// The default is not to have specific unwind plans for trap handlers.
+  ///
+  /// \param[in] triple
+  ///     Triple of the current target.
+  ///
+  /// \param[in] name
+  ///     Name of the trap handler function.
+  ///
+  /// \return
+  ///     A specific unwind plan for that trap handler, or an empty
+  ///     shared pointer. The latter means there is no specific plan,
+  ///     unwind as normal.
+  virtual lldb::UnwindPlanSP
+  GetTrapHandlerUnwindPlan(const llvm::Triple &triple, ConstString name) {
+    return {};
+  }
+
   /// Find a support executable that may not live within in the standard
   /// locations related to LLDB.
   ///

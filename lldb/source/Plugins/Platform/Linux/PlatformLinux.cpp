@@ -14,9 +14,11 @@
 #include <sys/utsname.h>
 #endif
 
+#include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
@@ -249,6 +251,96 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
   m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
   m_trap_handlers.push_back(ConstString("__restore_rt"));
+}
+
+static lldb::UnwindPlanSP GetAArch64TrapHanlderUnwindPlan(ConstString name) {
+  UnwindPlanSP unwind_plan_sp;
+  if (name != "__kernel_rt_sigreturn")
+    return unwind_plan_sp;
+
+  UnwindPlan::RowSP row = std::make_shared<UnwindPlan::Row>();
+  row->SetOffset(0);
+
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext struct:
+  //     - 8-byte long (uc_flags)
+  //     - 8-byte pointer (uc_link)
+  //     - 24-byte stack_t
+  //     - 128-byte signal set
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - sigcontext/mcontext_t
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/signal.c
+  int32_t offset = 128 + 8 + 8 + 24 + 128 + 8;
+  // Then sigcontext[2] is:
+  // - 8 byte fault address
+  // - 31 8 byte registers
+  // - 8 byte sp
+  // - 8 byte pc
+  // [2]
+  // https://github.com/torvalds/linux/blob/master/arch/arm64/include/uapi/asm/sigcontext.h
+
+  // Skip fault address
+  offset += 8;
+  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
+
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
+
+  // The sigcontext may also contain floating point and SVE registers.
+  // However this would require a dynamic unwind plan so they are not included
+  // here.
+
+  unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  unwind_plan_sp->AppendRow(row);
+  unwind_plan_sp->SetSourceName("AArch64 Linux sigcontext");
+  unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  // Because sp is the same throughout the function
+  unwind_plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  unwind_plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  return unwind_plan_sp;
+}
+
+lldb::UnwindPlanSP
+PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
+                                        ConstString name) {
+  if (triple.isAArch64())
+    return GetAArch64TrapHanlderUnwindPlan(name);
+
+  return {};
 }
 
 MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,
