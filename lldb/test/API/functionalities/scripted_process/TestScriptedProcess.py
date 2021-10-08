@@ -88,6 +88,7 @@ class ScriptedProcesTestCase(TestBase):
         for idx, reg in enumerate(registers, start=1):
             self.assertEqual(idx, int(reg.value, 16))
 
+    @skipUnlessDarwin
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""
