@@ -4595,8 +4595,12 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  auto CstVal = isConstantOrConstantSplatVector(*MRI.getVRegDef(RHS), MRI);
-  if (!CstVal || CstVal->isOne() || !isPowerOf2_64(CstVal->getZExtValue()))
+  auto MatchPow2ExceptOne = [&](const Constant *C) {
+    if (auto *CI = dyn_cast<ConstantInt>(C))
+      return CI->getValue().isPowerOf2() && !CI->getValue().isOne();
+    return false;
+  };
+  if (!matchUnaryPredicate(MRI, RHS, MatchPow2ExceptOne, false))
     return false;
   return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}});
 }
