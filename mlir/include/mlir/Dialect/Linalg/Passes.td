@@ -255,6 +255,19 @@ def LinalgStrategyPromotePass
   ];
 }
 
+def LinalgStrategyGeneralizePass
+    : FunctionPass<"linalg-strategy-generalize-pass"> {
+  let summary = "Configurable pass to apply pattern-based generalization.";
+  let constructor = "mlir::createLinalgStrategyGeneralizePass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
+      "Which linalg op within the func is the anchor to latch on.">,
+  ];
+}
+
 def LinalgStrategyVectorizePass
     : FunctionPass<"linalg-strategy-vectorize-pass"> {
   let summary = "Configurable pass to apply pattern-based linalg vectorization.";
