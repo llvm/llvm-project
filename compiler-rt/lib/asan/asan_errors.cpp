@@ -12,10 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
@@ -657,6 +659,23 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
   }
 }
 
+void ErrorNonSelfAMDGPU::PrintStack() {
+  InternalScopedString source_location;
+  source_location.append("  #0 %p", callstack[0]);
+#if SANITIZER_AMDGPU
+  if (cb_loc.fd != -1) {
+    source_location.append(" in ");
+    __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
+    symbolizer.Init(cb_loc.fd, cb_loc.offset, cb_loc.size);
+    symbolizer.SymbolizePC(callstack[0] - cb_loc.vma_adjust, source_location);
+    // release all allocated comgr objects.
+    symbolizer.Release();
+    CloseFile((fd_t)cb_loc.fd);
+  }
+#endif
+  Printf("%s", source_location.data());
+}
+
 void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
   InternalScopedString str;
   str.append("Thread ids and accessed addresses:\n");
@@ -681,11 +700,12 @@ void ErrorNonSelfAMDGPU::Print() {
   Printf("%s", d.Default());
   Printf("%s%s of size %zu in workgroup id (%zu,%zu,%zu)\n", d.Access(),
          (is_write ? "WRITE" : "READ"), access_size, wg.idx, wg.idy, wg.idz);
+  Printf("%s", d.Default());
+  PrintStack();
   Printf("%s", d.Location());
   PrintThreadsAndAddresses();
   addr_description.Print(bug_descr, true);
   Printf("%s", d.Default());
-
   // print shadow memory region for single address
   PrintShadowMemoryForAddress(device_address[0]);
 }
