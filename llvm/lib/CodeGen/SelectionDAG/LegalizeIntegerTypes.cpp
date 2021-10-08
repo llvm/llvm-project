@@ -3998,7 +3998,10 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   }
 
   if (LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC)) {
-    SDValue Ops[2] = { N->getOperand(0), N->getOperand(1) };
+    EVT ShAmtTy =
+        EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize());
+    SDValue ShAmt = DAG.getZExtOrTrunc(N->getOperand(1), dl, ShAmtTy);
+    SDValue Ops[2] = {N->getOperand(0), ShAmt};
     TargetLowering::MakeLibCallOptions CallOptions;
     CallOptions.setSExt(isSigned);
     SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first, Lo, Hi);
