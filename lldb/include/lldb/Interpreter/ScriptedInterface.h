@@ -9,15 +9,13 @@
 #ifndef LLDB_INTERPRETER_SCRIPTEDINTERFACE_H
 #define LLDB_INTERPRETER_SCRIPTEDINTERFACE_H
 
-#ifdef _MSC_VER
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-#endif
-
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/Support/Compiler.h"
 
 #include <string>
 

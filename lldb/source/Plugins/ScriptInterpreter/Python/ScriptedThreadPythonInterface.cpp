@@ -60,7 +60,7 @@ lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_thread_id", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return LLDB_INVALID_THREAD_ID;
 
   return obj->GetIntegerValue(LLDB_INVALID_THREAD_ID);
@@ -70,7 +70,7 @@ llvm::Optional<std::string> ScriptedThreadPythonInterface::GetName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_name", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetStringValue().str();
@@ -80,7 +80,7 @@ lldb::StateType ScriptedThreadPythonInterface::GetState() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_state", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return eStateInvalid;
 
   return static_cast<StateType>(obj->GetIntegerValue(eStateInvalid));
@@ -90,7 +90,7 @@ llvm::Optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_queue", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetStringValue().str();
@@ -101,7 +101,7 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetStopReason() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_stop_reason", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, dict, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
     return {};
 
   return dict;
@@ -116,7 +116,7 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_register_info", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, dict, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
     return {};
 
   return dict;
@@ -127,7 +127,7 @@ ScriptedThreadPythonInterface::GetRegisterContext() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_register_context", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetAsString()->GetValue().str();

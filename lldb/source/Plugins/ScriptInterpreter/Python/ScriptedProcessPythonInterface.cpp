@@ -72,7 +72,7 @@ bool ScriptedProcessPythonInterface::ShouldStop() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_alive", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetBooleanValue();
@@ -89,7 +89,7 @@ ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
       "get_memory_region_containing_address", error, address);
 
   if (error.Fail()) {
-    return ErrorWithMessage<MemoryRegionInfo>(__PRETTY_FUNCTION__,
+    return ErrorWithMessage<MemoryRegionInfo>(LLVM_PRETTY_FUNCTION,
                                               error.AsCString(), error);
   }
 
@@ -101,7 +101,7 @@ ScriptedProcessPythonInterface::GetThreadWithID(lldb::tid_t tid) {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_thread_with_id", error, tid);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   StructuredData::DictionarySP dict{obj->GetAsDictionary()};
@@ -130,7 +130,7 @@ lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_process_id", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return LLDB_INVALID_PROCESS_ID;
 
   return obj->GetIntegerValue(LLDB_INVALID_PROCESS_ID);
@@ -140,7 +140,7 @@ bool ScriptedProcessPythonInterface::IsAlive() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_alive", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetBooleanValue();
@@ -151,7 +151,7 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_scripted_thread_plugin", error);
 
-  if (!CheckStructuredDataObject(__PRETTY_FUNCTION__, obj, error))
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return {};
 
   return obj->GetStringValue().str();
