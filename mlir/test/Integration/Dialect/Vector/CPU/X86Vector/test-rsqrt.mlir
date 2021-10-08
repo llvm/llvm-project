@@ -9,7 +9,7 @@ func @entry() -> i32 {
   %v = std.constant dense<[0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]> : vector<8xf32>
   %r = x86vector.avx.rsqrt %v : vector<8xf32>
   // `rsqrt` may produce slightly different results on Intel and AMD machines: accept both results here.
-  // CHECK: {{( 2.82764, 1.99951, 1.41382, 0.999756, 0.706909, 0.499878, 0.353455, 0.249939 | 2.82812, 1.99976, 1.41406, 0.999878, 0.707031, 0.499939, 0.353516, 0.249969 )}}
+  // CHECK: {{( 2.82[0-9]*, 1.99[0-9]*, 1.41[0-9]*, 0.99[0-9]*, 0.70[0-9]*, 0.49[0-9]*, 0.35[0-9]*, 0.24[0-9]* )}}
   vector.print %r : vector<8xf32>
 
   return %i0 : i32
