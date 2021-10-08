@@ -16,7 +16,7 @@ MATH_MANGLE(tgamma)(float x)
     float ax = BUILTIN_ABS_F32(x);
     float ret;
 
-    if (ax > 0.0125f) {
+    if (ax > 0x1.0p-6f) {
         // For x < 3, push to larger value using gamma(x) = gamma(x+1) / x
         float d = 1.0f;
         if (x < 1.0f) {
@@ -48,16 +48,11 @@ MATH_MANGLE(tgamma)(float x)
             ret = BUILTIN_FRACTION_F32(x) == 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
         }
     } else {
-        float p =  MATH_MAD(ax,
-                       MATH_MAD(ax,
-                           MATH_MAD(ax, 0.95758557809281868459f, -0.90729132749086121523f),
-                           0.98905552641429454945f),
-                       -0.57721566471808262829f);
-        if (BUILTIN_CLASS_F32(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR))
-            ret = MATH_RCP(ax) + p;
-        else
-            ret = MATH_DIV(pi, MATH_MAD(ax, p, 1.0f) * MATH_MANGLE(sinpi)(x));
+        ret = MATH_MAD(x, MATH_MAD(x, MATH_MAD(x,
+                  0x1.f6a510p-1f, -0x1.d0a118p-1f), 0x1.fa658cp-1f), -0x1.2788d0p-1f) +
+              4.0f*MATH_FAST_RCP(4.0f*x);
     }
+
     return ret;
 }
 
