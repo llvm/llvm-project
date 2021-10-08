@@ -477,7 +477,7 @@ entry:
 ; DWARF32-NEXT:                  DW_AT_high_pc   (0x00000026)
 ; DWARF32-NEXT:                  DW_AT_frame_base        (DW_OP_reg1 R1)
 ; DWARF32-NEXT:                  DW_AT_name      ("main")
-; DWARF32-NEXT:                  DW_AT_decl_file ("debug/1.c")
+; DWARF32-NEXT:                  DW_AT_decl_file ("debug{{[/\\]}}1.c")
 ; DWARF32-NEXT:                  DW_AT_decl_line (1)
 ; DWARF32-NEXT:                  DW_AT_prototyped        (true)
 ; DWARF32-NEXT:                  DW_AT_type      (0x0000004f "int")
