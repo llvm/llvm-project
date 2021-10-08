@@ -53,7 +53,7 @@ void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
   auto ProgramHeaderOrError = ELF.program_headers();
   if (!ProgramHeaderOrError) {
     report_fatal_error(
-        errorToErrorCode(ProgramHeaderOrError.takeError()).message());
+        Twine(errorToErrorCode(ProgramHeaderOrError.takeError()).message()));
   }
   for (const typename ELFO::Elf_Phdr &Phdr : *ProgramHeaderOrError) {
     switch (Phdr.p_type) {
