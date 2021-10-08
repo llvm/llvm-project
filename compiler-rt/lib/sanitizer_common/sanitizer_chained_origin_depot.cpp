@@ -46,16 +46,16 @@ struct ChainedOriginDepotNode {
   args_type load() const;
 
   struct Handle {
-    ChainedOriginDepotNode *node_;
+    const ChainedOriginDepotNode *node_;
     Handle() : node_(nullptr) {}
-    explicit Handle(ChainedOriginDepotNode *node) : node_(node) {}
-    bool valid() { return node_; }
-    u32 id() { return node_->id; }
-    int here_id() { return node_->here_id; }
-    int prev_id() { return node_->prev_id; }
+    explicit Handle(const ChainedOriginDepotNode *node) : node_(node) {}
+    bool valid() const { return node_; }
+    u32 id() const { return node_->id; }
+    int here_id() const { return node_->here_id; }
+    int prev_id() const { return node_->prev_id; }
   };
 
-  Handle get_handle();
+  Handle get_handle() const;
 
   typedef Handle handle_type;
 };
@@ -129,7 +129,7 @@ ChainedOriginDepotNode::args_type ChainedOriginDepotNode::load() const {
   return ret;
 }
 
-ChainedOriginDepotNode::Handle ChainedOriginDepotNode::get_handle() {
+ChainedOriginDepotNode::Handle ChainedOriginDepotNode::get_handle() const {
   return Handle(this);
 }
 
