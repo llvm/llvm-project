@@ -2224,20 +2224,6 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
       Result.addFnAttr(llvm::Attribute::ReadOnly);
   }
 
-  // Attach OpenMP assumption attributes from the caller, if they exist.
-  if (CGF.CGM.getLangOpts().OpenMP) {
-    SmallVector<StringRef, 4> Attrs;
-
-    for (const AssumptionAttr *AA :
-         CGF.CurFuncDecl->specific_attrs<AssumptionAttr>())
-      AA->getAssumption().split(Attrs, ",");
-
-    if (!Attrs.empty())
-      Result.addFnAttr(
-          llvm::Attribute::get(CGF.getLLVMContext(), llvm::AssumptionAttrKey,
-                               llvm::join(Attrs.begin(), Attrs.end(), ",")));
-  }
-
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))

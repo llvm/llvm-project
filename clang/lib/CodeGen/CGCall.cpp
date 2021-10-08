@@ -1748,8 +1748,7 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
 }
 
 static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
-                                     const Decl *Callee, const Decl *Caller,
-                                     bool AssumptionOnCallSite) {
+                                     const Decl *Callee) {
   if (!Callee)
     return;
 
@@ -1757,10 +1756,6 @@ static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
 
   for (const AssumptionAttr *AA : Callee->specific_attrs<AssumptionAttr>())
     AA->getAssumption().split(Attrs, ",");
-
-  if (Caller && Caller->hasAttrs() && AssumptionOnCallSite)
-    for (const AssumptionAttr *AA : Caller->specific_attrs<AssumptionAttr>())
-      AA->getAssumption().split(Attrs, ",");
 
   if (!Attrs.empty())
     FuncAttrs.addAttribute(llvm::AssumptionAttrKey,
@@ -2019,10 +2014,12 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
 ///     attributes that restrict how the frontend generates code must be
 ///     added here rather than getDefaultFunctionAttributes.
 ///
-void CodeGenModule::ConstructAttributeList(
-    StringRef Name, const CGFunctionInfo &FI, CGCalleeInfo CalleeInfo,
-    llvm::AttributeList &AttrList, unsigned &CallingConv, bool AttrOnCallSite,
-    bool IsThunk, const Decl *Caller) {
+void CodeGenModule::ConstructAttributeList(StringRef Name,
+                                           const CGFunctionInfo &FI,
+                                           CGCalleeInfo CalleeInfo,
+                                           llvm::AttributeList &AttrList,
+                                           unsigned &CallingConv,
+                                           bool AttrOnCallSite, bool IsThunk) {
   llvm::AttrBuilder FuncAttrs;
   llvm::AttrBuilder RetAttrs;
 
@@ -2040,12 +2037,9 @@ void CodeGenModule::ConstructAttributeList(
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
-  // Only attach assumptions to call sites in OpenMP mode.
-  bool AssumptionOnCallSite = getLangOpts().OpenMP && AttrOnCallSite;
-
   // Attach assumption attributes to the declaration. If this is a call
   // site, attach assumptions from the caller to the call as well.
-  AddAttributesFromAssumes(FuncAttrs, TargetDecl, Caller, AssumptionOnCallSite);
+  AddAttributesFromAssumes(FuncAttrs, TargetDecl);
 
   bool HasOptnone = false;
   // The NoBuiltinAttr attached to the target FunctionDecl.
@@ -5180,7 +5174,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   CGM.ConstructAttributeList(CalleePtr->getName(), CallInfo,
                              Callee.getAbstractInfo(), Attrs, CallingConv,
                              /*AttrOnCallSite=*/true,
-                             /*IsThunk=*/false, CurFuncDecl);
+                             /*IsThunk=*/false);
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())
