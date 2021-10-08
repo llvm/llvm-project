@@ -146,6 +146,10 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
     return nullptr;
   }
 
+  // The Swift REPL can't deal with poisoning the scratch context
+  // in SwiftASTContext::ModulesDidLoad().
+  target_sp->SetUseAllCompilerFlags(false);
+
   // Limit the breakpoint to our executable module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (!exe_module_sp) {

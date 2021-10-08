@@ -4483,6 +4483,11 @@ bool TargetProperties::GetUseAllCompilerFlags() const {
       NULL, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+void TargetProperties::SetUseAllCompilerFlags(bool b) {
+  const uint32_t idx = ePropertyUseAllCompilerFlags;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+}
+
 ImportStdModule TargetProperties::GetImportStdModule() const {
   const uint32_t idx = ePropertyImportStdModule;
   return (ImportStdModule)m_collection_sp->GetPropertyAtIndexAsEnumeration(
