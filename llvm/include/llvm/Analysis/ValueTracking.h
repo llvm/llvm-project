@@ -574,6 +574,18 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// instruction variant of this function.
   bool isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB);
 
+  /// Return true if every instruction in the range (Begin, End) is
+  /// guaranteed to transfer execution to its static successor. \p ScanLimit
+  /// bounds the search to avoid scanning huge blocks.
+  bool isGuaranteedToTransferExecutionToSuccessor(
+     BasicBlock::const_iterator Begin, BasicBlock::const_iterator End,
+     unsigned ScanLimit = 32);
+
+  /// Same as previous, but with range expressed via iterator_range.
+  bool isGuaranteedToTransferExecutionToSuccessor(
+     iterator_range<BasicBlock::const_iterator> Range,
+     unsigned ScanLimit = 32);
+
   /// Return true if this function can prove that the instruction I
   /// is executed for every iteration of the loop L.
   ///

@@ -6631,39 +6631,20 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
   return Bound ? Bound : &*F.getEntryBlock().begin();
 }
 
-
-static bool
-isGuaranteedToTransferExecutionToSuccessor(BasicBlock::const_iterator Begin,
-                                           BasicBlock::const_iterator End) {
-  // Limit number of instructions we look at, to avoid scanning through large
-  // blocks. The current limit is chosen arbitrarily.
-  unsigned ScanLimit = 32;
-  for (const Instruction &I : make_range(Begin, End)) {
-    if (isa<DbgInfoIntrinsic>(I))
-        continue;
-    if (--ScanLimit == 0)
-      return false;
-
-    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
-      return false;
-  }
-  return true;
-}
-
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
                                                         const Instruction *B) {
   if (A->getParent() == B->getParent() &&
-      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
-                                                   B->getIterator()))
+      isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                 B->getIterator()))
     return true;
 
   auto *BLoop = LI.getLoopFor(B->getParent());
   if (BLoop && BLoop->getHeader() == B->getParent() &&
       BLoop->getLoopPreheader() == A->getParent() &&
-      ::isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
-                                                   A->getParent()->end()) &&
-      ::isGuaranteedToTransferExecutionToSuccessor(B->getParent()->begin(),
-                                                   B->getIterator()))
+      isGuaranteedToTransferExecutionToSuccessor(A->getIterator(),
+                                                 A->getParent()->end()) &&
+      isGuaranteedToTransferExecutionToSuccessor(B->getParent()->begin(),
+                                                 B->getIterator()))
     return true;
   return false;
 }
