@@ -203,12 +203,23 @@ TEST_F(DynamicRegisterInfoRegisterTest, addSupplementaryRegister) {
   };
   uint32_t eax = AddTestRegister("eax", "supplementary", 4, suppl_adder, {rax});
   uint32_t ax = AddTestRegister("ax", "supplementary", 2, suppl_adder, {rax});
+  uint32_t ah = AddTestRegister("ah", "supplementary", 1, suppl_adder, {rax});
   uint32_t al = AddTestRegister("al", "supplementary", 1, suppl_adder, {rax});
+  m_regs[ah].value_reg_offset = 1;
 
-  EXPECT_IN_REGS(rax, {}, {eax, ax, al});
-  EXPECT_IN_REGS(eax, {rax}, {rax, ax, al});
-  EXPECT_IN_REGS(ax, {rax}, {rax, eax, al});
-  EXPECT_IN_REGS(al, {rax}, {rax, eax, ax});
+  EXPECT_IN_REGS(rax, {}, {eax, ax, ah, al});
+  EXPECT_IN_REGS(eax, {rax}, {rax, ax, ah, al});
+  EXPECT_IN_REGS(ax, {rax}, {rax, eax, ah, al});
+  EXPECT_IN_REGS(ah, {rax}, {rax, eax, ax, al});
+  EXPECT_IN_REGS(al, {rax}, {rax, eax, ax, ah});
+
+  EXPECT_EQ(m_dyninfo.SetRegisterInfo(std::move(m_regs), ArchSpec()),
+            m_regs.size());
+  EXPECT_IN_DYNINFO(rax, 0, {}, {eax, ax, ah, al});
+  EXPECT_IN_DYNINFO(eax, 0, {rax}, {rax, ax, ah, al});
+  EXPECT_IN_DYNINFO(ax, 0, {rax}, {rax, eax, ah, al});
+  EXPECT_IN_DYNINFO(ah, 1, {rax}, {rax, eax, ax, al});
+  EXPECT_IN_DYNINFO(al, 0, {rax}, {rax, eax, ax, ah});
 }
 
 TEST_F(DynamicRegisterInfoRegisterTest, SetRegisterInfo) {
