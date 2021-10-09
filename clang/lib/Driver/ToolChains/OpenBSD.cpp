@@ -28,10 +28,13 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfoList &Inputs,
                                       const ArgList &Args,
                                       const char *LinkingOutput) const {
+  const toolchains::OpenBSD &ToolChain =
+      static_cast<const toolchains::OpenBSD &>(getToolChain());
+
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
-  switch (getToolChain().getArch()) {
+  switch (ToolChain.getArch()) {
   case llvm::Triple::x86:
     // When building 32-bit code on OpenBSD/amd64, we have to explicitly
     // instruct as in the base system to assemble 32-bit code.
@@ -45,11 +48,11 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(getToolChain().getDriver(), Args,
-                                 getToolChain().getTriple());
+    std::string CPU = getCPUName(ToolChain.getDriver(), Args,
+                                 ToolChain.getTriple());
     CmdArgs.push_back(
-        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
@@ -57,17 +60,17 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::mips64el: {
     StringRef CPUName;
     StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
+    mips::getMipsCPUAndABI(Args, ToolChain.getTriple(), CPUName, ABIName);
 
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
-    if (getToolChain().getTriple().isLittleEndian())
+    if (ToolChain.getTriple().isLittleEndian())
       CmdArgs.push_back("-EL");
     else
       CmdArgs.push_back("-EB");
 
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
@@ -83,7 +86,7 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
+  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
@@ -96,7 +99,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   const toolchains::OpenBSD &ToolChain =
       static_cast<const toolchains::OpenBSD &>(getToolChain());
-  const Driver &D = getToolChain().getDriver();
+  const Driver &D = ToolChain.getDriver();
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
