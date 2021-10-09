@@ -1857,7 +1857,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   MemorySSAUpdater *MSSAU;
   LoopInfo &LI;
   DebugLoc DL;
-  int Alignment;
+  Align Alignment;
   bool UnorderedAtomic;
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
@@ -1886,12 +1886,12 @@ public:
                SmallVectorImpl<Instruction *> &LIP,
                SmallVectorImpl<MemoryAccess *> &MSSAIP, PredIteratorCache &PIC,
                MemorySSAUpdater *MSSAU, LoopInfo &li, DebugLoc dl,
-               int alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
+               Align Alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
                ICFLoopSafetyInfo &SafetyInfo)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), MSSAInsertPts(MSSAIP),
         PredCache(PIC), MSSAU(MSSAU), LI(li), DL(std::move(dl)),
-        Alignment(alignment), UnorderedAtomic(UnorderedAtomic), AATags(AATags),
+        Alignment(Alignment), UnorderedAtomic(UnorderedAtomic), AATags(AATags),
         SafetyInfo(SafetyInfo) {}
 
   bool isInstInList(Instruction *I,
@@ -1918,7 +1918,7 @@ public:
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
       if (UnorderedAtomic)
         NewSI->setOrdering(AtomicOrdering::Unordered);
-      NewSI->setAlignment(Align(Alignment));
+      NewSI->setAlignment(Alignment);
       NewSI->setDebugLoc(DL);
       if (AATags)
         NewSI->setAAMetadata(AATags);
@@ -2225,8 +2225,7 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
                         InsertPts, MSSAInsertPts, PIC, MSSAU, *LI, DL,
-                        Alignment.value(), SawUnorderedAtomic, AATags,
-                        *SafetyInfo);
+                        Alignment, SawUnorderedAtomic, AATags, *SafetyInfo);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
