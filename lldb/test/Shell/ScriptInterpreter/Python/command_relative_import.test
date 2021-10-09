@@ -8,9 +8,9 @@
 # RUN:    -o 'command source %t/foo/magritte.in' \
 # RUN:    -o 'command source %t/foo/zip.in' \
 # RUN:    -o 'command source %t/foo/magritte.in' \
-# RUN:    -o 'zip' \
+# RUN;    -o 'zip' \
 # RUN:    -o 'hello'
-# RUN:    -o 'magritte' 2>&1 | FileCheck %s
+# RUN     -o 'magritte' 2>&1 | FileCheck %s
 
 # The first time importing 'magritte' fails because we didn't pass -c.
 # CHECK: ModuleNotFoundError: No module named 'magritte'
