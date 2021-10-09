@@ -125,7 +125,7 @@ define i1 @test_EQ_IssEbT(i16 %a, i16 %b) {
 ; CHECK: 	sxth	w8, w1
 ; CHECK-NEXT: 	cmn	w8, w0, sxth
 ; CHECK-NEXT: 	cset	w0, eq
-; CHECK-NEXT;   ret
+; CHECK-NEXT:   ret
 entry:
   %conv = sext i16 %a to i32
   %conv1 = sext i16 %b to i32
@@ -139,7 +139,7 @@ define i1 @test_EQ_IscEbT(i16 %a, i8 %b) {
 ; CHECK: 	and	w8, w1, #0xff
 ; CHECK-NEXT: 	cmn	w8, w0, sxth
 ; CHECK-NEXT: 	cset	w0, eq
-; CHECK-NEXT;   ret
+; CHECK-NEXT:   ret
 entry:
   %conv = sext i16 %a to i32
   %conv1 = zext i8 %b to i32

@@ -35,7 +35,7 @@ entry:
 ; Check that we don't combine the bitcast into the store. This would create a
 ; bitcast of the swifterror which is invalid.
 
-; CHECK-LABEL; @swifterror_store
+; CHECK-LABEL: @swifterror_store
 ; CHECK: bitcast i64
 ; CHECK: store %swift.error
 

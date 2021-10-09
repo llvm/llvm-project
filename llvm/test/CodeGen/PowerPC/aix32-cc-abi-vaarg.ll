@@ -42,7 +42,7 @@
   declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
 ; 32BIT-LABEL:   name:            int_va_arg
-; 32BIT-LABEL;   liveins:
+; 32BIT-LABEL:   liveins:
 ; 32BIT-DAG:     - { reg: '$r3', virtual-reg: '' }
 ; 32BIT-DAG:     - { reg: '$r4', virtual-reg: '' }
 ; 32BIT-DAG:     - { reg: '$r5', virtual-reg: '' }

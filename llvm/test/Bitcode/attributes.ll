@@ -404,7 +404,7 @@ define void @f68() mustprogress
   ret void
 }
 
-; CHECK; define void @f69() #42
+; CHECK: define void @f69() #42
 define void @f69() nocallback
 {
   ret void
