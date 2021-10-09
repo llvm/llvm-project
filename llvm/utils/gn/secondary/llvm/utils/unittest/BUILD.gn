@@ -27,7 +27,6 @@ static_library("gtest") {
   ]
   public_configs = [ ":googletest_config" ]
   configs -= [ "//llvm/utils/gn/build:warn_covered_switch_default" ]
-  configs -= [ "//llvm/utils/gn/build:no_rtti" ]
   sources = [
     "googlemock/src/gmock-all.cc",
     "googletest/src/gtest-all.cc",
