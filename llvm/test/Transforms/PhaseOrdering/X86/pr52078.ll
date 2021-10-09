@@ -16,8 +16,7 @@ define i16 @foo(i1 %a) {
 ; IC-NEXT:    ret i16 [[TRUNC]]
 ;
 ; AIC_AND_IC-LABEL: @foo(
-; AIC_AND_IC-NEXT:    [[SEXT:%.*]] = sext i1 [[A:%.*]] to i16
-; AIC_AND_IC-NEXT:    [[LSHR:%.*]] = lshr i16 [[SEXT]], 1
+; AIC_AND_IC-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i16 32767, i16 0
 ; AIC_AND_IC-NEXT:    ret i16 [[LSHR]]
 ;
   %sext = sext i1 %a to i16
@@ -29,18 +28,15 @@ define i16 @foo(i1 %a) {
 
 define i16 @foo2(i1 %a) {
 ; CHECK-LABEL: @foo2(
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[A:%.*]] to i16
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[S]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i16 32767, i16 0
 ; CHECK-NEXT:    ret i16 [[LSHR]]
 ;
 ; IC-LABEL: @foo2(
-; IC-NEXT:    [[S:%.*]] = sext i1 [[A:%.*]] to i16
-; IC-NEXT:    [[LSHR:%.*]] = lshr i16 [[S]], 1
+; IC-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i16 32767, i16 0
 ; IC-NEXT:    ret i16 [[LSHR]]
 ;
 ; AIC_AND_IC-LABEL: @foo2(
-; AIC_AND_IC-NEXT:    [[S:%.*]] = sext i1 [[A:%.*]] to i16
-; AIC_AND_IC-NEXT:    [[LSHR:%.*]] = lshr i16 [[S]], 1
+; AIC_AND_IC-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i16 32767, i16 0
 ; AIC_AND_IC-NEXT:    ret i16 [[LSHR]]
 ;
   %s = sext i1 %a to i16
