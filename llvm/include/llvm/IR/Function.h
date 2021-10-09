@@ -48,6 +48,7 @@ typedef unsigned ID;
 
 class AssemblyAnnotationWriter;
 class Constant;
+struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
