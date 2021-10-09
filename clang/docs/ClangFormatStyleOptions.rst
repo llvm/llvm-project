@@ -247,7 +247,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignConsecutiveAssignments** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 13`
+**AlignConsecutiveAssignments** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 3.8`
   Style of aligning consecutive assignments.
 
   ``Consecutive`` will result in formattings like:
@@ -320,7 +320,7 @@ the configuration (without a prefix: ``Auto``).
        /* A comment. */
        double e         = 4;
 
-**AlignConsecutiveBitFields** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 13`
+**AlignConsecutiveBitFields** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 11`
   Style of aligning consecutive bit field.
 
   ``Consecutive`` will align the bitfield separators of consecutive lines.
@@ -394,7 +394,7 @@ the configuration (without a prefix: ``Auto``).
        /* A comment. */
        int ee   : 3;
 
-**AlignConsecutiveDeclarations** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 13`
+**AlignConsecutiveDeclarations** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 3.8`
   Style of aligning consecutive declarations.
 
   ``Consecutive`` will align the declaration names of consecutive lines.
@@ -468,7 +468,7 @@ the configuration (without a prefix: ``Auto``).
        /* A comment. */
        bool        c = false;
 
-**AlignConsecutiveMacros** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 13`
+**AlignConsecutiveMacros** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 9`
   Style of aligning consecutive macro definitions.
 
   ``Consecutive`` will result in formattings like:
@@ -1082,7 +1082,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AttributeMacros** (``List of Strings``) :versionbadge:`clang-format 13`
+**AttributeMacros** (``List of Strings``) :versionbadge:`clang-format 12`
   A vector of strings that should be interpreted as attributes/qualifiers
   instead of identifiers. This can be useful for language extensions or
   static analyzer annotations.
@@ -1135,7 +1135,7 @@ the configuration (without a prefix: ``Auto``).
            int aaaaaaaaaaaaaaaaaaaa,
            int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
 
-**BitFieldColonSpacing** (``BitFieldColonSpacingStyle``) :versionbadge:`clang-format 13`
+**BitFieldColonSpacing** (``BitFieldColonSpacingStyle``) :versionbadge:`clang-format 12`
   The BitFieldColonSpacingStyle to use for bitfields.
 
   Possible values:
@@ -3197,7 +3197,7 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyExcessCharacter** (``Unsigned``) :versionbadge:`clang-format 3.7`
   The penalty for each character outside of the column limit.
 
-**PenaltyIndentedWhitespace** (``Unsigned``) :versionbadge:`clang-format 13`
+**PenaltyIndentedWhitespace** (``Unsigned``) :versionbadge:`clang-format 12`
   Penalty for each character of whitespace indentation
   (counted relative to leading non-whitespace column).
 
@@ -3301,8 +3301,9 @@ the configuration (without a prefix: ``Auto``).
     * type
 
   Note: it MUST contain 'type'.
-  Items to the left of 'type' will be placed to the left of the type and aligned in the order supplied.
-  Items to the right of 'type' will be placed to the right of the type and aligned in the order supplied.
+  Items to the left of 'type' will be placed to the left of the type and
+  aligned in the order supplied. Items to the right of 'type' will be placed
+  to the right of the type and aligned in the order supplied.
 
 
   .. code-block:: yaml
@@ -3461,7 +3462,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**SortJavaStaticImport** (``SortJavaStaticImportOptions``) :versionbadge:`clang-format 13`
+**SortJavaStaticImport** (``SortJavaStaticImportOptions``) :versionbadge:`clang-format 12`
   When sorting Java imports, by default static imports are placed before
   non-static imports. If ``JavaStaticImportAfterImport`` is ``After``,
   static imports are placed after non-static imports.
@@ -3529,7 +3530,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      template <int> void foo();     vs.     template<int> void foo();
 
-**SpaceAroundPointerQualifiers** (``SpaceAroundPointerQualifiersStyle``) :versionbadge:`clang-format 13`
+**SpaceAroundPointerQualifiers** (``SpaceAroundPointerQualifiersStyle``) :versionbadge:`clang-format 12`
   Defines in which cases to put a space before or after pointer qualifiers
 
   Possible values:
@@ -3578,7 +3579,7 @@ the configuration (without a prefix: ``Auto``).
      int a = 5;                     vs.     int a= 5;
      a += 42;                               a+= 42;
 
-**SpaceBeforeCaseColon** (``Boolean``) :versionbadge:`clang-format 13`
+**SpaceBeforeCaseColon** (``Boolean``) :versionbadge:`clang-format 12`
   If ``false``, spaces will be removed before case colon.
 
   .. code-block:: c++
@@ -3893,7 +3894,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**StatementAttributeLikeMacros** (``List of Strings``) :versionbadge:`clang-format 13`
+**StatementAttributeLikeMacros** (``List of Strings``) :versionbadge:`clang-format 12`
   Macros which are ignored in front of a statement, as if they were an
   attribute. So that they are not parsed as identifier, for example for Qts
   emit.
