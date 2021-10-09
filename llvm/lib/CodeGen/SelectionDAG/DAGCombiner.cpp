@@ -23046,9 +23046,10 @@ SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
   if (LegalDAG)
     return SDValue();
 
-  // TODO: Handle half and/or extended types?
+  // TODO: Handle extended types?
   EVT VT = Op.getValueType();
-  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+  if (VT.getScalarType() != MVT::f16 && VT.getScalarType() != MVT::f32 &&
+      VT.getScalarType() != MVT::f64)
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.
@@ -23185,9 +23186,10 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
   if (LegalDAG)
     return SDValue();
 
-  // TODO: Handle half and/or extended types?
+  // TODO: Handle extended types?
   EVT VT = Op.getValueType();
-  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+  if (VT.getScalarType() != MVT::f16 && VT.getScalarType() != MVT::f32 &&
+      VT.getScalarType() != MVT::f64)
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.

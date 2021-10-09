@@ -12,6 +12,7 @@
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Interpreter/ScriptedInterface.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 
 #include "lldb/lldb-private.h"
 
@@ -34,9 +35,10 @@ public:
 
   virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
 
-  virtual lldb::MemoryRegionInfoSP
-  GetMemoryRegionContainingAddress(lldb::addr_t address) {
-    return nullptr;
+  virtual llvm::Optional<MemoryRegionInfo>
+  GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
+    error.SetErrorString("ScriptedProcess have no memory region.");
+    return {};
   }
 
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
@@ -57,6 +59,45 @@ public:
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
   virtual bool IsAlive() { return true; }
+
+  virtual llvm::Optional<std::string> GetScriptedThreadPluginName() {
+    return llvm::None;
+  }
+
+protected:
+  friend class ScriptedThread;
+  virtual lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() {
+    return nullptr;
+  }
+
+  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
+};
+
+class ScriptedThreadInterface : virtual public ScriptedInterface {
+public:
+  StructuredData::GenericSP
+  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
+                     StructuredData::DictionarySP args_sp) override {
+    return nullptr;
+  }
+
+  virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
+
+  virtual llvm::Optional<std::string> GetName() { return llvm::None; }
+
+  virtual lldb::StateType GetState() { return lldb::eStateInvalid; }
+
+  virtual llvm::Optional<std::string> GetQueue() { return llvm::None; }
+
+  virtual StructuredData::DictionarySP GetStopReason() { return nullptr; }
+
+  virtual StructuredData::ArraySP GetStackFrames() { return nullptr; }
+
+  virtual StructuredData::DictionarySP GetRegisterInfo() { return nullptr; }
+
+  virtual llvm::Optional<std::string> GetRegisterContext() {
+    return llvm::None;
+  }
 };
 } // namespace lldb_private
 

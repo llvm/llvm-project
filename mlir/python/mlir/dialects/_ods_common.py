@@ -5,11 +5,14 @@
 # Provide a convenient name for sub-packages to resolve the main C-extension
 # with a relative import.
 from .._mlir_libs import _mlir as _cext
+from typing import Sequence as _Sequence, Union as _Union
 
 __all__ = [
     "equally_sized_accessor",
     "extend_opview_class",
     "get_default_loc_context",
+    "get_op_result_or_value",
+    "get_op_results_or_values",
     "segmented_accessor",
 ]
 
@@ -118,3 +121,38 @@ def get_default_loc_context(location=None):
     # Location.current raises ValueError if there is no current location.
     return _cext.ir.Location.current.context
   return location.context
+
+
+def get_op_result_or_value(
+    arg: _Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]
+) -> _cext.ir.Value:
+  """Returns the given value or the single result of the given op.
+
+  This is useful to implement op constructors so that they can take other ops as
+  arguments instead of requiring the caller to extract results for every op.
+  Raises ValueError if provided with an op that doesn't have a single result.
+  """
+  if isinstance(arg, _cext.ir.OpView):
+    return arg.operation.result
+  elif isinstance(arg, _cext.ir.Operation):
+    return arg.result
+  else:
+    assert isinstance(arg, _cext.ir.Value)
+    return arg
+
+
+def get_op_results_or_values(
+    arg: _Union[_cext.ir.OpView, _cext.ir.Operation, _Sequence[_cext.ir.Value]]
+) -> _Union[_Sequence[_cext.ir.Value], _cext.ir.OpResultList]:
+  """Returns the given sequence of values or the results of the given op.
+
+  This is useful to implement op constructors so that they can take other ops as
+  lists of arguments instead of requiring the caller to extract results for
+  every op.
+  """
+  if isinstance(arg, _cext.ir.OpView):
+    return arg.operation.results
+  elif isinstance(arg, _cext.ir.Operation):
+    return arg.results
+  else:
+    return arg

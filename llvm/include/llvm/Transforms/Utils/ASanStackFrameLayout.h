@@ -42,9 +42,9 @@ struct ASanStackVariableDescription {
 
 // Output data struct for ComputeASanStackFrameLayout.
 struct ASanStackFrameLayout {
-  size_t Granularity;     // Shadow granularity.
-  size_t FrameAlignment;  // Alignment for the entire frame.
-  size_t FrameSize;       // Size of the frame in bytes.
+  uint64_t Granularity;     // Shadow granularity.
+  uint64_t FrameAlignment;  // Alignment for the entire frame.
+  uint64_t FrameSize;       // Size of the frame in bytes.
 };
 
 ASanStackFrameLayout ComputeASanStackFrameLayout(

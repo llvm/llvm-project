@@ -250,6 +250,16 @@ define <16 x half> @test_int_x86_avx512fp16_div_ph_256(<16 x half> %x1, <16 x ha
   ret <16 x half> %res
 }
 
+define <16 x half> @test_int_x86_avx512fp16_div_ph_256_fast(<16 x half> %x1, <16 x half> %x2) {
+; CHECK-LABEL: test_int_x86_avx512fp16_div_ph_256_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpph %ymm1, %ymm1
+; CHECK-NEXT:    vmulph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = fdiv fast <16 x half> %x1, %x2
+  ret <16 x half> %res
+}
+
 define <16 x half> @test_int_x86_avx512fp16_mask_div_ph_256(<16 x half> %x1, <16 x half> %x2, <16 x half> %src, i16 %mask, <16 x half>* %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_div_ph_256:
 ; CHECK:       # %bb.0:
@@ -287,6 +297,16 @@ define <8 x half> @test_int_x86_avx512fp16_div_ph_128(<8 x half> %x1, <8 x half>
 ; CHECK-NEXT:    vdivph %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = fdiv <8 x half> %x1, %x2
+  ret <8 x half> %res
+}
+
+define <8 x half> @test_int_x86_avx512fp16_div_ph_128_fast(<8 x half> %x1, <8 x half> %x2) {
+; CHECK-LABEL: test_int_x86_avx512fp16_div_ph_128_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpph %xmm1, %xmm1
+; CHECK-NEXT:    vmulph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = fdiv fast <8 x half> %x1, %x2
   ret <8 x half> %res
 }
 

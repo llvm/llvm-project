@@ -16,7 +16,6 @@ from types import SimpleNamespace
 from dex.command.CommandBase import StepExpectInfo
 from dex.dextIR import DebuggerIR, FrameIR, LocIR, StepIR, ValueIR
 from dex.utils.Exceptions import DebuggerException
-from dex.utils.Exceptions import NotYetLoadedDebuggerException
 from dex.utils.ReturnCode import ReturnCode
 
 def watch_is_active(watch_info: StepExpectInfo, path, frame_idx, line_no):
@@ -44,11 +43,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
 
         self._interface = None
         self.has_loaded = False
-        self._loading_error = NotYetLoadedDebuggerException()
+        self._loading_error = None
         try:
             self._interface = self._load_interface()
             self.has_loaded = True
-            self._loading_error = None
         except DebuggerException:
             self._loading_error = sys.exc_info()
 

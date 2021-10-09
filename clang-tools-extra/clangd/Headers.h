@@ -125,11 +125,6 @@ public:
   // populates the structure.
   std::unique_ptr<PPCallbacks> collect(const SourceManager &SM);
 
-  void setMainFileEntry(const FileEntry *Entry) {
-    assert(Entry && Entry->isValid());
-    this->MainFileEntry = Entry;
-  }
-
   // HeaderID identifies file in the include graph. It corresponds to a
   // FileEntry rather than a FileID, but stays stable across preamble & main
   // file builds.

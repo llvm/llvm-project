@@ -43,13 +43,18 @@ memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
   interleave(type.getShape(), os, "x");
   os << "x" << type.getElementType();
 
+  // Add an optional alignment to the global memref.
+  IntegerAttr memrefAlignment =
+      alignment > 0 ? IntegerAttr::get(globalBuilder.getI64Type(), alignment)
+                    : IntegerAttr();
+
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
       /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true,
-      /*alignment=*/IntegerAttr());
+      /*alignment=*/memrefAlignment);
   symbolTable.insert(global);
   // The symbol table inserts at the end of the module, but globals are a bit
   // nicer if they are at the beginning.
@@ -90,11 +95,17 @@ void mlir::populateTensorConstantBufferizePatterns(
 }
 
 namespace {
-struct TensorConstantBufferizePass
+class TensorConstantBufferizePass
     : public TensorConstantBufferizeBase<TensorConstantBufferizePass> {
+public:
+  explicit TensorConstantBufferizePass(unsigned alignment) {
+    if (alignment)
+      this->alignment = alignment;
+  }
+
   void runOnOperation() override {
     auto module = getOperation();
-    GlobalCreator globals(module);
+    GlobalCreator globals(module, alignment);
 
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
@@ -111,6 +122,7 @@ struct TensorConstantBufferizePass
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createTensorConstantBufferizePass() {
-  return std::make_unique<TensorConstantBufferizePass>();
+std::unique_ptr<Pass>
+mlir::createTensorConstantBufferizePass(unsigned alignment) {
+  return std::make_unique<TensorConstantBufferizePass>(alignment);
 }

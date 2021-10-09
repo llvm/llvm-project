@@ -15,7 +15,7 @@
 #include "WebAssemblySubtarget.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyInstrInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-subtarget"

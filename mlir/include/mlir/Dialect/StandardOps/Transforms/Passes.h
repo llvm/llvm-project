@@ -39,7 +39,7 @@ void populateTensorConstantBufferizePatterns(
     RewritePatternSet &patterns);
 
 /// Creates an instance of tensor constant bufferization pass.
-std::unique_ptr<Pass> createTensorConstantBufferizePass();
+std::unique_ptr<Pass> createTensorConstantBufferizePass(unsigned alignment = 0);
 
 /// Creates an instance of the StdExpand pass that legalizes Std
 /// dialect ops to be convertible to LLVM. For example,

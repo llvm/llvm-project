@@ -132,9 +132,6 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
     KV.second->set_value(
         shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
 
-  // TODO: Free attached resources.
-  // 1. Close libraries in DylibHandles.
-
   // Wait for dispatcher to clear.
   D->shutdown();
 

@@ -2791,11 +2791,15 @@ SourceRange ParmVarDecl::getSourceRange() const {
 }
 
 bool ParmVarDecl::isDestroyedInCallee() const {
+  // ns_consumed only affects code generation in ARC
   if (hasAttr<NSConsumedAttr>())
-    return true;
+    return getASTContext().getLangOpts().ObjCAutoRefCount;
 
+  // FIXME: isParamDestroyedInCallee() should probably imply
+  // isDestructedType()
   auto *RT = getType()->getAs<RecordType>();
-  if (RT && RT->getDecl()->isParamDestroyedInCallee())
+  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+      getType().isDestructedType())
     return true;
 
   return false;

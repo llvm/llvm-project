@@ -13,6 +13,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
+#include "ScriptedThread.h"
+
 #include <mutex>
 
 namespace lldb_private {
@@ -101,6 +103,8 @@ protected:
                           ThreadList &new_thread_list) override;
 
 private:
+  friend class ScriptedThread;
+
   void CheckInterpreterAndScriptObject() const;
   ScriptedProcessInterface &GetInterface() const;
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);

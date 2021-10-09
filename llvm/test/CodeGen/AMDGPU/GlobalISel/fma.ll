@@ -253,36 +253,21 @@ define <2 x half> @v_fma_v2f16_fneg_lhs_rhs(<2 x half> %x, <2 x half> %y, <2 x h
 ; GFX6-LABEL: v_fma_v2f16_fneg_lhs_rhs:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v6, 0xffff
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX6-NEXT:    v_and_b32_e32 v0, v0, v6
-; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; GFX6-NEXT:    v_and_b32_e32 v2, v2, v6
-; GFX6-NEXT:    v_or_b32_e32 v1, v1, v2
-; GFX6-NEXT:    s_mov_b32 s4, 0x80008000
-; GFX6-NEXT:    v_xor_b32_e32 v0, s4, v0
-; GFX6-NEXT:    v_xor_b32_e32 v1, s4, v1
-; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; GFX6-NEXT:    v_fma_f32 v0, v0, v1, v4
+; GFX6-NEXT:    v_fma_f32 v0, v0, v2, v4
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-NEXT:    v_fma_f32 v1, v2, v3, v5
+; GFX6-NEXT:    v_fma_f32 v1, v1, v3, v5
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_fma_v2f16_fneg_lhs_rhs:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b32 s4, 0x80008000
-; GFX8-NEXT:    v_xor_b32_e32 v0, s4, v0
-; GFX8-NEXT:    v_xor_b32_e32 v1, s4, v1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
@@ -296,14 +281,14 @@ define <2 x half> @v_fma_v2f16_fneg_lhs_rhs(<2 x half> %x, <2 x half> %y, <2 x h
 ; GFX9-LABEL: v_fma_v2f16_fneg_lhs_rhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v2f16_fneg_lhs_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x.fneg = fneg <2 x half> %x
   %y.fneg = fneg <2 x half> %y
@@ -414,26 +399,26 @@ define double @v_fma_f64_fneg_all(double %x, double %y, double %z) {
 ; GFX6-LABEL: v_fma_f64_fneg_all:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[2:3], -v[4:5]
+; GFX6-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_fma_f64_fneg_all:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[2:3], -v[4:5]
+; GFX8-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_fma_f64_fneg_all:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[2:3], -v[4:5]
+; GFX9-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f64_fneg_all:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[2:3], -v[4:5]
+; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg double %x
   %neg.y = fneg double %y

@@ -46,9 +46,14 @@ extern "C" void *LLDBSwigPythonCreateScriptedProcess(
     const lldb::TargetSP &target_sp, StructuredDataImpl *args_impl,
     std::string &error_string);
 
+extern "C" void *LLDBSwigPythonCreateScriptedThread(
+    const char *python_class_name, const char *session_dictionary_name,
+    const lldb::TargetSP &target_sp, std::string &error_string);
+
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBData(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBError(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data);
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(void *data);
 
 } // namespace lldb_private
 

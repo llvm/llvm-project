@@ -26,9 +26,9 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -245,12 +245,12 @@ OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
-GlobalValue *OpenMPIRBuilder::createDebugKind(unsigned DebugKind) {
+GlobalValue *OpenMPIRBuilder::createGlobalFlag(unsigned Value, StringRef Name) {
   IntegerType *I32Ty = Type::getInt32Ty(M.getContext());
-  auto *GV = new GlobalVariable(
-      M, I32Ty,
-      /* isConstant = */ true, GlobalValue::WeakODRLinkage,
-      ConstantInt::get(I32Ty, DebugKind), "__omp_rtl_debug_kind");
+  auto *GV =
+      new GlobalVariable(M, I32Ty,
+                         /* isConstant = */ true, GlobalValue::WeakODRLinkage,
+                         ConstantInt::get(I32Ty, Value), Name);
 
   return GV;
 }

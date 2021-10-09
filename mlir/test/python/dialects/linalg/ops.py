@@ -185,3 +185,30 @@ def testNamedStructuredAsGenericOp():
         return linalg.matmul(lhs, rhs, outs=[init_result.result], emit_generic=True)
 
   print(module)
+
+
+# CHECK-LABEL: TEST: testOpResultFromOtherOp
+@run
+def testOpResultFromOtherOp():
+  with Context(), Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8),
+                                                                   f32))
+      def pass_an_op_directly(arg0, arg1):
+        one = std.ConstantOp(F32Type.get(), 1.0)
+        # CHECK: %[[LHS:.*]] = linalg.fill
+        lhs = linalg.FillOp(arg0, one)
+        # CHECK: %[[RHS:.*]] = linalg.fill
+        rhs = linalg.FillOp(arg1, one)
+        # CHECK: %[[INIT:.*]] = linalg.init_tensor
+        init = linalg.InitTensorOp([4, 8], f32)
+        # CHECK: linalg.matmul
+        # CHECK: ins(%[[LHS]], %[[RHS]]
+        # CHECK: outs(%[[INIT]]
+        return linalg.matmul(lhs, rhs, outs=init)
+
+  print(module)

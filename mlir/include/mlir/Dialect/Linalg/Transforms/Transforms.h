@@ -970,12 +970,6 @@ void populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
 
-/// Populates `patterns` with patterns to convert linalg.conv ops to
-/// linalg.generic ops.
-void populateLinalgConvGeneralizationPatterns(
-    RewritePatternSet &patterns,
-    LinalgTransformationFilter filter = LinalgTransformationFilter());
-
 /// Linalg distribution patterns
 //
 /// Populates `patterns` with patterns to distribute linalg.tiled_loop.

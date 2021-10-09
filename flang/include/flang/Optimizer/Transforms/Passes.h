@@ -22,7 +22,13 @@ class Region;
 
 namespace fir {
 
+//===----------------------------------------------------------------------===//
+// Passes defined in Passes.td
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
+std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 
 /// Support for inlining on FIR.
 bool canLegallyInline(mlir::Operation *op, mlir::Region *reg,

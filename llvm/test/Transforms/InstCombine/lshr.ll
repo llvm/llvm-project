@@ -172,6 +172,19 @@ define i16 @bool_zext(i1 %x) {
   ret i16 %hibit
 }
 
+define i32 @bool_zext_use(i1 %x) {
+; CHECK-LABEL: @bool_zext_use(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[HIBIT:%.*]] = zext i1 [[X]] to i32
+; CHECK-NEXT:    ret i32 [[HIBIT]]
+;
+  %sext = sext i1 %x to i32
+  call void @use(i32 %sext)
+  %hibit = lshr i32 %sext, 31
+  ret i32 %hibit
+}
+
 define <2 x i8> @bool_zext_splat(<2 x i1> %x) {
 ; CHECK-LABEL: @bool_zext_splat(
 ; CHECK-NEXT:    [[HIBIT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i8>

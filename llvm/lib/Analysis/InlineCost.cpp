@@ -387,6 +387,7 @@ protected:
   bool simplifyCallSite(Function *F, CallBase &Call);
   template <typename Callable>
   bool simplifyInstruction(Instruction &I, Callable Evaluate);
+  bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   ConstantInt *stripAndComputeInBoundsConstantOffsets(Value *&V);
 
   /// Return true if the given argument to the function being considered for
@@ -1531,6 +1532,27 @@ bool CallAnalyzer::simplifyInstruction(Instruction &I, Callable Evaluate) {
   return true;
 }
 
+/// Try to simplify a call to llvm.is.constant.
+///
+/// Duplicate the argument checking from CallAnalyzer::simplifyCallSite since
+/// we expect calls of this specific intrinsic to be infrequent.
+///
+/// FIXME: Given that we know CB's parent (F) caller
+/// (CandidateCall->getParent()->getParent()), we might be able to determine
+/// whether inlining F into F's caller would change how the call to
+/// llvm.is.constant would evaluate.
+bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
+  Value *Arg = CB.getArgOperand(0);
+  auto *C = dyn_cast<Constant>(Arg);
+
+  if (!C)
+    C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(Arg));
+
+  Type *RT = CB.getFunctionType()->getReturnType();
+  SimplifiedValues[&CB] = ConstantInt::get(RT, C ? 1 : 0);
+  return true;
+}
+
 bool CallAnalyzer::visitBitCast(BitCastInst &I) {
   // Propagate constants through bitcasts.
   if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
@@ -2154,6 +2176,8 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
       if (auto *SROAArg = getSROAArgForValueOrNull(II->getOperand(0)))
         SROAArgValues[II] = SROAArg;
       return true;
+    case Intrinsic::is_constant:
+      return simplifyIntrinsicCallIsConstant(Call);
     }
   }
 
