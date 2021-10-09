@@ -37,7 +37,7 @@
 #define COMGR_METADATA_H
 
 #include "comgr.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
