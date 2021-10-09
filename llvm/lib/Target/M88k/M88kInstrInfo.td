@@ -597,3 +597,14 @@ def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
                      "mov.d",
                      [(set (f64 XROpnd:$rd), FPR64Opnd:$rs2)]>;
 }
+
+let rs1 = 0, rs2 = 0 in
+de FLDCR : F_SFU1CR<0b01001, (outs GPROpnd:$rd), (ins FCROpnd:$fcr),
+      f               "fldcr", " $rd, $fcr">;
+
+let rd = 0 in
+def FSTCR : F_SFU1CR2<0b10001, (outs FCROpnd:$fcr), (ins GPROpnd:$rs1),
+                     "fstcr", " $rs1, $fcr">;
+
+def FXCR : F_SFU1CR2<0b11001, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, FCROpnd:$fcr),
+                     "fxcr", " $rd, $rs1, $fcr">;

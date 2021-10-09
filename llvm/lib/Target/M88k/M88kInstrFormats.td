@@ -292,6 +292,26 @@ class F_SFU1D<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
   let Inst{6-5} = td;
 }
 
+// Format: Control register.
+class F_SFU1CR<bits<5> func,
+               dag outs, dag ins, string asm, string operands,
+               InstrItinClass itin = NoItinerary>
+   : F_SFU<outs, ins, asm, operands, [], itin> {
+
+  bits<6>  fcr;
+
+  let Inst{28-26} = 0b000;
+  let Inst{15-11} = func;
+  let Inst{10-5} = fcr;
+}
+
+class F_SFU1CR2<bits<5> func,
+               dag outs, dag ins, string asm, string operands,
+               InstrItinClass itin = NoItinerary>
+   : F_SFU1CR<func, outs, ins, asm, operands, itin> {
+  let rs2 = rs1;
+}
+
 // Format: Triadic register.
 class F_SFU2<bits<5> func, bits<2> sat, bits<2> ty,
                dag outs, dag ins, string asmstr, list<dag> pattern,
