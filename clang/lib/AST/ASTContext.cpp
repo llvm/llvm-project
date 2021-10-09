@@ -6343,7 +6343,7 @@ QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
     case BFloat16Rank: llvm_unreachable("Complex bfloat16 is not supported");
     case Float16Rank:
     case HalfRank: llvm_unreachable("Complex half is not supported");
-    case Ibm128Rank: llvm_unreachable("Complex __ibm128 is not supported");
+    case Ibm128Rank:     return getComplexType(Ibm128Ty);
     case FloatRank:      return getComplexType(FloatTy);
     case DoubleRank:     return getComplexType(DoubleTy);
     case LongDoubleRank: return getComplexType(LongDoubleTy);
