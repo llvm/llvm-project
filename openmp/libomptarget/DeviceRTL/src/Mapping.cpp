@@ -84,8 +84,7 @@ uint32_t getNumberOfBlocks() {
 }
 
 uint32_t getNumberOfProcessorElements() {
-  // TODO
-  return mapping::getBlockSize();
+  return getBlockSize();
 }
 
 uint32_t getWarpId() {
@@ -233,6 +232,10 @@ bool mapping::isGenericMode() { return !isSPMDMode(); }
 extern "C" {
 __attribute__((noinline)) uint32_t __kmpc_get_hardware_thread_id_in_block() {
   return mapping::getThreadIdInBlock();
+}
+
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_threads_in_block() {
+  return mapping::getNumberOfProcessorElements();
 }
 }
 #pragma omp end declare target

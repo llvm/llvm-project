@@ -18866,7 +18866,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -19097,7 +19097,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 9, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -19299,7 +19299,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 99, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -19562,7 +19562,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i64 [[TMP7]], i64* [[DOTOMP_COMB_UB]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    [[CONV12:%.*]] = zext i32 [[NVPTX_NUM_THREADS]] to i64
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
@@ -19867,7 +19867,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -20460,7 +20460,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -20691,7 +20691,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 9, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -20893,7 +20893,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 99, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -21154,7 +21154,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 [[TMP7]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP9]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -21456,7 +21456,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -22029,7 +22029,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -22252,7 +22252,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 9, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -22445,7 +22445,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 99, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -22696,7 +22696,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i64 [[TMP7]], i64* [[DOTOMP_COMB_UB]], align 8
 // CHECK3-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK3-NEXT:    [[CONV11:%.*]] = zext i32 [[NVPTX_NUM_THREADS]] to i64
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
@@ -22999,7 +22999,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -23563,7 +23563,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK4-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -23786,7 +23786,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 9, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK4-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -23979,7 +23979,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 99, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
 // CHECK4-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
@@ -24230,7 +24230,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i64 [[TMP7]], i64* [[DOTOMP_COMB_UB]], align 8
 // CHECK4-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK4-NEXT:    [[CONV11:%.*]] = zext i32 [[NVPTX_NUM_THREADS]] to i64
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
@@ -24533,7 +24533,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK4-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
 // CHECK4-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[NVPTX_NUM_THREADS]])
