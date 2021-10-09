@@ -105,16 +105,18 @@ private:
 /// llvm.global_ctors.
 class GlobalCtorDtorScraper {
 public:
-
   GlobalCtorDtorScraper(GenericLLVMIRPlatformSupport &PS,
-                        StringRef InitFunctionPrefix)
-    : PS(PS), InitFunctionPrefix(InitFunctionPrefix) {}
+                        StringRef InitFunctionPrefix,
+                        StringRef DeInitFunctionPrefix)
+      : PS(PS), InitFunctionPrefix(InitFunctionPrefix),
+        DeInitFunctionPrefix(DeInitFunctionPrefix) {}
   Expected<ThreadSafeModule> operator()(ThreadSafeModule TSM,
                                         MaterializationResponsibility &R);
 
 private:
   GenericLLVMIRPlatformSupport &PS;
   StringRef InitFunctionPrefix;
+  StringRef DeInitFunctionPrefix;
 };
 
 /// Generic IR Platform Support
@@ -125,12 +127,14 @@ private:
 class GenericLLVMIRPlatformSupport : public LLJIT::PlatformSupport {
 public:
   GenericLLVMIRPlatformSupport(LLJIT &J)
-      : J(J), InitFunctionPrefix(J.mangle("__orc_init_func.")) {
+      : J(J), InitFunctionPrefix(J.mangle("__orc_init_func.")),
+        DeInitFunctionPrefix(J.mangle("__orc_deinit_func.")) {
 
     getExecutionSession().setPlatform(
         std::make_unique<GenericLLVMIRPlatform>(*this));
 
-    setInitTransform(J, GlobalCtorDtorScraper(*this, InitFunctionPrefix));
+    setInitTransform(J, GlobalCtorDtorScraper(*this, InitFunctionPrefix,
+                                              DeInitFunctionPrefix));
 
     SymbolMap StdInterposes;
 
@@ -203,6 +207,8 @@ public:
           InitSymbols[&JD].add(KV.first,
                                SymbolLookupFlags::WeaklyReferencedSymbol);
           InitFunctions[&JD].add(KV.first);
+        } else if ((*KV.first).startswith(DeInitFunctionPrefix)) {
+          DeInitFunctions[&JD].add(KV.first);
         }
     }
     return Error::success();
@@ -254,6 +260,11 @@ public:
     getExecutionSession().runSessionLocked([&]() {
         InitFunctions[&JD].add(InitName);
       });
+  }
+
+  void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
+    getExecutionSession().runSessionLocked(
+        [&]() { DeInitFunctions[&JD].add(DeInitName); });
   }
 
 private:
@@ -438,6 +449,7 @@ private:
 
   LLJIT &J;
   std::string InitFunctionPrefix;
+  std::string DeInitFunctionPrefix;
   DenseMap<JITDylib *, SymbolLookupSet> InitSymbols;
   DenseMap<JITDylib *, SymbolLookupSet> InitFunctions;
   DenseMap<JITDylib *, SymbolLookupSet> DeInitFunctions;
@@ -459,40 +471,63 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
   auto Err = TSM.withModuleDo([&](Module &M) -> Error {
     auto &Ctx = M.getContext();
     auto *GlobalCtors = M.getNamedGlobal("llvm.global_ctors");
+    auto *GlobalDtors = M.getNamedGlobal("llvm.global_dtors");
 
-    // If there's no llvm.global_ctors or it's just a decl then skip.
-    if (!GlobalCtors || GlobalCtors->isDeclaration())
+    auto RegisterCOrDtors = [&](GlobalVariable *GlobalCOrDtors,
+                                bool isCtor) -> Error {
+      // If there's no llvm.global_c/dtor or it's just a decl then skip.
+      if (!GlobalCOrDtors || GlobalCOrDtors->isDeclaration())
+        return Error::success();
+      std::string InitOrDeInitFunctionName;
+      if (isCtor)
+        raw_string_ostream(InitOrDeInitFunctionName)
+            << InitFunctionPrefix << M.getModuleIdentifier();
+      else
+        raw_string_ostream(InitOrDeInitFunctionName)
+            << DeInitFunctionPrefix << M.getModuleIdentifier();
+
+      MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
+      auto InternedInitOrDeInitName = Mangle(InitOrDeInitFunctionName);
+      if (auto Err = R.defineMaterializing(
+              {{InternedInitOrDeInitName, JITSymbolFlags::Callable}}))
+        return Err;
+
+      auto *InitOrDeInitFunc = Function::Create(
+          FunctionType::get(Type::getVoidTy(Ctx), {}, false),
+          GlobalValue::ExternalLinkage, InitOrDeInitFunctionName, &M);
+      InitOrDeInitFunc->setVisibility(GlobalValue::HiddenVisibility);
+      std::vector<std::pair<Function *, unsigned>> InitsOrDeInits;
+      auto COrDtors = isCtor ? getConstructors(M) : getDestructors(M);
+
+      for (auto E : COrDtors)
+        InitsOrDeInits.push_back(std::make_pair(E.Func, E.Priority));
+      llvm::sort(InitsOrDeInits,
+                 [](const std::pair<Function *, unsigned> &LHS,
+                    const std::pair<Function *, unsigned> &RHS) {
+                   return LHS.first < RHS.first;
+                 });
+
+      auto *InitOrDeInitFuncEntryBlock =
+          BasicBlock::Create(Ctx, "entry", InitOrDeInitFunc);
+      IRBuilder<> IB(InitOrDeInitFuncEntryBlock);
+      for (auto &KV : InitsOrDeInits)
+        IB.CreateCall(KV.first);
+      IB.CreateRetVoid();
+
+      if (isCtor)
+        PS.registerInitFunc(R.getTargetJITDylib(), InternedInitOrDeInitName);
+      else
+        PS.registerDeInitFunc(R.getTargetJITDylib(), InternedInitOrDeInitName);
+
+      GlobalCOrDtors->eraseFromParent();
       return Error::success();
+    };
 
-    std::string InitFunctionName;
-    raw_string_ostream(InitFunctionName)
-        << InitFunctionPrefix << M.getModuleIdentifier();
-
-    MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
-    auto InternedName = Mangle(InitFunctionName);
-    if (auto Err =
-            R.defineMaterializing({{InternedName, JITSymbolFlags::Callable}}))
+    if (auto Err = RegisterCOrDtors(GlobalCtors, true))
+      return Err;
+    if (auto Err = RegisterCOrDtors(GlobalDtors, false))
       return Err;
 
-    auto *InitFunc =
-        Function::Create(FunctionType::get(Type::getVoidTy(Ctx), {}, false),
-                         GlobalValue::ExternalLinkage, InitFunctionName, &M);
-    InitFunc->setVisibility(GlobalValue::HiddenVisibility);
-    std::vector<std::pair<Function *, unsigned>> Inits;
-    for (auto E : getConstructors(M))
-      Inits.push_back(std::make_pair(E.Func, E.Priority));
-    llvm::sort(Inits, [](const std::pair<Function *, unsigned> &LHS,
-                         const std::pair<Function *, unsigned> &RHS) {
-      return LHS.first < RHS.first;
-    });
-    auto *EntryBlock = BasicBlock::Create(Ctx, "entry", InitFunc);
-    IRBuilder<> IB(EntryBlock);
-    for (auto &KV : Inits)
-      IB.CreateCall(KV.first);
-    IB.CreateRetVoid();
-
-    PS.registerInitFunc(R.getTargetJITDylib(), InternedName);
-    GlobalCtors->eraseFromParent();
     return Error::success();
   });
 
