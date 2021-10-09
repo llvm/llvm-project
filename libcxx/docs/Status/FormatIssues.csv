@@ -8,7 +8,7 @@ Number,Name,Assignee,Patch,Status,First released version
 `LWG-3242 <https://wg21.link/LWG3242>`_,"std::format: missing rules for arg-id in width and precision",Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
 `LWG-3243 <https://wg21.link/LWG3243>`_,"std::format and negative zeroes",,,|Not Started|,
 `LWG-3246 <https://wg21.link/LWG3246>`_,"What are the constraints on the template parameter of basic_format_arg?",,,|Not Started|,
-`LWG-3248 <https://wg21.link/LWG3248>`_,"std::format #b, #B, #o, #x, and #X presentation types misformat negative numbers",Mark de Wever,`D103433 <https://reviews.llvm.org/D103433>`__,|Review|,
+`LWG-3248 <https://wg21.link/LWG3248>`_,"std::format #b, #B, #o, #x, and #X presentation types misformat negative numbers",Mark de Wever,`D103433 <https://reviews.llvm.org/D103433>`__,|Complete|,Clang 14
 `LWG-3250 <https://wg21.link/LWG3250>`_,"std::format: # (alternate form) for NaN and inf",,,|Not Started|,
 `LWG-3327 <https://wg21.link/LWG3327>`_,"Format alignment specifiers vs. text direction",,,|Nothing To Do|,
 `LWG-3340 <https://wg21.link/LWG3340>`_,"Formatting functions should throw on argument/format string mismatch in [format.functions]",,,|Not Started|,
