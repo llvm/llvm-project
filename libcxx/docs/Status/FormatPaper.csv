@@ -9,10 +9,10 @@ Section,Description,Dependencies,Assignee,Patch,Status,First released version
 `[format.arg] <https://wg21.link/format.arg>`_,"Class template basic_format_arg - handle",,Unassigned,,|Not Started|,
 `[format.arg] <https://wg21.link/format.arg>`_,"Class template basic_format_arg - pointers",,Unassigned,,|Not Started|,
 `[format.arg.store] <https://wg21.link/format.arg.store>`_,"Class template format-arg-store",,Mark de Wever,`D103357 <https://llvm.org/D103357>`__,|Complete|,Clang 14
-`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - character types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103466 <https://llvm.org/D103466>`__",|Review|,
-`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - string types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103425 <https://reviews.llvm.org/D103425>`__",|Review|,
-`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - boolean type",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103670 <https://reviews.llvm.org/D103670>`__",|Review|,
-`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - integral types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103433 <https://reviews.llvm.org/D103433>`__",|Review|,
+`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - character types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103466 <https://llvm.org/D103466>`__",|Complete|,Clang 14
+`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - string types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103425 <https://reviews.llvm.org/D103425>`__",|Complete|,Clang 14
+`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - boolean type",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103670 <https://reviews.llvm.org/D103670>`__",|Complete|,Clang 14
+`[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - integral types",,Mark de Wever,"`D96664 <https://llvm.org/D96664>`__ `D103433 <https://reviews.llvm.org/D103433>`__",|Complete|,Clang 14
 `[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - floating-point types",`D70631 <https://llvm.org/D70631>`__,Mark de Wever,,|In Progress|,
 `[format.formatter.spec] <https://wg21.link/format.formatter.spec>`_,"Formatter specializations - pointer types",,Unassigned,,|Not Started|,
 `[format.string.std] <https://wg21.link/format.string.std>`_,"Standard format specifiers - character types",,Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
