@@ -84,7 +84,7 @@ private:
 
     // An include header quoted with either <> or "".
     std::string Name;
-    // The range of the whole line of include directive including any eading
+    // The range of the whole line of include directive including any leading
     // whitespaces and trailing comment.
     tooling::Range R;
   };
@@ -126,7 +126,6 @@ private:
   // Matches a whole #include directive.
   llvm::Regex IncludeRegex;
 };
-
 
 } // namespace tooling
 } // namespace clang
