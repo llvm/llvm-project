@@ -80,10 +80,10 @@ private:
   /// The in-memory filesystem laid on top the physical filesystem in `RealFS`.
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
   /// The file system that is used by each worker when scanning for
-  /// dependencies. This filesystem persists accross multiple compiler
+  /// dependencies. This filesystem persists across multiple compiler
   /// invocations.
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  /// The file manager that is reused accross multiple invocations by this
+  /// The file manager that is reused across multiple invocations by this
   /// worker. If null, the file manager will not be reused.
   llvm::IntrusiveRefCntPtr<FileManager> Files;
   ScanningOutputFormat Format;
