@@ -72,7 +72,7 @@ static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
                                             InterWarpCopyFnTy cpyFct,
                                             bool isSPMDExecutionMode, bool) {
   uint32_t BlockThreadId = mapping::getThreadIdInBlock();
-  if (mapping::isMainThreadInGenericMode())
+  if (mapping::isMainThreadInGenericMode(/* IsSPMD */ false))
     BlockThreadId = 0;
   uint32_t NumThreads = omp_get_num_threads();
   if (NumThreads == 1)
