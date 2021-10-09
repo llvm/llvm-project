@@ -12,8 +12,8 @@ entry:
 ; CHECK-NEXT: and   x1, x1, x16
 ; CHECK-NEXT: csdb
 ; CHECK-NEXT: mov [[TMPREG:x[0-9]+]], sp
-; CHECK-NEXT: and [[TMPREG]], [[TMPREG]], x16
 ; CHECK-NEXT: mov x0, x8
+; CHECK-NEXT: and [[TMPREG]], [[TMPREG]], x16
 ; CHECK-NEXT: mov sp, [[TMPREG]]
 ; CHECK-NEXT: ret
 }
@@ -128,8 +128,8 @@ entry:
 ; CHECK-NEXT:  movi    v0.2d, #0000000000000000
 ; CHECK-NEXT:  and     x1, x1, x16
 ; CHECK-NEXT:  csdb
-; CHECK-NEXT:  ld1     { v0.d }[0], [x1]
 ; CHECK-NEXT:  mov     [[TMPREG:x[0-9]+]], sp
+; CHECK-NEXT:  ld1     { v0.d }[0], [x1]
 ; CHECK-NEXT:  and     [[TMPREG]], [[TMPREG]], x16
 ; CHECK-NEXT:  mov     sp, [[TMPREG]]
 ; CHECK-NEXT:  ret

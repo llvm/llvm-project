@@ -51,20 +51,20 @@ define half @test_v4f16(<4 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v4f16:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP-NEXT:    mov h3, v0.h[1]
-; CHECK-NOFP-NEXT:    mov h1, v0.h[3]
+; CHECK-NOFP-NEXT:    mov h1, v0.h[1]
+; CHECK-NOFP-NEXT:    fcvt s2, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-NOFP-NEXT:    mov h2, v0.h[2]
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    mov h0, v0.h[3]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s2
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s2
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s1, s0
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
 ;
@@ -80,20 +80,20 @@ define half @test_v4f16_ninf(<4 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v4f16_ninf:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP-NEXT:    mov h3, v0.h[1]
-; CHECK-NOFP-NEXT:    mov h1, v0.h[3]
+; CHECK-NOFP-NEXT:    mov h1, v0.h[1]
+; CHECK-NOFP-NEXT:    fcvt s2, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-NOFP-NEXT:    mov h2, v0.h[2]
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    mov h0, v0.h[3]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s2
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s2
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s1, s0
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
 ;
@@ -108,104 +108,104 @@ define half @test_v4f16_ninf(<4 x half> %a) nounwind {
 define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16:
 ; CHECK-NOFP:       // %bb.0:
-; CHECK-NOFP-NEXT:    ldr h18, [sp, #8]
+; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
-; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcvt s18, h18
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcmp s1, s18
-; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s18, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
-; CHECK-NOFP-NEXT:    ldr h18, [x8, :lo12:.LCPI6_0]
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
-; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcmp s1, s16
+; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
+; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
+; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s2, s2, s16, gt
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
+; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI6_0]
 ; CHECK-NOFP-NEXT:    mov w8, #-8388608
-; CHECK-NOFP-NEXT:    fcvt s18, h18
-; CHECK-NOFP-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fmov s17, w8
-; CHECK-NOFP-NEXT:    fcmp s3, s18
-; CHECK-NOFP-NEXT:    fcvt s1, h2
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s3, s3, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s4, h4
-; CHECK-NOFP-NEXT:    fcvt h2, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s18
+; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmov s16, w8
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s2
-; CHECK-NOFP-NEXT:    fcvt s5, h5
-; CHECK-NOFP-NEXT:    fcvt h3, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s5, s18
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s4, s5, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt s6, h6
-; CHECK-NOFP-NEXT:    fcvt h4, s4
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s6, s18
-; CHECK-NOFP-NEXT:    fcvt s1, h4
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s5, s6, s17, gt
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s7, h7
-; CHECK-NOFP-NEXT:    fcvt h4, s5
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s7, s18
-; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s5, s7, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s4
-; CHECK-NOFP-NEXT:    fcvt h5, s5
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h5
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h6
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h7
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
 ;
 ; CHECK-FP-LABEL: test_v11f16:
 ; CHECK-FP:       // %bb.0:
-; CHECK-FP-NEXT:    movi v16.8h, #252, lsl #8
-; CHECK-FP-NEXT:    mov x8, sp
-; CHECK-FP-NEXT:    ld1 { v16.h }[0], [x8]
-; CHECK-FP-NEXT:    add x8, sp, #8
 ; CHECK-FP-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-FP-NEXT:    ld1 { v16.h }[1], [x8]
+; CHECK-FP-NEXT:    movi v1.8h, #252, lsl #8
 ; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
+; CHECK-FP-NEXT:    add x8, sp, #8
 ; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-FP-NEXT:    ld1 { v1.h }[1], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #16
 ; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-FP-NEXT:    ld1 { v16.h }[2], [x8]
+; CHECK-FP-NEXT:    ld1 { v1.h }[2], [x8]
 ; CHECK-FP-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[7], v7.h[0]
-; CHECK-FP-NEXT:    fmaxnm v0.8h, v0.8h, v16.8h
+; CHECK-FP-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
 ; CHECK-FP-NEXT:    fmaxnmv h0, v0.8h
 ; CHECK-FP-NEXT:    ret
   %b = call nnan half @llvm.vector.reduce.fmax.v11f16(<11 x half> %a)
@@ -215,105 +215,105 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16_ninf:
 ; CHECK-NOFP:       // %bb.0:
-; CHECK-NOFP-NEXT:    ldr h18, [sp, #8]
+; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
-; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcvt s18, h18
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcmp s1, s18
-; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s18, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
-; CHECK-NOFP-NEXT:    ldr h18, [x8, :lo12:.LCPI7_0]
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
-; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcmp s1, s16
+; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
+; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
+; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
+; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI7_0]
 ; CHECK-NOFP-NEXT:    mov w8, #57344
-; CHECK-NOFP-NEXT:    fcsel s2, s2, s16, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    movk w8, #51071, lsl #16
-; CHECK-NOFP-NEXT:    fcvt s18, h18
-; CHECK-NOFP-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fmov s17, w8
-; CHECK-NOFP-NEXT:    fcmp s3, s18
-; CHECK-NOFP-NEXT:    fcvt s1, h2
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s3, s3, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s4, h4
-; CHECK-NOFP-NEXT:    fcvt h2, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s18
+; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmov s16, w8
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s2
-; CHECK-NOFP-NEXT:    fcvt s5, h5
-; CHECK-NOFP-NEXT:    fcvt h3, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s5, s18
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s4, s5, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt s6, h6
-; CHECK-NOFP-NEXT:    fcvt h4, s4
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s6, s18
-; CHECK-NOFP-NEXT:    fcvt s1, h4
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s5, s6, s17, gt
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcvt s7, h7
-; CHECK-NOFP-NEXT:    fcvt h4, s5
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s7, s18
-; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcsel s5, s7, s17, gt
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s4
-; CHECK-NOFP-NEXT:    fcvt h5, s5
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h5
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h6
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s3, h7
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
 ;
 ; CHECK-FP-LABEL: test_v11f16_ninf:
 ; CHECK-FP:       // %bb.0:
-; CHECK-FP-NEXT:    mvni v16.8h, #4, lsl #8
-; CHECK-FP-NEXT:    mov x8, sp
-; CHECK-FP-NEXT:    ld1 { v16.h }[0], [x8]
-; CHECK-FP-NEXT:    add x8, sp, #8
 ; CHECK-FP-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-FP-NEXT:    ld1 { v16.h }[1], [x8]
+; CHECK-FP-NEXT:    mvni v1.8h, #4, lsl #8
 ; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
+; CHECK-FP-NEXT:    add x8, sp, #8
 ; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-FP-NEXT:    ld1 { v1.h }[1], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #16
 ; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-FP-NEXT:    ld1 { v16.h }[2], [x8]
+; CHECK-FP-NEXT:    ld1 { v1.h }[2], [x8]
 ; CHECK-FP-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[7], v7.h[0]
-; CHECK-FP-NEXT:    fmaxnm v0.8h, v0.8h, v16.8h
+; CHECK-FP-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
 ; CHECK-FP-NEXT:    fmaxnmv h0, v0.8h
 ; CHECK-FP-NEXT:    ret
   %b = call nnan ninf half @llvm.vector.reduce.fmax.v11f16(<11 x half> %a)

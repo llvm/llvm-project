@@ -81,11 +81,11 @@ define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n6_fshl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    mvn w9, w2
-; CHECK-NEXT:    lsr w10, w1, #1
-; CHECK-NEXT:    lsl w8, w0, w2
-; CHECK-NEXT:    lsr w9, w10, w9
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    mvn w8, w2
+; CHECK-NEXT:    lsr w9, w1, #1
+; CHECK-NEXT:    lsl w10, w0, w2
+; CHECK-NEXT:    lsr w8, w9, w8
+; CHECK-NEXT:    orr w0, w10, w8
 ; CHECK-NEXT:    ret
   %shamt_wide = sext i8 %shamt to i32
   %r = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt_wide)
@@ -95,11 +95,11 @@ define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n7_fshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    mvn w9, w2
-; CHECK-NEXT:    lsl w10, w0, #1
-; CHECK-NEXT:    lsr w8, w1, w2
-; CHECK-NEXT:    lsl w9, w10, w9
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    mvn w8, w2
+; CHECK-NEXT:    lsl w9, w0, #1
+; CHECK-NEXT:    lsr w10, w1, w2
+; CHECK-NEXT:    lsl w8, w9, w8
+; CHECK-NEXT:    orr w0, w8, w10
 ; CHECK-NEXT:    ret
   %shamt_wide = sext i8 %shamt to i32
   %r = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt_wide)

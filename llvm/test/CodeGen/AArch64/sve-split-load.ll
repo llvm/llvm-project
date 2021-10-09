@@ -123,10 +123,10 @@ define <vscale x 8 x i64> @masked_load_split_8i64(<vscale x 8 x i64> *%a, <vscal
 ; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x0, #1, mul vl]
-; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(<vscale x 8 x i64> *%a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i64> undef)

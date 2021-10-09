@@ -16,9 +16,9 @@ entry:
 ; O0: str x8, [sp, #8]
 ; O0: ldr x0, [sp, #8]
 ; DAGISEL: add x0, sp, #32
-; DAGISEL: stp x2, x3, [sp, #32]
-; DAGISEL: stp x4, x5, [sp, #48]
-; DAGISEL: stp x6, x7, [sp, #64]
+; DAGISEL: stp x3, x4, [sp, #40]
+; DAGISEL: str x2, [sp, #32]
+; DAGISEL: stp x5, x6, [sp, #56]
 ; CHECK: bl f_va_list
   %ap = alloca i8*, align 8
   %0 = bitcast i8** %ap to i8*
@@ -51,9 +51,9 @@ entry:
 ; O0: str x8, [sp, #8]
 ; O0: ldr x0, [sp, #8]
 ; DAGISEL: add x0, sp, #32
-; DAGISEL: stp x2, x3, [sp, #32]
-; DAGISEL: stp x4, x5, [sp, #48]
-; DAGISEL: stp x6, x7, [sp, #64]
+; DAGISEL: stp x3, x4, [sp, #40]
+; DAGISEL: str x2, [sp, #32]
+; DAGISEL: stp x5, x6, [sp, #56]
 ; CHECK: bl d_va_list
   %ap = alloca i8*, align 8
   %0 = bitcast i8** %ap to i8*

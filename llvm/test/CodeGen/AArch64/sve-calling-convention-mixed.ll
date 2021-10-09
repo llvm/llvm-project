@@ -12,13 +12,13 @@ define float @foo1(double* %x0, double* %x1, double* %x2) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ld4d { z1.d, z2.d, z3.d, z4.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld4d { z16.d, z17.d, z18.d, z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
@@ -44,12 +44,11 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    ld4d { z1.d, z2.d, z3.d, z4.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld4d { z16.d, z17.d, z18.d, z19.d }, p0/z, [x1]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x8, sp, #16
-; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    fmov s0, #1.00000000
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    mov w1, #1
 ; CHECK-NEXT:    mov w2, #2
 ; CHECK-NEXT:    mov w3, #3
@@ -57,7 +56,8 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 ; CHECK-NEXT:    mov w5, #5
 ; CHECK-NEXT:    mov w6, #6
 ; CHECK-NEXT:    mov w7, #7
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
 ; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
@@ -83,14 +83,14 @@ define float @foo3(double* %x0, double* %x1, double* %x2) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ld4d { z2.d, z3.d, z4.d, z5.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld3d { z16.d, z17.d, z18.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x2]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    fmov s1, #2.00000000
 ; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]

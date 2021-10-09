@@ -13,8 +13,8 @@ define half @faddp_2xhalf(<2 x half> %a) {
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKNOFP16-NEXT:    dup v1.4h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
@@ -37,8 +37,8 @@ define half @faddp_2xhalf_commute(<2 x half> %a) {
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKNOFP16-NEXT:    dup v1.4h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
@@ -61,8 +61,8 @@ define half @faddp_4xhalf(<4 x half> %a) {
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKNOFP16-NEXT:    dup v1.4h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
@@ -85,8 +85,8 @@ define half @faddp_4xhalf_commute(<4 x half> %a) {
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKNOFP16-NEXT:    dup v1.4h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECKNOFP16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0

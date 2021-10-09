@@ -8,8 +8,8 @@ define win64cc void @pass_va(i32 %count, ...) nounwind {
 ; CHECK-NEXT:    add x8, sp, #40
 ; CHECK-NEXT:    add x0, sp, #40
 ; CHECK-NEXT:    stp x30, x18, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x1, x2, [sp, #40]
 ; CHECK-NEXT:    stp x3, x4, [sp, #56]
+; CHECK-NEXT:    stp x1, x2, [sp, #40]
 ; CHECK-NEXT:    stp x5, x6, [sp, #72]
 ; CHECK-NEXT:    str x7, [sp, #88]
 ; CHECK-NEXT:    str x8, [sp, #8]
@@ -70,8 +70,8 @@ define win64cc i8* @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x18, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    str x7, [sp, #24]
 ; CHECK-NEXT:    add x0, sp, #24
+; CHECK-NEXT:    str x7, [sp, #24]
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    ldr x18, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

@@ -4,16 +4,16 @@
 define void @matrix_mul_unsigned(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i16 %val) {
 ; CHECK-LABEL: matrix_mul_unsigned:
 ; CHECK:       // %bb.0: // %vector.header
-; CHECK-NEXT:    and w9, w3, #0xffff
+; CHECK-NEXT:    and w8, w3, #0xffff
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-NEXT:    dup v0.4h, w9
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    ldp d1, d2, [x9]
 ; CHECK-NEXT:    add x9, x1, w0, uxtw #2
-; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
@@ -68,16 +68,16 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i16 %val) {
 ; CHECK-LABEL: matrix_mul_signed:
 ; CHECK:       // %bb.0: // %vector.header
-; CHECK-NEXT:    sxth w9, w3
+; CHECK-NEXT:    sxth w8, w3
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-NEXT:    dup v0.4h, w9
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x2, w0, sxtw #1
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    ldp d1, d2, [x9]
 ; CHECK-NEXT:    add x9, x1, w0, sxtw #2
-; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    smull v2.4s, v0.4h, v2.4h
@@ -133,20 +133,20 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_double_shuffle(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i16 %val) {
 ; CHECK-LABEL: matrix_mul_double_shuffle:
 ; CHECK:       // %bb.0: // %vector.header
-; CHECK-NEXT:    and w9, w3, #0xffff
+; CHECK-NEXT:    and w8, w3, #0xffff
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-NEXT:    dup v0.4h, w9
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh w9, [x2], #16
-; CHECK-NEXT:    mov w10, w0
 ; CHECK-NEXT:    subs x8, x8, #8
-; CHECK-NEXT:    lsl x10, x10, #2
 ; CHECK-NEXT:    dup v1.4h, w9
-; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    lsl x9, x9, #2
 ; CHECK-NEXT:    add w0, w0, #8
-; CHECK-NEXT:    str q1, [x1, x10]
+; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    str q1, [x1, x9]
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %for.end12
 ; CHECK-NEXT:    ret

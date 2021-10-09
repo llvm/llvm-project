@@ -472,8 +472,8 @@ define void @memset_40_stack() {
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, #-6148914691236517206
 ; CHECK-NEXT:    movi v0.16b, #170
+; CHECK-NEXT:    mov x8, #-6148914691236517206
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    str x8, [sp, #32]
 ; CHECK-NEXT:    stp q0, q0, [sp]
@@ -517,8 +517,8 @@ define void @memset_72_stack() {
 ; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, #-6148914691236517206
 ; CHECK-NEXT:    movi v0.16b, #170
+; CHECK-NEXT:    mov x8, #-6148914691236517206
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    str x8, [sp, #64]
 ; CHECK-NEXT:    stp q0, q0, [sp, #32]
