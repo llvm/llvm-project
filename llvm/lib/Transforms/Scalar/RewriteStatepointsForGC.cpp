@@ -755,7 +755,7 @@ public:
   }
 
   bool operator==(const BDVState &Other) const {
-    return OriginalValue == OriginalValue && BaseValue == Other.BaseValue &&
+    return OriginalValue == Other.OriginalValue && BaseValue == Other.BaseValue &&
       Status == Other.Status;
   }
 

@@ -6061,7 +6061,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
   Register Src = MI.getOperand(1).getReg();
   Register Amt = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
-  LLT SrcTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
   LLT AmtTy = MRI.getType(Amt);
 
   unsigned EltSizeInBits = DstTy.getScalarSizeInBits();

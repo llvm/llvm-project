@@ -332,7 +332,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
       break;
     case DW_FORM_LLVM_addrx_offset:
       Value.uval = Data.getULEB128(OffsetPtr, &Err) << 32;
-      Value.uval = Data.getU32(OffsetPtr, &Err);
+      Value.uval |= Data.getU32(OffsetPtr, &Err);
       break;
     case DW_FORM_string:
       Value.cstr = Data.getCStr(OffsetPtr, &Err);
