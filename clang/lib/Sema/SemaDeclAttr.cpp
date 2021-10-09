@@ -4082,9 +4082,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     }
   }
 
-  unsigned MaximumAlignment = Sema::MaximumAlignment;
+  uint64_t MaximumAlignment = Sema::MaximumAlignment;
   if (Context.getTargetInfo().getTriple().isOSBinFormatCOFF())
-    MaximumAlignment = std::min(MaximumAlignment, 8192u);
+    MaximumAlignment = std::min(MaximumAlignment, uint64_t(8192));
   if (AlignVal > MaximumAlignment) {
     Diag(AttrLoc, diag::err_attribute_aligned_too_great)
         << MaximumAlignment << E->getSourceRange();
@@ -4203,9 +4203,10 @@ bool Sema::checkMSInheritanceAttrOnDefinition(
 /// attribute.
 static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
                              bool &IntegerMode, bool &ComplexMode,
-                             bool &ExplicitIEEE) {
+                             FloatModeKind &ExplicitType) {
   IntegerMode = true;
   ComplexMode = false;
+  ExplicitType = FloatModeKind::NoFloat;
   switch (Str.size()) {
   case 2:
     switch (Str[0]) {
@@ -4225,11 +4226,11 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
       DestWidth = 96;
       break;
     case 'K': // KFmode - IEEE quad precision (__float128)
-      ExplicitIEEE = true;
+      ExplicitType = FloatModeKind::Float128;
       DestWidth = Str[1] == 'I' ? 0 : 128;
       break;
     case 'T':
-      ExplicitIEEE = false;
+      ExplicitType = FloatModeKind::LongDouble;
       DestWidth = 128;
       break;
     }
@@ -4290,7 +4291,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   unsigned DestWidth = 0;
   bool IntegerMode = true;
   bool ComplexMode = false;
-  bool ExplicitIEEE = false;
+  FloatModeKind ExplicitType = FloatModeKind::NoFloat;
   llvm::APInt VectorSize(64, 0);
   if (Str.size() >= 4 && Str[0] == 'V') {
     // Minimal length of vector mode is 4: 'V' + NUMBER(>=1) + TYPE(>=2).
@@ -4303,7 +4304,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
         !Str.substr(1, VectorStringLength).getAsInteger(10, VectorSize) &&
         VectorSize.isPowerOf2()) {
       parseModeAttrArg(*this, Str.substr(VectorStringLength + 1), DestWidth,
-                       IntegerMode, ComplexMode, ExplicitIEEE);
+                       IntegerMode, ComplexMode, ExplicitType);
       // Avoid duplicate warning from template instantiation.
       if (!InInstantiation)
         Diag(AttrLoc, diag::warn_vector_mode_deprecated);
@@ -4314,7 +4315,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
   if (!VectorSize)
     parseModeAttrArg(*this, Str, DestWidth, IntegerMode, ComplexMode,
-                     ExplicitIEEE);
+                     ExplicitType);
 
   // FIXME: Sync this with InitializePredefinedMacros; we need to match int8_t
   // and friends, at least with glibc.
@@ -4380,7 +4381,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     NewElemTy = Context.getIntTypeForBitwidth(DestWidth,
                                               OldElemTy->isSignedIntegerType());
   else
-    NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitIEEE);
+    NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
   if (NewElemTy.isNull()) {
     Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;

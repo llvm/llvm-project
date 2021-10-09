@@ -15,6 +15,8 @@
 #include "lldb/Utility/Logging.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/Compiler.h"
+
 #include <string>
 
 namespace lldb_private {

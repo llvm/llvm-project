@@ -80,9 +80,9 @@ define <16 x i8> @v16i8_2(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: v16i8_2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:

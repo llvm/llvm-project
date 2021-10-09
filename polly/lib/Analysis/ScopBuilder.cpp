@@ -1554,7 +1554,7 @@ void ScopBuilder::addUserAssumptions(
     AssumptionCache &AC, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
   for (auto &Assumption : AC.assumptions()) {
     auto *CI = dyn_cast_or_null<CallInst>(Assumption);
-    if (!CI || CI->getNumArgOperands() != 1)
+    if (!CI || CI->arg_size() != 1)
       continue;
 
     bool InScop = scop->contains(CI);
@@ -1860,7 +1860,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   case FMRB_OnlyAccessesArgumentPointees: {
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());
-    for (const auto &Arg : CI->arg_operands()) {
+    for (const auto &Arg : CI->args()) {
       if (!Arg->getType()->isPointerTy())
         continue;
 

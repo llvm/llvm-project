@@ -7,10 +7,10 @@ define <8 x i8> @float_to_i8(<8 x float>* %in) {
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fadd v1.4s, v1.4s, v1.4s
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %l = load <8 x float>, <8 x float>* %in

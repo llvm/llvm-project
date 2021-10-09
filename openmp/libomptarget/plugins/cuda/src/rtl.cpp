@@ -748,7 +748,7 @@ public:
         DeviceData[DeviceId].ThreadsPerBlock) {
       DP("Default number of threads exceeds device limit, capping at %d\n",
          DeviceData[DeviceId].ThreadsPerBlock);
-      DeviceData[DeviceId].NumTeams = DeviceData[DeviceId].ThreadsPerBlock;
+      DeviceData[DeviceId].NumThreads = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
     return OFFLOAD_SUCCESS;

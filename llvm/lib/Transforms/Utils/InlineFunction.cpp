@@ -1177,14 +1177,8 @@ static bool MayContainThrowingOrExitingCall(Instruction *Begin,
 
   assert(Begin->getParent() == End->getParent() &&
          "Expected to be in same basic block!");
-  unsigned NumInstChecked = 0;
-  // Check that all instructions in the range [Begin, End) are guaranteed to
-  // transfer execution to successor.
-  for (auto &I : make_range(Begin->getIterator(), End->getIterator()))
-    if (NumInstChecked++ > InlinerAttributeWindow ||
-        !isGuaranteedToTransferExecutionToSuccessor(&I))
-      return true;
-  return false;
+  return !llvm::isGuaranteedToTransferExecutionToSuccessor(
+      Begin->getIterator(), End->getIterator(), InlinerAttributeWindow + 1);
 }
 
 static AttrBuilder IdentifyValidAttributes(CallBase &CB) {

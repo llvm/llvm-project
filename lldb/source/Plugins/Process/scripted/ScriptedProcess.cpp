@@ -233,7 +233,7 @@ bool ScriptedProcess::IsAlive() {
 size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
   if (!m_interpreter)
-    return GetInterface().ErrorWithMessage<size_t>(__PRETTY_FUNCTION__,
+    return GetInterface().ErrorWithMessage<size_t>(LLVM_PRETTY_FUNCTION,
                                                    "No interpreter.", error);
 
   lldb::DataExtractorSP data_extractor_sp =
@@ -247,7 +247,7 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
 
   if (!bytes_copied || bytes_copied == LLDB_INVALID_OFFSET)
     return GetInterface().ErrorWithMessage<size_t>(
-        __PRETTY_FUNCTION__, "Failed to copy read memory to buffer.", error);
+        LLVM_PRETTY_FUNCTION, "Failed to copy read memory to buffer.", error);
 
   return size;
 }
@@ -304,7 +304,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
 
   if (language != eScriptLanguagePython)
     return GetInterface().ErrorWithMessage<bool>(
-        __PRETTY_FUNCTION__,
+        LLVM_PRETTY_FUNCTION,
         llvm::Twine("ScriptInterpreter language (" +
                     llvm::Twine(m_interpreter->LanguageToString(language)) +
                     llvm::Twine(") not supported."))
@@ -315,7 +315,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   thread_sp = std::make_shared<ScriptedThread>(*this, error);
 
   if (!thread_sp || error.Fail())
-    return GetInterface().ErrorWithMessage<bool>(__PRETTY_FUNCTION__,
+    return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
                                                  error.AsCString(), error);
 
   new_thread_list.AddThread(thread_sp);

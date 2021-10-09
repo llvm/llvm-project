@@ -51,10 +51,10 @@ define i128 @neg_abs128(i128 %x) {
 ; CHECK-LABEL: neg_abs128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    eor x10, x0, x8
-; CHECK-NEXT:    eor x9, x1, x8
-; CHECK-NEXT:    subs x0, x8, x10
-; CHECK-NEXT:    sbcs x1, x8, x9
+; CHECK-NEXT:    eor x9, x0, x8
+; CHECK-NEXT:    eor x10, x1, x8
+; CHECK-NEXT:    subs x0, x8, x9
+; CHECK-NEXT:    sbcs x1, x8, x10
 ; CHECK-NEXT:    ret
   %abs = tail call i128 @llvm.abs.i128(i128 %x, i1 true)
   %neg = sub nsw i128 0, %abs

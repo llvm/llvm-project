@@ -40,6 +40,7 @@ VERS1.0 {
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;
+    llvm_omp_get_dynamic_shared;
     __tgt_set_info_flag;
     __tgt_print_device_info;
   local:

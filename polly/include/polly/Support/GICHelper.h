@@ -231,6 +231,12 @@ ISL_DUMP_OBJECT(val)
 ISL_DUMP_OBJECT(val_list)
 //@}
 
+/// Emit the equivaltent of the isl_*_dump output into a raw_ostream.
+/// @{
+void dumpIslObj(const isl::schedule_node &Node, llvm::raw_ostream &OS);
+void dumpIslObj(__isl_keep isl_schedule_node *node, llvm::raw_ostream &OS);
+/// @}
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_map *Map) {
   OS << polly::stringFromIslObj(Map, "null");

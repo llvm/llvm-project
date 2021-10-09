@@ -943,7 +943,7 @@ namespace llvm {
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
     /// function arguments in the caller parameter area.  This is the actual
     /// alignment, not its logarithm.
-    unsigned getByValTypeAlignment(Type *Ty,
+    uint64_t getByValTypeAlignment(Type *Ty,
                                    const DataLayout &DL) const override;
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops

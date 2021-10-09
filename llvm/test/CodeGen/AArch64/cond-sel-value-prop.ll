@@ -5,8 +5,8 @@
 define i32 @test1(i32 %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    csel w0, w0, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x, 2
@@ -18,8 +18,8 @@ define i32 @test1(i32 %x) {
 define i64 @test2(i64 %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #2
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    cmp x0, #2
 ; CHECK-NEXT:    csel x0, x0, x8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i64 %x, 2
@@ -31,8 +31,8 @@ define i64 @test2(i64 %x) {
 define i64 @test3(i64 %x) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #7
 ; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    cmp x0, #7
 ; CHECK-NEXT:    csel x0, x8, x0, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i64 %x, 7
@@ -45,8 +45,8 @@ define i64 @test3(i64 %x) {
 define i64 @test4(i64 %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    csel x0, xzr, x8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i64 %x, 0
@@ -60,8 +60,8 @@ define i64 @test4(i64 %x) {
 define i64 @test5(i64 %x) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #1
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    cmp x0, #1
 ; CHECK-NEXT:    csinc x0, x8, xzr, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i64 %x, 1
@@ -75,8 +75,8 @@ define i64 @test5(i64 %x) {
 define i64 @test6(i64 %x) {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x0, #1
 ; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    cmn x0, #1
 ; CHECK-NEXT:    csinv x0, x8, xzr, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i64 %x, -1

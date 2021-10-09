@@ -16,6 +16,7 @@
 
 #include "GISelWorkList.h"
 #include "LostDebugLocObserver.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"

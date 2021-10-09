@@ -19,6 +19,7 @@
 // Atexit functions.
 ORC_RT_INTERFACE int __orc_rt_elfnix_cxa_atexit(void (*func)(void *), void *arg,
                                                 void *dso_handle);
+ORC_RT_INTERFACE int __orc_rt_elfnix_atexit(void (*func)(void *));
 ORC_RT_INTERFACE void __orc_rt_elfnix_cxa_finalize(void *dso_handle);
 
 // dlfcn functions.

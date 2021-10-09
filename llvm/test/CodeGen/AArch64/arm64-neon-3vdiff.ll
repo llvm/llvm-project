@@ -117,9 +117,9 @@ entry:
 define <4 x i32> @test_vaddl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %a to <4 x i32>
@@ -132,9 +132,9 @@ entry:
 define <2 x i64> @test_vaddl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %a to <2 x i64>
@@ -247,9 +247,9 @@ entry:
 define <4 x i32> @test_vaddl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_high_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddl2 v0.4s, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -264,9 +264,9 @@ entry:
 define <2 x i64> @test_vaddl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_high_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddl2 v0.2d, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -360,9 +360,9 @@ entry:
 define <4 x i32> @test_vaddw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %b to <4 x i32>
@@ -374,9 +374,9 @@ entry:
 define <2 x i64> @test_vaddw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddw v0.2d, v0.2d, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %b to <2 x i64>
@@ -474,9 +474,9 @@ entry:
 define <4 x i32> @test_vaddw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_high_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -489,9 +489,9 @@ entry:
 define <2 x i64> @test_vaddw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_high_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddw2 v0.2d, v0.2d, v1.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -590,9 +590,9 @@ entry:
 define <4 x i32> @test_vsubl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %a to <4 x i32>
@@ -605,9 +605,9 @@ entry:
 define <2 x i64> @test_vsubl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %a to <2 x i64>
@@ -720,9 +720,9 @@ entry:
 define <4 x i32> @test_vsubl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_high_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubl2 v0.4s, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -737,9 +737,9 @@ entry:
 define <2 x i64> @test_vsubl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_high_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubl2 v0.2d, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -833,9 +833,9 @@ entry:
 define <4 x i32> @test_vsubw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %b to <4 x i32>
@@ -847,9 +847,9 @@ entry:
 define <2 x i64> @test_vsubw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubw v0.2d, v0.2d, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %b to <2 x i64>
@@ -947,9 +947,9 @@ entry:
 define <4 x i32> @test_vsubw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_high_a16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubw2 v0.4s, v0.4s, v1.8h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -962,9 +962,9 @@ entry:
 define <2 x i64> @test_vsubw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_high_a32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubw2 v0.2d, v0.2d, v1.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>

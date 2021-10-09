@@ -115,10 +115,10 @@ define float @negated_constant(float %x) {
 ; CHECK-LABEL: negated_constant:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1037565952
-; CHECK-NEXT:    mov w9, #1109917696
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #1109917696
 ; CHECK-NEXT:    fmul s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fmadd s0, s0, s2, s1
 ; CHECK-NEXT:    ret
   %m = fmul float %x, 42.0

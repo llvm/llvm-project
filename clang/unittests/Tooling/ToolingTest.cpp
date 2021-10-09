@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Tooling.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
@@ -18,12 +19,11 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 #include <algorithm>

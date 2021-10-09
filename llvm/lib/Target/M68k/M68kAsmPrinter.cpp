@@ -21,7 +21,7 @@
 #include "MCTargetDesc/M68kInstPrinter.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
