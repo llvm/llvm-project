@@ -238,4 +238,25 @@ void neverCalled() {
   polly::dumpIslObj(isl::val());
   polly::dumpIslObj(isl::val_list());
 }
+
+void polly::dumpIslObj(__isl_keep isl_schedule_node *node, raw_ostream &OS) {
+  if (!node)
+    return;
+
+  isl_ctx *ctx = isl_schedule_node_get_ctx(node);
+  isl_printer *p = isl_printer_to_str(ctx);
+  p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
+  p = isl_printer_print_schedule_node(p, node);
+
+  char *char_str = isl_printer_get_str(p);
+  OS << char_str;
+
+  free(char_str);
+  isl_printer_free(p);
+}
+
+void polly::dumpIslObj(const isl::schedule_node &Node, raw_ostream &OS) {
+  dumpIslObj(Node.get(), OS);
+}
+
 #endif

@@ -240,6 +240,14 @@ isl::schedule_node applyRegisterTiling(isl::schedule_node Node,
                                        llvm::ArrayRef<int> TileSizes,
                                        int DefaultTileSize);
 
+/// Apply greedy fusion. That is, fuse any loop that is possible to be fused
+/// top-down.
+///
+/// @param Sched  Sched tree to fuse all the loops in.
+/// @param Deps   Validity constraints that must be preserved.
+isl::schedule applyGreedyFusion(isl::schedule Sched,
+                                const isl::union_map &Deps);
+
 } // namespace polly
 
 #endif // POLLY_SCHEDULETREETRANSFORM_H
