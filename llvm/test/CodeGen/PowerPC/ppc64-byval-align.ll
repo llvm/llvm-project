@@ -47,10 +47,11 @@ entry:
   ret void
 }
 ; CHECK-LABEL: @caller2
-; CHECK: std 3, [[OFF:[0-9]+]](1)
-; CHECK: addi [[REG1:[0-9]+]], 1, [[OFF]]
-; CHECK: lxvw4x [[REG2:[0-9]+]], 0, [[REG1]]
-; CHECK: li [[REG3:[0-9]+]], 128
-; CHECK: stxvw4x 0, 1, [[REG3]]
-; CHECK: bl test2
+; CHECK-DAG: std 3, [[OFF:[0-9]+]](1)
+; CHECK-DAG: addi [[REG1:[0-9]+]], 1, [[OFF]]
+;
+; CHECK-DAG: lxvw4x [[REG2:[0-9]+]], 0, [[REG1]]
+; CHECK-DAG: li [[REG3:[0-9]+]], 128
+; CHECK:     stxvw4x 0, 1, [[REG3]]
+; CHECK:     bl test2
 

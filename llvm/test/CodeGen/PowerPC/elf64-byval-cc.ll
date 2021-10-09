@@ -340,8 +340,6 @@ define void @call_test_byval_mem8() #0 {
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC4@toc@ha
 ; CHECK-NEXT:    ld 3, .LC4@toc@l(3)
-; CHECK-NEXT:    ld 4, 0(3)
-; CHECK-NEXT:    std 4, 32(1)
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    bl test_byval_mem8
 ; CHECK-NEXT:    nop
@@ -379,14 +377,7 @@ define void @call_test_byval_mem32() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
-; CHECK-NEXT:    li 4, 16
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
-; CHECK-NEXT:    lxvd2x 0, 3, 4
-; CHECK-NEXT:    li 4, 48
-; CHECK-NEXT:    stxvd2x 0, 1, 4
-; CHECK-NEXT:    li 4, 32
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    stxvd2x 0, 1, 4
 ; CHECK-NEXT:    ld 6, 24(3)
 ; CHECK-NEXT:    ld 5, 16(3)
 ; CHECK-NEXT:    ld 4, 8(3)
@@ -427,16 +418,9 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
-; CHECK-NEXT:    li 4, 16
 ; CHECK-NEXT:    addis 8, 2, .LCPI20_0@toc@ha
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    lfs 1, .LCPI20_0@toc@l(8)
-; CHECK-NEXT:    lxvd2x 0, 3, 4
-; CHECK-NEXT:    li 4, 56
-; CHECK-NEXT:    stxvd2x 0, 1, 4
-; CHECK-NEXT:    li 4, 40
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    stxvd2x 0, 1, 4
 ; CHECK-NEXT:    ld 7, 24(3)
 ; CHECK-NEXT:    ld 6, 16(3)
 ; CHECK-NEXT:    ld 5, 8(3)
@@ -531,20 +515,7 @@ define void @call_test_byval_mem64() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC6@toc@ha
-; CHECK-NEXT:    li 4, 48
-; CHECK-NEXT:    li 5, 80
-; CHECK-NEXT:    li 6, 64
 ; CHECK-NEXT:    ld 3, .LC6@toc@l(3)
-; CHECK-NEXT:    lxvd2x 0, 3, 4
-; CHECK-NEXT:    stxvd2x 0, 1, 5
-; CHECK-NEXT:    li 5, 32
-; CHECK-NEXT:    lxvd2x 0, 3, 5
-; CHECK-NEXT:    stxvd2x 0, 1, 6
-; CHECK-NEXT:    li 6, 16
-; CHECK-NEXT:    lxvd2x 0, 3, 6
-; CHECK-NEXT:    stxvd2x 0, 1, 4
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    stxvd2x 0, 1, 5
 ; CHECK-NEXT:    ld 10, 56(3)
 ; CHECK-NEXT:    ld 9, 48(3)
 ; CHECK-NEXT:    ld 8, 40(3)
