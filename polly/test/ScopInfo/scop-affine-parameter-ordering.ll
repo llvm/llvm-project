@@ -9,8 +9,8 @@ target triple = "aarch64--linux-android"
 ; CHECK-NEXT: Schedule :=
 ; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> [i0] };
 ; CHECK-NEXT: MustWriteAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> MemRef_0[1 + p_0] };
-; CHECK-NEXT }
+; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> MemRef0[1 - p_0] };
+; CHECK-NEXT: }
 
 define void @test1() unnamed_addr align 2 {
 entry:
