@@ -1427,6 +1427,11 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   if (!ClassDecl->isDynamicClass())
     return true;
 
+  // For a final class, the vtable pointer is known to already point to the
+  // class's vtable.
+  if (ClassDecl->isEffectivelyFinal())
+    return true;
+
   if (!Dtor->hasTrivialBody())
     return false;
 
