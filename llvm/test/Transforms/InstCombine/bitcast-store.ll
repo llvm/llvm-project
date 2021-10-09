@@ -47,6 +47,16 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @ppcf128_ones_store
+; CHECK: store ppc_fp128 0xMFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ppc_fp128* %dest, align 16
+define void @ppcf128_ones_store(ppc_fp128* %dest) {
+entry:
+  %int = or i128 0, 340282366920938463463374607431768211455 ; 128 ones
+  %val = bitcast i128 %int to ppc_fp128
+  store ppc_fp128 %val, ppc_fp128* %dest, align 16
+  ret void
+}
+
 !0 = !{!1}
 !1 = !{!1, !2}
 !2 = !{!2}

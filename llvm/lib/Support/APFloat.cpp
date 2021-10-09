@@ -92,7 +92,7 @@ namespace llvm {
      Note: we need to make the value different from semBogus as otherwise
      an unsafe optimization may collapse both values to a single address,
      and we heavily rely on them having distinct addresses.             */
-  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 0};
+  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
 
   /* These are legacy semantics for the fallback, inaccrurate implementation of
      IBM double-double, if the accurate semPPCDoubleDouble doesn't handle the
