@@ -29,7 +29,6 @@ char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
-char Task::ID = 0;
 char MaterializationTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
@@ -1798,8 +1797,6 @@ void Platform::lookupInitSymbolsAsync(
         NoDependenciesToRegister);
   }
 }
-
-void Task::anchor() {}
 
 void MaterializationTask::printDescription(raw_ostream &OS) {
   OS << "Materialization task: " << MU->getName() << " in "
