@@ -204,7 +204,7 @@ define i1 @neg_eq_43(i32 %x) {
 ; CHECK-LABEL: @neg_eq_43(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[NEGX]], 43
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], -43
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i32 0, %x
@@ -217,7 +217,7 @@ define i1 @neg_ne_44(i32 %x) {
 ; CHECK-LABEL: @neg_ne_44(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[NEGX]], 44
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], -44
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i32 0, %x
@@ -230,7 +230,7 @@ define i1 @neg_nsw_eq_45(i32 %x) {
 ; CHECK-LABEL: @neg_nsw_eq_45(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[NEGX]], 45
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], -45
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub nsw i32 0, %x
@@ -243,7 +243,7 @@ define i1 @neg_nsw_ne_46(i32 %x) {
 ; CHECK-LABEL: @neg_nsw_ne_46(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[NEGX]], 46
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], -46
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub nsw i32 0, %x
@@ -256,7 +256,7 @@ define i1 @subC_eq(i32 %x) {
 ; CHECK-LABEL: @subC_eq(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub i32 -2147483648, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SUBX]], 43
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], 2147483605
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %subx = sub i32 -2147483648, %x
@@ -269,7 +269,7 @@ define <2 x i1> @subC_ne(<2 x i8> %x) {
 ; CHECK-LABEL: @subC_ne(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub <2 x i8> <i8 -6, i8 -128>, [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[SUBX]], <i8 -44, i8 -44>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X]], <i8 38, i8 -84>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %subx = sub <2 x i8> <i8 -6, i8 -128>, %x
@@ -282,7 +282,7 @@ define i1 @subC_nsw_eq(i32 %x) {
 ; CHECK-LABEL: @subC_nsw_eq(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub nsw i32 -100, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SUBX]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], 2147483548
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %subx = sub nsw i32 -100, %x
@@ -295,7 +295,7 @@ define i1 @subC_nsw_ne(i32 %x) {
 ; CHECK-LABEL: @subC_nsw_ne(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub nsw i32 -2147483647, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[SUBX]], 46
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 2147483603
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %subx = sub nsw i32 -2147483647, %x
