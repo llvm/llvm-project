@@ -613,6 +613,11 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
                       false, false);
 
+  // Find nvlink and pass it as "--nvlink-path=" argument of
+  // clang-nvlink-wrapper.
+  CmdArgs.push_back(Args.MakeArgString(
+      Twine("--nvlink-path=" + getToolChain().GetProgramPath("nvlink"))));
+
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
   C.addCommand(std::make_unique<Command>(

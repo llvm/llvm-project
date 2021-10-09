@@ -25,6 +25,7 @@
 /// 2. nvlink -o a.out-openmp-nvptx64 /tmp/a.cubin /tmp/b.cubin
 //===---------------------------------------------------------------------===//
 
+#include "clang/Basic/Version.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
@@ -40,6 +41,19 @@
 using namespace llvm;
 
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+
+// Mark all our options with this category, everything else (except for -help)
+// will be hidden.
+static cl::OptionCategory
+    ClangNvlinkWrapperCategory("clang-nvlink-wrapper options");
+
+static cl::opt<std::string> NvlinkUserPath("nvlink-path",
+                                           cl::desc("Path of nvlink binary"),
+                                           cl::cat(ClangNvlinkWrapperCategory));
+
+// Do not parse nvlink options
+static cl::list<std::string>
+    NVArgs(cl::Sink, cl::desc("<options to be passed to nvlink>..."));
 
 static Error runNVLink(std::string NVLinkPath,
                        SmallVectorImpl<std::string> &Args) {
@@ -119,8 +133,20 @@ static Error cleanupTmpFiles(SmallVectorImpl<std::string> &TmpFiles) {
   return Error::success();
 }
 
+static void PrintVersion(raw_ostream &OS) {
+  OS << clang::getClangToolFullVersion("clang-nvlink-wrapper") << '\n';
+}
+
 int main(int argc, const char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
+  cl::SetVersionPrinter(PrintVersion);
+  cl::HideUnrelatedOptions(ClangNvlinkWrapperCategory);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "A wrapper tool over nvlink program. It transparently passes every \n"
+      "input option and objects to nvlink except archive files and path of \n"
+      "nvlink binary. It reads each input archive file to extract archived \n"
+      "cubin files as temporary files.\n");
 
   if (Help) {
     cl::PrintHelpMessage();
@@ -132,12 +158,7 @@ int main(int argc, const char **argv) {
     exit(1);
   };
 
-  ErrorOr<std::string> NvlinkPath = sys::findProgramByName("nvlink");
-  if (!NvlinkPath) {
-    reportError(createStringError(NvlinkPath.getError(),
-                                  "unable to find 'nvlink' in path"));
-  }
-
+  std::string NvlinkPath;
   SmallVector<const char *, 0> Argv(argv, argv + argc);
   SmallVector<std::string, 0> ArgvSubst;
   SmallVector<std::string, 0> TmpFiles;
@@ -145,8 +166,7 @@ int main(int argc, const char **argv) {
   StringSaver Saver(Alloc);
   cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
 
-  for (size_t i = 1; i < Argv.size(); ++i) {
-    std::string Arg = Argv[i];
+  for (const std::string &Arg : NVArgs) {
     if (sys::path::extension(Arg) == ".a") {
       if (Error Err = extractArchiveFiles(Arg, ArgvSubst, TmpFiles))
         reportError(std::move(Err));
@@ -155,7 +175,19 @@ int main(int argc, const char **argv) {
     }
   }
 
-  if (Error Err = runNVLink(NvlinkPath.get(), ArgvSubst))
+  NvlinkPath = NvlinkUserPath;
+
+  // If user hasn't specified nvlink binary then search it in PATH
+  if (NvlinkPath.empty()) {
+    ErrorOr<std::string> NvlinkPathErr = sys::findProgramByName("nvlink");
+    if (!NvlinkPathErr) {
+      reportError(createStringError(NvlinkPathErr.getError(),
+                                    "unable to find 'nvlink' in path"));
+    }
+    NvlinkPath = NvlinkPathErr.get();
+  }
+
+  if (Error Err = runNVLink(NvlinkPath, ArgvSubst))
     reportError(std::move(Err));
   if (Error Err = cleanupTmpFiles(TmpFiles))
     reportError(std::move(Err));
