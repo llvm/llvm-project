@@ -197,6 +197,14 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
     Value *RHS =
         getValueOnFirstIteration(Cmp->getOperand(1), FirstIterValue, SQ);
     FirstIterV = SimplifyICmpInst(Cmp->getPredicate(), LHS, RHS, SQ);
+  } else if (auto *Select = dyn_cast<SelectInst>(V)) {
+    Value *Cond =
+        getValueOnFirstIteration(Select->getCondition(), FirstIterValue, SQ);
+    if (auto *C = dyn_cast<ConstantInt>(Cond)) {
+      auto *Selected = C->isAllOnesValue() ? Select->getTrueValue()
+                                           : Select->getFalseValue();
+      FirstIterV = getValueOnFirstIteration(Selected, FirstIterValue, SQ);
+    }
   }
   if (!FirstIterV)
     FirstIterV = V;
