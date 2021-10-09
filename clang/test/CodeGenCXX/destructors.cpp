@@ -529,4 +529,38 @@ namespace test11 {
   }
 
 }
+
+namespace final_dtor {
+  struct A {
+    virtual void f();
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1AD2Ev(
+    // CHECK6: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~A() { f(); }
+  };
+  struct B : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1BD2Ev(
+    // CHECK6: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~B() { f(); }
+  };
+  struct C final : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1CD2Ev(
+    // CHECK6-NOT: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~C() { f(); }
+  };
+  struct D : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1DD2Ev(
+    // CHECK6-NOT: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~D() final { f(); }
+  };
+  void use() {
+    {A a;}
+    {B b;}
+    {C c;}
+    {D d;}
+  }
+}
 #endif
