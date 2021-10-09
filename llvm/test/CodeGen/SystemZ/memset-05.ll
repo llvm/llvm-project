@@ -48,37 +48,37 @@ define void @fun2(i8* %Addr, i32 %Len) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgfr %r1, %r3
 ; CHECK-NEXT:    aghi %r1, -1
-; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    cgije %r1, -1, .LBB2_5
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    lgr %r3, %r2
 ; CHECK-NEXT:    cgije %r0, 0, .LBB2_4
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    lgr %r4, %r0
 ; CHECK-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r3), 0(%r3)
 ; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    brctg %r4, .LBB2_3
+; CHECK-NEXT:    brctg %r0, .LBB2_3
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    exrl %r1, .Ltmp1
 ; CHECK-NEXT:  .LBB2_5:
 ; CHECK-NEXT:    cgije %r1, -1, .LBB2_10
 ; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    lgr %r3, %r2
 ; CHECK-NEXT:    cgije %r0, 0, .LBB2_9
 ; CHECK-NEXT:  # %bb.7:
 ; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    lgr %r4, %r0
 ; CHECK-NEXT:  .LBB2_8: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r3), 0(%r3)
 ; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    brctg %r4, .LBB2_8
+; CHECK-NEXT:    brctg %r0, .LBB2_8
 ; CHECK-NEXT:  .LBB2_9:
 ; CHECK-NEXT:    exrl %r1, .Ltmp1
 ; CHECK-NEXT:  .LBB2_10:
 ; CHECK-NEXT:    cgibe %r1, -1, 0(%r14)
 ; CHECK-NEXT:  .LBB2_11:
+; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    cgije %r0, 0, .LBB2_13
 ; CHECK-NEXT:  .LBB2_12: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r2), 0(%r2)
@@ -111,6 +111,135 @@ define void @fun3(i64 %Len) {
 ; CHECK-NEXT:    exrl %r2, .Ltmp2
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0i8.i64(i8* null, i8 0, i64 %Len, i1 false)
+  ret void
+}
+
+; Test that a memset with a length argument that DAGCombiner will convert
+; into a constant get the correct number of bytes set.
+@Data = external hidden constant [1024 x i8], align 2
+define void @fun4() {
+; CHECK-LABEL: fun4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, Data
+; CHECK-NEXT:    xc 35(256,%r1), 35(%r1)
+; CHECK-NEXT:    xc 291(256,%r1), 291(%r1)
+; CHECK-NEXT:    xc 547(256,%r1), 547(%r1)
+; CHECK-NEXT:    xc 803(221,%r1), 803(%r1)
+; CHECK-NEXT:    mvghi 0(%r1), 989
+; CHECK-NEXT:    br %r14
+  call void @llvm.memset.p0i8.i64(
+     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+     i8 0,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 0) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 0, i64 35) to i64), i64 1)),
+     i1 false)
+  %i11 = getelementptr i8, i8* null,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 0) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 0, i64 35) to i64), i64 1))
+  store i8* %i11, i8** undef, align 8
+  ret void
+}
+
+; The same, with a resulting constant length of 0.
+define void @fun5() {
+; CHECK-LABEL: fun5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvghi 0(%r1), 0
+; CHECK-NEXT:    br %r14
+  call void @llvm.memset.p0i8.i64(
+     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+     i8 0,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i1 false)
+  %i11 = getelementptr i8, i8* null,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
+  store i8* %i11, i8** undef, align 8
+  ret void
+}
+
+; The same, with a resulting constant length of 1.
+define void @fun6() {
+; CHECK-LABEL: fun6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, Data
+; CHECK-NEXT:    xc 35(1,%r1), 35(%r1)
+; CHECK-NEXT:    mvghi 0(%r1), 1
+; CHECK-NEXT:    br %r14
+  call void @llvm.memset.p0i8.i64(
+     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+     i8 0,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 36) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i1 false)
+  %i11 = getelementptr i8, i8* null,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 36) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
+  store i8* %i11, i8** undef, align 8
+  ret void
+}
+
+; The same, with a resulting constant length of 256.
+define void @fun7() {
+; CHECK-LABEL: fun7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, Data
+; CHECK-NEXT:    xc 35(256,%r1), 35(%r1)
+; CHECK-NEXT:    mvghi 0(%r1), 256
+; CHECK-NEXT:    br %r14
+  call void @llvm.memset.p0i8.i64(
+     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+     i8 0,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 291) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i1 false)
+  %i11 = getelementptr i8, i8* null,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 291) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
+  store i8* %i11, i8** undef, align 8
+  ret void
+}
+
+; The same, with a resulting constant length of 257.
+define void @fun8() {
+; CHECK-LABEL: fun8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, Data
+; CHECK-NEXT:    xc 35(256,%r1), 35(%r1)
+; CHECK-NEXT:    xc 291(1,%r1), 291(%r1)
+; CHECK-NEXT:    mvghi 0(%r1), 257
+; CHECK-NEXT:    br %r14
+  call void @llvm.memset.p0i8.i64(
+     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+     i8 0,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 292) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i1 false)
+  %i11 = getelementptr i8, i8* null,
+     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 292) to i64), i64 1),
+              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
+                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
+  store i8* %i11, i8** undef, align 8
   ret void
 }
 

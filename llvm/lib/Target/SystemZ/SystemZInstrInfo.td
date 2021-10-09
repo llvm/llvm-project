@@ -503,7 +503,7 @@ def MVGHI : StoreSIL<"mvghi", 0xE548, store,         imm64sx16>;
 
 // Memory-to-memory moves.
 let mayLoad = 1, mayStore = 1 in
-  defm MVC : MemorySS<"mvc", 0xD2, z_mvc, z_mvc_loop>;
+  defm MVC : MemorySS<"mvc", 0xD2, z_mvc>;
 let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   def MVCL  : SideEffectBinaryMemMemRR<"mvcl", 0x0E, GR128, GR128>;
   def MVCLE : SideEffectTernaryMemMemRS<"mvcle", 0xA8, GR128, GR128>;
@@ -1200,7 +1200,7 @@ let Defs = [CC] in {
 
   // Block AND.
   let mayLoad = 1, mayStore = 1 in
-    defm NC : MemorySS<"nc", 0xD4, z_nc, z_nc_loop>;
+    defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
 defm : RMWIByte<and, bdaddr12pair, NI>;
 defm : RMWIByte<and, bdaddr20pair, NIY>;
@@ -1257,7 +1257,7 @@ let Defs = [CC] in {
 
   // Block OR.
   let mayLoad = 1, mayStore = 1 in
-    defm OC : MemorySS<"oc", 0xD6, z_oc, z_oc_loop>;
+    defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
 defm : RMWIByte<or, bdaddr12pair, OI>;
 defm : RMWIByte<or, bdaddr20pair, OIY>;
@@ -1297,7 +1297,7 @@ let Defs = [CC] in {
 
   // Block XOR.
   let mayLoad = 1, mayStore = 1 in
-    defm XC : MemorySS<"xc", 0xD7, z_xc, z_xc_loop>;
+    defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
 defm : RMWIByte<xor, bdaddr12pair, XI>;
 defm : RMWIByte<xor, bdaddr20pair, XIY>;
@@ -1624,7 +1624,7 @@ defm : ZXB<z_ucmp, GR64, CLGFR>;
 
 // Memory-to-memory comparison.
 let mayLoad = 1, Defs = [CC] in {
-  defm CLC : CompareMemorySS<"clc", 0xD5, z_clc, z_clc_loop>;
+  defm CLC : CompareMemorySS<"clc", 0xD5, z_clc>;
   def CLCL  : SideEffectBinaryMemMemRR<"clcl", 0x0F, GR128, GR128>;
   def CLCLE : SideEffectTernaryMemMemRS<"clcle", 0xA9, GR128, GR128>;
   def CLCLU : SideEffectTernaryMemMemRSY<"clclu", 0xEB8F, GR128, GR128>;
@@ -2355,21 +2355,15 @@ let AddedComplexity = 4 in {
             (RLLG GR64:$val, (LCR GR32:$shift), 0)>;
 }
 
-// Peepholes for turning scalar operations into block operations.
-defm : BlockLoadStore<anyextloadi8, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 1>;
-defm : BlockLoadStore<anyextloadi16, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 2>;
-defm : BlockLoadStore<load, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 4>;
-defm : BlockLoadStore<anyextloadi8, i64, MVCSequence, NCSequence,
-                      OCSequence, XCSequence, 1>;
-defm : BlockLoadStore<anyextloadi16, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 2>;
-defm : BlockLoadStore<anyextloadi32, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 4>;
-defm : BlockLoadStore<load, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 8>;
+// Peepholes for turning scalar operations into block operations.  The length
+// is given as one less for these pseudos.
+defm : BlockLoadStore<anyextloadi8, i32, MVCImm, NCImm, OCImm, XCImm, 0>;
+defm : BlockLoadStore<anyextloadi16, i32, MVCImm, NCImm, OCImm, XCImm, 1>;
+defm : BlockLoadStore<load, i32, MVCImm, NCImm, OCImm, XCImm, 3>;
+defm : BlockLoadStore<anyextloadi8, i64, MVCImm, NCImm, OCImm, XCImm, 0>;
+defm : BlockLoadStore<anyextloadi16, i64, MVCImm, NCImm, OCImm, XCImm, 1>;
+defm : BlockLoadStore<anyextloadi32, i64, MVCImm, NCImm, OCImm, XCImm, 3>;
+defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 //===----------------------------------------------------------------------===//
 // Mnemonic Aliases
