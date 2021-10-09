@@ -34,6 +34,12 @@ _Complex long double foo_long_double(_Complex long double x) {
 
 // CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_long_double(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
+_Complex __ibm128 foo_ibm128(_Complex __ibm128 x) {
+  return x;
+}
+
+// CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_ibm128(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+
 _Complex int foo_int(_Complex int x) {
   return x;
 }
@@ -88,6 +94,15 @@ long double bar_long_double(void) {
 
 // CHECK: define{{.*}} ppc_fp128 @bar_long_double() [[NUW]] {
 // CHECK: [[VAR3:[%A-Za-z0-9.]+]] = call { ppc_fp128, ppc_fp128 } @foo_long_double
+// CHECK: extractvalue { ppc_fp128, ppc_fp128 } [[VAR3]], 0
+// CHECK: extractvalue { ppc_fp128, ppc_fp128 } [[VAR3]], 1
+
+__ibm128 bar_ibm128(void) {
+  return creall(foo_ibm128(2.0L - 2.5Li));
+}
+
+// CHECK: define{{.*}} ppc_fp128 @bar_ibm128() [[NUW]] {
+// CHECK: [[VAR3:[%A-Za-z0-9.]+]] = call { ppc_fp128, ppc_fp128 } @foo_ibm128
 // CHECK: extractvalue { ppc_fp128, ppc_fp128 } [[VAR3]], 0
 // CHECK: extractvalue { ppc_fp128, ppc_fp128 } [[VAR3]], 1
 

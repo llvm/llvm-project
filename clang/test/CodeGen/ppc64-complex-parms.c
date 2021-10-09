@@ -33,6 +33,13 @@ long double foo_long_double(_Complex long double x) {
 
 // CHECK: define{{.*}} ppc_fp128 @foo_long_double(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
+__ibm128 foo_ibm128(_Complex __ibm128 x) {
+  // We don't have a suffix for explicit __ibm128 type yet. Use *l instead.
+  return creall(x);
+}
+
+// CHECK: define{{.*}} ppc_fp128 @foo_ibm128(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+
 int foo_int(_Complex int x) {
   return __real__ x;
 }
@@ -110,6 +117,22 @@ void bar_long_double(void) {
 // CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 1
 // CHECK: %[[VAR27:[A-Za-z0-9.]+]] = load ppc_fp128, ppc_fp128* %[[VAR26]], align 16
 // CHECK: %{{[A-Za-z0-9.]+}} = call ppc_fp128 @foo_long_double(ppc_fp128 %[[VAR25]], ppc_fp128 %[[VAR27]])
+
+void bar_ibm128(void) {
+  foo_ibm128(2.0L - 2.5Li);
+}
+
+// CHECK: define{{.*}} void @bar_ibm128() [[NUW]] {
+// CHECK: %[[VAR21:[A-Za-z0-9.]+]] = alloca { ppc_fp128, ppc_fp128 }, align 16
+// CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 1
+// CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ppc_fp128* %[[VAR22]]
+// CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ppc_fp128* %[[VAR23]]
+// CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ppc_fp128* %[[VAR24]], align 16
+// CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 1
+// CHECK: %[[VAR27:[A-Za-z0-9.]+]] = load ppc_fp128, ppc_fp128* %[[VAR26]], align 16
+// CHECK: %{{[A-Za-z0-9.]+}} = call ppc_fp128 @foo_ibm128(ppc_fp128 %[[VAR25]], ppc_fp128 %[[VAR27]])
 
 void bar_int(void) {
   foo_int(2 - 3i);
