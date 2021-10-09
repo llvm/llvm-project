@@ -200,6 +200,7 @@ static const RegisterInfo g_register_infos[] = {
      eFormatHex,
      {dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
      nullptr,
+     nullptr,
      }};
 
 static const uint32_t k_num_register_infos =

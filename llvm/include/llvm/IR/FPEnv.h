@@ -39,19 +39,19 @@ enum ExceptionBehavior : uint8_t {
 /// Returns a valid RoundingMode enumerator when given a string
 /// that is valid as input in constrained intrinsic rounding mode
 /// metadata.
-Optional<RoundingMode> StrToRoundingMode(StringRef);
+Optional<RoundingMode> convertStrToRoundingMode(StringRef);
 
 /// For any RoundingMode enumerator, returns a string valid as input in
 /// constrained intrinsic rounding mode metadata.
-Optional<StringRef> RoundingModeToStr(RoundingMode);
+Optional<StringRef> convertRoundingModeToStr(RoundingMode);
 
 /// Returns a valid ExceptionBehavior enumerator when given a string
 /// valid as input in constrained intrinsic exception behavior metadata.
-Optional<fp::ExceptionBehavior> StrToExceptionBehavior(StringRef);
+Optional<fp::ExceptionBehavior> convertStrToExceptionBehavior(StringRef);
 
 /// For any ExceptionBehavior enumerator, returns a string valid as
 /// input in constrained intrinsic exception behavior metadata.
-Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior);
+Optional<StringRef> convertExceptionBehaviorToStr(fp::ExceptionBehavior);
 
 /// Returns true if the exception handling behavior and rounding mode
 /// match what is used in the default floating point environment.

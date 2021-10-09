@@ -74,34 +74,6 @@ static cl::opt<bool> BuiltinCode("mlink-builtin-bitcode", cl::desc("Ignore optio
 
 static ExitOnError ExitOnErr;
 
-/// ---------------------------------------------
-// Show the error message and exit.
-[[noreturn]] static void fail(Twine Error) {
-  errs() << ": " << Error << ".\n";
-  exit(1);
-}
-
-static void failIfError(std::error_code EC, Twine Context = "") {
-  if (!EC)
-    return;
-  std::string ContextStr = Context.str();
-  if (ContextStr == "")
-    fail(EC.message());
-  fail(Context + ": " + EC.message());
-}
-
-static void failIfError(Error E, Twine Context = "") {
-  if (!E)
-    return;
-
-  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
-    std::string ContextStr = Context.str();
-    if (ContextStr == "")
-      fail(EIB.message());
-    fail(Context + ": " + EIB.message());
-  });
-}
-
 static bool loadArFile(const char *argv0, const std::string ArchiveName,
                        LLVMContext &Context, Linker &L, unsigned OrigFlags,
                        unsigned ApplicableFlags) {
@@ -111,14 +83,19 @@ static bool loadArFile(const char *argv0, const std::string ArchiveName,
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFile(ArchiveName, -1, false);
   if (std::error_code EC = Buf.getError()) {
-    failIfError(EC, Twine("error loading archive'") + ArchiveName + "'");
+    if (Verbose)
+      errs() << "Skipping archive : File not found " << ArchiveName << "\n";
+    return false;
   } else {
     Error Err = Error::success();
     object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
     object::Archive *ArchivePtr = &Archive;
     EC = errorToErrorCode(std::move(Err));
-    failIfError(EC,
-                "error loading '" + ArchiveName + "': " + EC.message() + "!");
+    if (Err) {
+      if (Verbose)
+        errs() << "Skipping archive : Empty file found " << ArchiveName << "\n";
+      return false;
+    }
     for (auto &C : ArchivePtr->children(Err)) {
       Expected<StringRef> ename = C.getName();
       if (Error E = ename.takeError()) {
@@ -159,7 +136,11 @@ static bool loadArFile(const char *argv0, const std::string ArchiveName,
       }
       ApplicableFlags = OrigFlags;
     } // end for each child
-    failIfError(std::move(Err));
+    if (Err) {
+      if (Verbose)
+        errs() << "Skipping archive : Linking Error " << ArchiveName << "\n";
+      return false;
+    }
   }
   return true;
 }
@@ -197,7 +178,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       bool loadArSuccess =
           loadArFile(argv0, File, Context, L, Flags, ApplicableFlags);
       if (!loadArSuccess)
-        return false;
+        continue;
     } else {
       if (Verbose)
         errs() << "Loading bc file'" << File << "'\n";

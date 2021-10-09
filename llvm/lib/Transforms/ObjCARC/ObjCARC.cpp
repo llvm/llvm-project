@@ -114,8 +114,8 @@ CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
 }
 
 BundledRetainClaimRVs::~BundledRetainClaimRVs() {
-  if (ContractPass) {
-    for (auto P : RVCalls) {
+  for (auto P : RVCalls) {
+    if (ContractPass) {
       CallBase *CB = P.second;
       // At this point, we know that the annotated calls can't be tail calls
       // as they are followed by marker instructions and retainRV/claimRV
@@ -129,10 +129,9 @@ BundledRetainClaimRVs::~BundledRetainClaimRVs() {
       auto *NewCB = CallBase::Create(CB, OB, CB);
       CB->replaceAllUsesWith(NewCB);
       CB->eraseFromParent();
-    }
-  } else {
-    for (auto P : RVCalls)
+    } else {
       EraseInstruction(P.first);
+    }
   }
 
   RVCalls.clear();

@@ -674,6 +674,7 @@ bool MIParser::parseBasicBlockDefinition(
   lex();
   bool HasAddressTaken = false;
   bool IsLandingPad = false;
+  bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
   Optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
@@ -688,6 +689,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_landing_pad:
         IsLandingPad = true;
+        lex();
+        break;
+      case MIToken::kw_inlineasm_br_indirect_target:
+        IsInlineAsmBrIndirectTarget = true;
         lex();
         break;
       case MIToken::kw_ehfunclet_entry:
@@ -737,6 +742,7 @@ bool MIParser::parseBasicBlockDefinition(
   if (HasAddressTaken)
     MBB->setHasAddressTaken();
   MBB->setIsEHPad(IsLandingPad);
+  MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   if (SectionID.hasValue()) {
     MBB->setSectionID(SectionID.getValue());
@@ -1011,10 +1017,6 @@ bool MIParser::parse(MachineInstr *&MI) {
     Optional<unsigned> TiedDefIdx;
     if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO, TiedDefIdx))
       return true;
-    if ((OpCode == TargetOpcode::DBG_VALUE ||
-         OpCode == TargetOpcode::DBG_VALUE_LIST) &&
-        MO.isReg())
-      MO.setIsDebug();
     Operands.push_back(
         ParsedMachineOperand(MO, Loc, Token.location(), TiedDefIdx));
     if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||

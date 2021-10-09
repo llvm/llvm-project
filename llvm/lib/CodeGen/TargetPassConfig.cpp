@@ -1217,7 +1217,7 @@ void TargetPassConfig::addMachinePasses() {
   // GC
   if (addGCPasses()) {
     if (PrintGCInfo)
-      addPass(createGCInfoPrinter(dbgs()), false);
+      addPass(createGCInfoPrinter(dbgs()));
   }
 
   // Basic block placement.
@@ -1417,8 +1417,8 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// Add the minimum set of target-independent passes that are required for
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
-  addPass(&PHIEliminationID, false);
-  addPass(&TwoAddressInstructionPassID, false);
+  addPass(&PHIEliminationID);
+  addPass(&TwoAddressInstructionPassID);
 
   addRegAssignAndRewriteFast();
 }
@@ -1446,13 +1446,13 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   // Edge splitting is smarter with machine loop info.
   addPass(&MachineLoopInfoID);
-  addPass(&PHIEliminationID, false);
+  addPass(&PHIEliminationID);
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (EarlyLiveIntervals)
     addPass(&LiveIntervalsID);
 
-  addPass(&TwoAddressInstructionPassID, false);
+  addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);
 
   // The machine scheduler may accidentally create disconnected components
@@ -1507,7 +1507,7 @@ void TargetPassConfig::addMachineLateOptimization() {
 
 /// Add standard GC passes.
 bool TargetPassConfig::addGCPasses() {
-  addPass(&GCMachineCodeAnalysisID, false);
+  addPass(&GCMachineCodeAnalysisID);
   return true;
 }
 

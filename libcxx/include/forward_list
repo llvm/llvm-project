@@ -990,7 +990,7 @@ template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>&
 forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
 {
-    if (this != &__x)
+    if (this != _VSTD::addressof(__x))
     {
         base::__copy_assign_alloc(__x);
         assign(__x.begin(), __x.end());

@@ -116,6 +116,7 @@ struct MIToken {
     kw_liveout,
     kw_address_taken,
     kw_landing_pad,
+    kw_inlineasm_br_indirect_target,
     kw_ehfunclet_entry,
     kw_liveins,
     kw_successors,

@@ -7880,6 +7880,12 @@ static void createUnbundleArchiveCommand(Compilation &C,
       UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
+
+      // Add this flag to not exit from clang-offload-bundler if no compatible
+      // code object is found in heterogenous archive library.
+      std::string AdditionalArgs("-allow-missing-bundles");
+      UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs.c_str()));
+
       C.addCommand(std::make_unique<Command>(
           UA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
           InputInfo(&UA, C.getArgs().MakeArgString(OutputLib))));

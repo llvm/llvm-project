@@ -33,7 +33,7 @@ class StackDepotBase {
   // Retrieves a stored stack trace by the id.
   args_type Get(u32 id);
 
-  StackDepotStats GetStats() const { return stats; }
+  StackDepotStats GetStats() const { return {n_uniq_ids, Node::allocated()}; }
 
   void LockAll();
   void UnlockAll();
@@ -55,7 +55,7 @@ class StackDepotBase {
   atomic_uintptr_t tab[kTabSize];   // Hash table of Node's.
   atomic_uint32_t seq[kPartCount];  // Unique id generators.
 
-  StackDepotStats stats;
+  uptr n_uniq_ids;
 
   friend class StackDepotReverseMap;
 };
@@ -100,15 +100,18 @@ template <class Node, int kReservedBits, int kTabSizeLog>
 typename StackDepotBase<Node, kReservedBits, kTabSizeLog>::handle_type
 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
                                                       bool *inserted) {
-  if (inserted) *inserted = false;
-  if (!Node::is_valid(args)) return handle_type();
+  if (inserted)
+    *inserted = false;
+  if (!LIKELY(Node::is_valid(args)))
+    return handle_type();
   hash_type h = Node::hash(args);
   atomic_uintptr_t *p = &tab[h % kTabSize];
   uptr v = atomic_load(p, memory_order_consume);
   Node *s = (Node *)(v & ~1);
   // First, try to find the existing stack.
   Node *node = find(s, args, h);
-  if (node) return node->get_handle();
+  if (LIKELY(node))
+    return node->get_handle();
   // If failed, lock, retry and insert new.
   Node *s2 = lock(p);
   if (s2 != s) {
@@ -120,14 +123,12 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   }
   uptr part = (h % kTabSize) / kPartSize;
   u32 id = atomic_fetch_add(&seq[part], 1, memory_order_relaxed) + 1;
-  stats.n_uniq_ids++;
+  n_uniq_ids++;
   CHECK_LT(id, kMaxId);
   id |= part << kPartShift;
   CHECK_NE(id, 0);
   CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
-  uptr memsz = Node::storage_size(args);
-  s = (Node *)PersistentAlloc(memsz);
-  stats.allocated += memsz;
+  s = Node::allocate(args);
   s->id = id;
   s->store(args, h);
   s->link = s2;
