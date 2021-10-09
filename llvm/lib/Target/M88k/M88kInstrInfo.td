@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+
+def IsMC881100 : Predicate<"Subtarget->getCPU() == \"mc88110\"">;
+class MC881100 { list<Predicate> Predicates = [IsMC881100]; }
+
 // ---------------------------------------------------------------------------//
 // Selection DAG Nodes.
 // ---------------------------------------------------------------------------//
@@ -571,7 +575,7 @@ defm FADD : FArith<0b0101, "fadd", fadd>;
 defm FSUB : FArith<0b0110, "fsub", fsub>;
 defm FDIV : FArith<0b1110, "fdiv", fdiv>;
 
-let regfile = 1 in {
+let regfile = 1, Predicates = [IsMC881100] in {
 def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
                      (outs FPR32Opnd:$rd), (ins XROpnd:$rs2),
                      "mov.s",
@@ -587,7 +591,7 @@ def MOVxx : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b11,
 //                    [(set XROpnd:$rd, XROpnd:$rs2)]>;
 }
 
-let regfile = 0 in {
+let regfile = 0, Predicates = [IsMC881100] in {
 def MOVxrs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b00,
                      (outs XROpnd:$rd), (ins FPR32Opnd:$rs2),
                      "mov.s",
@@ -600,11 +604,11 @@ def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
 
 let rs1 = 0, rs2 = 0 in
 de FLDCR : F_SFU1CR<0b01001, (outs GPROpnd:$rd), (ins FCROpnd:$fcr),
-      f               "fldcr", " $rd, $fcr">;
+                    "fldcr", " $rd, $fcr">;
 
 let rd = 0 in
 def FSTCR : F_SFU1CR2<0b10001, (outs FCROpnd:$fcr), (ins GPROpnd:$rs1),
-                     "fstcr", " $rs1, $fcr">;
+                      "fstcr", " $rs1, $fcr">;
 
 def FXCR : F_SFU1CR2<0b11001, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, FCROpnd:$fcr),
                      "fxcr", " $rd, $rs1, $fcr">;
