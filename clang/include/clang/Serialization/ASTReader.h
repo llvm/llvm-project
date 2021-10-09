@@ -1155,10 +1155,6 @@ private:
   /// definitions. Only populated when using modules in C++.
   llvm::DenseMap<EnumDecl *, EnumDecl *> EnumDefinitions;
 
-  /// A mapping from canonical declarations of records to their canonical
-  /// definitions. Doesn't cover CXXRecordDecl.
-  llvm::DenseMap<RecordDecl *, RecordDecl *> RecordDefinitions;
-
   /// When reading a Stmt tree, Stmt operands are placed in this stack.
   SmallVector<Stmt *, 16> StmtStack;
 
