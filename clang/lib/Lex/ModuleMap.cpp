@@ -2186,7 +2186,7 @@ void ModuleMapParser::parseExternModuleDecl() {
   }
   if (auto File = SourceMgr.getFileManager().getFile(FileNameRef))
     Map.parseModuleMapFile(
-        *File, /*IsSystem=*/false,
+        *File, IsSystem,
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
             : (*File)->getDir(),
