@@ -96,7 +96,7 @@ public:
     return *this;
   }
   ExecutorAddr operator++(int) { return ExecutorAddr(Addr++); }
-  ExecutorAddr operator--(int) { return ExecutorAddr(Addr++); }
+  ExecutorAddr operator--(int) { return ExecutorAddr(Addr--); }
 
   ExecutorAddr &operator+=(const ExecutorAddrDiff Delta) {
     Addr += Delta.getValue();
