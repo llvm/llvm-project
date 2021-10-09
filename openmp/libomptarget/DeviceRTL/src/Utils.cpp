@@ -22,6 +22,7 @@ namespace _OMP {
 /// Helper to keep code alive without introducing a performance penalty.
 __attribute__((used, weak, optnone)) void keepAlive() {
   __kmpc_get_hardware_thread_id_in_block();
+  __kmpc_get_hardware_num_threads_in_block();
   __kmpc_barrier_simple_spmd(nullptr, 0);
 }
 } // namespace _OMP

@@ -1665,7 +1665,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
 // CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    store i32 0, i32* [[CRITICAL_COUNTER]], align 4
 // CHECK1-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
 // CHECK1:       omp.critical.loop:
@@ -1937,7 +1937,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
 // CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    store i32 0, i32* [[CRITICAL_COUNTER]], align 4
 // CHECK2-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
 // CHECK2:       omp.critical.loop:
