@@ -5,9 +5,9 @@
 define void @test(i64 %a, i8* %b) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldr x8, [x1]
-; CHECK-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NEXT:    str x8, [x9]
+; CHECK-NEXT:    and x8, x0, #0x7fffffffffffffff
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:    str x9, [x8]
 ; CHECK-NEXT:    ret
   %1 = and i64 %a, 9223372036854775807
   %2 = inttoptr i64 %1 to i8*

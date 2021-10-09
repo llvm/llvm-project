@@ -169,18 +169,18 @@ define void @ucvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
 ; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    mov x8, sp
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x8]
+; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_EQ_256-NEXT:    ucvtf z0.s, p0/m, z0.s
+; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ucvtf z1.s, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    mov sp, x29
 ; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_256-NEXT:    ret
@@ -284,17 +284,17 @@ define void @ucvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-LABEL: ucvtf_v8i16_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
 ; VBITS_EQ_256-NEXT:    ldr q0, [x0]
-; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z0.h
-; VBITS_EQ_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    ucvtf z0.d, p0/m, z0.d
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    ucvtf z1.d, p0/m, z1.d
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v8i16_v8f64:
@@ -396,12 +396,12 @@ define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s
-; VBITS_EQ_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_EQ_256-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; VBITS_EQ_256-NEXT:    ucvtf z1.h, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_EQ_256-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_EQ_256-NEXT:    splice z1.h, p1, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl8
+; VBITS_EQ_256-NEXT:    splice z1.h, p0, z1.h, z0.h
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
@@ -412,8 +412,8 @@ define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    ucvtf z0.h, p0/m, z0.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
@@ -429,8 +429,8 @@ define void @ucvtf_v32i32_v32f16(<32 x i32>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.s
 ; VBITS_GE_1024-NEXT:    ucvtf z0.h, p0/m, z0.s
-; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_1024-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <32 x i32>, <32 x i32>* %a
@@ -446,8 +446,8 @@ define void @ucvtf_v64i32_v64f16(<64 x i32>* %a, <64 x half>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.s
 ; VBITS_GE_2048-NEXT:    ucvtf z0.h, p0/m, z0.s
-; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_2048-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <64 x i32>, <64 x i32>* %a
@@ -601,18 +601,18 @@ define void @ucvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
 ; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    mov x8, sp
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    ucvtf z0.d, p0/m, z0.d
+; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    mov sp, x29
 ; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_256-NEXT:    ret
@@ -752,9 +752,9 @@ define void @ucvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d
 ; VBITS_GE_1024-NEXT:    ucvtf z0.h, p0/m, z0.d
+; VBITS_GE_1024-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
@@ -770,9 +770,9 @@ define void @ucvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.d
 ; VBITS_GE_2048-NEXT:    ucvtf z0.h, p0/m, z0.d
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
@@ -831,12 +831,12 @@ define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d
-; VBITS_EQ_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_EQ_256-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; VBITS_EQ_256-NEXT:    ucvtf z1.s, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_EQ_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_EQ_256-NEXT:    splice z1.s, p1, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_256-NEXT:    splice z1.s, p0, z1.s, z0.s
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
@@ -847,8 +847,8 @@ define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    ucvtf z0.s, p0/m, z0.d
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x i64>, <8 x i64>* %a
@@ -864,8 +864,8 @@ define void @ucvtf_v16i64_v16f32(<16 x i64>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d
 ; VBITS_GE_1024-NEXT:    ucvtf z0.s, p0/m, z0.d
-; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
@@ -881,8 +881,8 @@ define void @ucvtf_v32i64_v32f32(<32 x i64>* %a, <32 x float>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.d
 ; VBITS_GE_2048-NEXT:    ucvtf z0.s, p0/m, z0.d
-; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
@@ -1134,18 +1134,18 @@ define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
 ; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    mov x8, sp
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x8]
+; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_EQ_256-NEXT:    scvtf z0.s, p0/m, z0.s
+; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    scvtf z1.s, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    mov sp, x29
 ; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_256-NEXT:    ret
@@ -1249,17 +1249,17 @@ define void @scvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-LABEL: scvtf_v8i16_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
 ; VBITS_EQ_256-NEXT:    ldr q0, [x0]
-; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_EQ_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; VBITS_EQ_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    scvtf z1.d, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    scvtf z0.d, p0/m, z0.d
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    scvtf z1.d, p0/m, z1.d
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v8i16_v8f64:
@@ -1361,12 +1361,12 @@ define void @scvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s
-; VBITS_EQ_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_EQ_256-NEXT:    scvtf z0.h, p0/m, z0.s
 ; VBITS_EQ_256-NEXT:    scvtf z1.h, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_EQ_256-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_EQ_256-NEXT:    splice z1.h, p1, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl8
+; VBITS_EQ_256-NEXT:    splice z1.h, p0, z1.h, z0.h
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
@@ -1377,8 +1377,8 @@ define void @scvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    scvtf z0.h, p0/m, z0.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
@@ -1394,8 +1394,8 @@ define void @scvtf_v32i32_v32f16(<32 x i32>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.s
 ; VBITS_GE_1024-NEXT:    scvtf z0.h, p0/m, z0.s
-; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_1024-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <32 x i32>, <32 x i32>* %a
@@ -1411,8 +1411,8 @@ define void @scvtf_v64i32_v64f16(<64 x i32>* %a, <64 x half>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.s
 ; VBITS_GE_2048-NEXT:    scvtf z0.h, p0/m, z0.s
-; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_2048-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <64 x i32>, <64 x i32>* %a
@@ -1566,18 +1566,18 @@ define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
 ; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    mov x8, sp
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    scvtf z0.d, p0/m, z0.d
+; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    scvtf z1.d, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    mov sp, x29
 ; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_256-NEXT:    ret
@@ -1717,9 +1717,9 @@ define void @scvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d
 ; VBITS_GE_1024-NEXT:    scvtf z0.h, p0/m, z0.d
+; VBITS_GE_1024-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
@@ -1735,9 +1735,9 @@ define void @scvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.d
 ; VBITS_GE_2048-NEXT:    scvtf z0.h, p0/m, z0.d
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
@@ -1796,12 +1796,12 @@ define void @scvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d
-; VBITS_EQ_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_EQ_256-NEXT:    scvtf z0.s, p0/m, z0.d
 ; VBITS_EQ_256-NEXT:    scvtf z1.s, p0/m, z1.d
 ; VBITS_EQ_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_EQ_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_EQ_256-NEXT:    splice z1.s, p1, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_256-NEXT:    splice z1.s, p0, z1.s, z0.s
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
@@ -1812,8 +1812,8 @@ define void @scvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    scvtf z0.s, p0/m, z0.d
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x i64>, <8 x i64>* %a
@@ -1829,8 +1829,8 @@ define void @scvtf_v16i64_v16f32(<16 x i64>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d
 ; VBITS_GE_1024-NEXT:    scvtf z0.s, p0/m, z0.d
-; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
@@ -1846,8 +1846,8 @@ define void @scvtf_v32i64_v32f32(<32 x i64>* %a, <32 x float>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ptrue p0.d
 ; VBITS_GE_2048-NEXT:    scvtf z0.s, p0/m, z0.d
-; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a

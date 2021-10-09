@@ -5,19 +5,19 @@
 define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK-LABEL: bar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add.2d v2, v0, v1
-; CHECK-NEXT:    add d0, d2, d1
-; CHECK-NEXT:    sub d1, d2, d1
-; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    add.2d v0, v0, v1
+; CHECK-NEXT:    sub d2, d0, d1
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    mov.d v0[1], x8
 ; CHECK-NEXT:    ret
 ;
 ; GENERIC-LABEL: bar:
 ; GENERIC:       // %bb.0:
-; GENERIC-NEXT:    add v2.2d, v0.2d, v1.2d
-; GENERIC-NEXT:    add d0, d2, d1
-; GENERIC-NEXT:    sub d1, d2, d1
-; GENERIC-NEXT:    fmov x8, d1
+; GENERIC-NEXT:    add v0.2d, v0.2d, v1.2d
+; GENERIC-NEXT:    sub d2, d0, d1
+; GENERIC-NEXT:    add d0, d0, d1
+; GENERIC-NEXT:    fmov x8, d2
 ; GENERIC-NEXT:    mov v0.d[1], x8
 ; GENERIC-NEXT:    ret
   %add = add <2 x i64> %a, %b
@@ -68,16 +68,16 @@ define double @vaddd_su64(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 define double @add_sub_su64(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK-LABEL: add_sub_su64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d2, xzr
 ; CHECK-NEXT:    add d0, d1, d0
-; CHECK-NEXT:    sub d0, d2, d0
+; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    sub d0, d1, d0
 ; CHECK-NEXT:    ret
 ;
 ; GENERIC-LABEL: add_sub_su64:
 ; GENERIC:       // %bb.0:
-; GENERIC-NEXT:    fmov d2, xzr
 ; GENERIC-NEXT:    add d0, d1, d0
-; GENERIC-NEXT:    sub d0, d2, d0
+; GENERIC-NEXT:    fmov d1, xzr
+; GENERIC-NEXT:    sub d0, d1, d0
 ; GENERIC-NEXT:    ret
   %vecext = extractelement <2 x i64> %a, i32 0
   %vecext1 = extractelement <2 x i64> %b, i32 0

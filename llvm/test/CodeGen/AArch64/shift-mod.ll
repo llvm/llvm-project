@@ -102,8 +102,8 @@ define i64 @ashr_add_shl_i8(i64 %r) {
 define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) {
 ; CHECK-LABEL: ashr_add_shl_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-NEXT:    movi v1.4s, #1, lsl #24
+; CHECK-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    sshr v0.4s, v0.4s, #24
 ; CHECK-NEXT:    ret

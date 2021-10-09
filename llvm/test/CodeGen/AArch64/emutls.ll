@@ -95,9 +95,9 @@ define i32 @_Z7getIntXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIiE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIiE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        add
-; ARM64:        str {{.*}}, [x0]
+; ARM64:        str {{.*}}, [x8]
 
 entry:
   %0 = load i32, i32* @_ZN1AIiE1xE, align 4
@@ -111,7 +111,7 @@ define float @_Z9getFloatXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIfE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIfE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        fadd s{{.*}}, s
 ; ARM64:        str s{{.*}}, [x0]
 

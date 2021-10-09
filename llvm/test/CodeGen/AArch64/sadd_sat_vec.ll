@@ -54,9 +54,9 @@ define <32 x i8> @v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 define <64 x i8> @v64i8(<64 x i8> %x, <64 x i8> %y) nounwind {
 ; CHECK-LABEL: v64i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd v2.16b, v2.16b, v6.16b
 ; CHECK-NEXT:    sqadd v0.16b, v0.16b, v4.16b
 ; CHECK-NEXT:    sqadd v1.16b, v1.16b, v5.16b
-; CHECK-NEXT:    sqadd v2.16b, v2.16b, v6.16b
 ; CHECK-NEXT:    sqadd v3.16b, v3.16b, v7.16b
 ; CHECK-NEXT:    ret
   %z = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> %x, <64 x i8> %y)
@@ -85,9 +85,9 @@ define <16 x i16> @v16i16(<16 x i16> %x, <16 x i16> %y) nounwind {
 define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; CHECK-LABEL: v32i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd v2.8h, v2.8h, v6.8h
 ; CHECK-NEXT:    sqadd v0.8h, v0.8h, v4.8h
 ; CHECK-NEXT:    sqadd v1.8h, v1.8h, v5.8h
-; CHECK-NEXT:    sqadd v2.8h, v2.8h, v6.8h
 ; CHECK-NEXT:    sqadd v3.8h, v3.8h, v7.8h
 ; CHECK-NEXT:    ret
   %z = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %x, <32 x i16> %y)
@@ -116,8 +116,8 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    shl v1.4h, v1.4h, #8
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    shl v1.4h, v1.4h, #8
 ; CHECK-NEXT:    sqadd v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
@@ -134,11 +134,11 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; CHECK-LABEL: v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x1]
+; CHECK-NEXT:    add x8, x1, #1
 ; CHECK-NEXT:    ld1 { v1.b }[0], [x0]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    add x9, x1, #1
-; CHECK-NEXT:    ld1 { v0.b }[4], [x9]
-; CHECK-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-NEXT:    add x9, x0, #1
+; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #24
 ; CHECK-NEXT:    sqadd v0.2s, v1.2s, v0.2s
@@ -174,11 +174,11 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; CHECK-LABEL: v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1 { v0.h }[0], [x1]
+; CHECK-NEXT:    add x8, x1, #2
 ; CHECK-NEXT:    ld1 { v1.h }[0], [x0]
-; CHECK-NEXT:    add x8, x0, #2
-; CHECK-NEXT:    add x9, x1, #2
-; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
-; CHECK-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-NEXT:    add x9, x0, #2
+; CHECK-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #16
 ; CHECK-NEXT:    sqadd v0.2s, v1.2s, v0.2s
@@ -207,10 +207,10 @@ define <12 x i8> @v12i8(<12 x i8> %x, <12 x i8> %y) nounwind {
 define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind {
 ; CHECK-LABEL: v12i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    sqadd v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    sqadd v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    sqadd v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    sqadd v1.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    str q0, [x2]
 ; CHECK-NEXT:    str d1, [x2, #16]
 ; CHECK-NEXT:    ret
@@ -254,10 +254,10 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-LABEL: v16i4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.16b, v0.16b, #4
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #4
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #4
+; CHECK-NEXT:    shl v0.16b, v0.16b, #4
 ; CHECK-NEXT:    sshr v1.16b, v1.16b, #4
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #4
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #4
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #4
 ; CHECK-NEXT:    sqadd v0.16b, v0.16b, v1.16b
@@ -307,9 +307,9 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; CHECK-LABEL: v16i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd v2.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    sqadd v0.4s, v0.4s, v4.4s
 ; CHECK-NEXT:    sqadd v1.4s, v1.4s, v5.4s
-; CHECK-NEXT:    sqadd v2.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    sqadd v3.4s, v3.4s, v7.4s
 ; CHECK-NEXT:    ret
   %z = call <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32> %x, <16 x i32> %y)
@@ -338,9 +338,9 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; CHECK-LABEL: v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd v2.2d, v2.2d, v6.2d
 ; CHECK-NEXT:    sqadd v0.2d, v0.2d, v4.2d
 ; CHECK-NEXT:    sqadd v1.2d, v1.2d, v5.2d
-; CHECK-NEXT:    sqadd v2.2d, v2.2d, v6.2d
 ; CHECK-NEXT:    sqadd v3.2d, v3.2d, v7.2d
 ; CHECK-NEXT:    ret
   %z = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> %x, <8 x i64> %y)
@@ -351,23 +351,23 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    adcs x11, x3, x7
-; CHECK-NEXT:    eor x9, x3, x7
-; CHECK-NEXT:    eor x12, x3, x11
-; CHECK-NEXT:    bics xzr, x12, x9
-; CHECK-NEXT:    asr x9, x11, #63
-; CHECK-NEXT:    eor x12, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x2, x9, x8, lt
-; CHECK-NEXT:    csel x3, x12, x11, lt
+; CHECK-NEXT:    eor x10, x3, x7
+; CHECK-NEXT:    adcs x9, x3, x7
+; CHECK-NEXT:    eor x11, x3, x9
+; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    bics xzr, x11, x10
+; CHECK-NEXT:    eor x10, x1, x5
+; CHECK-NEXT:    csel x2, x12, x8, lt
+; CHECK-NEXT:    eor x8, x12, #0x8000000000000000
+; CHECK-NEXT:    csel x3, x8, x9, lt
 ; CHECK-NEXT:    adds x8, x0, x4
 ; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    eor x10, x1, x5
-; CHECK-NEXT:    eor x12, x1, x9
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    bics xzr, x12, x10
-; CHECK-NEXT:    eor x13, x11, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x11, x8, lt
-; CHECK-NEXT:    csel x1, x13, x9, lt
+; CHECK-NEXT:    eor x11, x1, x9
+; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    bics xzr, x11, x10
+; CHECK-NEXT:    eor x10, x12, #0x8000000000000000
+; CHECK-NEXT:    csel x8, x12, x8, lt
+; CHECK-NEXT:    csel x1, x10, x9, lt
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0

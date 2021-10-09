@@ -9,8 +9,8 @@ define i32 @srl_and()  {
 ; CHECK-LABEL: srl_and:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:g
-; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-NEXT:    mov w9, #50
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-NEXT:    ldrh w8, [x8]
 ; CHECK-NEXT:    eor w8, w8, w9
 ; CHECK-NEXT:    mov w9, #65535

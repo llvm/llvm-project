@@ -14,11 +14,11 @@
 define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w8, w9, [x1]
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldp w9, w10, [x1]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    add w0, w9, w10
+; CHECK-NEXT:    ldr q0, [x8, #16]
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -37,11 +37,11 @@ define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy_inline:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w8, w9, [x1]
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldp w9, w10, [x1]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    add w0, w9, w10
+; CHECK-NEXT:    ldr q0, [x8, #16]
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -60,11 +60,11 @@ define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
 define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memmove:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w8, w9, [x1]
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldp w9, w10, [x1]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    add w0, w9, w10
+; CHECK-NEXT:    ldr q0, [x8, #16]
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -84,11 +84,11 @@ define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
 define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w8, w9, [x1]
-; CHECK-NEXT:    mov x10, #-6148914691236517206
-; CHECK-NEXT:    stp x10, x10, [x0]
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldp w10, w11, [x1]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov x9, #-6148914691236517206
+; CHECK-NEXT:    add w0, w10, w11
+; CHECK-NEXT:    stp x9, x9, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast i32* %p to i8*
   tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(16) %p0, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
@@ -105,11 +105,11 @@ define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
 define i32 @test_mempcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_mempcpy:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w8, w9, [x1]
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ldp w9, w10, [x1]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    add w0, w9, w10
+; CHECK-NEXT:    ldr q0, [x8, #16]
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4

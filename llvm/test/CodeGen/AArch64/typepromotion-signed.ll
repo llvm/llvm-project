@@ -56,13 +56,13 @@ define i16 @test_srem(i16 zeroext %arg) local_unnamed_addr #1 {
 define i32 @test_signext_b(i8* nocapture readonly %ptr, i8 signext %arg) {
 ; CHECK-LABEL: test_signext_b:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    mov w9, #20894
-; CHECK-NEXT:    add w8, w8, w1
-; CHECK-NEXT:    sxtb w8, w8
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, ge
+; CHECK-NEXT:    ldrb w9, [x0]
+; CHECK-NEXT:    mov w8, #20894
+; CHECK-NEXT:    add w9, w9, w1
+; CHECK-NEXT:    sxtb w9, w9
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    csel w0, w9, w8, ge
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, i8* %ptr, align 1
@@ -76,12 +76,12 @@ define i32 @test_signext_b_ult_slt(i8* nocapture readonly %ptr, i8 signext %arg)
 ; CHECK-LABEL: test_signext_b_ult_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    mov w9, #57
-; CHECK-NEXT:    add w10, w8, w1, uxtb
-; CHECK-NEXT:    cmp w10, #127
+; CHECK-NEXT:    add w9, w8, w1, uxtb
+; CHECK-NEXT:    cmp w9, #127
+; CHECK-NEXT:    mov w9, #42
 ; CHECK-NEXT:    ccmp w8, #0, #0, ne
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, i8* %ptr, align 1
@@ -96,13 +96,13 @@ entry:
 define i32 @test_signext_h(i16* nocapture readonly %ptr, i16 signext %arg) {
 ; CHECK-LABEL: test_signext_h:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    mov w9, #20894
-; CHECK-NEXT:    add w8, w8, w1
-; CHECK-NEXT:    sxth w8, w8
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, ge
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    mov w8, #20894
+; CHECK-NEXT:    add w9, w9, w1
+; CHECK-NEXT:    sxth w9, w9
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    csel w0, w9, w8, ge
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, i16* %ptr, align 1

@@ -9,10 +9,10 @@ define i32 @test_urem_odd(i32 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    mov w9, #13108
-; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    movk w9, #13107, lsl #16
+; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -26,10 +26,10 @@ define i32 @test_urem_odd_25(i32 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_25:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    mov w9, #28836
-; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #2621, lsl #16
+; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -97,11 +97,11 @@ define i32 @test_urem_even_100(i32 %X) nounwind {
 ; CHECK-LABEL: test_urem_even_100:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    movk w8, #49807, lsl #16
-; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    mov w9, #23593
-; CHECK-NEXT:    ror w8, w8, #2
+; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #655, lsl #16
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    ror w8, w8, #2
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -154,9 +154,9 @@ define i32 @test_urem_odd_setne(i32 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_setne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
+; CHECK-NEXT:    mov w9, #858993459
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
-; CHECK-NEXT:    mov w9, #858993459
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret

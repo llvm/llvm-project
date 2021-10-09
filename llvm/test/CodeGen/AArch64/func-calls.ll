@@ -139,8 +139,8 @@ define dso_local void @check_i128_align() {
 ; CHECK-NOT: mov x1
 ; CHECK-LE: mov x2, #{{0x2a|42}}
 ; CHECK-LE: mov x3, xzr
-; CHECK-BE: mov {{x|w}}3, #{{0x2a|42}}
 ; CHECK-BE: mov x2, xzr
+; CHECK-BE: mov {{x|w}}3, #{{0x2a|42}}
 ; CHECK: bl check_i128_regalign
 
   ret void

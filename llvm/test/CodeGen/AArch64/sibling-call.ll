@@ -106,8 +106,8 @@ define dso_local void @indirect_tail() {
 ; CHECK-LABEL: indirect_tail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, func
-; CHECK-NEXT:    ldr x1, [x8, :lo12:func]
 ; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    ldr x1, [x8, :lo12:func]
 ; CHECK-NEXT:    br x1
 
   %fptr = load void(i32)*, void(i32)** @func

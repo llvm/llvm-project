@@ -7,16 +7,16 @@ define i128 @test_128bitmul(i128 %lhs, i128 %rhs) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    umulh x8, x0, x2
 ; CHECK-NEXT:    madd x8, x0, x3, x8
-; CHECK-NEXT:    madd x1, x1, x2, x8
 ; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    madd x1, x1, x2, x8
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_128bitmul:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    umulh x8, x1, x3
 ; CHECK-BE-NEXT:    madd x8, x1, x2, x8
-; CHECK-BE-NEXT:    madd x0, x0, x3, x8
 ; CHECK-BE-NEXT:    mul x1, x1, x3
+; CHECK-BE-NEXT:    madd x0, x0, x3, x8
 ; CHECK-BE-NEXT:    ret
 
 

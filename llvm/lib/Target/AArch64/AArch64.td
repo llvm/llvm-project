@@ -1156,7 +1156,7 @@ def ProcTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureFP16FML,
                                   FeatureDotProd]>;
 
-def : ProcessorModel<"generic", NoSchedModel, [
+def : ProcessorModel<"generic", CortexA55Model, [
                      FeatureFPARMv8,
                      FeatureFuseAES,
                      FeatureNEON,

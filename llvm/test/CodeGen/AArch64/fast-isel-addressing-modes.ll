@@ -410,9 +410,9 @@ define i64 @load_breg_offreg_immoff_1(i64 %a, i64 %b) {
 define i64 @load_breg_offreg_immoff_2(i64 %a, i64 %b) {
 ; SDAG-LABEL: load_breg_offreg_immoff_2:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    add x8, x0, x1
-; SDAG-NEXT:    mov w9, #61440
-; SDAG-NEXT:    ldr x0, [x8, x9]
+; SDAG-NEXT:    mov w8, #61440
+; SDAG-NEXT:    add x9, x0, x1
+; SDAG-NEXT:    ldr x0, [x9, x8]
 ; SDAG-NEXT:    ret
 ;
 ; FAST-LABEL: load_breg_offreg_immoff_2:

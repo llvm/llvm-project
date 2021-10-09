@@ -27,13 +27,13 @@ define i1 @test_redxor_v4i1(<4 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    eor w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    eor w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    eor w8, w9, w8
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %or_result = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %a)
@@ -44,21 +44,21 @@ define i1 @test_redxor_v8i1(<8 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w14, v0.b[1]
-; CHECK-NEXT:    umov w15, v0.b[0]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    eor w14, w15, w14
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    eor w13, w14, w13
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    eor w12, w13, w12
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    eor w11, w12, w11
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    eor w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
 ; CHECK-NEXT:    eor w8, w9, w8
+; CHECK-NEXT:    umov w9, v0.b[6]
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    eor w8, w8, w12
+; CHECK-NEXT:    eor w8, w8, w13
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w10
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %or_result = call i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %a)
@@ -72,19 +72,19 @@ define i1 @test_redxor_v16i1(<16 x i1> %a) {
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    eor w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    eor w8, w8, w12
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %or_result = call i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %a)
@@ -115,13 +115,13 @@ define i8 @test_redxor_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: test_redxor_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    eor w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    eor w9, w10, w9
-; CHECK-NEXT:    eor w0, w9, w8
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    eor w8, w9, w8
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v4i8(<4 x i8> %a)
   ret i8 %xor_result
@@ -131,21 +131,21 @@ define i8 @test_redxor_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: test_redxor_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w14, v0.b[1]
-; CHECK-NEXT:    umov w15, v0.b[0]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    eor w14, w15, w14
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    eor w13, w14, w13
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    eor w12, w13, w12
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    eor w11, w12, w11
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    eor w8, w9, w8
 ; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    eor w9, w10, w9
-; CHECK-NEXT:    eor w0, w9, w8
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    eor w8, w8, w12
+; CHECK-NEXT:    eor w8, w8, w13
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w0, w8, w10
 ; CHECK-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %a)
   ret i8 %xor_result
@@ -158,19 +158,19 @@ define i8 @test_redxor_v16i8(<16 x i8> %a) {
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    eor w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    eor w8, w8, w12
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %a)
   ret i8 %xor_result
@@ -184,19 +184,19 @@ define i8 @test_redxor_v32i8(<32 x i8> %a) {
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    eor w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    eor w8, w8, w12
 ; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v32i8(<32 x i8> %a)
   ret i8 %xor_result
@@ -206,13 +206,13 @@ define i16 @test_redxor_v4i16(<4 x i16> %a) {
 ; CHECK-LABEL: test_redxor_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    eor w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    eor w9, w10, w9
-; CHECK-NEXT:    eor w0, w9, w8
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    eor w8, w9, w8
+; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i16 @llvm.vector.reduce.xor.v4i16(<4 x i16> %a)
   ret i16 %xor_result
@@ -226,10 +226,10 @@ define i16 @test_redxor_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    umov w8, v0.h[1]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    eor w8, w9, w8
 ; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %a)
   ret i16 %xor_result
@@ -244,10 +244,10 @@ define i16 @test_redxor_v16i16(<16 x i16> %a) {
 ; CHECK-NEXT:    umov w8, v0.h[1]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    eor w8, w9, w8
 ; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    eor w0, w8, w11
 ; CHECK-NEXT:    ret
   %xor_result = call i16 @llvm.vector.reduce.xor.v16i16(<16 x i16> %a)
   ret i16 %xor_result

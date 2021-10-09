@@ -312,10 +312,10 @@ define i64 @pairUpBarelyOut(i64* %a) nounwind ssp {
 ; are used---just check that there isn't an ldp before the add
 ; CHECK-LABEL: pairUpBarelyOut:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x9, x0, #264
-; CHECK-NEXT:    ldur x8, [x0, #-256]
-; CHECK-NEXT:    ldr x9, [x9]
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    sub x8, x0, #264
+; CHECK-NEXT:    ldur x9, [x0, #-256]
+; CHECK-NEXT:    ldr x8, [x8]
+; CHECK-NEXT:    add x0, x9, x8
 ; CHECK-NEXT:    ret
   %p1 = getelementptr inbounds i64, i64* %a, i64 -32
   %tmp1 = load i64, i64* %p1, align 2
@@ -330,10 +330,10 @@ define i64 @pairUpBarelyOutSext(i32* %a) nounwind ssp {
 ; are used---just check that there isn't an ldp before the add
 ; CHECK-LABEL: pairUpBarelyOutSext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x9, x0, #260
-; CHECK-NEXT:    ldursw x8, [x0, #-256]
-; CHECK-NEXT:    ldrsw x9, [x9]
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    sub x8, x0, #260
+; CHECK-NEXT:    ldursw x9, [x0, #-256]
+; CHECK-NEXT:    ldrsw x8, [x8]
+; CHECK-NEXT:    add x0, x9, x8
 ; CHECK-NEXT:    ret
   %p1 = getelementptr inbounds i32, i32* %a, i64 -64
   %tmp1 = load i32, i32* %p1, align 2
@@ -422,8 +422,10 @@ define i64 @ldp_sext_int_post(i32* %p) nounwind {
 ; CHECK-LABEL: ldp_sext_int_post:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldpsw x19, x20, [x0], #8
+; CHECK-NEXT:    ldpsw x19, x20, [x0]
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    bl "use-ptr"
 ; CHECK-NEXT:    add x0, x20, x19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload

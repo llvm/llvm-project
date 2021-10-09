@@ -178,13 +178,13 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr x8, [sp, #48]
+; CHECK-NEXT:    mov x18, xzr
 ; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    ldr x8, [sp, #48]
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    mov w1, #17
-; CHECK-NEXT:    mov x18, xzr
-; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    bl consume_attributes
 ; CHECK-NEXT:  .Ltmp11:
 ; CHECK-NEXT:    add sp, sp, #32

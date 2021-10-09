@@ -28,9 +28,9 @@ define double @test2(double %a, double %b) {
 define double @test3(double %a, double %b, double %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd d2, d2, d2
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    fadd d1, d2, d2
-; CHECK-NEXT:    fsub d0, d0, d1
+; CHECK-NEXT:    fsub d0, d0, d2
 ; CHECK-NEXT:    ret
   %mul = fmul double %a, %b
   %mul1 = fmul double %c, 2.000000e+00
@@ -41,9 +41,9 @@ define double @test3(double %a, double %b, double %c) {
 define double @test4(double %a, double %b, double %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd d2, d2, d2
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    fadd d1, d2, d2
-; CHECK-NEXT:    fsub d0, d0, d1
+; CHECK-NEXT:    fsub d0, d0, d2
 ; CHECK-NEXT:    ret
   %mul = fmul double %a, %b
   %mul1 = fmul double %c, -2.000000e+00
@@ -114,10 +114,10 @@ define double @test7(double %a, double %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov d2, #-2.00000000
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmul d1, d1, d2
 ; CHECK-NEXT:    fadd d8, d0, d1
 ; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, d8
@@ -268,8 +268,8 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s1, s0, s1
 ; CHECK-NEXT:    fmadd s0, s2, s3, s1
-; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
   store float %m1, float* %p
@@ -286,8 +286,8 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s2, s2, s3
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
-; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    str s2, [x0]
+; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d

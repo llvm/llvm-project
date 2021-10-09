@@ -76,12 +76,12 @@ define i1 @test_bs(i8* %s1, i8* %s2) optsize {
 ; CHECKN-NEXT:    ldr x12, [x0, #16]
 ; CHECKN-NEXT:    ldr x13, [x1, #16]
 ; CHECKN-NEXT:    ldur x14, [x0, #23]
-; CHECKN-NEXT:    ldur x15, [x1, #23]
 ; CHECKN-NEXT:    eor x8, x8, x10
+; CHECKN-NEXT:    ldur x15, [x1, #23]
 ; CHECKN-NEXT:    eor x9, x9, x11
 ; CHECKN-NEXT:    eor x10, x12, x13
-; CHECKN-NEXT:    eor x11, x14, x15
 ; CHECKN-NEXT:    orr x8, x8, x9
+; CHECKN-NEXT:    eor x11, x14, x15
 ; CHECKN-NEXT:    orr x9, x10, x11
 ; CHECKN-NEXT:    orr x8, x8, x9
 ; CHECKN-NEXT:    cmp x8, #0

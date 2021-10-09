@@ -87,8 +87,8 @@ define void @t7(i8* %f, i32 %g) nounwind {
 ; CHECK-LABEL: t7:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    str w1, [x8]
 ; CHECK-NEXT:    ; InlineAsm End
@@ -368,13 +368,13 @@ entry:
 define void @test_zero_reg(i32* %addr) {
 ; CHECK-LABEL: test_zero_reg:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(xzr)
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(wzr)
 ; CHECK-NEXT:    ; InlineAsm End
-; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(w8)
 ; CHECK-NEXT:    ; InlineAsm End
@@ -485,11 +485,11 @@ define void @test_vector_too_large_r_m(<9 x float>* nocapture readonly %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldr s0, [x0, #32]
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str s0, [sp, #32]
+; CHECK-NEXT:    ldr s0, [x0, #32]
 ; CHECK-NEXT:    stp q2, q1, [sp]
+; CHECK-NEXT:    str s0, [sp, #32]
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    add sp, sp, #64

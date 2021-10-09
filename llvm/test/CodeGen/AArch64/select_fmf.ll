@@ -7,12 +7,12 @@
 define float @select_select_fold_select_and(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: select_select_fold_select_and:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm s5, s1, s2
 ; CHECK-NEXT:    fcmp s1, s2
-; CHECK-NEXT:    fminnm s1, s1, s2
-; CHECK-NEXT:    fmaxnm s2, s0, s3
+; CHECK-NEXT:    fmaxnm s1, s0, s3
 ; CHECK-NEXT:    fmov s4, #0.50000000
-; CHECK-NEXT:    fccmp s1, s0, #4, lt
-; CHECK-NEXT:    fcsel s2, s2, s0, gt
+; CHECK-NEXT:    fccmp s5, s0, #4, lt
+; CHECK-NEXT:    fcsel s2, s1, s0, gt
 ; CHECK-NEXT:    fadd s1, s0, s4
 ; CHECK-NEXT:    fadd s4, s1, s2
 ; CHECK-NEXT:    fcmp s4, s1
@@ -23,14 +23,14 @@ define float @select_select_fold_select_and(float %w, float %x, float %y, float 
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %if.end.i159.i.i
 ; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    movk w8, #48844, lsl #16
 ; CHECK-NEXT:    mov w9, #13107
+; CHECK-NEXT:    movk w8, #48844, lsl #16
 ; CHECK-NEXT:    movk w9, #48819, lsl #16
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    fadd s2, s3, s2
 ; CHECK-NEXT:    fcmp s1, #0.0
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmov s4, w9
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s2, s3, s4
 ; CHECK-NEXT:    fcsel s0, s0, s2, gt
 ; CHECK-NEXT:    ret
   %tmp21 = fcmp fast olt float %x, %y
@@ -65,12 +65,12 @@ exit:                                     ; preds = %if.end.i159.i.i, %if.then.i
 define float @select_select_fold_select_or(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: select_select_fold_select_or:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm s5, s1, s2
 ; CHECK-NEXT:    fcmp s1, s2
-; CHECK-NEXT:    fminnm s1, s1, s2
-; CHECK-NEXT:    fmaxnm s2, s0, s3
+; CHECK-NEXT:    fmaxnm s1, s0, s3
 ; CHECK-NEXT:    fmov s4, #0.50000000
-; CHECK-NEXT:    fccmp s1, s0, #0, ge
-; CHECK-NEXT:    fcsel s2, s0, s2, gt
+; CHECK-NEXT:    fccmp s5, s0, #0, ge
+; CHECK-NEXT:    fcsel s2, s0, s1, gt
 ; CHECK-NEXT:    fadd s1, s0, s4
 ; CHECK-NEXT:    fadd s4, s1, s2
 ; CHECK-NEXT:    fcmp s4, s1
@@ -81,14 +81,14 @@ define float @select_select_fold_select_or(float %w, float %x, float %y, float %
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2: // %if.end.i159.i.i
 ; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    movk w8, #48844, lsl #16
 ; CHECK-NEXT:    mov w9, #13107
+; CHECK-NEXT:    movk w8, #48844, lsl #16
 ; CHECK-NEXT:    movk w9, #48819, lsl #16
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    fadd s2, s3, s2
 ; CHECK-NEXT:    fcmp s1, #0.0
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    fmov s4, w9
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s2, s3, s4
 ; CHECK-NEXT:    fcsel s0, s0, s2, gt
 ; CHECK-NEXT:    ret
   %tmp21 = fcmp fast olt float %x, %y

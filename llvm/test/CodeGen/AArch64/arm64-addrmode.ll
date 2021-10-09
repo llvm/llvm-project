@@ -67,9 +67,9 @@ define void @t5(i64 %a) {
 define void @t6(i64 %a, i64* %object) {
 ; CHECK-LABEL: t6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x1, x0, lsl #3
-; CHECK-NEXT:    mov w9, #32768
-; CHECK-NEXT:    ldr xzr, [x8, x9]
+; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    add x9, x1, x0, lsl #3
+; CHECK-NEXT:    ldr xzr, [x9, x8]
 ; CHECK-NEXT:    ret
   %tmp1 = getelementptr inbounds i64, i64* %object, i64 %a
   %incdec.ptr = getelementptr inbounds i64, i64* %tmp1, i64 4096

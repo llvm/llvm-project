@@ -27,8 +27,8 @@ define i64 @test_chains() {
 
 ; CHECK: ldurb {{w[0-9]+}}, [x29, [[LOCADDR:#-?[0-9]+]]]
 ; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #1
-; CHECK: sturb w[[STRVAL:[0-9]+]], [x29, [[LOCADDR]]]
-; CHECK: and x0, x[[STRVAL]], #0xff
+; CHECK: and x0, x[[STRVAL:[0-9]+]], #0xff
+; CHECK: sturb w[[STRVAL]], [x29, [[LOCADDR]]]
 
   %ret.1 = load i8, i8* %locvar
   %ret.2 = zext i8 %ret.1 to i64

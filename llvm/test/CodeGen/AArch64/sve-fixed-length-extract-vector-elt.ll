@@ -67,8 +67,8 @@ define half @extractelement_v32f16(<32 x half>* %a) #0 {
 define half @extractelement_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: extractelement_v64f16:
 ; VBITS_GE_1024:         ptrue   p0.h, vl64
-; VBITS_GE_1024-NEXT:    ld1h    { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    mov w8, #63
+; VBITS_GE_1024-NEXT:    ld1h    { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    whilels p0.h, xzr, x8
 ; VBITS_GE_1024-NEXT:    lastb   h0, p0, z0.h
 ; VBITS_GE_1024-NEXT:    ret
@@ -80,8 +80,8 @@ define half @extractelement_v64f16(<64 x half>* %a) #0 {
 define half @extractelement_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: extractelement_v128f16:
 ; VBITS_GE_2048:      ptrue   p0.h, vl128
-; VBITS_GE_2048-NEXT: ld1h    { z0.h }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT: mov w8, #127
+; VBITS_GE_2048-NEXT: ld1h    { z0.h }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT: whilels p0.h, xzr, x8
 ; VBITS_GE_2048-NEXT: lastb   h0, p0, z0.h
 ; VBITS_GE_2048-NEXT: ret
@@ -133,8 +133,8 @@ define float @extractelement_v16f32(<16 x float>* %a) #0 {
 define float @extractelement_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: extractelement_v32f32:
 ; VBITS_GE_1024:        ptrue   p0.s, vl32
-; VBITS_GE_1024-NEXT:   ld1w    { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:   mov w8, #31
+; VBITS_GE_1024-NEXT:   ld1w    { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:   whilels p0.s, xzr, x8
 ; VBITS_GE_1024-NEXT:   lastb   s0, p0, z0.s
 ; VBITS_GE_1024-NEXT:   ret
@@ -146,8 +146,8 @@ define float @extractelement_v32f32(<32 x float>* %a) #0 {
 define float @extractelement_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: extractelement_v64f32:
 ; VBITS_GE_2048:        ptrue   p0.s, vl64
-; VBITS_GE_2048-NEXT:   ld1w    { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:   mov w8, #63
+; VBITS_GE_2048-NEXT:   ld1w    { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:   whilels p0.s, xzr, x8
 ; VBITS_GE_2048-NEXT:   lastb   s0, p0, z0.s
 ; VBITS_GE_2048-NEXT:   ret
@@ -198,8 +198,8 @@ define double @extractelement_v8f64(<8 x double>* %a) #0 {
 define double @extractelement_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: extractelement_v16f64:
 ; VBITS_GE_1024:         ptrue   p0.d, vl16
-; VBITS_GE_1024-NEXT:    ld1d    { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    mov w8, #15
+; VBITS_GE_1024-NEXT:    ld1d    { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    whilels p0.d, xzr, x8
 ; VBITS_GE_1024-NEXT:    lastb   d0, p0, z0.d
 ; VBITS_GE_1024-NEXT:    ret
@@ -211,8 +211,8 @@ define double @extractelement_v16f64(<16 x double>* %a) #0 {
 define double @extractelement_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: extractelement_v32f64:
 ; VBITS_GE_2048:         ptrue   p0.d, vl32
-; VBITS_GE_2048-NEXT:    ld1d    { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    mov w8, #31
+; VBITS_GE_2048-NEXT:    ld1d    { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    whilels p0.d, xzr, x8
 ; VBITS_GE_2048-NEXT:    lastb   d0, p0, z0.d
 ; VBITS_GE_2048-NEXT:    ret

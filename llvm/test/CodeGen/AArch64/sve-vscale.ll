@@ -70,8 +70,8 @@ define i32 @vscale_neg1() nounwind {
 
 ; CHECK-LABEL: rdvl_3:
 ; CHECK:       rdvl [[VL_B:x[0-9]+]], #1
-; CHECK-NEXT:  lsr  [[VL_Q:x[0-9]+]], [[VL_B]], #4
 ; CHECK-NEXT:  mov  w[[MUL:[0-9]+]], #3
+; CHECK-NEXT:  lsr  [[VL_Q:x[0-9]+]], [[VL_B]], #4
 ; CHECK-NEXT:  mul  x0, [[VL_Q]], x[[MUL]]
 ; CHECK-NEXT:  ret
 define i32 @rdvl_3() nounwind {

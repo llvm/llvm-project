@@ -49,13 +49,13 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, i1 %mask) #0 {
 define void @select_v16f16(<16 x half>* %a, <16 x half>* %b, i1 %mask) #0 {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
@@ -70,13 +70,13 @@ define void @select_v16f16(<16 x half>* %a, <16 x half>* %b, i1 %mask) #0 {
 define void @select_v32f16(<32 x half>* %a, <32 x half>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-LABEL: select_v32f16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    and w8, w2, #0x1
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    ptrue p1.h
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
 ; VBITS_GE_512-NEXT:    and z2.h, z2.h, #0x1
-; VBITS_GE_512-NEXT:    ptrue p1.h
 ; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; VBITS_GE_512-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
@@ -91,13 +91,13 @@ define void @select_v32f16(<32 x half>* %a, <32 x half>* %b, i1 %mask) #0 {
 define void @select_v64f16(<64 x half>* %a, <64 x half>* %b, i1 %mask) #0 {
 ; VBITS_GE_1024-LABEL: select_v64f16:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
 ; VBITS_GE_1024-NEXT:    and w8, w2, #0x1
+; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
 ; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    ptrue p1.h
 ; VBITS_GE_1024-NEXT:    mov z2.h, w8
 ; VBITS_GE_1024-NEXT:    and z2.h, z2.h, #0x1
-; VBITS_GE_1024-NEXT:    ptrue p1.h
 ; VBITS_GE_1024-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; VBITS_GE_1024-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x0]
@@ -112,13 +112,13 @@ define void @select_v64f16(<64 x half>* %a, <64 x half>* %b, i1 %mask) #0 {
 define void @select_v128f16(<128 x half>* %a, <128 x half>* %b, i1 %mask) #0 {
 ; VBITS_GE_2048-LABEL: select_v128f16:
 ; VBITS_GE_2048:       // %bb.0:
-; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
 ; VBITS_GE_2048-NEXT:    and w8, w2, #0x1
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
 ; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    ptrue p1.h
 ; VBITS_GE_2048-NEXT:    mov z2.h, w8
 ; VBITS_GE_2048-NEXT:    and z2.h, z2.h, #0x1
-; VBITS_GE_2048-NEXT:    ptrue p1.h
 ; VBITS_GE_2048-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; VBITS_GE_2048-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x0]
@@ -159,13 +159,13 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, i1 %mask) #
 define void @select_v8f32(<8 x float>* %a, <8 x float>* %b, i1 %mask) #0 {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    cmpne p1.s, p1/z, z2.s, #0
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
@@ -180,13 +180,13 @@ define void @select_v8f32(<8 x float>* %a, <8 x float>* %b, i1 %mask) #0 {
 define void @select_v16f32(<16 x float>* %a, <16 x float>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-LABEL: select_v16f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    and w8, w2, #0x1
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    mov z2.s, w8
 ; VBITS_GE_512-NEXT:    and z2.s, z2.s, #0x1
-; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    cmpne p1.s, p1/z, z2.s, #0
 ; VBITS_GE_512-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
@@ -201,13 +201,13 @@ define void @select_v16f32(<16 x float>* %a, <16 x float>* %b, i1 %mask) #0 {
 define void @select_v32f32(<32 x float>* %a, <32 x float>* %b, i1 %mask) #0 {
 ; VBITS_GE_1024-LABEL: select_v32f32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
 ; VBITS_GE_1024-NEXT:    and w8, w2, #0x1
+; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
 ; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    ptrue p1.s
 ; VBITS_GE_1024-NEXT:    mov z2.s, w8
 ; VBITS_GE_1024-NEXT:    and z2.s, z2.s, #0x1
-; VBITS_GE_1024-NEXT:    ptrue p1.s
 ; VBITS_GE_1024-NEXT:    cmpne p1.s, p1/z, z2.s, #0
 ; VBITS_GE_1024-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x0]
@@ -222,13 +222,13 @@ define void @select_v32f32(<32 x float>* %a, <32 x float>* %b, i1 %mask) #0 {
 define void @select_v64f32(<64 x float>* %a, <64 x float>* %b, i1 %mask) #0 {
 ; VBITS_GE_2048-LABEL: select_v64f32:
 ; VBITS_GE_2048:       // %bb.0:
-; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
 ; VBITS_GE_2048-NEXT:    and w8, w2, #0x1
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    ptrue p1.s
 ; VBITS_GE_2048-NEXT:    mov z2.s, w8
 ; VBITS_GE_2048-NEXT:    and z2.s, z2.s, #0x1
-; VBITS_GE_2048-NEXT:    ptrue p1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.s, p1/z, z2.s, #0
 ; VBITS_GE_2048-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x0]
@@ -269,13 +269,13 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, i1 %mask
 define void @select_v4f64(<4 x double>* %a, <4 x double>* %b, i1 %mask) #0 {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    and z2.d, z2.d, #0x1
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
@@ -290,13 +290,13 @@ define void @select_v4f64(<4 x double>* %a, <4 x double>* %b, i1 %mask) #0 {
 define void @select_v8f64(<8 x double>* %a, <8 x double>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-LABEL: select_v8f64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    and w8, w2, #0x1
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    mov z2.d, x8
 ; VBITS_GE_512-NEXT:    and z2.d, z2.d, #0x1
-; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_GE_512-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
@@ -311,13 +311,13 @@ define void @select_v8f64(<8 x double>* %a, <8 x double>* %b, i1 %mask) #0 {
 define void @select_v16f64(<16 x double>* %a, <16 x double>* %b, i1 %mask) #0 {
 ; VBITS_GE_1024-LABEL: select_v16f64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
 ; VBITS_GE_1024-NEXT:    and w8, w2, #0x1
+; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    ptrue p1.d
 ; VBITS_GE_1024-NEXT:    mov z2.d, x8
 ; VBITS_GE_1024-NEXT:    and z2.d, z2.d, #0x1
-; VBITS_GE_1024-NEXT:    ptrue p1.d
 ; VBITS_GE_1024-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_GE_1024-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x0]
@@ -332,13 +332,13 @@ define void @select_v16f64(<16 x double>* %a, <16 x double>* %b, i1 %mask) #0 {
 define void @select_v32f64(<32 x double>* %a, <32 x double>* %b, i1 %mask) #0 {
 ; VBITS_GE_2048-LABEL: select_v32f64:
 ; VBITS_GE_2048:       // %bb.0:
-; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    and w8, w2, #0x1
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    ptrue p1.d
 ; VBITS_GE_2048-NEXT:    mov z2.d, x8
 ; VBITS_GE_2048-NEXT:    and z2.d, z2.d, #0x1
-; VBITS_GE_2048-NEXT:    ptrue p1.d
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; VBITS_GE_2048-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x0]

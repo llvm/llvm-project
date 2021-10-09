@@ -23,8 +23,8 @@ define double @fadda_nxv8f64(double %init, <vscale x 8 x double> %a) {
 define float @faddv_nxv8f32(float %init, <vscale x 8 x float> %a) {
 ; CHECK-LABEL: faddv_nxv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret

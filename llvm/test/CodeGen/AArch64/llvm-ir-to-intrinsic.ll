@@ -12,18 +12,18 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    sunpkhi z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpkhi z4.s, z2.h
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    sunpkhi z5.s, z1.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    sunpkhi z3.s, z0.h
+; CHECK-NEXT:    sunpkhi z3.s, z1.h
+; CHECK-NEXT:    sunpkhi z5.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z5.s
+; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z4.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
@@ -36,9 +36,9 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @sdiv_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: sdiv_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
@@ -113,24 +113,24 @@ define <vscale x 16 x i8> @srem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    sunpkhi z2.h, z1.b
 ; CHECK-NEXT:    sunpkhi z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sunpklo z4.h, z1.b
-; CHECK-NEXT:    sunpklo z5.h, z0.b
-; CHECK-NEXT:    sunpkhi z6.s, z2.h
-; CHECK-NEXT:    sunpkhi z7.s, z3.h
+; CHECK-NEXT:    sunpkhi z5.s, z2.h
+; CHECK-NEXT:    sunpkhi z6.s, z3.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
-; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
-; CHECK-NEXT:    sunpkhi z7.s, z4.h
+; CHECK-NEXT:    sunpklo z4.h, z1.b
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    sunpkhi z3.s, z5.h
+; CHECK-NEXT:    sunpklo z3.h, z0.b
+; CHECK-NEXT:    sdivr z5.s, p0/m, z5.s, z6.s
+; CHECK-NEXT:    sunpkhi z6.s, z4.h
+; CHECK-NEXT:    sunpkhi z7.s, z3.h
 ; CHECK-NEXT:    sunpklo z4.s, z4.h
-; CHECK-NEXT:    sunpklo z5.s, z5.h
-; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z7.s
-; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z6.h
-; CHECK-NEXT:    uzp1 z3.h, z4.h, z3.h
-; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
+; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
+; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z5.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z6.h
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    ret
   %div = srem <vscale x 16 x i8> %a, %b
@@ -140,11 +140,11 @@ define <vscale x 16 x i8> @srem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @srem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: srem_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z4.s, z1.h
+; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z5.s, z0.h
 ; CHECK-NEXT:    movprfx z3, z5
 ; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
@@ -191,18 +191,18 @@ define <vscale x 16 x i8> @udiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    uunpkhi z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpkhi z4.s, z2.h
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    uunpkhi z5.s, z1.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    uunpkhi z3.s, z1.h
+; CHECK-NEXT:    uunpkhi z5.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z5.s
+; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z4.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
@@ -215,9 +215,9 @@ define <vscale x 16 x i8> @udiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @udiv_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: udiv_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
@@ -293,24 +293,24 @@ define <vscale x 16 x i8> @urem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    uunpkhi z2.h, z1.b
 ; CHECK-NEXT:    uunpkhi z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uunpklo z4.h, z1.b
-; CHECK-NEXT:    uunpklo z5.h, z0.b
-; CHECK-NEXT:    uunpkhi z6.s, z2.h
-; CHECK-NEXT:    uunpkhi z7.s, z3.h
+; CHECK-NEXT:    uunpkhi z5.s, z2.h
+; CHECK-NEXT:    uunpkhi z6.s, z3.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
-; CHECK-NEXT:    uunpkhi z7.s, z4.h
+; CHECK-NEXT:    uunpklo z4.h, z1.b
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    uunpkhi z3.s, z5.h
+; CHECK-NEXT:    uunpklo z3.h, z0.b
+; CHECK-NEXT:    udivr z5.s, p0/m, z5.s, z6.s
+; CHECK-NEXT:    uunpkhi z6.s, z4.h
+; CHECK-NEXT:    uunpkhi z7.s, z3.h
 ; CHECK-NEXT:    uunpklo z4.s, z4.h
-; CHECK-NEXT:    uunpklo z5.s, z5.h
-; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z7.s
-; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z6.h
-; CHECK-NEXT:    uzp1 z3.h, z4.h, z3.h
-; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
+; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
+; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z5.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z6.h
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    ret
   %div = urem <vscale x 16 x i8> %a, %b
@@ -320,11 +320,11 @@ define <vscale x 16 x i8> @urem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @urem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: urem_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z4.s, z1.h
+; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
 ; CHECK-NEXT:    movprfx z3, z5
 ; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
@@ -424,9 +424,9 @@ define <vscale x 32 x i16> @smin_split_i16(<vscale x 32 x i16> %a, <vscale x 32 
 ; CHECK-LABEL: smin_split_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    smin z2.h, p0/m, z2.h, z6.h
 ; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z4.h
 ; CHECK-NEXT:    smin z1.h, p0/m, z1.h, z5.h
-; CHECK-NEXT:    smin z2.h, p0/m, z2.h, z6.h
 ; CHECK-NEXT:    smin z3.h, p0/m, z3.h, z7.h
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 32 x i16> %a, %b
@@ -775,8 +775,8 @@ define <vscale x 2 x i32> @asr_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x 
 ; CHECK-LABEL: asr_promote_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %shr = ashr <vscale x 2 x i32> %a, %b
@@ -1067,9 +1067,9 @@ define <vscale x 64 x i1> @cmp_split_64(<vscale x 64 x i8> %a, <vscale x 64 x i8
 ; CHECK-LABEL: cmp_split_64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p3.b
+; CHECK-NEXT:    cmpgt p2.b, p3/z, z2.b, z6.b
 ; CHECK-NEXT:    cmpgt p0.b, p3/z, z0.b, z4.b
 ; CHECK-NEXT:    cmpgt p1.b, p3/z, z1.b, z5.b
-; CHECK-NEXT:    cmpgt p2.b, p3/z, z2.b, z6.b
 ; CHECK-NEXT:    cmpgt p3.b, p3/z, z3.b, z7.b
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 64 x i8> %a, %b
@@ -1083,14 +1083,15 @@ declare <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x 
 define <vscale x 2 x i64> @fshl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c){
 ; CHECK-LABEL: fshl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z3.d, z2.d, z3.d
+; CHECK-NEXT:    mov z4.d, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z3.d, z2.d
+; CHECK-NEXT:    eor z2.d, z2.d, z4.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lsr z1.d, z1.d, #1
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    lsr z1.d, z1.d, #1
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z3.d
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
@@ -1102,18 +1103,18 @@ define <vscale x 4 x i64> @fshl_illegal_i64(<vscale x 4 x i64> %a, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z6.d, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    eor z7.d, z5.d, z6.d
-; CHECK-NEXT:    and z5.d, z5.d, #0x3f
-; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z5.d
-; CHECK-NEXT:    eor z5.d, z4.d, z6.d
+; CHECK-NEXT:    eor z7.d, z4.d, z6.d
+; CHECK-NEXT:    eor z6.d, z5.d, z6.d
+; CHECK-NEXT:    and z7.d, z7.d, #0x3f
 ; CHECK-NEXT:    lsr z2.d, z2.d, #1
-; CHECK-NEXT:    lsr z3.d, z3.d, #1
 ; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    and z5.d, z5.d, #0x3f
-; CHECK-NEXT:    and z7.d, z7.d, #0x3f
+; CHECK-NEXT:    and z6.d, z6.d, #0x3f
+; CHECK-NEXT:    lsr z3.d, z3.d, #1
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, z7.d
 ; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z4.d
-; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, z5.d
-; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, z7.d
+; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z5.d
+; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, z6.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
@@ -1127,11 +1128,11 @@ define <vscale x 2 x i64> @fshl_rot_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    subr z1.d, z1.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z1.d, z1.d, #0x3f
-; CHECK-NEXT:    lslr z2.d, p0/m, z2.d, z0.d
-; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    orr z0.d, z2.d, z0.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    lsrr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %fshl
@@ -1143,19 +1144,20 @@ define <vscale x 4 x i64> @fshl_rot_illegal_i64(<vscale x 4 x i64> %a, <vscale x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z4.d, z2.d
 ; CHECK-NEXT:    subr z2.d, z2.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and z4.d, z4.d, #0x3f
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
-; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z0.d
-; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, z3.d
+; CHECK-NEXT:    mov z5.d, z3.d
 ; CHECK-NEXT:    subr z3.d, z3.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
-; CHECK-NEXT:    lslr z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    lsrr z2.d, p0/m, z2.d, z0.d
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z4.d
+; CHECK-NEXT:    and z5.d, z5.d, #0x3f
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    lsl z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z4.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    orr z1.d, z4.d, z1.d
 ; CHECK-NEXT:    ret
   %fshl = call <vscale x 4 x i64> @llvm.fshl.nxv4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %a, <vscale x 4 x i64> %b)
   ret <vscale x 4 x i64> %fshl
@@ -1177,14 +1179,15 @@ define <vscale x 2 x i64> @fshl_rot_const_i64(<vscale x 2 x i64> %a){
 define <vscale x 2 x i64> @fshr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c){
 ; CHECK-LABEL: fshr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z3.d, z2.d, z3.d
+; CHECK-NEXT:    mov z4.d, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z3.d, z2.d
+; CHECK-NEXT:    eor z2.d, z2.d, z4.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lsl z0.d, z0.d, #1
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z3.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    lsl z0.d, z0.d, #1
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fshr = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
@@ -1197,11 +1200,11 @@ define <vscale x 2 x i64> @fshr_rot_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    subr z1.d, z1.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z1.d, z1.d, #0x3f
-; CHECK-NEXT:    lsrr z2.d, p0/m, z2.d, z0.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    orr z0.d, z2.d, z0.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    lslr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fshr = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %fshr

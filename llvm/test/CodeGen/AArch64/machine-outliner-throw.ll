@@ -36,8 +36,8 @@ define dso_local i32 @_Z5func2c(i8 %x) #0 {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    orr w9, wzr, #0x1
 ; CHECK-NEXT:    mov w0, #4
+; CHECK-NEXT:    orr w9, wzr, #0x1
 ; CHECK-NEXT:    madd w19, w8, w8, w9
 ; CHECK-NEXT:    bl __cxa_allocate_exception
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
@@ -55,8 +55,8 @@ entry:
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:      .cfi_startproc
 ; CHECK:        adrp    x1, _ZTIi
-; CHECK-NEXT:   add     x1, x1, :lo12:_ZTIi
 ; CHECK-NEXT:   mov     x2, xzr
+; CHECK-NEXT:   add     x1, x1, :lo12:_ZTIi
 ; CHECK-NEXT:   str     w19, [x0]
 ; CHECK-NEXT:   b       __cxa_throw
 ; CHECK:      .cfi_endproc

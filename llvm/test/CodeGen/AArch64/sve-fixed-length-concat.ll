@@ -45,9 +45,9 @@ define <16 x i8> @concat_v16i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 
 define void @concat_v32i8(<16 x i8>* %a, <16 x i8>* %b, <32 x i8>* %c) #0 {
 ; CHECK-LABEL: concat_v32i8:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].b, vl16
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].b, [[PG1]], z[[OP1]].b, z[[OP2]].b
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].b, vl32
 ; CHECK-NEXT: st1b { [[RES]].b }, [[PG2]], [x2]
@@ -187,9 +187,9 @@ define <8 x i16> @concat_v8i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 
 define void @concat_v16i16(<8 x i16>* %a, <8 x i16>* %b, <16 x i16>* %c) #0 {
 ; CHECK-LABEL: concat_v16i16:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].h, vl8
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].h, [[PG1]], z[[OP1]].h, z[[OP2]].h
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].h, vl16
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG2]], [x2]
@@ -299,9 +299,9 @@ define <4 x i32> @concat_v4i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 
 define void @concat_v8i32(<4 x i32>* %a, <4 x i32>* %b, <8 x i32>* %c) #0 {
 ; CHECK-LABEL: concat_v8i32:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl4
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].s, [[PG1]], z[[OP1]].s, z[[OP2]].s
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].s, vl8
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG2]], [x2]
@@ -387,9 +387,9 @@ define <2 x i64> @concat_v2i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 
 define void @concat_v4i64(<2 x i64>* %a, <2 x i64>* %b, <4 x i64>* %c) #0 {
 ; CHECK-LABEL: concat_v4i64:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].d, vl2
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].d, [[PG1]], z[[OP1]].d, z[[OP2]].d
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].d, vl4
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG2]], [x2]
@@ -478,9 +478,9 @@ define <8 x half> @concat_v8f16(<4 x half> %op1, <4 x half> %op2) #0 {
 
 define void @concat_v16f16(<8 x half>* %a, <8 x half>* %b, <16 x half>* %c) #0 {
 ; CHECK-LABEL: concat_v16f16:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].h, vl8
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].h, [[PG1]], z[[OP1]].h, z[[OP2]].h
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].h, vl16
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG2]], [x2]
@@ -590,9 +590,9 @@ define <4 x float> @concat_v4f32(<2 x float> %op1, <2 x float> %op2) #0 {
 
 define void @concat_v8f32(<4 x float>* %a, <4 x float>* %b, <8 x float>* %c) #0 {
 ; CHECK-LABEL: concat_v8f32:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl4
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].s, [[PG1]], z[[OP1]].s, z[[OP2]].s
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].s, vl8
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG2]], [x2]
@@ -678,9 +678,9 @@ define <2 x double> @concat_v2f64(<1 x double> %op1, <1 x double> %op2) #0 {
 
 define void @concat_v4f64(<2 x double>* %a, <2 x double>* %b, <4 x double>* %c) #0 {
 ; CHECK-LABEL: concat_v4f64:
-; CHECK: ldr q[[OP1:[0-9]+]], [x0]
-; CHECK-NEXT: ldr q[[OP2:[0-9]+]], [x1]
+; CHECK: ldr q[[OP2:[0-9]+]], [x1]
 ; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].d, vl2
+; CHECK-NEXT: ldr q[[OP1:[0-9]+]], [x0]
 ; CHECK-NEXT: splice [[RES:z[0-9]+]].d, [[PG1]], z[[OP1]].d, z[[OP2]].d
 ; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].d, vl4
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG2]], [x2]

@@ -39,8 +39,9 @@ define <2 x i8> @splice_v2i8_idx(<2 x i8> %a, <2 x i8> %b) #0 {
 define <8 x i32> @splice_v8i32_idx(<8 x i32> %a, <8 x i32> %b) #0 {
 ; CHECK-LABEL: splice_v8i32_idx:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v3.16b, v2.16b, v3.16b, #4
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #4
-; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #4
+; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    ret
   %res = call <8 x i32> @llvm.experimental.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 5)
   ret <8 x i32> %res
@@ -50,10 +51,12 @@ define <8 x i32> @splice_v8i32_idx(<8 x i32> %a, <8 x i32> %b) #0 {
 define <16 x float> @splice_v16f32_idx(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-LABEL: splice_v16f32_idx:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v5.16b, v4.16b, v5.16b, #12
+; CHECK-NEXT:    ext v6.16b, v2.16b, v3.16b, #12
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #12
-; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #12
 ; CHECK-NEXT:    ext v2.16b, v3.16b, v4.16b, #12
-; CHECK-NEXT:    ext v3.16b, v4.16b, v5.16b, #12
+; CHECK-NEXT:    mov v3.16b, v5.16b
+; CHECK-NEXT:    mov v1.16b, v6.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 7)
   ret <16 x float> %res
@@ -104,8 +107,9 @@ define <2 x i8> @splice_v2i8(<2 x i8> %a, <2 x i8> %b) #0 {
 define <8 x i32> @splice_v8i32(<8 x i32> %a, <8 x i32> %b) #0 {
 ; CHECK-LABEL: splice_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v3.16b, v2.16b, v3.16b, #4
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #4
-; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #4
+; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    ret
   %res = call <8 x i32> @llvm.experimental.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 -3)
   ret <8 x i32> %res
@@ -115,10 +119,12 @@ define <8 x i32> @splice_v8i32(<8 x i32> %a, <8 x i32> %b) #0 {
 define <16 x float> @splice_v16f32(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-LABEL: splice_v16f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v5.16b, v4.16b, v5.16b, #12
+; CHECK-NEXT:    ext v6.16b, v2.16b, v3.16b, #12
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #12
-; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #12
 ; CHECK-NEXT:    ext v2.16b, v3.16b, v4.16b, #12
-; CHECK-NEXT:    ext v3.16b, v4.16b, v5.16b, #12
+; CHECK-NEXT:    mov v3.16b, v5.16b
+; CHECK-NEXT:    mov v1.16b, v6.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 -9)
   ret <16 x float> %res

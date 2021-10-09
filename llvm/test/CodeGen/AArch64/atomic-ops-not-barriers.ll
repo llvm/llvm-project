@@ -21,7 +21,7 @@ atomic_ver:
   ; The key point here is that the second dmb isn't immediately followed by the
   ; simple_ver basic block, which LLVM attempted to do when DMB had been marked
   ; with isBarrier. For now, look for something that looks like "somewhere".
-; CHECK-NEXT: mov
+; CHECK-NEXT: ret
 somewhere:
   %combined = phi i32 [ %val, %atomic_ver ], [ %newval, %simple_ver]
   ret i32 %combined

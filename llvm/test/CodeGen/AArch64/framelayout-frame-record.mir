@@ -16,9 +16,8 @@ body: |
 
 # CHECK: stp d9, d8, [sp, #-48]!
 # CHECK: stp x29, x30, [sp, #16]
-# CHECK: str x19, [sp, #32]
-
 # CHECK: add x29, sp, #16
+# CHECK: str x19, [sp, #32]
 
 # CHECK: .cfi_def_cfa w29, 32
 # CHECK: .cfi_offset w19, -16

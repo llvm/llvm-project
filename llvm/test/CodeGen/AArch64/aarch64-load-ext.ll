@@ -106,18 +106,18 @@ define <2 x i32> @fsext_v2i32(<2 x i8>* %a) {
 ; CHECK-LE-LABEL: fsext_v2i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldrsb w8, [x0]
-; CHECK-LE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-LE-NEXT:    fmov s0, w8
-; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    ldrsb w8, [x0, #1]
+; CHECK-LE-NEXT:    mov v0.s[1], w8
 ; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v2i32:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldrsb w8, [x0]
-; CHECK-BE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-BE-NEXT:    fmov s0, w8
-; CHECK-BE-NEXT:    mov v0.s[1], w9
+; CHECK-BE-NEXT:    ldrsb w8, [x0, #1]
+; CHECK-BE-NEXT:    mov v0.s[1], w8
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
   %x = load <2 x i8>, <2 x i8>* %a
@@ -187,12 +187,12 @@ define <8 x i32> @fsext_v8i32(<8 x i8>* %a) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ld1 { v0.8b }, [x0]
 ; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-BE-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-BE-NEXT:    sshll2 v1.4s, v0.8h, #0
+; CHECK-BE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v1.4s
-; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
   %x = load <8 x i8>, <8 x i8>* %a
   %y = sext <8 x i8> %x to <8 x i32>
@@ -251,18 +251,18 @@ define <2 x i16> @fsext_v2i16(<2 x i8>* %a) {
 ; CHECK-LE-LABEL: fsext_v2i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldrsb w8, [x0]
-; CHECK-LE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-LE-NEXT:    fmov s0, w8
-; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    ldrsb w8, [x0, #1]
+; CHECK-LE-NEXT:    mov v0.s[1], w8
 ; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v2i16:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldrsb w8, [x0]
-; CHECK-BE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-BE-NEXT:    fmov s0, w8
-; CHECK-BE-NEXT:    mov v0.s[1], w9
+; CHECK-BE-NEXT:    ldrsb w8, [x0, #1]
+; CHECK-BE-NEXT:    mov v0.s[1], w8
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
   %x = load <2 x i8>, <2 x i8>* %a
@@ -344,12 +344,12 @@ define <16 x i16> @fsext_v16i16(<16 x i8>* %a) {
 ; CHECK-BE-LABEL: fsext_v16i16:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ld1 { v0.16b }, [x0]
-; CHECK-BE-NEXT:    sshll v1.8h, v0.8b, #0
-; CHECK-BE-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-BE-NEXT:    sshll2 v1.8h, v0.16b, #0
+; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.8h, v1.8h
-; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
   %x = load <16 x i8>, <16 x i8>* %a
   %y = sext <16 x i8> %x to <16 x i16>

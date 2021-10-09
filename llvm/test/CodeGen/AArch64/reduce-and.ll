@@ -44,13 +44,13 @@ define i1 @test_redand_v4i1(<4 x i1> %a) {
 ; CHECK-LABEL: test_redand_v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -62,10 +62,10 @@ define i1 @test_redand_v4i1(<4 x i1> %a) {
 ; GISEL-NEXT:    mov h3, v0.h[3]
 ; GISEL-NEXT:    fmov w8, s0
 ; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
-; GISEL-NEXT:    and w9, w9, w10
+; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w8, w8, w9
 ; GISEL-NEXT:    and w0, w8, #0x1
 ; GISEL-NEXT:    ret
@@ -77,21 +77,21 @@ define i1 @test_redand_v8i1(<8 x i1> %a) {
 ; CHECK-LABEL: test_redand_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w14, v0.b[1]
-; CHECK-NEXT:    umov w15, v0.b[0]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    and w14, w15, w14
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    and w13, w14, w13
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    and w12, w13, w12
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    and w11, w12, w11
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    and w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
 ; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    umov w9, v0.b[6]
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    and w8, w8, w12
+; CHECK-NEXT:    and w8, w8, w13
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w10
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -101,24 +101,24 @@ define i1 @test_redand_v8i1(<8 x i1> %a) {
 ; GISEL-NEXT:    mov b1, v0.b[1]
 ; GISEL-NEXT:    mov b2, v0.b[2]
 ; GISEL-NEXT:    mov b3, v0.b[3]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    mov b4, v0.b[4]
 ; GISEL-NEXT:    mov b5, v0.b[5]
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
-; GISEL-NEXT:    and w9, w9, w10
-; GISEL-NEXT:    fmov w10, s4
-; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    and w10, w10, w11
-; GISEL-NEXT:    fmov w11, s6
-; GISEL-NEXT:    fmov w12, s7
-; GISEL-NEXT:    and w11, w11, w12
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s4
+; GISEL-NEXT:    fmov w13, s5
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    and w10, w10, w11
+; GISEL-NEXT:    fmov w11, s7
+; GISEL-NEXT:    and w12, w12, w13
+; GISEL-NEXT:    and w8, w8, w10
+; GISEL-NEXT:    and w9, w9, w11
+; GISEL-NEXT:    and w9, w12, w9
 ; GISEL-NEXT:    and w8, w8, w9
 ; GISEL-NEXT:    and w0, w8, #0x1
 ; GISEL-NEXT:    ret
@@ -133,19 +133,19 @@ define i1 @test_redand_v16i1(<16 x i1> %a) {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w12
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -154,47 +154,47 @@ define i1 @test_redand_v16i1(<16 x i1> %a) {
 ; GISEL-NEXT:    mov b1, v0.b[1]
 ; GISEL-NEXT:    mov b2, v0.b[2]
 ; GISEL-NEXT:    mov b3, v0.b[3]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    mov b4, v0.b[4]
 ; GISEL-NEXT:    mov b5, v0.b[5]
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
-; GISEL-NEXT:    and w9, w9, w10
-; GISEL-NEXT:    fmov w10, s4
-; GISEL-NEXT:    fmov w11, s5
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    mov b16, v0.b[8]
 ; GISEL-NEXT:    mov b17, v0.b[9]
-; GISEL-NEXT:    and w10, w10, w11
-; GISEL-NEXT:    fmov w11, s6
-; GISEL-NEXT:    fmov w12, s7
 ; GISEL-NEXT:    mov b18, v0.b[10]
 ; GISEL-NEXT:    mov b19, v0.b[11]
-; GISEL-NEXT:    and w11, w11, w12
-; GISEL-NEXT:    fmov w12, s16
-; GISEL-NEXT:    fmov w13, s17
-; GISEL-NEXT:    mov b20, v0.b[12]
-; GISEL-NEXT:    mov b21, v0.b[13]
-; GISEL-NEXT:    and w12, w12, w13
-; GISEL-NEXT:    fmov w13, s18
-; GISEL-NEXT:    fmov w14, s19
-; GISEL-NEXT:    mov b22, v0.b[14]
-; GISEL-NEXT:    mov b23, v0.b[15]
-; GISEL-NEXT:    and w13, w13, w14
-; GISEL-NEXT:    fmov w14, s20
-; GISEL-NEXT:    fmov w15, s21
-; GISEL-NEXT:    and w14, w14, w15
-; GISEL-NEXT:    fmov w15, s22
-; GISEL-NEXT:    fmov w16, s23
-; GISEL-NEXT:    and w15, w15, w16
 ; GISEL-NEXT:    and w8, w8, w9
 ; GISEL-NEXT:    and w9, w10, w11
-; GISEL-NEXT:    and w10, w12, w13
-; GISEL-NEXT:    and w11, w14, w15
+; GISEL-NEXT:    fmov w10, s4
+; GISEL-NEXT:    fmov w11, s5
+; GISEL-NEXT:    fmov w12, s6
+; GISEL-NEXT:    fmov w13, s7
+; GISEL-NEXT:    mov b20, v0.b[12]
+; GISEL-NEXT:    mov b21, v0.b[13]
+; GISEL-NEXT:    mov b22, v0.b[14]
+; GISEL-NEXT:    mov b23, v0.b[15]
+; GISEL-NEXT:    and w10, w10, w11
+; GISEL-NEXT:    and w11, w12, w13
+; GISEL-NEXT:    fmov w12, s16
+; GISEL-NEXT:    fmov w13, s17
+; GISEL-NEXT:    fmov w14, s18
+; GISEL-NEXT:    fmov w15, s19
+; GISEL-NEXT:    fmov w16, s22
+; GISEL-NEXT:    fmov w17, s23
 ; GISEL-NEXT:    and w8, w8, w9
+; GISEL-NEXT:    and w12, w12, w13
+; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    and w13, w14, w15
+; GISEL-NEXT:    fmov w14, s20
+; GISEL-NEXT:    fmov w15, s21
+; GISEL-NEXT:    and w10, w12, w13
+; GISEL-NEXT:    and w8, w8, w9
+; GISEL-NEXT:    and w14, w14, w15
+; GISEL-NEXT:    and w15, w16, w17
+; GISEL-NEXT:    and w11, w14, w15
 ; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w8, w8, w9
 ; GISEL-NEXT:    and w0, w8, #0x1
@@ -240,13 +240,13 @@ define i8 @test_redand_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: test_redand_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v4i8:
@@ -257,10 +257,10 @@ define i8 @test_redand_v4i8(<4 x i8> %a) {
 ; GISEL-NEXT:    mov h3, v0.h[3]
 ; GISEL-NEXT:    fmov w8, s0
 ; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
-; GISEL-NEXT:    and w9, w9, w10
+; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> %a)
@@ -271,21 +271,21 @@ define i8 @test_redand_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: test_redand_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w14, v0.b[1]
-; CHECK-NEXT:    umov w15, v0.b[0]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    and w14, w15, w14
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    and w13, w14, w13
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    and w12, w13, w12
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    and w11, w12, w11
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    and w8, w8, w12
+; CHECK-NEXT:    and w8, w8, w13
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w0, w8, w10
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v8i8:
@@ -294,24 +294,24 @@ define i8 @test_redand_v8i8(<8 x i8> %a) {
 ; GISEL-NEXT:    mov b1, v0.b[1]
 ; GISEL-NEXT:    mov b2, v0.b[2]
 ; GISEL-NEXT:    mov b3, v0.b[3]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    mov b4, v0.b[4]
 ; GISEL-NEXT:    mov b5, v0.b[5]
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
-; GISEL-NEXT:    and w9, w9, w10
-; GISEL-NEXT:    fmov w10, s4
-; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    and w10, w10, w11
-; GISEL-NEXT:    fmov w11, s6
-; GISEL-NEXT:    fmov w12, s7
-; GISEL-NEXT:    and w11, w11, w12
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s4
+; GISEL-NEXT:    fmov w13, s5
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    and w10, w10, w11
+; GISEL-NEXT:    fmov w11, s7
+; GISEL-NEXT:    and w12, w12, w13
+; GISEL-NEXT:    and w8, w8, w10
+; GISEL-NEXT:    and w9, w9, w11
+; GISEL-NEXT:    and w9, w12, w9
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> %a)
@@ -325,19 +325,19 @@ define i8 @test_redand_v16i8(<16 x i8> %a) {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w12
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v16i8:
@@ -347,24 +347,24 @@ define i8 @test_redand_v16i8(<16 x i8> %a) {
 ; GISEL-NEXT:    mov b1, v0.b[1]
 ; GISEL-NEXT:    mov b2, v0.b[2]
 ; GISEL-NEXT:    mov b3, v0.b[3]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    mov b4, v0.b[4]
 ; GISEL-NEXT:    mov b5, v0.b[5]
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
-; GISEL-NEXT:    and w9, w9, w10
-; GISEL-NEXT:    fmov w10, s4
-; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    and w10, w10, w11
-; GISEL-NEXT:    fmov w11, s6
-; GISEL-NEXT:    fmov w12, s7
-; GISEL-NEXT:    and w11, w11, w12
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s4
+; GISEL-NEXT:    fmov w13, s5
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    and w10, w10, w11
+; GISEL-NEXT:    fmov w11, s7
+; GISEL-NEXT:    and w12, w12, w13
+; GISEL-NEXT:    and w8, w8, w10
+; GISEL-NEXT:    and w9, w9, w11
+; GISEL-NEXT:    and w9, w12, w9
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %a)
@@ -379,19 +379,19 @@ define i8 @test_redand_v32i8(<32 x i8> %a) {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v0.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w12
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v32i8:
@@ -402,24 +402,24 @@ define i8 @test_redand_v32i8(<32 x i8> %a) {
 ; GISEL-NEXT:    mov b1, v0.b[1]
 ; GISEL-NEXT:    mov b2, v0.b[2]
 ; GISEL-NEXT:    mov b3, v0.b[3]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    mov b4, v0.b[4]
 ; GISEL-NEXT:    mov b5, v0.b[5]
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
-; GISEL-NEXT:    and w9, w9, w10
-; GISEL-NEXT:    fmov w10, s4
-; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    and w10, w10, w11
-; GISEL-NEXT:    fmov w11, s6
-; GISEL-NEXT:    fmov w12, s7
-; GISEL-NEXT:    and w11, w11, w12
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s4
+; GISEL-NEXT:    fmov w13, s5
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    and w10, w10, w11
+; GISEL-NEXT:    fmov w11, s7
+; GISEL-NEXT:    and w12, w12, w13
+; GISEL-NEXT:    and w8, w8, w10
+; GISEL-NEXT:    and w9, w9, w11
+; GISEL-NEXT:    and w9, w12, w9
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> %a)
@@ -430,13 +430,13 @@ define i16 @test_redand_v4i16(<4 x i16> %a) {
 ; CHECK-LABEL: test_redand_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v4i16:
@@ -447,10 +447,10 @@ define i16 @test_redand_v4i16(<4 x i16> %a) {
 ; GISEL-NEXT:    mov h3, v0.h[3]
 ; GISEL-NEXT:    fmov w8, s0
 ; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
-; GISEL-NEXT:    and w9, w9, w10
+; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %a)
@@ -465,10 +465,10 @@ define i16 @test_redand_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    umov w8, v0.h[1]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v8i16:
@@ -480,10 +480,10 @@ define i16 @test_redand_v8i16(<8 x i16> %a) {
 ; GISEL-NEXT:    mov h3, v0.h[3]
 ; GISEL-NEXT:    fmov w8, s0
 ; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
-; GISEL-NEXT:    and w9, w9, w10
+; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %a)
@@ -499,10 +499,10 @@ define i16 @test_redand_v16i16(<16 x i16> %a) {
 ; CHECK-NEXT:    umov w8, v0.h[1]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v16i16:
@@ -515,10 +515,10 @@ define i16 @test_redand_v16i16(<16 x i16> %a) {
 ; GISEL-NEXT:    mov h3, v0.h[3]
 ; GISEL-NEXT:    fmov w8, s0
 ; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    fmov w9, s2
-; GISEL-NEXT:    fmov w10, s3
-; GISEL-NEXT:    and w9, w9, w10
+; GISEL-NEXT:    and w9, w10, w11
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %and_result = call i16 @llvm.vector.reduce.and.v16i16(<16 x i16> %a)

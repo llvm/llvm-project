@@ -14,8 +14,8 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
-; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE: mov x21, x0
+; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE-NOT: x21
 
 ; CHECK-O0-LABEL: foo:
@@ -249,9 +249,9 @@ define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_
 ; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
+; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE: str w{{.*}}, [{{.*}}[[SRET]], #4]
-; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
 
 ; CHECK-O0-LABEL: foo_sret:
@@ -375,10 +375,10 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-APPLE-LABEL: caller4:
 
 ; CHECK-APPLE-AARCH64: mov [[ID:x[0-9]+]], x0
+; CHECK-APPLE-AARCH64: mov x21, xzr
 ; CHECK-APPLE-AARCH64: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #8]
 ; CHECK-APPLE-AARCH64: str {{x[0-9]+}}, [sp]
 
-; CHECK-APPLE-AARCH64: mov x21, xzr
 ; CHECK-APPLE-AARCH64: bl {{.*}}foo_vararg
 ; CHECK-APPLE-AARCH64: mov x0, x21
 ; CHECK-APPLE-AARCH64: cbnz x21

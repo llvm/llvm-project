@@ -108,9 +108,9 @@ define <8 x i32> @t10(<8 x i32> %a, <8 x i32> %b) {
 define <16 x i32> @t11(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: t11:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    smin v2.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v4.4s
 ; CHECK-NEXT:    smin v1.4s, v1.4s, v5.4s
-; CHECK-NEXT:    smin v2.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    smin v3.4s, v3.4s, v7.4s
 ; CHECK-NEXT:    ret
   %t1 = icmp sle <16 x i32> %a, %b
@@ -122,10 +122,10 @@ define <16 x i32> @t11(<16 x i32> %a, <16 x i32> %b) {
 define <16 x i8> @t12(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: t12:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmhi v2.16b, v1.16b, v0.16b
-; CHECK-NEXT:    movi v3.16b, #1
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    cmhi v3.16b, v1.16b, v0.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    add v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %t1 = icmp ugt <16 x i8> %b, %a

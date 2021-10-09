@@ -208,8 +208,8 @@ define void @test_stnp_i64_offset_neg(i64* %p, i64 %v) #0 {
 define void @test_stnp_v4f32_invalid_offset_4(i8* %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4f32_invalid_offset_4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    add x8, x0, #4
 ; CHECK-NEXT:    mov d1, v0[1]
+; CHECK-NEXT:    add x8, x0, #4
 ; CHECK-NEXT:    stnp d0, d1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 4
@@ -221,8 +221,8 @@ define void @test_stnp_v4f32_invalid_offset_4(i8* %p, <4 x float> %v) #0 {
 define void @test_stnp_v4f32_invalid_offset_neg_4(i8* %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4f32_invalid_offset_neg_4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub x8, x0, #4
 ; CHECK-NEXT:    mov d1, v0[1]
+; CHECK-NEXT:    sub x8, x0, #4
 ; CHECK-NEXT:    stnp d0, d1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 -4
@@ -234,8 +234,8 @@ define void @test_stnp_v4f32_invalid_offset_neg_4(i8* %p, <4 x float> %v) #0 {
 define void @test_stnp_v4f32_invalid_offset_512(i8* %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4f32_invalid_offset_512:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    add x8, x0, #512
 ; CHECK-NEXT:    mov d1, v0[1]
+; CHECK-NEXT:    add x8, x0, #512
 ; CHECK-NEXT:    stnp d0, d1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 512
@@ -259,8 +259,8 @@ define void @test_stnp_v4f32_offset_504(i8* %p, <4 x float> %v) #0 {
 define void @test_stnp_v4f32_invalid_offset_508(i8* %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4f32_invalid_offset_508:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    add x8, x0, #508
 ; CHECK-NEXT:    mov d1, v0[1]
+; CHECK-NEXT:    add x8, x0, #508
 ; CHECK-NEXT:    stnp d0, d1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 508
@@ -272,8 +272,8 @@ define void @test_stnp_v4f32_invalid_offset_508(i8* %p, <4 x float> %v) #0 {
 define void @test_stnp_v4f32_invalid_offset_neg_520(i8* %p, <4 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v4f32_invalid_offset_neg_520:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub x8, x0, #520
 ; CHECK-NEXT:    mov d1, v0[1]
+; CHECK-NEXT:    sub x8, x0, #520
 ; CHECK-NEXT:    stnp d0, d1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 -520
@@ -299,8 +299,8 @@ define void @test_stnp_v2f32_invalid_offset_256(i8* %p, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v2f32_invalid_offset_256:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    add x8, x0, #256
 ; CHECK-NEXT:    mov s1, v0[1]
+; CHECK-NEXT:    add x8, x0, #256
 ; CHECK-NEXT:    stnp s0, s1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 256
@@ -326,8 +326,8 @@ define void @test_stnp_v2f32_invalid_offset_neg_260(i8* %p, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_stnp_v2f32_invalid_offset_neg_260:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sub x8, x0, #260
 ; CHECK-NEXT:    mov s1, v0[1]
+; CHECK-NEXT:    sub x8, x0, #260
 ; CHECK-NEXT:    stnp s0, s1, [x8]
 ; CHECK-NEXT:    ret
   %tmp0 = getelementptr i8, i8* %p, i32 -260
@@ -450,44 +450,44 @@ entry:
 define void @test_stnp_v17f32(<17 x float> %v, <17 x float>* %ptr) {
 ; CHECK-LABEL: test_stnp_v17f32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ; kill: def $s1 killed $s1 def $q1
-; CHECK-NEXT:    ; kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ldr s16, [sp, #16]
-; CHECK-NEXT:    mov.s v0[1], v1[0]
-; CHECK-NEXT:    ldr s1, [sp]
 ; CHECK-NEXT:    add x8, sp, #20
-; CHECK-NEXT:    ld1.s { v16 }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #4
-; CHECK-NEXT:    ld1.s { v1 }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    ld1.s { v16 }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    ld1.s { v1 }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #28
+; CHECK-NEXT:    ldr s17, [sp]
+; CHECK-NEXT:    add x9, sp, #4
 ; CHECK-NEXT:    ; kill: def $s4 killed $s4 def $q4
-; CHECK-NEXT:    ld1.s { v16 }[3], [x8]
-; CHECK-NEXT:    add x8, sp, #12
+; CHECK-NEXT:    ; kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ; kill: def $s5 killed $s5 def $q5
-; CHECK-NEXT:    ; kill: def $s2 killed $s2 def $q2
-; CHECK-NEXT:    mov.s v4[1], v5[0]
-; CHECK-NEXT:    ld1.s { v1 }[3], [x8]
+; CHECK-NEXT:    ; kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    ; kill: def $s6 killed $s6 def $q6
-; CHECK-NEXT:    mov.s v0[2], v2[0]
-; CHECK-NEXT:    ldr s2, [sp, #32]
-; CHECK-NEXT:    mov.s v4[2], v6[0]
+; CHECK-NEXT:    ; kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    ; kill: def $s7 killed $s7 def $q7
 ; CHECK-NEXT:    ; kill: def $s3 killed $s3 def $q3
-; CHECK-NEXT:    mov.s v0[3], v3[0]
+; CHECK-NEXT:    ld1.s { v16 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    ld1.s { v17 }[1], [x9]
+; CHECK-NEXT:    add x9, sp, #8
+; CHECK-NEXT:    mov.s v4[1], v5[0]
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    ld1.s { v16 }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #28
+; CHECK-NEXT:    ld1.s { v17 }[2], [x9]
+; CHECK-NEXT:    add x9, sp, #12
+; CHECK-NEXT:    mov.s v4[2], v6[0]
+; CHECK-NEXT:    mov.s v0[2], v2[0]
+; CHECK-NEXT:    ld1.s { v16 }[3], [x8]
+; CHECK-NEXT:    ld1.s { v17 }[3], [x9]
 ; CHECK-NEXT:    mov.s v4[3], v7[0]
+; CHECK-NEXT:    mov.s v0[3], v3[0]
+; CHECK-NEXT:    mov d1, v16[1]
+; CHECK-NEXT:    mov d2, v17[1]
 ; CHECK-NEXT:    mov d3, v4[1]
 ; CHECK-NEXT:    mov d5, v0[1]
+; CHECK-NEXT:    stnp d16, d1, [x0, #48]
+; CHECK-NEXT:    ldr s1, [sp, #32]
+; CHECK-NEXT:    stnp d17, d2, [x0, #32]
 ; CHECK-NEXT:    stnp d4, d3, [x0, #16]
 ; CHECK-NEXT:    stnp d0, d5, [x0]
-; CHECK-NEXT:    mov d0, v16[1]
-; CHECK-NEXT:    mov d3, v1[1]
-; CHECK-NEXT:    stnp d16, d0, [x0, #48]
-; CHECK-NEXT:    stnp d1, d3, [x0, #32]
-; CHECK-NEXT:    str s2, [x0, #64]
+; CHECK-NEXT:    str s1, [x0, #64]
 ; CHECK-NEXT:    ret
 
 entry:
@@ -497,12 +497,12 @@ entry:
 define void @test_stnp_v16i32_invalid_offset(<16 x i32> %v, <16 x i32>* %ptr) {
 ; CHECK-LABEL: test_stnp_v16i32_invalid_offset:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w8, #32000
-; CHECK-NEXT:    mov w9, #32032
+; CHECK-NEXT:    mov w8, #32032
+; CHECK-NEXT:    mov w9, #32000
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:    stnp q2, q3, [x9]
-; CHECK-NEXT:    stnp q0, q1, [x8]
+; CHECK-NEXT:    stnp q2, q3, [x8]
+; CHECK-NEXT:    stnp q0, q1, [x9]
 ; CHECK-NEXT:    ret
 
 entry:

@@ -312,8 +312,8 @@ define <4 x half> @set_lane_64(<4 x half> %a, half %b) #0 {
 ; CHECK-LABEL: set_lane_64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret

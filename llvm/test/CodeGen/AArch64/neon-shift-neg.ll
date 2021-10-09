@@ -376,8 +376,8 @@ define <vscale x 2 x i64> @shrn64x2(<vscale x 2 x i64> %a, i64 %b) {
 ; CHECK-LABEL: shrn64x2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
@@ -392,8 +392,8 @@ define <vscale x 4 x i32> @shrn32x4(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: shrn32x4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -408,8 +408,8 @@ define <vscale x 8 x i16> @shrn16x8(<vscale x 8 x i16> %a, i16 %b) {
 ; CHECK-LABEL: shrn16x8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -424,8 +424,8 @@ define <vscale x 16 x i8> @shrn8x16(<vscale x 16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: shrn8x16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -440,8 +440,8 @@ define <vscale x 2 x i64> @lshrn64x2(<vscale x 2 x i64> %a, i64 %b) {
 ; CHECK-LABEL: lshrn64x2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
@@ -456,8 +456,8 @@ define <vscale x 4 x i32> @lshrn32x4(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: lshrn32x4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -472,8 +472,8 @@ define <vscale x 8 x i16> @lshrn16x8(<vscale x 8 x i16> %a, i16 %b) {
 ; CHECK-LABEL: lshrn16x8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -488,8 +488,8 @@ define <vscale x 16 x i8> @lshrn8x16(<vscale x 16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: lshrn8x16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -504,8 +504,8 @@ define <vscale x 2 x i64> @shln64x2(<vscale x 2 x i64> %a, i64 %b) {
 ; CHECK-LABEL: shln64x2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
@@ -520,8 +520,8 @@ define <vscale x 4 x i32> @shln32x4(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: shln32x4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -536,8 +536,8 @@ define <vscale x 8 x i16> @shln16x8(<vscale x 8 x i16> %a, i16 %b) {
 ; CHECK-LABEL: shln16x8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -552,8 +552,8 @@ define <vscale x 16 x i8> @shln8x16(<vscale x 16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: shln8x16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:

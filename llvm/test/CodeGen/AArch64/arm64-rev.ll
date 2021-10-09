@@ -533,16 +533,16 @@ define <8 x i16> @test_vrev32Q16_undef(<8 x i16>* %A) nounwind {
 define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst) nounwind ssp {
 ; CHECK-LABEL: test_vrev64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    add x8, x1, #2
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_vrev64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    add x8, x1, #2
+; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    st1.h { v0 }[6], [x1]
 ; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret
@@ -561,18 +561,18 @@ entry:
 define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest) nounwind noinline ssp {
 ; CHECK-LABEL: float_vrev64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-NEXT:    dup.4s v1, v1[0]
-; CHECK-NEXT:    ext.16b v0, v0, v1, #12
+; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    dup.4s v0, v0[0]
+; CHECK-NEXT:    ext.16b v0, v1, v0, #12
 ; CHECK-NEXT:    rev64.4s v0, v0
 ; CHECK-NEXT:    str q0, [x1, #176]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: float_vrev64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    movi d0, #0000000000000000
 ; GISEL-NEXT:    adrp x8, .LCPI28_0
+; GISEL-NEXT:    movi d0, #0000000000000000
 ; GISEL-NEXT:    ldr q1, [x0]
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2

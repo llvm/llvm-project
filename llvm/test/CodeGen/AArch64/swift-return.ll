@@ -277,8 +277,8 @@ declare swiftcc { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @gen11()
 
 ; CHECK-LABEL: _test12
 ; CHECK:  fadd.4s v0, v0, v1
-; CHECK:  fadd.4s v0, v0, v2
 ; CHECK:  fmov s1, s3
+; CHECK:  fadd.4s v0, v0, v2
 define swiftcc { <4 x float>, float } @test12() #0 {
 entry:
   %call = call swiftcc { <4 x float>, <4 x float>, <4 x float>, float } @gen12()

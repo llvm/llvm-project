@@ -19,7 +19,6 @@ entry:
 
 ; CHECK-LABEL: litp:
 ; CHECK: adrp [[R:x[0-9]+]], litp
-; CHECKDONT-NEXT: add {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
 ; CHECKFUSE-NEXT: add {{x[0-9]+}}, [[R]], :lo12:litp
 }
 
@@ -44,10 +43,10 @@ entry:
 
 ; CHECK-LABEL: litl:
 ; CHECK: mov [[R:x[0-9]+]], {{#[0-9]+}}
+; CHECKDONT-NEXT: add {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: movk [[R]], {{#[0-9]+}}, lsl #16
 ; CHECK: movk [[R]], {{#[0-9]+}}, lsl #32
-; CHECKDONT-NEXT: add {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECKFUSE-NEXT: movk [[R]], {{#[0-9]+}}, lsl #48
+; CHECK-NEXT: movk [[R]], {{#[0-9]+}}, lsl #48
 }
 
 ; Function Attrs: norecurse nounwind readnone

@@ -413,8 +413,8 @@ define <vscale x 4 x i64> @add_i64_tuple2(<vscale x 4 x i64>* %out, <vscale x 2 
 define <vscale x 6 x i64> @add_i64_tuple3(<vscale x 6 x i64>* %out, <vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3) {
 ; CHECK-LABEL: add_i64_tuple3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add z0.d, z0.d, z0.d
 ; CHECK-NEXT:    add z1.d, z1.d, z1.d
+; CHECK-NEXT:    add z0.d, z0.d, z0.d
 ; CHECK-NEXT:    add z2.d, z2.d, z2.d
 ; CHECK-NEXT:    ret
   %tuple = tail call <vscale x 6 x i64> @llvm.aarch64.sve.tuple.create3.nxv6i64.nxv2i64(<vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3)
@@ -425,9 +425,9 @@ define <vscale x 6 x i64> @add_i64_tuple3(<vscale x 6 x i64>* %out, <vscale x 2 
 define <vscale x 8 x i64> @add_i64_tuple4(<vscale x 8 x i64>* %out, <vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3, <vscale x 2 x i64> %in4) {
 ; CHECK-LABEL: add_i64_tuple4:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    add z2.d, z2.d, z2.d
 ; CHECK-NEXT:    add z0.d, z0.d, z0.d
 ; CHECK-NEXT:    add z1.d, z1.d, z1.d
-; CHECK-NEXT:    add z2.d, z2.d, z2.d
 ; CHECK-NEXT:    add z3.d, z3.d, z3.d
 ; CHECK-NEXT:    ret
   %tuple = tail call <vscale x 8 x i64> @llvm.aarch64.sve.tuple.create4.nxv8i64.nxv2i64(<vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3, <vscale x 2 x i64> %in4)

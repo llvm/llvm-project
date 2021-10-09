@@ -27,8 +27,8 @@ define void @call_byval_a64i32([64 x i32]* %incoming) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #288
 ; CHECK-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #256
+; CHECK-NEXT:    str x28, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
@@ -66,8 +66,8 @@ define void @call_byval_a64i32([64 x i32]* %incoming) {
 ; CHECK-NEXT:    ldr q0, [x0, #240]
 ; CHECK-NEXT:    str q0, [sp, #240]
 ; CHECK-NEXT:    bl byval_a64i32
-; CHECK-NEXT:    ldr x28, [sp, #272] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #272] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #288
 ; CHECK-NEXT:    ret
   call void @byval_a64i32([64 x i32]* byval([64 x i32]) %incoming)

@@ -120,8 +120,8 @@ define i32 @dont_fold_srem_i32_smax(i32 %x) {
 ; CHECK-LABEL: dont_fold_srem_i32_smax:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    csel w8, w8, w0, lt
 ; CHECK-NEXT:    and w8, w8, #0x80000000
 ; CHECK-NEXT:    add w0, w0, w8

@@ -67,20 +67,20 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
-; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p4.h, p2.b
+; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p5.h, p3.b
+; CHECK-NEXT:    uzp1 p4.s, p4.s, p0.s
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    uzp1 p2.s, p5.s, p2.s
 ; CHECK-NEXT:    punpkhi p5.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    uzp1 p4.s, p4.s, p0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p3.s, p5.s, p3.s
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p4.h
@@ -551,69 +551,69 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK-LABEL: extract_nxv14i8_nxv28i8_14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z2.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEXT:    uunpklo z5.s, z0.h
-; CHECK-NEXT:    uunpklo z4.d, z3.s
-; CHECK-NEXT:    uunpklo z5.d, z5.s
-; CHECK-NEXT:    uzp1 z4.s, z5.s, z4.s
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    uzp1 z0.h, z4.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z4.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uunpklo z5.d, z4.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z4.s
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z3.s, z0.h
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z5.s
+; CHECK-NEXT:    uzp1 z0.h, z3.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z2.s, z2.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z5.d, z2.s
-; CHECK-NEXT:    uunpklo z3.d, z3.s
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z5.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uzp1 z3.s, z4.s, z3.s
+; CHECK-NEXT:    uunpklo z4.d, z2.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z4.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    uzp1 z3.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpkhi z3.h, z3.b
-; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    uunpkhi z5.d, z5.s
+; CHECK-NEXT:    uunpklo z4.s, z3.h
 ; CHECK-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z5.s
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z3.h
-; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z3.s, z2.h
+; CHECK-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z3.h
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
+; CHECK-NEXT:    uunpkhi z2.h, z2.b
+; CHECK-NEXT:    uunpklo z3.s, z2.h
 ; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    uunpklo z3.d, z3.s
 ; CHECK-NEXT:    uzp1 z3.s, z3.s, z4.s
 ; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
 ; CHECK-NEXT:    uunpkhi z2.h, z2.b
 ; CHECK-NEXT:    uunpkhi z3.s, z2.h
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z3.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
 ; CHECK-NEXT:    uunpkhi z1.h, z1.b
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret

@@ -10,8 +10,8 @@ define i8 @out8_constmask(i8 %x, i8 %y) {
 ; CHECK-LABEL: out8_constmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #2
-; CHECK-NEXT:    bfi w1, w8, #2, #4
 ; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    bfi w0, w8, #2, #4
 ; CHECK-NEXT:    ret
   %mx = and i8 %x, 60
   %my = and i8 %y, -61
@@ -23,8 +23,8 @@ define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-LABEL: out16_constmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #4
-; CHECK-NEXT:    bfi w1, w8, #4, #8
 ; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    bfi w0, w8, #4, #8
 ; CHECK-NEXT:    ret
   %mx = and i16 %x, 4080
   %my = and i16 %y, -4081
@@ -36,8 +36,8 @@ define i32 @out32_constmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: out32_constmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #8
-; CHECK-NEXT:    bfi w1, w8, #8, #16
 ; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    bfi w0, w8, #8, #16
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, 16776960
   %my = and i32 %y, -16776961
@@ -49,8 +49,8 @@ define i64 @out64_constmask(i64 %x, i64 %y) {
 ; CHECK-LABEL: out64_constmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    bfi x1, x8, #16, #32
 ; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    bfi x0, x8, #16, #32
 ; CHECK-NEXT:    ret
   %mx = and i64 %x, 281474976645120
   %my = and i64 %y, -281474976645121
@@ -206,8 +206,8 @@ define i32 @in_multiuse_A_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    and w20, w8, #0xffff00
-; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -245,10 +245,10 @@ define i32 @in_multiuse_B_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 define i32 @n0_badconstmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: n0_badconstmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w1, #0xffffff00
-; CHECK-NEXT:    and w8, w0, #0xffff00
-; CHECK-NEXT:    and w9, w9, #0xff0001ff
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    and w8, w1, #0xffffff00
+; CHECK-NEXT:    and w9, w0, #0xffff00
+; CHECK-NEXT:    and w8, w8, #0xff0001ff
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, 16776960
   %my = and i32 %y, -16776960 ; instead of -16776961

@@ -7,9 +7,9 @@ define <4 x i1> @t0_all_tautological(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 2, i32 2>
@@ -20,15 +20,15 @@ define <4 x i1> @t0_all_tautological(<4 x i32> %X) nounwind {
 define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t1_all_odd_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    mov w8, #43691
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    dup v1.4s, w8
+; CHECK-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    movi d1, #0xffff0000ffff0000
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 3, i32 1, i32 1, i32 9>
@@ -39,15 +39,15 @@ define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t1_all_odd_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    mov w8, #43691
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    dup v1.4s, w8
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    movi d1, #0xffff0000ffff0000
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 3, i32 1, i32 1, i32 9>
@@ -58,14 +58,14 @@ define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 ; CHECK-LABEL: t2_narrow:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    dup v2.8h, w8
-; CHECK-NEXT:    mul v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    cmhs v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    movi d1, #0xffff0000ffff0000
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %urem = urem <8 x i16> %X, <i16 3, i16 1, i16 1, i16 9, i16 3, i16 1, i16 1, i16 9>
@@ -76,19 +76,19 @@ define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ; CHECK-LABEL: t3_wide:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, #-6148914691236517206
-; CHECK-NEXT:    adrp x11, .LCPI4_0
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    movk x9, #43691
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    ldr q0, [x11, :lo12:.LCPI4_0]
-; CHECK-NEXT:    mul x10, x10, x9
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    mov v1.d[1], x8
-; CHECK-NEXT:    cmhs v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    mov x8, #-6148914691236517206
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    movk x8, #43691
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    mul x9, x9, x8
+; CHECK-NEXT:    mul x8, x10, x8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    adrp x9, .LCPI4_0
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI4_0]
+; CHECK-NEXT:    cmhs v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    movi d1, #0xffffffff00000000
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %urem = urem <2 x i64> %X, <i64 3, i64 1>

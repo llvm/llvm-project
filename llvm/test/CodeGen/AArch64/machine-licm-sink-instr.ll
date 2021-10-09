@@ -20,14 +20,14 @@ define i32 @sink_load_and_copy(i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
-; CHECK-NEXT:    ldr w21, [x8, :lo12:A]
 ; CHECK-NEXT:    mov w20, w19
+; CHECK-NEXT:    ldr w21, [x8, :lo12:A]
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl _Z3usei
-; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    sdiv w20, w20, w0
+; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_3:
@@ -74,16 +74,16 @@ define i32 @cant_sink_successive_call(i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
-; CHECK-NEXT:    ldr w20, [x8, :lo12:A]
 ; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:    ldr w20, [x8, :lo12:A]
 ; CHECK-NEXT:    bl _Z3usei
 ; CHECK-NEXT:    mov w21, w19
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl _Z3usei
-; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    sdiv w21, w21, w0
+; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_3:
@@ -131,23 +131,23 @@ define i32 @cant_sink_successive_store(i32* nocapture readnone %store, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB2_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
-; CHECK-NEXT:    ldr w20, [x8, :lo12:A]
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    mov w21, w19
-; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    mov w20, w19
+; CHECK-NEXT:    ldr w21, [x8, :lo12:A]
+; CHECK-NEXT:    str w9, [x0]
 ; CHECK-NEXT:  .LBB2_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov w0, w20
+; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl _Z3usei
+; CHECK-NEXT:    sdiv w20, w20, w0
 ; CHECK-NEXT:    subs w19, w19, #1
-; CHECK-NEXT:    sdiv w21, w21, w0
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:    b .LBB2_4
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    mov w21, w19
+; CHECK-NEXT:    mov w20, w19
 ; CHECK-NEXT:  .LBB2_4: // %for.cond.cleanup
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
