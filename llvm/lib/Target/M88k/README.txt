@@ -53,3 +53,32 @@ git checkout binutils-2_16_1
 ../binutils-gdb/configure --target=m88k-openbsd --prefix="$HOME/opt/cross" \
     --disable-nls --disable-werror \
     --disable-gdb --disable-libdecnumber --disable-readline --disable-sim
+
+
+Testing with GXemul: http://gavare.se/gxemul/
+
+On FreeBSD:
+
+To enable tap device, add the following:
+
+In /etc/sysctl.conf:
+net.link.tap.user_open=1
+
+In /etc/rc.conf:
+cloned_interfaces="bridge0 tap0"
+ifconfig_bridge0="addm em0 addm tap0 up"
+
+In /boot/loader.conf:
+if_bridge_load="YES"
+if_tap_load="YES"
+
+Using config file lunam88k.cfg for GXemul:
+net(
+        tapdev("/dev/tap0")
+)
+machine(
+        type("luna88k")
+        subtype("luna-88k")
+        disk("liveimage-luna88k-raw-20210918.img")
+        load("boot")
+)
