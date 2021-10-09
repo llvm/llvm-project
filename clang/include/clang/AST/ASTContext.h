@@ -102,6 +102,7 @@ class ParentMapContext;
 class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
+enum class FloatModeKind;
 class GlobalDecl;
 class ItaniumMangleContext;
 class MangleContext;
@@ -750,7 +751,8 @@ public:
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
-  QualType getRealTypeForBitwidth(unsigned DestWidth, bool ExplicitIEEE) const;
+  QualType getRealTypeForBitwidth(unsigned DestWidth,
+                                  FloatModeKind ExplicitType) const;
 
   bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
 

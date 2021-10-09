@@ -53,6 +53,15 @@ class SourceManager;
 
 namespace Builtin { struct Info; }
 
+enum class FloatModeKind {
+  NoFloat = 255,
+  Float = 0,
+  Double,
+  LongDouble,
+  Float128,
+  Ibm128
+};
+
 /// Fields controlling how types are laid out in memory; these may need to
 /// be copied for targets like AMDGPU that base their ABIs on an auxiliary
 /// CPU target.
@@ -119,15 +128,6 @@ struct TransferrableTargetInfo {
     UnsignedLong,
     SignedLongLong,
     UnsignedLongLong
-  };
-
-  enum RealType {
-    NoFloat = 255,
-    Float = 0,
-    Double,
-    LongDouble,
-    Float128,
-    Ibm128
   };
 
 protected:
@@ -403,7 +403,8 @@ public:
   /// is represented as one of those two). At this time, there is no support
   /// for an explicit "PPC double-double" type (i.e. __ibm128) so we only
   /// need to differentiate between "long double" and IEEE quad precision.
-  RealType getRealTypeByWidth(unsigned BitWidth, bool ExplicitIEEE) const;
+  FloatModeKind getRealTypeByWidth(unsigned BitWidth,
+                                   FloatModeKind ExplicitType) const;
 
   /// Return the alignment (in bits) of the specified integer type enum.
   ///
@@ -849,8 +850,8 @@ public:
 
   /// Check whether the given real type should use the "fpret" flavor of
   /// Objective-C message passing on this target.
-  bool useObjCFPRetForRealType(RealType T) const {
-    return RealTypeUsesObjCFPRet & (1 << T);
+  bool useObjCFPRetForRealType(FloatModeKind T) const {
+    return RealTypeUsesObjCFPRet & (1 << (int)T);
   }
 
   /// Check whether _Complex long double should use the "fp2ret" flavor
