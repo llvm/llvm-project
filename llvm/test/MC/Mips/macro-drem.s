@@ -186,7 +186,7 @@
 # CHECK-TRAP: ddiv $zero, $5, $6          # encoding: [0x1e,0x00,0xa6,0x00]
 # CHECK-TRAP: addiu $1, $zero, -1         # encoding: [0xff,0xff,0x01,0x24]
 # CHECK-TRAP: bne $6, $1, .Ltmp3          # encoding: [A,A,0xc1,0x14]
-# CHECK-TRAP;                             # fixup A - offset: 0, value: .Ltmp3-4, kind: fixup_Mips_PC16
+# CHECK-TRAP:                             # fixup A - offset: 0, value: .Ltmp3-4, kind: fixup_Mips_PC16
 # CHECK-TRAP: addiu $1, $zero, 1          # encoding: [0x01,0x00,0x01,0x24]
 # CHECK-TRAP: dsll32  $1, $1, 31          # encoding: [0xfc,0x0f,0x01,0x00]
 # CHECK-TRAP: teq  $5, $1, 6              # encoding: [0xb4,0x01,0xa1,0x00]
