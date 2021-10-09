@@ -44,33 +44,26 @@
 #ifndef LLVM_MC_MCPSEUDOPROBE_H
 #define LLVM_MC_MCPSEUDOPROBE_H
 
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/PseudoProbe.h"
-#include "llvm/MC/MCSection.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/WithColor.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <functional>
 #include <list>
 #include <map>
-#include <set>
-#include <sstream>
+#include <memory>
 #include <string>
-#include <system_error>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
 
+class MCSection;
 class MCStreamer;
 class MCSymbol;
 class MCObjectStreamer;
+class raw_ostream;
 
 enum class MCPseudoProbeFlag {
   // If set, indicates that the probe is encoded as an address delta
