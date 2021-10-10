@@ -1844,8 +1844,29 @@ struct DSEState {
           if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
               Func != LibFunc_malloc)
             return false;
+
+          auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
+            // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
+            // of malloc block
+            auto *MallocBB = Malloc->getParent(),
+                 *MemsetBB = Memset->getParent();
+            if (MallocBB == MemsetBB)
+              return true;
+            auto *Ptr = Memset->getArgOperand(0);
+            auto *TI = MallocBB->getTerminator();
+            ICmpInst::Predicate Pred;
+            BasicBlock *TrueBB, *FalseBB;
+            if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
+                                FalseBB)))
+              return false;
+            if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
+              return false;
+            return true;
+          };
+
           if (Malloc->getOperand(0) == MemSet->getLength()) {
-            if (DT.dominates(Malloc, MemSet) && PDT.dominates(MemSet, Malloc) &&
+            if (shouldCreateCalloc(Malloc, MemSet) &&
+                DT.dominates(Malloc, MemSet) &&
                 memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
               IRBuilder<> IRB(Malloc);
               const auto &DL = Malloc->getModule()->getDataLayout();
