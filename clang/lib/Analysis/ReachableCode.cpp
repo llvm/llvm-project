@@ -694,10 +694,8 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
   // If there aren't explicit EH edges, we should include the 'try' dispatch
   // blocks as roots.
   if (!AC.getCFGBuildOptions().AddEHEdges) {
-    for (CFG::try_block_iterator I = cfg->try_blocks_begin(),
-         E = cfg->try_blocks_end() ; I != E; ++I) {
-      numReachable += scanMaybeReachableFromBlock(*I, PP, reachable);
-    }
+    for (const CFGBlock *B : cfg->try_blocks())
+      numReachable += scanMaybeReachableFromBlock(B, PP, reachable);
     if (numReachable == cfg->getNumBlockIDs())
       return;
   }

@@ -1337,6 +1337,7 @@ public:
   const CFGBlock * getIndirectGotoBlock() const { return IndirectGotoBlock; }
 
   using try_block_iterator = std::vector<const CFGBlock *>::const_iterator;
+  using try_block_range = llvm::iterator_range<try_block_iterator>;
 
   try_block_iterator try_blocks_begin() const {
     return TryDispatchBlocks.begin();
@@ -1344,6 +1345,10 @@ public:
 
   try_block_iterator try_blocks_end() const {
     return TryDispatchBlocks.end();
+  }
+
+  try_block_range try_blocks() const {
+    return try_block_range(try_blocks_begin(), try_blocks_end());
   }
 
   void addTryDispatchBlock(const CFGBlock *block) {
