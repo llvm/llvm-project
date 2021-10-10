@@ -3,10 +3,10 @@
 
 define i32 @foo(i32 %a) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[T15:%.*]] = sub i32 99, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[T15]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[A_OP:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    [[T13:%.*]] = select i1 [[TMP1]], i32 100, i32 [[A_OP]]
+; CHECK-NEXT:    [[T13:%.*]] = select i1 [[TMP2]], i32 100, i32 [[A_OP]]
 ; CHECK-NEXT:    ret i32 [[T13]]
 ;
   %t15 = sub i32 99, %a
@@ -19,9 +19,9 @@ define i32 @foo(i32 %a) {
 
 define i32 @bar(i32 %a) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[T15:%.*]] = sub i32 99, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[T15]], 0
-; CHECK-NEXT:    [[T12:%.*]] = select i1 [[TMP1]], i32 99, i32 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], -1
+; CHECK-NEXT:    [[T12:%.*]] = select i1 [[TMP2]], i32 99, i32 [[A]]
 ; CHECK-NEXT:    ret i32 [[T12]]
 ;
   %t15 = sub i32 99, %a
