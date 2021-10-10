@@ -2592,17 +2592,25 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   // (icmp P (sub nuw|nsw C2, Y), C) -> (icmp swap(P) Y, C2-C)
   const APInt *C2;
   APInt SubResult;
+  ICmpInst::Predicate SwappedPred = Cmp.getSwappedPredicate();
+  bool HasNSW = Sub->hasNoSignedWrap();
+  bool HasNUW = Sub->hasNoUnsignedWrap();
   if (match(X, m_APInt(C2)) &&
-      ((Cmp.isUnsigned() && Sub->hasNoUnsignedWrap()) ||
-       (Cmp.isSigned() && Sub->hasNoSignedWrap())) &&
+      ((Cmp.isUnsigned() && HasNUW) || (Cmp.isSigned() && HasNSW)) &&
       !subWithOverflow(SubResult, *C2, C, Cmp.isSigned()))
-    return new ICmpInst(Cmp.getSwappedPredicate(), Y,
-                        ConstantInt::get(Ty, SubResult));
+    return new ICmpInst(SwappedPred, Y, ConstantInt::get(Ty, SubResult));
 
   // The following transforms are only worth it if the only user of the subtract
   // is the icmp.
+  // TODO: This is an artificial restriction for all of the transforms below
+  //       that only need a single replacement icmp.
   if (!Sub->hasOneUse())
     return nullptr;
+
+  // X - Y == 0 --> X == Y.
+  // X - Y != 0 --> X != Y.
+  if (Cmp.isEquality() && C.isZero())
+    return new ICmpInst(Pred, X, Y);
 
   if (Sub->hasNoSignedWrap()) {
     // (icmp sgt (sub nsw X, Y), -1) -> (icmp sge X, Y)
@@ -2636,7 +2644,12 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   if (Pred == ICmpInst::ICMP_UGT && (C + 1).isPowerOf2() && (*C2 & C) == C)
     return new ICmpInst(ICmpInst::ICMP_NE, Builder.CreateOr(Y, C), X);
 
-  return nullptr;
+  // We have handled special cases that reduce.
+  // Canonicalize any remaining sub to add as:
+  // (C2 - Y) > C --> (Y + ~C2) < ~C
+  Value *Add = Builder.CreateAdd(Y, ConstantInt::get(Ty, ~(*C2)), "notsub",
+                                 HasNUW, HasNSW);
+  return new ICmpInst(SwappedPred, Add, ConstantInt::get(Ty, ~C));
 }
 
 /// Fold icmp (add X, Y), C.
@@ -3120,14 +3133,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
         return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
       } else if (C.isZero()) {
         // Replace ((xor A, B) != 0) with (A != B)
-        return new ICmpInst(Pred, BOp0, BOp1);
-      }
-    }
-    break;
-  case Instruction::Sub:
-    if (BO->hasOneUse()) {
-      if (C.isZero()) {
-        // Replace ((sub A, B) != 0) with (A != B).
         return new ICmpInst(Pred, BOp0, BOp1);
       }
     }
