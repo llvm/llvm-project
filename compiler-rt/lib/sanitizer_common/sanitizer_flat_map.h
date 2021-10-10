@@ -1,4 +1,4 @@
-//===-- sanitizer_allocator_bytemap.h ---------------------------*- C++ -*-===//
+//===-- sanitizer_flat_map.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef SANITIZER_FLAT_MAP_H
+#define SANITIZER_FLAT_MAP_H
+
+#include "sanitizer_atomic.h"
+#include "sanitizer_common.h"
+#include "sanitizer_internal_defs.h"
 #include "sanitizer_local_address_space_view.h"
+#include "sanitizer_mutex.h"
+
+namespace __sanitizer {
+
+// Call these callbacks on mmap/munmap.
+struct NoOpMapUnmapCallback {
+  void OnMap(uptr p, uptr size) const { }
+  void OnUnmap(uptr p, uptr size) const { }
+};
 
 // Maps integers in rage [0, kSize) to u8 values.
 template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
-class FlatByteMap {
+class FlatMap {
  public:
   using AddressSpaceView = AddressSpaceViewTy;
   void Init() {
@@ -43,7 +58,7 @@ class FlatByteMap {
 template <u64 kSize1, u64 kSize2,
           typename AddressSpaceViewTy = LocalAddressSpaceView,
           class MapUnmapCallback = NoOpMapUnmapCallback>
-class TwoLevelByteMap {
+class TwoLevelMap {
  public:
   using AddressSpaceView = AddressSpaceViewTy;
   void Init() {
@@ -91,7 +106,7 @@ class TwoLevelByteMap {
     if (!res) {
       SpinMutexLock l(&mu_);
       if (!(res = Get(idx))) {
-        res = (u8*)MmapOrDie(kSize2, "TwoLevelByteMap");
+        res = (u8*)MmapOrDie(kSize2, "TwoLevelMap");
         MapUnmapCallback().OnMap(reinterpret_cast<uptr>(res), kSize2);
         atomic_store(&map1_[idx], reinterpret_cast<uptr>(res),
                      memory_order_release);
@@ -104,3 +119,15 @@ class TwoLevelByteMap {
   StaticSpinMutex mu_;
 };
 
+template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
+using FlatByteMap = FlatMap<kSize, AddressSpaceViewTy>;
+
+template <u64 kSize1, u64 kSize2,
+          typename AddressSpaceViewTy = LocalAddressSpaceView,
+          class MapUnmapCallback = NoOpMapUnmapCallback>
+using TwoLevelByteMap =
+    TwoLevelMap<kSize1, kSize2, AddressSpaceViewTy, MapUnmapCallback>;
+
+}
+
+#endif

@@ -1412,69 +1412,6 @@ TEST(SanitizerCommon, SizeClassAllocator64VeryCompactReleaseFreeMemoryToOS) {
 
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
-TEST(SanitizerCommon, TwoLevelByteMap) {
-  const u64 kSize1 = 1 << 6, kSize2 = 1 << 12;
-  const u64 n = kSize1 * kSize2;
-  TwoLevelByteMap<kSize1, kSize2> m;
-  m.Init();
-  for (u64 i = 0; i < n; i += 7) {
-    m.set(i, (i % 100) + 1);
-  }
-  for (u64 j = 0; j < n; j++) {
-    if (j % 7)
-      EXPECT_EQ(m[j], 0);
-    else
-      EXPECT_EQ(m[j], (j % 100) + 1);
-  }
-
-  m.TestOnlyUnmap();
-}
-
-template <typename AddressSpaceView>
-using TestByteMapASVT =
-    TwoLevelByteMap<1 << 12, 1 << 13, AddressSpaceView, TestMapUnmapCallback>;
-using TestByteMap = TestByteMapASVT<LocalAddressSpaceView>;
-
-struct TestByteMapParam {
-  TestByteMap *m;
-  size_t shard;
-  size_t num_shards;
-};
-
-void *TwoLevelByteMapUserThread(void *param) {
-  TestByteMapParam *p = (TestByteMapParam*)param;
-  for (size_t i = p->shard; i < p->m->size(); i += p->num_shards) {
-    size_t val = (i % 100) + 1;
-    p->m->set(i, val);
-    EXPECT_EQ((*p->m)[i], val);
-  }
-  return 0;
-}
-
-TEST(SanitizerCommon, ThreadedTwoLevelByteMap) {
-  TestByteMap m;
-  m.Init();
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
-  static const int kNumThreads = 4;
-  pthread_t t[kNumThreads];
-  TestByteMapParam p[kNumThreads];
-  for (int i = 0; i < kNumThreads; i++) {
-    p[i].m = &m;
-    p[i].shard = i;
-    p[i].num_shards = kNumThreads;
-    PTHREAD_CREATE(&t[i], 0, TwoLevelByteMapUserThread, &p[i]);
-  }
-  for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_JOIN(t[i], 0);
-  }
-  EXPECT_EQ((uptr)TestMapUnmapCallback::map_count, m.size1());
-  EXPECT_EQ((uptr)TestMapUnmapCallback::unmap_count, 0UL);
-  m.TestOnlyUnmap();
-  EXPECT_EQ((uptr)TestMapUnmapCallback::map_count, m.size1());
-  EXPECT_EQ((uptr)TestMapUnmapCallback::unmap_count, m.size1());
-}
-
 TEST(SanitizerCommon, LowLevelAllocatorShouldRoundUpSizeOnAlloc) {
   // When allocating a memory block slightly bigger than a memory page and
   // LowLevelAllocator calls MmapOrDie for the internal buffer, it should round
