@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Guard the debug iterators against ADL-hijacking.
-// XFAIL: LIBCXX-DEBUG-FIXME
-
 // <list>
 
 // list& operator=(const list& c);
