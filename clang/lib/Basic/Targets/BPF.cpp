@@ -35,7 +35,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {"generic", "v1", "v2",
                                                         "v3", "probe"};
 
 bool BPFTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {

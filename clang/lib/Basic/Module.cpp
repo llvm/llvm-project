@@ -121,9 +121,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Default(Target.hasFeature(Feature) ||
                                  isPlatformEnvironment(Target, Feature));
   if (!HasFeature)
-    HasFeature = std::find(LangOpts.ModuleFeatures.begin(),
-                           LangOpts.ModuleFeatures.end(),
-                           Feature) != LangOpts.ModuleFeatures.end();
+    HasFeature = llvm::is_contained(LangOpts.ModuleFeatures, Feature);
   return HasFeature;
 }
 
