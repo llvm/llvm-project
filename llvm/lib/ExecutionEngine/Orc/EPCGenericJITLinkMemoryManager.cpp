@@ -60,6 +60,7 @@ public:
     }
     Parent.EPC.callSPSWrapperAsync<
         rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(
+        Parent.SAs.Finalize,
         [OnFinalize = std::move(OnFinalize)](Error SerializationErr,
                                              Error FinalizeErr) {
           if (SerializationErr)
@@ -67,7 +68,7 @@ public:
           else
             OnFinalize(std::move(FinalizeErr));
         },
-        Parent.SAs.Finalize, Parent.SAs.Allocator, std::move(FR));
+        Parent.SAs.Allocator, std::move(FR));
   }
 
   Error deallocate() override {

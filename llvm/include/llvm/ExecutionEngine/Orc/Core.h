@@ -1481,9 +1481,10 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  void callWrapperAsync(ExecutorProcessControl::SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr, ArrayRef<char> ArgBuffer) {
-    EPC->callWrapperAsync(std::move(OnComplete), WrapperFnAddr, ArgBuffer);
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        ExecutorProcessControl::SendResultFunction OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(WrapperFnAddr, std::move(OnComplete), ArgBuffer);
   }
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -1500,10 +1501,10 @@ public:
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
+  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
                            const ArgTs &...Args) {
     EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        std::forward<SendResultT>(SendResult), WrapperFnAddr, Args...);
+        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
