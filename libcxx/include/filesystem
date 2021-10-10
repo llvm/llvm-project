@@ -277,7 +277,7 @@ struct _LIBCPP_TYPE_VIS space_info {
   uintmax_t available;
 };
 
-// On Windows, the library never identifies files as  block, character, fifo
+// On Windows, the library never identifies files as block, character, fifo
 // or socket.
 enum class _LIBCPP_ENUM_VIS file_type : signed char {
   none = 0,
