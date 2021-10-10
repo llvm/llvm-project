@@ -31,6 +31,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -6415,6 +6416,31 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(0));
     return;
+  case Intrinsic::is_fpclass: {
+    const DataLayout DLayout = DAG.getDataLayout();
+    EVT DestVT = TLI.getValueType(DLayout, I.getType());
+    EVT ArgVT = TLI.getValueType(DLayout, I.getArgOperand(0)->getType());
+    unsigned Test = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    MachineFunction &MF = DAG.getMachineFunction();
+    const Function &F = MF.getFunction();
+    SDValue Op = getValue(I.getArgOperand(0));
+    SDNodeFlags Flags;
+    Flags.setNoFPExcept(
+        !F.getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
+    // If ISD::IS_FPCLASS should be expanded, do it right now, because the
+    // expansion can use illegal types. Making expansion early allows
+    // legalizing these types prior to selection.
+    if (!TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, ArgVT)) {
+      SDValue Result = TLI.expandIS_FPCLASS(DestVT, Op, Test, Flags, sdl, DAG);
+      setValue(&I, Result);
+      return;
+    }
+
+    SDValue Check = DAG.getTargetConstant(Test, sdl, MVT::i32);
+    SDValue V = DAG.getNode(ISD::IS_FPCLASS, sdl, DestVT, {Op, Check}, Flags);
+    setValue(&I, V);
+    return;
+  }
   case Intrinsic::pcmarker: {
     SDValue Tmp = getValue(I.getArgOperand(0));
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));

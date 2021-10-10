@@ -169,3 +169,31 @@ llvm::findSplitPointForStackProtector(MachineBasicBlock *BB,
 
   return SplitPoint;
 }
+
+unsigned llvm::getInvertedFPClassTest(unsigned Test) {
+  unsigned InvertedTest = ~Test & fcAllFlags;
+  switch (InvertedTest) {
+  default:
+    break;
+  case fcNan:
+  case fcSNan:
+  case fcQNan:
+  case fcInf:
+  case fcPosInf:
+  case fcNegInf:
+  case fcNormal:
+  case fcPosNormal:
+  case fcNegNormal:
+  case fcSubnormal:
+  case fcPosSubnormal:
+  case fcNegSubnormal:
+  case fcZero:
+  case fcPosZero:
+  case fcNegZero:
+  case fcFinite:
+  case fcPosFinite:
+  case fcNegFinite:
+    return InvertedTest;
+  }
+  return 0;
+}
