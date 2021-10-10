@@ -77,7 +77,7 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
 
   let results = (outs);
 
-  let verifier = [{ return verifyMemorySemantics(*this); }];
+  let verifier = [{ return verifyMemorySemantics(getOperation(), memory_semantics()); }];
 
   let autogenSerialization = 0;
 
@@ -131,7 +131,7 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
 
   let results = (outs);
 
-  let verifier = [{ return verifyMemorySemantics(*this); }];
+  let verifier = [{ return verifyMemorySemantics(getOperation(), memory_semantics()); }];
 
   let autogenSerialization = 0;
 

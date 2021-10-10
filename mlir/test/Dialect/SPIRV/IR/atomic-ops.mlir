@@ -29,6 +29,14 @@ func @atomic_and(%ptr : !spv.ptr<i32, StorageBuffer>, %value : i64) -> i64 {
 
 // -----
 
+func @atomic_and(%ptr : !spv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spv.AtomicAnd "Device" "Acquire|Release" %ptr, %value : !spv.ptr<i32, StorageBuffer>
+  return %0 : i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.AtomicCompareExchangeWeak
 //===----------------------------------------------------------------------===//
