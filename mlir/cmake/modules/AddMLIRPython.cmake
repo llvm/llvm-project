@@ -330,9 +330,6 @@ function(add_mlir_python_common_capi_library name)
     "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;RELATIVE_INSTALL_ROOT"
     "DECLARED_SOURCES;EMBED_LIBS"
     ${ARGN})
-  # TODO: Upgrade to the aggregate utility in https://reviews.llvm.org/D106419
-  # once ready.
-
   # Collect all explicit and transitive embed libs.
   set(_embed_libs ${ARG_EMBED_LIBS})
   _flatten_mlir_python_targets(_all_source_targets ${ARG_DECLARED_SOURCES})
@@ -344,27 +341,13 @@ function(add_mlir_python_common_capi_library name)
   endforeach()
   list(REMOVE_DUPLICATES _embed_libs)
 
-  foreach(lib ${_embed_libs})
-    if(XCODE)
-      # Xcode doesn't support object libraries, so we have to trick it into
-      # linking the static libraries instead.
-      list(APPEND _deps "-force_load" ${lib})
-    else()
-      list(APPEND _objects $<TARGET_OBJECTS:obj.${lib}>)
-    endif()
-    # Accumulate transitive deps of each exported lib into _DEPS.
-    list(APPEND _deps $<TARGET_PROPERTY:${lib},LINK_LIBRARIES>)
-  endforeach()
-
-  add_mlir_library(${name}
-    PARTIAL_SOURCES_INTENDED
+  # Generate the aggregate .so that everything depends on.
+  add_mlir_aggregate(${name}
     SHARED
     DISABLE_INSTALL
-    ${_objects}
-    EXCLUDE_FROM_LIBMLIR
-    LINK_LIBS
-    ${_deps}
+    EMBED_LIBS ${_embed_libs}
   )
+
   if(MSVC)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()

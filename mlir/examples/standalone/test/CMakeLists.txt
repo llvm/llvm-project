@@ -7,6 +7,7 @@ configure_lit_site_cfg(
 
 set(STANDALONE_TEST_DEPENDS
         FileCheck count not
+        standalone-capi-test
         standalone-opt
         standalone-translate
         )
@@ -18,3 +19,5 @@ add_lit_testsuite(check-standalone "Running the standalone regression tests"
 set_target_properties(check-standalone PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(STANDALONE ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${STANDALONE_TEST_DEPENDS})
+
+add_subdirectory(CAPI)
