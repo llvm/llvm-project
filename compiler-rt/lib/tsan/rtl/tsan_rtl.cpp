@@ -974,12 +974,6 @@ void TraceSwitchPartImpl(ThreadState* thr) {
           atomic_load_relaxed(&thr->trace_pos));
 }
 
-#if !SANITIZER_GO
-extern "C" void __tsan_trace_switch() {}
-
-extern "C" void __tsan_report_race() {}
-#endif
-
 void ThreadIgnoreBegin(ThreadState* thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreBegin\n", thr->tid);
   thr->ignore_reads_and_writes++;
