@@ -36,6 +36,8 @@ class FlatMap {
     internal_memset(map_, 0, sizeof(map_));
   }
 
+  constexpr uptr size() const { return kSize; }
+
   void set(uptr idx, u8 val) {
     CHECK_LT(idx, kSize);
     CHECK_EQ(0U, map_[idx]);
@@ -75,9 +77,9 @@ class TwoLevelMap {
     }
   }
 
-  uptr size() const { return kSize1 * kSize2; }
-  uptr size1() const { return kSize1; }
-  uptr size2() const { return kSize2; }
+  constexpr uptr size() const { return kSize1 * kSize2; }
+  constexpr uptr size1() const { return kSize1; }
+  constexpr uptr size2() const { return kSize2; }
 
   void set(uptr idx, u8 val) {
     CHECK_LT(idx, kSize1 * kSize2);
