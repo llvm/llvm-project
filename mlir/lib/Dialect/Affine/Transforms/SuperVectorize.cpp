@@ -253,7 +253,8 @@ using namespace vector;
 ///           transfer read and write operations.
 ///         * Scalar constant operations/operands are converted to vector
 ///           constant operations (splat).
-///         * Uniform operands (only operands defined outside of the loop nest,
+///         * Uniform operands (only induction variables of loops not mapped to
+///           a vector dimension, or operands defined outside of the loop nest
 ///           for now) are broadcasted to a vector.
 ///           TODO: Support more uniform cases.
 ///         * Affine for operations with 'iter_args' are vectorized by
@@ -1062,10 +1063,15 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
 
 /// Returns true if the provided value is vector uniform given the vectorization
 /// strategy.
-// TODO: For now, only values that are invariants to all the loops in the
-// vectorization strategy are considered vector uniforms.
+// TODO: For now, only values that are induction variables of loops not in
+// `loopToVectorDim` or invariants to all the loops in the vectorization
+// strategy are considered vector uniforms.
 static bool isUniformDefinition(Value value,
                                 const VectorizationStrategy *strategy) {
+  AffineForOp forOp = getForInductionVarOwner(value);
+  if (forOp && strategy->loopToVectorDim.count(forOp) == 0)
+    return true;
+
   for (auto loopToDim : strategy->loopToVectorDim) {
     auto loop = cast<AffineForOp>(loopToDim.first);
     if (!loop.isDefinedOutsideOfLoop(value))
@@ -1079,11 +1085,13 @@ static bool isUniformDefinition(Value value,
 static Operation *vectorizeUniform(Value uniformVal,
                                    VectorizationState &state) {
   OpBuilder::InsertionGuard guard(state.builder);
-  state.builder.setInsertionPointAfterValue(uniformVal);
+  Value uniformScalarRepl =
+      state.valueScalarReplacement.lookupOrDefault(uniformVal);
+  state.builder.setInsertionPointAfterValue(uniformScalarRepl);
 
   auto vectorTy = getVectorType(uniformVal.getType(), state.strategy);
   auto bcastOp = state.builder.create<BroadcastOp>(uniformVal.getLoc(),
-                                                   vectorTy, uniformVal);
+                                                   vectorTy, uniformScalarRepl);
   state.registerValueVectorReplacement(uniformVal, bcastOp);
   return bcastOp;
 }
