@@ -2602,8 +2602,15 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
 
   // The following transforms are only worth it if the only user of the subtract
   // is the icmp.
+  // TODO: This is an artificial restriction for all of the transforms below
+  //       that only need a single replacement icmp.
   if (!Sub->hasOneUse())
     return nullptr;
+
+  // X - Y == 0 --> X == Y.
+  // X - Y != 0 --> X != Y.
+  if (Cmp.isEquality() && C.isZero())
+    return new ICmpInst(Pred, X, Y);
 
   if (Sub->hasNoSignedWrap()) {
     // (icmp sgt (sub nsw X, Y), -1) -> (icmp sge X, Y)
@@ -3126,14 +3133,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
         return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
       } else if (C.isZero()) {
         // Replace ((xor A, B) != 0) with (A != B)
-        return new ICmpInst(Pred, BOp0, BOp1);
-      }
-    }
-    break;
-  case Instruction::Sub:
-    if (BO->hasOneUse()) {
-      if (C.isZero()) {
-        // Replace ((sub A, B) != 0) with (A != B).
         return new ICmpInst(Pred, BOp0, BOp1);
       }
     }
