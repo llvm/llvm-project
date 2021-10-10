@@ -81,10 +81,12 @@ TEST(SanitizerCommon, ChainedOriginDepotStats) {
   EXPECT_EQ(stats2.n_uniq_ids, stats1.n_uniq_ids);
   EXPECT_EQ(stats2.allocated, stats1.allocated);
 
-  EXPECT_TRUE(chainedOriginDepot.Put(35, 36, &new_id));
-  StackDepotStats stats3 = chainedOriginDepot.GetStats();
-  EXPECT_EQ(stats3.n_uniq_ids, stats2.n_uniq_ids + 1);
-  EXPECT_GT(stats3.allocated, stats2.allocated);
+  for (int i = 0; i < 100000; ++i) {
+    ASSERT_TRUE(chainedOriginDepot.Put(35, i, &new_id));
+    StackDepotStats stats3 = chainedOriginDepot.GetStats();
+    ASSERT_EQ(stats3.n_uniq_ids, stats2.n_uniq_ids + 1 + i);
+  }
+  EXPECT_GT(chainedOriginDepot.GetStats().allocated, stats2.allocated);
 }
 
 }  // namespace __sanitizer
