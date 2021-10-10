@@ -55,6 +55,24 @@ def AffineDialectDemotion : FunctionPass<"demote-affine"> {
   ];
 }
 
+def CharacterConversion : Pass<"character-conversion"> {
+  let summary = "Convert CHARACTER entities with different KINDs";
+  let description = [{
+    Translates entities of one CHARACTER KIND to another.
+
+    By default the translation is to naively zero-extend or truncate a code
+    point to fit the destination size.
+  }];
+  let constructor = "::fir::createCharacterConversionPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"useRuntimeCalls", "use-runtime-calls",
+           "std::string", /*default=*/"std::string{}",
+           "Generate runtime calls to a named set of conversion routines. "
+           "By default, the conversions may produce unexpected results.">
+  ];
+}
+
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let summary = "Convert name for external interoperability";
   let description = [{
