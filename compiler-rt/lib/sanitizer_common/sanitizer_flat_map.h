@@ -41,7 +41,7 @@ class FlatMap {
     CHECK_EQ(0U, map_[idx]);
     map_[idx] = val;
   }
-  u8 operator[](uptr idx) {
+  u8 operator[](uptr idx) const {
     CHECK_LT(idx, kSize);
     // FIXME: CHECK may be too expensive here.
     return map_[idx];
