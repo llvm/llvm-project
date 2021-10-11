@@ -40,6 +40,9 @@ add_llvm_component_library(LLVMOrcJIT
   DEPENDS
   intrinsics_gen
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   LINK_COMPONENTS
   Core
   ExecutionEngine
