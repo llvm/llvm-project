@@ -151,6 +151,43 @@ template <> struct Chained<> {
   static void SplatSet(char *dst, const unsigned char value) {}
 };
 
+// Overlap ElementA and ElementB so they span Size bytes.
+template <size_t Size, typename ElementA, typename ElementB = ElementA>
+struct Overlap {
+  static constexpr size_t kSize = Size;
+  static_assert(ElementB::kSize <= ElementA::kSize, "ElementB too big");
+  static_assert(ElementA::kSize <= Size, "ElementA too big");
+  static_assert((ElementA::kSize + ElementB::kSize) >= Size,
+                "Elements too small to overlap");
+  static constexpr size_t kOffset = kSize - ElementB::kSize;
+
+  static void Copy(char *__restrict dst, const char *__restrict src) {
+    ElementA::Copy(dst, src);
+    ElementB::Copy(dst + kOffset, src + kOffset);
+  }
+
+  static bool Equals(const char *lhs, const char *rhs) {
+    if (!ElementA::Equals(lhs, rhs))
+      return false;
+    if (!ElementB::Equals(lhs + kOffset, rhs + kOffset))
+      return false;
+    return true;
+  }
+
+  static int ThreeWayCompare(const char *lhs, const char *rhs) {
+    if (!ElementA::Equals(lhs, rhs))
+      return ElementA::ThreeWayCompare(lhs, rhs);
+    if (!ElementB::Equals(lhs + kOffset, rhs + kOffset))
+      return ElementB::ThreeWayCompare(lhs + kOffset, rhs + kOffset);
+    return 0;
+  }
+
+  static void SplatSet(char *dst, const unsigned char value) {
+    ElementA::SplatSet(dst, value);
+    ElementB::SplatSet(dst + kOffset, value);
+  }
+};
+
 // Runtime-size Higher-Order Operations
 // ------------------------------------
 // - Tail<T>: Perform the operation on the last 'T::kSize' bytes of the buffer.
