@@ -46,8 +46,8 @@ define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 
 define i1 @test_negative_nuw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_negative_nuw_and_signed_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nuw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt i64 [[Y]], 3
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add nuw i64 [[X:%.*]], -11
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[NOTSUB]], -4
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw i64 10, %x
@@ -57,8 +57,8 @@ define i1 @test_negative_nuw_and_signed_pred(i64 %x) {
 
 define i1 @test_negative_nsw_and_unsigned_pred(i64 %x) {
 ; CHECK-LABEL: @test_negative_nsw_and_unsigned_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nsw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i64 [[Y]], 3
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add nsw i64 [[X:%.*]], -11
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[NOTSUB]], -4
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nsw i64 10, %x
@@ -68,9 +68,7 @@ define i1 @test_negative_nsw_and_unsigned_pred(i64 %x) {
 
 define i1 @test_negative_combined_sub_unsigned_overflow(i64 %x) {
 ; CHECK-LABEL: @test_negative_combined_sub_unsigned_overflow(
-; CHECK-NEXT:    [[Y:%.*]] = sub nuw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i64 [[Y]], 11
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = sub nuw i64 10, %x
   %z = icmp ult i64 %y, 11
@@ -79,9 +77,7 @@ define i1 @test_negative_combined_sub_unsigned_overflow(i64 %x) {
 
 define i1 @test_negative_combined_sub_signed_overflow(i8 %x) {
 ; CHECK-LABEL: @test_negative_combined_sub_signed_overflow(
-; CHECK-NEXT:    [[Y:%.*]] = sub nsw i8 127, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[Y]], -1
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y = sub nsw i8 127, %x
   %z = icmp slt i8 %y, -1
@@ -191,8 +187,8 @@ define <2 x i1> @icmp_eq_sub_non_splat2(<2 x i32> %a) {
 
 define i1 @neg_sgt_42(i32 %x) {
 ; CHECK-LABEL: @neg_sgt_42(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[NEGX]], 42
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[NOTSUB]], -43
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i32 0, %x
@@ -306,8 +302,8 @@ define i1 @subC_nsw_ne(i32 %x) {
 
 define i1 @neg_slt_42(i128 %x) {
 ; CHECK-LABEL: @neg_slt_42(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i128 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i128 [[NEGX]], 42
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i128 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i128 [[NOTSUB]], -43
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i128 0, %x
@@ -317,8 +313,8 @@ define i1 @neg_slt_42(i128 %x) {
 
 define <2 x i1> @neg_ugt_42_splat(<2 x i7> %x) {
 ; CHECK-LABEL: @neg_ugt_42_splat(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i7> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i7> [[NEGX]], <i7 42, i7 42>
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i7> [[X:%.*]], <i7 -1, i7 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[NOTSUB]], <i7 -43, i7 -43>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %negx = sub <2 x i7> zeroinitializer, %x
@@ -343,8 +339,8 @@ define i1 @neg_sgt_42_use(i32 %x) {
 
 define i1 @neg_slt_n1(i8 %x) {
 ; CHECK-LABEL: @neg_slt_n1(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[NEGX]], -1
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[NOTSUB]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -354,8 +350,8 @@ define i1 @neg_slt_n1(i8 %x) {
 
 define i1 @neg_slt_0(i8 %x) {
 ; CHECK-LABEL: @neg_slt_0(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[ISNEGNEG:%.*]] = icmp slt i8 [[NEGX]], 0
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[ISNEGNEG:%.*]] = icmp sgt i8 [[NOTSUB]], -1
 ; CHECK-NEXT:    ret i1 [[ISNEGNEG]]
 ;
   %negx = sub i8 0, %x
@@ -365,8 +361,7 @@ define i1 @neg_slt_0(i8 %x) {
 
 define i1 @neg_slt_1(i8 %x) {
 ; CHECK-LABEL: @neg_slt_1(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[NEGX]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], -127
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -376,8 +371,8 @@ define i1 @neg_slt_1(i8 %x) {
 
 define i1 @neg_sgt_n1(i8 %x) {
 ; CHECK-LABEL: @neg_sgt_n1(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[NEGX]], -1
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[NOTSUB]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -387,8 +382,7 @@ define i1 @neg_sgt_n1(i8 %x) {
 
 define i1 @neg_sgt_0(i8 %x) {
 ; CHECK-LABEL: @neg_sgt_0(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[NEGX]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], -128
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i8 0, %x
@@ -398,8 +392,8 @@ define i1 @neg_sgt_0(i8 %x) {
 
 define i1 @neg_sgt_1(i8 %x) {
 ; CHECK-LABEL: @neg_sgt_1(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[NEGX]], 1
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[NOTSUB]], -2
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %negx = sub i8 0, %x
