@@ -163,10 +163,7 @@ public:
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
-  bool isUndefWeak() const {
-    // See comment on lazy symbols for details.
-    return isWeak() && (isUndefined() || isLazy());
-  }
+  bool isUndefWeak() const { return isWeak() && isUndefined(); }
 
   StringRef getName() const {
     if (nameSize == (uint32_t)-1)
