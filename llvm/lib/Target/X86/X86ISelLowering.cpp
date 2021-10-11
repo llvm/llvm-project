@@ -42852,10 +42852,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
       int NumElts = VT.getVectorNumElements();
       for (int i = 0; i != NumElts; ++i) {
-        if (CondMask[i] < NumElts)
+        // getConstVector sets negative shuffle mask values as undef, so ensure
+        // we hardcode SM_SentinelZero values to zero (0x80).
+        if (CondMask[i] < NumElts) {
+          LHSMask[i] = (LHSMask[i] == SM_SentinelZero) ? 0x80 : LHSMask[i];
           RHSMask[i] = 0x80;
-        else
+        } else {
           LHSMask[i] = 0x80;
+          RHSMask[i] = (RHSMask[i] == SM_SentinelZero) ? 0x80 : RHSMask[i];
+        }
       }
       LHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, LHS.getOperand(0),
                         getConstVector(LHSMask, SimpleVT, DAG, DL, true));
