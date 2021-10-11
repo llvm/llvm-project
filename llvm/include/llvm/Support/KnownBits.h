@@ -282,6 +282,10 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  unsigned countMaxActiveBits() const {
+    return getBitWidth() - countMinLeadingZeros();
+  }
+
   /// Create known bits from a known constant.
   static KnownBits makeConstant(const APInt &C) {
     return KnownBits(~C, C);
