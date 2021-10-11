@@ -35,6 +35,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strlen
+    libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
     libc.src.string.strnlen

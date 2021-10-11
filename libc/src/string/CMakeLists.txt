@@ -96,6 +96,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strncat
+  SRCS
+    strncat.cpp
+  HDRS
+    strncat.h
+  DEPENDS
+    .strncpy
+    .string_utils
+)
+
+add_entrypoint_object(
   strncmp
   SRCS
     strncmp.cpp
