@@ -24,7 +24,7 @@ namespace mlir {
 class Location;
 class OpBuilder;
 
-raw_ostream &operator<<(raw_ostream &os, Range &range);
+raw_ostream &operator<<(raw_ostream &os, const Range &range);
 
 /// Return the list of Range (i.e. offset, size, stride). Each Range
 /// entry contains either the dynamic value or a ConstantIndexOp constructed

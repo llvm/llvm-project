@@ -10,6 +10,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -212,6 +213,16 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   }
 
   containerOp->destroy();
+}
+
+TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *op = createOp(&context);
+
+  std::string str = formatv("{0}", *op).str();
+  ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
 }
 
 } // end namespace
