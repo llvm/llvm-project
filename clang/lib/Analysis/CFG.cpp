@@ -2711,7 +2711,8 @@ CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
   return addStmt(C->getCond());
 }
 
-CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C, bool ExternallyDestructed) {
+CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C,
+                                        bool ExternallyDestructed) {
   LocalScope::const_iterator scopeBeginPos = ScopePos;
   addLocalScopeForStmt(C);
 
