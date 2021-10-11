@@ -51,7 +51,7 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ...
+- -Wbitwise-instead-of-logical (part of -Wbool-operation) warns about use of bitwise with boolean operands which have side effects.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
