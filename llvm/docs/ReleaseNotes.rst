@@ -60,6 +60,7 @@ Changes to the LLVM IR
   will be removed after LLVM 14. In the meantime, only minimal effort will be
   made to maintain the legacy pass manager for the optimization pipeline.
 * Max allowed integer type was reduced from 2^24-1 bits to 2^23 bits.
+* Max allowed alignment was increased from 2^29 to 2^32.
 
 Changes to building LLVM
 ------------------------
