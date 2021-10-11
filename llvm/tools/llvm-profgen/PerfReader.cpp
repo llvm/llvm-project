@@ -647,9 +647,13 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x")) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
     if (extractLBRStack(TraceIt, Sample->LBRStack)) {
-      // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
-      // ranges
-      Sample->CallStack.front() = Sample->LBRStack[0].Target;
+      if (IgnoreStackSamples) {
+        Sample->CallStack.clear();
+      } else {
+        // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
+        // ranges
+        Sample->CallStack.front() = Sample->LBRStack[0].Target;
+      }
       // Record samples by aggregation
       AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
     }
