@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 #include <future>
@@ -141,4 +142,20 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleAsyncRet) {
   EXPECT_FALSE(!!WrapperFunction<int32_t(int32_t, int32_t)>::call(
       addAsyncWrapper, Result, 1, 2));
   EXPECT_EQ(Result, (int32_t)3);
+}
+
+static WrapperFunctionResult failingWrapper(const char *ArgData,
+                                            size_t ArgSize) {
+  return WrapperFunctionResult::createOutOfBandError("failed");
+}
+
+void asyncFailingWrapperCaller(unique_function<void(WrapperFunctionResult)> F,
+                               const char *ArgData, size_t ArgSize) {
+  F(failingWrapper(ArgData, ArgSize));
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallFailingAsync) {
+  WrapperFunction<void()>::callAsync(asyncFailingWrapperCaller, [](Error Err) {
+    EXPECT_THAT_ERROR(std::move(Err), Failed());
+  });
 }
