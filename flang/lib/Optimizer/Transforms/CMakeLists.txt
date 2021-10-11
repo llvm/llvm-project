@@ -1,4 +1,5 @@
 add_flang_library(FIRTransforms
+  AbstractResult.cpp
   AffinePromotion.cpp
   AffineDemotion.cpp
   CharacterConversion.cpp
