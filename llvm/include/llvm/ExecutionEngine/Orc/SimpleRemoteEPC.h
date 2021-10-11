@@ -37,8 +37,8 @@ public:
   Create(std::unique_ptr<TaskDispatcher> D,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
-                                           new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
-                                                               std::move(D)));
+        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
+                            std::move(D)));
     auto T = TransportT::Create(
         *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
