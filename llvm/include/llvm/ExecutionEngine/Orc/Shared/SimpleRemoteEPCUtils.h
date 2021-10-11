@@ -22,7 +22,6 @@
 #include "llvm/Support/Error.h"
 
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
