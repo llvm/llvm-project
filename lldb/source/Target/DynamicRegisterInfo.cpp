@@ -408,29 +408,6 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
   m_set_reg_nums[set].push_back(reg_num);
 }
 
-void DynamicRegisterInfo::AddSupplementaryRegister(RegisterInfo new_reg_info,
-                                                   ConstString &set_name) {
-  assert(new_reg_info.value_regs != nullptr);
-  const uint32_t reg_num = m_regs.size();
-  AddRegister(new_reg_info, set_name);
-
-  reg_to_regs_map new_invalidates;
-  for (uint32_t value_reg : m_value_regs_map[reg_num]) {
-    // copy value_regs to invalidate_regs
-    new_invalidates[reg_num].push_back(value_reg);
-
-    // copy invalidate_regs from the parent register
-    llvm::append_range(new_invalidates[reg_num], m_invalidate_regs_map[value_reg]);
-
-    // add reverse invalidate entries
-    for (uint32_t x : new_invalidates[reg_num])
-      new_invalidates[x].push_back(new_reg_info.kinds[eRegisterKindLLDB]);
-  }
-
-  for (const auto &x : new_invalidates)
-    llvm::append_range(m_invalidate_regs_map[x.first], x.second);
-}
-
 void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   if (m_finalized)
     return;
@@ -801,4 +778,29 @@ DynamicRegisterInfo::GetRegisterInfo(llvm::StringRef reg_name) const {
     if (reg_info.name == reg_name)
       return &reg_info;
   return nullptr;
+}
+
+void lldb_private::addSupplementaryRegister(
+    std::vector<DynamicRegisterInfo::Register> &regs,
+    DynamicRegisterInfo::Register new_reg_info) {
+  assert(!new_reg_info.value_regs.empty());
+  const uint32_t reg_num = regs.size();
+  regs.push_back(new_reg_info);
+
+  std::map<uint32_t, std::vector<uint32_t>> new_invalidates;
+  for (uint32_t value_reg : new_reg_info.value_regs) {
+    // copy value_regs to invalidate_regs
+    new_invalidates[reg_num].push_back(value_reg);
+
+    // copy invalidate_regs from the parent register
+    llvm::append_range(new_invalidates[reg_num],
+                       regs[value_reg].invalidate_regs);
+
+    // add reverse invalidate entries
+    for (uint32_t x : new_invalidates[reg_num])
+      new_invalidates[x].push_back(reg_num);
+  }
+
+  for (const auto &x : new_invalidates)
+    llvm::append_range(regs[x.first].invalidate_regs, x.second);
 }

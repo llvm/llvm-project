@@ -56,11 +56,6 @@ public:
   void AddRegister(lldb_private::RegisterInfo reg_info,
                    lldb_private::ConstString &set_name);
 
-  // Add a new register and cross-link it via invalidate_regs with other
-  // registers sharing its value_regs.
-  void AddSupplementaryRegister(lldb_private::RegisterInfo reg_info,
-                                lldb_private::ConstString &set_name);
-
   void Finalize(const lldb_private::ArchSpec &arch);
 
   size_t GetNumRegisters() const;
@@ -129,6 +124,9 @@ protected:
   bool m_finalized = false;
   bool m_is_reconfigurable = false;
 };
+
+void addSupplementaryRegister(std::vector<DynamicRegisterInfo::Register> &regs,
+                              DynamicRegisterInfo::Register new_reg_info);
 
 } // namespace lldb_private
 
