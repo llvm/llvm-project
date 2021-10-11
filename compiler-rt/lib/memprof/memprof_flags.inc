@@ -37,13 +37,3 @@ MEMPROF_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
              "pointer to an allocated space which can not be used.")
 MEMPROF_FLAG(bool, print_terse, false,
              "If set, prints memory profile in a terse format.")
-
-MEMPROF_FLAG(
-    int, mem_info_cache_entries, 16381,
-    "Size in entries of the mem info block cache, should be closest prime"
-    " number to a power of two for best hashing.")
-MEMPROF_FLAG(bool, print_mem_info_cache_miss_rate, false,
-             "If set, prints the miss rate of the mem info block cache.")
-MEMPROF_FLAG(
-    bool, print_mem_info_cache_miss_rate_details, false,
-    "If set, prints detailed miss rates of the mem info block cache sets.")

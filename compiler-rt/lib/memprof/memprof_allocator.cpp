@@ -16,6 +16,7 @@
 #include "memprof_allocator.h"
 #include "memprof_mapping.h"
 #include "memprof_meminfoblock.h"
+#include "memprof_mibmap.h"
 #include "memprof_stack.h"
 #include "memprof_thread.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -29,7 +30,6 @@
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 #include <sched.h>
-#include <stdlib.h>
 #include <time.h>
 
 namespace __memprof {
@@ -167,146 +167,6 @@ AllocatorCache *GetAllocatorCache(MemprofThreadLocalMallocStorage *ms) {
   return &ms->allocator_cache;
 }
 
-struct SetEntry {
-  SetEntry() : id(0), MIB() {}
-  bool Empty() { return id == 0; }
-  void Print() {
-    CHECK(!Empty());
-    MIB.Print(id, flags()->print_terse);
-  }
-  // The stack id
-  u64 id;
-  MemInfoBlock MIB;
-};
-
-struct CacheSet {
-  enum { kSetSize = 4 };
-
-  void PrintAll() {
-    for (int i = 0; i < kSetSize; i++) {
-      if (Entries[i].Empty())
-        continue;
-      Entries[i].Print();
-    }
-  }
-  void insertOrMerge(u64 new_id, MemInfoBlock &newMIB) {
-    SpinMutexLock l(&SetMutex);
-    AccessCount++;
-
-    for (int i = 0; i < kSetSize; i++) {
-      auto id = Entries[i].id;
-      // Check if this is a hit or an empty entry. Since we always move any
-      // filled locations to the front of the array (see below), we don't need
-      // to look after finding the first empty entry.
-      if (id == new_id || !id) {
-        if (id == 0) {
-          Entries[i].id = new_id;
-          Entries[i].MIB = newMIB;
-        } else {
-          Entries[i].MIB.Merge(newMIB);
-        }
-        // Assuming some id locality, we try to swap the matching entry
-        // into the first set position.
-        if (i != 0) {
-          auto tmp = Entries[0];
-          Entries[0] = Entries[i];
-          Entries[i] = tmp;
-        }
-        return;
-      }
-    }
-
-    // Miss
-    MissCount++;
-
-    // We try to find the entries with the lowest alloc count to be evicted:
-    int min_idx = 0;
-    u64 min_count = Entries[0].MIB.alloc_count;
-    for (int i = 1; i < kSetSize; i++) {
-      CHECK(!Entries[i].Empty());
-      if (Entries[i].MIB.alloc_count < min_count) {
-        min_idx = i;
-        min_count = Entries[i].MIB.alloc_count;
-      }
-    }
-
-    // Print the evicted entry profile information
-    if (!flags()->print_terse)
-      Printf("Evicted:\n");
-    Entries[min_idx].Print();
-
-    // Similar to the hit case, put new MIB in first set position.
-    if (min_idx != 0)
-      Entries[min_idx] = Entries[0];
-    Entries[0].id = new_id;
-    Entries[0].MIB = newMIB;
-  }
-
-  void PrintMissRate(int i) {
-    u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
-    Printf("Set %d miss rate: %d / %d = %5llu.%02llu%%\n", i, MissCount,
-           AccessCount, p / 100, p % 100);
-  }
-
-  SetEntry Entries[kSetSize];
-  u32 AccessCount = 0;
-  u32 MissCount = 0;
-  SpinMutex SetMutex;
-};
-
-struct MemInfoBlockCache {
-  MemInfoBlockCache() {
-    if (common_flags()->print_module_map)
-      DumpProcessMap();
-    if (flags()->print_terse)
-      MemInfoBlock::printHeader();
-    Sets =
-        (CacheSet *)malloc(sizeof(CacheSet) * flags()->mem_info_cache_entries);
-    Constructed = true;
-  }
-
-  ~MemInfoBlockCache() { free(Sets); }
-
-  void insertOrMerge(u64 new_id, MemInfoBlock &newMIB) {
-    u64 hv = new_id;
-
-    // Use mod method where number of entries should be a prime close to power
-    // of 2.
-    hv %= flags()->mem_info_cache_entries;
-
-    return Sets[hv].insertOrMerge(new_id, newMIB);
-  }
-
-  void PrintAll() {
-    for (int i = 0; i < flags()->mem_info_cache_entries; i++) {
-      Sets[i].PrintAll();
-    }
-  }
-
-  void PrintMissRate() {
-    if (!flags()->print_mem_info_cache_miss_rate)
-      return;
-    u64 MissCountSum = 0;
-    u64 AccessCountSum = 0;
-    for (int i = 0; i < flags()->mem_info_cache_entries; i++) {
-      MissCountSum += Sets[i].MissCount;
-      AccessCountSum += Sets[i].AccessCount;
-    }
-    u64 p = AccessCountSum ? MissCountSum * 10000ULL / AccessCountSum : 0;
-    Printf("Overall miss rate: %llu / %llu = %5llu.%02llu%%\n", MissCountSum,
-           AccessCountSum, p / 100, p % 100);
-    if (flags()->print_mem_info_cache_miss_rate_details)
-      for (int i = 0; i < flags()->mem_info_cache_entries; i++)
-        Sets[i].PrintMissRate(i);
-  }
-
-  CacheSet *Sets;
-  // Flag when the Sets have been allocated, in case a deallocation is called
-  // very early before the static init of the Allocator and therefore this table
-  // have completed.
-  bool Constructed = false;
-};
-
 // Accumulates the access count from the shadow for the given pointer and size.
 u64 GetShadowCount(uptr p, u32 size) {
   u64 *shadow = (u64 *)MEM_TO_SHADOW(p);
@@ -357,24 +217,35 @@ struct Allocator {
   uptr max_user_defined_malloc_size;
   atomic_uint8_t rss_limit_exceeded;
 
-  MemInfoBlockCache MemInfoBlockTable;
+  // Holds the mapping of stack ids to MemInfoBlocks.
+  MIBMapTy MIBMap;
+
   bool destructing;
+  bool constructed = false;
 
   // ------------------- Initialization ------------------------
-  explicit Allocator(LinkerInitialized) : destructing(false) {}
-
+  explicit Allocator(LinkerInitialized)
+      : destructing(false), constructed(true) {}
   ~Allocator() { FinishAndPrint(); }
 
+  static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
+                            void *Arg) {
+    SpinMutexLock(&Value->mutex);
+    Value->mib.Print(Key, bool(Arg));
+  }
+
   void FinishAndPrint() {
+    if (common_flags()->print_module_map)
+      DumpProcessMap();
     if (!flags()->print_terse)
       Printf("Live on exit:\n");
     allocator.ForceLock();
     allocator.ForEachChunk(
         [](uptr chunk, void *alloc) {
           u64 user_requested_size;
+          Allocator *A = (Allocator *)alloc;
           MemprofChunk *m =
-              ((Allocator *)alloc)
-                  ->GetMemprofChunk((void *)chunk, user_requested_size);
+              A->GetMemprofChunk((void *)chunk, user_requested_size);
           if (!m)
             return;
           uptr user_beg = ((uptr)m) + kChunkHeaderSize;
@@ -382,16 +253,15 @@ struct Allocator {
           long curtime = GetTimestamp();
           MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
                               m->cpu_id, GetCpuId());
-          ((Allocator *)alloc)
-              ->MemInfoBlockTable.insertOrMerge(m->alloc_context_id, newMIB);
+          InsertOrMerge(m->alloc_context_id, newMIB, A->MIBMap);
         },
         this);
-    allocator.ForceUnlock();
 
     destructing = true;
-    MemInfoBlockTable.PrintMissRate();
-    MemInfoBlockTable.PrintAll();
+    MIBMap.ForEach(PrintCallback,
+                   reinterpret_cast<void *>(flags()->print_terse));
     StackDepotPrintAll();
+    allocator.ForceUnlock();
   }
 
   void InitLinkerInitialized() {
@@ -523,14 +393,13 @@ struct Allocator {
 
     u64 user_requested_size =
         atomic_exchange(&m->user_requested_size, 0, memory_order_acquire);
-    if (memprof_inited && memprof_init_done && !destructing &&
-        MemInfoBlockTable.Constructed) {
+    if (memprof_inited && memprof_init_done && constructed && !destructing) {
       u64 c = GetShadowCount(p, user_requested_size);
       long curtime = GetTimestamp();
 
       MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
                           m->cpu_id, GetCpuId());
-        MemInfoBlockTable.insertOrMerge(m->alloc_context_id, newMIB);
+      InsertOrMerge(m->alloc_context_id, newMIB, MIBMap);
     }
 
     MemprofStats &thread_stats = GetCurrentThreadStats();
