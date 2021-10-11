@@ -1079,11 +1079,9 @@ namespace {
       while (!BlockQueue.empty()) {
         const CFGBlock *P = BlockQueue.front();
         BlockQueue.pop_front();
-        for (CFGBlock::const_succ_iterator I = P->succ_begin(),
-                                           E = P->succ_end();
-             I != E; ++I) {
-          if (*I && ReachableBlocks.insert(*I).second)
-            BlockQueue.push_back(*I);
+        for (const CFGBlock *B : P->succs()) {
+          if (B && ReachableBlocks.insert(B).second)
+            BlockQueue.push_back(B);
         }
       }
     }
