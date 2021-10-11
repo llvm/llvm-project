@@ -54,8 +54,10 @@ define void @test2(double* %ptr, i32 %skip) {
   ret void
 }
 
-; Same as @test1, but the assume just guarantees %skip > -3, which is not
-; enough to derive NoAlias
+; Same as @test1, this time the assume just guarantees %skip > -3, which is
+; enough to derive NoAlias for %ptr and %col.ptr.2 (distance is more than 3
+; doubles, and we load 1 double), but not %col.ptr.1 and %col.ptr.2 (distance
+; is more than 3 doubles, and we load 6 doubles).
 define void @test3(double* %ptr, i32 %skip) {
 ; CHECK-LABEL: Function: test3: 4 pointers, 1 call sites
 ; CHECK-NEXT:  MustAlias:   <6 x double>* %col.ptr.1, double* %ptr
