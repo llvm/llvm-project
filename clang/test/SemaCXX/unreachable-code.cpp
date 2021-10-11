@@ -77,3 +77,25 @@ void weak_redecl() {
     return;
   bar(); // no-warning
 }
+
+namespace pr52103 {
+
+void g(int a);
+
+void f(int a) {
+  if (a > 4) [[ likely ]] { // no-warning
+    return;
+  }
+
+  if (a > 4) [[ unlikely ]] { // no-warning
+    return;
+
+    return; // expected-warning {{will never be executed}}
+  }
+
+  [[clang::musttail]] return g(a); // no-warning
+
+  [[clang::musttail]] return g(a); // expected-warning {{will never be executed}}
+}
+
+}

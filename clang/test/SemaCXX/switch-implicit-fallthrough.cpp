@@ -50,6 +50,8 @@ label_default:
       break;
   }
   switch (n / 20) {
+    [[likely]] case 6:
+      [[clang::fallthrough]];
     case 7:
       n += 400;
       [[clang::fallthrough]];
@@ -73,6 +75,8 @@ label_default:
       n += 800;
   }
   switch (n / 30) {
+    case 6:
+      [[unlikely, clang::fallthrough]];
     case 11:
     case 12:  // no warning here, intended fall-through, no statement between labels
       n += 1600;
