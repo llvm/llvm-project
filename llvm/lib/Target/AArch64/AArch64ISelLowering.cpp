@@ -10917,6 +10917,10 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   unsigned Idx = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
   unsigned Size = Op.getValueSizeInBits();
 
+  // If we don't have legal types yet, do nothing
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT))
+    return SDValue();
+
   if (InVT.isScalableVector()) {
     // This will be matched by custom code during ISelDAGToDAG.
     if (Idx == 0 && isPackedVectorType(InVT, DAG))
