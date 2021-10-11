@@ -24,6 +24,9 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+namespace {
+#include "flang/Optimizer/Transforms/RewritePatterns.inc"
+} // namespace
 using namespace fir;
 
 /// Return true if a sequence type is of some incomplete size or a record type
@@ -773,7 +776,11 @@ static mlir::LogicalResult verify(fir::ConstcOp &op) {
 //===----------------------------------------------------------------------===//
 
 void fir::ConvertOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {}
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ConvertConvertOptPattern, RedundantConvertOptPattern,
+                 CombineConvertOptPattern, ForwardConstantConvertPattern>(
+      context);
+}
 
 mlir::OpFoldResult fir::ConvertOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
   if (value().getType() == getType())
