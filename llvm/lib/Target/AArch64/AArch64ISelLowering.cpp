@@ -1805,6 +1805,11 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known.Zero = APInt::getHighBitsSet(64, 32);
     break;
   }
+  case AArch64ISD::ASSERT_ZEXT_BOOL: {
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known.Zero |= APInt(Known.getBitWidth(), 0xFE);
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(1));
     Intrinsic::ID IntID = static_cast<Intrinsic::ID>(CN->getZExtValue());
@@ -2198,6 +2203,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
     MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
+    MAKE_CASE(AArch64ISD::ASSERT_ZEXT_BOOL)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -5379,6 +5385,19 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       if (Subtarget->isTargetILP32() && Ins[i].Flags.isPointer())
         ArgValue = DAG.getNode(ISD::AssertZext, DL, ArgValue.getValueType(),
                                ArgValue, DAG.getValueType(MVT::i32));
+
+      // i1 arguments are zero-extended to i8 by the caller. Emit a
+      // hint to reflect this.
+      if (Ins[i].isOrigArg()) {
+        Argument *OrigArg = MF.getFunction().getArg(Ins[i].getOrigArgIndex());
+        if (OrigArg->getType()->isIntegerTy(1)) {
+          if (!Ins[i].Flags.isZExt()) {
+            ArgValue = DAG.getNode(AArch64ISD::ASSERT_ZEXT_BOOL, DL,
+                                   ArgValue.getValueType(), ArgValue);
+          }
+        }
+      }
+
       InVals.push_back(ArgValue);
     }
   }
@@ -5817,6 +5836,19 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
          CallCC == CallingConv::Tail || CallCC == CallingConv::SwiftTail;
 }
 
+// Check if the value is zero-extended from i1 to i8
+static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
+  unsigned SizeInBits = Arg.getValueType().getSizeInBits();
+  if (SizeInBits < 8)
+    return false;
+
+  APInt LowBits(SizeInBits, 0xFF);
+  APInt RequredZero(SizeInBits, 0xFE);
+  KnownBits Bits = DAG.computeKnownBits(Arg, LowBits, 4);
+  bool ZExtBool = (Bits.Zero & RequredZero) == RequredZero;
+  return ZExtBool;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -6014,8 +6046,22 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     case CCValAssign::AExt:
       if (Outs[i].ArgVT == MVT::i1) {
         // AAPCS requires i1 to be zero-extended to 8-bits by the caller.
-        Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
-        Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
+        //
+        // Check if we actually have to do this, because the value may
+        // already be zero-extended.
+        //
+        // We cannot just emit a (zext i8 (trunc (assert-zext i8)))
+        // and rely on DAGCombiner to fold this, because the following
+        // (anyext i32) is combined with (zext i8) in DAG.getNode:
+        //
+        //   (ext (zext x)) -> (zext x)
+        //
+        // This will give us (zext i32), which we cannot remove, so
+        // try to check this beforehand.
+        if (!checkZExtBool(Arg, DAG)) {
+          Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
+          Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
+        }
       }
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
