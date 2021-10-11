@@ -255,7 +255,7 @@ public:
 
       if (VD->getType()->isReferenceType()) {
         if (const auto *TTy =
-            dyn_cast<TypedefType>(VD->getType().getNonReferenceType()))
+                VD->getType().getNonReferenceType()->getAs<TypedefType>())
           AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
       } else {
         // Assumptions for function parameters are emitted at the start of the
@@ -271,8 +271,7 @@ public:
     }
 
     if (!AVAttr)
-      if (const auto *TTy =
-          dyn_cast<TypedefType>(E->getType()))
+      if (const auto *TTy = E->getType()->getAs<TypedefType>())
         AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
 
     if (!AVAttr)

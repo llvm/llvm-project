@@ -45,7 +45,7 @@ TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerClass) {
 
 TEST(RecursiveASTVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType) {
   TypeLocVisitor Visitor;
-  Visitor.ExpectMatch("X<class Y>", 2, 18);
+  Visitor.ExpectMatch("X<Y>", 2, 18, 2);
   EXPECT_TRUE(Visitor.runOver(
     "template<typename T> class X {};\n"
     "class Y : public X<Y> {};"));

@@ -194,8 +194,14 @@ SourceLocation TypeLoc::getBeginLoc() const {
   while (true) {
     switch (Cur.getTypeLocClass()) {
     case Elaborated:
-      LeftMost = Cur;
-      break;
+      if (Cur.getLocalSourceRange().getBegin().isValid()) {
+        LeftMost = Cur;
+        break;
+      }
+      Cur = Cur.getNextTypeLoc();
+      if (Cur.isNull())
+        break;
+      continue;
     case FunctionProto:
       if (Cur.castAs<FunctionProtoTypeLoc>().getTypePtr()
               ->hasTrailingReturn()) {
@@ -530,6 +536,8 @@ void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
 
 void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
+  if (isEmpty())
+    return;
   setElaboratedKeywordLoc(Loc);
   NestedNameSpecifierLocBuilder Builder;
   Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);

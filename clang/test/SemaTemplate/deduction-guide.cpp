@@ -43,10 +43,11 @@ using AT = A<int[3], int, int, short>;
 // CHECK:   `-ParmVarDecl {{.*}} 'short (*)[4]'
 // CHECK: FunctionProtoType {{.*}} 'auto (X<Ps...>, Ts (*)[Ns]...) -> A<T, Ts...>' dependent trailing_return
 // CHECK: |-InjectedClassNameType {{.*}} 'A<T, Ts...>' dependent
-// CHECK: |-TemplateSpecializationType {{.*}} 'X<Ps...>' dependent X
-// CHECK: | `-TemplateArgument expr
-// CHECK: |   `-PackExpansionExpr {{.*}} 'T *'
-// CHECK: |     `-DeclRefExpr {{.*}} 'T *' NonTypeTemplateParm {{.*}} 'Ps' 'T *'
+// CHECK: |-ElaboratedType {{.*}} 'X<Ps...>' sugar dependent
+// CHECK: | `-TemplateSpecializationType {{.*}} 'X<Ps...>' dependent X
+// CHECK: |   `-TemplateArgument expr
+// CHECK: |     `-PackExpansionExpr {{.*}} 'T *'
+// CHECK: |       `-DeclRefExpr {{.*}} 'T *' NonTypeTemplateParm {{.*}} 'Ps' 'T *'
 // CHECK: `-PackExpansionType {{.*}} 'Ts (*)[Ns]...' dependent
 // CHECK:   `-PointerType {{.*}} 'Ts (*)[Ns]' dependent contains_unexpanded_pack
 // CHECK:     `-ParenType {{.*}} 'Ts[Ns]' sugar dependent contains_unexpanded_pack
@@ -117,8 +118,9 @@ using CT = C<int>;
 // CHECK: |-InjectedClassNameType {{.*}} 'C<A>' dependent
 // CHECK: |-TemplateTypeParmType {{.*}} 'A' dependent depth 0 index 0
 // CHECK: | `-TemplateTypeParm {{.*}} 'A'
-// CHECK: |-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
-// CHECK: | `-TemplateArgument template 
+// CHECK: |-ElaboratedType {{.*}} 'Y<>' sugar dependent
+// CHECK: | `-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
+// CHECK: |   `-TemplateArgument template
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
 
 template<typename ...T> struct D { // expected-note {{candidate}}

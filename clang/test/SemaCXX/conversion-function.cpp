@@ -235,7 +235,7 @@ namespace smart_ptr {
   Y make_Y();
 
   X f() {
-    X x = make_Y(); // expected-error{{no viable conversion from 'smart_ptr::Y' to 'smart_ptr::X'}}
+    X x = make_Y(); // expected-error{{no viable conversion from 'Y' to 'X'}}
     X x2(make_Y());
     return X(Y());
   }
@@ -348,7 +348,7 @@ namespace rdar8018274 {
   };
 
   void test2(UeberDerived ud) {
-    int i = ud; // expected-error{{ambiguous conversion from derived class 'rdar8018274::UeberDerived' to base class 'rdar8018274::Base'}}
+    int i = ud; // expected-error{{ambiguous conversion from derived class 'UeberDerived' to base class 'rdar8018274::Base'}}
   }
 
   struct Base2 {

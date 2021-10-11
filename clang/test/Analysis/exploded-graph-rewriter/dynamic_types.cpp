@@ -9,9 +9,9 @@ struct S {};
 void test() {
   // CHECK: Dynamic Types:
   // CHECK-SAME: <tr><td align="left"><table border="0"><tr>
-  // CHECK-SAME:   <td align="left">HeapSymRegion\{conj_$1\{struct S *, LC1,
+  // CHECK-SAME:   <td align="left">HeapSymRegion\{conj_$1\{S *, LC1,
   // CHECK-SAME:       S{{[0-9]*}}, #1\}\}</td>
-  // CHECK-SAME:   <td align="left">struct S</td>
+  // CHECK-SAME:   <td align="left">S</td>
   // CHECK-SAME: </tr></table></td></tr>
   new S;
 }

@@ -33,8 +33,8 @@ public:
   // CHECK:        [B3 (ENTRY)]
   // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
-  // WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
-  // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
+  // WARNINGS-NEXT:     1:  (CXXConstructExpr, A)
+  // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), A)
   // CHECK-NEXT:     2: A([B1.1]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
@@ -52,8 +52,8 @@ public:
   // CHECK:        [B1]
   // CHECK-NEXT:     1: i
   // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
-  // WARNINGS-NEXT:     3: [B1.2] (CXXConstructExpr, class A)
-  // ANALYZER-NEXT:     3: [B1.2] (CXXConstructExpr, A([B1.2]) (Base initializer), class A)
+  // WARNINGS-NEXT:     3: [B1.2] (CXXConstructExpr, A)
+  // ANALYZER-NEXT:     3: [B1.2] (CXXConstructExpr, A([B1.2]) (Base initializer), A)
   // CHECK-NEXT:     4: A([B1.3]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
@@ -72,8 +72,8 @@ public:
   // CHECK:        [B3 (ENTRY)]
   // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
-  // WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
-  // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
+  // WARNINGS-NEXT:     1:  (CXXConstructExpr, A)
+  // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), A)
   // CHECK-NEXT:     2: A([B1.1]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
@@ -91,8 +91,8 @@ public:
   // CHECK:        [B1]
   // CHECK-NEXT:     1: i
   // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
-  // WARNINGS-NEXT:     3: [B1.2] (CXXConstructExpr, class A)
-  // ANALYZER-NEXT:     3: [B1.2] (CXXConstructExpr, A([B1.2]) (Base initializer), class A)
+  // WARNINGS-NEXT:     3: [B1.2] (CXXConstructExpr, A)
+  // ANALYZER-NEXT:     3: [B1.2] (CXXConstructExpr, A([B1.2]) (Base initializer), A)
   // CHECK-NEXT:     4: A([B1.3]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
@@ -117,27 +117,27 @@ public:
 // CHECK:        [B4 (ENTRY)]
 // CHECK-NEXT:     Succs (1): B3
 // CHECK:        [B1]
-// WARNINGS-NEXT:     1:  (CXXConstructExpr, class C)
-// ANALYZER-NEXT:     1:  (CXXConstructExpr, C() (Base initializer), class C)
+// WARNINGS-NEXT:     1:  (CXXConstructExpr, C)
+// ANALYZER-NEXT:     1:  (CXXConstructExpr, C() (Base initializer), C)
 // CHECK-NEXT:     2: C([B1.1]) (Base initializer)
-// WARNINGS-NEXT:     3:  (CXXConstructExpr, class B)
-// ANALYZER-NEXT:     3:  (CXXConstructExpr, B() (Base initializer), class B)
+// WARNINGS-NEXT:     3:  (CXXConstructExpr, B)
+// ANALYZER-NEXT:     3:  (CXXConstructExpr, B() (Base initializer), B)
 // CHECK-NEXT:     4: B([B1.3]) (Base initializer)
-// WARNINGS-NEXT:     5:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     5:  (CXXConstructExpr, A() (Base initializer), class A)
+// WARNINGS-NEXT:     5:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:     5:  (CXXConstructExpr, A() (Base initializer), A)
 // CHECK-NEXT:     6: A([B1.5]) (Base initializer)
 // CHECK-NEXT:     7: i(/*implicit*/(int)0) (Member initializer)
 // CHECK-NEXT:     8: this
 // CHECK-NEXT:    9: [B1.8]->i
 // CHECK-NEXT:    10: r([B1.9]) (Member initializer)
-// WARNINGS-NEXT:    11:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:    11:  (CXXConstructExpr, [B1.12], class A)
+// WARNINGS-NEXT:    11:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:    11:  (CXXConstructExpr, [B1.12], A)
 // CHECK-NEXT:    12: A a;
 // CHECK-NEXT:     Preds (2): B2 B3
 // CHECK-NEXT:     Succs (1): B0
 // CHECK:        [B2]
-// WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
+// WARNINGS-NEXT:     1:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), A)
 // CHECK-NEXT:     2: A([B2.1]) (Base initializer)
 // CHECK-NEXT:     Preds (1): B3
 // CHECK-NEXT:     Succs (1): B1
@@ -244,8 +244,8 @@ public:
 // CHECK-NEXT:     Succs (1): B9
 // CHECK:        [B1]
 // CHECK-NEXT:     1: [B4.2] ? [B2.1] : [B3.1]
-// WARNINGS-NEXT:     2: [B1.1] (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     2: [B1.1] (CXXConstructExpr, a([B1.1]) (Member initializer), class A)
+// WARNINGS-NEXT:     2: [B1.1] (CXXConstructExpr, A)
+// ANALYZER-NEXT:     2: [B1.1] (CXXConstructExpr, a([B1.1]) (Member initializer), A)
 // CHECK-NEXT:     3: a([B1.2]) (Member initializer)
 // CHECK-NEXT:     Preds (2): B2 B3
 // CHECK-NEXT:     Succs (1): B0
@@ -265,8 +265,8 @@ public:
 // CHECK-NEXT:     Succs (2): B2 B3
 // CHECK:        [B5]
 // CHECK-NEXT:     1: [B8.2] ? [B6.1] : [B7.1]
-// WARNINGS-NEXT:     2: [B5.1] (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     2: [B5.1] (CXXConstructExpr, A([B5.1]) (Base initializer), class A)
+// WARNINGS-NEXT:     2: [B5.1] (CXXConstructExpr, A)
+// ANALYZER-NEXT:     2: [B5.1] (CXXConstructExpr, A([B5.1]) (Base initializer), A)
 // CHECK-NEXT:     3: A([B5.2]) (Base initializer)
 // CHECK-NEXT:     Preds (2): B6 B7
 // CHECK-NEXT:     Succs (1): B4

@@ -427,7 +427,7 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "auto";
          HI.Kind = index::SymbolKind::TypeAlias;
-         HI.Definition = "struct S";
+         HI.Definition = "S";
        }},
       // undeduced auto
       {R"cpp(
@@ -550,7 +550,7 @@ class Foo final {})cpp";
          HI.NamespaceScope = "";
          HI.Definition = "Color x = RED";
          HI.Kind = index::SymbolKind::Variable;
-         HI.Type = "enum Color";
+         HI.Type = "Color";
          HI.Value = "RED (0xffffff85)"; // Symbolic on an expression.
        }},
       {R"cpp(
@@ -795,7 +795,7 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::Variable;
          HI.NamespaceScope = "";
          HI.Definition = "X x";
-         HI.Type = "struct X";
+         HI.Type = "X";
        }},
       {// Don't crash on null types.
        R"cpp(auto [^[[x]]] = 1; /*error-ok*/)cpp",
@@ -1944,7 +1944,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "auto function return with trailing type";
           }},
       {
@@ -1957,7 +1957,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "decltype";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "trailing return type";
           }},
       {
@@ -1970,7 +1970,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "auto in function return";
           }},
       {
@@ -1984,7 +1984,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "auto& in function return";
           }},
       {
@@ -1998,7 +1998,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "auto* in function return";
           }},
       {
@@ -2012,7 +2012,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "const auto& in function return";
           }},
       {
@@ -2025,7 +2025,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "decltype";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation = "decltype(auto) in function return";
           }},
       {
@@ -2115,7 +2115,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "decltype";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "struct Bar";
+            HI.Definition = "Bar";
             HI.Documentation =
                 "decltype of function with trailing return type.";
           }},
