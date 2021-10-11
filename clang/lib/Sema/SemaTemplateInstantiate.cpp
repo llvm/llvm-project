@@ -3658,7 +3658,7 @@ void LocalInstantiationScope::MakeInstantiatedLocalArgPack(const Decl *D) {
 
 bool LocalInstantiationScope::isLocalPackExpansion(const Decl *D) {
   for (DeclArgumentPack *Pack : ArgumentPacks)
-    if (std::find(Pack->begin(), Pack->end(), D) != Pack->end())
+    if (llvm::is_contained(*Pack, D))
       return true;
   return false;
 }

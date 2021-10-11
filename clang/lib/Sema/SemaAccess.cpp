@@ -140,7 +140,7 @@ struct EffectiveContext {
 
   bool includesClass(const CXXRecordDecl *R) const {
     R = R->getCanonicalDecl();
-    return llvm::find(Records, R) != Records.end();
+    return llvm::is_contained(Records, R);
   }
 
   /// Retrieves the innermost "useful" context.  Can be null if we're

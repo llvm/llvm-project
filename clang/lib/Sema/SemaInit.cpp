@@ -9915,8 +9915,7 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
   const bool ShouldTrackCopy =
       Entity.isParameterKind() && Seq.isConstructorInitialization();
   if (ShouldTrackCopy) {
-    if (llvm::find(CurrentParameterCopyTypes, Entity.getType()) !=
-        CurrentParameterCopyTypes.end()) {
+    if (llvm::is_contained(CurrentParameterCopyTypes, Entity.getType())) {
       Seq.SetOverloadFailure(
           InitializationSequence::FK_ConstructorOverloadFailed,
           OR_No_Viable_Function);

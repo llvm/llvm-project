@@ -497,8 +497,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
       HasAbnormalEdge = true;
       continue;
     }
-    if (std::find(B.succ_begin(), B.succ_end(), &cfg->getExit())
-        == B.succ_end()) {
+    if (!llvm::is_contained(B.succs(), &cfg->getExit())) {
       HasAbnormalEdge = true;
       continue;
     }

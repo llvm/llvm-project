@@ -4596,9 +4596,7 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
                  dyn_cast_or_null<NamedDecl>(NamespaceDeclChain.back())) {
     IdentifierInfo *Name = ND->getIdentifier();
     bool SameNameSpecifier = false;
-    if (std::find(CurNameSpecifierIdentifiers.begin(),
-                  CurNameSpecifierIdentifiers.end(),
-                  Name) != CurNameSpecifierIdentifiers.end()) {
+    if (llvm::is_contained(CurNameSpecifierIdentifiers, Name)) {
       std::string NewNameSpecifier;
       llvm::raw_string_ostream SpecifierOStream(NewNameSpecifier);
       SmallVector<const IdentifierInfo *, 4> NewNameSpecifierIdentifiers;
@@ -4607,8 +4605,7 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
       SpecifierOStream.flush();
       SameNameSpecifier = NewNameSpecifier == CurNameSpecifier;
     }
-    if (SameNameSpecifier || llvm::find(CurContextIdentifiers, Name) !=
-                                 CurContextIdentifiers.end()) {
+    if (SameNameSpecifier || llvm::is_contained(CurContextIdentifiers, Name)) {
       // Rebuild the NestedNameSpecifier as a globally-qualified specifier.
       NNS = NestedNameSpecifier::GlobalSpecifier(Context);
       NumSpecifiers =

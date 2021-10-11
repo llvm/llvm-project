@@ -12946,7 +12946,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
       // Then we append it to the list to check next in order.
       FieldTy = FieldTy.getCanonicalType();
       if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+        if (!llvm::is_contained(RecordTypeList, FieldRecTy))
           RecordTypeList.push_back(FieldRecTy);
       }
     }
