@@ -733,19 +733,22 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    MemorySSAUpdater MSSAU(MSSA);
-    if (VerifyMemorySSA)
-      MSSA->verifyMemorySSA();
+    auto *MSSAA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    Optional<MemorySSAUpdater> MSSAU;
+    if (MSSAA)
+      MSSAU = MemorySSAUpdater(&MSSAA->getMSSA());
+    if (MSSAA && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
     bool DeleteCurrentLoop = false;
-    bool Changed = simplifyLoopCFG(*L, DT, LI, SE, &MSSAU, DeleteCurrentLoop);
+    bool Changed = simplifyLoopCFG(
+        *L, DT, LI, SE, MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
+        DeleteCurrentLoop);
     if (DeleteCurrentLoop)
       LPM.markLoopAsDeleted(*L);
     return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MemorySSAWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addPreserved<DependenceAnalysisWrapperPass>();
     getLoopAnalysisUsage(AU);
