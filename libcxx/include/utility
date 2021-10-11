@@ -183,7 +183,8 @@ template<class... T>
   using index_sequence_for = make_index_sequence<sizeof...(T)>;
 
 template<class T, class U=T>
-    T exchange(T& obj, U&& new_value);
+    constexpr T exchange(T& obj, U&& new_value)
+      noexcept(is_nothrow_move_constructible<T>::value && is_nothrow_assignable<T&, U>::value); // constexpr in C++17, noexcept in C++23
 
 // 20.2.7, in-place construction // C++17
 struct in_place_t {

@@ -36,5 +36,5 @@
 "`P2321 <https://wg21.link/P2321>`__","LWG","``zip``","October 2021","",""
 "`P2340 <https://wg21.link/P2340>`__","LWG","Clarifying the status of the 'C headers'","October 2021","",""
 "`P2393 <https://wg21.link/P2393>`__","LWG","Cleaning up ``integer``-class types","October 2021","",""
-"`P2401 <https://wg21.link/P2401>`__","LWG","Add a conditional ``noexcept`` specification to ``std::exchange``","October 2021","",""
+"`P2401 <https://wg21.link/P2401>`__","LWG","Add a conditional ``noexcept`` specification to ``std::exchange``","October 2021","|Complete|","14.0"
 "","","","","",""
