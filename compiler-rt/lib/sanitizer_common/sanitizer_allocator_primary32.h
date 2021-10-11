@@ -199,7 +199,8 @@ class SizeClassAllocator32 {
   }
 
   uptr GetSizeClass(const void *p) const {
-    return possible_regions[ComputeRegionId(reinterpret_cast<uptr>(p))];
+    uptr id = ComputeRegionId(reinterpret_cast<uptr>(p));
+    return possible_regions.contains(id) ? possible_regions[id] : 0;
   }
 
   void *GetBlockBegin(const void *p) {
@@ -253,7 +254,7 @@ class SizeClassAllocator32 {
   // The allocator must be locked when calling this function.
   void ForEachChunk(ForEachChunkCallback callback, void *arg) const {
     for (uptr region = 0; region < kNumPossibleRegions; region++)
-      if (possible_regions[region]) {
+      if (possible_regions.contains(region) && possible_regions[region]) {
         uptr chunk_size = ClassIdToSize(possible_regions[region]);
         uptr max_chunks_in_region = kRegionSize / (chunk_size + kMetadataSize);
         uptr region_beg = region * kRegionSize;
@@ -305,7 +306,7 @@ class SizeClassAllocator32 {
     MapUnmapCallback().OnMap(res, kRegionSize);
     stat->Add(AllocatorStatMapped, kRegionSize);
     CHECK(IsAligned(res, kRegionSize));
-    possible_regions.set(ComputeRegionId(res), static_cast<u8>(class_id));
+    possible_regions[ComputeRegionId(res)] = class_id;
     return res;
   }
 
