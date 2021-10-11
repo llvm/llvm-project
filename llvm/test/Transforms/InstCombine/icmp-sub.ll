@@ -462,3 +462,29 @@ define i1 @neg_nsw_sgt_1(i8 %x) {
   %r = icmp sgt i8 %negx, 1
   ret i1 %r
 }
+
+define i1 @sub_eq_zero_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_eq_zero_use(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sub = sub i32 %x, %y
+  call void @use(i32 %sub)
+  %r = icmp eq i32 %sub, 0
+  ret i1 %r
+}
+
+define <2 x i1> @sub_ne_zero_use(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sub_ne_zero_use(
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[SUB]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %sub = sub <2 x i8> %x, %y
+  call void @use_vec(<2 x i8> %sub)
+  %r = icmp eq <2 x i8> %sub, zeroinitializer
+  ret <2 x i1> %r
+}
