@@ -298,11 +298,11 @@ FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
     if (ExplicitType == FloatModeKind::Float128)
       return hasFloat128Type() ? FloatModeKind::Float128
                                : FloatModeKind::NoFloat;
-    if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble() ||
-        &getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
-      return FloatModeKind::LongDouble;
-    if (hasFloat128Type())
-      return FloatModeKind::Float128;
+    if (ExplicitType == FloatModeKind::Ibm128)
+      return hasIbm128Type() ? FloatModeKind::Ibm128
+                             : FloatModeKind::NoFloat;
+    if (ExplicitType == FloatModeKind::LongDouble)
+      return ExplicitType;
     break;
   }
 

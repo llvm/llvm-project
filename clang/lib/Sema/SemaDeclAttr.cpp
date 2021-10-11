@@ -4242,6 +4242,10 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
       ExplicitType = FloatModeKind::LongDouble;
       DestWidth = 128;
       break;
+    case 'I':
+      ExplicitType = FloatModeKind::Ibm128;
+      DestWidth = Str[1] == 'I' ? 0 : 128;
+      break;
     }
     if (Str[1] == 'F') {
       IntegerMode = false;
