@@ -1917,6 +1917,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (Subtarget.isTargetXPLINK64())
     IsTailCall = false;
 
+  // Integer args <=32 bits should have an extension attribute.
+  bool HasLocalLinkage = false;
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
+    if (const Function *Fn = dyn_cast<Function>(G->getGlobal()))
+      HasLocalLinkage = Fn->hasLocalLinkage();
+  verifyNarrowIntegerArgs(Outs, HasLocalLinkage);
+
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
@@ -2176,6 +2183,9 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+
+  // Integer args <=32 bits should have an extension attribute.
+  verifyNarrowIntegerArgs(Outs, MF.getFunction().hasLocalLinkage());
 
   // Assign locations to each returned value.
   SmallVector<CCValAssign, 16> RetLocs;
@@ -9799,4 +9809,25 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   return DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, VT, DAG.getBitcast(OpVT, Op),
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
+}
+
+// Verify that narrow integer arguments are extended as required by the ABI.
+void SystemZTargetLowering::
+verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        bool HasLocalLinkage) const {
+  if (!getTargetMachine().Options.VerifyArgABICompliance || HasLocalLinkage ||
+      !Subtarget.isTargetELF())
+    return;
+
+  for (unsigned i = 0; i < Outs.size(); ++i) {
+    MVT VT = Outs[i].VT;
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    if (VT.isInteger()) {
+      assert((VT == MVT::i32 || VT.getSizeInBits() >= 64) &&
+             "Unexpected integer argument VT.");
+      assert((VT != MVT::i32 ||
+              (Flags.isSExt() || Flags.isZExt() || Flags.isNoExt())) &&
+             "Narrow integer argument must have a valid extension type.");
+    }
+  }
 }
