@@ -1184,7 +1184,7 @@ void RVVEmitter::createRVVIntrinsics(
     }
 
     if (HasPolicy) {
-      ProtoMaskSeq.push_back("z");
+      ProtoMaskSeq.push_back("Kz");
     }
 
     // Create Intrinsics for each type and LMUL.
