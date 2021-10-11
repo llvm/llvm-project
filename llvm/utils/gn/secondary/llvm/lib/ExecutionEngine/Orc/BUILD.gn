@@ -46,6 +46,7 @@ static_library("Orc") {
     "SimpleRemoteEPC.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",
+    "TaskDispatch.cpp",
     "ThreadSafeModule.cpp",
   ]
 }
