@@ -653,6 +653,11 @@ class Instruction : InstructionEncoding {
   /// instruction selection predicates. FastISel cannot handle such cases, but
   /// SelectionDAG can.
   bit FastISelShouldIgnore = false;
+
+  /// HasPositionOrder: Indicate tablegen to sort the instructions by record
+  /// ID, so that instruction that is defined earlier can be sorted earlier
+  /// in the assembly matching table.
+  bit HasPositionOrder = false;
 }
 
 /// Defines an additional encoding that disassembles to the given instruction

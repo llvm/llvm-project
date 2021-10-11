@@ -636,6 +636,15 @@ struct MatchableInfo {
     if (RequiredFeatures.size() != RHS.RequiredFeatures.size())
       return RequiredFeatures.size() > RHS.RequiredFeatures.size();
 
+    // For X86 AVX/AVX512 instructions, we prefer vex encoding because the
+    // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
+    // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
+    // We use the ID to sort AVX instruction before AVX512 instruction in
+    // matching table.
+    if (TheDef->isSubClassOf("Instruction") &&
+        TheDef->getValueAsBit("HasPositionOrder"))
+      return TheDef->getID() < RHS.TheDef->getID();
+
     return false;
   }
 
