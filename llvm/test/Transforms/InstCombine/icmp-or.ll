@@ -220,9 +220,7 @@ define i1 @eq_const_mask_use2(i8 %x, i8 %y) {
 
 define <2 x i1> @decrement_slt_0(<2 x i8> %x) {
 ; CHECK-LABEL: @decrement_slt_0(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[OR]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
@@ -236,8 +234,7 @@ define i1 @decrement_slt_0_commute_use1(i8 %px) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], 42
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    call void @use(i8 [[DEC]])
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[DEC]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[OR]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %px, 42 ; thwart complexity-based canonicalization
@@ -253,7 +250,7 @@ define i1 @decrement_slt_0_use2(i8 %x) {
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[DEC]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[OR]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
@@ -262,6 +259,8 @@ define i1 @decrement_slt_0_use2(i8 %x) {
   %r = icmp slt i8 %or, 0
   ret i1 %r
 }
+
+; negative test - wrong cmp constant
 
 define i1 @decrement_slt_n1(i8 %x) {
 ; CHECK-LABEL: @decrement_slt_n1(
@@ -275,6 +274,8 @@ define i1 @decrement_slt_n1(i8 %x) {
   %r = icmp slt i8 %or, -1
   ret i1 %r
 }
+
+; negative test - wrong add constant
 
 define i1 @not_decrement_slt_0(i8 %x) {
 ; CHECK-LABEL: @not_decrement_slt_0(
@@ -293,9 +294,7 @@ define i1 @not_decrement_slt_0(i8 %x) {
 
 define <2 x i1> @decrement_sgt_n1(<2 x i8> %x) {
 ; CHECK-LABEL: @decrement_sgt_n1(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[OR]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
@@ -309,8 +308,7 @@ define i1 @decrement_sgt_n1_commute_use1(i8 %px) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], 42
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    call void @use(i8 [[DEC]])
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[DEC]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[OR]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %px, 42 ; thwart complexity-based canonicalization
@@ -326,7 +324,7 @@ define i1 @decrement_sgt_n1_use2(i8 %x) {
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[DEC]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[OR]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
@@ -335,6 +333,8 @@ define i1 @decrement_sgt_n1_use2(i8 %x) {
   %r = icmp sgt i8 %or, -1
   ret i1 %r
 }
+
+; negative test - wrong cmp constant
 
 define i1 @decrement_sgt_0(i8 %x) {
 ; CHECK-LABEL: @decrement_sgt_0(
@@ -348,6 +348,8 @@ define i1 @decrement_sgt_0(i8 %x) {
   %r = icmp sgt i8 %or, 0
   ret i1 %r
 }
+
+; negative test - wrong add constant
 
 define i1 @not_decrement_sgt_n1(i8 %x) {
 ; CHECK-LABEL: @not_decrement_sgt_n1(
