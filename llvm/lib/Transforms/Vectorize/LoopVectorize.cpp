@@ -5130,8 +5130,14 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
       Instruction *Update = cast<Instruction>(
           cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
-      ScalarPtrs.insert(Update);
-      return;
+
+      // If there is more than one user of Update (Ptr), we shouldn't assume it
+      // will be scalar after vectorisation as other users of the instruction
+      // may require widening. Otherwise, add it to ScalarPtrs.
+      if (Update->hasOneUse() && cast<Value>(*Update->user_begin()) == Ptr) {
+        ScalarPtrs.insert(Update);
+        return;
+      }
     }
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
