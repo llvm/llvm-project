@@ -793,6 +793,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     HandlePragmaFPContract();
     return nullptr;
   case tok::annot_pragma_fenv_access:
+  case tok::annot_pragma_fenv_access_ms:
     HandlePragmaFEnvAccess();
     return nullptr;
   case tok::annot_pragma_fenv_round:

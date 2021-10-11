@@ -374,8 +374,11 @@ Retry:
     return StmtError();
 
   case tok::annot_pragma_fenv_access:
+  case tok::annot_pragma_fenv_access_ms:
     ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_stdc_fenv_access_scope);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope)
+        << (Kind == tok::annot_pragma_fenv_access ? "STDC FENV_ACCESS"
+                                                    : "fenv_access");
     ConsumeAnnotationToken();
     return StmtEmpty();
 
@@ -955,6 +958,7 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       HandlePragmaFP();
       break;
     case tok::annot_pragma_fenv_access:
+    case tok::annot_pragma_fenv_access_ms:
       HandlePragmaFEnvAccess();
       break;
     case tok::annot_pragma_fenv_round:

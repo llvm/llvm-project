@@ -830,10 +830,11 @@ PRAGMA_ANNOTATION(pragma_redefine_extname)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fp_contract)
 
-// Annotation for #pragma STDC FENV_ACCESS
+// Annotations for #pragma STDC FENV_ACCESS and #pragma fenv_access (MS compat)
 // The lexer produces these so that they only take effect when the parser
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_access)
+PRAGMA_ANNOTATION(pragma_fenv_access_ms)
 
 // Annotation for #pragma STDC FENV_ROUND
 // The lexer produces these so that they only take effect when the parser
