@@ -20,7 +20,8 @@ class TestVectorOfVectors(TestBase):
 
         vector_type = "std::vector<int>"
         vector_of_vector_type = "std::vector<" + vector_type + " >"
-        size_type = vector_of_vector_type + "::size_type"
+        size_type = "size_type"
+        value_type = "value_type"
 
         self.runCmd("settings set target.import-std-module true")
 
@@ -42,12 +43,8 @@ class TestVectorOfVectors(TestBase):
                            ]),
             ])
         self.expect_expr("a.size()", result_type=size_type, result_value="2")
-        front = self.expect_expr("a.front().front()", result_value="1")
-        value_type = front.GetDisplayTypeName()
-        self.assertIn(value_type, [
-            "std::vector<int>::value_type", # Pre-D112976
-            "std::__vector_base<int, std::allocator<int> >::value_type", # Post-D112976
-            ])
+        front = self.expect_expr("a.front().front()", result_type=value_type,
+                                 result_value="1")
         self.expect_expr("a[1][1]", result_type=value_type, result_value="2")
         self.expect_expr("a.back().at(0)",
                          result_type=value_type,

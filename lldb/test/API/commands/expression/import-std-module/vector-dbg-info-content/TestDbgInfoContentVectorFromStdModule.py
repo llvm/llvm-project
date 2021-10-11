@@ -22,12 +22,12 @@ class TestDbgInfoContentVector(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         vector_type = "std::vector<Foo>"
-        size_type = vector_type + "::size_type"
-        value_type = vector_type + "::value_type"
-        iterator = vector_type + "::iterator"
+        size_type = "size_type"
+        value_type = "value_type"
+        iterator = "iterator"
         # LLDB's formatter provides us with a artificial 'item' member.
         iterator_children = [ValueCheck(name="item")]
-        riterator = vector_type + "::reverse_iterator"
+        riterator = "reverse_iterator"
         riterator_children = [
             ValueCheck(name="__t"),
             ValueCheck(name="current")

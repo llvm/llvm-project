@@ -70,5 +70,5 @@ namespace DRnnnn {
   };
 
   constexpr B b0(0, 0.0f); // ok, constexpr
-  B b1(0, 1); // expected-error {{call to constructor of 'DRnnnn::B' is ambiguous}}
+  B b1(0, 1); // expected-error {{call to constructor of 'B' is ambiguous}}
 }

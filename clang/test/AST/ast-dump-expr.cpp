@@ -59,7 +59,7 @@ void Throw() {
 void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
   obj1.*data;
   // CHECK: BinaryOperator 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int' lvalue '.*'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S':'S'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:9> 'int S::*' lvalue ParmVar 0x{{[^ ]*}} 'data' 'int S::*'
 
@@ -74,7 +74,7 @@ void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'void'
   // CHECK-NEXT: ParenExpr 0x{{[^ ]*}} <col:3, col:14> '<bound member function type>'
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:4, col:10> '<bound member function type>' '.*'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S':'S'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'void (S::*)(int)' lvalue ParmVar 0x{{[^ ]*}} 'call' 'void (S::*)(int)'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'int' 12
@@ -91,20 +91,18 @@ void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
 }
 
 void Casting(const S *s) {
-  // FIXME: The cast expressions contain "struct S" instead of "S".
-
   const_cast<S *>(s);
-  // CHECK: CXXConstCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:20> 'S *' const_cast<struct S *> <NoOp>
+  // CHECK: CXXConstCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:20> 'S *' const_cast<S *> <NoOp>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:19> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:19> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
   static_cast<const T *>(s);
-  // CHECK: CXXStaticCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:27> 'const T *' static_cast<const struct T *> <BaseToDerived (S)>
+  // CHECK: CXXStaticCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:27> 'const T *' static_cast<const T *> <BaseToDerived (S)>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:26> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:26> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
   dynamic_cast<const T *>(s);
-  // CHECK: CXXDynamicCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> 'const T *' dynamic_cast<const struct T *> <Dynamic>
+  // CHECK: CXXDynamicCastExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> 'const T *' dynamic_cast<const T *> <Dynamic>
   // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:27> 'const S *' <LValueToRValue> part_of_explicit_cast
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:27> 'const S *' lvalue ParmVar 0x{{[^ ]*}} 's' 'const S *'
 
@@ -180,7 +178,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   a.func(0);
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .func 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:10> 'int' 0
 
   p->func(0);
@@ -201,7 +199,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   a.template foo<float>();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:25> 'float':'float'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:23> '<bound member function type>' .foo 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
 
   p->~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'void'
@@ -212,14 +210,14 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   a.~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:8> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:6> '<bound member function type>' .~S 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
 
   // FIXME: there seems to be no way to distinguish the construct below from
   // the construct above.
   a.~decltype(a)();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .~S 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
 
   // FIXME: similarly, there is no way to distinguish the construct below from
   // the p->~S() case.
@@ -238,7 +236,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
 
   typeid(a);
   // CHECK: CXXTypeidExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'const std::type_info' lvalue
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
 
   // FIXME: no type information is printed for the argument.
   typeid(S);

@@ -81,7 +81,7 @@ namespace bullet6 {
 
   const S& r1 = { 1, 2, 3.0 };
   const S& r2 = { "Spinach" };
-  S& r3 = { 1, 2, 3 };  // expected-error {{non-const lvalue reference to type 'bullet6::S' cannot bind to an initializer list temporary}}
+  S& r3 = { 1, 2, 3 };  // expected-error {{non-const lvalue reference to type 'S' cannot bind to an initializer list temporary}}
   const int& i1 = { 1 };
   const int& i2 = { 1.1 };  // expected-error {{type 'double' cannot be narrowed to 'int' in initializer list}} expected-note {{silence}} expected-warning {{implicit conversion}}
   const int (&iar)[2] = { 1, 2 };
@@ -134,11 +134,11 @@ namespace rdar13395022 {
 
   void test(MoveOnly mo) {
     auto &&list1 = {mo}; // expected-error {{call to implicitly-deleted copy constructor}} expected-note {{in initialization of temporary of type 'std::initializer_list}}
-    MoveOnly (&&list2)[1] = {mo}; // expected-error {{call to implicitly-deleted copy constructor}} expected-note {{in initialization of temporary of type 'rdar13395022::MoveOnly[1]'}}
+    MoveOnly (&&list2)[1] = {mo}; // expected-error {{call to implicitly-deleted copy constructor}} expected-note {{in initialization of temporary of type 'MoveOnly[1]'}}
     std::initializer_list<MoveOnly> &&list3 = {};
     MoveOnly (&&list4)[1] = {}; // expected-error {{no matching constructor}}
     // expected-note@-1 {{in implicit initialization of array element 0 with omitted initializer}}
-    // expected-note@-2 {{in initialization of temporary of type 'rdar13395022::MoveOnly[1]' created to list-initialize this reference}}
+    // expected-note@-2 {{in initialization of temporary of type 'MoveOnly[1]' created to list-initialize this reference}}
   }
 }
 

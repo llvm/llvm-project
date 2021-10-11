@@ -30,7 +30,7 @@ namespace testVarDeclNRVO {
     return TestVarDeclNRVO;
   }
 }
-// CHECK: VarDecl{{.*}} TestVarDeclNRVO 'testVarDeclNRVO::A' nrvo
+// CHECK: VarDecl{{.*}} TestVarDeclNRVO 'A':'testVarDeclNRVO::A' nrvo
 
 void testParmVarDeclInit(int TestParmVarDeclInit = 0);
 // CHECK:      ParmVarDecl{{.*}} TestParmVarDeclInit 'int'
@@ -107,8 +107,8 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     CopyAssignment simple non_trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple non_trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
-// CHECK-NEXT:   virtual private 'testCXXRecordDecl::A'
-// CHECK-NEXT:   public 'testCXXRecordDecl::B'
+// CHECK-NEXT:   virtual private 'A':'testCXXRecordDecl::A'
+// CHECK-NEXT:   public 'B':'testCXXRecordDecl::B'
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestCXXRecordDecl
 // CHECK-NEXT:   FieldDecl
 
@@ -228,7 +228,7 @@ namespace testFunctionTemplateDecl {
   // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'A'
   // CHECK-NEXT:  | |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::A':'testFunctionTemplateDecl::A'
   // CHECK-NEXT:  | `-CompoundStmt 0x{{.+}} <col:53, col:55>
-  // CHECK-NEXT:  |-Function 0x{{.+}} 'TestFunctionTemplate' 'void (testFunctionTemplateDecl::B)'
+  // CHECK-NEXT:  |-Function 0x{{.+}} 'TestFunctionTemplate' 'void (B)'
   // CHECK-NEXT:  |-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 TestFunctionTemplate 'void (testFunctionTemplateDecl::C)'
   // CHECK-NEXT:  | |-TemplateArgument type 'testFunctionTemplateDecl::C'
   // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::C'
@@ -241,11 +241,11 @@ namespace testFunctionTemplateDecl {
   // CHECK-NEXT:    |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::D':'testFunctionTemplateDecl::D'
   // CHECK-NEXT:    `-CompoundStmt 0x{{.+}} <col:53, col:55>
 
-  // CHECK:       FunctionDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, col:41> col:19 TestFunctionTemplate 'void (testFunctionTemplateDecl::B)'
+  // CHECK:       FunctionDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, col:41> col:19 TestFunctionTemplate 'void (B)'
   // CHECK-NEXT:  |-TemplateArgument type 'testFunctionTemplateDecl::B'
   // CHECK-NEXT:  | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::B'
   // CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'B'
-  // CHECK-NEXT:  `-ParmVarDecl 0x{{.+}} <col:40> col:41 'testFunctionTemplateDecl::B'
+  // CHECK-NEXT:  `-ParmVarDecl 0x{{.+}} <col:40> col:41 'B':'testFunctionTemplateDecl::B'
 
 
 namespace testClassTemplateDecl {

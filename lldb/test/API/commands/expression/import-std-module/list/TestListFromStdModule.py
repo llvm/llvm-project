@@ -21,11 +21,11 @@ class TestBasicList(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         list_type = "std::list<int>"
-        size_type = list_type + "::size_type"
-        value_type = list_type + "::value_type"
+        size_type = "size_type"
+        value_type = "value_type"
 
-        iteratorvalue = "std::__list_iterator<int, void *>::value_type"
-        riterator_value = "std::__list_iterator<int, void *>::value_type"
+        iteratorvalue = "value_type"
+        riterator_value = "value_type"
 
         self.expect_expr("a",
                          result_type=list_type,

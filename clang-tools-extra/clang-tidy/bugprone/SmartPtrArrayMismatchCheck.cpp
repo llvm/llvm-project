@@ -67,10 +67,11 @@ void SmartPtrArrayMismatchCheck::registerMatchers(MatchFinder *Finder) {
   auto FindConstructExpr =
       cxxConstructExpr(
           hasDeclaration(FindConstructor), argumentCountIs(1),
-          hasArgument(
-              0, cxxNewExpr(isArray(), hasType(pointerType(pointee(
-                                           equalsBoundNode(PointerTypeN)))))
-                     .bind(NewExprN)))
+          hasArgument(0,
+                      cxxNewExpr(isArray(),
+                                 hasType(hasCanonicalType(pointerType(
+                                     pointee(equalsBoundNode(PointerTypeN))))))
+                          .bind(NewExprN)))
           .bind(ConstructExprN);
   Finder->addMatcher(FindConstructExpr, this);
 }
@@ -101,7 +102,7 @@ void SmartPtrArrayMismatchCheck::check(const MatchFinder::MatchResult &Result) {
     SourceRange TemplateArgumentRange = TSTypeLoc.getArgLoc(0)
                                             .getTypeSourceInfo()
                                             ->getTypeLoc()
-                                            .getLocalSourceRange();
+                                            .getSourceRange();
     D << TemplateArgumentRange;
 
     if (isInSingleDeclStmt(VarOrField)) {
