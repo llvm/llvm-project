@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -36,11 +37,64 @@ class SymbolLookupSet;
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class ExecutorProcessControl {
   friend class ExecutionSession;
-
 public:
-  /// Sender to return the result of a WrapperFunction executed in the JIT.
-  using SendResultFunction =
-      unique_function<void(shared::WrapperFunctionResult)>;
+
+  /// A handler or incoming WrapperFunctionResults -- either return values from
+  /// callWrapper* calls, or incoming JIT-dispatch requests.
+  ///
+  /// IncomingWFRHandlers are constructible from
+  /// unique_function<void(shared::WrapperFunctionResult)>s using the
+  /// runInPlace function or a RunWithDispatch object.
+  class IncomingWFRHandler {
+    friend class ExecutorProcessControl;
+  public:
+    IncomingWFRHandler() = default;
+    void operator()(shared::WrapperFunctionResult WFR) { H(std::move(WFR)); }
+  private:
+    template <typename FnT> IncomingWFRHandler(FnT &&Fn)
+      : H(std::forward<FnT>(Fn)) {}
+
+    unique_function<void(shared::WrapperFunctionResult)> H;
+  };
+
+  /// Constructs an IncomingWFRHandler from a function object that is callable
+  /// as void(shared::WrapperFunctionResult). The function object will be called
+  /// directly. This should be used with care as it may block listener threads
+  /// in remote EPCs. It is only suitable for simple tasks (e.g. setting a
+  /// future), or for performing some quick analysis before dispatching "real"
+  /// work as a Task.
+  class RunInPlace {
+  public:
+    template <typename FnT>
+    IncomingWFRHandler operator()(FnT &&Fn) {
+      return IncomingWFRHandler(std::forward<FnT>(Fn));
+    }
+  };
+
+  /// Constructs an IncomingWFRHandler from a function object by creating a new
+  /// function object that dispatches the original using a TaskDispatcher,
+  /// wrapping the original as a GenericNamedTask.
+  ///
+  /// This is the default approach for running WFR handlers.
+  class RunAsTask {
+  public:
+    RunAsTask(TaskDispatcher &D) : D(D) {}
+
+    template <typename FnT>
+    IncomingWFRHandler operator()(FnT &&Fn) {
+      return IncomingWFRHandler(
+          [&D = this->D, Fn = std::move(Fn)]
+          (shared::WrapperFunctionResult WFR) mutable {
+              D.dispatch(
+                makeGenericNamedTask(
+                    [Fn = std::move(Fn), WFR = std::move(WFR)]() mutable {
+                      Fn(std::move(WFR));
+                    }, "WFR handler task"));
+          });
+    }
+  private:
+    TaskDispatcher &D;
+  };
 
   /// APIs for manipulating memory in the target process.
   class MemoryAccess {
@@ -121,6 +175,10 @@ public:
     ExecutorAddr JITDispatchContext;
   };
 
+  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
+                         std::unique_ptr<TaskDispatcher> D)
+    : SSP(std::move(SSP)), D(std::move(D)) {}
+
   virtual ~ExecutorProcessControl();
 
   /// Return the ExecutionSession associated with this instance.
@@ -135,6 +193,8 @@ public:
 
   /// Return a shared pointer to the SymbolStringPool for this instance.
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() const { return SSP; }
+
+  TaskDispatcher &getDispatcher() { return *D; }
 
   /// Return the Triple for the target process.
   const Triple &getTargetTriple() const { return TargetTriple; }
@@ -198,18 +258,35 @@ public:
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
-  /// Run a wrapper function in the executor.
+  /// Run a wrapper function in the executor. The given WFRHandler will be
+  /// called on the result when it is returned.
   ///
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  ///
-  /// The given OnComplete function will be called to return the result.
-  virtual void callWrapperAsync(SendResultFunction OnComplete,
-                                ExecutorAddr WrapperFnAddr,
+  virtual void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                IncomingWFRHandler OnComplete,
                                 ArrayRef<char> ArgBuffer) = 0;
+
+  /// Run a wrapper function in the executor using the given Runner to dispatch
+  /// OnComplete when the result is ready.
+  template <typename RunPolicyT, typename FnT>
+  void callWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
+                        FnT &&OnComplete, ArrayRef<char> ArgBuffer) {
+    callWrapperAsync(
+        WrapperFnAddr, Runner(std::forward<FnT>(OnComplete)), ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor. OnComplete will be dispatched
+  /// as a GenericNamedTask using this instance's TaskDispatch object.
+  template <typename FnT>
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr, FnT &&OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    callWrapperAsync(RunAsTask(*D), WrapperFnAddr,
+                     std::forward<FnT>(OnComplete), ArgBuffer);
+  }
 
   /// Run a wrapper function in the executor. The wrapper function should be
   /// callable as:
@@ -222,24 +299,37 @@ public:
     std::promise<shared::WrapperFunctionResult> RP;
     auto RF = RP.get_future();
     callWrapperAsync(
-        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
-        WrapperFnAddr, ArgBuffer);
+        RunInPlace(), WrapperFnAddr,
+        [&](shared::WrapperFunctionResult R) {
+          RP.set_value(std::move(R));
+        }, ArgBuffer);
     return RF.get();
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
-                           const ArgTs &...Args) {
+  template <typename SPSSignature, typename RunPolicyT, typename SendResultT,
+            typename... ArgTs>
+  void callSPSWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
+                           SendResultT &&SendResult, const ArgTs &...Args) {
     shared::WrapperFunction<SPSSignature>::callAsync(
-        [this,
-         WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
-                        const char *ArgData, size_t ArgSize) {
-          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
-                           ArrayRef<char>(ArgData, ArgSize));
+        [this, WrapperFnAddr, Runner = std::move(Runner)]
+        (auto &&SendResult, const char *ArgData, size_t ArgSize) mutable {
+          this->callWrapperAsync(std::move(Runner), WrapperFnAddr,
+                                 std::move(SendResult),
+                                 ArrayRef<char>(ArgData, ArgSize));
         },
-        std::move(SendResult), Args...);
+        std::forward<SendResultT>(SendResult), Args...);
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
+  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
+                           const ArgTs &...Args) {
+    callSPSWrapperAsync<SPSSignature>(RunAsTask(*D), WrapperFnAddr,
+                                      std::forward<SendResultT>(SendResult),
+                                      Args...);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
@@ -263,10 +353,9 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP)
-      : SSP(std::move(SSP)) {}
 
   std::shared_ptr<SymbolStringPool> SSP;
+  std::unique_ptr<TaskDispatcher> D;
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
   unsigned PageSize = 0;
@@ -283,9 +372,12 @@ class UnsupportedExecutorProcessControl : public ExecutorProcessControl {
 public:
   UnsupportedExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP = nullptr,
+      std::unique_ptr<TaskDispatcher> D = nullptr,
       const std::string &TT = "", unsigned PageSize = 0)
       : ExecutorProcessControl(SSP ? std::move(SSP)
-                                   : std::make_shared<SymbolStringPool>()) {
+                               : std::make_shared<SymbolStringPool>(),
+                               D ? std::move(D)
+                               : std::make_unique<InPlaceTaskDispatcher>()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
   }
@@ -304,8 +396,8 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  void callWrapperAsync(SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr,
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override {
     llvm_unreachable("Unsupported");
   }
@@ -319,8 +411,9 @@ class SelfExecutorProcessControl
       private ExecutorProcessControl::MemoryAccess {
 public:
   SelfExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
-      unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
+      std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
+      Triple TargetTriple, unsigned PageSize,
+      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Create a SelfExecutorProcessControl with the given symbol string pool and
   /// memory manager.
@@ -329,6 +422,7 @@ public:
   /// be created and used by default.
   static Expected<std::unique_ptr<SelfExecutorProcessControl>>
   Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
+         std::unique_ptr<TaskDispatcher> D = nullptr,
          std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
 
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
@@ -339,8 +433,8 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  void callWrapperAsync(SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr,
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;

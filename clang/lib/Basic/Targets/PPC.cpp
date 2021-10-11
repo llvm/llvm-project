@@ -437,11 +437,11 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
 
   // vsx was not explicitly turned off.
-  if (llvm::find(FeaturesVec, "-vsx") == FeaturesVec.end())
+  if (!llvm::is_contained(FeaturesVec, "-vsx"))
     return true;
 
   auto FindVSXSubfeature = [&](StringRef Feature, StringRef Option) {
-    if (llvm::find(FeaturesVec, Feature) != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, Feature)) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << Option << "-mno-vsx";
       return true;
     }
@@ -562,28 +562,28 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
 
   if (!(ArchDefs & ArchDefinePwr9) && (ArchDefs & ArchDefinePpcgr) &&
-      llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+float128")) {
     // We have __float128 on PPC but not power 9 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr10) &&
-      llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+mma")) {
     // We have MMA on PPC but not power 10 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::find(FeaturesVec, "+rop-protect") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+rop-protect")) {
     // We can turn on ROP Protect on Power 8 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::find(FeaturesVec, "+privileged") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+privileged")) {
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
   }
@@ -782,7 +782,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"powerpc64le"}, {"ppc64le"}, {"future"}};
 
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {

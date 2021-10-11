@@ -39,10 +39,10 @@ define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ushr v1.8h, v0.8h, #8
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    umov w9, v1.h[1]
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    mov v0.b[1], w8
 ; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    mov v0.b[1], w9
 ; CHECK-NEXT:    mov v0.b[2], w8
 ; CHECK-NEXT:    umov w8, v1.h[3]
 ; CHECK-NEXT:    mov v0.b[3], w8
@@ -210,13 +210,14 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: smulh_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w10, v0.s[3]
+; CHECK-NEXT:    ushr v1.4s, v0.4s, #16
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w10
+; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i32> undef, i32 16, i64 0
@@ -666,10 +667,10 @@ define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ushr v1.8h, v0.8h, #8
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    umov w9, v1.h[1]
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    mov v0.b[1], w8
 ; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    mov v0.b[1], w9
 ; CHECK-NEXT:    mov v0.b[2], w8
 ; CHECK-NEXT:    umov w8, v1.h[3]
 ; CHECK-NEXT:    mov v0.b[3], w8
@@ -837,13 +838,14 @@ define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: umulh_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w10, v0.s[3]
+; CHECK-NEXT:    ushr v1.4s, v0.4s, #16
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w10
+; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i32> undef, i32 16, i64 0

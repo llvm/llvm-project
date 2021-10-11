@@ -3947,3 +3947,16 @@ void CGOpenMPRuntimeGPU::clear() {
   }
   CGOpenMPRuntime::clear();
 }
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
+  CGBuilderTy &Bld = CGF.Builder;
+  llvm::Module *M = &CGF.CGM.getModule();
+  const char *LocSize = "__kmpc_get_hardware_num_threads_in_block";
+  llvm::Function *F = M->getFunction(LocSize);
+  if (!F) {
+    F = llvm::Function::Create(
+        llvm::FunctionType::get(CGF.Int32Ty, llvm::None, false),
+        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
+  }
+  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
+}

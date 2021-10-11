@@ -14,9 +14,9 @@ define void @test1(%struct_type** %s, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w8, [x9, #4]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    stp w10, w8, [x9]
+; CHECK-NEXT:    mov w8, w10
 ; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: // %while_end
@@ -54,9 +54,9 @@ define void @test2(%struct_type* %struct, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w8, [x9, #4]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    stp w10, w8, [x9]
+; CHECK-NEXT:    mov w8, w10
 ; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: // %while_end
@@ -96,9 +96,9 @@ define void @test3(%struct_type* %s1, %struct_type* %s2, i1 %cond, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w8, [x9, #4]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    stp w10, w8, [x9]
+; CHECK-NEXT:    mov w8, w10
 ; CHECK-NEXT:    cmp w8, w3
 ; CHECK-NEXT:    b.lt .LBB2_2
 ; CHECK-NEXT:  .LBB2_3: // %while_end
@@ -164,9 +164,9 @@ define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
 ; CHECK-NEXT:    b.ge .LBB3_4
 ; CHECK-NEXT:  // %bb.3: // %while_body
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    str w20, [x8, #4]
-; CHECK-NEXT:    add w20, w20, #1
-; CHECK-NEXT:    str w20, [x8]
+; CHECK-NEXT:    add w9, w20, #1
+; CHECK-NEXT:    stp w9, w20, [x8]
+; CHECK-NEXT:    mov w20, w9
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: // %while_end
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -222,9 +222,9 @@ define void @test5([65536 x i32]** %s, i32 %n) {
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w8, [x9, #4]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    add w10, w8, #1
+; CHECK-NEXT:    stp w10, w8, [x9]
+; CHECK-NEXT:    mov w8, w10
 ; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB4_1
 ; CHECK-NEXT:  .LBB4_2: // %while_end

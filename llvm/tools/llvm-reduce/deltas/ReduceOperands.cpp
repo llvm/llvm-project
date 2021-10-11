@@ -34,12 +34,9 @@ static bool canReduceOperand(Use &Op) {
 }
 
 /// Sets Operands to undef.
-static void extractOperandsFromModule(std::vector<Chunk> ChunksToKeep,
-                                      Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractOperandsFromModule(Oracle &O, Module &Program) {
   // Extract Operands from the module.
-  for (auto &F : Program->functions()) {
+  for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
         // Filter Operands then set to undef.
@@ -53,9 +50,9 @@ static void extractOperandsFromModule(std::vector<Chunk> ChunksToKeep,
 }
 
 /// Counts the amount of operands in the module that can be reduced.
-static int countOperands(Module *Program) {
+static int countOperands(Module &Program) {
   int Count = 0;
-  for (auto &F : Program->functions()) {
+  for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
         if (canReduceOperand(Op)) {

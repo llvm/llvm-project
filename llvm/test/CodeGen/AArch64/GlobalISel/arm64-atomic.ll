@@ -705,14 +705,14 @@ define i32 @atomic_load(i32* %p) #0 {
 define i8 @atomic_load_relaxed_8(i8* %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    ldrb w8, [x0, #4095]
-; CHECK-NOLSE-O1-NEXT:    ldrb w9, [x0, w1, sxtw]
-; CHECK-NOLSE-O1-NEXT:    ldurb w10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
-; CHECK-NOLSE-O1-NEXT:    ldrb w11, [x11]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w9
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10
-; CHECK-NOLSE-O1-NEXT:    add w0, w8, w11
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldrb w9, [x0, #4095]
+; CHECK-NOLSE-O1-NEXT:    ldrb w10, [x0, w1, sxtw]
+; CHECK-NOLSE-O1-NEXT:    ldurb w11, [x0, #-256]
+; CHECK-NOLSE-O1-NEXT:    ldrb w8, [x8]
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
+; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_8:
@@ -775,14 +775,14 @@ define i8 @atomic_load_relaxed_8(i8* %p, i32 %off32) #0 {
 define i16 @atomic_load_relaxed_16(i16* %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    ldrh w8, [x0, #8190]
-; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x0, w1, sxtw #1]
-; CHECK-NOLSE-O1-NEXT:    ldurh w10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
-; CHECK-NOLSE-O1-NEXT:    ldrh w11, [x11]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w9
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10
-; CHECK-NOLSE-O1-NEXT:    add w0, w8, w11
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x0, #8190]
+; CHECK-NOLSE-O1-NEXT:    ldrh w10, [x0, w1, sxtw #1]
+; CHECK-NOLSE-O1-NEXT:    ldurh w11, [x0, #-256]
+; CHECK-NOLSE-O1-NEXT:    ldrh w8, [x8]
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
+; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_16:
@@ -845,14 +845,14 @@ define i16 @atomic_load_relaxed_16(i16* %p, i32 %off32) #0 {
 define i32 @atomic_load_relaxed_32(i32* %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_32:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    ldr w8, [x0, #16380]
-; CHECK-NOLSE-O1-NEXT:    ldr w9, [x0, w1, sxtw #2]
-; CHECK-NOLSE-O1-NEXT:    ldur w10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
-; CHECK-NOLSE-O1-NEXT:    ldr w11, [x11]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w9
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10
-; CHECK-NOLSE-O1-NEXT:    add w0, w8, w11
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldr w9, [x0, #16380]
+; CHECK-NOLSE-O1-NEXT:    ldr w10, [x0, w1, sxtw #2]
+; CHECK-NOLSE-O1-NEXT:    ldur w11, [x0, #-256]
+; CHECK-NOLSE-O1-NEXT:    ldr w8, [x8]
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
+; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_32:
@@ -911,14 +911,14 @@ define i32 @atomic_load_relaxed_32(i32* %p, i32 %off32) #0 {
 define i64 @atomic_load_relaxed_64(i64* %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    ldr x8, [x0, #32760]
-; CHECK-NOLSE-O1-NEXT:    ldr x9, [x0, w1, sxtw #3]
-; CHECK-NOLSE-O1-NEXT:    ldur x10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
-; CHECK-NOLSE-O1-NEXT:    ldr x11, [x11]
-; CHECK-NOLSE-O1-NEXT:    add x8, x8, x9
-; CHECK-NOLSE-O1-NEXT:    add x8, x8, x10
-; CHECK-NOLSE-O1-NEXT:    add x0, x8, x11
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldr x9, [x0, #32760]
+; CHECK-NOLSE-O1-NEXT:    ldr x10, [x0, w1, sxtw #3]
+; CHECK-NOLSE-O1-NEXT:    ldur x11, [x0, #-256]
+; CHECK-NOLSE-O1-NEXT:    ldr x8, [x8]
+; CHECK-NOLSE-O1-NEXT:    add x9, x9, x10
+; CHECK-NOLSE-O1-NEXT:    add x9, x9, x11
+; CHECK-NOLSE-O1-NEXT:    add x0, x9, x8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_64:
@@ -2717,8 +2717,8 @@ define { i8, i1 } @cmpxchg_i8(i8* %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB47_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -2783,8 +2783,8 @@ define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB48_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;

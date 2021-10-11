@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_SIMPLEREMOTEEPCUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/Error.h"
 
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -139,29 +137,6 @@ private:
   int InFD, OutFD;
   std::atomic<bool> Disconnected{false};
 };
-
-/// Dispatches calls to runWrapper.
-class SimpleRemoteEPCDispatcher {
-public:
-  virtual ~SimpleRemoteEPCDispatcher();
-  virtual void dispatch(unique_function<void()> Work) = 0;
-  virtual void shutdown() = 0;
-};
-
-#if LLVM_ENABLE_THREADS
-class DynamicThreadPoolSimpleRemoteEPCDispatcher
-    : public SimpleRemoteEPCDispatcher {
-public:
-  void dispatch(unique_function<void()> Work) override;
-  void shutdown() override;
-
-private:
-  std::mutex DispatchMutex;
-  bool Running = true;
-  size_t Outstanding = 0;
-  std::condition_variable OutstandingCV;
-};
-#endif
 
 struct RemoteSymbolLookupSetElement {
   std::string Name;

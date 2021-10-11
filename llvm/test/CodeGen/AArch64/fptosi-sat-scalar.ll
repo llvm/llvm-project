@@ -22,10 +22,10 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, #-1.00000000
 ; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w8, wzr, w8, vs
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -37,13 +37,13 @@ define i8 @test_signed_i8_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i8_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1023410176
-; CHECK-NEXT:    mov w9, #1123942400
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #1123942400
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i8 @llvm.fptosi.sat.i8.f32(float %f)
@@ -54,14 +54,14 @@ define i13 @test_signed_i13_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i13_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-981467136
-; CHECK-NEXT:    mov w9, #61440
-; CHECK-NEXT:    movk w9, #17791, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #61440
+; CHECK-NEXT:    movk w8, #17791, lsl #16
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i13 @llvm.fptosi.sat.i13.f32(float %f)
@@ -72,14 +72,14 @@ define i16 @test_signed_i16_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i16_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-956301312
-; CHECK-NEXT:    mov w9, #65024
-; CHECK-NEXT:    movk w9, #18175, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #65024
+; CHECK-NEXT:    movk w8, #18175, lsl #16
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i16 @llvm.fptosi.sat.i16.f32(float %f)
@@ -90,14 +90,14 @@ define i19 @test_signed_i19_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i19_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-931135488
-; CHECK-NEXT:    mov w9, #65472
-; CHECK-NEXT:    movk w9, #18559, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #65472
+; CHECK-NEXT:    movk w8, #18559, lsl #16
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i19 @llvm.fptosi.sat.i19.f32(float %f)
@@ -116,17 +116,17 @@ define i32 @test_signed_i32_f32(float %f) nounwind {
 define i50 @test_signed_i50_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i50_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #-671088640
-; CHECK-NEXT:    mov w11, #1476395007
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    mov x10, #-562949953421312
+; CHECK-NEXT:    mov w8, #-671088640
+; CHECK-NEXT:    fcvtzs x9, s0
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #1476395007
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fmov s1, w11
-; CHECK-NEXT:    mov x12, #562949953421311
-; CHECK-NEXT:    csel x8, x10, x8, lt
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov x8, #-562949953421312
+; CHECK-NEXT:    csel x8, x8, x9, lt
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csel x8, x12, x8, gt
+; CHECK-NEXT:    mov x9, #562949953421311
+; CHECK-NEXT:    csel x8, x9, x8, gt
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel x0, xzr, x8, vs
 ; CHECK-NEXT:    ret
@@ -151,18 +151,18 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-251658240
+; CHECK-NEXT:    mov x10, #34359738367
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov w8, #1895825407
 ; CHECK-NEXT:    fcmp s8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov x8, #-34359738368
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #34359738367
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs
@@ -180,18 +180,18 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-16777216
+; CHECK-NEXT:    mov x10, #9223372036854775807
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov w8, #2130706431
 ; CHECK-NEXT:    fcmp s8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov x8, #-9223372036854775808
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs
@@ -221,10 +221,10 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d1, #-1.00000000
 ; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel w8, wzr, w8, vs
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -236,14 +236,14 @@ define i8 @test_signed_i8_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i8_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-4584664420663164928
-; CHECK-NEXT:    mov x9, #211106232532992
-; CHECK-NEXT:    movk x9, #16479, lsl #48
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov x8, #211106232532992
+; CHECK-NEXT:    movk x8, #16479, lsl #48
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i8 @llvm.fptosi.sat.i8.f64(double %f)
@@ -254,14 +254,14 @@ define i13 @test_signed_i13_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i13_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-4562146422526312448
-; CHECK-NEXT:    mov x9, #279275953455104
-; CHECK-NEXT:    movk x9, #16559, lsl #48
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov x8, #279275953455104
+; CHECK-NEXT:    movk x8, #16559, lsl #48
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i13 @llvm.fptosi.sat.i13.f64(double %f)
@@ -272,14 +272,14 @@ define i16 @test_signed_i16_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i16_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-4548635623644200960
-; CHECK-NEXT:    mov x9, #281200098803712
-; CHECK-NEXT:    movk x9, #16607, lsl #48
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov x8, #281200098803712
+; CHECK-NEXT:    movk x8, #16607, lsl #48
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i16 @llvm.fptosi.sat.i16.f64(double %f)
@@ -290,14 +290,14 @@ define i19 @test_signed_i19_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i19_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-4535124824762089472
-; CHECK-NEXT:    mov x9, #281440616972288
-; CHECK-NEXT:    movk x9, #16655, lsl #48
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov x8, #281440616972288
+; CHECK-NEXT:    movk x8, #16655, lsl #48
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i19 @llvm.fptosi.sat.i19.f64(double %f)
@@ -317,14 +317,14 @@ define i50 @test_signed_i50_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i50_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-4395513236313604096
-; CHECK-NEXT:    mov x9, #-16
-; CHECK-NEXT:    movk x9, #17151, lsl #48
+; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov x8, #-16
+; CHECK-NEXT:    movk x8, #17151, lsl #48
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
-; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs x8, d1
-; CHECK-NEXT:    fcmp d0, d0
 ; CHECK-NEXT:    csel x0, xzr, x8, vs
 ; CHECK-NEXT:    ret
     %x = call i50 @llvm.fptosi.sat.i50.f64(double %f)
@@ -348,18 +348,18 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    mov x8, #-4170333254945079296
+; CHECK-NEXT:    mov x10, #34359738367
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #5053038781909696511
 ; CHECK-NEXT:    fcmp d8, d0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #-34359738368
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #34359738367
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp d8, d0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp d8, d8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs
@@ -377,18 +377,18 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    mov x8, #-4044232465378705408
+; CHECK-NEXT:    mov x10, #9223372036854775807
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #5179139571476070399
 ; CHECK-NEXT:    fcmp d8, d0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #-9223372036854775808
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp d8, d0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp d8, d8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs
@@ -420,9 +420,9 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-NEXT:    fmov s1, #-1.00000000
 ; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w8, wzr, w8, vs
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -435,13 +435,13 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1023410176
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    mov w9, #1123942400
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #1123942400
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i8 @llvm.fptosi.sat.i8.f16(half %f)
@@ -452,15 +452,15 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; CHECK-LABEL: test_signed_i13_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-981467136
-; CHECK-NEXT:    mov w9, #61440
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    movk w9, #17791, lsl #16
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #61440
+; CHECK-NEXT:    movk w8, #17791, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i13 @llvm.fptosi.sat.i13.f16(half %f)
@@ -471,15 +471,15 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; CHECK-LABEL: test_signed_i16_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-956301312
-; CHECK-NEXT:    mov w9, #65024
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    movk w9, #18175, lsl #16
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #65024
+; CHECK-NEXT:    movk w8, #18175, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i16 @llvm.fptosi.sat.i16.f16(half %f)
@@ -490,15 +490,15 @@ define i19 @test_signed_i19_f16(half %f) nounwind {
 ; CHECK-LABEL: test_signed_i19_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-931135488
-; CHECK-NEXT:    mov w9, #65472
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    movk w9, #18559, lsl #16
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #65472
+; CHECK-NEXT:    movk w8, #18559, lsl #16
+; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
-; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
-; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel w0, wzr, w8, vs
 ; CHECK-NEXT:    ret
     %x = call i19 @llvm.fptosi.sat.i19.f16(half %f)
@@ -525,15 +525,15 @@ define i50 @test_signed_i50_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-671088640
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov w8, #1476395007
-; CHECK-NEXT:    mov x9, #-562949953421312
-; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    mov w9, #1476395007
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    csel x8, x9, x8, lt
-; CHECK-NEXT:    mov x9, #562949953421311
 ; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    mov x9, #-562949953421312
+; CHECK-NEXT:    csel x8, x9, x8, lt
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    mov x9, #562949953421311
 ; CHECK-NEXT:    csel x8, x9, x8, gt
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    csel x0, xzr, x8, vs
@@ -562,22 +562,22 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-251658240
+; CHECK-NEXT:    mov x10, #34359738367
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov w8, #1895825407
 ; CHECK-NEXT:    fcmp s8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov x8, #-34359738368
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #34359738367
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs
@@ -592,22 +592,22 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-16777216
+; CHECK-NEXT:    mov x10, #9223372036854775807
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov w8, #2130706431
 ; CHECK-NEXT:    fcmp s8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov x8, #-9223372036854775808
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    csel x8, x8, x1, lt
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s0
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    csel x8, x10, x8, gt
+; CHECK-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    csel x0, xzr, x9, vs
 ; CHECK-NEXT:    csel x1, xzr, x8, vs

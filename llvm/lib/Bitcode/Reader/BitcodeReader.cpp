@@ -1926,7 +1926,7 @@ Error BitcodeReader::parseTypeTableBody() {
       if (Record[0] == 0)
         return error("Invalid vector length");
       ResultTy = getTypeByID(Record[1]);
-      if (!ResultTy || !StructType::isValidElementType(ResultTy))
+      if (!ResultTy || !VectorType::isValidElementType(ResultTy))
         return error("Invalid type");
       bool Scalable = Record.size() > 2 ? Record[2] : false;
       ResultTy = VectorType::get(ResultTy, Record[0], Scalable);

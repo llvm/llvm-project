@@ -5,7 +5,7 @@
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=INVALID-REL
 
 # INVALID-REL:      Relocations [
-# INVALID-REL-NEXT:   warning: '[[FILE]]': The end of the file was unexpectedly encountered
+# INVALID-REL-NEXT:   warning: '[[FILE]]': The end of the file was unexpectedly encountered: relocations with offset 0x222 and size 0x0 go past the end of the file
 # INVALID-REL-NEXT: ]
 
 --- !XCOFF
@@ -23,7 +23,7 @@ Sections:
 
 # INVALID-SYM:      Relocations [
 # INVALID-SYM-NEXT:   Section (index: 1) .text {
-# INVALID-SYM-NEXT:     warning: '[[FILE]]': Invalid symbol index
+# INVALID-SYM-NEXT:     warning: '[[FILE]]': symbol index 33 exceeds symbol count 0
 # INVALID-SYM-NEXT:   }
 # INVALID-SYM-NEXT: ]
 

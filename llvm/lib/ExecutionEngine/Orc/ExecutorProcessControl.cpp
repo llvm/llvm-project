@@ -24,9 +24,10 @@ ExecutorProcessControl::MemoryAccess::~MemoryAccess() {}
 ExecutorProcessControl::~ExecutorProcessControl() {}
 
 SelfExecutorProcessControl::SelfExecutorProcessControl(
-    std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
-    unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP)) {
+    std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
+    Triple TargetTriple, unsigned PageSize,
+    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -45,10 +46,19 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
 SelfExecutorProcessControl::Create(
     std::shared_ptr<SymbolStringPool> SSP,
+    std::unique_ptr<TaskDispatcher> D,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
 
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
+
+  if (!D) {
+#if LLVM_ENABLE_THREADS
+    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
+#else
+    D = std::make_unique<InPlaceTaskDispatcher>();
+#endif
+  }
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
@@ -57,7 +67,8 @@ SelfExecutorProcessControl::Create(
   Triple TT(sys::getProcessTriple());
 
   return std::make_unique<SelfExecutorProcessControl>(
-      std::move(SSP), std::move(TT), *PageSize, std::move(MemMgr));
+      std::move(SSP), std::move(D), std::move(TT), *PageSize,
+      std::move(MemMgr));
 }
 
 Expected<tpctypes::DylibHandle>
@@ -109,8 +120,8 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
-void SelfExecutorProcessControl::callWrapperAsync(SendResultFunction SendResult,
-                                                  ExecutorAddr WrapperFnAddr,
+void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                                  IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
       shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);

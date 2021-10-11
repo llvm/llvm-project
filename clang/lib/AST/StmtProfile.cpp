@@ -1933,30 +1933,9 @@ StmtProfiler::VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
 void
 StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   VisitExpr(S);
-  for (LambdaExpr::capture_iterator C = S->explicit_capture_begin(),
-                                 CEnd = S->explicit_capture_end();
-       C != CEnd; ++C) {
-    if (C->capturesVLAType())
-      continue;
-
-    ID.AddInteger(C->getCaptureKind());
-    switch (C->getCaptureKind()) {
-    case LCK_StarThis:
-    case LCK_This:
-      break;
-    case LCK_ByRef:
-    case LCK_ByCopy:
-      VisitDecl(C->getCapturedVar());
-      ID.AddBoolean(C->isPackExpansion());
-      break;
-    case LCK_VLAType:
-      llvm_unreachable("VLA type in explicit captures.");
-    }
-  }
-  // Note: If we actually needed to be able to match lambda
-  // expressions, we would have to consider parameters and return type
-  // here, among other things.
-  VisitStmt(S->getBody());
+  // C++20 [temp.over.link]p5:
+  //   Two lambda-expressions are never considered equivalent.
+  VisitDecl(S->getLambdaClass());
 }
 
 void

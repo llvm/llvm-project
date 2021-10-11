@@ -21,8 +21,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {

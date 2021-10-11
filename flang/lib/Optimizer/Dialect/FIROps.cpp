@@ -623,7 +623,8 @@ void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                         llvm::ArrayRef<mlir::Type> results,
                         mlir::ValueRange operands) {
   result.addOperands(operands);
-  result.addAttribute(getCalleeAttrName(), callee);
+  if (callee)
+    result.addAttribute(getCalleeAttrName(), callee);
   result.addTypes(results);
 }
 

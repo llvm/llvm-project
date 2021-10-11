@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TargetInfo/AArch64TargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 Target &llvm::getTheAArch64leTarget() {

@@ -29,7 +29,6 @@ char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
-char Task::ID = 0;
 char MaterializationTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
@@ -1799,8 +1798,6 @@ void Platform::lookupInitSymbolsAsync(
   }
 }
 
-void Task::anchor() {}
-
 void MaterializationTask::printDescription(raw_ostream &OS) {
   OS << "Materialization task: " << MU->getName() << " in "
      << MR->getTargetJITDylib().getName();
@@ -2092,8 +2089,8 @@ Error ExecutionSession::registerJITDispatchHandlers(
 }
 
 void ExecutionSession::runJITDispatchHandler(
-    ExecutorProcessControl::SendResultFunction SendResult,
-    JITTargetAddress HandlerFnTagAddr, ArrayRef<char> ArgBuffer) {
+    SendResultFunction SendResult, JITTargetAddress HandlerFnTagAddr,
+    ArrayRef<char> ArgBuffer) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {

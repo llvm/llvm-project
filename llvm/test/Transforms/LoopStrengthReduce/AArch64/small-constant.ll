@@ -67,8 +67,8 @@ define float @test2(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK-NEXT:    add x8, x0, #28
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
 ; CHECK-NEXT:    scvtf s2, x1
+; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
 ; CHECK-NEXT:    fadd s2, s2, s0
 ; CHECK-NEXT:    fcmp s1, s2
 ; CHECK-NEXT:    b.gt .LBB1_5

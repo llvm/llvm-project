@@ -1709,6 +1709,7 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   switch (getOS()) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")

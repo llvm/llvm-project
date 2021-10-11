@@ -57,6 +57,15 @@ int get_c() { return c; }
 
 thread_local int c = 0;
 
+// PR51079: We must assume an incomplete class type might have non-trivial
+// destruction, and so speculatively call the thread wrapper.
+
+// CHECK-LABEL: define {{.*}} @_Z6get_e3v(
+// CHECK: call {{.*}}* @_ZTW2e3()
+// CHECK-LABEL: }
+extern thread_local constinit struct DestructedFwdDecl e3;
+DestructedFwdDecl &get_e3() { return e3; }
+
 int d_init();
 
 // CHECK: define {{.*}}[[D_INIT:@__cxx_global_var_init[^(]*]](
@@ -84,3 +93,11 @@ thread_local constinit int f = 4;
 // CHECK-LABEL: define {{.*}}__tls_init
 // CHECK: call {{.*}} [[D_INIT]]
 // CHECK: call {{.*}} [[E2_INIT]]
+
+// Because the call wrapper may be called speculatively (and simply because
+// it's required by the ABI), it must always be emitted for an external linkage
+// variable, even if the variable has constant initialization and constant
+// destruction.
+struct NotDestructed { int n = 0; };
+thread_local constinit NotDestructed nd;
+// CHECK-LABEL: define {{.*}} @_ZTW2nd

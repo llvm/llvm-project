@@ -7,11 +7,11 @@ define void @test(float * %p1, i32 %v1) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    fmov.2d v0, #2.00000000
 ; CHECK-NEXT:    and x8, x1, #0x3
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    fmov.2d v0, #2.00000000
 ; CHECK-NEXT:    bfi x9, x8, #2, #2
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr s0, [x9]
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
@@ -28,11 +28,11 @@ define void @test2(float * %p1, i32 %v1) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    movi.16b v0, #63
 ; CHECK-NEXT:    and x8, x1, #0x3
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    movi.16b v0, #63
 ; CHECK-NEXT:    bfi x9, x8, #2, #2
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr s0, [x9]
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
@@ -54,8 +54,8 @@ define internal void @nvcast_f32_v8i8() {
 ; CHECK-LABEL: nvcast_f32_v8i8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    adrp x8, __gv@GOTPAGE
-; CHECK-NEXT:    ldr x8, [x8, __gv@GOTPAGEOFF]
 ; CHECK-NEXT:    movi.8b v0, #254
+; CHECK-NEXT:    ldr x8, [x8, __gv@GOTPAGEOFF]
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret
 entry:

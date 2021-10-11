@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "MSP430.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -19,8 +19,8 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 

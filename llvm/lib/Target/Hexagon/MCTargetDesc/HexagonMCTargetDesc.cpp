@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "HexagonArch.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,8 +32,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>

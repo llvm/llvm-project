@@ -14,33 +14,31 @@
 
 using namespace llvm;
 
-static void clearModuleData(std::vector<Chunk> ChunksToKeep, Module *Program) {
-  Oracle O(ChunksToKeep);
-
-  if (!Program->getModuleIdentifier().empty() && !O.shouldKeep())
-    Program->setModuleIdentifier("");
-  if (!Program->getSourceFileName().empty() && !O.shouldKeep())
-    Program->setSourceFileName("");
-  if (!Program->getDataLayoutStr().empty() && !O.shouldKeep())
-    Program->setDataLayout("");
-  if (!Program->getTargetTriple().empty() && !O.shouldKeep())
-    Program->setTargetTriple("");
+static void clearModuleData(Oracle &O, Module &Program) {
+  if (!Program.getModuleIdentifier().empty() && !O.shouldKeep())
+    Program.setModuleIdentifier("");
+  if (!Program.getSourceFileName().empty() && !O.shouldKeep())
+    Program.setSourceFileName("");
+  if (!Program.getDataLayoutStr().empty() && !O.shouldKeep())
+    Program.setDataLayout("");
+  if (!Program.getTargetTriple().empty() && !O.shouldKeep())
+    Program.setTargetTriple("");
   // TODO: clear line by line rather than all at once
-  if (!Program->getModuleInlineAsm().empty() && !O.shouldKeep())
-    Program->setModuleInlineAsm("");
+  if (!Program.getModuleInlineAsm().empty() && !O.shouldKeep())
+    Program.setModuleInlineAsm("");
 }
 
-static int countModuleData(Module *M) {
+static int countModuleData(Module &M) {
   int Count = 0;
-  if (!M->getModuleIdentifier().empty())
+  if (!M.getModuleIdentifier().empty())
     ++Count;
-  if (!M->getSourceFileName().empty())
+  if (!M.getSourceFileName().empty())
     ++Count;
-  if (!M->getDataLayoutStr().empty())
+  if (!M.getDataLayoutStr().empty())
     ++Count;
-  if (!M->getTargetTriple().empty())
+  if (!M.getTargetTriple().empty())
     ++Count;
-  if (!M->getModuleInlineAsm().empty())
+  if (!M.getModuleInlineAsm().empty())
     ++Count;
   return Count;
 }

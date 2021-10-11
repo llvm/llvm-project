@@ -15,8 +15,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;

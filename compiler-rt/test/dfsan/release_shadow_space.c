@@ -73,8 +73,10 @@ int main(int argc, char **argv) {
       after_mmap_and_set_label2, after_munmap);
 
   const size_t mmap_cost_kb = map_size >> 10;
+  // Shadow space (1:1 with application memory)
   const size_t mmap_shadow_cost_kb = sizeof(dfsan_label) * mmap_cost_kb;
 #ifdef ORIGIN_TRACKING
+  // Origin space (1:1 with application memory)
   const size_t mmap_origin_cost_kb = mmap_cost_kb;
 #else
   const size_t mmap_origin_cost_kb = 0;
@@ -85,11 +87,21 @@ int main(int argc, char **argv) {
   assert(after_mmap_and_set_label2 >=
          before + mmap_cost_kb + mmap_shadow_cost_kb + mmap_origin_cost_kb);
 
+#ifdef ORIGIN_TRACKING
+  // Origin chain (sanitizer PersistentAllocator, never freed).
+  // This value is chosen based on observed difference.
+  const size_t mmap_origin_chain_kb = 4000;
+#else
+  const size_t mmap_origin_chain_kb = 0;
+#endif
+
   // RSS may not change memory amount after munmap to the same level as the
   // start of the program. The assert checks the memory up to a delta.
   const size_t delta = 5000;
-  assert(after_fixed_mmap <= before + delta);
-  assert(after_munmap <= before + delta);
+  // Origin chains are not freed, even when the origin space which refers to
+  // them is freed, so mmap_origin_chain_kb is added to account for this.
+  assert(after_fixed_mmap <= before + delta + mmap_origin_chain_kb);
+  assert(after_munmap <= before + delta + mmap_origin_chain_kb);
 
   return 0;
 }

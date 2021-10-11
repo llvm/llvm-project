@@ -6334,7 +6334,7 @@ QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
     case BFloat16Rank: llvm_unreachable("Complex bfloat16 is not supported");
     case Float16Rank:
     case HalfRank: llvm_unreachable("Complex half is not supported");
-    case Ibm128Rank: llvm_unreachable("Complex __ibm128 is not supported");
+    case Ibm128Rank:     return getComplexType(Ibm128Ty);
     case FloatRank:      return getComplexType(FloatTy);
     case DoubleRank:     return getComplexType(DoubleTy);
     case LongDoubleRank: return getComplexType(LongDoubleTy);
@@ -11252,21 +11252,21 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
 /// sets floating point QualTy according to specified bitwidth.
 /// Returns empty type if there is no appropriate target types.
 QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
-                                            bool ExplicitIEEE) const {
-  TargetInfo::RealType Ty =
-      getTargetInfo().getRealTypeByWidth(DestWidth, ExplicitIEEE);
+                                            FloatModeKind ExplicitType) const {
+  FloatModeKind Ty =
+      getTargetInfo().getRealTypeByWidth(DestWidth, ExplicitType);
   switch (Ty) {
-  case TargetInfo::Float:
+  case FloatModeKind::Float:
     return FloatTy;
-  case TargetInfo::Double:
+  case FloatModeKind::Double:
     return DoubleTy;
-  case TargetInfo::LongDouble:
+  case FloatModeKind::LongDouble:
     return LongDoubleTy;
-  case TargetInfo::Float128:
+  case FloatModeKind::Float128:
     return Float128Ty;
-  case TargetInfo::Ibm128:
+  case FloatModeKind::Ibm128:
     return Ibm128Ty;
-  case TargetInfo::NoFloat:
+  case FloatModeKind::NoFloat:
     return {};
   }
 

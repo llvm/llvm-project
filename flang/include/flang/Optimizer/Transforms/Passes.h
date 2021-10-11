@@ -26,7 +26,9 @@ namespace fir {
 // Passes defined in Passes.td
 //===----------------------------------------------------------------------===//
 
+std::unique_ptr<mlir::Pass> createAbstractResultOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
+std::unique_ptr<mlir::Pass> createCharacterConversionPass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 

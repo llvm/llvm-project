@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains definitions for passes within the Optimizer/Transforms/
-//  directory.
+// directory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +15,25 @@
 #define FLANG_OPTIMIZER_TRANSFORMS_PASSES
 
 include "mlir/Pass/PassBase.td"
+
+def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
+  let summary = "Convert fir.array, fir.box and fir.rec function result to "
+                "function argument";
+  let description = [{
+    This pass is required before code gen to the LLVM IR dialect,
+    including the pre-cg rewrite pass.
+  }];
+  let constructor = "::fir::createAbstractResultOptPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
+  let options = [
+    Option<"passResultAsBox", "abstract-result-as-box",
+           "bool", /*default=*/"false",
+           "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
+           " of fir.ref<fir.array<T>>.">
+  ];
+}
 
 def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
@@ -52,6 +71,24 @@ def AffineDialectDemotion : FunctionPass<"demote-affine"> {
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+  ];
+}
+
+def CharacterConversion : Pass<"character-conversion"> {
+  let summary = "Convert CHARACTER entities with different KINDs";
+  let description = [{
+    Translates entities of one CHARACTER KIND to another.
+
+    By default the translation is to naively zero-extend or truncate a code
+    point to fit the destination size.
+  }];
+  let constructor = "::fir::createCharacterConversionPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"useRuntimeCalls", "use-runtime-calls",
+           "std::string", /*default=*/"std::string{}",
+           "Generate runtime calls to a named set of conversion routines. "
+           "By default, the conversions may produce unexpected results.">
   ];
 }
 

@@ -10,9 +10,6 @@
 define void @logical_32bit() minsize {
 ; CHECK-LABEL: logical_32bit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    adrp x8, :got:var1_32
 ; CHECK-NEXT:    adrp x9, :got:var2_32
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var1_32]
@@ -22,40 +19,39 @@ define void @logical_32bit() minsize {
 ; CHECK-NEXT:    and w11, w10, w9
 ; CHECK-NEXT:    bic w12, w10, w9
 ; CHECK-NEXT:    orr w13, w10, w9
-; CHECK-NEXT:    orn w14, w10, w9
-; CHECK-NEXT:    eor w15, w10, w9
-; CHECK-NEXT:    eon w16, w9, w10
-; CHECK-NEXT:    and w17, w10, w9, lsl #31
-; CHECK-NEXT:    bic w18, w10, w9, lsl #31
-; CHECK-NEXT:    orr w0, w10, w9, lsl #31
-; CHECK-NEXT:    orn w1, w10, w9, lsl #31
-; CHECK-NEXT:    eor w2, w10, w9, lsl #31
-; CHECK-NEXT:    eon w3, w10, w9, lsl #31
-; CHECK-NEXT:    bic w4, w10, w9, asr #10
-; CHECK-NEXT:    eor w5, w10, w9, asr #10
-; CHECK-NEXT:    orn w6, w10, w9, lsr #1
-; CHECK-NEXT:    eor w7, w10, w9, lsr #1
-; CHECK-NEXT:    eon w19, w10, w9, ror #20
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    orn w11, w10, w9
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eor w12, w10, w9
+; CHECK-NEXT:    str w13, [x8]
+; CHECK-NEXT:    eon w13, w9, w10
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    and w11, w10, w9, lsl #31
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    bic w12, w10, w9, lsl #31
+; CHECK-NEXT:    str w13, [x8]
+; CHECK-NEXT:    orr w13, w10, w9, lsl #31
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    orn w11, w10, w9, lsl #31
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eor w12, w10, w9, lsl #31
+; CHECK-NEXT:    str w13, [x8]
+; CHECK-NEXT:    eon w13, w10, w9, lsl #31
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    bic w11, w10, w9, asr #10
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eor w12, w10, w9, asr #10
+; CHECK-NEXT:    str w13, [x8]
+; CHECK-NEXT:    orn w13, w10, w9, lsr #1
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    eor w11, w10, w9, lsr #1
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eon w12, w10, w9, ror #20
 ; CHECK-NEXT:    and w9, w10, w9, ror #20
+; CHECK-NEXT:    str w13, [x8]
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    str w12, [x8]
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    str w14, [x8]
-; CHECK-NEXT:    str w15, [x8]
-; CHECK-NEXT:    str w16, [x8]
-; CHECK-NEXT:    str w17, [x8]
-; CHECK-NEXT:    str w18, [x8]
-; CHECK-NEXT:    str w0, [x8]
-; CHECK-NEXT:    str w1, [x8]
-; CHECK-NEXT:    str w2, [x8]
-; CHECK-NEXT:    str w3, [x8]
-; CHECK-NEXT:    str w4, [x8]
-; CHECK-NEXT:    str w5, [x8]
-; CHECK-NEXT:    str w6, [x8]
-; CHECK-NEXT:    str w7, [x8]
-; CHECK-NEXT:    str w19, [x8]
 ; CHECK-NEXT:    str w9, [x8]
-; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %val1 = load i32, i32* @var1_32
   %val2 = load i32, i32* @var2_32
@@ -130,9 +126,6 @@ define void @logical_32bit() minsize {
 define void @logical_64bit() minsize {
 ; CHECK-LABEL: logical_64bit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    adrp x8, :got:var1_64
 ; CHECK-NEXT:    adrp x9, :got:var2_64
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var1_64]
@@ -142,40 +135,39 @@ define void @logical_64bit() minsize {
 ; CHECK-NEXT:    and x11, x10, x9
 ; CHECK-NEXT:    bic x12, x10, x9
 ; CHECK-NEXT:    orr x13, x10, x9
-; CHECK-NEXT:    orn x14, x10, x9
-; CHECK-NEXT:    eor x15, x10, x9
-; CHECK-NEXT:    eon x16, x9, x10
-; CHECK-NEXT:    and x17, x10, x9, lsl #63
-; CHECK-NEXT:    bic x18, x10, x9, lsl #63
-; CHECK-NEXT:    orr x0, x10, x9, lsl #63
-; CHECK-NEXT:    orn x1, x10, x9, lsl #63
-; CHECK-NEXT:    eor x2, x10, x9, lsl #63
-; CHECK-NEXT:    eon x3, x10, x9, lsl #63
-; CHECK-NEXT:    bic x4, x10, x9, asr #10
-; CHECK-NEXT:    eor x5, x10, x9, asr #10
-; CHECK-NEXT:    orn x6, x10, x9, lsr #1
-; CHECK-NEXT:    eor x7, x10, x9, lsr #1
-; CHECK-NEXT:    eon x19, x10, x9, ror #20
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    orn x11, x10, x9
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eor x12, x10, x9
+; CHECK-NEXT:    str x13, [x8]
+; CHECK-NEXT:    eon x13, x9, x10
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    and x11, x10, x9, lsl #63
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    bic x12, x10, x9, lsl #63
+; CHECK-NEXT:    str x13, [x8]
+; CHECK-NEXT:    orr x13, x10, x9, lsl #63
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    orn x11, x10, x9, lsl #63
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eor x12, x10, x9, lsl #63
+; CHECK-NEXT:    str x13, [x8]
+; CHECK-NEXT:    eon x13, x10, x9, lsl #63
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    bic x11, x10, x9, asr #10
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eor x12, x10, x9, asr #10
+; CHECK-NEXT:    str x13, [x8]
+; CHECK-NEXT:    orn x13, x10, x9, lsr #1
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    eor x11, x10, x9, lsr #1
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eon x12, x10, x9, ror #20
 ; CHECK-NEXT:    and x9, x10, x9, ror #20
+; CHECK-NEXT:    str x13, [x8]
 ; CHECK-NEXT:    str x11, [x8]
 ; CHECK-NEXT:    str x12, [x8]
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    str x14, [x8]
-; CHECK-NEXT:    str x15, [x8]
-; CHECK-NEXT:    str x16, [x8]
-; CHECK-NEXT:    str x17, [x8]
-; CHECK-NEXT:    str x18, [x8]
-; CHECK-NEXT:    str x0, [x8]
-; CHECK-NEXT:    str x1, [x8]
-; CHECK-NEXT:    str x2, [x8]
-; CHECK-NEXT:    str x3, [x8]
-; CHECK-NEXT:    str x4, [x8]
-; CHECK-NEXT:    str x5, [x8]
-; CHECK-NEXT:    str x6, [x8]
-; CHECK-NEXT:    str x7, [x8]
-; CHECK-NEXT:    str x19, [x8]
 ; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %val1 = load i64, i64* @var1_64
   %val2 = load i64, i64* @var2_64
@@ -260,17 +252,16 @@ define void @flag_setting() {
 ; CHECK-NEXT:    ldr x9, [x8]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    tst x9, x10
-; CHECK-NEXT:    b.gt .LBB2_4
+; CHECK-NEXT:    b.gt .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    tst x9, x10, lsl #63
-; CHECK-NEXT:    b.lt .LBB2_4
-; CHECK-NEXT:  // %bb.2: // %test3
 ; CHECK-NEXT:    and x10, x9, x10, asr #12
-; CHECK-NEXT:    cmp x10, #1
-; CHECK-NEXT:    b.ge .LBB2_4
-; CHECK-NEXT:  // %bb.3: // %other_exit
+; CHECK-NEXT:    ccmp x10, #1, #0, ge
+; CHECK-NEXT:    b.lt .LBB2_3
+; CHECK-NEXT:  .LBB2_2: // %common.ret
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_3: // %other_exit
 ; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:  .LBB2_4: // %common.ret
 ; CHECK-NEXT:    ret
   %val1 = load i64, i64* @var1_64
   %val2 = load i64, i64* @var2_64

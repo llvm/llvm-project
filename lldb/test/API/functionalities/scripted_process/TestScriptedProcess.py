@@ -43,6 +43,7 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
         check its process ID, read string from memory, check scripted thread
@@ -88,6 +89,7 @@ class ScriptedProcesTestCase(TestBase):
         for idx, reg in enumerate(registers, start=1):
             self.assertEqual(idx, int(reg.value, 16))
 
+    @skipIfDarwin
     @skipUnlessDarwin
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
@@ -113,11 +115,6 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 42)
         self.assertEqual(process.GetNumThreads(), 1)
 
-        error = lldb.SBError()
-        hello_world = "Hello, world!"
-        memory_read = process.ReadCStringFromMemory(0x50000000000,
-                                                    len(hello_world) + 1, # NULL byte
-                                                    error)
         thread = process.GetSelectedThread()
         self.assertTrue(thread, "Invalid thread.")
         self.assertEqual(thread.GetThreadID(), 0x19)

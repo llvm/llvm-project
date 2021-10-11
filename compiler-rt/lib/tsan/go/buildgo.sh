@@ -27,7 +27,6 @@ SRCS="
 	../../sanitizer_common/sanitizer_flags.cpp
 	../../sanitizer_common/sanitizer_libc.cpp
 	../../sanitizer_common/sanitizer_mutex.cpp
-	../../sanitizer_common/sanitizer_persistent_allocator.cpp
 	../../sanitizer_common/sanitizer_printf.cpp
 	../../sanitizer_common/sanitizer_suppressions.cpp
 	../../sanitizer_common/sanitizer_thread_registry.cpp

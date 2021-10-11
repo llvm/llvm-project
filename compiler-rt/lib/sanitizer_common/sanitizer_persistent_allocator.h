@@ -20,9 +20,10 @@
 
 namespace __sanitizer {
 
+template <typename T>
 class PersistentAllocator {
  public:
-  void *alloc(uptr size);
+  T *alloc(uptr count = 1);
   uptr allocated() const {
     SpinMutexLock l(&mtx);
     return atomic_load_relaxed(&mapped_size) +
@@ -30,32 +31,55 @@ class PersistentAllocator {
   }
 
  private:
-  void *tryAlloc(uptr size);
-  void *refillAndAlloc(uptr size);
+  T *tryAlloc(uptr count);
+  T *refillAndAlloc(uptr count);
   mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.
   atomic_uintptr_t region_pos;  // Region allocator for Node's.
   atomic_uintptr_t region_end;
   atomic_uintptr_t mapped_size;
 };
 
-inline void *PersistentAllocator::tryAlloc(uptr size) {
+template <typename T>
+inline T *PersistentAllocator<T>::tryAlloc(uptr count) {
   // Optimisic lock-free allocation, essentially try to bump the region ptr.
   for (;;) {
     uptr cmp = atomic_load(&region_pos, memory_order_acquire);
     uptr end = atomic_load(&region_end, memory_order_acquire);
+    uptr size = count * sizeof(T);
     if (cmp == 0 || cmp + size > end) return nullptr;
     if (atomic_compare_exchange_weak(&region_pos, &cmp, cmp + size,
                                      memory_order_acquire))
-      return (void *)cmp;
+      return reinterpret_cast<T *>(cmp);
   }
 }
 
-inline void *PersistentAllocator::alloc(uptr size) {
+template <typename T>
+inline T *PersistentAllocator<T>::alloc(uptr count) {
   // First, try to allocate optimisitically.
-  void *s = tryAlloc(size);
+  T *s = tryAlloc(count);
   if (LIKELY(s))
     return s;
-  return refillAndAlloc(size);
+  return refillAndAlloc(count);
+}
+
+template <typename T>
+inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
+  // If failed, lock, retry and alloc new superblock.
+  SpinMutexLock l(&mtx);
+  for (;;) {
+    T *s = tryAlloc(count);
+    if (s)
+      return s;
+    atomic_store(&region_pos, 0, memory_order_relaxed);
+    uptr size = count * sizeof(T);
+    uptr allocsz = 64 * 1024;
+    if (allocsz < size)
+      allocsz = size;
+    uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
+    atomic_fetch_add(&mapped_size, allocsz, memory_order_relaxed);
+    atomic_store(&region_end, mem + allocsz, memory_order_release);
+    atomic_store(&region_pos, mem, memory_order_release);
+  }
 }
 
 } // namespace __sanitizer

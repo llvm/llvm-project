@@ -4,7 +4,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[cmp.result] <https://wg21.link/cmp.result>`_,| `compare_three_way_result <https://reviews.llvm.org/D103581>`_,None,Arthur O'Dwyer,|Complete|
 | `[expos.only.func] <https://wg21.link/expos.only.func>`_,"| `synth-three-way <https://reviews.llvm.org/D107721>`_
 | `synth-three-way-result <https://reviews.llvm.org/D107721>`_",[cmp.concept],Kent Ross,|Complete|
-| `[comparisons.three.way] <https://wg21.link/comparisons.three.way>`_,| `compare_three_way <https://reviews.llvm.org/D80899>`_,[cmp.concept],Christopher Di Bella,|In Progress|
+| `[comparisons.three.way] <https://wg21.link/comparisons.three.way>`_,| `compare_three_way <https://reviews.llvm.org/D80899>`_,[cmp.concept],Arthur O'Dwyer,|Complete|
 | `[cmp.alg] <https://wg21.link/cmp.alg>`_,"| `strong_order <https://reviews.llvm.org/D107036>`_
 | `weak_order <https://reviews.llvm.org/D107036>`_
 | `partial_order <https://reviews.llvm.org/D107036>`_",None,Arthur O'Dwyer,|In Progress|
@@ -14,7 +14,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| error_category,[comparisons.three.way],Unassigned,|Not Started|
 | `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| error_code
 | error_condition",None,Unassigned,|Not Started|
-| `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|In Progress|
+| `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
 "| `[optional.relops] <https://wg21.link/optional.relops>`_
 | `[optional.nullops] <https://wg21.link/optional.nullops>`_
 | `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| optional

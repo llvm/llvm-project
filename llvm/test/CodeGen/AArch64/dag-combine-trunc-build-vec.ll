@@ -10,13 +10,13 @@
 define void @no_combine(i32 %p) local_unnamed_addr {
 ; CHECK-LABEL: no_combine:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v0.4s, w0
-; CHECK-NEXT:    movi v1.4h, #4
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    xtn v1.8b, v0.8h
-; CHECK-NEXT:    xtn2 v1.16b, v0.8h
-; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    movi v0.4h, #4
+; CHECK-NEXT:    dup v1.4s, w0
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    xtn v0.8b, v1.8h
+; CHECK-NEXT:    xtn2 v0.16b, v1.8h
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
 
 ; The two shufflevector operations are needed to force the DAGCombine to happen

@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
@@ -1254,21 +1255,6 @@ public:
                          const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 };
 
-/// Represents an abstract task for ORC to run.
-class Task : public RTTIExtends<Task, RTTIRoot> {
-public:
-  static char ID;
-
-  /// Description of the task to be performed. Used for logging.
-  virtual void printDescription(raw_ostream &OS) = 0;
-
-  /// Run the task.
-  virtual void run() = 0;
-
-private:
-  void anchor() override;
-};
-
 /// A materialization task.
 class MaterializationTask : public RTTIExtends<MaterializationTask, Task> {
 public:
@@ -1298,13 +1284,16 @@ public:
   /// For reporting errors.
   using ErrorReporter = std::function<void(Error)>;
 
+  /// Send a result to the remote.
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+
   /// For dispatching ORC tasks (typically materialization tasks).
   using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
   using JITDispatchHandlerFunction = unique_function<void(
-      ExecutorProcessControl::SendResultFunction SendResult,
+      SendResultFunction SendResult,
       const char *ArgData, size_t ArgSize)>;
 
   /// A map associating tag names with asynchronous wrapper function
@@ -1481,9 +1470,9 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  void callWrapperAsync(ExecutorProcessControl::SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr, ArrayRef<char> ArgBuffer) {
-    EPC->callWrapperAsync(std::move(OnComplete), WrapperFnAddr, ArgBuffer);
+  template <typename... ArgTs>
+  void callWrapperAsync(ArgTs &&... Args) {
+    EPC->callWrapperAsync(std::forward<ArgTs>(Args)...);
   }
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -1500,10 +1489,10 @@ public:
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
+  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
                            const ArgTs &...Args) {
     EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        std::forward<SendResultT>(SendResult), WrapperFnAddr, Args...);
+        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
@@ -1528,7 +1517,7 @@ public:
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
     return [H = std::forward<HandlerT>(H)](
-               ExecutorProcessControl::SendResultFunction SendResult,
+               SendResultFunction SendResult,
                const char *ArgData, size_t ArgSize) mutable {
       shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
                                                          std::move(SendResult));
@@ -1567,7 +1556,7 @@ public:
   /// This should be called by the ExecutorProcessControl instance in response
   /// to incoming jit-dispatch requests from the executor.
   void
-  runJITDispatchHandler(ExecutorProcessControl::SendResultFunction SendResult,
+  runJITDispatchHandler(SendResultFunction SendResult,
                         JITTargetAddress HandlerFnTagAddr,
                         ArrayRef<char> ArgBuffer);
 
