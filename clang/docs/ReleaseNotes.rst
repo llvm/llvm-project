@@ -121,6 +121,7 @@ C Language Changes in Clang
   `P2362 <wg21.link/P2362>`_.
 - Support for ``__attribute__((error("")))`` and
   ``__attribute__((warning("")))`` function attributes have been added.
+- The maximum allowed alignment has been increased from 2^29 to 2^32.
 
 C++ Language Changes in Clang
 -----------------------------
