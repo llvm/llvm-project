@@ -890,6 +890,9 @@ protected:
     // Required by the libc++ locale support.
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+    Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
+    this->PlatformName = "fuchsia";
+    this->PlatformMinVersion = VersionTuple(Opts.FuchsiaAPILevel);
   }
 
 public:
