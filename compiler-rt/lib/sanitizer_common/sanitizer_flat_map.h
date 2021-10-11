@@ -79,9 +79,20 @@ class TwoLevelMap {
       T *p = Get(i);
       if (!p)
         continue;
-      MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), kSize2 * sizeof(T));
+      MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), MmapSize());
       UnmapOrDie(p, kSize2);
     }
+  }
+
+  uptr MemoryUsage() const {
+    uptr res = 0;
+    for (uptr i = 0; i < kSize1; i++) {
+      T *p = Get(i);
+      if (!p)
+        continue;
+      res += MmapSize();
+    }
+    return res;
   }
 
   constexpr uptr size() const { return kSize1 * kSize2; }
@@ -106,6 +117,10 @@ class TwoLevelMap {
   }
 
  private:
+  constexpr uptr MmapSize() const {
+    return RoundUpTo(kSize2 * sizeof(T), GetPageSizeCached());
+  }
+
   T *Get(uptr idx) const {
     CHECK_LT(idx, kSize1);
     return reinterpret_cast<T *>(
@@ -123,7 +138,7 @@ class TwoLevelMap {
     SpinMutexLock l(&mu_);
     T *res = Get(idx);
     if (!res) {
-      res = reinterpret_cast<T *>(MmapOrDie(kSize2 * sizeof(T), "TwoLevelMap"));
+      res = reinterpret_cast<T *>(MmapOrDie(MmapSize(), "TwoLevelMap"));
       MapUnmapCallback().OnMap(reinterpret_cast<uptr>(res), kSize2);
       atomic_store(&map1_[idx], reinterpret_cast<uptr>(res),
                    memory_order_release);

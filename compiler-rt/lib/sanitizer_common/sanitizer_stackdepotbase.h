@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #include "sanitizer_atomic.h"
+#include "sanitizer_flat_map.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_mutex.h"
 
@@ -23,16 +24,29 @@ namespace __sanitizer {
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 class StackDepotBase {
+  static const u32 kIdSizeLog = sizeof(u32) * 8 - kReservedBits;
+  static const u32 kNodesSize1Log = kIdSizeLog / 2;
+  static const u32 kNodesSize2Log = kIdSizeLog - kNodesSize1Log;
+
  public:
   typedef typename Node::args_type args_type;
   typedef typename Node::handle_type handle_type;
   typedef typename Node::hash_type hash_type;
+
+  static const u64 kNodesSize1 = 1ull << kNodesSize1Log;
+  static const u64 kNodesSize2 = 1ull << kNodesSize2Log;
+
   // Maps stack trace to an unique id.
   handle_type Put(args_type args, bool *inserted = nullptr);
   // Retrieves a stored stack trace by the id.
   args_type Get(u32 id);
 
-  StackDepotStats GetStats() const { return {n_uniq_ids, Node::allocated()}; }
+  StackDepotStats GetStats() const {
+    return {
+        atomic_load_relaxed(&n_uniq_ids),
+        nodes.MemoryUsage() + Node::allocated(),
+    };
+  }
 
   void LockAll();
   void UnlockAll();
@@ -44,17 +58,12 @@ class StackDepotBase {
   static void unlock(atomic_uintptr_t *p, Node *s);
 
   static const int kTabSize = 1 << kTabSizeLog;  // Hash table size.
-  static const int kPartBits = 8;
-  static const int kPartShift = sizeof(u32) * 8 - kPartBits - kReservedBits;
-  static const int kPartCount =
-      1 << kPartBits;  // Number of subparts in the table.
-  static const int kPartSize = kTabSize / kPartCount;
-  static const int kMaxId = 1 << kPartShift;
 
-  atomic_uintptr_t tab[kTabSize];   // Hash table of Node's.
-  atomic_uint32_t seq[kPartCount];  // Unique id generators.
+  atomic_uintptr_t tab[kTabSize];  // Hash table of Node's.
 
-  uptr n_uniq_ids;
+  atomic_uint32_t n_uniq_ids;
+
+  TwoLevelMap<Node, kNodesSize1, kNodesSize2> nodes;
 
   friend class StackDepotReverseMap;
 };
@@ -120,14 +129,10 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
       return node->get_handle();
     }
   }
-  uptr part = (h % kTabSize) / kPartSize;
-  u32 id = atomic_fetch_add(&seq[part], 1, memory_order_relaxed) + 1;
-  n_uniq_ids++;
-  CHECK_LT(id, kMaxId);
-  id |= part << kPartShift;
+  u32 id = atomic_fetch_add(&n_uniq_ids, 1, memory_order_relaxed) + 1;
   CHECK_NE(id, 0);
   CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
-  s = Node::allocate(args);
+  s = &nodes[id];
   s->id = id;
   s->store(args, h);
   s->link = s2;
@@ -139,25 +144,15 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
 template <class Node, int kReservedBits, int kTabSizeLog>
 typename StackDepotBase<Node, kReservedBits, kTabSizeLog>::args_type
 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Get(u32 id) {
-  if (id == 0) {
+  if (id == 0)
     return args_type();
-  }
   CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
-  // High kPartBits contain part id, so we need to scan at most kPartSize lists.
-  uptr part = id >> kPartShift;
-  for (int i = 0; i != kPartSize; i++) {
-    uptr idx = part * kPartSize + i;
-    CHECK_LT(idx, kTabSize);
-    atomic_uintptr_t *p = &tab[idx];
-    uptr v = atomic_load(p, memory_order_consume);
-    Node *s = (Node *)(v & ~uptr(1));
-    for (; s; s = s->link) {
-      if (s->id == id) {
-        return s->load();
-      }
-    }
-  }
-  return args_type();
+  if (!nodes.contains(id))
+    return args_type();
+  const Node &node = nodes[id];
+  if (node.id != id)
+    return args_type();
+  return node.load();
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
