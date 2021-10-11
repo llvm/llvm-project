@@ -19,6 +19,7 @@ TEST(InPlaceTaskDispatchTest, GenericNamedTask) {
   bool B = false;
   D->dispatch(makeGenericNamedTask([&]() { B = true; }));
   EXPECT_TRUE(B);
+  D->shutdown();
 }
 
 #if LLVM_ENABLE_THREADS
@@ -29,5 +30,6 @@ TEST(DynamicThreadPoolDispatchTest, GenericNamedTask) {
   D->dispatch(makeGenericNamedTask(
       [P = std::move(P)]() mutable { P.set_value(true); }));
   EXPECT_TRUE(F.get());
+  D->shutdown();
 }
 #endif
