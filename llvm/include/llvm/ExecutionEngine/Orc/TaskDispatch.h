@@ -16,7 +16,9 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include <cassert>
 #include <string>
 
 #if LLVM_ENABLE_THREADS
