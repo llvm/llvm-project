@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -121,6 +122,10 @@ public:
     ExecutorAddr JITDispatchContext;
   };
 
+  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
+                         std::unique_ptr<TaskDispatcher> D)
+    : SSP(std::move(SSP)), D(std::move(D)) {}
+
   virtual ~ExecutorProcessControl();
 
   /// Return the ExecutionSession associated with this instance.
@@ -135,6 +140,8 @@ public:
 
   /// Return a shared pointer to the SymbolStringPool for this instance.
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() const { return SSP; }
+
+  TaskDispatcher &getDispatcher() { return *D; }
 
   /// Return the Triple for the target process.
   const Triple &getTargetTriple() const { return TargetTriple; }
@@ -264,10 +271,9 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP)
-      : SSP(std::move(SSP)) {}
 
   std::shared_ptr<SymbolStringPool> SSP;
+  std::unique_ptr<TaskDispatcher> D;
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
   unsigned PageSize = 0;
@@ -284,9 +290,12 @@ class UnsupportedExecutorProcessControl : public ExecutorProcessControl {
 public:
   UnsupportedExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP = nullptr,
+      std::unique_ptr<TaskDispatcher> D = nullptr,
       const std::string &TT = "", unsigned PageSize = 0)
       : ExecutorProcessControl(SSP ? std::move(SSP)
-                                   : std::make_shared<SymbolStringPool>()) {
+                               : std::make_shared<SymbolStringPool>(),
+                               D ? std::move(D)
+                               : std::make_unique<InPlaceTaskDispatcher>()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
   }
@@ -320,8 +329,9 @@ class SelfExecutorProcessControl
       private ExecutorProcessControl::MemoryAccess {
 public:
   SelfExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
-      unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
+      std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
+      Triple TargetTriple, unsigned PageSize,
+      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Create a SelfExecutorProcessControl with the given symbol string pool and
   /// memory manager.
@@ -330,6 +340,7 @@ public:
   /// be created and used by default.
   static Expected<std::unique_ptr<SelfExecutorProcessControl>>
   Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
+         std::unique_ptr<TaskDispatcher> D = nullptr,
          std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
 
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;

@@ -718,6 +718,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(FromExecutor[WriteEnd]);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
@@ -795,7 +796,8 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
-  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(*SockFD, *SockFD);
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(), *SockFD, *SockFD);
 #endif
 }
 
@@ -832,8 +834,9 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
     if (!PageSize)
       return PageSize.takeError();
     EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(), std::move(TT), *PageSize,
-        createMemoryManager());
+        std::make_shared<SymbolStringPool>(),
+        std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+        std::move(TT), *PageSize, createMemoryManager());
   }
 
   Error Err = Error::success();
