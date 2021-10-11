@@ -2178,10 +2178,6 @@ targets. This attribute may be attached to a struct/union, struct/union field,
 function, function parameter or variable declaration. If -g is specified,
 the ``ARGUMENT`` info will be preserved in IR and be emitted to dwarf.
 For BPF targets, the ``ARGUMENT`` info will be emitted to .BTF ELF section too.
-
-The attribute can also be used as a type qualifier. Right now it is accepted
-and silently ignored in order to permit the linux kernel to build with the
-attribute.
   }];
 }
 
