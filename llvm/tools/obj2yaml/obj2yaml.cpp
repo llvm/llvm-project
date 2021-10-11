@@ -23,7 +23,7 @@ static Error dumpObject(const ObjectFile &Obj) {
     return errorCodeToError(coff2yaml(outs(), cast<COFFObjectFile>(Obj)));
 
   if (Obj.isXCOFF())
-    return errorCodeToError(xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj)));
+    return xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj));
 
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);

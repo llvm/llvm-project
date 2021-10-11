@@ -5,7 +5,7 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: not obj2yaml %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
 
-# ERROR1: The end of the file was unexpectedly encountered
+# ERROR1: The end of the file was unexpectedly encountered: section data with offset 0x70 and size 0x4 goes past the end of the file
 
 --- !XCOFF
 FileHeader:
@@ -18,7 +18,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=2 -o %t2
 # RUN: not obj2yaml %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERROR2
 
-# ERROR2: The end of the file was unexpectedly encountered
+# ERROR2: The end of the file was unexpectedly encountered: relocations with offset 0x3c and size 0x1e go past the end of the file
 
 --- !XCOFF
 FileHeader:

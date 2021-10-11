@@ -73,7 +73,7 @@ Sections:
 # RUN: not llvm-objdump --section-headers %t-truncate.o 2>&1 \
 # RUN:  | FileCheck --check-prefix=ERROR %s
 
-# ERROR: The end of the file was unexpectedly encountered
+# ERROR: The end of the file was unexpectedly encountered: section headers with offset 0x14 and size 0x28 go past the end of the file
 
 --- !XCOFF
 FileHeader:
