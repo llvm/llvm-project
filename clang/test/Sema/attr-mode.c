@@ -92,6 +92,12 @@ void f_ft128_arg(long double *x);
 void f_ft128_complex_arg(_Complex long double *x);
 void test_TFtype(f128ibm *a) { f_ft128_arg (a); }
 void test_TCtype(c128ibm *a) { f_ft128_complex_arg (a); }
+typedef float w128ibm __attribute__((mode(IF)));
+typedef _Complex float cw128ibm __attribute__((mode(IC)));
+void f_ibm128_arg(__ibm128 *x);
+void f_ibm128_complex_arg(_Complex __ibm128 *x);
+void test_IFtype(w128ibm *a) { f_ibm128_arg(a); }
+void test_ICtype(cw128ibm *a) { f_ibm128_complex_arg(a); }
 #elif TEST_F128_PPC64
 typedef int invalid_7 __attribute((mode(KF))); // expected-error{{type of machine mode does not match type of base type}}
 typedef int invalid_8 __attribute((mode(KI))); // expected-error{{unknown machine mode}}

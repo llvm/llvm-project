@@ -59,6 +59,12 @@ template <__ibm128 Q> struct T2 {
   constexpr static __ibm128 mem = Q;
 };
 
+typedef float w128ibm __attribute__((mode(IF)));
+typedef _Complex float w128ibm_c __attribute__((mode(IC)));
+
+w128ibm icmode_self(w128ibm x) { return x; }
+w128ibm_c icmode_self_complex(w128ibm_c x) { return x; }
+
 int main(void) {
   __ibm128 lf;
   CTest ct(lf);
@@ -114,6 +120,9 @@ int main(void) {
 // CHECK:   %2 = load ppc_fp128, ppc_fp128* %r, align 16
 // CHECK:   ret ppc_fp128 %2
 // CHECK: }
+
+// CHECK: define dso_local ppc_fp128 @_Z11icmode_selfg(ppc_fp128 %x)
+// CHECK: define dso_local { ppc_fp128, ppc_fp128 } @_Z19icmode_self_complexCg(ppc_fp128 %x.coerce0, ppc_fp128 %x.coerce1)
 
 // CHECK: define dso_local signext i32 @main()
 // CHECK: entry:
