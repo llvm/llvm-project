@@ -759,9 +759,13 @@ public:
   /// Convert from an "exit count" (i.e. "backedge taken count") to a "trip
   /// count".  A "trip count" is the number of times the header of the loop
   /// will execute if an exit is taken after the specified number of backedges
-  /// have been taken.  (e.g. TripCount = ExitCount + 1)  A zero result
-  /// must be interpreted as a loop having an unknown trip count.
-  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount);
+  /// have been taken.  (e.g. TripCount = ExitCount + 1).  Note that the
+  /// expression can overflow if ExitCount = UINT_MAX.  \p Extend controls
+  /// how potential overflow is handled.  If true, a wider result type is
+  /// returned. ex: EC = 255 (i8), TC = 256 (i9).  If false, result unsigned
+  /// wraps with 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount,
+                                        bool Extend = true);
 
   /// Returns the exact trip count of the loop if we can compute it, and
   /// the result is a small constant.  '0' is used to represent an unknown
