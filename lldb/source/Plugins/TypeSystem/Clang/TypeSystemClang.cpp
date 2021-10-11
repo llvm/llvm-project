@@ -1159,20 +1159,12 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     }
     break;
   }
-  // This assert should fire for anything that we don't catch above so we know
-  // to fix any issues we run into.
-  if (!type_name.empty()) {
-    std::string type_name_str = type_name.str();
-    Host::SystemLog(Host::eSystemLogError,
-                    "error: need to add support for DW_TAG_base_type '%s' "
-                    "encoded with DW_ATE = 0x%x, bit_size = %u\n",
-                    type_name_str.c_str(), dw_ate, bit_size);
-  } else {
-    Host::SystemLog(Host::eSystemLogError, "error: need to add support for "
-                                           "DW_TAG_base_type encoded with "
-                                           "DW_ATE = 0x%x, bit_size = %u\n",
-                    dw_ate, bit_size);
-  }
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  LLDB_LOG(log,
+           "error: need to add support for DW_TAG_base_type '{0}' "
+           "encoded with DW_ATE = {1:x}, bit_size = {2}",
+           type_name, dw_ate, bit_size);
   return CompilerType();
 }
 
