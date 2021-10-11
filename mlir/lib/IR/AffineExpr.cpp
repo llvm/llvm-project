@@ -216,9 +216,11 @@ bool AffineExpr::isPureAffine() const {
 int64_t AffineExpr::getLargestKnownDivisor() const {
   AffineBinaryOpExpr binExpr(nullptr);
   switch (getKind()) {
-  case AffineExprKind::SymbolId:
+  case AffineExprKind::CeilDiv:
     LLVM_FALLTHROUGH;
   case AffineExprKind::DimId:
+  case AffineExprKind::FloorDiv:
+  case AffineExprKind::SymbolId:
     return 1;
   case AffineExprKind::Constant:
     return std::abs(this->cast<AffineConstantExpr>().getValue());
@@ -229,8 +231,6 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
   }
   case AffineExprKind::Add:
     LLVM_FALLTHROUGH;
-  case AffineExprKind::FloorDiv:
-  case AffineExprKind::CeilDiv:
   case AffineExprKind::Mod: {
     binExpr = cast<AffineBinaryOpExpr>();
     return llvm::GreatestCommonDivisor64(
