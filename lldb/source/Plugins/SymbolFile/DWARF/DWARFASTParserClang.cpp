@@ -876,6 +876,37 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   return type_sp;
 }
 
+static clang::CallingConv
+ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
+  switch (attrs.calling_convention) {
+  case llvm::dwarf::DW_CC_normal:
+    return clang::CC_C;
+  case llvm::dwarf::DW_CC_BORLAND_stdcall:
+    return clang::CC_X86StdCall;
+  case llvm::dwarf::DW_CC_BORLAND_msfastcall:
+    return clang::CC_X86FastCall;
+  case llvm::dwarf::DW_CC_LLVM_vectorcall:
+    return clang::CC_X86VectorCall;
+  case llvm::dwarf::DW_CC_BORLAND_pascal:
+    return clang::CC_X86Pascal;
+  case llvm::dwarf::DW_CC_LLVM_Win64:
+    return clang::CC_Win64;
+  case llvm::dwarf::DW_CC_LLVM_X86_64SysV:
+    return clang::CC_X86_64SysV;
+  case llvm::dwarf::DW_CC_LLVM_X86RegCall:
+    return clang::CC_X86RegCall;
+  default:
+    break;
+  }
+
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+  LLDB_LOG(log, "Unsupported DW_AT_calling_convention value: {0}",
+           attrs.calling_convention);
+  // Use the default calling convention as a fallback.
+  return clang::CC_C;
+}
+
 TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                            ParsedDWARFTypeAttributes &attrs) {
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
@@ -954,11 +985,14 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
     is_cxx_method = false;
   }
 
+  clang::CallingConv calling_convention =
+      ConvertDWARFCallingConventionToClang(attrs);
+
   // clang_type will get the function prototype clang type after this
   // call
   CompilerType clang_type = m_ast.CreateFunctionType(
       return_clang_type, function_param_types.data(),
-      function_param_types.size(), is_variadic, type_quals);
+      function_param_types.size(), is_variadic, type_quals, calling_convention);
 
   if (attrs.name) {
     bool type_handled = false;
