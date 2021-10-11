@@ -1,6 +1,8 @@
 # MLIR Python Bindings
 
-Current status: Under development and not enabled by default
+**Current status**: Under development and not enabled by default
+
+[TOC]
 
 ## Building
 
@@ -244,6 +246,433 @@ Module, when used purely from the Python API, can't alias anyway, so we can use
 it as a top-level ref type without a live-list for interning. If the API ever
 changes such that this cannot be guaranteed (i.e. by letting you marshal a
 native-defined Module in), then there would need to be a live table for it too.
+
+## User-level API
+
+### Context Management
+
+The bindings rely on Python
+[context managers](https://docs.python.org/3/reference/datamodel.html#context-managers)
+(`with` statements) to simplify creation and handling of IR objects by omitting
+repeated arguments such as MLIR contexts, operation insertion points and
+locations. A context manager sets up the default object to be used by all
+binding calls within the following context and in the same thread. This default
+can be overridden by specific calls through the dedicated keyword arguments.
+
+#### MLIR Context
+
+An MLIR context is a top-level entity that owns attributes and types and is
+referenced from virtually all IR constructs. Contexts also provide thread safety
+at the C++ level. In Python bindings, the MLIR context is also a Python context
+manager, one can write:
+
+```python
+from mlir.ir import Context, Module
+
+with Context() as ctx:
+  # IR construction using `ctx` as context.
+
+  # For example, parsing an MLIR module from string requires the context.
+  Module.parse("builtin.module {}")
+```
+
+IR objects referencing a context usually provide access to it through the
+`.context` property. Most IR-constructing functions expect the context to be
+provided in some form. In case of attributes and types, the context may be
+extracted from the contained attribute or type. In case of operations, the
+context is systematically extracted from Locations (see below). When the context
+cannot be extracted from any argument, the bindings API expects the (keyword)
+argument `context`. If it is not provided or set to `None` (default), it will be
+looked up from an implicit stack of contexts maintained by the bindings in the
+current thread and updated by context managers. If there is no surrounding
+context, an error will be raised.
+
+Note that it is possible to manually specify the MLIR context both inside and
+outside of the `with` statement:
+
+```python
+from mlir.ir import Context, Module
+
+standalone_ctx = Context()
+with Context() as managed_ctx:
+  # Parse a module in managed_ctx.
+  Module.parse("...")
+
+  # Parse a module in standalone_ctx (override the context manager).
+  Module.parse("...", context=standalone_ctx)
+
+# Parse a module without using context managers.
+Module.parse("...", context=standalone_ctx)
+```
+
+The context object remains live as long as there are IR objects referencing it.
+
+#### Insertion Points and Locations
+
+When constructing an MLIR operation, two pieces of information are required:
+
+-   an *insertion point* that indicates where the operation is to be created in
+    the IR region/block/operation structure (usually before or after another
+    operation, or at the end of some block); it may be missing, at which point
+    the operation is created in the *detached* state;
+-   a *location* that contains user-understandable information about the source
+    of the operation (for example, file/line/column information), which must
+    always be provided as it carries a reference to the MLIR context.
+
+Both can be provided using context managers or explicitly as keyword arguments
+in the operation constructor. They can be also provided as keyword arguments
+`ip` and `loc` both within and outside of the context manager.
+
+```python
+from mlir.ir import Context, InsertionPoint, Location, Module, Operation
+
+with Context() as ctx:
+  module = Module.create()
+
+  # Prepare for inserting operations into the body of the module and indicate
+  # that these operations originate in the "f.mlir" file at the given line and
+  # column.
+  with InsertionPoint(module.body), Location.file("f.mlir", line=42, col=1):
+    # This operation will be inserted at the end of the module body and will
+    # have the location set up by the context manager.
+    Operation(<...>)
+
+    # This operation will be inserted at the end of the module (and after the
+    # previously constructed operation) and will have the location provided as
+    # the keyword argument.
+    Operation(<...>, loc=Location.file("g.mlir", line=1, col=10))
+
+    # This operation will be inserted at the *beginning* of the block rather
+    # than at its end.
+    Operation(<...>, ip=InsertionPoint.at_block_begin(module.body))
+```
+
+Note that `Location` needs an MLIR context to be constructed. It can take the
+context set up in the current thread by some surrounding context manager, or
+accept it as an explicit argument:
+
+```python
+from mlir.ir import Context, Location
+
+# Create a context and a location in this context in the same `with` statement.
+with Context() as ctx, Location.file("f.mlir", line=42, col=1, context=ctx):
+  pass
+```
+
+Locations are owned by the context and maintain it live as long as they are
+(transitively) referenced from somewhere in Python code.
+
+Unlike locations, the insertion point may be left unspecified (or, equivalently,
+set to `None` or `False`) during operation construction. In this case, the
+operation is created in the *detached* state, that is, it is not added into the
+region of another operation and is owned by the caller. This is usually the case
+for top-level operations that contain the IR, such as modules. Regions, blocks
+and values contained in an operation point back to it and maintain it live.
+
+### Inspecting IR Objects
+
+Inspecting the IR is one of the primary tasks the Python bindings are designed
+for. One can traverse the IR operation/region/block structure and inspect their
+aspects such as operation attributes and value types.
+
+#### Operations, Regions and Blocks
+
+Operations are represented as either:
+
+-   the generic `Operation` class, useful in particular for generic processing
+    of unregistered operations; or
+-   a specific subclass of `OpView` that provides more semantically-loaded
+    accessors to operation properties.
+
+Given an `OpView` subclass, one can obtain an `Operation` using its `.operation`
+property. Given an `Operation`, one can obtain the corresponding `OpView` using
+its `.opview` property *as long as* the corresponding class has been set up.
+This typically means that the Python module of its dialect has been loaded. By
+default, the `OpView` version is produced when navigating the IR tree.
+
+One can check if an operation has a specific type by means of Python's
+`isinstance` function:
+
+```python
+operation = <...>
+opview = <...>
+if isinstance(operation.opview, mydialect.MyOp):
+  pass
+if isinstance(opview, mydialect.MyOp):
+  pass
+```
+
+The components of an operation can be inspected using its properties.
+
+-   `attributes` is a collection of operation attributes . It can be subscripted
+    as both dictionary and sequence, e.g., both `operation.attributes["value"]`
+    and `operation.attributes[0]` will work. There is no guarantee on the order
+    in which the attributes are traversed when iterating over the `attributes`
+    property as sequence.
+-   `operands` is a sequence collection of operation operands.
+-   `results` is a sequence collection of operation results.
+-   `regions` is a sequence collection of regions attached to the operation.
+
+The objects produced by `operands` and `results` have a `.types` property that
+contains a sequence collection of types of the corresponding values.
+
+```python
+from mlir.ir import Operation
+
+operation1 = <...>
+operation2 = <...>
+if operation1.results.types == operation2.operand.types:
+  pass
+```
+
+`OpView` subclasses for specific operations may provide leaner accessors to
+properties of an opeation. For example, named attributes, operand and results
+are usually accessible as properties of the `OpView` subclass with the same
+name, such as `operation.const_value` instead of
+`operation.attributes["const_value"]`. If this name is a reserved Python
+keyword, it is suffixed with an underscore.
+
+The operation itself is iterable, which provides access to the attached regions
+in order:
+
+```python
+from mlir.ir import Operation
+
+operation = <...>
+for region in operation:
+  do_something_with_region(region)
+```
+
+A region is conceptually a sequence of blocks. Objects of the `Region` class are
+thus iterable, which provides access to the blocks. One can also use the
+`.blocks` property.
+
+```python
+# Regions are directly iterable and give acceess to blocks.
+for block1, block2 in zip(operation.regions[0], operation.regions[0].blocks)
+  assert block1 == block2
+```
+
+A block contains a sequence of operations, and has several additional
+properties. Objects of the `Block` class are iterable and provide access to the
+operations contained in the block. So does the `.operations` property. Blocks
+also have a list of arguments available as a sequence collection using the
+`.arguments` property.
+
+Block and region belong to the parent operation in Python bindings and keep it
+alive. This operation can be accessed using the `.owner` property.
+
+#### Attributes and Types
+
+Attributes and types are (mostly) immutable context-owned objects. They are
+represented as either:
+
+-   an opaque `Attribute` or `Type` object supporting printing and comparsion;
+    or
+-   a concrete subclass thereof with access to properties of the attribute or
+    type.
+
+Given an `Attribute` or `Type` object, one can obtain a concrete subclass using
+the constructor of the subclass. This may raise a `ValueError` if the attribute
+or type does not have the expected subclass:
+
+```python
+from mlir.ir import Attribute, Type
+from mlir.<dialect> import ConcreteAttr, ConcreteType
+
+attribute = <...>
+type = <...>
+try:
+  concrete_attr = ConcreteAttr(attribute)
+  concrete_type = ConcreteType(type)
+except ValueError as e:
+  # Handle incorrect subclass.
+```
+
+In addition, concrete attribute and type classes provide a static `isinstance`
+method to check whether an object of the opaque `Attribute` or `Type` type can
+be downcasted:
+
+```python
+from mlir.ir import Attribute, Type
+from mlir.<dialect> import ConcreteAttr, ConcreteType
+
+attribute = <...>
+type = <...>
+
+# No need to handle errors here.
+if ConcreteAttr.isinstance(attribute):
+  concrete_attr = ConcreteAttr(attribute)
+if ConcreteType.isinstance(type):
+  concrete_type = ConcreteType(type)
+```
+
+By default, and unlike operations, attributes and types are returned from IR
+traversals using the opaque `Attribute` or `Type` that needs to be downcasted.
+
+Concrete attribute and type classes usually expose their properties as Python
+readonly properties. For example, the elemental type of a tensor type can be
+accessed using the `.element_type` property.
+
+#### Values
+
+MLIR has two kinds of values based on their defining object: block arguments and
+operation results. Values are handled similarly to attributes and types. They
+are represented as either:
+
+-   a generic `Value` object; or
+-   a concrete `BlockArgument` or `OpResult` object.
+
+The former provides all the generic functionality such as comparison, type
+access and printing. The latter provide access to the defining block or
+operation and the position of the value within it. By default, the generic
+`Value` objects are returned from IR traversals. Downcasting is implemented
+through concrete subclass constructors, similarly to attribtues and types:
+
+```python
+from mlir.ir import BlockArgument, OpResult, Value
+
+value = ...
+
+# Set `concrete` to the specific value subclass.
+try:
+  concrete = BlockArgument(value)
+except ValueError:
+  # This must not raise another ValueError as values are either block arguments
+  # or op results.
+  concrete = OpResult(value)
+```
+
+### Creating IR Objects
+
+Python bindings also support IR creation and manipulation.
+
+#### Operations, Regions and Blocks
+
+Operations can be created given a `Location` and an optional `InsertionPoint`.
+It is often easier to user context managers to specify locations and insertion
+points for several operations created in a row as decribed above.
+
+Concrete operations can be created by using constructors of the corresponding
+`OpView` subclasses. The generic, default form of the constructor accepts:
+
+-   an optional sequence of types for operation results (`results`);
+-   an optional sequence of values for operation operands, or another operation
+    producing those values (`operands`);
+-   an optional dictionary of operation attributes (`attributes`);
+-   an optional sequence of successor blocks (`successors`);
+-   the number of regions to attach to the operation (`regions`, default `0`);
+-   the `loc` keyword argument containing the `Location` of this operation; if
+    `None`, the location created by the closest context manager is used or an
+    exception will be raised if there is no context manager;
+-   the `ip` keyword argument indicating where the operation will be inserted in
+    the IR; if `None`, the insertion point created by the closest context
+    manager is used; if there is no surrounding context manager, the operation
+    is created in the detached state.
+
+Most operations will customize the constructor to accept a reduced list of
+arguments that are relevant for the operation. For example, zero-result
+operations may omit the `results` argument, so can the operations where the
+result types can be derived from operand types unambiguously. As a concrete
+example, built-in function operations can be constructed by providing a function
+name as string and its argument and result types as a tuple of sequences:
+
+```python
+from mlir.ir import Context, Module
+from mlir.dialects import builtin
+
+with Context():
+  module = Module.create()
+  with InsertionPoint(module.body), Location.unknown():
+    func = builtin.FuncOp("main", ([], []))
+```
+
+Also see below for constructors generated from ODS.
+
+Operations can also be constructed using the generic class and based on the
+canonical string name of the operation using `Operation.create`. It accepts the
+operation name as string, which must exactly match the canonical name of the
+operation in C++ or ODS, followed by the same argument list as the default
+constructor for `OpView`. *This form is discouraged* from use and is intended
+for generic operation processing.
+
+```python
+from mlir.ir import Context, Module
+from mlir.dialects import builtin
+
+with Context():
+  module = Module.create()
+  with InsertionPoint(module.body), Location.unknown():
+    # Operations can be created in a generic way.
+    func = Operation.create(
+        "builtin.func", results=[], operands=[],
+        attributes={"type":TypeAttr.get(FunctionType.get([], []))},
+        successors=None, regions=1)
+    # The result will be downcasted to the concrete `OpView` subclass if
+    # available.
+    assert isinstance(func, builtin.FuncOp)
+```
+
+Regions are created for an operation when constructing it on the C++ side. They
+are not constructible in Python and are not expected to exist outside of
+operations (unlike in C++ that supports detached regions).
+
+Blocks can be created within a given region and inserted before or after another
+block of the same region using `create_before()`, `create_after()` methods of
+the `Block` class. They are not expected to exist outside of regions (unlike in
+C++ that supports detached blocks).
+
+Blocks can be used to create `InsertionPoint`s, which can point to the beginning
+or the end of the block, or just before its terminator. It is common for
+`OpView` subclasses to provide a `.body` property that can be used to construct
+an `InsertionPoint`. For example, builtin `Module` and `FuncOp` provide a
+`.body` and `.add_entry_blocK()`, respectively.
+
+#### Attributes and Types
+
+Attributes and types can be created given a `Context` or another attribute or
+type object that already references the context. To indicate that they are owned
+by the context, they are obtained by calling the static `get` method on the
+concrete attribute or type class. These method take as arguments the data
+necessary to construct the attribute or type and a the keyword `context`
+argument when the context cannot be derived from other arguments.
+
+```python
+from mlir.ir import Context, F32Type, FloatAttr
+
+# Attribute and types require access to an MLIR context, either directly or
+# through another context-owned object.
+ctx = Context()
+f32 = F32Type.get(context=ctx)
+pi = FloatAttr.get(f32, 3.14)
+
+# They may use the context defined by the surrounding context manager.
+with Context():
+  f32 = F32Type.get()
+  pi = FloatAttr.get(f32, 3.14)
+```
+
+Some attributes provide additional construction methods for clarity.
+
+```python
+from mlir.ir import Context, IntegerAttr, IntegerType
+
+with Context():
+  i8 = IntegerType.get_signless(8)
+  IntegerAttr.get(i8, 42)
+```
+
+Builtin attribute can often be constructed from Python types with similar
+structure. For example, `ArrayAttr` can be constructed from a sequence
+collection of attributes, and a `DictAttr` can be constructed from a dictionary:
+
+```python
+from mlir.ir import ArrayAttr, Context, DictAttr, UnitAttr
+
+with Context():
+  array = ArrayAttr.get([UnitAttr.get(), UnitAttr.get()])
+  dictionary = DictAttr.get({"array": array, "unit": UnitAttr.get()})
+```
 
 ## Style
 
