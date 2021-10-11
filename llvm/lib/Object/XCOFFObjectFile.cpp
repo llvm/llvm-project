@@ -43,10 +43,6 @@ static uintptr_t getWithOffset(uintptr_t Base, ptrdiff_t Offset) {
                                      Offset);
 }
 
-static Error createError(const Twine &Err) {
-  return make_error<StringError>(Err, object_error::parse_failed);
-}
-
 template <typename T> static const T *viewAs(uintptr_t in) {
   return reinterpret_cast<const T *>(in);
 }
