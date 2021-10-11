@@ -3484,6 +3484,9 @@ bool CombinerHelper::matchTruncStoreMerge(MachineInstr &MI,
   assert(WideSrcVal.isValid());
 
   LLT WideStoreTy = MRI.getType(WideSrcVal);
+  // The wide type might not be a multiple of the memory type, e.g. s48 and s32.
+  if (WideStoreTy.getSizeInBits() % MemTy.getSizeInBits() != 0)
+    return false;
   const unsigned NumStoresRequired =
       WideStoreTy.getSizeInBits() / MemTy.getSizeInBits();
 

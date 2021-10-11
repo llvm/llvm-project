@@ -13,11 +13,12 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i16_to_i8
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %2:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %2(s32)
     %1:_(p0) = COPY $x1
@@ -45,10 +46,11 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i32_to_i8
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %3:_(s32) = G_CONSTANT i32 8
@@ -87,10 +89,11 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i32_to_i16
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32), align 2)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32), align 2)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %3:_(s32) = G_CONSTANT i32 16
@@ -117,12 +120,13 @@ body:             |
 
     ; CHECK-LABEL: name: be_i32_to_i16
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s32)
-    ; CHECK: G_STORE [[ROTR]](s32), [[COPY1]](p0) :: (store (s32), align 2)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: G_STORE [[ROTR]](s32), [[COPY1]](p0) :: (store (s32), align 2)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %2:_(s32) = G_CONSTANT i32 16
@@ -149,12 +153,13 @@ body:             |
 
     ; CHECK-LABEL: name: be_i32_to_i16_order
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s32)
-    ; CHECK: G_STORE [[ROTR]](s32), [[COPY1]](p0) :: (store (s32), align 2)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: G_STORE [[ROTR]](s32), [[COPY1]](p0) :: (store (s32), align 2)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %2:_(s32) = G_CONSTANT i32 16
@@ -181,10 +186,11 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i64_to_i8
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %3:_(s64) = G_CONSTANT i64 8
@@ -247,10 +253,11 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i64_to_i16
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 2)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 2)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %3:_(s64) = G_CONSTANT i64 16
@@ -289,10 +296,11 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_i64_to_i32
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64), align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %3:_(s64) = G_CONSTANT i64 32
@@ -319,12 +327,13 @@ body:             |
 
     ; CHECK-LABEL: name: be_i64_to_i32
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[ROTR]](s64), [[COPY1]](p0) :: (store (s64), align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: G_STORE [[ROTR]](s64), [[COPY1]](p0) :: (store (s64), align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 32
@@ -351,12 +360,13 @@ body:             |
 
     ; CHECK-LABEL: name: be_i64_to_i32_order
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[ROTR]](s64), [[COPY1]](p0) :: (store (s64), align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s64) = G_ROTR [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: G_STORE [[ROTR]](s64), [[COPY1]](p0) :: (store (s64), align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 32
@@ -383,17 +393,18 @@ body:             |
 
     ; CHECK-LABEL: name: merge_hole
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s8), [[COPY1]](p0) :: (store (s8))
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: G_STORE [[TRUNC1]](s16), [[PTR_ADD]](p0) :: (store (s16), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s8), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s16), [[PTR_ADD]](p0) :: (store (s16), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %5:_(s32) = G_CONSTANT i32 16
@@ -420,17 +431,18 @@ body:             |
 
     ; CHECK-LABEL: name: merge_hole2
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s16), [[PTR_ADD]](p0) :: (store (s16), align 1)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[PTR_ADD]](p0) :: (store (s16), align 1)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %4:_(s32) = G_CONSTANT i32 16
@@ -457,19 +469,20 @@ body:             |
 
     ; CHECK-LABEL: name: merge_hole3
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: G_STORE [[TRUNC1]](s16), [[PTR_ADD1]](p0) :: (store (s16), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s16), [[PTR_ADD1]](p0) :: (store (s16), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %7:_(s32) = G_CONSTANT i32 16
@@ -498,17 +511,18 @@ body:             |
 
     ; CHECK-LABEL: name: merge_hole4
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: G_STORE [[TRUNC1]](s16), [[COPY1]](p0) :: (store (s16), align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s16), [[COPY1]](p0) :: (store (s16), align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %5:_(s32) = G_CONSTANT i32 16
@@ -536,20 +550,21 @@ body:             |
 
     ; CHECK-LABEL: name: load_between_stores
     ; CHECK: liveins: $w0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16))
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32))
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: G_STORE [[TRUNC1]](s16), [[PTR_ADD]](p0) :: (store (s16))
-    ; CHECK: $w0 = COPY [[LOAD]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16))
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s16), [[PTR_ADD]](p0) :: (store (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %2:_(p0) = COPY $x2
@@ -579,18 +594,19 @@ body:             |
 
     ; CHECK-LABEL: name: invalid_shift
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 4
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
-    ; CHECK: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 4
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: RET_ReallyLR
     %2:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %2(s32)
     %1:_(p0) = COPY $x1
@@ -618,23 +634,24 @@ body:             |
 
     ; CHECK-LABEL: name: missing_store
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C1]](s32)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR1]](s32)
-    ; CHECK: G_STORE [[TRUNC]](s8), [[COPY1]](p0) :: (store (s8))
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: G_STORE [[TRUNC1]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
-    ; CHECK: G_STORE [[TRUNC2]](s8), [[PTR_ADD1]](p0) :: (store (s8))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s32)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C1]](s32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s8), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s8), [[PTR_ADD1]](p0) :: (store (s8))
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %3:_(s32) = G_CONSTANT i32 8
@@ -668,19 +685,20 @@ body:             |
 
     ; CHECK-LABEL: name: different_base_reg
     ; CHECK: liveins: $w0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
-    ; CHECK: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C1]](s64)
-    ; CHECK: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: RET_ReallyLR
     %3:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %3(s32)
     %1:_(p0) = COPY $x1
@@ -709,18 +727,19 @@ body:             |
 
     ; CHECK-LABEL: name: second_store_is_volatile
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
-    ; CHECK: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (volatile store (s8))
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s16)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s8), [[COPY1]](p0) :: (volatile store (s8))
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s8), [[PTR_ADD]](p0) :: (store (s8))
+    ; CHECK-NEXT: RET_ReallyLR
     %2:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %2(s32)
     %1:_(p0) = COPY $x1
@@ -732,6 +751,38 @@ body:             |
     %7:_(s64) = G_CONSTANT i64 1
     %8:_(p0) = G_PTR_ADD %1, %7(s64)
     G_STORE %6(s8), %8(p0) :: (store (s8))
+    RET_ReallyLR
+
+...
+---
+name:            wide_not_multiple_of_mem_ty
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: wide_not_multiple_of_mem_ty
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s48) = G_LSHR [[TRUNC]], [[C]](s64)
+    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC [[LSHR]](s48)
+    ; CHECK-NEXT: G_STORE %trunc(s32), [[COPY1]](p0) :: (store (s32))
+    ; CHECK-NEXT: RET_ReallyLR
+    %2:_(s64) = COPY $x0
+    %0:_(s48) = G_TRUNC %2(s64)
+    %1:_(p0) = COPY $x1
+    %4:_(s64) = G_CONSTANT i64 32
+    %5:_(s48) = G_LSHR %0, %4(s64)
+    %trunc:_(s32) = G_TRUNC %5(s48)
+    G_STORE %trunc(s32), %1(p0) :: (store (s32))
     RET_ReallyLR
 
 ...
