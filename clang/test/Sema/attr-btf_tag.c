@@ -40,11 +40,3 @@ int __tag2 __tag3 foo(struct t1 *arg, struct t2 *arg2);
 int __tag1 foo(struct t1 *arg __tag1, struct t2 *arg2) {
   return arg->a + arg2->a;
 }
-
-void * convert(long arg) {
-  /* FIXME: the attribute __tag1 is accepted but didn't really do type conversion
-   * or enforce type checking. This is to permit linux kernel build with btf_tag
-   * attribute.
-   */
-  return (void __tag1 *)arg;
-}
