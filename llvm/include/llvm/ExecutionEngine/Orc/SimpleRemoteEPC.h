@@ -64,7 +64,7 @@ public:
                               ArrayRef<std::string> Args) override;
 
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        SendResultFunction OnComplete,
+                        IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
@@ -100,7 +100,8 @@ private:
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}
 
-  using PendingCallWrapperResultsMap = DenseMap<uint64_t, SendResultFunction>;
+  using PendingCallWrapperResultsMap =
+    DenseMap<uint64_t, IncomingWFRHandler>;
 
   std::mutex SimpleRemoteEPCMutex;
   std::condition_variable DisconnectCV;

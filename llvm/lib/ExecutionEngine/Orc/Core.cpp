@@ -2089,8 +2089,8 @@ Error ExecutionSession::registerJITDispatchHandlers(
 }
 
 void ExecutionSession::runJITDispatchHandler(
-    ExecutorProcessControl::SendResultFunction SendResult,
-    JITTargetAddress HandlerFnTagAddr, ArrayRef<char> ArgBuffer) {
+    SendResultFunction SendResult, JITTargetAddress HandlerFnTagAddr,
+    ArrayRef<char> ArgBuffer) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {

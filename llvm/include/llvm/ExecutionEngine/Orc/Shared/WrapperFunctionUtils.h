@@ -555,7 +555,7 @@ public:
                         SendDeserializedResultFn &&SendDeserializedResult,
                         const ArgTs &...Args) {
     WrapperFunction<SPSEmpty(SPSTagTs...)>::callAsync(
-        Caller,
+        std::forward<AsyncCallerFn>(Caller),
         [SDR = std::move(SendDeserializedResult)](Error SerializeErr,
                                                   SPSEmpty E) mutable {
           SDR(std::move(SerializeErr));

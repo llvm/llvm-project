@@ -1284,13 +1284,16 @@ public:
   /// For reporting errors.
   using ErrorReporter = std::function<void(Error)>;
 
+  /// Send a result to the remote.
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+
   /// For dispatching ORC tasks (typically materialization tasks).
   using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
   using JITDispatchHandlerFunction = unique_function<void(
-      ExecutorProcessControl::SendResultFunction SendResult,
+      SendResultFunction SendResult,
       const char *ArgData, size_t ArgSize)>;
 
   /// A map associating tag names with asynchronous wrapper function
@@ -1467,10 +1470,9 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        ExecutorProcessControl::SendResultFunction OnComplete,
-                        ArrayRef<char> ArgBuffer) {
-    EPC->callWrapperAsync(WrapperFnAddr, std::move(OnComplete), ArgBuffer);
+  template <typename... ArgTs>
+  void callWrapperAsync(ArgTs &&... Args) {
+    EPC->callWrapperAsync(std::forward<ArgTs>(Args)...);
   }
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -1515,7 +1517,7 @@ public:
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
     return [H = std::forward<HandlerT>(H)](
-               ExecutorProcessControl::SendResultFunction SendResult,
+               SendResultFunction SendResult,
                const char *ArgData, size_t ArgSize) mutable {
       shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
                                                          std::move(SendResult));
@@ -1554,7 +1556,7 @@ public:
   /// This should be called by the ExecutorProcessControl instance in response
   /// to incoming jit-dispatch requests from the executor.
   void
-  runJITDispatchHandler(ExecutorProcessControl::SendResultFunction SendResult,
+  runJITDispatchHandler(SendResultFunction SendResult,
                         JITTargetAddress HandlerFnTagAddr,
                         ArrayRef<char> ArgBuffer);
 
