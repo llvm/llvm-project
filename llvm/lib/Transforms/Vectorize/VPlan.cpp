@@ -884,6 +884,13 @@ void VPlan::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
   O << "VPlan '" << Name << "' {";
+
+  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+    O << "\nLive-in ";
+    BackedgeTakenCount->printAsOperand(O, SlotTracker);
+    O << " = backedge-taken count\n";
+  }
+
   for (const VPBlockBase *Block : depth_first(getEntry())) {
     O << '\n';
     Block->print(O, "", SlotTracker);
