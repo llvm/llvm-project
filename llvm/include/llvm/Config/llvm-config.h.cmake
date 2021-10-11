@@ -100,8 +100,4 @@
 /* Define if the xar_open() function is supported on this platform. */
 #cmakedefine LLVM_HAVE_LIBXAR ${LLVM_HAVE_LIBXAR}
 
-/* Whether Timers signpost passes in Xcode Instruments */
-#cmakedefine01 LLVM_SUPPORT_XCODE_SIGNPOSTS
-
-
 #endif

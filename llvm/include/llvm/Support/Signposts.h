@@ -17,16 +17,7 @@
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
 #include <memory>
-
-#if LLVM_SUPPORT_XCODE_SIGNPOSTS
-#include <Availability.h>
-#include <os/signpost.h>
-#endif
-
-#define SIGNPOSTS_AVAILABLE()                                                  \
-  __builtin_available(macos 10.14, iOS 12, tvOS 12, watchOS 5, *)
 
 namespace llvm {
 class SignpostEmitterImpl;
@@ -44,33 +35,8 @@ public:
 
   /// Begin a signposted interval for a given object.
   void startInterval(const void *O, StringRef Name);
-
-#if LLVM_SUPPORT_XCODE_SIGNPOSTS
-  os_log_t &getLogger() const;
-  os_signpost_id_t getSignpostForObject(const void *O);
-#endif
-
-  /// A macro to take advantage of the special format string handling
-  /// in the os_signpost API. The format string substitution is
-  /// deferred to the log consumer and done outside of the
-  /// application.
-#if LLVM_SUPPORT_XCODE_SIGNPOSTS
-#define SIGNPOST_EMITTER_START_INTERVAL(SIGNPOST_EMITTER, O, ...)              \
-  do {                                                                         \
-    if ((SIGNPOST_EMITTER).isEnabled())                                        \
-      if (SIGNPOSTS_AVAILABLE())                                               \
-        os_signpost_interval_begin((SIGNPOST_EMITTER).getLogger(),             \
-                                   (SIGNPOST_EMITTER).getSignpostForObject(O), \
-                                   "LLVM Timers", __VA_ARGS__);                \
-  } while (0)
-#else
-#define SIGNPOST_EMITTER_START_INTERVAL(SIGNPOST_EMITTER, O, ...)              \
-  do {                                                                         \
-  } while (0)
-#endif
-
   /// End a signposted interval for a given object.
-  void endInterval(const void *O);
+  void endInterval(const void *O, StringRef Name);
 };
 
 } // end namespace llvm
