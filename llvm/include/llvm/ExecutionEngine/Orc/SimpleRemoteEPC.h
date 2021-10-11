@@ -61,8 +61,8 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  void callWrapperAsync(SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr,
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        SendResultFunction OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;

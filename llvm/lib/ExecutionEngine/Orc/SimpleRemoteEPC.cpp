@@ -54,8 +54,8 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
   return Result;
 }
 
-void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
-                                       ExecutorAddr WrapperFnAddr,
+void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                       SendResultFunction OnComplete,
                                        ArrayRef<char> ArgBuffer) {
   uint64_t SeqNo;
   {

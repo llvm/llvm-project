@@ -109,8 +109,8 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
-void SelfExecutorProcessControl::callWrapperAsync(SendResultFunction SendResult,
-                                                  ExecutorAddr WrapperFnAddr,
+void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                                  SendResultFunction SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
       shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);
