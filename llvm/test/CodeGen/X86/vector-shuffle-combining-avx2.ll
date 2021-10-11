@@ -847,7 +847,7 @@ define <32 x i8> @PR52122(<32 x i8> %0, <32 x i8> %1) {
 ; CHECK-LABEL: PR52122:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,ymm1[4],zero,zero,zero,ymm1[5],zero,zero,zero,ymm1[6],zero,zero,zero,ymm1[7],zero,zero,zero,ymm1[20],zero,zero,zero,ymm1[21],zero,zero,zero,ymm1[22],zero,zero,zero,ymm1[23],zero
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,4],zero,ymm0[u,u,5],zero,ymm0[u,3,6],zero,ymm0[u,u,7],zero,ymm0[u,18,20],zero,ymm0[u,u,21],zero,ymm0[u,19,22],zero,ymm0[u,u,23],zero,ymm0[u]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,4],zero,zero,zero,ymm0[5],zero,zero,ymm0[3,6],zero,zero,zero,ymm0[7],zero,zero,ymm0[18,20],zero,zero,zero,ymm0[21],zero,zero,ymm0[19,22],zero,zero,zero,ymm0[23],zero,zero
 ; CHECK-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %3 = shufflevector <32 x i8> %0, <32 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <32 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55>
