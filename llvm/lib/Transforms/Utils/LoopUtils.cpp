@@ -1049,6 +1049,7 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
     return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
     return Builder.CreateXorReduce(Src);
+  case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
                                     Src);
@@ -1091,7 +1092,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
                                     const RecurrenceDescriptor &Desc,
                                     Value *Src, Value *Start) {
-  assert(Desc.getRecurrenceKind() == RecurKind::FAdd &&
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
