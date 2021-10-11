@@ -110,7 +110,7 @@ protected:
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<DWARFDIE> &member_function_dies,
       DelayedPropertyList &delayed_properties,
-      lldb::AccessType &default_accessibility,
+      const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
