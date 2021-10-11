@@ -18,7 +18,7 @@ struct ValueEnum {
 struct ValueBoth : ValueInt, ValueEnum { };
 
 struct IndirectValueInt : ValueInt { };
-struct TwoValueInts : ValueInt, IndirectValueInt { }; // expected-warning{{direct base 'ValueInt' is inaccessible due to ambiguity:\n    struct TwoValueInts -> struct ValueInt\n    struct TwoValueInts -> struct IndirectValueInt -> struct ValueInt}}
+struct TwoValueInts : ValueInt, IndirectValueInt { }; // expected-warning{{direct base 'ValueInt' is inaccessible due to ambiguity:\n    struct TwoValueInts -> ValueInt\n    struct TwoValueInts -> IndirectValueInt -> ValueInt}}
 
 
 void test() {

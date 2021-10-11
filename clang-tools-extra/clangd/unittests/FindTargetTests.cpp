@@ -1612,13 +1612,14 @@ TEST_F(FindExplicitReferencesTest, All) {
        {
            R"cpp(
              void foo() {
-              class {} $0^x;
-              int (*$1^fptr)(int $2^a, int) = nullptr;
+              $0^class {} $1^x;
+              int (*$2^fptr)(int $3^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {x}, decl\n"
-           "1: targets = {fptr}, decl\n"
-           "2: targets = {a}, decl\n"},
+           "0: targets = {}\n"
+           "1: targets = {x}, decl\n"
+           "2: targets = {fptr}, decl\n"
+           "3: targets = {a}, decl\n"},
        // Namespace aliases should be handled properly.
        {
            R"cpp(

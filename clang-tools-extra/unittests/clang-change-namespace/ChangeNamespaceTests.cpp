@@ -2229,7 +2229,7 @@ TEST_F(ChangeNamespaceTest, InjectedClassNameInFriendDecl) {
                          "namespace e {\n"
                          "class D : public a::Base<D> {\n"
                          " private:\n"
-                         "  friend class Base<D>;\n"
+                         "  friend class a::Base<D>;\n"
                          "  void priv() {}\n"
                          "  a::Base b;\n"
                          "};\n"

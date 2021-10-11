@@ -163,9 +163,9 @@ namespace dr308 { // dr308: yes
   void f() {
     try {
       throw D();
-    } catch (const A&) { // expected-note {{for type 'const dr308::A &'}}
+    } catch (const A&) { // expected-note {{for type 'const A &'}}
       // unreachable
-    } catch (const B&) { // expected-warning {{exception of type 'const dr308::B &' will be caught by earlier handler}}
+    } catch (const B&) { // expected-warning {{exception of type 'const B &' will be caught by earlier handler}}
       // get here instead
     }
   }

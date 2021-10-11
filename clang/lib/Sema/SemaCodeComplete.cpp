@@ -2782,7 +2782,7 @@ static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
   while (true) {
     // Look through typedefs.
     if (!SuppressBlock) {
-      if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
+      if (TypedefTypeLoc TypedefTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
         if (TypeSourceInfo *InnerTSInfo =
                 TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
           TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();

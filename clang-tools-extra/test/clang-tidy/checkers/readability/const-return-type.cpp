@@ -76,7 +76,7 @@ class Clazz {
   };
 
   const Strukt p6() {}
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Clazz::Strukt' i
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Strukt' i
   // CHECK-FIXES: Strukt p6() {}
 
   // No warning is emitted here, because this is only the declaration.  The
@@ -90,7 +90,7 @@ class Clazz {
   // CHECK-FIXES: static int p8() {}
 
   static const Strukt p9() {}
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Clazz::Strukt' i
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Strukt' i
   // CHECK-FIXES: static Strukt p9() {}
 
   int n0() const { return 0; }

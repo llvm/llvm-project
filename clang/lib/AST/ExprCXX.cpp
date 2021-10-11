@@ -314,7 +314,7 @@ QualType CXXDeleteExpr::getDestroyedType() const {
 // CXXPseudoDestructorExpr
 PseudoDestructorTypeStorage::PseudoDestructorTypeStorage(TypeSourceInfo *Info)
     : Type(Info) {
-  Location = Info->getTypeLoc().getLocalSourceRange().getBegin();
+  Location = Info->getTypeLoc().getBeginLoc();
 }
 
 CXXPseudoDestructorExpr::CXXPseudoDestructorExpr(
@@ -341,7 +341,7 @@ QualType CXXPseudoDestructorExpr::getDestroyedType() const {
 SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   SourceLocation End = DestroyedType.getLocation();
   if (TypeSourceInfo *TInfo = DestroyedType.getTypeSourceInfo())
-    End = TInfo->getTypeLoc().getLocalSourceRange().getEnd();
+    End = TInfo->getTypeLoc().getSourceRange().getEnd();
   return End;
 }
 
