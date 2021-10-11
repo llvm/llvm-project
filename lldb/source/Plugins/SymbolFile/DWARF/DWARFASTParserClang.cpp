@@ -2794,7 +2794,8 @@ bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<DWARFDIE> &member_function_dies,
-    DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
+    DelayedPropertyList &delayed_properties,
+    const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
     return false;
