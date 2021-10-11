@@ -63,9 +63,10 @@ public:
         Parent.SAs.Finalize,
         [OnFinalize = std::move(OnFinalize)](Error SerializationErr,
                                              Error FinalizeErr) {
-          if (SerializationErr)
+          if (SerializationErr) {
+            cantFail(std::move(FinalizeErr));
             OnFinalize(std::move(SerializationErr));
-          else
+          } else
             OnFinalize(std::move(FinalizeErr));
         },
         Parent.SAs.Allocator, std::move(FR));
