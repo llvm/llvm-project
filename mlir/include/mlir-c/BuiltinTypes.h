@@ -229,16 +229,17 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAUnrankedMemRef(MlirType type);
 /// Creates a MemRef type with the given rank and shape, a potentially empty
 /// list of affine layout maps, the given memory space and element type, in the
 /// same context as element type. The type is owned by the context.
-MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(
-    MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
-    MlirAffineMap const *affineMaps, MlirAttribute memorySpace);
+MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(MlirType elementType,
+                                              intptr_t rank,
+                                              const int64_t *shape,
+                                              MlirAttribute layout,
+                                              MlirAttribute memorySpace);
 
 /// Same as "mlirMemRefTypeGet" but returns a nullptr-wrapping MlirType o
 /// illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGetChecked(
     MlirLocation loc, MlirType elementType, intptr_t rank, const int64_t *shape,
-    intptr_t numMaps, MlirAffineMap const *affineMaps,
-    MlirAttribute memorySpace);
+    MlirAttribute layout, MlirAttribute memorySpace);
 
 /// Creates a MemRef type with the given rank, shape, memory space and element
 /// type in the same context as the element type. The type has no affine maps,
@@ -264,12 +265,11 @@ mlirUnrankedMemRefTypeGet(MlirType elementType, MlirAttribute memorySpace);
 MLIR_CAPI_EXPORTED MlirType mlirUnrankedMemRefTypeGetChecked(
     MlirLocation loc, MlirType elementType, MlirAttribute memorySpace);
 
-/// Returns the number of affine layout maps in the given MemRef type.
-MLIR_CAPI_EXPORTED intptr_t mlirMemRefTypeGetNumAffineMaps(MlirType type);
+/// Returns the layout of the given MemRef type.
+MLIR_CAPI_EXPORTED MlirAttribute mlirMemRefTypeGetLayout(MlirType type);
 
-/// Returns the pos-th affine map of the given MemRef type.
-MLIR_CAPI_EXPORTED MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type,
-                                                            intptr_t pos);
+/// Returns the affine map of the given MemRef type.
+MLIR_CAPI_EXPORTED MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type);
 
 /// Returns the memory space of the given MemRef type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type);

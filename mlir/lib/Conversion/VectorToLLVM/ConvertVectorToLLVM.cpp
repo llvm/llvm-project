@@ -950,8 +950,7 @@ computeContiguousStrides(MemRefType memRefType) {
   if (!strides.empty() && strides.back() != 1)
     return None;
   // If no layout or identity layout, this is contiguous by definition.
-  if (memRefType.getAffineMaps().empty() ||
-      memRefType.getAffineMaps().front().isIdentity())
+  if (memRefType.getLayout().isIdentity())
     return strides;
 
   // Otherwise, we must determine contiguity form shapes. This can only ever

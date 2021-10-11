@@ -61,13 +61,7 @@ func @memrefs(memref<2x4xi8, #map0, 1, #map1>) // expected-error {{expected memo
 // The error must be emitted even for the trivial identity layout maps that are
 // dropped in type creation.
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
-func @memrefs(memref<42xi8, #map0>) // expected-error {{memref affine map dimension mismatch}}
-
-// -----
-
-#map0 = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(d0) -> (d0)>
-func @memrefs(memref<42x42xi8, #map0, #map1>) // expected-error {{memref affine map dimension mismatch}}
+func @memrefs(memref<42xi8, #map0>) // expected-error {{memref layout mismatch between rank and affine map: 1 != 2}}
 
 // -----
 

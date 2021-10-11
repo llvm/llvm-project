@@ -647,7 +647,7 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   Value oldMemRef = allocOp->getResult();
 
   SmallVector<Value, 4> symbolOperands(allocOp->symbolOperands());
-  AffineMap layoutMap = memrefType.getAffineMaps().front();
+  AffineMap layoutMap = memrefType.getLayout().getAffineMap();
   memref::AllocOp newAlloc;
   // Check if `layoutMap` is a tiled layout. Only single layout map is
   // supported for normalizing dynamic memrefs.
@@ -695,13 +695,12 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   if (rank == 0)
     return memrefType;
 
-  ArrayRef<AffineMap> layoutMaps = memrefType.getAffineMaps();
-  if (layoutMaps.empty() ||
-      layoutMaps.front() == b.getMultiDimIdentityMap(rank)) {
+  if (memrefType.getLayout().isIdentity()) {
     // Either no maps is associated with this memref or this memref has
     // a trivial (identity) map.
     return memrefType;
   }
+  AffineMap layoutMap = memrefType.getLayout().getAffineMap();
 
   // We don't do any checks for one-to-one'ness; we assume that it is
   // one-to-one.
@@ -710,7 +709,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   // for now.
   // TODO: Normalize the other types of dynamic memrefs.
   SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
-  (void)getTileSizePos(layoutMaps.front(), tileSizePos);
+  (void)getTileSizePos(layoutMap, tileSizePos);
   if (memrefType.getNumDynamicDims() > 0 && tileSizePos.empty())
     return memrefType;
 
@@ -731,7 +730,6 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   }
   // We compose this map with the original index (logical) space to derive
   // the upper bounds for the new index space.
-  AffineMap layoutMap = layoutMaps.front();
   unsigned newRank = layoutMap.getNumResults();
   if (failed(fac.composeMatchingMap(layoutMap)))
     return memrefType;
@@ -763,7 +761,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   MemRefType newMemRefType =
       MemRefType::Builder(memrefType)
           .setShape(newShape)
-          .setAffineMaps(b.getMultiDimIdentityMap(newRank));
+          .setLayout(AffineMapAttr::get(b.getMultiDimIdentityMap(newRank)));
 
   return newMemRefType;
 }

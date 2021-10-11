@@ -1142,7 +1142,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType dstType = reshapeOp.getResultType();
     MemRefType srcType = reshapeOp.getSrcType();
-    if (!srcType.getAffineMaps().empty() || !dstType.getAffineMaps().empty()) {
+    if (!srcType.getLayout().isIdentity() ||
+        !dstType.getLayout().isIdentity()) {
       return rewriter.notifyMatchFailure(reshapeOp,
                                          "only empty layout map is supported");
     }

@@ -88,8 +88,8 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
                           "dynamic dimension count");
 
   unsigned numSymbols = 0;
-  if (!memRefType.getAffineMaps().empty())
-    numSymbols = memRefType.getAffineMaps().front().getNumSymbols();
+  if (!memRefType.getLayout().isIdentity())
+    numSymbols = memRefType.getLayout().getAffineMap().getNumSymbols();
   if (op.symbolOperands().size() != numSymbols)
     return op.emitOpError("symbol operand count does not equal memref symbol "
                           "count: expected ")
@@ -496,7 +496,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (aT && bT) {
     if (aT.getElementType() != bT.getElementType())
       return false;
-    if (aT.getAffineMaps() != bT.getAffineMaps()) {
+    if (aT.getLayout() != bT.getLayout()) {
       int64_t aOffset, bOffset;
       SmallVector<int64_t, 4> aStrides, bStrides;
       if (failed(getStridesAndOffset(aT, aStrides, aOffset)) ||
@@ -1408,7 +1408,7 @@ static LogicalResult verify(ReinterpretCastOp op) {
 
   // Match offset and strides in static_offset and static_strides attributes if
   // result memref type has an affine map specified.
-  if (!resultType.getAffineMaps().empty()) {
+  if (!resultType.getLayout().isIdentity()) {
     int64_t resultOffset;
     SmallVector<int64_t, 4> resultStrides;
     if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
@@ -1526,8 +1526,8 @@ computeReshapeCollapsedType(MemRefType type,
   }
 
   // Early-exit: if `type` is contiguous, the result must be contiguous.
-  if (canonicalizeStridedLayout(type).getAffineMaps().empty())
-    return MemRefType::Builder(type).setShape(newSizes).setAffineMaps({});
+  if (canonicalizeStridedLayout(type).getLayout().isIdentity())
+    return MemRefType::Builder(type).setShape(newSizes).setLayout({});
 
   // Convert back to int64_t because we don't have enough information to create
   // new strided layouts from AffineExpr only. This corresponds to a case where
@@ -1546,7 +1546,8 @@ computeReshapeCollapsedType(MemRefType type,
   auto layout =
       makeStridedLinearLayoutMap(intStrides, intOffset, type.getContext());
   return canonicalizeStridedLayout(
-      MemRefType::Builder(type).setShape(newSizes).setAffineMaps({layout}));
+      MemRefType::Builder(type).setShape(newSizes).setLayout(
+          AffineMapAttr::get(layout)));
 }
 
 void ExpandShapeOp::build(OpBuilder &b, OperationState &result, Value src,
@@ -1662,14 +1663,14 @@ static LogicalResult verify(ReshapeOp op) {
                           "types should be the same");
 
   if (auto operandMemRefType = operandType.dyn_cast<MemRefType>())
-    if (!operandMemRefType.getAffineMaps().empty())
+    if (!operandMemRefType.getLayout().isIdentity())
       return op.emitOpError(
           "source memref type should have identity affine map");
 
   int64_t shapeSize = op.shape().getType().cast<MemRefType>().getDimSize(0);
   auto resultMemRefType = resultType.dyn_cast<MemRefType>();
   if (resultMemRefType) {
-    if (!resultMemRefType.getAffineMaps().empty())
+    if (!resultMemRefType.getLayout().isIdentity())
       return op.emitOpError(
           "result memref type should have identity affine map");
     if (shapeSize == ShapedType::kDynamicSize)
@@ -1824,10 +1825,9 @@ Type SubViewOp::inferRankReducedResultType(
       if (!dimsToProject.contains(pos))
         projectedShape.push_back(shape[pos]);
 
-    AffineMap map;
-    auto maps = inferredType.getAffineMaps();
-    if (!maps.empty() && maps.front())
-      map = getProjectedMap(maps.front(), dimsToProject);
+    AffineMap map = inferredType.getLayout().getAffineMap();
+    if (!map.isIdentity())
+      map = getProjectedMap(map, dimsToProject);
     inferredType =
         MemRefType::get(projectedShape, inferredType.getElementType(), map,
                         inferredType.getMemorySpace());
@@ -2279,7 +2279,9 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   auto map =
       makeStridedLinearLayoutMap(strides, offset, memRefType.getContext());
   map = permutationMap ? map.compose(permutationMap) : map;
-  return MemRefType::Builder(memRefType).setShape(sizes).setAffineMaps(map);
+  return MemRefType::Builder(memRefType)
+      .setShape(sizes)
+      .setLayout(AffineMapAttr::get(map));
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
@@ -2387,15 +2389,11 @@ static LogicalResult verify(ViewOp op) {
   auto viewType = op.getType();
 
   // The base memref should have identity layout map (or none).
-  if (baseType.getAffineMaps().size() > 1 ||
-      (baseType.getAffineMaps().size() == 1 &&
-       !baseType.getAffineMaps()[0].isIdentity()))
+  if (!baseType.getLayout().isIdentity())
     return op.emitError("unsupported map for base memref type ") << baseType;
 
   // The result memref should have identity layout map (or none).
-  if (viewType.getAffineMaps().size() > 1 ||
-      (viewType.getAffineMaps().size() == 1 &&
-       !viewType.getAffineMaps()[0].isIdentity()))
+  if (!viewType.getLayout().isIdentity())
     return op.emitError("unsupported map for result memref type ") << viewType;
 
   // The base memref and the view memref should be in the same memory space.

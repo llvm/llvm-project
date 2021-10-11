@@ -9,6 +9,7 @@
 #ifndef MLIR_IR_BUILTINATTRIBUTEINTERFACES_H
 #define MLIR_IR_BUILTINATTRIBUTEINTERFACES_H
 
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
@@ -227,6 +228,21 @@ private:
   ptrdiff_t index;
 };
 } // namespace detail
+
+//===----------------------------------------------------------------------===//
+// MemRefLayoutAttrInterface
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+
+// Verify the affine map 'm' can be used as a layout specification
+// for memref with 'shape'.
+LogicalResult
+verifyAffineMapAsLayout(AffineMap m, ArrayRef<int64_t> shape,
+                        function_ref<InFlightDiagnostic()> emitError);
+
+} // namespace detail
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

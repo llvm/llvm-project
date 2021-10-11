@@ -1971,9 +1971,9 @@ void AsmPrinter::Impl::printType(Type type) {
           os << 'x';
         }
         printType(memrefTy.getElementType());
-        for (auto map : memrefTy.getAffineMaps()) {
+        if (!memrefTy.getLayout().isIdentity()) {
           os << ", ";
-          printAttribute(AffineMapAttr::get(map));
+          printAttribute(memrefTy.getLayout(), AttrTypeElision::May);
         }
         // Only print the memory space if it is the non-default one.
         if (memrefTy.getMemorySpace()) {

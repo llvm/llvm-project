@@ -34,7 +34,9 @@ class Builtin_Attr<string name, list<Trait> traits = [],
 // AffineMapAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap"> {
+def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
+    MemRefLayoutAttrInterface
+  ]> {
   let summary = "An Attribute containing an AffineMap object";
   let description = [{
     Syntax:
@@ -56,7 +58,10 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap"> {
       return $_get(value.getContext(), value);
     }]>
   ];
-  let extraClassDeclaration = "using ValueType = AffineMap;";
+  let extraClassDeclaration = [{
+    using ValueType = AffineMap;
+    AffineMap getAffineMap() const { return getValue(); }
+  }];
   let skipDefaultBuilders = 1;
   let typeBuilder = "IndexType::get($_value.getContext())";
 }

@@ -278,8 +278,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
 
     stride-list ::= `[` (dimension (`,` dimension)*)? `]`
     strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
-    semi-affine-map-composition ::= (semi-affine-map `,` )* semi-affine-map
-    layout-specification ::= semi-affine-map-composition | strided-layout
+    layout-specification ::= semi-affine-map | strided-layout | attribute-value
     memory-space ::= attribute-value
     ```
 
@@ -486,27 +485,6 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     #layout_tiled = (i, j) -> (i floordiv 64, j floordiv 64, i mod 64, j mod 64)
     ```
 
-    ##### Affine Map Composition
-
-    A memref specifies a semi-affine map composition as part of its type. A
-    semi-affine map composition is a composition of semi-affine maps beginning
-    with zero or more index maps, and ending with a layout map. The composition
-    must be conformant: the number of dimensions of the range of one map, must
-    match the number of dimensions of the domain of the next map in the
-    composition.
-
-    The semi-affine map composition specified in the memref type, maps from
-    accesses used to index the memref in load/store operations to other index
-    spaces (i.e. logical to physical index mapping). Each of the
-    [semi-affine maps](Affine.md/#semi-affine-maps) and thus its composition is required
-    to be one-to-one.
-
-    The semi-affine map composition can be used in dependence analysis, memory
-    access pattern analysis, and for performance optimizations like
-    vectorization, copy elision and in-place updates. If an affine map
-    composition is not specified for the memref, the identity affine map is
-    assumed.
-
     ##### Strided MemRef
 
     A memref may specify a strided layout as part of its type. A stride
@@ -544,36 +522,23 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
     "Type":$elementType,
-    ArrayRefParameter<"AffineMap">:$affineMaps,
+    "MemRefLayoutAttrInterface":$layout,
     "Attribute":$memorySpace
   );
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
-      CArg<"ArrayRef<AffineMap>", "{}">:$affineMaps,
-      CArg<"Attribute", "{}">:$memorySpace
-    ), [{
-      // Drop identity maps from the composition. This may lead to the
-      // composition becoming empty, which is interpreted as an implicit
-      // identity.
-      auto nonIdentityMaps = llvm::make_filter_range(affineMaps,
-        [](AffineMap map) { return !map.isIdentity(); });
-      // Drop default memory space value and replace it with empty attribute.
-      Attribute nonDefaultMemorySpace = skipDefaultMemorySpace(memorySpace);
-      return $_get(elementType.getContext(), shape, elementType,
-                   llvm::to_vector<4>(nonIdentityMaps), nonDefaultMemorySpace);
-    }]>,
+      CArg<"MemRefLayoutAttrInterface", "{}">:$layout,
+      CArg<"Attribute", "{}">:$memorySpace)>,
+    TypeBuilderWithInferredContext<(ins
+      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      CArg<"AffineMap">:$map,
+      CArg<"Attribute", "{}">:$memorySpace)>,
     /// [deprecated] `Attribute`-based form should be used instead.
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
-      "ArrayRef<AffineMap>":$affineMaps,
-      "unsigned":$memorySpace
-    ), [{
-      // Convert deprecated integer-like memory space to Attribute.
-      Attribute memorySpaceAttr =
-          wrapIntegerMemorySpace(memorySpace, elementType.getContext());
-      return MemRefType::get(shape, elementType, affineMaps, memorySpaceAttr);
-    }]>
+      "AffineMap":$map,
+      "unsigned":$memorySpaceInd)>
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.

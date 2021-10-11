@@ -1095,7 +1095,7 @@ func @flat_transpose_type_mismatch(%arg0: vector<16xf32>) {
 // -----
 
 func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>>) {
-  // expected-error@+1 {{expects operand to be a memref with no layout}}
+  // expected-error@+1 {{expects operand to be a memref with identity layout}}
   %0 = vector.type_cast %arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>> to memref<vector<4x3xf32>>
 }
 

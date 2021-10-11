@@ -225,7 +225,7 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
         // memref type is normalized.
         // TODO: When selective normalization is implemented, handle multiple
         // results case where some are normalized, some aren't.
-        if (memrefType.getAffineMaps().empty())
+        if (memrefType.getLayout().isIdentity())
           resultTypes[operandEn.index()] = memrefType;
       }
     });
@@ -269,7 +269,7 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
       if (oldResult.getType() == newResult.getType())
         continue;
       AffineMap layoutMap =
-          oldResult.getType().dyn_cast<MemRefType>().getAffineMaps().front();
+          oldResult.getType().cast<MemRefType>().getLayout().getAffineMap();
       if (failed(replaceAllMemRefUsesWith(oldResult, /*newMemRef=*/newResult,
                                           /*extraIndices=*/{},
                                           /*indexRemap=*/layoutMap,
@@ -363,7 +363,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
     BlockArgument newMemRef =
         funcOp.front().insertArgument(argIndex, newMemRefType);
     BlockArgument oldMemRef = funcOp.getArgument(argIndex + 1);
-    AffineMap layoutMap = memrefType.getAffineMaps().front();
+    AffineMap layoutMap = memrefType.getLayout().getAffineMap();
     // Replace all uses of the old memref.
     if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newMemRef,
                                         /*extraIndices=*/{},
@@ -412,7 +412,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
           if (oldMemRefType == newMemRefType)
             continue;
           // TODO: Assume single layout map. Multiple maps not supported.
-          AffineMap layoutMap = oldMemRefType.getAffineMaps().front();
+          AffineMap layoutMap = oldMemRefType.getLayout().getAffineMap();
           if (failed(replaceAllMemRefUsesWith(oldMemRef,
                                               /*newMemRef=*/newMemRef,
                                               /*extraIndices=*/{},
