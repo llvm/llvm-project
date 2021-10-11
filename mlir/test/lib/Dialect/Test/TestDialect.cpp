@@ -88,6 +88,14 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         return AliasResult::FinalAlias;
       }
     }
+    if (auto intType = type.dyn_cast<TestIntegerType>()) {
+      if (intType.getSignedness() ==
+              TestIntegerType::SignednessSemantics::Unsigned &&
+          intType.getWidth() == 8) {
+        os << "test_ui8";
+        return AliasResult::FinalAlias;
+      }
+    }
     return AliasResult::NoAlias;
   }
 

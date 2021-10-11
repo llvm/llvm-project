@@ -32,14 +32,13 @@ parseSignedness(DialectAsmParser &parser,
   auto loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&signStr))
     return failure();
-  if (signStr.compare_insensitive("u") ||
-      signStr.compare_insensitive("unsigned"))
+  if (signStr.equals_insensitive("u") || signStr.equals_insensitive("unsigned"))
     result = TestIntegerType::SignednessSemantics::Unsigned;
-  else if (signStr.compare_insensitive("s") ||
-           signStr.compare_insensitive("signed"))
+  else if (signStr.equals_insensitive("s") ||
+           signStr.equals_insensitive("signed"))
     result = TestIntegerType::SignednessSemantics::Signed;
-  else if (signStr.compare_insensitive("n") ||
-           signStr.compare_insensitive("none"))
+  else if (signStr.equals_insensitive("n") ||
+           signStr.equals_insensitive("none"))
     result = TestIntegerType::SignednessSemantics::Signless;
   else
     return parser.emitError(loc, "expected signed, unsigned, or none");
