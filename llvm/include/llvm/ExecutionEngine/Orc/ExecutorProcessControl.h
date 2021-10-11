@@ -49,6 +49,7 @@ public:
     friend class ExecutorProcessControl;
   public:
     IncomingWFRHandler() = default;
+    explicit operator bool() const { return !!H; }
     void operator()(shared::WrapperFunctionResult WFR) { H(std::move(WFR)); }
   private:
     template <typename FnT> IncomingWFRHandler(FnT &&Fn)
