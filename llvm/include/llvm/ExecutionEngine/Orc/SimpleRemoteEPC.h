@@ -96,6 +96,7 @@ private:
                      SimpleRemoteEPCArgBytesVector ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
+  Error handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}

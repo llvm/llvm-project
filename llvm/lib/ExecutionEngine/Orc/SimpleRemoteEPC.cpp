@@ -121,8 +121,10 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       return std::move(Err);
     break;
   case SimpleRemoteEPCOpcode::Hangup:
-    return make_error<StringError>("Unexpected Hangup opcode",
-                                   inconvertibleErrorCode());
+    T->disconnect();
+    if (auto Err = handleHangup(std::move(ArgBytes)))
+      return std::move(Err);
+    return EndSession;
   case SimpleRemoteEPCOpcode::Result:
     if (auto Err = handleResult(SeqNo, TagAddr, std::move(ArgBytes)))
       return std::move(Err);
@@ -352,6 +354,20 @@ void SimpleRemoteEPC::handleCallWrapper(
           getExecutionSession().reportError(std::move(Err));
       },
       TagAddr.getValue(), ArgBytes);
+}
+
+Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
+  using namespace llvm::orc::shared;
+  auto WFR = WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+  if (const char *ErrMsg = WFR.getOutOfBandError())
+    return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+
+  detail::SPSSerializableError Info;
+  SPSInputBuffer IB(WFR.data(), WFR.size());
+  if (!SPSArgList<SPSError>::deserialize(IB, Info))
+    return make_error<StringError>("Could not deserialize hangup info",
+                                   inconvertibleErrorCode());
+  return fromSPSSerializable(std::move(Info));
 }
 
 } // end namespace orc
