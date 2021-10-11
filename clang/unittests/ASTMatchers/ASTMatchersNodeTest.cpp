@@ -1809,7 +1809,8 @@ TEST_P(ASTMatchersTest, PointerType_MatchesPointersToConstTypes) {
 
 TEST_P(ASTMatchersTest, TypedefType) {
   EXPECT_TRUE(matches("typedef int X; X a;",
-                      varDecl(hasName("a"), hasType(typedefType()))));
+                      varDecl(hasName("a"), hasType(elaboratedType(
+                                                namesType(typedefType()))))));
 }
 
 TEST_P(ASTMatchersTest, TemplateSpecializationType) {
@@ -1858,7 +1859,7 @@ TEST_P(ASTMatchersTest, ElaboratedType) {
                       "N::M::D d;",
                       elaboratedType()));
   EXPECT_TRUE(matches("class C {} c;", elaboratedType()));
-  EXPECT_TRUE(notMatches("class C {}; C c;", elaboratedType()));
+  EXPECT_TRUE(matches("class C {}; C c;", elaboratedType()));
 }
 
 TEST_P(ASTMatchersTest, SubstTemplateTypeParmType) {
@@ -2179,7 +2180,8 @@ TEST_P(ASTMatchersTest,
   }
   EXPECT_TRUE(matches(
       "template <typename T> class C {}; C<char> var;",
-      varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
+      varDecl(hasName("var"), hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                                  templateSpecializationTypeLoc()))))));
 }
 
 TEST_P(
@@ -2218,13 +2220,12 @@ TEST_P(ASTMatchersTest,
 }
 
 TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_DoesNotBindToNonElaboratedObjectDeclaration) {
+       ElaboratedTypeLocTest_BindsToBareElaboratedObjectDeclaration) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(
-      notMatches("class C {}; C c;",
-                 varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
+  EXPECT_TRUE(matches("class C {}; C c;",
+                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
 }
 
 TEST_P(
@@ -2233,19 +2234,17 @@ TEST_P(
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(
-      notMatches("namespace N { class D {}; } using N::D; D d;",
-                 varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
+  EXPECT_TRUE(matches("namespace N { class D {}; } using N::D; D d;",
+                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
 }
 
 TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_DoesNotBindToNonElaboratedStructDeclaration) {
+       ElaboratedTypeLocTest_BindsToBareElaboratedStructDeclaration) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(
-      notMatches("struct s {}; s ss;",
-                 varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
+  EXPECT_TRUE(matches("struct s {}; s ss;",
+                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest) {

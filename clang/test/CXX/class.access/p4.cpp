@@ -102,7 +102,7 @@ namespace test2 {
   A A::foo; // okay
   
 #if __cplusplus < 201103L
-  class B : A { }; // expected-error {{base class 'test2::A' has private default constructor}}
+  class B : A { }; // expected-error {{base class 'A' has private default constructor}}
   B b; // expected-note{{implicit default constructor}}
   
   class C : virtual A { 
@@ -110,14 +110,14 @@ namespace test2 {
     C();
   };
 
-  class D : C { }; // expected-error {{inherited virtual base class 'test2::A' has private default constructor}}
+  class D : C { }; // expected-error {{inherited virtual base class 'A' has private default constructor}}
   D d; // expected-note{{implicit default constructor}}
 #else
-  class B : A { }; // expected-note {{base class 'test2::A' has an inaccessible default constructor}}
+  class B : A { }; // expected-note {{base class 'A' has an inaccessible default constructor}}
   B b; // expected-error {{call to implicitly-deleted default constructor}}
   
   // FIXME: Do a better job of explaining how we get here from class D.
-  class C : virtual A { // expected-note {{default constructor of 'D' is implicitly deleted because base class 'test2::A' has an inaccessible default constructor}}
+  class C : virtual A { // expected-note {{default constructor of 'D' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
   public:
     C();
   };
@@ -135,11 +135,11 @@ namespace test3 {
     static A foo;
   };
 
-  A a; // expected-error {{variable of type 'test3::A' has private destructor}}
+  A a; // expected-error {{variable of type 'A' has private destructor}}
   A A::foo;
 
   void foo(A param) { // okay
-    A local; // expected-error {{variable of type 'test3::A' has private destructor}}
+    A local; // expected-error {{variable of type 'A' has private destructor}}
   }
 
 #if __cplusplus < 201103L && !defined(_MSC_VER)
@@ -156,7 +156,7 @@ namespace test3 {
                    // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
     Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error {{base class 'Base2' has private destructor}}
     virtual Base3
   {
     ~Derived2() {}
@@ -167,7 +167,7 @@ namespace test3 {
                    // expected-note 2{{implicit default constructor}}
     Base<0>,  // expected-error 2 {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error 2 {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error 2 {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error 2 {{base class 'Base2' has private destructor}}
     virtual Base3
   {};
   Derived3 d3; // expected-note{{implicit destructor}}} \
@@ -186,7 +186,7 @@ namespace test3 {
                    // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
     Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error {{base class 'Base2' has private destructor}}
     virtual Base3
   {
     ~Derived2() {} // expected-note 2{{in implicit destructor}}
@@ -196,7 +196,7 @@ namespace test3 {
                    // expected-error 2 {{inherited virtual base class 'Base<3>' has private destructor}}
     Base<0>,  // expected-error 2 {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error 2 {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error 2 {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error 2 {{base class 'Base2' has private destructor}}
     virtual Base3
   {};
   Derived3 d3; // expected-note{{implicit destructor}}} expected-note {{implicit default constructor}}
@@ -213,7 +213,7 @@ namespace test3 {
                    // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
     Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error {{base class 'Base2' has private destructor}}
     virtual Base3
   {
     ~Derived2() {}
@@ -241,7 +241,7 @@ namespace test3 {
                    // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
     Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
-    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    Base2, // expected-error {{base class 'Base2' has private destructor}}
     virtual Base3
   {
     // expected-note@+2 {{in implicit destructor for 'test3::Base2' first required here}}
@@ -328,7 +328,7 @@ namespace test5 {
     a = Test1(); // expected-error {{copy assignment operator is implicitly deleted}}
   }
 
-  class Test2 : A {}; // expected-note {{because base class 'test5::A' has an inaccessible copy assignment operator}}
+  class Test2 : A {}; // expected-note {{because base class 'A' has an inaccessible copy assignment operator}}
   void test2() {
     Test2 a;
     a = Test2(); // expected-error {{copy assignment operator is implicitly deleted}}
@@ -347,12 +347,12 @@ namespace test6 {
   };
 
 #if __cplusplus < 201103L
-  class Test1 { A a; }; // expected-error {{field of type 'test6::A' has private copy constructor}}
+  class Test1 { A a; }; // expected-error {{field of type 'A' has private copy constructor}}
   void test1(const Test1 &t) {
     Test1 a = t; // expected-note{{implicit copy}}
   }
 
-  class Test2 : A {}; // expected-error {{base class 'test6::A' has private copy constructor}}
+  class Test2 : A {}; // expected-error {{base class 'A' has private copy constructor}}
   void test2(const Test2 &t) {
     Test2 a = t; // expected-note{{implicit copy}}
   }
@@ -362,7 +362,7 @@ namespace test6 {
     Test1 a = t; // expected-error{{implicitly-deleted}}
   }
 
-  class Test2 : A {}; // expected-note {{base class 'test6::A' has an inaccessible copy constructor}}
+  class Test2 : A {}; // expected-note {{base class 'A' has an inaccessible copy constructor}}
   void test2(const Test2 &t) {
     Test2 a = t; // expected-error{{implicitly-deleted}}
   }
@@ -483,7 +483,7 @@ namespace test14 {
   A foo();
 
   void test() {
-    foo(); // expected-error {{temporary of type 'test14::A' has private destructor}}
+    foo(); // expected-error {{temporary of type 'A' has private destructor}}
   }
 
   class X {
@@ -495,7 +495,7 @@ namespace test14 {
   };
   
   void g() {
-    const X &xr = Y1(); // expected-error{{temporary of type 'test14::X' has private destructor}}
+    const X &xr = Y1(); // expected-error{{temporary of type 'X' has private destructor}}
   }
 }
 
@@ -558,8 +558,8 @@ namespace test15 {
 // PR7281
 namespace test16 {
   class A { ~A(); }; // expected-note 2{{declared private here}}
-  void b() { throw A(); } // expected-error{{temporary of type 'test16::A' has private destructor}} \
-  // expected-error{{exception object of type 'test16::A' has private destructor}}
+  void b() { throw A(); } // expected-error{{temporary of type 'A' has private destructor}} \
+  // expected-error{{exception object of type 'A' has private destructor}}
 }
 
 // rdar://problem/8146294

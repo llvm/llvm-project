@@ -21,8 +21,8 @@ class B {
 
 // CHECK: void foo(int)
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], class variant_0::B)
-// CHECK-NEXT:    2: variant_0::B i;
+// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], B)
+// CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, class variant_0::B &(*)(class variant_0::B &&) noexcept)
 // CHECK-NEXT:    5: i
@@ -31,7 +31,7 @@ class B {
 // CHECK-NEXT:    8: [B1.7]
 // CHECK-NEXT:    9: [B1.5] = [B1.8] (OperatorCall)
 // CHECK-NEXT:   10: ~variant_0::B() (Temporary object destructor)
-// CHECK-NEXT:   11: [B1.2].~variant_0::B() (Implicit destructor)
+// CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
 void foo(int) {
   B i;
   i = {};
@@ -63,15 +63,15 @@ class B {
 // destructor.
 // CHECK: template<> void foo<int>(int)
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], class variant_1::B)
-// CHECK-NEXT:    2: variant_1::B i;
+// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], B)
+// CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, class variant_1::B &(*)(class variant_1::B &&) noexcept)
 // CHECK-NEXT:    5: i
 // CHECK-NEXT:    6: {} (CXXConstructExpr, class variant_1::B)
 // CHECK-NEXT:    7: [B1.6]
 // CHECK-NEXT:    8: [B1.5] = [B1.7] (OperatorCall)
-// CHECK-NEXT:    9: [B1.2].~variant_1::B() (Implicit destructor)
+// CHECK-NEXT:    9: [B1.2].~B() (Implicit destructor)
 template <typename T> void foo(T) {
   B i;
   i = {};
@@ -103,8 +103,8 @@ public:
 
 // CHECK: template<> void foo<int>(int)
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], class variant_2::B)
-// CHECK-NEXT:    2: variant_2::B i;
+// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], B)
+// CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, class variant_2::B &(*)(class variant_2::B &&) noexcept)
 // CHECK-NEXT:    5: i
@@ -114,7 +114,7 @@ public:
 // CHECK-NEXT:    9: [B1.8]
 // CHECK-NEXT:   10: [B1.5] = [B1.9] (OperatorCall)
 // CHECK-NEXT:   11: ~variant_2::B() (Temporary object destructor)
-// CHECK-NEXT:   12: [B1.2].~variant_2::B() (Implicit destructor)
+// CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
 template <typename T> void foo(T) {
   B i;
   i = {};
