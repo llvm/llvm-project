@@ -786,7 +786,8 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
 
     bool IsNegStride = StoreSize == -Stride;
 
-    const SCEV *StoreSizeSCEV = SE->getConstant(BECount->getType(), StoreSize);
+    Type *IntIdxTy = DL->getIndexType(StorePtr->getType());
+    const SCEV *StoreSizeSCEV = SE->getConstant(IntIdxTy, StoreSize);
     if (processLoopStridedStore(StorePtr, StoreSizeSCEV,
                                 MaybeAlign(HeadStore->getAlignment()),
                                 StoredVal, HeadStore, AdjacentStores, StoreEv,
