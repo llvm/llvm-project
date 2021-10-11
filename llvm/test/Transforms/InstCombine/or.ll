@@ -1444,3 +1444,18 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   %r = or i8 %sign, %y
   ret i8 %r
 }
+
+define i1 @cmp_overlap(i32 %x) {
+; CHECK-LABEL: @cmp_overlap(
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i32 [[NEGX]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISNEG]], [[ISNOTNEG]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %isneg = icmp slt i32 %x, 0
+  %negx = sub i32 0, %x
+  %isnotneg = icmp sgt i32 %negx, -1
+  %r = or i1 %isneg, %isnotneg
+  ret i1 %r
+}
