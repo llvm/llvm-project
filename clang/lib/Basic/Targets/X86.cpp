@@ -139,26 +139,26 @@ bool X86TargetInfo::initFeatureMap(
   // Enable popcnt if sse4.2 is enabled and popcnt is not explicitly disabled.
   auto I = Features.find("sse4.2");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(UpdatedFeaturesVec, "-popcnt") == UpdatedFeaturesVec.end())
+      !llvm::is_contained(UpdatedFeaturesVec, "-popcnt"))
     Features["popcnt"] = true;
 
   // Additionally, if SSE is enabled and mmx is not explicitly disabled,
   // then enable MMX.
   I = Features.find("sse");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(UpdatedFeaturesVec, "-mmx") == UpdatedFeaturesVec.end())
+      !llvm::is_contained(UpdatedFeaturesVec, "-mmx"))
     Features["mmx"] = true;
 
   // Enable xsave if avx is enabled and xsave is not explicitly disabled.
   I = Features.find("avx");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(UpdatedFeaturesVec, "-xsave") == UpdatedFeaturesVec.end())
+      !llvm::is_contained(UpdatedFeaturesVec, "-xsave"))
     Features["xsave"] = true;
 
   // Enable CRC32 if SSE4.2 is enabled and CRC32 is not explicitly disabled.
   I = Features.find("sse4.2");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(UpdatedFeaturesVec, "-crc32") == UpdatedFeaturesVec.end())
+      !llvm::is_contained(UpdatedFeaturesVec, "-crc32"))
     Features["crc32"] = true;
 
   return true;
