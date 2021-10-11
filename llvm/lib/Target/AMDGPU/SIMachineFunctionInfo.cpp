@@ -447,12 +447,18 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  // RA, EXEC, FP & BP spills haven't been inserted yet, so keep them around.
-  for (auto &R : SGPRToVGPRSpills) {
+  // Remove dead frame indices from function frame, however keep FP & BP since
+  // spills for them haven't been inserted yet. And also make sure to remove the
+  // frame indices from `SGPRToVGPRSpills` data structure, otherwise, it could
+  // result in an unexpected side effect and bug, in case of any re-mapping of
+  // freed frame indices by later pass(es) like "stack slot coloring".
+  for (auto &R : make_early_inc_range(SGPRToVGPRSpills)) {
     if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex &&
         (!TRI->isCFISavedRegsSpillEnabled() ||
-         (R.first != ReturnAddressSaveIndex && R.first != EXECSaveIndex)))
+         (R.first != ReturnAddressSaveIndex && R.first != EXECSaveIndex))) {
       MFI.RemoveStackObject(R.first);
+      SGPRToVGPRSpills.erase(R.first);
+    }
   }
 
   // All other SPGRs must be allocated on the default stack, so reset the stack
