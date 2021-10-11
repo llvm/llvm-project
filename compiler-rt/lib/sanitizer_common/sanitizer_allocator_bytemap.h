@@ -9,9 +9,8 @@
 // Part of the Sanitizer Allocator.
 //
 //===----------------------------------------------------------------------===//
-#ifndef SANITIZER_ALLOCATOR_H
-#error This file must be included inside sanitizer_allocator.h
-#endif
+
+#include "sanitizer_local_address_space_view.h"
 
 // Maps integers in rage [0, kSize) to u8 values.
 template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
