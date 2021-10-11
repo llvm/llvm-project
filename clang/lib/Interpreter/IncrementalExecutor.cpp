@@ -60,12 +60,4 @@ llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
-llvm::Expected<llvm::JITTargetAddress>
-IncrementalExecutor::getSymbolAddress(llvm::StringRef UnmangledName) const {
-  auto Sym = Jit->lookup(UnmangledName);
-  if (!Sym)
-    return Sym.takeError();
-  return Sym->getAddress();
-}
-
 } // end namespace clang

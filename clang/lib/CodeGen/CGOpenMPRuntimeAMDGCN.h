@@ -33,9 +33,6 @@ public:
   /// Get the id of the current thread on the GPU.
   llvm::Value *getGPUThreadID(CodeGenFunction &CGF) override;
 
-  /// Get the maximum number of threads in a block of the GPU.
-  llvm::Value *getGPUNumThreads(CodeGenFunction &CGF) override;
-
   // Emit call to fast FP intrinsics
   std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                                RValue Update,

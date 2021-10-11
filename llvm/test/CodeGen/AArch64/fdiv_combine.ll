@@ -29,8 +29,8 @@ entry:
 define <2 x float> @test3(<2 x i32> %in) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf.2s v0, v0
 ; CHECK-NEXT:    fmov.2s v1, #9.00000000
+; CHECK-NEXT:    scvtf.2s v0, v0
 ; CHECK-NEXT:    fdiv.2s v0, v0, v1
 ; CHECK-NEXT:    ret
 entry:
@@ -43,8 +43,8 @@ entry:
 define <2 x float> @test4(<2 x i32> %in) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf.2s v0, v0
 ; CHECK-NEXT:    movi.2s v1, #80, lsl #24
+; CHECK-NEXT:    scvtf.2s v0, v0
 ; CHECK-NEXT:    fdiv.2s v0, v0, v1
 ; CHECK-NEXT:    ret
 entry:
@@ -106,8 +106,8 @@ define <2 x float> @test9(<2 x i64> %in) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    movi.2s v1, #64, lsl #24
+; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    fdiv.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %conv = uitofp <2 x i64> %in to <2 x float>

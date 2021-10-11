@@ -31,7 +31,9 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    b OUTLINED_FUNCTION_1
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -77,21 +79,23 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    mov w9, #1
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    adrp x9, x
 ; CHECK-NEXT:    mov w10, #2
 ; CHECK-NEXT:    mov w11, #3
-; CHECK-NEXT:    mov w12, #4
-; CHECK-NEXT:    stp w9, wzr, [x29, #-8]
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    str w8, [x9, :lo12:x]
+; CHECK-NEXT:    mov w9, #4
+; CHECK-NEXT:    stp w8, wzr, [x29, #-8]
 ; CHECK-NEXT:    stur w10, [x29, #-12]
-; CHECK-NEXT:    stp w12, w11, [sp, #12]
-; CHECK-NEXT:    str w9, [x8, :lo12:x]
+; CHECK-NEXT:    stp w9, w11, [sp, #12]
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    stp w10, w9, [x29, #-12]
+; CHECK-NEXT:    stp w10, w8, [x29, #-12]
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    stp w12, w11, [sp, #12]
-; CHECK-NEXT:    b OUTLINED_FUNCTION_1
+; CHECK-NEXT:    stp w9, w11, [sp, #12]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

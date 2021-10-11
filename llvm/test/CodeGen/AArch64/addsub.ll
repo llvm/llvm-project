@@ -247,8 +247,8 @@ define void @testing() {
 ; CHECK-NEXT:    b.ne .LBB13_6
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    adrp x10, :got:var2_i32
-; CHECK-NEXT:    ldr x10, [x10, :got_lo12:var2_i32]
 ; CHECK-NEXT:    add w11, w9, #1
+; CHECK-NEXT:    ldr x10, [x10, :got_lo12:var2_i32]
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    cmp w10, #3567, lsl #12 // =14610432

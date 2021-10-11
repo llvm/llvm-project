@@ -14,7 +14,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| error_category,[comparisons.three.way],Unassigned,|Not Started|
 | `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| error_code
 | error_condition",None,Unassigned,|Not Started|
-| `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|In Progress|
+| `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
 "| `[optional.relops] <https://wg21.link/optional.relops>`_
 | `[optional.nullops] <https://wg21.link/optional.nullops>`_
 | `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| optional

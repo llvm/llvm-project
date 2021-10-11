@@ -18,8 +18,8 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_4: ; %cmpxchg.nostore
-; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    ret
 ;
 ; OUTLINE-ATOMICS-LABEL: test_return:
@@ -68,8 +68,8 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_4: ; %cmpxchg.nostore
-; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    eor w0, wzr, #0x1
+; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    ret
 ;
 ; OUTLINE-ATOMICS-LABEL: test_return_bool:
@@ -191,8 +191,8 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    b LBB3_5
 ; CHECK-NEXT:  LBB3_4: ; %cmpxchg.nostore
-; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    clrex
 ; CHECK-NEXT:  LBB3_5: ; %for.cond.preheader
 ; CHECK-NEXT:    mov w22, #2
 ; CHECK-NEXT:  LBB3_6: ; %for.cond
@@ -201,8 +201,8 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:  ; %bb.7: ; %for.body
 ; CHECK-NEXT:    ; in Loop: Header=BB3_6 Depth=1
 ; CHECK-NEXT:    sub w22, w22, #1
-; CHECK-NEXT:    ldr w10, [x19, w22, sxtw #2]
 ; CHECK-NEXT:    orr w9, w21, w20
+; CHECK-NEXT:    ldr w10, [x19, w22, sxtw #2]
 ; CHECK-NEXT:    cmp w9, w10
 ; CHECK-NEXT:    b.eq LBB3_6
 ; CHECK-NEXT:  ; %bb.8: ; %if.then
@@ -214,8 +214,8 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    b LBB3_6
 ; CHECK-NEXT:  LBB3_9: ; %for.cond.cleanup
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
@@ -236,16 +236,16 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-NEXT:    mov w21, w0
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w21
-; OUTLINE-ATOMICS-NEXT:    cset w8, eq
 ; OUTLINE-ATOMICS-NEXT:    mov w22, #2
+; OUTLINE-ATOMICS-NEXT:    cset w8, eq
 ; OUTLINE-ATOMICS-NEXT:  LBB3_1: ; %for.cond
 ; OUTLINE-ATOMICS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    cbz w22, LBB3_4
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.2: ; %for.body
 ; OUTLINE-ATOMICS-NEXT:    ; in Loop: Header=BB3_1 Depth=1
 ; OUTLINE-ATOMICS-NEXT:    sub w22, w22, #1
-; OUTLINE-ATOMICS-NEXT:    ldr w10, [x19, w22, sxtw #2]
 ; OUTLINE-ATOMICS-NEXT:    orr w9, w21, w20
+; OUTLINE-ATOMICS-NEXT:    ldr w10, [x19, w22, sxtw #2]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w10
 ; OUTLINE-ATOMICS-NEXT:    b.eq LBB3_1
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.3: ; %if.then
@@ -257,8 +257,8 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-NEXT:    b LBB3_1
 ; OUTLINE-ATOMICS-NEXT:  LBB3_4: ; %for.cond.cleanup
 ; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    and w0, w8, #0x1
+; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
 entry:

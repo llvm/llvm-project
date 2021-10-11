@@ -43,8 +43,8 @@ define <4 x i32> @add_zext_ifpos_vec_splat(<4 x i32> %x) {
 define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_tval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, ge
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
@@ -92,8 +92,8 @@ define <4 x i32> @add_sext_ifpos_vec_splat(<4 x i32> %x) {
 define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_fval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, lt
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
@@ -128,8 +128,8 @@ define i32 @add_zext_ifneg(i32 %x) {
 define i32 @sel_ifneg_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_tval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, lt
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
@@ -162,8 +162,8 @@ define i32 @add_sext_ifneg(i32 %x) {
 define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_fval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, ge
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0

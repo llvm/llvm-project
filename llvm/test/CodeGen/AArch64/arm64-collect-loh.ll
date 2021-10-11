@@ -612,9 +612,9 @@ define <1 x i8> @getL() {
 ; CHECK-LABEL: _setL
 ; CHECK: [[ADRP_LABEL:Lloh[0-9]+]]:
 ; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _L@GOTPAGE
+; CHECK-NEXT: ; kill
 ; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
 ; CHECK-NEXT: ldr {{[xw]}}[[LDRGOT_REG:[0-9]+]], {{\[}}[[ADRP_REG]], _L@GOTPAGEOFF]
-; CHECK-NEXT: ; kill
 ; Ultimately we should generate str b0, but right now, we match the vector
 ; variant which does not allow to fold the immediate into the store.
 ; CHECK-NEXT: st1.b { v0 }[0], [x[[LDRGOT_REG]]]

@@ -28,15 +28,15 @@ define i32 @test_stack_guard_remat2() ssp {
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    ldr x9, [x9]
 ; CHECK-NEXT:    str x8, [sp]
-; CHECK-NEXT:    stur x9, [x29, #-8]
 ; CHECK-NEXT:  Lloh6:
-; CHECK-NEXT:    adrp x9, ___stack_chk_guard@GOTPAGE
-; CHECK-NEXT:    ldur x8, [x29, #-8]
+; CHECK-NEXT:    adrp x8, ___stack_chk_guard@GOTPAGE
+; CHECK-NEXT:    stur x9, [x29, #-8]
 ; CHECK-NEXT:  Lloh7:
-; CHECK-NEXT:    ldr x9, [x9, ___stack_chk_guard@GOTPAGEOFF]
+; CHECK-NEXT:    ldr x8, [x8, ___stack_chk_guard@GOTPAGEOFF]
+; CHECK-NEXT:    ldur x9, [x29, #-8]
 ; CHECK-NEXT:  Lloh8:
-; CHECK-NEXT:    ldr x9, [x9]
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ldr x8, [x8]
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    b.ne LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload

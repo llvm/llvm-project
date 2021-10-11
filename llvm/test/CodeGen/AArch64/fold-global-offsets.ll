@@ -100,16 +100,16 @@ define i64 @f5() {
 define i64 @f6() {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x2
-; CHECK-NEXT:    add x8, x8, :lo12:x2
-; CHECK-NEXT:    mov w9, #2097152
-; CHECK-NEXT:    ldr x0, [x8, x9]
+; CHECK-NEXT:    mov w8, #2097152
+; CHECK-NEXT:    adrp x9, x2
+; CHECK-NEXT:    add x9, x9, :lo12:x2
+; CHECK-NEXT:    ldr x0, [x9, x8]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: f6:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x9, x2
 ; GISEL-NEXT:    mov w8, #2097152
+; GISEL-NEXT:    adrp x9, x2
 ; GISEL-NEXT:    add x9, x9, :lo12:x2
 ; GISEL-NEXT:    ldr x0, [x9, x8]
 ; GISEL-NEXT:    ret

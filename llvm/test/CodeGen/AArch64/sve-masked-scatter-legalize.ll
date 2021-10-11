@@ -99,9 +99,9 @@ define void @masked_scatter_nxv32i32(<vscale x 32 x i32> %data, i32* %base, <vsc
 ; CHECK-NEXT:    ld1w { z30.s }, p2/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    ld1w { z31.s }, p2/z, [x1]
 ; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p3, [x0, z31.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z1.s }, p2, [x0, z30.s, sxtw #2]
 ; CHECK-NEXT:    punpklo p2.h, p0.b

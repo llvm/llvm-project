@@ -26,11 +26,11 @@ define void @test1(i32 %bitset, i32 %val0, i32 %val1) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp w0, #7
+; CHECK-NEXT:    adrp x8, out
 ; CHECK-NEXT:    csel w9, w1, w2, eq
 ; CHECK-NEXT:    cmp w9, #13
 ; CHECK-NEXT:    csel w9, w1, w2, lo
 ; CHECK-NEXT:    cmp w0, #42
-; CHECK-NEXT:    adrp x8, out
 ; CHECK-NEXT:    csel w10, w1, w9, eq
 ; CHECK-NEXT:    str w9, [x8, :lo12:out]
 ; CHECK-NEXT:    str w10, [x8, :lo12:out]

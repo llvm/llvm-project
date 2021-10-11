@@ -34,8 +34,8 @@ define <2 x <vscale x 2 x i64>*> @fixed_of_scalable_1(<vscale x 2 x i64>* %base)
 ; CHECK-LABEL: fixed_of_scalable_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, <2 x i64> <i64 1, i64 1>
@@ -203,8 +203,8 @@ define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_1(<vscale x 2 x 
 ; CHECK-LABEL: scalable_of_scalable_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    add z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer

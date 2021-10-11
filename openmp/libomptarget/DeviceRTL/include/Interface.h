@@ -203,6 +203,9 @@ void __kmpc_get_shared_variables(void ***GlobalArgs);
 /// External interface to get the thread ID.
 uint32_t __kmpc_get_hardware_thread_id_in_block();
 
+/// External interface to get the number of threads.
+uint32_t __kmpc_get_hardware_num_threads_in_block();
+
 /// Kernel
 ///
 ///{

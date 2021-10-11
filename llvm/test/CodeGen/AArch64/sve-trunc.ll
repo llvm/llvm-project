@@ -95,10 +95,10 @@ define <vscale x 8 x i1> @trunc_i64toi1_split2(<vscale x 8 x i64> %in) {
 ; CHECK-NEXT:    and z0.d, z0.d, #0x1
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, #0
-; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-NEXT:    cmpne p2.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p3.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p2.s
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p3.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -111,33 +111,35 @@ define <vscale x 16 x i1> @trunc_i64toi1_split3(<vscale x 16 x i64> %in) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z7.d, z7.d, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z6.d, z6.d, #0x1
 ; CHECK-NEXT:    and z5.d, z5.d, #0x1
 ; CHECK-NEXT:    and z4.d, z4.d, #0x1
-; CHECK-NEXT:    and z3.d, z3.d, #0x1
-; CHECK-NEXT:    and z2.d, z2.d, #0x1
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z7.d, #0
 ; CHECK-NEXT:    cmpne p2.d, p0/z, z6.d, #0
 ; CHECK-NEXT:    cmpne p3.d, p0/z, z5.d, #0
 ; CHECK-NEXT:    cmpne p4.d, p0/z, z4.d, #0
+; CHECK-NEXT:    and z3.d, z3.d, #0x1
+; CHECK-NEXT:    and z2.d, z2.d, #0x1
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    and z0.d, z0.d, #0x1
 ; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-NEXT:    cmpne p2.d, p0/z, z3.d, #0
-; CHECK-NEXT:    uzp1 p3.s, p4.s, p3.s
+; CHECK-NEXT:    uzp1 p2.s, p4.s, p3.s
+; CHECK-NEXT:    cmpne p3.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    cmpne p4.d, p0/z, z2.d, #0
-; CHECK-NEXT:    uzp1 p2.s, p4.s, p2.s
-; CHECK-NEXT:    cmpne p4.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p5.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p4.s
+; CHECK-NEXT:    uzp1 p3.s, p4.s, p3.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p5.s
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    uzp1 p1.h, p3.h, p1.h
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p2.h
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -187,8 +189,8 @@ entry:
 define void @trunc_promoteIntRes(<vscale x 4 x i64> %0, i16* %ptr) {
 ; CHECK-LABEL: trunc_promoteIntRes:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:

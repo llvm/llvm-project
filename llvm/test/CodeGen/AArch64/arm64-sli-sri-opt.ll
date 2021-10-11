@@ -18,8 +18,8 @@ define void @testLeftBad8x8(<8 x i8> %src1, <8 x i8> %src2, <8 x i8>* %dest) nou
 ; CHECK-LABEL: testLeftBad8x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.8b v2, #165
-; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    shl.8b v1, v1, #1
+; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -47,8 +47,8 @@ define void @testRightBad8x8(<8 x i8> %src1, <8 x i8> %src2, <8 x i8>* %dest) no
 ; CHECK-LABEL: testRightBad8x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.8b v2, #165
-; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    ushr.8b v1, v1, #1
+; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -76,8 +76,8 @@ define void @testLeftBad16x8(<16 x i8> %src1, <16 x i8> %src2, <16 x i8>* %dest)
 ; CHECK-LABEL: testLeftBad16x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.16b v2, #165
-; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    shl.16b v1, v1, #1
+; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -105,8 +105,8 @@ define void @testRightBad16x8(<16 x i8> %src1, <16 x i8> %src2, <16 x i8>* %dest
 ; CHECK-LABEL: testRightBad16x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.16b v2, #165
-; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    ushr.16b v1, v1, #1
+; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -134,9 +134,9 @@ define void @testLeftBad4x16(<4 x i16> %src1, <4 x i16> %src2, <4 x i16>* %dest)
 ; CHECK-LABEL: testLeftBad4x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    shl.4h v1, v1, #14
 ; CHECK-NEXT:    dup.4h v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    shl.4h v1, v1, #14
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -164,9 +164,9 @@ define void @testRightBad4x16(<4 x i16> %src1, <4 x i16> %src2, <4 x i16>* %dest
 ; CHECK-LABEL: testRightBad4x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    ushr.4h v1, v1, #14
 ; CHECK-NEXT:    dup.4h v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    ushr.4h v1, v1, #14
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -194,9 +194,9 @@ define void @testLeftBad8x16(<8 x i16> %src1, <8 x i16> %src2, <8 x i16>* %dest)
 ; CHECK-LABEL: testLeftBad8x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    shl.8h v1, v1, #14
 ; CHECK-NEXT:    dup.8h v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    shl.8h v1, v1, #14
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -224,9 +224,9 @@ define void @testRightBad8x16(<8 x i16> %src1, <8 x i16> %src2, <8 x i16>* %dest
 ; CHECK-LABEL: testRightBad8x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    ushr.8h v1, v1, #14
 ; CHECK-NEXT:    dup.8h v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    ushr.8h v1, v1, #14
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -254,9 +254,9 @@ define void @testLeftBad2x32(<2 x i32> %src1, <2 x i32> %src2, <2 x i32>* %dest)
 ; CHECK-LABEL: testLeftBad2x32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    shl.2s v1, v1, #22
 ; CHECK-NEXT:    dup.2s v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    shl.2s v1, v1, #22
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -284,9 +284,9 @@ define void @testRightBad2x32(<2 x i32> %src1, <2 x i32> %src2, <2 x i32>* %dest
 ; CHECK-LABEL: testRightBad2x32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    ushr.2s v1, v1, #22
 ; CHECK-NEXT:    dup.2s v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    ushr.2s v1, v1, #22
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
@@ -314,9 +314,9 @@ define void @testLeftBad4x32(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %dest)
 ; CHECK-LABEL: testLeftBad4x32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    shl.4s v1, v1, #22
 ; CHECK-NEXT:    dup.4s v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    shl.4s v1, v1, #22
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -344,9 +344,9 @@ define void @testRightBad4x32(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %dest
 ; CHECK-LABEL: testRightBad4x32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    ushr.4s v1, v1, #22
 ; CHECK-NEXT:    dup.4s v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    ushr.4s v1, v1, #22
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -375,9 +375,9 @@ define void @testLeftBad2x64(<2 x i64> %src1, <2 x i64> %src2, <2 x i64>* %dest)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #10
 ; CHECK-NEXT:    movk x8, #1, lsl #48
+; CHECK-NEXT:    shl.2d v1, v1, #48
 ; CHECK-NEXT:    dup.2d v2, x8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    shl.2d v1, v1, #48
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -406,9 +406,9 @@ define void @testRightBad2x64(<2 x i64> %src1, <2 x i64> %src2, <2 x i64>* %dest
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #10
 ; CHECK-NEXT:    movk x8, #1, lsl #48
+; CHECK-NEXT:    ushr.2d v1, v1, #48
 ; CHECK-NEXT:    dup.2d v2, x8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    ushr.2d v1, v1, #48
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -436,8 +436,8 @@ define void @testLeftNotAllConstantBuildVec8x8(<8 x i8> %src1, <8 x i8> %src2, <
 ; CHECK-LABEL: testLeftNotAllConstantBuildVec8x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI29_0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI29_0]
 ; CHECK-NEXT:    shl.8b v1, v1, #3
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI29_0]
 ; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]

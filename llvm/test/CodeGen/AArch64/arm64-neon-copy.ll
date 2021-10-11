@@ -1226,11 +1226,12 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
 define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK-LABEL: test_extracts_inserts_varidx_extract:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    str q0, [sp, #-16]!
 ; CHECK-NEXT:    and x8, x0, #0x7
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bfi x9, x8, #1, #3
 ; CHECK-NEXT:    ldr h1, [x9]
 ; CHECK-NEXT:    mov v1.h[1], v0.h[1]
@@ -1491,11 +1492,11 @@ entry:
 define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    sqabs s1, s1
-; CHECK-NEXT:    sqabs s0, s0
-; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    sqabs s2, s0
+; CHECK-NEXT:    sqabs s0, s1
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret

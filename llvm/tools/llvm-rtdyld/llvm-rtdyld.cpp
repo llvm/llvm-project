@@ -1024,7 +1024,7 @@ int main(int argc, char **argv) {
 
   Timers = ShowTimes ? std::make_unique<RTDyldTimers>() : nullptr;
 
-  int Result;
+  int Result = 0;
   switch (Action) {
   case AC_Execute:
     Result = executeInput();

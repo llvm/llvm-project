@@ -97,6 +97,11 @@ static cl::opt<std::string>
                       cl::desc("Maximize the band depth (yes/no)"), cl::Hidden,
                       cl::init("yes"), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    GreedyFusion("polly-loopfusion-greedy",
+                 cl::desc("Aggressively try to fuse everything"), cl::Hidden,
+                 cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<std::string> OuterCoincidence(
     "polly-opt-outer-coincidence",
     cl::desc("Try to construct schedules where the outer member of each band "
@@ -834,6 +839,13 @@ static bool runIslScheduleOptimizer(
   // touch the schedule.
   if (Schedule.is_null())
     return false;
+
+  if (GreedyFusion) {
+    isl::union_map Validity = D.getDependences(
+        Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW);
+    Schedule = applyGreedyFusion(Schedule, Validity);
+    assert(!Schedule.is_null());
+  }
 
   // Apply post-rescheduling optimizations (if enabled) and/or prevectorization.
   const OptimizerAdditionalInfoTy OAI = {

@@ -8,10 +8,10 @@ define <2 x i16> @bitcast_v2i16_v2f16(<2 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %y = bitcast <2 x half> %x to <2 x i16>
   ret <2 x i16> %y
