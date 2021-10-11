@@ -673,7 +673,7 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
                                       /*symbolOperands=*/symbolOperands,
                                       /*domOpFilter=*/nullptr,
                                       /*postDomOpFilter=*/nullptr,
-                                      /*allowDereferencingOps=*/true))) {
+                                      /*allowNonDereferencingOps=*/true))) {
     // If it failed (due to escapes for example), bail out.
     newAlloc.erase();
     return failure();
