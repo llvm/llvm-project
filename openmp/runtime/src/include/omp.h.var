@@ -431,14 +431,23 @@
     extern omp_allocator_handle_t __KAI_KMPC_CONVENTION omp_get_default_allocator(void);
 #   ifdef __cplusplus
     extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, omp_allocator_handle_t a = omp_null_allocator);
-    extern void *__KAI_KMPC_CONVENTION omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t a = omp_null_allocator);
+    extern void *__KAI_KMPC_CONVENTION omp_aligned_alloc(size_t align, size_t size,
+                                                         omp_allocator_handle_t a = omp_null_allocator);
+    extern void *__KAI_KMPC_CONVENTION omp_calloc(size_t nmemb, size_t size,
+                                                  omp_allocator_handle_t a = omp_null_allocator);
+    extern void *__KAI_KMPC_CONVENTION omp_aligned_calloc(size_t align, size_t nmemb, size_t size,
+                                                          omp_allocator_handle_t a = omp_null_allocator);
     extern void *__KAI_KMPC_CONVENTION omp_realloc(void *ptr, size_t size,
                                                    omp_allocator_handle_t allocator = omp_null_allocator,
                                                    omp_allocator_handle_t free_allocator = omp_null_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void * ptr, omp_allocator_handle_t a = omp_null_allocator);
 #   else
     extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, omp_allocator_handle_t a);
+    extern void *__KAI_KMPC_CONVENTION omp_aligned_alloc(size_t align, size_t size,
+                                                         omp_allocator_handle_t a);
     extern void *__KAI_KMPC_CONVENTION omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t a);
+    extern void *__KAI_KMPC_CONVENTION omp_aligned_calloc(size_t align, size_t nmemb, size_t size,
+                                                          omp_allocator_handle_t a);
     extern void *__KAI_KMPC_CONVENTION omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                                                    omp_allocator_handle_t free_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void *ptr, omp_allocator_handle_t a);
