@@ -1348,15 +1348,14 @@ TEST_P(ASTMatchersTest, HasType_MatchesAsString) {
 
   EXPECT_TRUE(
       matches("class Y { public: void x(); }; void z() {Y* y; y->x(); }",
-              cxxMemberCallExpr(on(hasType(asString("class Y *"))))));
+              cxxMemberCallExpr(on(hasType(asString("Y *"))))));
   EXPECT_TRUE(
       matches("class X { void x(int x) {} };",
               cxxMethodDecl(hasParameter(0, hasType(asString("int"))))));
   EXPECT_TRUE(matches("namespace ns { struct A {}; }  struct B { ns::A a; };",
                       fieldDecl(hasType(asString("ns::A")))));
-  EXPECT_TRUE(
-      matches("namespace { struct A {}; }  struct B { A a; };",
-              fieldDecl(hasType(asString("struct (anonymous namespace)::A")))));
+  EXPECT_TRUE(matches("namespace { struct A {}; }  struct B { A a; };",
+                      fieldDecl(hasType(asString("A")))));
 }
 
 TEST_P(ASTMatchersTest, HasOverloadedOperatorName) {
@@ -2142,9 +2141,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
+                templateSpecializationType(hasDeclaration(classTemplateDecl(
+                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
+                                              .bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2162,9 +2162,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(
+                hasType(elaboratedType(namesType(templateSpecializationType(
+                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
+                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2179,9 +2180,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(
+                hasType(elaboratedType(namesType(templateSpecializationType(
+                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {

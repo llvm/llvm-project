@@ -124,7 +124,7 @@ void test(Opaque o, OpaqueClass oc, Defined d) {
   switch (d) {
   case Defined::a:
     break;
-  case (Defined)2: // expected-warning {{case value not in enumerated type 'OpaqueEnumWarnings::Defined'}}
+  case (Defined)2: // expected-warning {{case value not in enumerated type 'Defined'}}
     break;
   }
 }
