@@ -238,6 +238,11 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
     }
   } while (true);
 
+  // Attempt to close FDs, set Disconnected to true so that subsequent
+  // sendMessage calls fail.
+  disconnect();
+
+  // Call up to the client to handle the disconnection.
   C.handleDisconnect(std::move(Err));
 }
 

@@ -67,6 +67,25 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
   if (auto Err = sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
                              WrapperFnAddr, ArgBuffer)) {
+    IncomingWFRHandler H;
+
+    // We just registered OnComplete, but there may be a race between this
+    // thread returning from sendMessage and handleDisconnect being called from
+    // the transport's listener thread. If handleDisconnect gets there first
+    // then it will have failed 'H' for us. If we get there first (or if
+    // handleDisconnect already ran) then we need to take care of it.
+    {
+      std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
+      auto I = PendingCallWrapperResults.find(SeqNo);
+      if (I != PendingCallWrapperResults.end()) {
+        H = std::move(I->second);
+        PendingCallWrapperResults.erase(I);
+      }
+    }
+
+    if (H)
+      H(shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+
     getExecutionSession().reportError(std::move(Err));
   }
 }
