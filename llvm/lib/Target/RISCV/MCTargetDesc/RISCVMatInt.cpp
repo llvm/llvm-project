@@ -182,6 +182,34 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
+  // Perform the following optimization with the Zbs extension.
+  // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
+  //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
+  //    an int32), then emit (BCLRI r, 31).
+  // 2. For values in range 0x80000000 ~ 0xffffffff, call generateInstSeqImpl
+  //    with Val&~0x80000000 (which is expected to be an int32), then
+  //    emit (BSETI r, 31).
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbs]) {
+    assert(ActiveFeatures[RISCV::Feature64Bit] &&
+           "Expected RV32 to only need 2 instructions");
+    int64_t NewVal;
+    unsigned Opc;
+    if (Val < 0) {
+      Opc = RISCV::BCLRI;
+      NewVal = Val | 0x80000000ll;
+    } else {
+      Opc = RISCV::BSETI;
+      NewVal = Val & ~0x80000000ll;
+    }
+    if (isInt<32>(NewVal)) {
+      RISCVMatInt::InstSeq TmpSeq;
+      generateInstSeqImpl(NewVal, ActiveFeatures, TmpSeq);
+      TmpSeq.push_back(RISCVMatInt::Inst(Opc, 31));
+      if (TmpSeq.size() < Res.size())
+        Res = TmpSeq;
+    }
+  }
+
   return Res;
 }
 
