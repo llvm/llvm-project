@@ -156,19 +156,19 @@ public:
 ClassWithoutDestructor make1(AddressVector<ClassWithoutDestructor> &v) {
   return ClassWithoutDestructor(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithoutDestructor' is still \
+object of type 'ClassWithoutDestructor' is still \
 referred to by the stack variable 'v' upon returning to the caller}}
 }
 ClassWithoutDestructor make2(AddressVector<ClassWithoutDestructor> &v) {
   return make1(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithoutDestructor' is still \
+object of type 'ClassWithoutDestructor' is still \
 referred to by the stack variable 'v' upon returning to the caller}}
 }
 ClassWithoutDestructor make3(AddressVector<ClassWithoutDestructor> &v) {
   return make2(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithoutDestructor' is still \
+object of type 'ClassWithoutDestructor' is still \
 referred to by the stack variable 'v' upon returning to the caller}}
 }
 
@@ -265,7 +265,7 @@ struct TestCtorInitializer {
   TestCtorInitializer(AddressVector<ClassWithDestructor> &v)
     : c(ClassWithDestructor(v)) {}
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithDestructor' is still referred \
+object of type 'ClassWithDestructor' is still referred \
 to by the stack variable 'v' upon returning to the caller}}
 };
 
@@ -301,19 +301,19 @@ void testCtorInitializer() {
 ClassWithDestructor make1(AddressVector<ClassWithDestructor> &v) {
   return ClassWithDestructor(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithDestructor' is still referred \
+object of type 'ClassWithDestructor' is still referred \
 to by the stack variable 'v' upon returning to the caller}}
 }
 ClassWithDestructor make2(AddressVector<ClassWithDestructor> &v) {
   return make1(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithDestructor' is still referred \
+object of type 'ClassWithDestructor' is still referred \
 to by the stack variable 'v' upon returning to the caller}}
 }
 ClassWithDestructor make3(AddressVector<ClassWithDestructor> &v) {
   return make2(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::ClassWithDestructor' is still referred \
+object of type 'ClassWithDestructor' is still referred \
 to by the stack variable 'v' upon returning to the caller}}
 }
 
@@ -406,7 +406,7 @@ struct Foo {
 Foo make1(Foo **r) {
   return Foo(r);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'address_vector_tests::Foo' is still referred to by the stack \
+object of type 'Foo' is still referred to by the stack \
 variable 'z' upon returning to the caller}}
 }
 

@@ -10236,7 +10236,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // We extract the name from the typedef because we don't want to show
         // the underlying type in the diagnostic.
         StringRef Name;
-        if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(ExprTy))
+        if (const auto *TypedefTy = ExprTy->getAs<TypedefType>())
           Name = TypedefTy->getDecl()->getName();
         else
           Name = CastTyName;
@@ -15843,7 +15843,7 @@ static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
   while (TInfo) {
     TypeLoc TL = TInfo->getTypeLoc();
     // Look through typedefs.
-    if (TypedefTypeLoc TTL = TL.getAs<TypedefTypeLoc>()) {
+    if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
       const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
       TInfo = TDL->getTypeSourceInfo();
       continue;

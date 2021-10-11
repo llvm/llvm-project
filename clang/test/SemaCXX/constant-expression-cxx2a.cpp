@@ -255,7 +255,7 @@ namespace DynamicCast {
   static_assert(g.f == (void*)(F*)&g);
   static_assert(dynamic_cast<const void*>(static_cast<const D*>(&g)) == &g);
 
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
   constexpr int d_a = (dynamic_cast<const A&>(static_cast<const D&>(g)), 0); // expected-error {{}}
 
   // Can navigate from A2 to its A...
@@ -263,7 +263,7 @@ namespace DynamicCast {
   // ... and from B to its A ...
   static_assert(&dynamic_cast<A&>((B&)g) == &(A&)(B&)g);
   // ... but not from D.
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'A' is an ambiguous base class of dynamic type 'DynamicCast::G' of operand}}
   static_assert(&dynamic_cast<A&>((D&)g) == &(A&)(B&)g); // expected-error {{}}
 
   // Can cast from A2 to sibling class D.
@@ -274,13 +274,13 @@ namespace DynamicCast {
   constexpr int e_f = (dynamic_cast<F&>((E&)g), 0); // expected-error {{}}
 
   // Cannot cast from B to private sibling E.
-  // expected-note@+1 {{reference dynamic_cast failed: 'DynamicCast::E' is a non-public base class of dynamic type 'DynamicCast::G' of operand}}
+  // expected-note@+1 {{reference dynamic_cast failed: 'E' is a non-public base class of dynamic type 'DynamicCast::G' of operand}}
   constexpr int b_e = (dynamic_cast<E&>((B&)g), 0); // expected-error {{}}
 
   struct Unrelated { virtual void unrelated(); };
-  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'DynamicCast::Unrelated'}}
+  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'Unrelated'}}
   constexpr int b_unrelated = (dynamic_cast<Unrelated&>((B&)g), 0); // expected-error {{}}
-  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'DynamicCast::Unrelated'}}
+  // expected-note@+1 {{reference dynamic_cast failed: dynamic type 'DynamicCast::G' of operand does not have a base class of type 'Unrelated'}}
   constexpr int e_unrelated = (dynamic_cast<Unrelated&>((E&)g), 0); // expected-error {{}}
 }
 
@@ -1031,7 +1031,7 @@ namespace delete_random_things {
   int n; // expected-note {{declared here}}
   static_assert((delete &n, true)); // expected-error {{}} expected-note {{delete of pointer '&n' that does not point to a heap-allocated object}}
   struct A { int n; };
-  static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new delete_random_things::A#0}.n'}}
+  static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new A#0}.n'}}
   static_assert((delete (new int + 1), true)); // expected-error {{}} expected-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
   static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
   static_assert((delete &(int&)(int&&)0, true)); // expected-error {{}} expected-note {{delete of pointer '&0' that does not point to a heap-allocated object}} expected-note {{temporary created here}}

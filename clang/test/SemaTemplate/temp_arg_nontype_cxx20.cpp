@@ -67,14 +67,14 @@ namespace ClassNTTP {
   static_assert(&id<A{1,2}> == &id<a>);
   static_assert(&id<A{1,3}> != &id<a>);
 
-  int k = id<1>; // expected-error {{no viable conversion from 'int' to 'ClassNTTP::A'}}
+  int k = id<1>; // expected-error {{no viable conversion from 'int' to 'A'}}
 
   struct B {
     constexpr B() {}
     constexpr B(int) = delete; // expected-note {{here}}
   };
   template<B> struct Q {}; // expected-note {{passing argument to parameter here}}
-  Q<1> q; // expected-error {{conversion function from 'int' to 'ClassNTTP::B' invokes a deleted function}}
+  Q<1> q; // expected-error {{conversion function from 'int' to 'B' invokes a deleted function}}
 
   struct C {
     constexpr C() {}
@@ -91,7 +91,7 @@ namespace ConvertedConstant {
   };
   template <A> struct X {};
   void f(X<1.0f>) {} // OK, user-defined conversion
-  void f(X<2>) {} // expected-error {{conversion from 'int' to 'ConvertedConstant::A' is not allowed in a converted constant expression}}
+  void f(X<2>) {} // expected-error {{conversion from 'int' to 'A' is not allowed in a converted constant expression}}
 }
 
 namespace CopyCounting {
