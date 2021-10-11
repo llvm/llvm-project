@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
@@ -188,6 +189,14 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
+    if (SrcOps[0].getLLTTy(*getMRI()).isVector()) {
+      // Try to constant fold vector constants.
+      auto VecCst = ConstantFoldVectorBinop(
+          Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI(), *this);
+      if (VecCst)
+        return MachineInstrBuilder(getMF(), *VecCst);
+      break;
+    }
     if (Optional<APInt> Cst = ConstantFoldBinOp(Opc, SrcOps[0].getReg(),
                                                 SrcOps[1].getReg(), *getMRI()))
       return buildConstant(DstOps[0], *Cst);

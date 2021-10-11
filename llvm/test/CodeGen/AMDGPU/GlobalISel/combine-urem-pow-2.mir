@@ -204,12 +204,9 @@ body:             |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: %pow2:_(s32) = G_CONSTANT i32 4096
-    ; GCN-NEXT: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4095
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[BUILD_VECTOR]]
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %pow2:_(s32) = G_CONSTANT i32 4096
@@ -229,13 +226,10 @@ body:             |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: %pow2_1:_(s32) = G_CONSTANT i32 4096
-    ; GCN-NEXT: %pow2_2:_(s32) = G_CONSTANT i32 2048
-    ; GCN-NEXT: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4095
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2047
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32)
+    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[BUILD_VECTOR]]
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %pow2_1:_(s32) = G_CONSTANT i32 4096
@@ -256,12 +250,9 @@ body:             |
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: %pow2:_(s64) = G_CONSTANT i64 4096
-    ; GCN-NEXT: %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4095
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN-NEXT: %rem:_(<2 x s64>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: %rem:_(<2 x s64>) = G_AND %var, [[BUILD_VECTOR]]
     ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem(<2 x s64>)
     %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %pow2:_(s64) = G_CONSTANT i64 4096
