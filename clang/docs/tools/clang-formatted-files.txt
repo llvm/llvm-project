@@ -73,6 +73,7 @@ clang/include/clang/Driver/DriverDiagnostic.h
 clang/include/clang/Driver/OptionUtils.h
 clang/include/clang/Driver/XRayArgs.h
 clang/include/clang/Edit/EditsReceiver.h
+clang/include/clang/Format/Format.h
 clang/include/clang/Frontend/FrontendDiagnostic.h
 clang/include/clang/Frontend/FrontendPluginRegistry.h
 clang/include/clang/Frontend/LogDiagnosticPrinter.h
@@ -130,8 +131,10 @@ clang/include/clang/Tooling/ASTDiff/ASTDiff.h
 clang/include/clang/Tooling/ASTDiff/ASTDiffInternal.h
 clang/include/clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h
 clang/include/clang/Tooling/DependencyScanning/DependencyScanningService.h
+clang/include/clang/Tooling/DependencyScanning/DependencyScanningTool.h
 clang/include/clang/Tooling/DependencyScanning/DependencyScanningWorker.h
 clang/include/clang/Tooling/DependencyScanning/ModuleDepCollector.h
+clang/include/clang/Tooling/Inclusions/HeaderIncludes.h
 clang/include/clang/Tooling/Inclusions/IncludeStyle.h
 clang/include/clang/Tooling/Refactoring/ASTSelection.h
 clang/include/clang/Tooling/Refactoring/AtomicChange.h
@@ -252,7 +255,6 @@ clang/lib/Driver/Distro.cpp
 clang/lib/Driver/XRayArgs.cpp
 clang/lib/Driver/ToolChains/AIX.cpp
 clang/lib/Driver/ToolChains/AIX.h
-clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
 clang/lib/Driver/ToolChains/Ananas.h
 clang/lib/Driver/ToolChains/AVR.cpp
@@ -338,6 +340,7 @@ clang/lib/Headers/stdnoreturn.h
 clang/lib/Headers/wmmintrin.h
 clang/lib/Headers/x86gprintrin.h
 clang/lib/Headers/xtestintrin.h
+clang/lib/Headers/__clang_cuda_texture_intrinsics.h
 clang/lib/Headers/__clang_hip_cmath.h
 clang/lib/Headers/__clang_hip_libdevice_declares.h
 clang/lib/Headers/__stddef_max_align_t.h
@@ -379,6 +382,7 @@ clang/lib/StaticAnalyzer/Checkers/Taint.cpp
 clang/lib/StaticAnalyzer/Checkers/Taint.h
 clang/lib/StaticAnalyzer/Checkers/VLASizeChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/Yaml.h
+clang/lib/StaticAnalyzer/Checkers/cert/InvalidPtrChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/cert/PutenvWithAutoChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/UninitializedObject/UninitializedPointee.cpp
 clang/lib/StaticAnalyzer/Checkers/WebKit/ASTUtils.cpp
@@ -456,7 +460,6 @@ clang/tools/libclang/CIndexUSRs.cpp
 clang/tools/libclang/CursorVisitor.h
 clang/tools/libclang/CXCursor.cpp
 clang/tools/libclang/CXCursor.h
-clang/tools/libclang/FatalErrorHandler.cpp
 clang/tools/scan-build-py/tests/functional/src/include/clean-one.h
 clang/unittests/Analysis/CFGBuildResult.h
 clang/unittests/Analysis/MacroExpansionContextTest.cpp
@@ -526,6 +529,7 @@ clang/unittests/StaticAnalyzer/CheckerRegistration.h
 clang/unittests/StaticAnalyzer/StoreTest.cpp
 clang/unittests/StaticAnalyzer/SValTest.cpp
 clang/unittests/StaticAnalyzer/SymbolReaperTest.cpp
+clang/unittests/Tooling/DependencyScannerTest.cpp
 clang/unittests/Tooling/ExecutionTest.cpp
 clang/unittests/Tooling/LookupTest.cpp
 clang/unittests/Tooling/RecursiveASTVisitorTestPostOrderVisitor.cpp
@@ -1177,6 +1181,8 @@ clang-tools-extra/clangd/FuzzyMatch.cpp
 clang-tools-extra/clangd/FuzzyMatch.h
 clang-tools-extra/clangd/GlobalCompilationDatabase.cpp
 clang-tools-extra/clangd/GlobalCompilationDatabase.h
+clang-tools-extra/clangd/Headers.cpp
+clang-tools-extra/clangd/Headers.h
 clang-tools-extra/clangd/HeaderSourceSwitch.cpp
 clang-tools-extra/clangd/HeaderSourceSwitch.h
 clang-tools-extra/clangd/HeuristicResolver.cpp
@@ -1336,6 +1342,7 @@ clang-tools-extra/clangd/unittests/FindTargetTests.cpp
 clang-tools-extra/clangd/unittests/FSTests.cpp
 clang-tools-extra/clangd/unittests/FuzzyMatchTests.cpp
 clang-tools-extra/clangd/unittests/GlobalCompilationDatabaseTests.cpp
+clang-tools-extra/clangd/unittests/HeadersTests.cpp
 clang-tools-extra/clangd/unittests/HoverTests.cpp
 clang-tools-extra/clangd/unittests/IncludeCleanerTests.cpp
 clang-tools-extra/clangd/unittests/IndexActionTests.cpp
@@ -1592,7 +1599,6 @@ compiler-rt/lib/sanitizer_common/sanitizer_errno_codes.h
 compiler-rt/lib/sanitizer_common/sanitizer_local_address_space_view.h
 compiler-rt/lib/sanitizer_common/sanitizer_openbsd.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_placement_new.h
-compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_freebsd.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_openbsd.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_openbsd.h
 compiler-rt/lib/sanitizer_common/sanitizer_stacktrace_printer.h
@@ -1605,6 +1611,7 @@ compiler-rt/lib/sanitizer_common/sanitizer_type_traits.h
 compiler-rt/lib/sanitizer_common/symbolizer/sanitizer_symbolize.cpp
 compiler-rt/lib/sanitizer_common/symbolizer/sanitizer_wrappers.cpp
 compiler-rt/lib/sanitizer_common/tests/sanitizer_chained_origin_depot_test.cpp
+compiler-rt/lib/sanitizer_common/tests/sanitizer_hash_test.cpp
 compiler-rt/lib/sanitizer_common/tests/sanitizer_test_main.cpp
 compiler-rt/lib/scudo/standalone/allocator_config.h
 compiler-rt/lib/scudo/standalone/atomic_helpers.h
@@ -1874,7 +1881,6 @@ flang/include/flang/Runtime/descriptor.h
 flang/include/flang/Runtime/entry-names.h
 flang/include/flang/Runtime/io-api.h
 flang/include/flang/Runtime/iostat.h
-flang/include/flang/Runtime/magic-numbers.h
 flang/include/flang/Runtime/main.h
 flang/include/flang/Runtime/matmul.h
 flang/include/flang/Runtime/memory.h
@@ -1967,7 +1973,11 @@ flang/lib/Optimizer/Dialect/FIRType.cpp
 flang/lib/Optimizer/Support/FIRContext.cpp
 flang/lib/Optimizer/Support/InternalNames.cpp
 flang/lib/Optimizer/Support/KindMapping.cpp
+flang/lib/Optimizer/Transforms/AffineDemotion.cpp
+flang/lib/Optimizer/Transforms/AffinePromotion.cpp
+flang/lib/Optimizer/Transforms/ExternalNameConversion.cpp
 flang/lib/Optimizer/Transforms/Inliner.cpp
+flang/lib/Optimizer/Transforms/PassDetail.h
 flang/lib/Parser/basic-parsers.h
 flang/lib/Parser/char-block.cpp
 flang/lib/Parser/char-buffer.cpp
@@ -2171,9 +2181,9 @@ flang/unittests/Evaluate/testing.h
 flang/unittests/Evaluate/uint128.cpp
 flang/unittests/Frontend/CompilerInstanceTest.cpp
 flang/unittests/Frontend/FrontendActionTest.cpp
-flang/unittests/Lower/RTBuilder.cpp
 flang/unittests/Optimizer/InternalNamesTest.cpp
 flang/unittests/Optimizer/KindMappingTest.cpp
+flang/unittests/Optimizer/RTBuilder.cpp
 flang/unittests/Runtime/BufferTest.cpp
 flang/unittests/Runtime/CharacterTest.cpp
 flang/unittests/Runtime/CommandTest.cpp
@@ -2638,6 +2648,7 @@ libc/src/unistd/linux/write.cpp
 libc/src/__support/common.h
 libc/src/__support/ctype_utils.h
 libc/src/__support/endian.h
+libc/src/__support/high_precision_decimal.h
 libc/src/__support/integer_operations.h
 libc/src/__support/sanitizer.h
 libc/src/__support/str_conv_utils.h
@@ -2921,7 +2932,6 @@ libcxx/include/__support/solaris/floatingpoint.h
 libcxx/include/__support/solaris/wchar.h
 libcxx/src/format.cpp
 libcxx/src/utility.cpp
-libcxx/src/vector.cpp
 libcxx/utils/google-benchmark/cmake/thread_safety_attributes.cpp
 libcxx/utils/google-benchmark/src/arraysize.h
 libcxx/utils/google-benchmark/src/benchmark_api_internal.h
@@ -3287,6 +3297,7 @@ lldb/include/lldb/Symbol/UnwindTable.h
 lldb/include/lldb/Symbol/Variable.h
 lldb/include/lldb/Target/AppleArm64ExceptionClass.h
 lldb/include/lldb/Target/AssertFrameRecognizer.h
+lldb/include/lldb/Target/DynamicRegisterInfo.h
 lldb/include/lldb/Target/ExecutionContextScope.h
 lldb/include/lldb/Target/InstrumentationRuntime.h
 lldb/include/lldb/Target/InstrumentationRuntimeStopInfo.h
@@ -3486,6 +3497,7 @@ lldb/source/Host/common/FileSystem.cpp
 lldb/source/Host/common/HostNativeThreadBase.cpp
 lldb/source/Host/common/HostProcess.cpp
 lldb/source/Host/common/HostThread.cpp
+lldb/source/Host/common/LockFileBase.cpp
 lldb/source/Host/common/LZMA.cpp
 lldb/source/Host/common/MonitoringProcessLauncher.cpp
 lldb/source/Host/common/NativeRegisterContext.cpp
@@ -3522,7 +3534,9 @@ lldb/source/Host/posix/HostThreadPosix.cpp
 lldb/source/Host/posix/LockFilePosix.cpp
 lldb/source/Host/posix/PipePosix.cpp
 lldb/source/Host/windows/FileSystem.cpp
+lldb/source/Host/windows/Host.cpp
 lldb/source/Host/windows/HostInfoWindows.cpp
+lldb/source/Host/windows/HostThreadWindows.cpp
 lldb/source/Host/windows/LockFileWindows.cpp
 lldb/source/Host/windows/ProcessLauncherWindows.cpp
 lldb/source/Host/windows/ProcessRunLock.cpp
@@ -3546,6 +3560,7 @@ lldb/source/Interpreter/OptionValueFileColonLine.cpp
 lldb/source/Interpreter/OptionValueFileSpecList.cpp
 lldb/source/Interpreter/OptionValueFormat.cpp
 lldb/source/Interpreter/OptionValueFormatEntity.cpp
+lldb/source/Interpreter/OptionValuePathMappings.cpp
 lldb/source/Interpreter/OptionValueRegex.cpp
 lldb/source/Interpreter/OptionValueSInt64.cpp
 lldb/source/Interpreter/OptionValueString.cpp
@@ -3564,6 +3579,8 @@ lldb/source/Plugins/ABI/PowerPC/ABISysV_ppc64.cpp
 lldb/source/Plugins/ABI/X86/ABIX86.cpp
 lldb/source/Plugins/ABI/X86/ABIX86.h
 lldb/source/Plugins/ABI/X86/ABIX86_64.h
+lldb/source/Plugins/ABI/X86/ABIX86_i386.cpp
+lldb/source/Plugins/ABI/X86/ABIX86_i386.h
 lldb/source/Plugins/Architecture/AArch64/ArchitectureAArch64.cpp
 lldb/source/Plugins/Architecture/AArch64/ArchitectureAArch64.h
 lldb/source/Plugins/Architecture/Arm/ArchitectureArm.h
@@ -3799,11 +3816,12 @@ lldb/source/Plugins/Process/POSIX/ProcessMessage.cpp
 lldb/source/Plugins/Process/POSIX/ProcessMessage.h
 lldb/source/Plugins/Process/scripted/ScriptedProcess.cpp
 lldb/source/Plugins/Process/scripted/ScriptedProcess.h
+lldb/source/Plugins/Process/scripted/ScriptedThread.cpp
+lldb/source/Plugins/Process/scripted/ScriptedThread.h
 lldb/source/Plugins/Process/Utility/ARMDefines.h
 lldb/source/Plugins/Process/Utility/ARMUtils.h
 lldb/source/Plugins/Process/Utility/AuxVector.cpp
 lldb/source/Plugins/Process/Utility/AuxVector.h
-lldb/source/Plugins/Process/Utility/DynamicRegisterInfo.h
 lldb/source/Plugins/Process/Utility/FreeBSDSignals.cpp
 lldb/source/Plugins/Process/Utility/FreeBSDSignals.h
 lldb/source/Plugins/Process/Utility/GDBRemoteSignals.cpp
@@ -3893,7 +3911,6 @@ lldb/source/Plugins/Process/Utility/RegisterContext_x86.cpp
 lldb/source/Plugins/Process/Utility/RegisterInfoAndSetInterface.h
 lldb/source/Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h
 lldb/source/Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h
-lldb/source/Plugins/Process/Utility/RegisterInfos_arm.h
 lldb/source/Plugins/Process/Utility/StopInfoMachException.cpp
 lldb/source/Plugins/Process/Utility/StopInfoMachException.h
 lldb/source/Plugins/Process/Utility/ThreadMemory.cpp
@@ -3935,6 +3952,8 @@ lldb/source/Plugins/ScriptInterpreter/Python/ScriptedProcessPythonInterface.cpp
 lldb/source/Plugins/ScriptInterpreter/Python/ScriptedProcessPythonInterface.h
 lldb/source/Plugins/ScriptInterpreter/Python/ScriptedPythonInterface.cpp
 lldb/source/Plugins/ScriptInterpreter/Python/ScriptedPythonInterface.h
+lldb/source/Plugins/ScriptInterpreter/Python/ScriptedThreadPythonInterface.cpp
+lldb/source/Plugins/ScriptInterpreter/Python/ScriptedThreadPythonInterface.h
 lldb/source/Plugins/ScriptInterpreter/Python/SWIGPythonBridge.cpp
 lldb/source/Plugins/ScriptInterpreter/Python/SWIGPythonBridge.h
 lldb/source/Plugins/SymbolFile/DWARF/AppleDWARFIndex.cpp
@@ -4438,6 +4457,7 @@ llvm/include/llvm/Analysis/StackSafetyAnalysis.h
 llvm/include/llvm/Analysis/SyncDependenceAnalysis.h
 llvm/include/llvm/Analysis/SyntheticCountsUtils.h
 llvm/include/llvm/Analysis/TypeBasedAliasAnalysis.h
+llvm/include/llvm/Analysis/TypeMetadataUtils.h
 llvm/include/llvm/Analysis/ValueLatticeUtils.h
 llvm/include/llvm/Analysis/Utils/TFUtils.h
 llvm/include/llvm/AsmParser/LLToken.h
@@ -4457,6 +4477,7 @@ llvm/include/llvm/Bitcode/BitcodeConvenience.h
 llvm/include/llvm/CodeGen/AsmPrinter.h
 llvm/include/llvm/CodeGen/AsmPrinterHandler.h
 llvm/include/llvm/CodeGen/BasicBlockSectionUtils.h
+llvm/include/llvm/CodeGen/CodeGenCommonISel.h
 llvm/include/llvm/CodeGen/CodeGenPassBuilder.h
 llvm/include/llvm/CodeGen/CommandFlags.h
 llvm/include/llvm/CodeGen/CSEConfigBase.h
@@ -5180,6 +5201,7 @@ llvm/lib/CodeGen/GlobalISel/CSEInfo.cpp
 llvm/lib/CodeGen/GlobalISel/CSEMIRBuilder.cpp
 llvm/lib/CodeGen/GlobalISel/GlobalISel.cpp
 llvm/lib/CodeGen/GlobalISel/InlineAsmLowering.cpp
+llvm/lib/CodeGen/GlobalISel/InstructionSelect.cpp
 llvm/lib/CodeGen/GlobalISel/InstructionSelector.cpp
 llvm/lib/CodeGen/GlobalISel/LegalizeMutations.cpp
 llvm/lib/CodeGen/GlobalISel/Localizer.cpp
@@ -5625,7 +5647,6 @@ llvm/lib/Target/ARC/ARCMachineFunctionInfo.cpp
 llvm/lib/Target/ARC/ARCMachineFunctionInfo.h
 llvm/lib/Target/ARC/ARCMCInstLower.cpp
 llvm/lib/Target/ARC/ARCMCInstLower.h
-llvm/lib/Target/ARC/ARCOptAddrMode.cpp
 llvm/lib/Target/ARC/ARCRegisterInfo.cpp
 llvm/lib/Target/ARC/ARCRegisterInfo.h
 llvm/lib/Target/ARC/ARCSubtarget.cpp
@@ -5742,6 +5763,7 @@ llvm/lib/Target/Hexagon/MCTargetDesc/HexagonMCShuffler.h
 llvm/lib/Target/Hexagon/TargetInfo/HexagonTargetInfo.h
 llvm/lib/Target/Lanai/Lanai.h
 llvm/lib/Target/Lanai/LanaiAluCode.h
+llvm/lib/Target/Lanai/LanaiAsmPrinter.cpp
 llvm/lib/Target/Lanai/LanaiCondCode.h
 llvm/lib/Target/Lanai/LanaiDelaySlotFiller.cpp
 llvm/lib/Target/Lanai/LanaiFrameLowering.cpp
@@ -5859,6 +5881,7 @@ llvm/lib/Target/NVPTX/NVPTXTargetObjectFile.h
 llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXBaseInfo.h
 llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXMCAsmInfo.cpp
 llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXMCAsmInfo.h
+llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXMCTargetDesc.cpp
 llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXMCTargetDesc.h
 llvm/lib/Target/NVPTX/MCTargetDesc/NVPTXTargetStreamer.h
 llvm/lib/Target/NVPTX/TargetInfo/NVPTXTargetInfo.cpp
@@ -6158,6 +6181,7 @@ llvm/tools/dsymutil/DebugMap.cpp
 llvm/tools/dsymutil/DebugMap.h
 llvm/tools/dsymutil/dsymutil.cpp
 llvm/tools/dsymutil/dsymutil.h
+llvm/tools/dsymutil/DwarfLinkerForBinary.cpp
 llvm/tools/dsymutil/LinkUtils.h
 llvm/tools/dsymutil/MachODebugMapParser.cpp
 llvm/tools/dsymutil/MachOUtils.h
@@ -6169,6 +6193,7 @@ llvm/tools/lli/ExecutionUtils.cpp
 llvm/tools/lli/ExecutionUtils.h
 llvm/tools/lli/ForwardingMemoryManager.h
 llvm/tools/lli/ChildTarget/ChildTarget.cpp
+llvm/tools/llvm-as-fuzzer/llvm-as-fuzzer.cpp
 llvm/tools/llvm-bcanalyzer/llvm-bcanalyzer.cpp
 llvm/tools/llvm-cfi-verify/lib/GraphBuilder.h
 llvm/tools/llvm-cov/CoverageExporter.h
@@ -6490,6 +6515,7 @@ llvm/unittests/DebugInfo/DWARF/DWARFDataExtractorTest.cpp
 llvm/unittests/DebugInfo/DWARF/DWARFDebugArangeSetTest.cpp
 llvm/unittests/DebugInfo/DWARF/DWARFDieManualExtractTest.cpp
 llvm/unittests/DebugInfo/DWARF/DWARFDieTest.cpp
+llvm/unittests/DebugInfo/DWARF/DWARFExpressionCompactPrinterTest.cpp
 llvm/unittests/DebugInfo/DWARF/DWARFExpressionCopyBytesTest.cpp
 llvm/unittests/DebugInfo/DWARF/DwarfGenerator.h
 llvm/unittests/DebugInfo/DWARF/DWARFListTableTest.cpp
@@ -6838,6 +6864,7 @@ mlir/include/mlir/Dialect/Affine/IR/AffineOps.h
 mlir/include/mlir/Dialect/Affine/IR/AffineValueMap.h
 mlir/include/mlir/Dialect/AMX/AMXDialect.h
 mlir/include/mlir/Dialect/AMX/Transforms.h
+mlir/include/mlir/Dialect/Arithmetic/IR/Arithmetic.h
 mlir/include/mlir/Dialect/ArmNeon/ArmNeonDialect.h
 mlir/include/mlir/Dialect/ArmSVE/ArmSVEDialect.h
 mlir/include/mlir/Dialect/ArmSVE/Transforms.h
@@ -7228,6 +7255,7 @@ mlir/lib/Dialect/Affine/Transforms/SuperVectorize.cpp
 mlir/lib/Dialect/Affine/Utils/Utils.cpp
 mlir/lib/Dialect/AMX/IR/AMXDialect.cpp
 mlir/lib/Dialect/AMX/Transforms/LegalizeForLLVMExport.cpp
+mlir/lib/Dialect/Arithmetic/IR/ArithmeticDialect.cpp
 mlir/lib/Dialect/ArmNeon/IR/ArmNeonDialect.cpp
 mlir/lib/Dialect/ArmSVE/IR/ArmSVEDialect.cpp
 mlir/lib/Dialect/ArmSVE/Transforms/LegalizeForLLVMExport.cpp
@@ -7271,6 +7299,7 @@ mlir/lib/Dialect/Linalg/Transforms/HoistPadding.cpp
 mlir/lib/Dialect/Linalg/Transforms/InlineScalarOperands.cpp
 mlir/lib/Dialect/Linalg/Transforms/Interchange.cpp
 mlir/lib/Dialect/Linalg/Transforms/LinalgStrategyPasses.cpp
+mlir/lib/Dialect/Linalg/Transforms/Loops.cpp
 mlir/lib/Dialect/Linalg/Transforms/PassDetail.h
 mlir/lib/Dialect/Linalg/Transforms/Promotion.cpp
 mlir/lib/Dialect/Linalg/Transforms/Tiling.cpp
@@ -7367,7 +7396,6 @@ mlir/lib/Dialect/Utils/StaticValueUtils.cpp
 mlir/lib/Dialect/Utils/StructuredOpsUtils.cpp
 mlir/lib/Dialect/Vector/VectorOps.cpp
 mlir/lib/Dialect/Vector/VectorTransferOpTransforms.cpp
-mlir/lib/Dialect/Vector/VectorTransforms.cpp
 mlir/lib/Dialect/Vector/VectorUtils.cpp
 mlir/lib/Dialect/X86Vector/IR/X86VectorDialect.cpp
 mlir/lib/Dialect/X86Vector/Transforms/LegalizeForLLVMExport.cpp
@@ -7593,7 +7621,6 @@ mlir/unittests/Interfaces/InferTypeOpInterfaceTest.cpp
 mlir/unittests/IR/AttributeTest.cpp
 mlir/unittests/IR/DialectTest.cpp
 mlir/unittests/IR/InterfaceAttachmentTest.cpp
-mlir/unittests/IR/MemRefTypeTest.cpp
 mlir/unittests/IR/OperationSupportTest.cpp
 mlir/unittests/IR/ShapedTypeTest.cpp
 mlir/unittests/IR/SubElementInterfaceTest.cpp
@@ -7606,7 +7633,6 @@ mlir/unittests/Support/MathExtrasTest.cpp
 mlir/unittests/Support/StorageUniquerTest.cpp
 mlir/unittests/TableGen/EnumsGenTest.cpp
 mlir/unittests/TableGen/FormatTest.cpp
-mlir/unittests/TableGen/OpBuildGen.cpp
 mlir/unittests/TableGen/PassGenTest.cpp
 openmp/libompd/src/Debug.h
 openmp/libompd/src/omp-debug.cpp
@@ -7626,7 +7652,6 @@ openmp/libomptarget/DeviceRTL/include/Utils.h
 openmp/libomptarget/DeviceRTL/src/Configuration.cpp
 openmp/libomptarget/DeviceRTL/src/Debug.cpp
 openmp/libomptarget/DeviceRTL/src/Kernel.cpp
-openmp/libomptarget/DeviceRTL/src/Mapping.cpp
 openmp/libomptarget/DeviceRTL/src/Misc.cpp
 openmp/libomptarget/DeviceRTL/src/Parallelism.cpp
 openmp/libomptarget/DeviceRTL/src/Reduction.cpp
@@ -7641,7 +7666,6 @@ openmp/libomptarget/deviceRTLs/amdgcn/src/amdgcn_interface.h
 openmp/libomptarget/deviceRTLs/amdgcn/src/target_impl.h
 openmp/libomptarget/deviceRTLs/common/allocator.h
 openmp/libomptarget/deviceRTLs/common/debug.h
-openmp/libomptarget/deviceRTLs/common/device_environment.h
 openmp/libomptarget/deviceRTLs/common/omptarget.h
 openmp/libomptarget/deviceRTLs/common/omptargeti.h
 openmp/libomptarget/deviceRTLs/common/state-queue.h
@@ -7652,6 +7676,7 @@ openmp/libomptarget/deviceRTLs/common/src/shuffle.cpp
 openmp/libomptarget/deviceRTLs/nvptx/src/nvptx_interface.h
 openmp/libomptarget/deviceRTLs/nvptx/src/target_impl.h
 openmp/libomptarget/include/Debug.h
+openmp/libomptarget/include/DeviceEnvironment.h
 openmp/libomptarget/include/dlwrap.h
 openmp/libomptarget/include/omptarget.h
 openmp/libomptarget/include/omptargetplugin.h

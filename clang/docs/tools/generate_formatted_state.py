@@ -38,10 +38,10 @@ RST_PREFIX = """\
 .. raw:: html
 
       <style type="text/css">
-        .none {{ background-color: #FFCC99 }}
-        .part {{ background-color: #FFFF99 }}
-        .good {{ background-color: #2CCCFF }}
         .total {{ font-weight: bold; }}
+        .none {{ background-color: #FFFF99; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
+        .part {{ background-color: #FFCC99; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
+        .good {{ background-color: #2CCCFF; height: 20px; display: inline-block; width: 120px; text-align: center; border-radius: 5px; color: #000000; font-family="Verdana,Geneva,DejaVu Sans,sans-serif" }}
       </style>
 
 .. role:: none
