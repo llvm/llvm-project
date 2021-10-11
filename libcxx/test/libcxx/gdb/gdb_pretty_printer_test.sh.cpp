@@ -659,7 +659,7 @@ int main(int, char**) {
   string_test();
   a_namespace::string_view_test();
 
-  u16string_test();
+  //u16string_test();
   u32string_test();
   tuple_test();
   unique_ptr_test();
