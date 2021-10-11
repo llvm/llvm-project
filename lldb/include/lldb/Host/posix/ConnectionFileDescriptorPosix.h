@@ -55,7 +55,7 @@ public:
 
   bool InterruptRead() override;
 
-  lldb::IOObjectSP GetReadObject() override { return m_read_sp; }
+  lldb::IOObjectSP GetReadObject() override { return m_io_sp; }
 
   uint16_t GetListeningPort(const Timeout<std::micro> &timeout);
 
@@ -88,8 +88,7 @@ protected:
 
   lldb::ConnectionStatus ConnectFile(llvm::StringRef args, Status *error_ptr);
 
-  lldb::IOObjectSP m_read_sp;
-  lldb::IOObjectSP m_write_sp;
+  lldb::IOObjectSP m_io_sp;
 
   Predicate<uint16_t>
       m_port_predicate; // Used when binding to port zero to wait for the thread
