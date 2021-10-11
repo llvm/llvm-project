@@ -248,6 +248,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
+/// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
+/// so, mark a method "no debug" because debug info makes the debugger
+/// experience worse.  GCC introduced this in GCC 4.0
+#if __has_attribute(nodebug) || LLVM_GNUC_PREREQ(4, 0, 0)
+#define LLVM_ATTRIBUTE_NODEBUG __attribute__((nodebug))
+#else
+#define LLVM_ATTRIBUTE_NODEBUG
+#endif
+
 #if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
 #elif defined(_MSC_VER)
