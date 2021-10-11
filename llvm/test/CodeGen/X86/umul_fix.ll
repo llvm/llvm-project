@@ -60,10 +60,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    adcl %edi, %edx
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    shldl $30, %eax, %ecx
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    shldl $30, %eax, %edx
 ; X86-NEXT:    shldl $30, %esi, %eax
-; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -373,11 +372,11 @@ define i64 @func9(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ebp, %eax
-; X86-NEXT:    adcl %ecx, %edx
+; X86-NEXT:    adcl %edx, %ecx
 ; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    addl %edx, %ebx
+; X86-NEXT:    addl %ebx, %ecx
 ; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

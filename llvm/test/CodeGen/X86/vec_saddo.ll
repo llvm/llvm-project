@@ -817,11 +817,11 @@ define <4 x i32> @saddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE2-NEXT:    pslld $8, %xmm2
 ; SSE2-NEXT:    psrad $8, %xmm2
 ; SSE2-NEXT:    paddd %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
-; SSE2-NEXT:    pslld $8, %xmm0
-; SSE2-NEXT:    psrad $8, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pslld $8, %xmm1
+; SSE2-NEXT:    psrad $8, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
@@ -852,11 +852,11 @@ define <4 x i32> @saddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSSE3-NEXT:    pslld $8, %xmm2
 ; SSSE3-NEXT:    psrad $8, %xmm2
 ; SSSE3-NEXT:    paddd %xmm1, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
-; SSSE3-NEXT:    pslld $8, %xmm0
-; SSSE3-NEXT:    psrad $8, %xmm0
-; SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    pslld $8, %xmm1
+; SSSE3-NEXT:    psrad $8, %xmm1
+; SSSE3-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSSE3-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSSE3-NEXT:    movd %xmm2, %eax
 ; SSSE3-NEXT:    movw %ax, (%rdi)
@@ -881,25 +881,24 @@ define <4 x i32> @saddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ;
 ; SSE41-LABEL: saddo_v4i24:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    pslld $8, %xmm1
 ; SSE41-NEXT:    psrad $8, %xmm1
-; SSE41-NEXT:    pslld $8, %xmm2
-; SSE41-NEXT:    psrad $8, %xmm2
-; SSE41-NEXT:    paddd %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    pslld $8, %xmm0
 ; SSE41-NEXT:    psrad $8, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE41-NEXT:    paddd %xmm1, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pslld $8, %xmm2
+; SSE41-NEXT:    psrad $8, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pextrd $3, %xmm2, %eax
+; SSE41-NEXT:    pxor %xmm2, %xmm1
+; SSE41-NEXT:    pextrd $3, %xmm0, %eax
 ; SSE41-NEXT:    movw %ax, 9(%rdi)
-; SSE41-NEXT:    pextrd $2, %xmm2, %ecx
+; SSE41-NEXT:    pextrd $2, %xmm0, %ecx
 ; SSE41-NEXT:    movw %cx, 6(%rdi)
-; SSE41-NEXT:    pextrd $1, %xmm2, %edx
+; SSE41-NEXT:    pextrd $1, %xmm0, %edx
 ; SSE41-NEXT:    movw %dx, 3(%rdi)
-; SSE41-NEXT:    movd %xmm2, %esi
+; SSE41-NEXT:    movd %xmm0, %esi
 ; SSE41-NEXT:    movw %si, (%rdi)
 ; SSE41-NEXT:    shrl $16, %eax
 ; SSE41-NEXT:    movb %al, 11(%rdi)
@@ -909,6 +908,7 @@ define <4 x i32> @saddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE41-NEXT:    movb %dl, 5(%rdi)
 ; SSE41-NEXT:    shrl $16, %esi
 ; SSE41-NEXT:    movb %sil, 2(%rdi)
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: saddo_v4i24:
@@ -989,11 +989,10 @@ define <4 x i32> @saddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; SSE-NEXT:    pslld $31, %xmm1
 ; SSE-NEXT:    movmskps %xmm1, %eax
 ; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pxor %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    movb %al, (%rdi)
-; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: saddo_v4i1:

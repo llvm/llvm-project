@@ -19,7 +19,6 @@
 define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    rolb $4, %dil
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andb $51, %al
@@ -32,13 +31,11 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-NEXT:    addb %al, %al
 ; SSE-NEXT:    shrb %dil
 ; SSE-NEXT:    andb $85, %dil
-; SSE-NEXT:    addl %edi, %eax
-; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    orb %dil, %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_bitreverse_i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    rolb $4, %dil
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andb $51, %al
@@ -51,8 +48,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; AVX-NEXT:    addb %al, %al
 ; AVX-NEXT:    shrb %dil
 ; AVX-NEXT:    andb $85, %dil
-; AVX-NEXT:    addl %edi, %eax
-; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    orb %dil, %al
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i8:
@@ -65,7 +61,6 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; GFNISSE-NEXT:    rolb $4, %dil
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andb $51, %al
@@ -78,13 +73,11 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNISSE-NEXT:    addb %al, %al
 ; GFNISSE-NEXT:    shrb %dil
 ; GFNISSE-NEXT:    andb $85, %dil
-; GFNISSE-NEXT:    addl %edi, %eax
-; GFNISSE-NEXT:    # kill: def $al killed $al killed $eax
+; GFNISSE-NEXT:    orb %dil, %al
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i8:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; GFNIAVX-NEXT:    rolb $4, %dil
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andb $51, %al
@@ -97,13 +90,11 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX-NEXT:    addb %al, %al
 ; GFNIAVX-NEXT:    shrb %dil
 ; GFNIAVX-NEXT:    andb $85, %dil
-; GFNIAVX-NEXT:    addl %edi, %eax
-; GFNIAVX-NEXT:    # kill: def $al killed $al killed $eax
+; GFNIAVX-NEXT:    orb %dil, %al
 ; GFNIAVX-NEXT:    retq
 ;
 ; GFNIAVX2-LABEL: test_bitreverse_i8:
 ; GFNIAVX2:       # %bb.0:
-; GFNIAVX2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; GFNIAVX2-NEXT:    rolb $4, %dil
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andb $51, %al
@@ -116,13 +107,11 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX2-NEXT:    addb %al, %al
 ; GFNIAVX2-NEXT:    shrb %dil
 ; GFNIAVX2-NEXT:    andb $85, %dil
-; GFNIAVX2-NEXT:    addl %edi, %eax
-; GFNIAVX2-NEXT:    # kill: def $al killed $al killed $eax
+; GFNIAVX2-NEXT:    orb %dil, %al
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512F-LABEL: test_bitreverse_i8:
 ; GFNIAVX512F:       # %bb.0:
-; GFNIAVX512F-NEXT:    # kill: def $edi killed $edi def $rdi
 ; GFNIAVX512F-NEXT:    rolb $4, %dil
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andb $51, %al
@@ -135,13 +124,11 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512F-NEXT:    addb %al, %al
 ; GFNIAVX512F-NEXT:    shrb %dil
 ; GFNIAVX512F-NEXT:    andb $85, %dil
-; GFNIAVX512F-NEXT:    addl %edi, %eax
-; GFNIAVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; GFNIAVX512F-NEXT:    orb %dil, %al
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; GFNIAVX512BW-NEXT:    rolb $4, %dil
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andb $51, %al
@@ -154,8 +141,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512BW-NEXT:    addb %al, %al
 ; GFNIAVX512BW-NEXT:    shrb %dil
 ; GFNIAVX512BW-NEXT:    andb $85, %dil
-; GFNIAVX512BW-NEXT:    addl %edi, %eax
-; GFNIAVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; GFNIAVX512BW-NEXT:    orb %dil, %al
 ; GFNIAVX512BW-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b

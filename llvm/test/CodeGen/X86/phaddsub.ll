@@ -565,8 +565,7 @@ define <8 x i16> @phaddw_single_source4(<8 x i16> %x) {
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    pslld $16, %xmm1
-; SSSE3-SLOW-NEXT:    paddw %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: phaddw_single_source4:

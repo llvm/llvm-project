@@ -37,8 +37,7 @@ define <4 x i32> @combine_vec_smul_two(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-NEXT:    paddd %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE-NEXT:    pxor %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    pxor %xmm3, %xmm0
 ; SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq

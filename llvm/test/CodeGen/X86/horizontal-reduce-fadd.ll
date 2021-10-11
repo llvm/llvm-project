@@ -25,8 +25,7 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addss %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: PR37890_v4f32:
@@ -71,8 +70,7 @@ define double @PR37890_v4f64(<4 x double> %a)  {
 ; SSE2-NEXT:    addpd %xmm1, %xmm0
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    addsd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    addsd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-SLOW-LABEL: PR37890_v4f64:
@@ -80,8 +78,7 @@ define double @PR37890_v4f64(<4 x double> %a)  {
 ; SSSE3-SLOW-NEXT:    addpd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movapd %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSSE3-SLOW-NEXT:    addsd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    addsd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: PR37890_v4f64:
@@ -143,8 +140,7 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addss %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: PR37890_v8f32:

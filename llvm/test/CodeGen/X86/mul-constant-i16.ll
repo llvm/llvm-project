@@ -318,7 +318,6 @@ define i16 @test_mul_by_17(i16 %x) {
 ;
 ; X64-LABEL: test_mul_by_17:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $4, %eax
 ; X64-NEXT:    addl %edi, %eax

@@ -1091,11 +1091,11 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; SSE2-NEXT:    psraw $2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
-; SSE2-NEXT:    movaps %xmm2, %xmm0
-; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [65535,0,65535,0,65535,0,65535,0]
+; SSE2-NEXT:    movaps %xmm2, %xmm1
+; SSE2-NEXT:    andps %xmm0, %xmm1
 ; SSE2-NEXT:    psraw $1, %xmm2
-; SSE2-NEXT:    andnps %xmm2, %xmm1
+; SSE2-NEXT:    andnps %xmm2, %xmm0
 ; SSE2-NEXT:    orps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1162,11 +1162,11 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; X86-SSE-NEXT:    psraw $2, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
 ; X86-SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
-; X86-SSE-NEXT:    movaps %xmm2, %xmm0
-; X86-SSE-NEXT:    andps %xmm1, %xmm0
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,0,65535,0,65535,0,65535,0]
+; X86-SSE-NEXT:    movaps %xmm2, %xmm1
+; X86-SSE-NEXT:    andps %xmm0, %xmm1
 ; X86-SSE-NEXT:    psraw $1, %xmm2
-; X86-SSE-NEXT:    andnps %xmm2, %xmm1
+; X86-SSE-NEXT:    andnps %xmm2, %xmm0
 ; X86-SSE-NEXT:    orps %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = ashr <8 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>

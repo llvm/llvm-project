@@ -13,24 +13,23 @@ define i64 @foo(i64 %x, i64 %y) nounwind {
 ; X86-NOBMI-NEXT:    pushl %ebx
 ; X86-NOBMI-NEXT:    pushl %edi
 ; X86-NOBMI-NEXT:    pushl %esi
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOBMI-NEXT:    movl %esi, %eax
-; X86-NOBMI-NEXT:    mull %ebx
-; X86-NOBMI-NEXT:    movl %edx, %edi
-; X86-NOBMI-NEXT:    movl %ebp, %eax
-; X86-NOBMI-NEXT:    mull %ebx
+; X86-NOBMI-NEXT:    movl %edi, %eax
+; X86-NOBMI-NEXT:    mull %esi
 ; X86-NOBMI-NEXT:    movl %edx, %ebx
-; X86-NOBMI-NEXT:    movl %eax, %ebp
-; X86-NOBMI-NEXT:    addl %edi, %ebp
-; X86-NOBMI-NEXT:    adcl $0, %ebx
-; X86-NOBMI-NEXT:    movl %esi, %eax
-; X86-NOBMI-NEXT:    mull %ecx
+; X86-NOBMI-NEXT:    movl %ebp, %eax
+; X86-NOBMI-NEXT:    mull %esi
 ; X86-NOBMI-NEXT:    movl %edx, %esi
+; X86-NOBMI-NEXT:    movl %eax, %ebp
+; X86-NOBMI-NEXT:    addl %ebx, %ebp
+; X86-NOBMI-NEXT:    adcl $0, %esi
+; X86-NOBMI-NEXT:    movl %edi, %eax
+; X86-NOBMI-NEXT:    mull %ecx
 ; X86-NOBMI-NEXT:    addl %ebp, %eax
-; X86-NOBMI-NEXT:    adcl %ebx, %esi
+; X86-NOBMI-NEXT:    adcl %edx, %esi
 ; X86-NOBMI-NEXT:    setb %al
 ; X86-NOBMI-NEXT:    movzbl %al, %edi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax

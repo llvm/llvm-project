@@ -402,9 +402,9 @@ define <16 x i1> @uge_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    psrlw $1, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pmaxub %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pmaxub %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: uge_v16i8:
@@ -430,9 +430,9 @@ define <16 x i1> @ule_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    psrlw $1, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pminub %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pminub %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ule_v16i8:

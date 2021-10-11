@@ -151,10 +151,9 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; CHECK-LABEL: mand16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andl %esi, %ecx
-; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;

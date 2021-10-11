@@ -283,17 +283,17 @@ define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
 define <4 x float> @sqrt_v4f32_check_denorms_ninf(<4 x float> %x) #3 {
 ; SSE-LABEL: sqrt_v4f32_check_denorms_ninf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtps %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    rsqrtps %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; SSE-NEXT:    mulps %xmm1, %xmm3
-; SSE-NEXT:    mulps %xmm2, %xmm1
-; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    mulps %xmm2, %xmm3
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    mulps %xmm3, %xmm1
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; SSE-NEXT:    cmpleps %xmm0, %xmm2
+; SSE-NEXT:    mulps %xmm3, %xmm2
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -632,9 +632,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; SSE-NEXT:    mulss %xmm2, %xmm1
 ; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    mulss %xmm0, %xmm2
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    mulss %xmm2, %xmm0
+; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: div_sqrt_fabs_f32:
@@ -813,9 +812,8 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; SSE-NEXT:    mulss %xmm1, %xmm2
 ; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    mulss %xmm0, %xmm1
-; SSE-NEXT:    mulss %xmm2, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    mulss %xmm1, %xmm0
+; SSE-NEXT:    mulss %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: div_sqrt_f32:

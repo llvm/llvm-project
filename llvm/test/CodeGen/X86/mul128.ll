@@ -10,8 +10,8 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X64-NEXT:    imulq %rdi, %rcx
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    addq %rcx, %rdx
-; X64-NEXT:    imulq %r8, %rsi
-; X64-NEXT:    addq %rsi, %rdx
+; X64-NEXT:    imulq %rsi, %r8
+; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: foo:

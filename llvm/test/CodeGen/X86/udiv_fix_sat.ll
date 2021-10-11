@@ -172,20 +172,20 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq %rsi, %rdx
-; X64-NEXT:    leaq (%rdi,%rdi), %rsi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $63, %rax
-; X64-NEXT:    shrdq $33, %rax, %rsi
+; X64-NEXT:    leaq (%rdi,%rdi), %rax
+; X64-NEXT:    movq %rdi, %rsi
+; X64-NEXT:    shrq $63, %rsi
+; X64-NEXT:    shldq $31, %rax, %rsi
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    cmpq $2, %rdx
 ; X64-NEXT:    movq $-1, %rcx
-; X64-NEXT:    cmovbq %rax, %rcx
+; X64-NEXT:    cmovaeq %rcx, %rax
 ; X64-NEXT:    cmpq $1, %rdx
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovbq %rdx, %rax
-; X64-NEXT:    shldq $63, %rcx, %rax
+; X64-NEXT:    movl $1, %ecx
+; X64-NEXT:    cmovbq %rdx, %rcx
+; X64-NEXT:    shrdq $1, %rcx, %rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;

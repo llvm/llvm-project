@@ -1548,10 +1548,9 @@ entry:
 define i64 @PR51612(i64 %x, i64 %y) {
 ; CHECK-LABEL: PR51612:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    incl %esi
-; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    incq %rdi
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    andl 10, %eax
 ; CHECK-NEXT:    retq
 ;

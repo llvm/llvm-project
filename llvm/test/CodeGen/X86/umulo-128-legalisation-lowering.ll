@@ -17,13 +17,12 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X64-NEXT:    seto %r10b
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdi
-; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    seto %r11b
 ; X64-NEXT:    orb %r10b, %r11b
-; X64-NEXT:    addq %rsi, %rcx
+; X64-NEXT:    addq %rax, %rsi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %r8
-; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    addq %rsi, %rdx
 ; X64-NEXT:    setb %cl
 ; X64-NEXT:    orb %r11b, %cl
 ; X64-NEXT:    orb %r9b, %cl

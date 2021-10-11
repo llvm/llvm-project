@@ -217,7 +217,6 @@ define i32 @mul40_32_minsize(i32 %A) minsize {
 define i32 @mul33_32(i32 %A) {
 ; X64-LABEL: mul33_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    addl %edi, %eax
@@ -346,7 +345,6 @@ entry:
 define i32 @test2(i32 %a) {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    addl %edi, %eax
@@ -367,7 +365,6 @@ entry:
 define i32 @test3(i32 %a) {
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    addl %edi, %eax

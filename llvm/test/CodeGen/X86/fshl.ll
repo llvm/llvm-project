@@ -831,27 +831,26 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X64-FAST-LABEL: var_shift_i128:
 ; X64-FAST:       # %bb.0:
 ; X64-FAST-NEXT:    movq %r8, %r9
-; X64-FAST-NEXT:    movq %rcx, %r10
-; X64-FAST-NEXT:    movq %rdx, %r8
-; X64-FAST-NEXT:    movq %rsi, %rdx
+; X64-FAST-NEXT:    movq %rcx, %r8
 ; X64-FAST-NEXT:    movl %r9d, %ecx
-; X64-FAST-NEXT:    shldq %cl, %rdi, %rdx
-; X64-FAST-NEXT:    shrdq $1, %r10, %r8
-; X64-FAST-NEXT:    shrq %r10
+; X64-FAST-NEXT:    shldq %cl, %rdi, %rsi
+; X64-FAST-NEXT:    shrdq $1, %r8, %rdx
+; X64-FAST-NEXT:    shrq %r8
 ; X64-FAST-NEXT:    notb %cl
-; X64-FAST-NEXT:    shrdq %cl, %r10, %r8
-; X64-FAST-NEXT:    shrq %cl, %r10
+; X64-FAST-NEXT:    shrdq %cl, %r8, %rdx
+; X64-FAST-NEXT:    shrq %cl, %r8
 ; X64-FAST-NEXT:    xorl %eax, %eax
 ; X64-FAST-NEXT:    testb $64, %cl
-; X64-FAST-NEXT:    cmovneq %r10, %r8
-; X64-FAST-NEXT:    cmovneq %rax, %r10
+; X64-FAST-NEXT:    cmovneq %r8, %rdx
+; X64-FAST-NEXT:    cmovneq %rax, %r8
 ; X64-FAST-NEXT:    movl %r9d, %ecx
 ; X64-FAST-NEXT:    shlq %cl, %rdi
 ; X64-FAST-NEXT:    testb $64, %r9b
-; X64-FAST-NEXT:    cmovneq %rdi, %rdx
+; X64-FAST-NEXT:    cmovneq %rdi, %rsi
 ; X64-FAST-NEXT:    cmoveq %rdi, %rax
-; X64-FAST-NEXT:    orq %r8, %rax
-; X64-FAST-NEXT:    orq %r10, %rdx
+; X64-FAST-NEXT:    orq %rdx, %rax
+; X64-FAST-NEXT:    orq %rsi, %r8
+; X64-FAST-NEXT:    movq %r8, %rdx
 ; X64-FAST-NEXT:    retq
 ;
 ; X64-SLOW-LABEL: var_shift_i128:

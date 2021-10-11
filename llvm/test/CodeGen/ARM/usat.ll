@@ -566,12 +566,12 @@ entry:
 define i32 @no_unsigned_sat_incorrect_compare(i32 %x, i32 %y) #0 {
 ; V4T-LABEL: no_unsigned_sat_incorrect_compare:
 ; V4T:       @ %bb.0: @ %entry
-; V4T-NEXT:    ldr r2, .LCPI14_0
 ; V4T-NEXT:    cmp r1, #0
-; V4T-NEXT:    mov r1, r0
-; V4T-NEXT:    movmi r1, #0
+; V4T-NEXT:    mov r2, r0
+; V4T-NEXT:    movmi r2, #0
+; V4T-NEXT:    ldr r1, .LCPI14_0
 ; V4T-NEXT:    cmp r0, #8388608
-; V4T-NEXT:    movge r1, r2
+; V4T-NEXT:    movlt r1, r2
 ; V4T-NEXT:    mov r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
@@ -581,12 +581,12 @@ define i32 @no_unsigned_sat_incorrect_compare(i32 %x, i32 %y) #0 {
 ;
 ; V6-LABEL: no_unsigned_sat_incorrect_compare:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    ldr r2, .LCPI14_0
 ; V6-NEXT:    cmp r1, #0
-; V6-NEXT:    mov r1, r0
-; V6-NEXT:    movmi r1, #0
+; V6-NEXT:    mov r2, r0
+; V6-NEXT:    movmi r2, #0
+; V6-NEXT:    ldr r1, .LCPI14_0
 ; V6-NEXT:    cmp r0, #8388608
-; V6-NEXT:    movge r1, r2
+; V6-NEXT:    movlt r1, r2
 ; V6-NEXT:    mov r0, r1
 ; V6-NEXT:    bx lr
 ; V6-NEXT:    .p2align 2

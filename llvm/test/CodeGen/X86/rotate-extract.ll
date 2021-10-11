@@ -156,7 +156,7 @@ define i64 @no_extract_shl(i64 %i) nounwind {
 ; X64-NEXT:    shlq $5, %rax
 ; X64-NEXT:    shlq $10, %rdi
 ; X64-NEXT:    shrq $57, %rax
-; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
   %lhs_mul = shl i64 %i, 5
   %rhs_mul = shl i64 %i, 10
@@ -179,12 +179,11 @@ define i32 @no_extract_shrl(i32 %i) nounwind {
 ;
 ; X64-LABEL: no_extract_shrl:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $-8, %eax
 ; X64-NEXT:    shll $25, %eax
 ; X64-NEXT:    shrl $9, %edi
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %lhs_div = lshr i32 %i, 3
   %rhs_div = lshr i32 %i, 9

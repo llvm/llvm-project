@@ -88,7 +88,6 @@ define i8 @test4(i8 %x) nounwind readnone {
 ;
 ; NO-POPCOUNT-LABEL: test4:
 ; NO-POPCOUNT:       # %bb.0:
-; NO-POPCOUNT-NEXT:    # kill: def $edi killed $edi def $rdi
 ; NO-POPCOUNT-NEXT:    andb $127, %dil
 ; NO-POPCOUNT-NEXT:    movl %edi, %eax
 ; NO-POPCOUNT-NEXT:    shrb %al
@@ -101,9 +100,8 @@ define i8 @test4(i8 %x) nounwind readnone {
 ; NO-POPCOUNT-NEXT:    addb %al, %dil
 ; NO-POPCOUNT-NEXT:    movl %edi, %eax
 ; NO-POPCOUNT-NEXT:    shrb $4, %al
-; NO-POPCOUNT-NEXT:    addl %edi, %eax
+; NO-POPCOUNT-NEXT:    addb %dil, %al
 ; NO-POPCOUNT-NEXT:    andb $15, %al
-; NO-POPCOUNT-NEXT:    # kill: def $al killed $al killed $eax
 ; NO-POPCOUNT-NEXT:    retq
   %x2 = and i8 %x, 127
   %count = tail call i8 @llvm.ctpop.i8(i8 %x2)

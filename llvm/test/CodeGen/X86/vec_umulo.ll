@@ -2740,29 +2740,29 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ;
 ; SSE41-LABEL: umulo_v4i24:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,0,255,255,255,0,255,255,255,0,255,255,255,0]
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pmuludq %xmm2, %xmm3
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,0,255,255,255,0,255,255,255,0,255,255,255,0]
-; SSE41-NEXT:    pand %xmm0, %xmm2
-; SSE41-NEXT:    pand %xmm0, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; SSE41-NEXT:    pmuludq %xmm0, %xmm3
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pmuludq %xmm1, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; SSE41-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,3],xmm4[4,5],xmm3[6,7]
+; SSE41-NEXT:    pmuludq %xmm1, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm4, %xmm0
-; SSE41-NEXT:    pmulld %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm3, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE41-NEXT:    pxor %xmm2, %xmm4
+; SSE41-NEXT:    pmulld %xmm0, %xmm1
 ; SSE41-NEXT:    pextrd $3, %xmm1, %eax
 ; SSE41-NEXT:    pextrd $2, %xmm1, %ecx
 ; SSE41-NEXT:    pextrd $1, %xmm1, %edx
 ; SSE41-NEXT:    movd %xmm1, %esi
-; SSE41-NEXT:    psrld $24, %xmm1
-; SSE41-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    psrld $24, %xmm0
+; SSE41-NEXT:    pcmpgtd %xmm3, %xmm0
+; SSE41-NEXT:    por %xmm4, %xmm0
 ; SSE41-NEXT:    movw %ax, 9(%rdi)
 ; SSE41-NEXT:    movw %cx, 6(%rdi)
 ; SSE41-NEXT:    movw %dx, 3(%rdi)

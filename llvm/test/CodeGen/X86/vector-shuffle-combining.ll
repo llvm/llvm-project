@@ -2693,8 +2693,7 @@ define <4 x float> @PR22390(<4 x float> %a, <4 x float> %b) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0,1,2]
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; SSE2-NEXT:    addps %xmm0, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    addps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR22390:
@@ -2702,8 +2701,7 @@ define <4 x float> @PR22390(<4 x float> %a, <4 x float> %b) {
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0,1,2]
 ; SSSE3-NEXT:    movaps %xmm0, %xmm2
 ; SSSE3-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; SSSE3-NEXT:    addps %xmm0, %xmm2
-; SSSE3-NEXT:    movaps %xmm2, %xmm0
+; SSSE3-NEXT:    addps %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR22390:

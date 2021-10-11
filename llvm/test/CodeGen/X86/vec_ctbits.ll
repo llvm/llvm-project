@@ -23,11 +23,10 @@ define <2 x i64> @footz(<2 x i64> %a) nounwind {
 ; CHECK-NEXT:    paddb %xmm2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlw $4, %xmm1
-; CHECK-NEXT:    paddb %xmm0, %xmm1
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    psadbw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    paddb %xmm1, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 true)
   ret <2 x i64> %c
@@ -93,11 +92,10 @@ define <2 x i64> @foopop(<2 x i64> %a) nounwind {
 ; CHECK-NEXT:    paddb %xmm2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlw $4, %xmm1
-; CHECK-NEXT:    paddb %xmm0, %xmm1
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    psadbw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    paddb %xmm1, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
   ret <2 x i64> %c
