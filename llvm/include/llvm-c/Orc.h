@@ -921,6 +921,49 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
     LLVMOrcSymbolPredicate Filter, void *FilterCtx);
 
 /**
+ * Get a LLVMOrcCreateDynamicLibararySearchGeneratorForPath that will reflect
+ * library symbols into the JITDylib. On success the resulting generator is
+ * owned by the client. Ownership is typically transferred by adding the
+ * instance to a JITDylib using LLVMOrcJITDylibAddGenerator,
+ *
+ * The GlobalPrefix argument specifies the character that appears on the front
+ * of linker-mangled symbols for the target platform (e.g. '_' on MachO).
+ * If non-null, this character will be stripped from the start of all symbol
+ * strings before passing the remaining substring to dlsym.
+ *
+ * The optional Filter and Ctx arguments can be used to supply a symbol name
+ * filter: Only symbols for which the filter returns true will be visible to
+ * JIT'd code. If the Filter argument is null then all library symbols will
+ * be visible to JIT'd code. Note that the symbol name passed to the Filter
+ * function is the full mangled symbol: The client is responsible for stripping
+ * the global prefix if present.
+ * 
+ * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
+ * 
+ */
+LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
+    LLVMOrcDefinitionGeneratorRef *Result, const char *FileName,
+    char GlobalPrefix, LLVMOrcSymbolPredicate Filter, void *FilterCtx);
+
+/**
+ * Get a LLVMOrcCreateStaticLibrarySearchGeneratorForPath that will reflect
+ * static library symbols into the JITDylib. On success the resulting
+ * generator is owned by the client. Ownership is typically transferred by
+ * adding the instance to a JITDylib using LLVMOrcJITDylibAddGenerator,
+ *
+ * Call with the optional TargetTriple argument will succeed if the file at
+ * the given path is a static library or a MachO universal binary containing a
+ * static library that is compatible with the given triple. Otherwise it will
+ * return an error.
+ *
+ * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
+ * 
+ */
+LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
+    LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,
+    const char *FileName, const char *TargetTriple);
+
+/**
  * Create a ThreadSafeContext containing a new LLVMContext.
  *
  * Ownership of the underlying ThreadSafeContext data is shared: Clients
