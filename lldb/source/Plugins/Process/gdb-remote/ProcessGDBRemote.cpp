@@ -4503,32 +4503,7 @@ void ProcessGDBRemote::AddRemoteRegisters(
   if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
     abi_sp->AugmentRegisterInfo(registers);
 
-  for (auto it : llvm::enumerate(registers)) {
-    uint32_t local_regnum = it.index();
-    DynamicRegisterInfo::Register &remote_reg_info = it.value();
-
-    auto regs_with_sentinel = [](std::vector<uint32_t> &vec) -> uint32_t * {
-      if (!vec.empty()) {
-        vec.push_back(LLDB_INVALID_REGNUM);
-        return vec.data();
-      }
-      return nullptr;
-    };
-
-    struct RegisterInfo reg_info {
-      remote_reg_info.name.AsCString(), remote_reg_info.alt_name.AsCString(),
-          remote_reg_info.byte_size, remote_reg_info.byte_offset,
-          remote_reg_info.encoding, remote_reg_info.format,
-          {remote_reg_info.regnum_ehframe, remote_reg_info.regnum_dwarf,
-           remote_reg_info.regnum_generic, remote_reg_info.regnum_remote,
-           local_regnum},
-          regs_with_sentinel(remote_reg_info.value_regs),
-          regs_with_sentinel(remote_reg_info.invalidate_regs),
-    };
-    m_register_info_sp->AddRegister(reg_info, remote_reg_info.set_name);
-  };
-
-  m_register_info_sp->Finalize(arch_to_use);
+  m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
 }
 
 // query the target of gdb-remote for extended target information returns
