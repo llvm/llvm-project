@@ -65,8 +65,7 @@ public:
 
   Section &getTLSInfoSection() const {
     if (!TLSInfoSection)
-      TLSInfoSection =
-          &G.createSection(ELFTLSInfoSectionName, sys::Memory::MF_READ);
+      TLSInfoSection = &G.createSection(ELFTLSInfoSectionName, MemProt::Read);
     return *TLSInfoSection;
   }
 
@@ -172,16 +171,14 @@ public:
 private:
   Section &getGOTSection() const {
     if (!GOTSection)
-      GOTSection = &G.createSection(ELFGOTSectionName, sys::Memory::MF_READ);
+      GOTSection = &G.createSection(ELFGOTSectionName, MemProt::Read);
     return *GOTSection;
   }
 
   Section &getStubsSection() const {
-    if (!StubsSection) {
-      auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
-          sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", StubsProt);
-    }
+    if (!StubsSection)
+      StubsSection =
+          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
     return *StubsSection;
   }
 
