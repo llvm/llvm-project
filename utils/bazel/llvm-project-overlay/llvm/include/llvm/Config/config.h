@@ -363,4 +363,9 @@
 /* Define to the default GlobalISel coverage file prefix */
 /* #undef LLVM_GISEL_COV_PREFIX */
 
+/* Whether Timers signpost passes in Xcode Instruments */
+#define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
+
+/* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
 #endif
