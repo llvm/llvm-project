@@ -89,6 +89,18 @@ def testAttrCast():
     print("a1 == a2:", a1 == a2)
 
 
+# CHECK-LABEL: TEST: testAttrIsInstance
+@run
+def testAttrIsInstance():
+  with Context():
+    a1 = Attribute.parse("42")
+    a2 = Attribute.parse("[42]")
+    assert IntegerAttr.isinstance(a1)
+    assert not IntegerAttr.isinstance(a2)
+    assert not ArrayAttr.isinstance(a1)
+    assert ArrayAttr.isinstance(a2)
+
+
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
 @run
 def testAttrEqDoesNotRaise():
