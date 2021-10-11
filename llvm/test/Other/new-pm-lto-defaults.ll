@@ -71,6 +71,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: InlinerPass
 ; CHECK-O23SZ-NEXT: Running pass: InlinerPass
+; CHECK-O23SZ-NEXT: Invalidating analysis: InlineAdvisorAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: GlobalOptPass
 ; CHECK-O23SZ-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O23SZ-NEXT: Running pass: ArgumentPromotionPass

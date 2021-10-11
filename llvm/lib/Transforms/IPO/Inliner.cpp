@@ -1048,10 +1048,11 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
         createDevirtSCCRepeatedPass(std::move(PM), MaxDevirtIterations)));
   MPM.run(M, MAM);
 
-  IAA.clear();
-
-  // The ModulePassManager has already taken care of invalidating analyses.
-  return PreservedAnalyses::all();
+  // Discard the InlineAdvisor, a subsequent inlining session should construct
+  // its own.
+  auto PA = PreservedAnalyses::all();
+  PA.abandon<InlineAdvisorAnalysis>();
+  return PA;
 }
 
 void InlinerPass::printPipeline(
