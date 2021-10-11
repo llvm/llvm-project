@@ -2720,19 +2720,19 @@ define <8 x i16> @PR52131_pavg_chainlike_but_not_zext(<8 x i16> %a, <8 x i16> %b
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]
 ; SSE2-NEXT:    paddd %xmm4, %xmm5
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE2-NEXT:    psubd %xmm4, %xmm5
-; SSE2-NEXT:    psubd %xmm4, %xmm1
-; SSE2-NEXT:    psrld $1, %xmm1
-; SSE2-NEXT:    psrld $1, %xmm5
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    psubd %xmm1, %xmm5
+; SSE2-NEXT:    psubd %xmm1, %xmm0
+; SSE2-NEXT:    psrld $1, %xmm0
+; SSE2-NEXT:    psrld $1, %xmm5
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; SSE2-NEXT:    paddd %xmm4, %xmm0
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; SSE2-NEXT:    paddd %xmm5, %xmm2
-; SSE2-NEXT:    psubd %xmm4, %xmm0
-; SSE2-NEXT:    psubd %xmm4, %xmm2
+; SSE2-NEXT:    psubd %xmm1, %xmm0
+; SSE2-NEXT:    psubd %xmm1, %xmm2
 ; SSE2-NEXT:    pslld $15, %xmm2
 ; SSE2-NEXT:    psrad $16, %xmm2
 ; SSE2-NEXT:    pslld $15, %xmm0
