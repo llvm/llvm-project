@@ -15,10 +15,10 @@ func @vector_transfer_ops_0d(%M: memref<f32>) {
     %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->(0)>} :
       memref<f32>, vector<1xf32>
 
-//  C-HECK: scf.for %[[J:.*]] = %{{.*}}
-//  C-HECK:   %[[JDX:.*]] = index_cast %[[J]] : index to i32
-//  C-HECK:   %[[SS:.*]] = vector.extractelement %[[R0]][%[[JDX]] : i32] : vector<1xf32>
-//  C-HECK:   memref.store %[[SS]], %[[MEM]][] : memref<f32>
+//  CHECK: scf.for %[[J:.*]] = %{{.*}}
+//  CHECK:   %[[JDX:.*]] = index_cast %[[J]] : index to i32
+//  CHECK:   %[[SS:.*]] = vector.extractelement %[[R0]][%[[JDX]] : i32] : vector<1xf32>
+//  CHECK:   memref.store %[[SS]], %[[MEM]][] : memref<f32>
     vector.transfer_write %0, %M[] {permutation_map = affine_map<()->(0)>} :
       vector<1xf32>, memref<f32>
 
