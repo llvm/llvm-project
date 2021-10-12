@@ -2066,7 +2066,7 @@ static LogicalResult verify(SubViewOp op) {
   return produceSubViewErrorMsg(result, op, expectedType, errMsg);
 }
 
-raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
+raw_ostream &mlir::operator<<(raw_ostream &os, const Range &range) {
   return os << "range " << range.offset << ":" << range.size << ":"
             << range.stride;
 }
