@@ -24,17 +24,18 @@ namespace __sanitizer {
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 class StackDepotBase {
-  static const u32 kIdSizeLog = sizeof(u32) * 8 - kReservedBits;
-  static const u32 kNodesSize1Log = kIdSizeLog / 2;
-  static const u32 kNodesSize2Log = kIdSizeLog - kNodesSize1Log;
+  static constexpr u32 kIdSizeLog = sizeof(u32) * 8 - kReservedBits;
+  static constexpr u32 kNodesSize1Log = kIdSizeLog / 2;
+  static constexpr u32 kNodesSize2Log = kIdSizeLog - kNodesSize1Log;
+  static constexpr int kTabSize = 1 << kTabSizeLog;  // Hash table size.
 
  public:
   typedef typename Node::args_type args_type;
   typedef typename Node::handle_type handle_type;
   typedef typename Node::hash_type hash_type;
 
-  static const u64 kNodesSize1 = 1ull << kNodesSize1Log;
-  static const u64 kNodesSize2 = 1ull << kNodesSize2Log;
+  static constexpr u64 kNodesSize1 = 1ull << kNodesSize1Log;
+  static constexpr u64 kNodesSize2 = 1ull << kNodesSize2Log;
 
   // Maps stack trace to an unique id.
   handle_type Put(args_type args, bool *inserted = nullptr);
@@ -56,8 +57,6 @@ class StackDepotBase {
   static Node *find(Node *s, args_type args, hash_type hash);
   static Node *lock(atomic_uintptr_t *p);
   static void unlock(atomic_uintptr_t *p, Node *s);
-
-  static const int kTabSize = 1 << kTabSizeLog;  // Hash table size.
 
   atomic_uintptr_t tab[kTabSize];  // Hash table of Node's.
 
