@@ -1041,10 +1041,27 @@ foldIdentityOffsetSizeAndStrideOpInterface(OffsetSizeAndStrideOpInterface op,
   return success();
 }
 
+/// If we have an ExtractSliceOp consuming an InsertSliceOp with the same slice,
+/// we can return the InsertSliceOp's source directly.
+// TODO: This only checks the immediate producer; extend to go up the
+// insert/extract chain if the slices are disjoint.
+static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
+  auto insertOp = extractOp.source().getDefiningOp<InsertSliceOp>();
+
+  auto isSame = [](OpFoldResult a, OpFoldResult b) { return a == b; };
+  if (insertOp && insertOp.source().getType() == extractOp.getType() &&
+      insertOp.isSameAs(extractOp, isSame))
+    return insertOp.source();
+
+  return {};
+}
+
 OpFoldResult ExtractSliceOp::fold(ArrayRef<Attribute>) {
   if (getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->source();
+  if (Value slice = foldExtractAfterInsertSlice(*this))
+    return slice;
   return OpFoldResult();
 }
 
@@ -1085,11 +1102,41 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
+/// If we have two consecutive InsertSliceOp writing to the same slice, we
+/// can mutate the second InsertSliceOp's destination to the first one's.
+///
+/// Example:
+///
+/// ```mlir
+///   %0 = tensor.insert_slice %slice0 into %input[0, 0] [64, 64] [1, 1]
+///   %1 = tensor.insert_slice %slice1 into %0[0, 0] [64, 64] [1, 1]
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %1 = tensor.insert_slice %slice1 into %input[0, 0] [64, 64] [1, 1]
+/// ```
+static LogicalResult foldInsertAfterInsertSlice(InsertSliceOp insertOp) {
+  auto prevInsertOp = insertOp.dest().getDefiningOp<InsertSliceOp>();
+
+  auto isSame = [](OpFoldResult a, OpFoldResult b) { return a == b; };
+  if (!prevInsertOp ||
+      prevInsertOp.source().getType() != insertOp.source().getType() ||
+      !prevInsertOp.isSameAs(insertOp, isSame))
+    return failure();
+
+  insertOp.destMutable().assign(prevInsertOp.dest());
+  return success();
+}
+
 OpFoldResult InsertSliceOp::fold(ArrayRef<Attribute>) {
   if (getSourceType().hasStaticShape() && getType().hasStaticShape() &&
       getSourceType() == getType() &&
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->source();
+  if (succeeded(foldInsertAfterInsertSlice(*this)))
+    return getResult();
   return OpFoldResult();
 }
 
