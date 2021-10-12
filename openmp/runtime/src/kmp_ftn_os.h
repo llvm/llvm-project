@@ -712,5 +712,6 @@
 #define KMP_API_NAME_GOMP_SECTIONS2_START GOMP_sections2_start
 #define KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER                  \
   GOMP_workshare_task_reduction_unregister
-
+#define KMP_API_NAME_GOMP_ALLOC GOMP_alloc
+#define KMP_API_NAME_GOMP_FREE GOMP_free
 #endif /* KMP_FTN_OS_H */
