@@ -42,7 +42,8 @@ inline T *PersistentAllocator<T>::tryAlloc(uptr count) {
     uptr cmp = atomic_load(&region_pos, memory_order_acquire);
     uptr end = atomic_load(&region_end, memory_order_acquire);
     uptr size = count * sizeof(T);
-    if (cmp == 0 || cmp + size > end) return nullptr;
+    if (cmp == 0 || cmp + size > end)
+      return nullptr;
     if (atomic_compare_exchange_weak(&region_pos, &cmp, cmp + size,
                                      memory_order_acquire))
       return reinterpret_cast<T *>(cmp);
