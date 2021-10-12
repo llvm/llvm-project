@@ -250,8 +250,8 @@
 
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
 /// so, mark a method "no debug" because debug info makes the debugger
-/// experience worse.  GCC introduced this in GCC 4.0
-#if __has_attribute(nodebug) || LLVM_GNUC_PREREQ(4, 0, 0)
+/// experience worse.
+#if __has_attribute(nodebug)
 #define LLVM_ATTRIBUTE_NODEBUG __attribute__((nodebug))
 #else
 #define LLVM_ATTRIBUTE_NODEBUG
