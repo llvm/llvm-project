@@ -161,28 +161,17 @@ define void @ucvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 define void @ucvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_EQ_256-LABEL: ucvtf_v16i16_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #8
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    uunpklo z1.s, z0.h
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    ucvtf z0.s, p0/m, z0.s
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ucvtf z1.s, p0/m, z1.s
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ucvtf z0.s, p0/m, z0.s
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v16i16_v16f32:
@@ -593,28 +582,17 @@ define void @ucvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 define void @ucvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-LABEL: ucvtf_v8i32_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    uunpklo z1.d, z0.s
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    ucvtf z0.d, p0/m, z0.d
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ucvtf z1.d, p0/m, z1.d
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ucvtf z0.d, p0/m, z0.d
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v8i32_v8f64:
@@ -1126,28 +1104,17 @@ define void @scvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_EQ_256-LABEL: scvtf_v16i16_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #8
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    sunpklo z1.s, z0.h
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    scvtf z0.s, p0/m, z0.s
-; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    scvtf z1.s, p0/m, z1.s
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    scvtf z0.s, p0/m, z0.s
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v16i16_v16f32:
@@ -1558,28 +1525,17 @@ define void @scvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-LABEL: scvtf_v8i32_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_256-NEXT:    sub x9, sp, #48
-; VBITS_EQ_256-NEXT:    mov x29, sp
-; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    mov x8, sp
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    ldp q0, q1, [sp]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    sunpklo z1.d, z0.s
+; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
 ; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    scvtf z0.d, p0/m, z0.d
-; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    scvtf z1.d, p0/m, z1.d
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    mov sp, x29
-; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    scvtf z0.d, p0/m, z0.d
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v8i32_v8f64:
