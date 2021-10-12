@@ -90,8 +90,8 @@ class TestCase(TestBase):
 
         # Different character arrays.
         # FIXME: Passing a 'const char *' will ignore any given format,
-        self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("character array", "cstring"))
-        self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("c-string", "cstring"))
+        self.assertIn(r'= " \U0000001b\a\b\f\n\r\t\vaA09\0"', self.getFormatted("character array", "cstring"))
+        self.assertIn(r'= " \U0000001b\a\b\f\n\r\t\vaA09\0"', self.getFormatted("c-string", "cstring"))
         self.assertIn(' = " \\e\\a\\b\\f\\n\\r\\t\\vaA09" " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n',
                       self.getFormatted("c-string", "(char *)cstring"))
         self.assertIn('=\n', self.getFormatted("c-string", "(__UINT64_TYPE__)0"))
@@ -132,10 +132,10 @@ class TestCase(TestBase):
         self.assertIn('= 0x2007080c0a0d090b415a617a30391b00\n', self.getFormatted("OSType", string_expr))
 
         # bytes
-        self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("bytes", "cstring"))
+        self.assertIn(r'= " \U0000001b\a\b\f\n\r\t\vaA09\0"', self.getFormatted("bytes", "cstring"))
 
         # bytes with ASCII
-        self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("bytes with ASCII", "cstring"))
+        self.assertIn(r'= " \U0000001b\a\b\f\n\r\t\vaA09\0"', self.getFormatted("bytes with ASCII", "cstring"))
 
         # unicode16
         self.assertIn('= U+5678 U+1234\n', self.getFormatted("unicode16", "0x12345678"))

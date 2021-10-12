@@ -8,11 +8,12 @@ struct A {
 
 int main (int argc, char const *argv[])
 {
-    A a, b;
+    A a, b, c;
     // Deliberately write past the end of data to test that the formatter stops
     // at the end of array.
     memcpy(a.data, "FOOBAR", 7);
     memcpy(b.data, "FO\0BAR", 7);
+    memcpy(c.data, "F\0O\0AR", 7);
     std::string stdstring("Hello\t\tWorld\nI am here\t\tto say hello\n"); //%self.addTearDownHook(lambda x: x.runCmd("setting set escape-non-printables true"))
     const char* constcharstar = stdstring.c_str();
     std::string longstring(
@@ -33,13 +34,15 @@ int main (int argc, char const *argv[])
     return 0;     //% if self.TraceOn(): self.runCmd('frame variable')
     //% self.expect_var_path('stdstring', summary='"Hello\\t\\tWorld\\nI am here\\t\\tto say hello\\n"')
     //% self.expect_var_path('constcharstar', summary='"Hello\\t\\tWorld\\nI am here\\t\\tto say hello\\n"')
+    //% self.expect_var_path("a.data", summary='"FOOB"')
+    //% self.expect_var_path("b.data", summary=r'"FO\0B"')
+    //% self.expect_var_path("c.data", summary=r'"F\0O"')
+    //%
     //% self.runCmd("setting set escape-non-printables false")
     //% self.expect_var_path('stdstring', summary='"Hello\t\tWorld\nI am here\t\tto say hello\n"')
     //% self.expect_var_path('constcharstar', summary='"Hello\t\tWorld\nI am here\t\tto say hello\n"')
     //% self.assertTrue(self.frame().FindVariable('longstring').GetSummary().endswith('"...'))
     //% self.assertTrue(self.frame().FindVariable('longconstcharstar').GetSummary().endswith('"...'))
-    //% self.expect_var_path("a.data", summary='"FOOB"')
-    // FIXME: Should this be "FO\0B" instead?
-    //% self.expect_var_path("b.data", summary='"FO"')
+    // FIXME: make "b.data" and "c.data" work sanely
 }
 
