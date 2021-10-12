@@ -107,9 +107,11 @@ MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
-  if (!CommonSection)
-    CommonSection =
-        &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+  if (!CommonSection) {
+    auto Prot = static_cast<sys::Memory::ProtectionFlags>(
+        sys::Memory::MF_READ | sys::Memory::MF_WRITE);
+    CommonSection = &G->createSection(CommonSectionName, Prot);
+  }
   return *CommonSection;
 }
 
@@ -174,11 +176,13 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     // Get prot flags.
     // FIXME: Make sure this test is correct (it's probably missing cases
     // as-is).
-    MemProt Prot;
+    sys::Memory::ProtectionFlags Prot;
     if (NSec.Flags & MachO::S_ATTR_PURE_INSTRUCTIONS)
-      Prot = MemProt::Read | MemProt::Exec;
+      Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                       sys::Memory::MF_EXEC);
     else
-      Prot = MemProt::Read | MemProt::Write;
+      Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                       sys::Memory::MF_WRITE);
 
     if (!isDebugSection(NSec)) {
       auto FullyQualifiedName =

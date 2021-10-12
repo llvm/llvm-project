@@ -184,13 +184,13 @@ public:
   }
 
 private:
-  using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
+  using AllocPtr = std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>;
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig);
   void notifyLoaded(MaterializationResponsibility &MR);
-  Error notifyEmitted(MaterializationResponsibility &MR, FinalizedAlloc FA);
+  Error notifyEmitted(MaterializationResponsibility &MR, AllocPtr Alloc);
 
   Error handleRemoveResources(ResourceKey K) override;
   void handleTransferResources(ResourceKey DstKey, ResourceKey SrcKey) override;
@@ -201,7 +201,7 @@ private:
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;
-  DenseMap<ResourceKey, std::vector<FinalizedAlloc>> Allocs;
+  DenseMap<ResourceKey, std::vector<AllocPtr>> Allocs;
   std::vector<std::unique_ptr<Plugin>> Plugins;
 };
 

@@ -13,19 +13,19 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINK_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINK_H
 
+#include "JITLinkMemoryManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <map>
@@ -225,7 +225,7 @@ public:
 
   /// Get the content for this block. Block must not be a zero-fill block.
   ArrayRef<char> getContent() const {
-    assert(Data && "Block does not contain content");
+    assert(Data && "Section does not contain content");
     return ArrayRef<char>(Data, Size);
   }
 
@@ -233,7 +233,6 @@ public:
   /// Caller is responsible for ensuring the underlying bytes are not
   /// deallocated while pointed to by this block.
   void setContent(ArrayRef<char> Content) {
-    assert(Content.data() && "Setting null content");
     Data = Content.data();
     Size = Content.size();
     ContentMutable = false;
@@ -252,7 +251,6 @@ public:
   /// to call this on a block with immutable content -- consider using
   /// getMutableContent instead.
   MutableArrayRef<char> getAlreadyMutableContent() {
-    assert(Data && "Block does not contain content");
     assert(ContentMutable && "Content is not mutable");
     return MutableArrayRef<char>(const_cast<char *>(Data), Size);
   }
@@ -262,7 +260,6 @@ public:
   /// The caller is responsible for ensuring that the memory pointed to by
   /// MutableContent is not deallocated while pointed to by this block.
   void setMutableContent(MutableArrayRef<char> MutableContent) {
-    assert(MutableContent.data() && "Setting null content");
     Data = MutableContent.data();
     Size = MutableContent.size();
     ContentMutable = true;
@@ -298,7 +295,6 @@ public:
   /// Add an edge to this block.
   void addEdge(Edge::Kind K, Edge::OffsetT Offset, Symbol &Target,
                Edge::AddendT Addend) {
-    assert(!isZeroFill() && "Adding edge to zero-fill block?");
     Edges.push_back(Edge(K, Offset, Target, Addend));
   }
 
@@ -644,7 +640,8 @@ class Section {
   friend class LinkGraph;
 
 private:
-  Section(StringRef Name, MemProt Prot, SectionOrdinal SecOrdinal)
+  Section(StringRef Name, sys::Memory::ProtectionFlags Prot,
+          SectionOrdinal SecOrdinal)
       : Name(Name), Prot(Prot), SecOrdinal(SecOrdinal) {}
 
   using SymbolSet = DenseSet<Symbol *>;
@@ -669,16 +666,12 @@ public:
   StringRef getName() const { return Name; }
 
   /// Returns the protection flags for this section.
-  MemProt getMemProt() const { return Prot; }
+  sys::Memory::ProtectionFlags getProtectionFlags() const { return Prot; }
 
   /// Set the protection flags for this section.
-  void setMemProt(MemProt Prot) { this->Prot = Prot; }
-
-  /// Get the deallocation policy for this section.
-  MemDeallocPolicy getMemDeallocPolicy() const { return MDP; }
-
-  /// Set the deallocation policy for this section.
-  void setMemDeallocPolicy(MemDeallocPolicy MDP) { this->MDP = MDP; }
+  void setProtectionFlags(sys::Memory::ProtectionFlags Prot) {
+    this->Prot = Prot;
+  }
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
@@ -693,7 +686,6 @@ public:
     return make_range(Blocks.begin(), Blocks.end());
   }
 
-  /// Returns the number of blocks in this section.
   BlockSet::size_type blocks_size() const { return Blocks.size(); }
 
   /// Returns an iterator over the symbols defined in this section.
@@ -742,8 +734,7 @@ private:
   }
 
   StringRef Name;
-  MemProt Prot;
-  MemDeallocPolicy MDP = MemDeallocPolicy::Standard;
+  sys::Memory::ProtectionFlags Prot;
   SectionOrdinal SecOrdinal = 0;
   BlockSet Blocks;
   SymbolSet Symbols;
@@ -925,11 +916,6 @@ public:
       : Name(std::move(Name)), TT(TT), PointerSize(PointerSize),
         Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
-  LinkGraph(const LinkGraph &) = delete;
-  LinkGraph &operator=(const LinkGraph &) = delete;
-  LinkGraph(LinkGraph &&) = delete;
-  LinkGraph &operator=(LinkGraph &&) = delete;
-
   /// Returns the name of this graph (usually the name of the original
   /// underlying MemoryBuffer).
   const std::string &getName() const { return Name; }
@@ -976,7 +962,7 @@ public:
   }
 
   /// Create a section with the given name, protection flags, and alignment.
-  Section &createSection(StringRef Name, MemProt Prot) {
+  Section &createSection(StringRef Name, sys::Memory::ProtectionFlags Prot) {
     assert(llvm::find_if(Sections,
                          [&](std::unique_ptr<Section> &Sec) {
                            return Sec->getName() == Name;
@@ -1364,13 +1350,6 @@ public:
     Sections.erase(I);
   }
 
-  /// Accessor for the AllocActions object for this graph. This can be used to
-  /// register allocation action calls prior to finalization.
-  ///
-  /// Accessing this object after finalization will result in undefined
-  /// behavior.
-  JITLinkMemoryManager::AllocActions &allocActions() { return AAs; }
-
   /// Dump the graph.
   void dump(raw_ostream &OS);
 
@@ -1387,7 +1366,6 @@ private:
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
-  JITLinkMemoryManager::AllocActions AAs;
 };
 
 inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {
@@ -1677,7 +1655,8 @@ public:
   /// finalized (i.e. emitted to memory and memory permissions set). If all of
   /// this objects dependencies have also been finalized then the code is ready
   /// to run.
-  virtual void notifyFinalized(JITLinkMemoryManager::FinalizedAlloc Alloc) = 0;
+  virtual void
+  notifyFinalized(std::unique_ptr<JITLinkMemoryManager::Allocation> A) = 0;
 
   /// Called by JITLink prior to linking to determine whether default passes for
   /// the target should be added. The default implementation returns true.

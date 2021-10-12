@@ -31,8 +31,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
-    OwnedMemMgr = std::make_unique<jitlink::InProcessMemoryManager>(
-        sys::Process::getPageSizeEstimate());
+    OwnedMemMgr = std::make_unique<jitlink::InProcessMemoryManager>();
 
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;

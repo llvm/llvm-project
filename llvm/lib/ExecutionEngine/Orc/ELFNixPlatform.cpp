@@ -56,7 +56,7 @@ public:
         "<DSOHandleMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
-        G->createSection(".data.__dso_handle", jitlink::MemProt::Read);
+        G->createSection(".data.__dso_handle", sys::Memory::MF_READ);
     auto &DSOHandleBlock = G->createContentBlock(
         DSOHandleSection, getDSOHandleContent(PointerSize), 0, 8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(

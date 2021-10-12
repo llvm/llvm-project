@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
           .setObjectLinkingLayerCreator(
               [&](ExecutionSession &ES, const Triple &TT) {
                 return std::make_unique<ObjectLinkingLayer>(
-                    ES, ExitOnErr(jitlink::InProcessMemoryManager::Create()));
+                    ES, std::make_unique<jitlink::InProcessMemoryManager>());
               })
           .create());
 
