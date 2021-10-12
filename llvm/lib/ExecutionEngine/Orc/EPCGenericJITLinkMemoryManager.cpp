@@ -22,12 +22,20 @@ namespace orc {
 class EPCGenericJITLinkMemoryManager::InFlightAlloc
     : public jitlink::JITLinkMemoryManager::InFlightAlloc {
 public:
+
+  // FIXME: The C++98 initializer is an attempt to work around compile failures
+  // due to http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1397.
+  // We should be able to switch this back to member initialization once that
+  // issue is fixed.
   struct SegInfo {
-    char *WorkingMem = nullptr;
+    SegInfo() : WorkingMem(nullptr), ContentSize(0), ZeroFillSize(0) {}
+
+    char *WorkingMem;
     ExecutorAddr Addr;
-    uint64_t ContentSize = 0;
-    uint64_t ZeroFillSize = 0;
+    uint64_t ContentSize;
+    uint64_t ZeroFillSize;
   };
+
   using SegInfoMap = AllocGroupSmallMap<SegInfo>;
 
   InFlightAlloc(EPCGenericJITLinkMemoryManager &Parent, LinkGraph &G,
