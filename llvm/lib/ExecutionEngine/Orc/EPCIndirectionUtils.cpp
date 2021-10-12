@@ -359,7 +359,7 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto Alloc = SimpleSegmentAlloc::Create(
         EPC.getMemMgr(), nullptr,
         {{StubProt, {static_cast<size_t>(StubBytes), Align(PageSize)}},
-         {PtrProt, {PtrBytes, Align(PageSize)}}});
+         {PtrProt, {static_cast<size_t>(PtrBytes), Align(PageSize)}}});
 
     if (!Alloc)
       return Alloc.takeError();
