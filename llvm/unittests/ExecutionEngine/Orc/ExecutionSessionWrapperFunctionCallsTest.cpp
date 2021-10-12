@@ -43,6 +43,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
                         ExecutorAddr::fromPtr(addWrapper), Result, 2, 3),
                     Succeeded());
   EXPECT_EQ(Result, 5);
+  cantFail(ES.endSession());
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
@@ -55,6 +56,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
                                  });
   Error Err = RP.get_future().get();
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+  cantFail(ES.endSession());
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RunNonVoidWrapperAsyncTemplate) {
@@ -71,6 +73,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunNonVoidWrapperAsyncTemplate) {
       2, 3);
   Expected<int32_t> Result = RP.get_future().get();
   EXPECT_THAT_EXPECTED(Result, HasValue(5));
+  cantFail(ES.endSession());
 }
 
 TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
