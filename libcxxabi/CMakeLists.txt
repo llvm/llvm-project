@@ -125,24 +125,10 @@ option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
 
-if(NOT CMAKE_SYSROOT AND LIBCXXABI_SYSROOT)
-  message(WARNING "LIBCXXABI_SYSROOT is deprecated, please use CMAKE_SYSROOT instead")
+# TODO: Remove this after branching for LLVM 15
+if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
+  message(WARNING "LIBCXXABI_SYSROOT, LIBCXXABI_TARGET_TRIPLE and LIBCXXABI_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
-if(NOT CMAKE_CXX_COMPILER_TARGET AND LIBCXXABI_TARGET_TRIPLE)
-  message(WARNING "LIBCXXABI_TARGET_TRIPLE is deprecated, please use CMAKE_CXX_COMPILER_TARGET instead")
-endif()
-if(NOT CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN AND LIBCXXABI_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXXABI_GCC_TOOLCHAIN is deprecated, please use CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN instead")
-endif()
-
-if(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBCXXABI_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
-else()
-  set(LIBCXXABI_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
-endif()
-set(LIBCXXABI_TARGET_TRIPLE "${LIBCXXABI_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Target triple for cross compiling.")
-set(LIBCXXABI_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE PATH "GCC toolchain for cross compiling.")
-set(LIBCXXABI_SYSROOT "${CMAKE_SYSROOT}" CACHE PATH "Sysroot for cross compiling.")
 
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 set(LIBCXXABI_LIBRARY_VERSION "1.0" CACHE STRING
@@ -285,15 +271,6 @@ include(HandleLibcxxabiFlags)
 # Configure target flags
 if(ZOS)
   add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
-endif()
-if(LIBCXXABI_TARGET_TRIPLE)
-  add_target_flags_if_supported("--target=${LIBCXXABI_TARGET_TRIPLE}")
-endif()
-if(LIBCXXABI_GCC_TOOLCHAIN)
-  add_target_flags_if_supported("--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
-endif()
-if(LIBCXXABI_SYSROOT)
-  add_target_flags_if_supported("--sysroot=${LIBCXXABI_SYSROOT}")
 endif()
 
 # Configure compiler. Must happen after setting the target flags.
