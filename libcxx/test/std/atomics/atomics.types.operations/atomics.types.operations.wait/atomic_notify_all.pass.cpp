@@ -18,11 +18,11 @@
 
 // template<class T>
 //     void
-//     atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+//     atomic_notify_all(volatile atomic<T>*);
 //
 // template<class T>
 //     void
-//     atomic_wait(const atomic<T>*, atomic<T>::value_type);
+//     atomic_notify_all(atomic<T>*);
 
 #include <atomic>
 #include <type_traits>
@@ -37,28 +37,37 @@ template <class T>
 struct TestFn {
   void operator()() const {
     typedef std::atomic<T> A;
+
     {
-      A t(T(1));
-      assert(std::atomic_load(&t) == T(1));
-      std::atomic_wait(&t, T(0));
-      std::thread t1 = support::make_test_thread([&]() {
-        std::atomic_store(&t, T(3));
-        std::atomic_notify_one(&t);
-      });
-      std::atomic_wait(&t, T(1));
-      assert(std::atomic_load(&t) == T(3));
+      A a(T(1));
+      auto f = [&]() {
+        assert(std::atomic_load(&a) == T(1));
+        std::atomic_wait(&a, T(1));
+        assert(std::atomic_load(&a) == T(3));
+      };
+      std::thread t1 = support::make_test_thread(f);
+      std::thread t2 = support::make_test_thread(f);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+      std::atomic_store(&a, T(3));
+      std::atomic_notify_all(&a);
       t1.join();
+      t2.join();
     }
     {
-      volatile A vt(T(2));
-      assert(std::atomic_load(&vt) == T(2));
-      std::atomic_wait(&vt, T(1));
-      std::thread t2 = support::make_test_thread([&]() {
-        std::atomic_store(&vt, T(4));
-        std::atomic_notify_one(&vt);
-      });
-      std::atomic_wait(&vt, T(2));
-      assert(std::atomic_load(&vt) == T(4));
+      volatile A a(T(2));
+      auto f = [&]() {
+        assert(std::atomic_load(&a) == T(2));
+        std::atomic_wait(&a, T(2));
+        assert(std::atomic_load(&a) == T(4));
+      };
+      std::thread t1 = support::make_test_thread(f);
+      std::thread t2 = support::make_test_thread(f);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+      std::atomic_store(&a, T(4));
+      std::atomic_notify_all(&a);
+      t1.join();
       t2.join();
     }
   }

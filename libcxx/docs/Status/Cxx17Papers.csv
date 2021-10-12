@@ -101,7 +101,7 @@
 "`P0518R1 <https://wg21.link/P0518R1>`__","LWG","Allowing copies as arguments to function objects given to parallel algorithms in response to CH11","Kona","",""
 "`P0523R1 <https://wg21.link/P0523R1>`__","LWG","Wording for CH 10: Complexity of parallel algorithms","Kona","",""
 "`P0548R1 <https://wg21.link/P0548R1>`__","LWG","common_type and duration","Kona","|Complete|","5.0"
-"`P0558R1 <https://wg21.link/P0558R1>`__","LWG","Resolving atomic<T> named base class inconsistencies","Kona","",""
+"`P0558R1 <https://wg21.link/P0558R1>`__","LWG","Resolving atomic<T> named base class inconsistencies","Kona","|Complete|",""
 "`P0574R1 <https://wg21.link/P0574R1>`__","LWG","Algorithm Complexity Constraints and Parallel Overloads","Kona","",""
 "`P0599R1 <https://wg21.link/P0599R1>`__","LWG","noexcept for hash functions","Kona","|Complete|","5.0"
 "`P0604R0 <https://wg21.link/P0604R0>`__","LWG","Resolving GB 55, US 84, US 85, US 86","Kona","|Complete|",""

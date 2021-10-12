@@ -18,11 +18,13 @@
 
 // template<class T>
 //     void
-//     atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+//     atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
+//                          memory_order);
 //
 // template<class T>
 //     void
-//     atomic_wait(const atomic<T>*, atomic<T>::value_type);
+//     atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
+//                          memory_order);
 
 #include <atomic>
 #include <type_traits>
@@ -40,24 +42,24 @@ struct TestFn {
     {
       A t(T(1));
       assert(std::atomic_load(&t) == T(1));
-      std::atomic_wait(&t, T(0));
+      std::atomic_wait_explicit(&t, T(0), std::memory_order_seq_cst);
       std::thread t1 = support::make_test_thread([&]() {
         std::atomic_store(&t, T(3));
         std::atomic_notify_one(&t);
       });
-      std::atomic_wait(&t, T(1));
+      std::atomic_wait_explicit(&t, T(1), std::memory_order_seq_cst);
       assert(std::atomic_load(&t) == T(3));
       t1.join();
     }
     {
       volatile A vt(T(2));
       assert(std::atomic_load(&vt) == T(2));
-      std::atomic_wait(&vt, T(1));
+      std::atomic_wait_explicit(&vt, T(1), std::memory_order_seq_cst);
       std::thread t2 = support::make_test_thread([&]() {
         std::atomic_store(&vt, T(4));
         std::atomic_notify_one(&vt);
       });
-      std::atomic_wait(&vt, T(2));
+      std::atomic_wait_explicit(&vt, T(2), std::memory_order_seq_cst);
       assert(std::atomic_load(&vt) == T(4));
       t2.join();
     }
