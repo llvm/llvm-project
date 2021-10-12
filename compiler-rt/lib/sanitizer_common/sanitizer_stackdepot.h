@@ -22,11 +22,11 @@ namespace __sanitizer {
 // StackDepot efficiently stores huge amounts of stack traces.
 struct StackDepotNode;
 struct StackDepotHandle {
-  StackDepotNode *node_;
-  StackDepotHandle() : node_(nullptr) {}
-  explicit StackDepotHandle(StackDepotNode *node) : node_(node) {}
+  StackDepotNode *node_ = nullptr;
+  u32 id_ = 0;
+  StackDepotHandle(StackDepotNode *node, u32 id) : node_(node), id_(id) {}
   bool valid() const { return node_; }
-  u32 id() const;
+  u32 id() const { return id_; }
   int use_count() const;
   void inc_use_count_unsafe();
 };
@@ -55,7 +55,7 @@ class StackDepotReverseMap {
  private:
   struct IdDescPair {
     u32 id;
-    StackDepotNode *desc;
+    const StackDepotNode *desc;
 
     static bool IdComparator(const IdDescPair &a, const IdDescPair &b);
   };

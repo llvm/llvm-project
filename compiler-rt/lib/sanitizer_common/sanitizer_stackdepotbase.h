@@ -24,10 +24,13 @@ namespace __sanitizer {
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 class StackDepotBase {
-  static constexpr u32 kIdSizeLog = sizeof(u32) * 8 - kReservedBits;
+  static constexpr u32 kIdSizeLog =
+      sizeof(u32) * 8 - Max(kReservedBits, 1 /* At least 1 bit for locking. */);
   static constexpr u32 kNodesSize1Log = kIdSizeLog / 2;
   static constexpr u32 kNodesSize2Log = kIdSizeLog - kNodesSize1Log;
   static constexpr int kTabSize = 1 << kTabSizeLog;  // Hash table size.
+  static constexpr u32 kUnlockMask = (1ull << kIdSizeLog) - 1;
+  static constexpr u32 kLockMask = ~kUnlockMask;
 
  public:
   typedef typename Node::args_type args_type;
@@ -38,7 +41,7 @@ class StackDepotBase {
   static constexpr u64 kNodesSize2 = 1ull << kNodesSize2Log;
 
   // Maps stack trace to an unique id.
-  handle_type Put(args_type args, bool *inserted = nullptr);
+  u32 Put(args_type args, bool *inserted = nullptr);
   // Retrieves a stored stack trace by the id.
   args_type Get(u32 id);
 
@@ -54,11 +57,12 @@ class StackDepotBase {
   void PrintAll();
 
  private:
-  static Node *find(Node *s, args_type args, hash_type hash);
-  static Node *lock(atomic_uintptr_t *p);
-  static void unlock(atomic_uintptr_t *p, Node *s);
-
-  atomic_uintptr_t tab[kTabSize];  // Hash table of Node's.
+  friend Node;
+  friend class StackDepotReverseMap;
+  u32 find(u32 s, args_type args, hash_type hash) const;
+  static u32 lock(atomic_uint32_t *p);
+  static void unlock(atomic_uint32_t *p, u32 s);
+  atomic_uint32_t tab[kTabSize];  // Hash table of Node's.
 
   atomic_uint32_t n_uniq_ids;
 
@@ -68,27 +72,27 @@ class StackDepotBase {
 };
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-Node *StackDepotBase<Node, kReservedBits, kTabSizeLog>::find(Node *s,
-                                                             args_type args,
-                                                             hash_type hash) {
+u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::find(
+    u32 s, args_type args, hash_type hash) const {
   // Searches linked list s for the stack, returns its id.
-  for (; s; s = s->link) {
-    if (s->eq(hash, args)) {
+  for (; s;) {
+    const Node &node = nodes[s];
+    if (node.eq(hash, args))
       return s;
-    }
+    s = node.link;
   }
-  return nullptr;
+  return 0;
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-Node *StackDepotBase<Node, kReservedBits, kTabSizeLog>::lock(
-    atomic_uintptr_t *p) {
+u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::lock(atomic_uint32_t *p) {
   // Uses the pointer lsb as mutex.
   for (int i = 0;; i++) {
-    uptr cmp = atomic_load(p, memory_order_relaxed);
-    if ((cmp & 1) == 0 &&
-        atomic_compare_exchange_weak(p, &cmp, cmp | 1, memory_order_acquire))
-      return (Node *)cmp;
+    u32 cmp = atomic_load(p, memory_order_relaxed);
+    if ((cmp & kLockMask) == 0 &&
+        atomic_compare_exchange_weak(p, &cmp, cmp | kLockMask,
+                                     memory_order_acquire))
+      return cmp;
     if (i < 10)
       proc_yield(10);
     else
@@ -98,46 +102,45 @@ Node *StackDepotBase<Node, kReservedBits, kTabSizeLog>::lock(
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 void StackDepotBase<Node, kReservedBits, kTabSizeLog>::unlock(
-    atomic_uintptr_t *p, Node *s) {
-  DCHECK_EQ((uptr)s & 1, 0);
-  atomic_store(p, (uptr)s, memory_order_release);
+    atomic_uint32_t *p, u32 s) {
+  DCHECK_EQ(s & kLockMask, 0);
+  atomic_store(p, s, memory_order_release);
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-typename StackDepotBase<Node, kReservedBits, kTabSizeLog>::handle_type
-StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
-                                                      bool *inserted) {
+u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
+                                                          bool *inserted) {
   if (inserted)
     *inserted = false;
   if (!LIKELY(Node::is_valid(args)))
-    return handle_type();
+    return 0;
   hash_type h = Node::hash(args);
-  atomic_uintptr_t *p = &tab[h % kTabSize];
-  uptr v = atomic_load(p, memory_order_consume);
-  Node *s = (Node *)(v & ~uptr(1));
+  atomic_uint32_t *p = &tab[h % kTabSize];
+  u32 v = atomic_load(p, memory_order_consume);
+  u32 s = v & kUnlockMask;
   // First, try to find the existing stack.
-  Node *node = find(s, args, h);
+  u32 node = find(s, args, h);
   if (LIKELY(node))
-    return node->get_handle();
+    return node;
+
   // If failed, lock, retry and insert new.
-  Node *s2 = lock(p);
+  u32 s2 = lock(p);
   if (s2 != s) {
     node = find(s2, args, h);
     if (node) {
       unlock(p, s2);
-      return node->get_handle();
+      return node;
     }
   }
-  u32 id = atomic_fetch_add(&n_uniq_ids, 1, memory_order_relaxed) + 1;
-  CHECK_NE(id, 0);
-  CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
-  s = &nodes[id];
-  s->id = id;
-  s->store(args, h);
-  s->link = s2;
+  s = atomic_fetch_add(&n_uniq_ids, 1, memory_order_relaxed) + 1;
+  CHECK_EQ(s & kUnlockMask, s);
+  CHECK_EQ(s & (((u32)-1) >> kReservedBits), s);
+  Node &new_node = nodes[s];
+  new_node.store(args, h);
+  new_node.link = s2;
   unlock(p, s);
   if (inserted) *inserted = true;
-  return s->get_handle();
+  return s;
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
@@ -149,8 +152,6 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Get(u32 id) {
   if (!nodes.contains(id))
     return args_type();
   const Node &node = nodes[id];
-  if (node.id != id)
-    return args_type();
   return node.load();
 }
 
@@ -164,21 +165,22 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::LockAll() {
 template <class Node, int kReservedBits, int kTabSizeLog>
 void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAll() {
   for (int i = 0; i < kTabSize; ++i) {
-    atomic_uintptr_t *p = &tab[i];
+    atomic_uint32_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
-    unlock(p, (Node *)(s & ~uptr(1)));
+    unlock(p, s & kUnlockMask);
   }
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 void StackDepotBase<Node, kReservedBits, kTabSizeLog>::PrintAll() {
   for (int i = 0; i < kTabSize; ++i) {
-    atomic_uintptr_t *p = &tab[i];
-    uptr v = atomic_load(p, memory_order_consume);
-    Node *s = (Node *)(v & ~uptr(1));
-    for (; s; s = s->link) {
-      Printf("Stack for id %u:\n", s->id);
-      s->load().Print();
+    atomic_uint32_t *p = &tab[i];
+    u32 s = atomic_load(p, memory_order_consume) & kUnlockMask;
+    for (; s;) {
+      const Node &node = nodes[s];
+      Printf("Stack for id %u:\n", s);
+      node.load().Print();
+      s = node.link;
     }
   }
 }
