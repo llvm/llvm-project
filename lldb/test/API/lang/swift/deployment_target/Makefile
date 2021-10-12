@@ -1,26 +1,28 @@
-all: a.out dlopen_module
+all: libNewerTarget.dylib a.out dlopen_module
+
+SWIFT_SOURCES=main.swift
+SWIFTFLAGS_EXTRAS=-target x86_64-apple-macosx10.10 -Xfrontend -disable-target-os-checking -I$(BUILDDIR)
+LD_EXTRAS=-lNewerTarget -L$(BUILDDIR)
 
 include Makefile.rules
 
 # This test only works on macOS 10.11+.
 
 a.out: main.swift libNewerTarget.dylib
-	$(SWIFTC) -sdk "$(SWIFTSDKROOT)" -target x86_64-apple-macosx10.10 -g -Onone $^ -lNewerTarget -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I$(shell pwd) -Xfrontend -disable-target-os-checking
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
 
-dlopen_module: main.m libNewerTarget.dylib
-	$(CC) -framework Foundation $^ -mmacos-version-min=10.8 -o $@ $(CFLAGS)
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+dlopen_module: dlopen_module.m libNewerTarget.dylib
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		CXX= \
+		OBJC_SOURCES=dlopen_module.m \
+		EXE=dlopen_module \
+		LD_EXTRAS="-framework Foundation -mmacos-version-min=10.8"
 
 lib%.dylib: %.swift
-	$(SWIFTC) -sdk "$(SWIFTSDKROOT)" -target x86_64-apple-macosx10.11 -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES \
+		DYLIB_NAME=$(patsubst lib%.dylib,%,$@) \
+		DYLIB_SWIFT_SOURCES=$(patsubst lib%.dylib,%.swift,$@) \
+		SWIFTFLAGS_EXTRAS="-target x86_64-apple-macosx10.11"
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out dlopen_module *.o
