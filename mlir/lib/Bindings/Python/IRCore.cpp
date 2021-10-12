@@ -43,6 +43,9 @@ See also: https://mlir.llvm.org/docs/LangRef/#type-system
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
 
+static const char kContextGetNameLocationDocString[] =
+    R"(Gets a Location representing a named location with optional child location)";
+
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
 
@@ -1970,6 +1973,19 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           py::arg("filename"), py::arg("line"), py::arg("col"),
           py::arg("context") = py::none(), kContextGetFileLocationDocstring)
+      .def_static(
+          "name",
+          [](std::string name, llvm::Optional<PyLocation> childLoc,
+             DefaultingPyMlirContext context) {
+            return PyLocation(
+                context->getRef(),
+                mlirLocationNameGet(
+                    context->get(), toMlirStringRef(name),
+                    childLoc ? childLoc->get()
+                             : mlirLocationUnknownGet(context->get())));
+          },
+          py::arg("name"), py::arg("childLoc") = py::none(),
+          py::arg("context") = py::none(), kContextGetNameLocationDocString)
       .def_property_readonly(
           "context",
           [](PyLocation &self) { return self.getContext().getObject(); },
