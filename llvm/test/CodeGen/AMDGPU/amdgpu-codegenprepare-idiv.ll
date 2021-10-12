@@ -11236,8 +11236,8 @@ define amdgpu_kernel void @sdiv_i64_pow2_shl_denom(i64 addrspace(1)* %out, i64 %
 ; GFX6-LABEL: sdiv_i64_pow2_shl_denom:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s4, s[0:1], 0xd
-; GFX6-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX6-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; GFX6-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -13358,8 +13358,8 @@ define amdgpu_kernel void @srem_i64_pow2_shl_denom(i64 addrspace(1)* %out, i64 %
 ; GFX6-LABEL: srem_i64_pow2_shl_denom:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s4, s[0:1], 0xd
-; GFX6-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX6-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; GFX6-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
