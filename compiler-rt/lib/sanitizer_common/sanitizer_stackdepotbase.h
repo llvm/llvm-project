@@ -106,7 +106,7 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   hash_type h = Node::hash(args);
   atomic_uintptr_t *p = &tab[h % kTabSize];
   uptr v = atomic_load(p, memory_order_consume);
-  Node *s = (Node *)(v & ~1);
+  Node *s = (Node *)(v & ~uptr(1));
   // First, try to find the existing stack.
   Node *node = find(s, args, h);
   if (LIKELY(node))
@@ -150,7 +150,7 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Get(u32 id) {
     CHECK_LT(idx, kTabSize);
     atomic_uintptr_t *p = &tab[idx];
     uptr v = atomic_load(p, memory_order_consume);
-    Node *s = (Node *)(v & ~1);
+    Node *s = (Node *)(v & ~uptr(1));
     for (; s; s = s->link) {
       if (s->id == id) {
         return s->load();
@@ -172,7 +172,7 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAll() {
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uintptr_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
-    unlock(p, (Node *)(s & ~1UL));
+    unlock(p, (Node *)(s & ~uptr(1)));
   }
 }
 
@@ -181,7 +181,7 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::PrintAll() {
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uintptr_t *p = &tab[i];
     uptr v = atomic_load(p, memory_order_consume);
-    Node *s = (Node *)(v & ~1UL);
+    Node *s = (Node *)(v & ~uptr(1));
     for (; s; s = s->link) {
       Printf("Stack for id %u:\n", s->id);
       s->load().Print();
