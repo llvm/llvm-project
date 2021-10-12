@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility> // for std::pair
@@ -24,6 +25,7 @@ class Module;
 class Function;
 class FunctionCallee;
 class GlobalValue;
+class GlobalVariable;
 class Constant;
 class Value;
 class Type;
@@ -77,6 +79,10 @@ void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Adds global values to the llvm.compiler.used list.
 void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// Replaces llvm.used or llvm.compiler.used list with a new set of values.
+GlobalVariable *setUsedInitializer(GlobalVariable &V,
+                                   const SmallPtrSetImpl<GlobalValue *> &Init);
 
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.
