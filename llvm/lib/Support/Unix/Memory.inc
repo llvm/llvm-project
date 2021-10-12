@@ -29,14 +29,6 @@
 #include <zircon/syscalls.h>
 #endif
 
-#if defined(__mips__)
-#  if defined(__OpenBSD__)
-#    include <mips64/sysarch.h>
-#  elif !defined(__FreeBSD__)
-#    include <sys/cachectl.h>
-#  endif
-#endif
-
 #if defined(__APPLE__)
 extern "C" void sys_icache_invalidate(const void *Addr, size_t len);
 #else
