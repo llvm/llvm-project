@@ -1,8 +1,5 @@
 // Check target CPUs are correctly passed.
 
-// https://PR46644
-// XFAIL: arm64-apple
-
 // RUN: %clang -target aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -mcpu=generic -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
@@ -23,17 +20,18 @@
 // RUN: %clang -target arm64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-NATIVE %s
 // ARM64-NATIVE-NOT: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "native"
 
-// RUN: %clang -target arm64-apple-darwin -arch arm64 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-DARWIN %s
-// RUN: %clang -target arm64-apple-darwin -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-DARWIN %s
-// RUN: %clang -target arm64-apple-ios12.0 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-DARWIN %s
-// ARM64-DARWIN: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
-// ARM64-DARWIN-SAME: "-target-feature" "+aes"
+// RUN: %clang -target arm64-apple-ios -arch arm64 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-IOS %s
+// RUN: %clang -target arm64-apple-ios -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-IOS %s
+// ARM64-IOS: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
+// ARM64-IOS-SAME: "-target-feature" "+aes"
 
-// RUN: %clang -target arm64-apple-darwin -arch arm64e -### -c %s 2>&1 | FileCheck -check-prefix=ARM64E-DARWIN %s
-// ARM64E-DARWIN: "-cc1"{{.*}} "-triple" "arm64e{{.*}}" "-target-cpu" "apple-a12"
+// RUN: %clang -target arm64-apple-ios -arch arm64e -### -c %s 2>&1 | FileCheck -check-prefix=ARM64E-IOS %s
+// RUN: %clang -target arm64e-apple-ios -### -c %s 2>&1 | FileCheck -check-prefix=ARM64E-IOS %s
+// ARM64E-IOS: "-cc1"{{.*}} "-triple" "arm64e{{.*}}" "-target-cpu" "apple-a12"
 
-// RUN: %clang -target arm64-apple-darwin -arch arm64_32 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-DARWIN %s
-// ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "arm64_32{{.*}}" "-target-cpu" "apple-s4"
+// RUN: %clang -target arm64-apple-watchos -arch arm64_32 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-WATCHOS %s
+// RUN: %clang -target arm64_32-apple-watchos -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-WATCHOS %s
+// ARM64_32-WATCHOS: "-cc1"{{.*}} "-triple" "arm64_32{{.*}}" "-target-cpu" "apple-s4"
 
 // RUN: %clang -target aarch64 -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
