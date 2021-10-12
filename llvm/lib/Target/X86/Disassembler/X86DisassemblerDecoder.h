@@ -374,12 +374,6 @@ namespace X86Disassembler {
   ENTRY(CR14)         \
   ENTRY(CR15)
 
-#define REGS_BOUND    \
-  ENTRY(BND0)         \
-  ENTRY(BND1)         \
-  ENTRY(BND2)         \
-  ENTRY(BND3)
-
 #undef  REGS_TMM
 #define REGS_TMM  \
   ENTRY(TMM0)     \
@@ -414,7 +408,6 @@ namespace X86Disassembler {
   REGS_SEGMENT        \
   REGS_DEBUG          \
   REGS_CONTROL        \
-  REGS_BOUND          \
   REGS_TMM            \
   ENTRY(RIP)
 
