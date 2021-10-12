@@ -556,7 +556,8 @@ static Module *getTopImportImplicitModule(ModuleManager &ModuleMgr,
   StringRef ModuleName = TopImport->ModuleName;
   assert(!ModuleName.empty() && "diagnostic options read before module name");
 
-  Module *M = PP.getHeaderSearchInfo().lookupModule(ModuleName);
+  Module *M =
+      PP.getHeaderSearchInfo().lookupModule(ModuleName, TopImport->ImportLoc);
   assert(M && "missing module");
   return M;
 }
@@ -2915,7 +2916,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // If we've already loaded a module map file covering this module, we may
       // have a better path for it (relative to the current build).
       Module *M = PP.getHeaderSearchInfo().lookupModule(
-          F.ModuleName, /*AllowSearch*/ true,
+          F.ModuleName, F.ImportLoc, /*AllowSearch*/ true,
           /*AllowExtraModuleMapSearch*/ true);
       if (M && M->Directory) {
         // If we're implicitly loading a module, the base directory can't
@@ -3883,7 +3884,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   if (F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
-    Module *M = PP.getHeaderSearchInfo().lookupModule(F.ModuleName);
+    Module *M =
+        PP.getHeaderSearchInfo().lookupModule(F.ModuleName, F.ImportLoc);
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();
     const FileEntry *ModMap = M ? Map.getModuleMapFileForUniquing(M) : nullptr;
     // Don't emit module relocation error if we have -fno-validate-pch
