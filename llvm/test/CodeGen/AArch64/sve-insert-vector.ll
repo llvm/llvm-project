@@ -313,6 +313,24 @@ define <vscale x 8 x i16> @insert_nxv8i16_nxv2i16(<vscale x 8 x i16> %vec, <vsca
   ret <vscale x 8 x i16> %r
 }
 
+; Test that the index is scaled by vscale if the subvector is scalable.
+define <vscale x 8 x half> @insert_nxv8f16_nxv2f16(<vscale x 8 x half> %vec, <vscale x 2 x half> %in) nounwind {
+; CHECK-LABEL: insert_nxv8f16_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
+; CHECK-NEXT:    st1h { z1.d }, p1, [x8, #1, mul vl]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [sp]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half> %vec, <vscale x 2 x half> %in, i64 2)
+  ret <vscale x 8 x half> %r
+}
 
 ; Fixed length clamping
 
@@ -379,3 +397,5 @@ declare <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv1i32(<vsc
 declare <vscale x 6 x i16> @llvm.experimental.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16>, <vscale x 1 x i16>, i64)
 
 declare <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.nxv2i16(<vscale x 8 x i16>, <vscale x 2 x i16>, i64)
+
+declare <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half>, <vscale x 2 x half>, i64)
