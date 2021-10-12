@@ -16,6 +16,36 @@ func @invalid_release_dense(%arg0: tensor<4xi32>) {
 
 // -----
 
+func @invalid_init_dense(%arg0: index, %arg1: index) -> tensor<?x?xf32> {
+  // expected-error@+1 {{expected a sparse tensor result}}
+  %0 = sparse_tensor.init [%arg0, %arg1] : tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func @invalid_init_rank(%arg0: index) -> tensor<?xf32, #SparseVector> {
+  // expected-error@+1 {{unexpected mismatch between tensor rank and sizes: 1 vs. 2}}
+  %0 = sparse_tensor.init [%arg0, %arg0] : tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+func @invalid_init_size() -> tensor<?x10xf32, #SparseMatrix> {
+  %c10 = constant 10 : index
+  %c20 = constant 20 : index
+  // expected-error@+1 {{unexpected mismatch with static dimension size 10}}
+  %0 = sparse_tensor.init [%c10, %c20] : tensor<?x10xf32, #SparseMatrix>
+  return %0 : tensor<?x10xf32, #SparseMatrix>
+}
+
+// -----
+
 func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
   %c = arith.constant 0 : index
   // expected-error@+1 {{expected a sparse tensor to get pointers}}
@@ -115,7 +145,7 @@ func @mismatch_values_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<?xf32
 // -----
 
 func @sparse_to_unannotated_tensor(%arg0: memref<?xf64>) -> tensor<16x32xf64> {
-  // expected-error@+1 {{expected a sparse tensor as result}}
+  // expected-error@+1 {{expected a sparse tensor result}}
   %0 = sparse_tensor.tensor %arg0 : memref<?xf64> to tensor<16x32xf64>
   return %0 : tensor<16x32xf64>
 }
