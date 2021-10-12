@@ -1275,6 +1275,11 @@ def Vector_TransferReadOp :
     %4 = vector.transfer_read %arg1[%c3, %c3], %vf0
       {permutation_map = (d0, d1)->(d0, d1)}
         : tensor<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
+
+    // Special encoding for 0-d transfer with 0-d tensor/memref, vector shape
+    // {1} and permutation_map () -> (0).
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
     ```
   }];
 
@@ -1402,6 +1407,11 @@ def Vector_TransferWriteOp :
     %5 = vector.transfer_write %4, %arg1[%c3, %c3]
       {permutation_map = (d0, d1)->(d0, d1)}
         : vector<1x1x4x3xf32>, tensor<?x?xvector<4x3xf32>>
+
+    // Special encoding for 0-d transfer with 0-d tensor/memref, vector shape
+    // {1} and permutation_map () -> (0).
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, tensor<f32>
     ```
   }];
 

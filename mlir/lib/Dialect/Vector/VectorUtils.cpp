@@ -239,6 +239,13 @@ AffineMap mlir::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getElementType().dyn_cast<VectorType>();
   if (elementVectorType)
     elementVectorRank += elementVectorType.getRank();
+  // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
+  // TODO: replace once we have 0-d vectors.
+  if (shapedType.getRank() == 0 &&
+      vectorType.getShape() == ArrayRef<int64_t>{1})
+    return AffineMap::get(
+        /*numDims=*/0, /*numSymbols=*/0,
+        getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
       shapedType.getRank(), vectorType.getRank() - elementVectorRank,
       shapedType.getContext());

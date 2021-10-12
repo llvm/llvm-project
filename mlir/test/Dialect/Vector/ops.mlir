@@ -1,5 +1,20 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
+// CHECK-LABEL: func @vector_transfer_ops_0d(
+func @vector_transfer_ops_0d(%arg0: tensor<f32>, %arg1: memref<f32>)
+  -> tensor<f32> {
+    %f0 = constant 0.0 : f32
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, tensor<f32>
+    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->(0)>} :
+      memref<f32>, vector<1xf32>
+    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, memref<f32>
+    return %1: tensor<f32>
+}
+
 // CHECK-LABEL: func @vector_transfer_ops(
 func @vector_transfer_ops(%arg0: memref<?x?xf32>,
                           %arg1 : memref<?x?xvector<4x3xf32>>,
