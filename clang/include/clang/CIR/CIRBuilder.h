@@ -20,6 +20,7 @@
 
 namespace mlir {
 class MLIRContext;
+class ModuleOp;
 class OwningModuleRef;
 } // namespace mlir
 
@@ -36,7 +37,6 @@ class CIRGenTypes;
 class CIRContext : public clang::ASTConsumer {
 public:
   CIRContext();
-  CIRContext(std::unique_ptr<llvm::raw_pwrite_stream> os);
   ~CIRContext();
   void Initialize(clang::ASTContext &Context) override;
   bool EmitFunction(const clang::FunctionDecl *FD);
@@ -44,8 +44,14 @@ public:
   bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
   void HandleTranslationUnit(clang::ASTContext &Ctx) override;
 
+  mlir::ModuleOp getModule();
+  std::unique_ptr<mlir::MLIRContext> takeContext() {
+    return std::move(mlirCtx);
+  };
+
+  void verifyModule();
+
 private:
-  std::unique_ptr<llvm::raw_pwrite_stream> outStream;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRBuildImpl> builder;
 

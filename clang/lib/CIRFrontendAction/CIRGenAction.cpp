@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRBuilder.h"
+#include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -55,13 +56,20 @@ namespace cir {
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
-  ASTContext *astContext{nullptr};
+
+  std::unique_ptr<raw_pwrite_stream> outputStream;
 
   std::unique_ptr<CIRContext> gen;
 
+  CIRGenAction::OutputType action;
+
+  ASTContext *astContext{nullptr};
+
 public:
-  CIRGenConsumer(std::unique_ptr<raw_pwrite_stream> os)
-      : gen(std::make_unique<CIRContext>(std::move(os))) {}
+  CIRGenConsumer(std::unique_ptr<raw_pwrite_stream> os,
+                 CIRGenAction::OutputType action)
+      : outputStream(std::move(os)), gen(std::make_unique<CIRContext>()),
+        action(action) {}
 
   void Initialize(ASTContext &ctx) override {
     assert(!astContext && "initialized multiple times");
@@ -76,7 +84,6 @@ public:
                                    astContext->getSourceManager(),
                                    "LLVM IR generation of declaration");
     gen->HandleTopLevelDecl(D);
-
     return true;
   }
 
@@ -86,7 +93,32 @@ public:
 
   void HandleTranslationUnit(ASTContext &C) override {
     gen->HandleTranslationUnit(C);
-    // TODO: Have context emit file here
+
+    gen->verifyModule();
+
+    auto mlirMod = gen->getModule();
+    auto mlirCtx = gen->takeContext();
+
+    switch (action) {
+    case CIRGenAction::OutputType::EmitCIR:
+      if (outputStream)
+        mlirMod->print(*outputStream);
+      break;
+    case CIRGenAction::OutputType::EmitLLVM: {
+      llvm::LLVMContext llvmCtx;
+      auto llvmModule =
+          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+      if (outputStream)
+        llvmModule->print(*outputStream, nullptr);
+      break;
+    }
+    case CIRGenAction::OutputType::EmitAssembly:
+    case CIRGenAction::OutputType::EmitObject:
+      assert(false && "Not yet implemented");
+      break;
+    case CIRGenAction::OutputType::None:
+      break;
+    }
   }
 
   void HandleTagDeclDefinition(TagDecl *D) override {}
@@ -126,7 +158,9 @@ getOutputStream(CompilerInstance &ci, StringRef inFile,
   case CIRGenAction::OutputType::EmitCIR:
     return ci.createDefaultOutputFile(false, inFile, "cir");
   case CIRGenAction::OutputType::EmitLLVM:
-    return ci.createDefaultOutputFile(true, inFile, "llvm");
+    return ci.createDefaultOutputFile(false, inFile, "llvm");
+  case CIRGenAction::OutputType::EmitObject:
+    return ci.createDefaultOutputFile(true, inFile, "o");
   case CIRGenAction::OutputType::None:
     return nullptr;
   }
@@ -139,7 +173,7 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   auto out = CI.takeOutputStream();
   if (!out)
     out = getOutputStream(CI, InFile, action);
-  return std::make_unique<cir::CIRGenConsumer>(std::move(out));
+  return std::make_unique<cir::CIRGenConsumer>(std::move(out), action);
 }
 
 std::unique_ptr<mlir::ModuleOp>
@@ -160,3 +194,7 @@ EmitCIRAction::EmitCIRAction(mlir::MLIRContext *_MLIRContext)
 void EmitCIROnlyAction::anchor() {}
 EmitCIROnlyAction::EmitCIROnlyAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::None, _MLIRContext) {}
+
+void EmitLLVMAction::anchor() {}
+EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *_MLIRContext)
+    : CIRGenAction(OutputType::EmitLLVM, _MLIRContext) {}
