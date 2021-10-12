@@ -1473,7 +1473,8 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor,
+               ExtractFromShapeOfExtentTensor>(context);
 }
 
 LogicalResult mlir::shape::ShapeOfOp::inferReturnTypes(
