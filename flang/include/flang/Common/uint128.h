@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Portable 128-bit unsigned integer arithmetic for use in impoverished
-// C++ implementations lacking __uint128_t.
+// Portable 128-bit integer arithmetic for use in impoverished C++
+// implementations lacking __uint128_t & __int128_t.
 
 #ifndef FORTRAN_COMMON_UINT128_H_
 #define FORTRAN_COMMON_UINT128_H_
@@ -46,6 +46,18 @@ public:
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
   constexpr Int128 &operator=(Int128 &&) = default;
+
+  constexpr Int128(const Int128<!IS_SIGNED> &n)
+      : low_{n.low()}, high_{n.high()} {}
+  constexpr Int128(Int128<!IS_SIGNED> &&n) : low_{n.low()}, high_{n.high()} {}
+  constexpr Int128 &operator=(const Int128<!IS_SIGNED> &n) {
+    low_ = n.low();
+    high_ = n.high();
+  }
+  constexpr Int128 &operator=(Int128<!IS_SIGNED> &&n) {
+    low_ = n.low();
+    high_ = n.high();
+  }
 
   constexpr Int128 operator+() const { return *this; }
   constexpr Int128 operator~() const { return {~high_, ~low_}; }
