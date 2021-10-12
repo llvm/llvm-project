@@ -1119,7 +1119,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
       if (p.first == nullptr && !config->shared)
         write(p.second, nullptr, 1);
       else if (p.first && !p.first->isPreemptible) {
-        // If we are emitting a shared libary with relocations we mustn't write
+        // If we are emitting a shared library with relocations we mustn't write
         // anything to the GOT here. When using Elf_Rel relocations the value
         // one will be treated as an addend and will cause crashes at runtime
         if (!config->shared)
