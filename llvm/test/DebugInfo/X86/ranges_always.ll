@@ -49,47 +49,89 @@
 
 ; CHECK-LABEL: .debug_info contents:
 ; CHECK: DW_TAG_compile_unit
-; CHECK:   DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
-; RNG:     DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x3) rangelist = [[CU_RANGE:.*]]
-; EXPRORFORM: DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = [[CU_RANGE:.*]]
+; CHECK:   DW_AT_low_pc
+; CHECK-SAME: (0x0000000000000000)
+; RNG:     DW_AT_ranges
+; RNG-SAME:  (indexed (0x4) rangelist = [[CU_RANGE:.*]]
+; EXPRORFORM: DW_AT_ranges
+; EXPRORFORM-SAME: (indexed (0x0) rangelist = [[CU_RANGE:.*]]
 ; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000000 ".text")
-; CHECK:     DW_AT_high_pc [DW_FORM_data4]   (0x00000001)
-; CHECK:     DW_AT_name {{.*}} "f1"
+; CHECK:     DW_AT_low_pc
+; CHECK-SAME:  (indexed (00000000) address = 0x0000000000000000 ".text")
+; CHECK:     DW_AT_high_pc
+; CHECK-SAME:  (0x00000001)
+; CHECK:     DW_AT_name
+; CHECK-SAME:  "f1"
 ; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_AT_name {{.*}} "f2"
+; CHECK:     DW_AT_name
+; CHECK-SAME:  "f2"
 ; CHECK:   DW_TAG_subprogram
-; EXPR:      DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x10, DW_OP_plus)
-; FORM:      DW_AT_low_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x10 address = 0x0000000000000010 ".text")
-; EXPRORFORM: DW_AT_high_pc [DW_FORM_data4]   (0x0000000d)
-; RNG:       DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = [[F3_RANGE:.*]]
-; CHECK:     DW_AT_name {{.*}} "f3"
+; EXPR:      DW_AT_low_pc 
+; EXPR-SAME:   (DW_OP_addrx 0x0, DW_OP_const4u 0x10, DW_OP_plus)
+; FORM:      DW_AT_low_pc
+; FORM-SAME:   [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x10 address = 0x0000000000000010 ".text")
+; EXPRORFORM: DW_AT_high_pc
+; EXPRORFORM-SAME: (0x0000000d)
+; RNG:       DW_AT_ranges
+; RNG-SAME:    (indexed (0x0) rangelist = [[F3_RANGE:.*]]
+; CHECK:     DW_AT_name
+; CHECK-SAME: "f3"
 ; CHECK:     DW_TAG_inlined_subroutine
-; EXPR:        DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x16, DW_OP_plus)
-; FORM:        DW_AT_low_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x16 address = 0x0000000000000016 ".text")
-; EXPRORFORM:  DW_AT_high_pc [DW_FORM_data4]   (0x00000005)
-; RNG:         DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = [[INL_RANGE:.*]]
+; EXPR:        DW_AT_low_pc
+; EXPR-SAME:     [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x16, DW_OP_plus)
+; FORM:        DW_AT_low_pc
+; FORM-SAME:     [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x16 address = 0x0000000000000016 ".text")
+; EXPRORFORM:  DW_AT_high_pc
+; EXPRORFORM-SAME: (0x00000005)
+; RNG:         DW_AT_ranges
+; RNG-SAME:      (indexed (0x1) rangelist = [[INL_RANGE:.*]]
 ; CHECK:     DW_TAG_call_site
-; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000016 ".text")
-; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x16, DW_OP_plus)
-; FORM:        DW_AT_call_return_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x16 address = 0x0000000000000016 ".text")
+; RNG:         DW_AT_call_return_pc
+; RNG-SAME:      (indexed (00000001) address = 0x0000000000000016 ".text")
+; EXPR:        DW_AT_call_return_pc
+; EXPR-SAME:     [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x16, DW_OP_plus)
+; FORM:        DW_AT_call_return_pc
+; FORM-SAME:     [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x16 address = 0x0000000000000016 ".text")
 ; CHECK:     DW_TAG_call_site
-; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000002) address = 0x000000000000001b ".text")
-; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x1b, DW_OP_plus)
-; FORM:        DW_AT_call_return_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x1b address = 0x000000000000001b ".text")
+; RNG:         DW_AT_call_return_pc 
+; RNG-SAME:      (indexed (00000002) address = 0x000000000000001b ".text")
+; EXPR:        DW_AT_call_return_pc
+; EXPR-SAME:     [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x1b, DW_OP_plus)
+; FORM:        DW_AT_call_return_pc
+; FORM-SAME:     [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x1b address = 0x000000000000001b ".text")
 ; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
-; EXPR:      DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x30, DW_OP_plus)
-; FORM:      DW_AT_low_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x30 address = 0x0000000000000030 ".text")
-; EXPRORFORM: DW_AT_high_pc [DW_FORM_data4]   (0x00000001)
-; RNG:       DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist = [[F5_RANGE:.*]]
-; CHECK:     DW_AT_name {{.*}} "f5"
+; EXPR:      DW_AT_low_pc
+; EXPR-SAME:   [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x30, DW_OP_plus)
+; FORM:      DW_AT_low_pc
+; FORM-SAME:   [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x30 address = 0x0000000000000030 ".text")
+; EXPRORFORM: DW_AT_high_pc
+; EXPRORFORM-SAME: (0x00000001)
+; RNG:       DW_AT_ranges
+; RNG-SAME:    (indexed (0x2) rangelist = [[F5_RANGE:.*]]
+; CHECK:     DW_AT_name
+; CHECK-SAME:  "f5"
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (
 ; RNG-SAME: 00000003
 ; EXPRORFORM-SAME: 00000001
 ; CHECK: ) address = 0x0000000000000000 ".other")
-; CHECK:     DW_AT_high_pc [DW_FORM_data4]   (0x00000001)
+; CHECK:     DW_AT_high_pc
+; CHECK-SAME:  (0x00000008)
+; CHECK:     DW_AT_name
+; CHECK-SAME: "f6"
+; CHECK:       DW_TAG_inlined_subroutine
+; RNG:           DW_AT_ranges
+; RNG-SAME:        (indexed (0x3) rangelist = [[F6_INL_RANGE:.*]]
+; EXPR:          DW_AT_low_pc
+; EXPR-SAME:       [DW_FORM_exprloc] (DW_OP_addrx 0x1, DW_OP_const4u 0x1, DW_OP_plus)
+; FORM:          DW_AT_low_pc
+; FORM-SAME:       [DW_FORM_LLVM_addrx_offset] (indexed (00000001) + 0x1 address = 0x0000000000000001 ".other")
+; EXPRORFORM:    DW_AT_high_pc
+; EXPRORFORM-SAME: (0x00000005)
+; CHECK:       DW_TAG_call_site
+; CHECK:         DW_AT_call_return_pc
+; CHECK:       NULL
 ; CHECK:   NULL
 
 ; CHECK-LABEL: .debug_addr contents:
@@ -99,29 +141,41 @@
 ; RNG-NEXT:   0x0000000000000016
 ; RNG-NEXT:   0x000000000000001b
 ; CHECK-NEXT: 0x0000000000000000
+; RNG-NEXT:   0x0000000000000006
 ; CHECK-NEXT: ]
 
 ; CHECK-LABEL: .debug_rnglists contents:
-; RNG: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000004
+; RNG: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000005
 ; EXPRORFORM: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000001
 ; CHECK: ranges:
-; RNG-NEXT:   [[F3_RANGE]]: [DW_RLE_base_addressx]:  0x0000000000000000
+; RNG-NEXT:   [[F3_RANGE]]: [DW_RLE_base_addressx]:
+; RNG-SAME:                   0x0000000000000000
 ; RNG-NEXT:                 [DW_RLE_offset_pair  ]
 ; RNG-NEXT:                 [DW_RLE_end_of_list  ]
 
-; RNG-NEXT:   [[INL_RANGE]]: [DW_RLE_base_addressx]:  0x0000000000000000
+; RNG-NEXT:   [[INL_RANGE]]: [DW_RLE_base_addressx]:
+; RNG-SAME:                    0x0000000000000000
 ; RNG-NEXT:                  [DW_RLE_offset_pair  ]
 ; RNG-NEXT:                  [DW_RLE_end_of_list  ]
 
-; RNG-NEXT:   [[F5_RANGE]]: [DW_RLE_base_addressx]:  0x0000000000000000
+; RNG-NEXT:   [[F5_RANGE]]: [DW_RLE_base_addressx]:
+; RNG-SAME:                   0x0000000000000000
 ; RNG-NEXT:                 [DW_RLE_offset_pair  ]
 ; RNG-NEXT:                 [DW_RLE_end_of_list  ]
 
-; CHECK-NEXT: [[CU_RANGE]]: [DW_RLE_base_addressx]:  0x0000000000000000
+; RNG-NEXT:   [[F6_INL_RANGE]]: [DW_RLE_base_addressx]:
+; RNG-SAME:                   0x0000000000000003
+; RNG-NEXT:                 [DW_RLE_offset_pair  ]
+; RNG-NEXT:                 [DW_RLE_end_of_list  ]
+
+; CHECK-NEXT: [[CU_RANGE]]: [DW_RLE_base_addressx]:
+; CHECK-SAME:                 0x0000000000000000
 ; CHECK-NEXT:               [DW_RLE_offset_pair  ]
 ; CHECK-NEXT:               [DW_RLE_offset_pair  ]
-; RNG-NEXT:                 [DW_RLE_startx_length]:  0x0000000000000003
-; EXPRORFORM-NEXT:          [DW_RLE_startx_length]:  0x0000000000000001
+; RNG-NEXT:                 [DW_RLE_startx_length]:
+; RNG-SAME:                   0x0000000000000003
+; EXPRORFORM-NEXT:          [DW_RLE_startx_length]:
+; EXPRORFORM-SAME:            0x0000000000000001
 ; CHECK-NEXT:               [DW_RLE_end_of_list  ]
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
@@ -150,10 +204,11 @@ entry:
   ret void, !dbg !20
 }
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone uwtable willreturn
-define dso_local void @_Z2f6v() local_unnamed_addr #2 section ".other" !dbg !21 {
+; Function Attrs: mustprogress nounwind uwtable
+define dso_local void @_Z2f6v() local_unnamed_addr #1 section ".other" !dbg !21 {
 entry:
-  ret void, !dbg !22
+  call void @_Z2f1v() #3, !dbg !22
+  ret void, !dbg !24
 }
 
 attributes #0 = { mustprogress noinline nounwind optnone uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -166,14 +221,14 @@ attributes #3 = { nounwind }
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0 (git@github.com:llvm/llvm-project.git e2c3dc6fc76e767f08249f6d2c36e41660a4e331)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "/usr/local/google/home/blaikie/dev/scratch/test.cpp", directory: "/usr/local/google/home/blaikie/dev/llvm/src", checksumkind: CSK_MD5, checksum: "3f22f50a63567e0643469021f6ccc6d5")
+!1 = !DIFile(filename: "/usr/local/google/home/blaikie/dev/scratch/test.cpp", directory: "/usr/local/google/home/blaikie/dev/llvm/src", checksumkind: CSK_MD5, checksum: "e70db21a276125757057e729999c09c7")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 1}
 !6 = !{!"clang version 14.0.0 (git@github.com:llvm/llvm-project.git e2c3dc6fc76e767f08249f6d2c36e41660a4e331)"}
 !7 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !8, file: !8, line: 1, type: !9, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
-!8 = !DIFile(filename: "scratch/test.cpp", directory: "/usr/local/google/home/blaikie/dev", checksumkind: CSK_MD5, checksum: "3f22f50a63567e0643469021f6ccc6d5")
+!8 = !DIFile(filename: "scratch/test.cpp", directory: "/usr/local/google/home/blaikie/dev", checksumkind: CSK_MD5, checksum: "e70db21a276125757057e729999c09c7")
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 !11 = !{}
@@ -187,4 +242,6 @@ attributes #3 = { nounwind }
 !19 = distinct !DISubprogram(name: "f5", linkageName: "_Z2f5v", scope: !8, file: !8, line: 11, type: !9, scopeLine: 11, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
 !20 = !DILocation(line: 12, column: 1, scope: !19)
 !21 = distinct !DISubprogram(name: "f6", linkageName: "_Z2f6v", scope: !8, file: !8, line: 13, type: !9, scopeLine: 13, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
-!22 = !DILocation(line: 14, column: 1, scope: !21)
+!22 = !DILocation(line: 3, column: 3, scope: !16, inlinedAt: !23)
+!23 = distinct !DILocation(line: 14, column: 3, scope: !21)
+!24 = !DILocation(line: 15, column: 1, scope: !21)
