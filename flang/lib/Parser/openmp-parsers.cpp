@@ -469,7 +469,7 @@ TYPE_PARSER(startOmpLine >>
         verbatim("END CRITICAL"_tok), maybe(parenthesized(name)))) /
         endOmpLine)
 TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
-                maybe(parenthesized(name)), maybe(Parser<OmpClause>{}))) /
+                maybe(parenthesized(name)), Parser<OmpClauseList>{})) /
     endOmpLine)
 
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
