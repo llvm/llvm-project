@@ -95,7 +95,7 @@ TEST(SanitizerCommon, StackDepotPrintNoLock) {
     idx2id[i] = StackDepotPut(s);
   }
   StackDepotPrintAll();
-  for (u32 i = 1; i < n; ++i) {
+  for (u32 i = 0; i < n; ++i) {
     uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
     StackTrace s(array, ARRAY_SIZE(array));
     CHECK_EQ(idx2id[i], StackDepotPut(s));
