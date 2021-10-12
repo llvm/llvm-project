@@ -2574,28 +2574,33 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>:<pref>:<idx>``
+``p[n]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. The fourth parameter
-    ``<idx>`` is a size of index that used for address calculation. If not
+    ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
+    and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
+    index that used for address calculation. If not
     specified, the default index size is equal to the pointer size. All sizes
     are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^23).
-``i<size>:<abi>:<pref>``
+``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
-``v<size>:<abi>:<pref>``
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
-    ``<size>``.
-``f<size>:<abi>:<pref>``
+    ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
-    targets.
-``a:<abi>:<pref>``
+    targets. The value of ``<size>`` must be in the range [1,2^23).
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
+    ``<pref>`` is optional and defaults to ``<abi>``.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
