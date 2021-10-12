@@ -38,7 +38,7 @@ FullDependencies::getAdditionalArgsWithoutModulePaths() const {
   };
 
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps) {
-    Args.push_back("-fmodule-file=" + PMD.ModuleName + "=" + PMD.PCMFile);
+    Args.push_back("-fmodule-file=" + PMD.PCMFile);
     Args.push_back("-fmodule-map-file=" + PMD.ModuleMapFile);
   }
 
