@@ -49,8 +49,8 @@ struct StringEqTransparent : StringEq {
 using umap_type = std::unordered_map<std::string, int, StringHash, StringEq>;
 using umap_type_hetero = std::unordered_map<std::string, int, StringHashTransparent, StringEqTransparent>;
 std::size_t num_measurements = 1001;
-std::size_t num_insertions = 100000;
-std::size_t string_size = 10;
+std::size_t num_insertions = 10000;
+std::size_t string_size = 100;
 
 template <typename MapType>
 double test_try_emplace() {

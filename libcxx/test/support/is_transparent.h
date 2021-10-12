@@ -179,7 +179,7 @@ enum class StoredCtorType {
 
 template <typename T>
 struct StoredType2 {
-  StoredType2(int value) : construction(StoredCtorType::ST_None), value_(value)
+  StoredType2(T value) : construction(StoredCtorType::ST_None), value_(value)
   {
     ++n_constructions;
   }
@@ -206,6 +206,10 @@ struct StoredType2 {
     return lhs.value_ == rhs.value_;
   }
 
+  friend bool operator<(StoredType2 const& lhs, StoredType2 const& rhs) {
+    return lhs.value_ < rhs.value_;
+  }
+
   // If we're being passed a SearchedType<T> object, avoid the conversion
   // to T. This allows testing that the transparent operations are correctly
   // forwarding the SearchedType all the way to this comparison by checking
@@ -216,6 +220,14 @@ struct StoredType2 {
   }
   friend bool operator==(SearchedType<T> const& lhs, StoredType2<T> const& rhs) {
     return lhs.get_value() == rhs.value_;
+  }
+
+  friend bool operator<(StoredType2 const& lhs, SearchedType<T> const& rhs) {
+    return lhs.value_ < rhs.get_value();
+  }
+
+  friend bool operator<(SearchedType<T> const& lhs, StoredType2 const& rhs) {
+    return lhs.get_value() < rhs.value_;
   }
 
   T get_value() const { return value_; }

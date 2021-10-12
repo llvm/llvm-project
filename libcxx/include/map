@@ -1248,6 +1248,19 @@ public:
             _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
+    template <class _K2, class... _Args>
+        _LIBCPP_INLINE_VISIBILITY
+        enable_if_t<__is_transparent<_Compare, _K2>::value &&
+                    is_convertible_v<_K2&&, const_iterator> == false &&
+                    is_convertible_v<_K2&&, iterator> == false,
+                    pair<iterator, bool>> try_emplace(_K2&& __k, _Args&&... __args)
+    {
+        return __tree_.__emplace_unique_key_args(__k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(_VSTD::forward<_K2>(__k)),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
+    }
+
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args)
@@ -1255,6 +1268,17 @@ public:
         return __tree_.__emplace_hint_unique_key_args(__h.__i_, __k,
             _VSTD::piecewise_construct,
             _VSTD::forward_as_tuple(__k),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)).first;
+    }
+
+    template <class _K2, class... _Args>
+        _LIBCPP_INLINE_VISIBILITY
+        enable_if_t<__is_transparent<_Compare, _K2>::value,
+                    iterator> try_emplace(const_iterator __h, _K2&& __k, _Args&&... __args)
+    {
+        return __tree_.__emplace_hint_unique_key_args(__h.__i_, __k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(_VSTD::forward<_K2>(__k)),
             _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)).first;
     }
 
@@ -1294,6 +1318,20 @@ public:
         return _VSTD::make_pair(emplace_hint(__p, _VSTD::move(__k), _VSTD::forward<_Vp>(__v)), true);
     }
 
+    template <class _K2, class _Vp>
+        _LIBCPP_INLINE_VISIBILITY
+        enable_if<__is_transparent<_Compare, _K2>::value,
+                  pair<iterator, bool>> insert_or_assign(_K2&& __k, _Vp&& __v)
+    {
+        iterator __p = lower_bound(__k);
+        if ( __p != end() && !key_comp()(__k, __p->first))
+        {
+            __p->second = _VSTD::forward<_Vp>(__v);
+            return _VSTD::make_pair(__p, false);
+        }
+        return _VSTD::make_pair(emplace_hint(__p, _VSTD::forward<_K2>(__k), _VSTD::forward<_Vp>(__v)), true);
+    }
+
     template <class _Vp>
     _LIBCPP_INLINE_VISIBILITY iterator insert_or_assign(const_iterator __h,
                                                         const key_type& __k,
@@ -1318,6 +1356,20 @@ public:
         __r->__get_value().second = _VSTD::forward<_Vp>(__v);
 
       return __r;
+    }
+
+    template <class _K2, class _Vp>
+        _LIBCPP_INLINE_VISIBILITY
+        enable_if<__is_transparent<_Compare, _K2>::value,
+                  iterator> insert_or_assign(const_iterator __h, _K2&& __k, _Vp&& __v)
+    {
+        auto [__r, __inserted] = __tree_.__emplace_hint_unique_key_args(
+            __h.__i_, __k, _VSTD::forward<_K2>(__k), _VSTD::forward<_Vp>(__v));
+
+        if (!__inserted)
+          __r->__get_value().second = _VSTD::forward<_Vp>(__v);
+
+        return __r;
     }
 
 #endif // _LIBCPP_STD_VER > 14
