@@ -224,6 +224,10 @@ struct CodegenStrategy {
         .enableHoistRedundantVectorTransfersOnTensor = val;
     return *this;
   }
+  CodegenStrategy &setMaxTransferRank(int64_t val) {
+    this->lateCodegenStrategyOptions.maxTransferRank = val;
+    return *this;
+  }
   CodegenStrategy &setEnableVectorTransferPartialRewrite(bool val) {
     this->lateCodegenStrategyOptions.enableVectorTransferPartialRewrite = val;
     return *this;
