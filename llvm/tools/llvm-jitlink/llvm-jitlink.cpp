@@ -1121,7 +1121,8 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
           "-slab-address requires -slab-allocate and -noexec",
           inconvertibleErrorCode());
 
-    errs() << "Warning: -slab-address used without -slab-page-size.\n";
+    if (SlabPageSize == 0)
+      errs() << "Warning: -slab-address used without -slab-page-size.\n";
   }
 
   if (SlabPageSize != 0) {
