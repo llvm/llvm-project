@@ -348,16 +348,15 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Debian package specific variables
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo5")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo5, rocm-core")
   if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
     set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   else()
     set(CPACK_DEBIAN_PACKAGE_RELEASE "local")
   endif()
-  set (CPACK_DEBIAN_PACKAGE_DEPENDS "rocm-core")
 
   # RPM package specific variables
-  set(CPACK_RPM_PACKAGE_REQUIRES "ncurses")
+  set(CPACK_RPM_PACKAGE_REQUIRES "ncurses, rocm-core")
   if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_PACKAGING_INSTALL_PREFIX}")
   endif()
@@ -366,7 +365,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
     set(CPACK_RPM_PACKAGE_RELEASE "local")
   endif()
-  set (CPACK_RPM_PACKAGE_REQUIRES "rocm-core")
 
   # Get rpm distro
   if(CPACK_RPM_PACKAGE_RELEASE)
