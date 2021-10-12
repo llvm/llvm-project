@@ -116,38 +116,4 @@ StackDepotHandle StackDepotNode::get_handle(u32 id) {
   return StackDepotHandle(&theDepot.nodes[id], id);
 }
 
-bool StackDepotReverseMap::IdDescPair::IdComparator(
-    const StackDepotReverseMap::IdDescPair &a,
-    const StackDepotReverseMap::IdDescPair &b) {
-  return a.id < b.id;
-}
-
-void StackDepotReverseMap::Init() const {
-  if (LIKELY(map_.capacity()))
-    return;
-  map_.reserve(StackDepotGetStats().n_uniq_ids + 100);
-  for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
-    u32 s = atomic_load(&theDepot.tab[idx], memory_order_consume) &
-            StackDepot::kUnlockMask;
-    for (; s;) {
-      const StackDepotNode &node = theDepot.nodes[s];
-      IdDescPair pair = {s, &node};
-      map_.push_back(pair);
-      s = node.link;
-    }
-  }
-  Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
-}
-
-StackTrace StackDepotReverseMap::Get(u32 id) const {
-  Init();
-  if (!map_.size())
-    return StackTrace();
-  IdDescPair pair = {id, nullptr};
-  uptr idx = InternalLowerBound(map_, pair, IdDescPair::IdComparator);
-  if (idx > map_.size() || map_[idx].id != id)
-    return StackTrace();
-  return map_[idx].desc->load();
-}
-
 } // namespace __sanitizer

@@ -58,7 +58,6 @@ class StackDepotBase {
 
  private:
   friend Node;
-  friend class StackDepotReverseMap;
   u32 find(u32 s, args_type args, hash_type hash) const;
   static u32 lock(atomic_uint32_t *p);
   static void unlock(atomic_uint32_t *p, u32 s);

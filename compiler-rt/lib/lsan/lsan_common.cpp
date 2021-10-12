@@ -487,7 +487,6 @@ static uptr GetCallerPC(const StackTrace &stack) {
 
 struct InvalidPCParam {
   Frontier *frontier;
-  const StackDepotReverseMap *stack_depot;
   bool skip_linker_allocations;
 };
 
@@ -502,7 +501,7 @@ static void MarkInvalidPCCb(uptr chunk, void *arg) {
     u32 stack_id = m.stack_trace_id();
     uptr caller_pc = 0;
     if (stack_id > 0)
-      caller_pc = GetCallerPC(param->stack_depot->Get(stack_id));
+      caller_pc = GetCallerPC(StackDepotGet(stack_id));
     // If caller_pc is unknown, this chunk may be allocated in a coroutine. Mark
     // it as reachable, as we can't properly report its allocation stack anyway.
     if (caller_pc == 0 || (param->skip_linker_allocations &&
@@ -533,11 +532,9 @@ static void MarkInvalidPCCb(uptr chunk, void *arg) {
 // which we don't care about).
 // On all other platforms, this simply checks to ensure that the caller pc is
 // valid before reporting chunks as leaked.
-static void ProcessPC(Frontier *frontier,
-                      const StackDepotReverseMap &stack_depot) {
+static void ProcessPC(Frontier *frontier) {
   InvalidPCParam arg;
   arg.frontier = frontier;
-  arg.stack_depot = &stack_depot;
   arg.skip_linker_allocations =
       flags()->use_tls && flags()->use_ld_allocations && GetLinker() != nullptr;
   ForEachChunk(MarkInvalidPCCb, &arg);
@@ -545,7 +542,6 @@ static void ProcessPC(Frontier *frontier,
 
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
-                              const StackDepotReverseMap &stack_depot,
                               Frontier *frontier) {
   const InternalMmapVector<u32> &suppressed_stacks =
       GetSuppressionContext()->GetSortedSuppressedStacks();
@@ -560,7 +556,7 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
   FloodFillTag(frontier, kReachable);
 
   CHECK_EQ(0, frontier->size());
-  ProcessPC(frontier, stack_depot);
+  ProcessPC(frontier);
 
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
@@ -654,8 +650,7 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   CHECK(param);
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
-  ClassifyAllChunks(suspended_threads, param->leak_report.stack_depot(),
-                    &param->frontier);
+  ClassifyAllChunks(suspended_threads, &param->frontier);
   ForEachChunk(CollectLeaksCb, &param->leak_report);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
@@ -795,7 +790,7 @@ void LeakReport::AddLeakedChunk(uptr chunk, u32 stack_trace_id,
   CHECK(tag == kDirectlyLeaked || tag == kIndirectlyLeaked);
 
   if (u32 resolution = flags()->resolution) {
-    StackTrace stack = stack_depot_.Get(stack_trace_id);
+    StackTrace stack = StackDepotGet(stack_trace_id);
     stack.size = Min(stack.size, resolution);
     stack_trace_id = StackDepotPut(stack);
   }
@@ -863,7 +858,7 @@ void LeakReport::PrintReportForLeak(uptr index) {
   Printf("%s", d.Default());
 
   CHECK(leaks_[index].stack_trace_id);
-  stack_depot_.Get(leaks_[index].stack_trace_id).Print();
+  StackDepotGet(leaks_[index].stack_trace_id).Print();
 
   if (flags()->report_objects) {
     Printf("Objects leaked above:\n");
@@ -900,7 +895,7 @@ uptr LeakReport::ApplySuppressions() {
   uptr new_suppressions = false;
   for (uptr i = 0; i < leaks_.size(); i++) {
     Suppression *s = suppressions->GetSuppressionForStack(
-        leaks_[i].stack_trace_id, stack_depot_.Get(leaks_[i].stack_trace_id));
+        leaks_[i].stack_trace_id, StackDepotGet(leaks_[i].stack_trace_id));
     if (s) {
       s->weight += leaks_[i].total_size;
       atomic_store_relaxed(&s->hit_count, atomic_load_relaxed(&s->hit_count) +
