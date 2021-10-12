@@ -86,6 +86,22 @@ TEST(SanitizerCommon, Maybe_StackDepotPrint) {
       "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*");
 }
 
+TEST(SanitizerCommon, StackDepotPrintNoLock) {
+  u32 n = 2000;
+  std::vector<u32> idx2id(n);
+  for (u32 i = 0; i < n; ++i) {
+    uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
+    StackTrace s(array, ARRAY_SIZE(array));
+    idx2id[i] = StackDepotPut(s);
+  }
+  StackDepotPrintAll();
+  for (u32 i = 1; i < n; ++i) {
+    uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
+    StackTrace s(array, ARRAY_SIZE(array));
+    CHECK_EQ(idx2id[i], StackDepotPut(s));
+  }
+}
+
 TEST(SanitizerCommon, StackDepotReverseMap) {
   uptr array1[] = {1, 2, 3, 4, 5};
   uptr array2[] = {7, 1, 3, 0};
