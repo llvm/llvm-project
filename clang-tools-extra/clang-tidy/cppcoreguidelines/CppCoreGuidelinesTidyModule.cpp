@@ -106,9 +106,6 @@ public:
     Opts["cppcoreguidelines-non-private-member-variables-in-classes."
          "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "true";
 
-    Opts["cppcoreguidelines-explicit-virtual-functions."
-         "IgnoreDestructors"] = "true";
-
     return Options;
   }
 };

@@ -113,6 +113,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Removed default setting `cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"`,
+  to match the current state of the C++ Core Guidelines.
+
+
 Removed checks
 ^^^^^^^^^^^^^^
 

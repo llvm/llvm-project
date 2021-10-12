@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-override,cppcoreguidelines-explicit-virtual-functions %t -- -- -fexceptions
 
 #define ABSTRACT = 0
 
@@ -52,7 +52,7 @@ struct Base {
 struct SimpleCases : public Base {
 public:
   virtual ~SimpleCases();
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual' [modernize-use-override]
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual'
   // CHECK-FIXES: {{^}}  ~SimpleCases() override;
 
   void a();
