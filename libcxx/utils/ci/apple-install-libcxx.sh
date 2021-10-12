@@ -122,7 +122,8 @@ for arch in ${architectures}; do
             -DCMAKE_OSX_ARCHITECTURES="${arch}" \
             -DLIBCXXABI_LIBRARY_VERSION="${version}" \
             -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-            -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
+            -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in" \
+            -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-shared.cfg.in"
     )
 
     xcrun --sdk "${sdk}" cmake --build "${build_dir}/${arch}" --target install-cxx install-cxxabi -- -v

@@ -178,9 +178,9 @@ option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
 
 set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
   "The path to the Lit testing configuration to use when running the tests.
-   If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxx/test/configs'.")
+   If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxxabi/test/configs'.")
 if (NOT IS_ABSOLUTE "${LIBCXXABI_TEST_CONFIG}")
-  set(LIBCXXABI_TEST_CONFIG "${LIBCXXABI_LIBCXX_PATH}/test/configs/${LIBCXXABI_TEST_CONFIG}")
+  set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/${LIBCXXABI_TEST_CONFIG}")
 endif()
 set(LIBCXXABI_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")

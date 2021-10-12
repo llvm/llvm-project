@@ -373,7 +373,8 @@ generic-no-wide-characters)
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-shared.cfg.in"
     check-runtimes
 ;;
 x86_64-apple-system-backdeployment-*)
