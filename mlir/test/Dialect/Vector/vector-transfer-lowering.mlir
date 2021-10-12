@@ -1,5 +1,23 @@
 // RUN: mlir-opt %s -test-vector-transfer-lowering-patterns -canonicalize -split-input-file | FileCheck %s
 
+// CHECK-LABEL: func @vector_transfer_ops_0d(
+//  CHECK-SAME:   %[[MEM:.*]]: memref<f32>) {
+func @vector_transfer_ops_0d(%M: memref<f32>) {
+    %f0 = constant 0.0 : f32
+
+//  CHECK-NEXT:   %[[V:.*]] = memref.load %[[MEM]][] : memref<f32>
+    %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->(0)>} :
+      memref<f32>, vector<1xf32>
+
+//  CHECK-NEXT:   memref.store %[[V]], %[[MEM]][] : memref<f32>
+    vector.transfer_write %0, %M[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, memref<f32>
+  
+    return
+}
+
+// -----
+
 // transfer_read/write are lowered to vector.load/store
 // CHECK-LABEL:   func @transfer_to_load(
 // CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
