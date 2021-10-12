@@ -465,7 +465,7 @@ void OverridingMethods::add(unsigned OverriddenSubobject,
                             UniqueVirtualMethod Overriding) {
   SmallVectorImpl<UniqueVirtualMethod> &SubobjectOverrides
     = Overrides[OverriddenSubobject];
-  if (llvm::find(SubobjectOverrides, Overriding) == SubobjectOverrides.end())
+  if (!llvm::is_contained(SubobjectOverrides, Overriding))
     SubobjectOverrides.push_back(Overriding);
 }
 

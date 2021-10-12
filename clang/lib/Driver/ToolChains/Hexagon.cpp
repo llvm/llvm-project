@@ -487,7 +487,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 
   std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
                                               D.PrefixDirs);
-  if (llvm::find(RootDirs, TargetDir) == RootDirs.end())
+  if (!llvm::is_contained(RootDirs, TargetDir))
     RootDirs.push_back(TargetDir);
 
   bool HasPIC = Args.hasArg(options::OPT_fpic, options::OPT_fPIC);

@@ -389,11 +389,10 @@ private:
       auto *Vector = NodeOrVector.template get<ParentVector *>();
       // Skip duplicates for types that have memoization data.
       // We must check that the type has memoization data before calling
-      // std::find() because DynTypedNode::operator== can't compare all
+      // llvm::is_contained() because DynTypedNode::operator== can't compare all
       // types.
       bool Found = ParentStack.back().getMemoizationData() &&
-                   std::find(Vector->begin(), Vector->end(),
-                             ParentStack.back()) != Vector->end();
+                   llvm::is_contained(*Vector, ParentStack.back());
       if (!Found)
         Vector->push_back(ParentStack.back());
     }

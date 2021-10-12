@@ -4449,8 +4449,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
   // the address of the variable.
   if (UsePointerValue) {
-    assert(std::find(Expr.begin(), Expr.end(), llvm::dwarf::DW_OP_deref) ==
-               Expr.end() &&
+    assert(!llvm::is_contained(Expr, llvm::dwarf::DW_OP_deref) &&
            "Debug info already contains DW_OP_deref.");
     Expr.push_back(llvm::dwarf::DW_OP_deref);
   }

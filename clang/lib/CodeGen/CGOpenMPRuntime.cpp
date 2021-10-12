@@ -7596,19 +7596,14 @@ private:
       Bits |= OMP_MAP_PTR_AND_OBJ;
     if (AddIsTargetParamFlag)
       Bits |= OMP_MAP_TARGET_PARAM;
-    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_always)
-        != MapModifiers.end())
+    if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_always))
       Bits |= OMP_MAP_ALWAYS;
-    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_close)
-        != MapModifiers.end())
+    if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_close))
       Bits |= OMP_MAP_CLOSE;
-    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_present) !=
-            MapModifiers.end() ||
-        llvm::find(MotionModifiers, OMPC_MOTION_MODIFIER_present) !=
-            MotionModifiers.end())
+    if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_present) ||
+        llvm::is_contained(MotionModifiers, OMPC_MOTION_MODIFIER_present))
       Bits |= OMP_MAP_PRESENT;
-    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_ompx_hold) !=
-        MapModifiers.end())
+    if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_ompx_hold))
       Bits |= OMP_MAP_OMPX_HOLD;
     if (IsNonContiguous)
       Bits |= OMP_MAP_NON_CONTIG;
