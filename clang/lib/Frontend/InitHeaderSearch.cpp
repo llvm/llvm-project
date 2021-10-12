@@ -36,9 +36,11 @@ namespace {
 struct DirectoryLookupInfo {
   IncludeDirGroup Group;
   DirectoryLookup Lookup;
+  Optional<unsigned> UserEntryIdx;
 
-  DirectoryLookupInfo(IncludeDirGroup Group, DirectoryLookup Lookup)
-      : Group(Group), Lookup(Lookup) {}
+  DirectoryLookupInfo(IncludeDirGroup Group, DirectoryLookup Lookup,
+                      Optional<unsigned> UserEntryIdx)
+      : Group(Group), Lookup(Lookup), UserEntryIdx(UserEntryIdx) {}
 };
 
 /// InitHeaderSearch - This class makes it easier to set the search paths of
@@ -60,13 +62,15 @@ public:
   /// AddPath - Add the specified path to the specified group list, prefixing
   /// the sysroot if used.
   /// Returns true if the path exists, false if it was ignored.
-  bool AddPath(const Twine &Path, IncludeDirGroup Group, bool isFramework);
+  bool AddPath(const Twine &Path, IncludeDirGroup Group, bool isFramework,
+               Optional<unsigned> UserEntryIdx = None);
 
   /// AddUnmappedPath - Add the specified path to the specified group list,
   /// without performing any sysroot remapping.
   /// Returns true if the path exists, false if it was ignored.
   bool AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
-                       bool isFramework);
+                       bool isFramework,
+                       Optional<unsigned> UserEntryIdx = None);
 
   /// AddSystemHeaderPrefix - Add the specified prefix to the system header
   /// prefix list.
@@ -119,22 +123,25 @@ static bool CanPrefixSysroot(StringRef Path) {
 }
 
 bool InitHeaderSearch::AddPath(const Twine &Path, IncludeDirGroup Group,
-                               bool isFramework) {
+                               bool isFramework,
+                               Optional<unsigned> UserEntryIdx) {
   // Add the path with sysroot prepended, if desired and this is a system header
   // group.
   if (HasSysroot) {
     SmallString<256> MappedPathStorage;
     StringRef MappedPathStr = Path.toStringRef(MappedPathStorage);
     if (CanPrefixSysroot(MappedPathStr)) {
-      return AddUnmappedPath(IncludeSysroot + Path, Group, isFramework);
+      return AddUnmappedPath(IncludeSysroot + Path, Group, isFramework,
+                             UserEntryIdx);
     }
   }
 
-  return AddUnmappedPath(Path, Group, isFramework);
+  return AddUnmappedPath(Path, Group, isFramework, UserEntryIdx);
 }
 
 bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
-                                       bool isFramework) {
+                                       bool isFramework,
+                                       Optional<unsigned> UserEntryIdx) {
   assert(!Path.isTriviallyEmpty() && "can't handle empty path here");
 
   FileManager &FM = Headers.getFileMgr();
@@ -160,7 +167,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
 
   // If the directory exists, add it.
   if (auto DE = FM.getOptionalDirectoryRef(MappedPathStr)) {
-    IncludePath.emplace_back(Group, DirectoryLookup(*DE, Type, isFramework));
+    IncludePath.emplace_back(Group, DirectoryLookup(*DE, Type, isFramework),
+                             UserEntryIdx);
     return true;
   }
 
@@ -171,7 +179,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
         IncludePath.emplace_back(
-            Group, DirectoryLookup(HM, Type, Group == IndexHeaderMap));
+            Group, DirectoryLookup(HM, Type, Group == IndexHeaderMap),
+            UserEntryIdx);
         return true;
       }
     }
@@ -471,7 +480,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
 /// RemoveDuplicates - If there are duplicate directory entries in the specified
 /// search list, remove the later (dead) ones.  Returns the number of non-system
 /// headers removed, which is used to update NumAngled.
-static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
+static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
                                  unsigned First, bool Verbose) {
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenDirs;
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenFrameworkDirs;
@@ -480,7 +489,7 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
   for (unsigned i = First; i != SearchList.size(); ++i) {
     unsigned DirToRemove = i;
 
-    const DirectoryLookup &CurEntry = SearchList[i];
+    const DirectoryLookup &CurEntry = SearchList[i].Lookup;
 
     if (CurEntry.isNormalDir()) {
       // If this isn't the first time we've seen this dir, remove it.
@@ -510,7 +519,7 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
       for (FirstDir = First;; ++FirstDir) {
         assert(FirstDir != i && "Didn't find dupe?");
 
-        const DirectoryLookup &SearchEntry = SearchList[FirstDir];
+        const DirectoryLookup &SearchEntry = SearchList[FirstDir].Lookup;
 
         // If these are different lookup types, then they can't be the dupe.
         if (SearchEntry.getLookupType() != CurEntry.getLookupType())
@@ -532,7 +541,7 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
 
       // If the first dir in the search path is a non-system dir, zap it
       // instead of the system one.
-      if (SearchList[FirstDir].getDirCharacteristic() == SrcMgr::C_User)
+      if (SearchList[FirstDir].Lookup.getDirCharacteristic() == SrcMgr::C_User)
         DirToRemove = FirstDir;
     }
 
@@ -554,16 +563,37 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
   return NonSystemRemoved;
 }
 
+/// Extract DirectoryLookups from DirectoryLookupInfos.
+static std::vector<DirectoryLookup>
+extractLookups(const std::vector<DirectoryLookupInfo> &Infos) {
+  std::vector<DirectoryLookup> Lookups;
+  Lookups.reserve(Infos.size());
+  llvm::transform(Infos, std::back_inserter(Lookups),
+                  [](const DirectoryLookupInfo &Info) { return Info.Lookup; });
+  return Lookups;
+}
+
+/// Collect the mapping between indices of DirectoryLookups and UserEntries.
+static llvm::DenseMap<unsigned, unsigned>
+mapToUserEntries(const std::vector<DirectoryLookupInfo> &Infos) {
+  llvm::DenseMap<unsigned, unsigned> LookupsToUserEntries;
+  for (unsigned I = 0, E = Infos.size(); I < E; ++I) {
+    // Check whether this DirectoryLookup maps to a HeaderSearch::UserEntry.
+    if (Infos[I].UserEntryIdx)
+      LookupsToUserEntries.insert({I, *Infos[I].UserEntryIdx});
+  }
+  return LookupsToUserEntries;
+}
 
 void InitHeaderSearch::Realize(const LangOptions &Lang) {
   // Concatenate ANGLE+SYSTEM+AFTER chains together into SearchList.
-  std::vector<DirectoryLookup> SearchList;
+  std::vector<DirectoryLookupInfo> SearchList;
   SearchList.reserve(IncludePath.size());
 
   // Quoted arguments go first.
   for (auto &Include : IncludePath)
     if (Include.Group == Quoted)
-      SearchList.push_back(Include.Lookup);
+      SearchList.push_back(Include);
 
   // Deduplicate and remember index.
   RemoveDuplicates(SearchList, 0, Verbose);
@@ -571,7 +601,7 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
 
   for (auto &Include : IncludePath)
     if (Include.Group == Angled || Include.Group == IndexHeaderMap)
-      SearchList.push_back(Include.Lookup);
+      SearchList.push_back(Include);
 
   RemoveDuplicates(SearchList, NumQuoted, Verbose);
   unsigned NumAngled = SearchList.size();
@@ -583,11 +613,11 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
          Include.Group == CXXSystem) ||
         (Lang.ObjC && !Lang.CPlusPlus && Include.Group == ObjCSystem) ||
         (Lang.ObjC && Lang.CPlusPlus && Include.Group == ObjCXXSystem))
-      SearchList.push_back(Include.Lookup);
+      SearchList.push_back(Include);
 
   for (auto &Include : IncludePath)
     if (Include.Group == After)
-      SearchList.push_back(Include.Lookup);
+      SearchList.push_back(Include);
 
   // Remove duplicates across both the Angled and System directories.  GCC does
   // this and failing to remove duplicates across these two groups breaks
@@ -596,7 +626,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   NumAngled -= NonSystemRemoved;
 
   bool DontSearchCurDir = false;  // TODO: set to true if -I- is set?
-  Headers.SetSearchPaths(SearchList, NumQuoted, NumAngled, DontSearchCurDir);
+  Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,
+                         DontSearchCurDir, mapToUserEntries(SearchList));
 
   Headers.SetSystemHeaderPrefixes(SystemHeaderPrefixes);
 
@@ -606,14 +637,14 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
     for (unsigned i = 0, e = SearchList.size(); i != e; ++i) {
       if (i == NumQuoted)
         llvm::errs() << "#include <...> search starts here:\n";
-      StringRef Name = SearchList[i].getName();
+      StringRef Name = SearchList[i].Lookup.getName();
       const char *Suffix;
-      if (SearchList[i].isNormalDir())
+      if (SearchList[i].Lookup.isNormalDir())
         Suffix = "";
-      else if (SearchList[i].isFramework())
+      else if (SearchList[i].Lookup.isFramework())
         Suffix = " (framework directory)";
       else {
-        assert(SearchList[i].isHeaderMap() && "Unknown DirectoryLookup");
+        assert(SearchList[i].Lookup.isHeaderMap() && "Unknown DirectoryLookup");
         Suffix = " (headermap)";
       }
       llvm::errs() << " " << Name << Suffix << "\n";
@@ -632,9 +663,9 @@ void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
   for (unsigned i = 0, e = HSOpts.UserEntries.size(); i != e; ++i) {
     const HeaderSearchOptions::Entry &E = HSOpts.UserEntries[i];
     if (E.IgnoreSysRoot) {
-      Init.AddUnmappedPath(E.Path, E.Group, E.IsFramework);
+      Init.AddUnmappedPath(E.Path, E.Group, E.IsFramework, i);
     } else {
-      Init.AddPath(E.Path, E.Group, E.IsFramework);
+      Init.AddPath(E.Path, E.Group, E.IsFramework, i);
     }
   }
 

@@ -108,6 +108,20 @@ void HeaderSearch::PrintStats() {
                << NumSubFrameworkLookups << " subframework lookups.\n";
 }
 
+std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
+  std::vector<bool> UserEntryUsage(HSOpts->UserEntries.size());
+  for (unsigned I = 0, E = SearchDirsUsage.size(); I < E; ++I) {
+    // Check whether this DirectoryLookup has been successfully used.
+    if (SearchDirsUsage[I]) {
+      auto UserEntryIdxIt = SearchDirToHSEntry.find(I);
+      // Check whether this DirectoryLookup maps to a HeaderSearch::UserEntry.
+      if (UserEntryIdxIt != SearchDirToHSEntry.end())
+        UserEntryUsage[UserEntryIdxIt->second] = true;
+    }
+  }
+  return UserEntryUsage;
+}
+
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
 /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
 const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
@@ -262,10 +276,11 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
                                    SourceLocation ImportLoc,
                                    bool AllowExtraModuleMapSearch) {
   Module *Module = nullptr;
+  unsigned Idx;
 
   // Look through the various header search paths to load any available module
   // maps, searching for a module map that describes this module.
-  for (unsigned Idx = 0, N = SearchDirs.size(); Idx != N; ++Idx) {
+  for (Idx = 0; Idx != SearchDirs.size(); ++Idx) {
     if (SearchDirs[Idx].isFramework()) {
       // Search for or infer a module map for a framework. Here we use
       // SearchName rather than ModuleName, to permit finding private modules
@@ -327,6 +342,9 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
     if (Module)
       break;
   }
+
+  if (Module)
+    noteLookupUsage(Idx, ImportLoc);
 
   return Module;
 }
@@ -440,16 +458,19 @@ Optional<FileEntryRef> DirectoryLookup::LookupFile(
   if (llvm::sys::path::is_relative(Dest)) {
     MappedName.append(Dest.begin(), Dest.end());
     Filename = StringRef(MappedName.begin(), MappedName.size());
-    Optional<FileEntryRef> Result = HM->LookupFile(Filename, HS.getFileMgr());
-    if (Result) {
-      FixupSearchPath();
-      return *Result;
-    }
-  } else if (auto Res = HS.getFileMgr().getOptionalFileRef(Dest)) {
+    Dest = HM->lookupFilename(Filename, Path);
+  }
+
+  if (auto Res = HS.getFileMgr().getOptionalFileRef(Dest)) {
     FixupSearchPath();
     return *Res;
   }
 
+  // Header maps need to be marked as used whenever the filename matches.
+  // The case where the target file **exists** is handled by callee of this
+  // function as part of the regular logic that applies to include search paths.
+  // The case where the target file **does not exist** is handled here:
+  HS.noteLookupUsage(*HS.searchDirIdx(*this), IncludeLoc);
   return None;
 }
 
@@ -652,6 +673,21 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
   if (File)
     return *File;
   return None;
+}
+
+void HeaderSearch::cacheLookupSuccess(LookupFileCacheInfo &CacheLookup,
+                                      unsigned HitIdx, SourceLocation Loc) {
+  CacheLookup.HitIdx = HitIdx;
+  noteLookupUsage(HitIdx, Loc);
+}
+
+void HeaderSearch::noteLookupUsage(unsigned HitIdx, SourceLocation Loc) {
+  SearchDirsUsage[HitIdx] = true;
+
+  auto UserEntryIdxIt = SearchDirToHSEntry.find(HitIdx);
+  if (UserEntryIdxIt != SearchDirToHSEntry.end())
+    Diags.Report(Loc, diag::remark_pp_search_path_usage)
+        << HSOpts->UserEntries[UserEntryIdxIt->second].Path;
 }
 
 void HeaderSearch::setTarget(const TargetInfo &Target) {
@@ -992,7 +1028,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
           &File->getFileEntry(), isAngled, FoundByHeaderMap);
 
     // Remember this location for the next lookup we do.
-    CacheLookup.HitIdx = i;
+    cacheLookupSuccess(CacheLookup, i, IncludeLoc);
     return File;
   }
 
@@ -1022,8 +1058,8 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
         return MSFE;
       }
 
-      LookupFileCacheInfo &CacheLookup = LookupFileCache[Filename];
-      CacheLookup.HitIdx = LookupFileCache[ScratchFilename].HitIdx;
+      cacheLookupSuccess(LookupFileCache[Filename],
+                         LookupFileCache[ScratchFilename].HitIdx, IncludeLoc);
       // FIXME: SuggestedModule.
       return File;
     }
@@ -1360,6 +1396,13 @@ size_t HeaderSearch::getTotalMemory() const {
     + llvm::capacity_in_bytes(HeaderMaps)
     + LookupFileCache.getAllocator().getTotalMemory()
     + FrameworkMap.getAllocator().getTotalMemory();
+}
+
+Optional<unsigned> HeaderSearch::searchDirIdx(const DirectoryLookup &DL) const {
+  for (unsigned I = 0; I < SearchDirs.size(); ++I)
+    if (&SearchDirs[I] == &DL)
+      return I;
+  return None;
 }
 
 StringRef HeaderSearch::getUniqueFrameworkName(StringRef Framework) {
