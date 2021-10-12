@@ -2393,11 +2393,8 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // inlining due to debug symbols. Eventually, the number of unsimplified
     // instructions shouldn't factor into the cost computation, but until then,
     // hack around it here.
-    if (isa<DbgInfoIntrinsic>(I))
-      continue;
-
-    // Skip pseudo-probes.
-    if (isa<PseudoProbeInst>(I))
+    // Similarly, skip pseudo-probes.
+    if (I.isDebugOrPseudoInst())
       continue;
 
     // Skip ephemeral values.
