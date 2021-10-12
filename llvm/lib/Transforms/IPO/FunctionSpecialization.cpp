@@ -789,12 +789,27 @@ bool llvm::runFunctionSpecialization(
       Solver.trackValueOfGlobalVariable(&G);
   }
 
+  auto &TrackedFuncs = Solver.getArgumentTrackedFunctions();
+  SmallVector<Function *, 16> FuncDecls(TrackedFuncs.begin(),
+                                        TrackedFuncs.end());
+
+  // No tracked functions, so nothing to do: don't run the solver and remove
+  // the ssa_copy intrinsics that may have been introduced.
+  if (TrackedFuncs.empty()) {
+    removeSSACopy(M);
+    return false;
+  }
+
   // Solve for constants.
   auto RunSCCPSolver = [&](auto &WorkList) {
     bool ResolvedUndefs = true;
 
     while (ResolvedUndefs) {
+      // Not running the solver unnecessary is checked in regression test
+      // nothing-to-do.ll, so if this debug message is changed, this regression
+      // test needs updating too.
       LLVM_DEBUG(dbgs() << "FnSpecialization: Running solver\n");
+
       Solver.solve();
       LLVM_DEBUG(dbgs() << "FnSpecialization: Resolving undefs\n");
       ResolvedUndefs = false;
@@ -815,9 +830,6 @@ bool llvm::runFunctionSpecialization(
     }
   };
 
-  auto &TrackedFuncs = Solver.getArgumentTrackedFunctions();
-  SmallVector<Function *, 16> FuncDecls(TrackedFuncs.begin(),
-                                        TrackedFuncs.end());
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "FnSpecialization: Worklist fn decls:\n");
   for (auto *F : FuncDecls)
