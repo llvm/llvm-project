@@ -3,6 +3,26 @@ add_libc_testsuite(libc_string_unittests)
 add_subdirectory(memory_utils)
 
 add_libc_unittest(
+  memccpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    memccpy_test.cpp
+  DEPENDS
+    libc.src.string.memccpy
+)
+
+add_libc_unittest(
+  mempcpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    mempcpy_test.cpp
+  DEPENDS
+    libc.src.string.mempcpy
+)
+
+add_libc_unittest(
   memchr_test
   SUITE
     libc_string_unittests
