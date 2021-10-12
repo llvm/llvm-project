@@ -65,13 +65,7 @@ TEST(SanitizerCommon, StackDepotSeveral) {
   EXPECT_NE(i1, i2);
 }
 
-#if SANITIZER_WINDOWS
-// CaptureStderr does not work on Windows.
-#define Maybe_StackDepotPrint DISABLED_StackDepotPrint
-#else
-#define Maybe_StackDepotPrint StackDepotPrint
-#endif
-TEST(SanitizerCommon, Maybe_StackDepotPrint) {
+TEST(SanitizerCommon, StackDepotPrint) {
   uptr array1[] = {0x111, 0x222, 0x333, 0x444, 0x777};
   StackTrace s1(array1, ARRAY_SIZE(array1));
   u32 i1 = StackDepotPut(s1);
