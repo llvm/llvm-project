@@ -36,6 +36,7 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_PARALLEL_ALGORITHMS=",
       "_LIBCPP_HAS_NO_RANDOM_DEVICE=",
       "_LIBCPP_HAS_NO_LOCALIZATION=",
+      "_LIBCPP_HAS_NO_WIDE_CHARACTERS=",
       "_LIBCPP_ABI_DEFINES=",
     ]
     if (libcxx_abi_version != 1) {
