@@ -2,8 +2,8 @@
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
-;   #define __tag1 __attribute__((btf_tag("tag1")))
-;   #define __tag2 __attribute__((btf_tag("tag2")))
+;   #define __tag1 __attribute__((btf_decl_tag("tag1")))
+;   #define __tag2 __attribute__((btf_decl_tag("tag2")))
 ;   struct t1 {
 ;     int a1;
 ;     int a2 __tag1 __tag2;
@@ -32,8 +32,8 @@
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "a2", scope: !6, file: !3, line: 5, baseType: !9, size: 32, offset: 32, annotations: !11)
 !11 = !{!12, !13}
-!12 = !{!"btf_tag", !"tag1"}
-!13 = !{!"btf_tag", !"tag2"}
+!12 = !{!"btf_decl_tag", !"tag1"}
+!13 = !{!"btf_decl_tag", !"tag2"}
 !14 = !{i32 7, !"Dwarf Version", i32 4}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
 !16 = !{i32 1, !"wchar_size", i32 4}
@@ -49,11 +49,11 @@
 ; CHECK-NEXT:        .long   7
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   32                              # 0x20
-; CHECK-NEXT:        .long   10                              # BTF_KIND_TAG(id = 2)
+; CHECK-NEXT:        .long   10                              # BTF_KIND_DECL_TAG(id = 2)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   4294967295
-; CHECK-NEXT:        .long   15                              # BTF_KIND_TAG(id = 3)
+; CHECK-NEXT:        .long   15                              # BTF_KIND_DECL_TAG(id = 3)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   4294967295
@@ -61,11 +61,11 @@
 ; CHECK-NEXT:        .long   16777216                        # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                        # 0x1000020
-; CHECK-NEXT:        .long   10                              # BTF_KIND_TAG(id = 5)
+; CHECK-NEXT:        .long   10                              # BTF_KIND_DECL_TAG(id = 5)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   15                              # BTF_KIND_TAG(id = 6)
+; CHECK-NEXT:        .long   15                              # BTF_KIND_DECL_TAG(id = 6)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   1
@@ -73,11 +73,11 @@
 ; CHECK-NEXT:        .long   234881024                       # 0xe000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   10                              # BTF_KIND_TAG(id = 8)
+; CHECK-NEXT:        .long   10                              # BTF_KIND_DECL_TAG(id = 8)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   7
 ; CHECK-NEXT:        .long   4294967295
-; CHECK-NEXT:        .long   15                              # BTF_KIND_TAG(id = 9)
+; CHECK-NEXT:        .long   15                              # BTF_KIND_DECL_TAG(id = 9)
 ; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   7
 ; CHECK-NEXT:        .long   4294967295
