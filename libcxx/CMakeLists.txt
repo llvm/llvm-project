@@ -272,9 +272,15 @@ option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit libc++." ${LLVM_BUILD_32_BITS})
-set(LIBCXX_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Use alternate target triple.")
-set(LIBCXX_SYSROOT "" CACHE STRING "Use alternate sysroot.")
-set(LIBCXX_GCC_TOOLCHAIN "" CACHE STRING "Use alternate GCC toolchain.")
+
+if(CMAKE_CXX_COMPILER_TARGET)
+  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
+else()
+  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+endif()
+set(LIBCXX_TARGET_TRIPLE "${LIBCXX_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Use alternate target triple.")
+set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}" CACHE STRING "Use alternate sysroot.")
+set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE STRING "Use alternate GCC toolchain.")
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
@@ -486,21 +492,14 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 add_target_flags_if(LIBCXX_BUILD_32_BITS "-m32")
-
 if(LIBCXX_TARGET_TRIPLE)
   add_target_flags_if_supported("--target=${LIBCXX_TARGET_TRIPLE}")
-elseif(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBCXX_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
 endif()
 if(LIBCXX_SYSROOT)
   add_target_flags_if_supported("--sysroot=${LIBCXX_SYSROOT}")
-elseif(CMAKE_SYSROOT)
-  set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}")
 endif()
 if(LIBCXX_GCC_TOOLCHAIN)
   add_target_flags_if_supported("--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
-elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
-  set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
 endif()
 
 # Configure compiler.

@@ -80,9 +80,14 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
-set(LIBUNWIND_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Target triple for cross compiling.")
-set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
-set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+if(CMAKE_CXX_COMPILER_TARGET)
+  set(LIBUNWIND_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
+else()
+  set(LIBUNWIND_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+endif()
+set(LIBUNWIND_TARGET_TRIPLE "${LIBUNWIND_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Target triple for cross compiling.")
+set(LIBUNWIND_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE PATH "GCC toolchain for cross compiling.")
+set(LIBUNWIND_SYSROOT "${CMAKE_SYSROOT}" CACHE PATH "Sysroot for cross compiling.")
 set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
     "Additional linker flags for test programs.")
 set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
@@ -170,18 +175,12 @@ add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 
 if(LIBUNWIND_TARGET_TRIPLE)
   add_target_flags_if_supported("--target=${LIBUNWIND_TARGET_TRIPLE}")
-elseif(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBUNWIND_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
 endif()
 if(LIBUNWIND_GCC_TOOLCHAIN)
   add_target_flags_if_supported("--gcc-toolchain=${LIBUNWIND_GCC_TOOLCHAIN}")
-elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
-  set(LIBUNWIND_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
 endif()
 if(LIBUNWIND_SYSROOT)
   add_target_flags_if_supported("--sysroot=${LIBUNWIND_SYSROOT}")
-elseif(CMAKE_SYSROOT)
-  set(LIBUNWIND_SYSROOT "${CMAKE_SYSROOT}")
 endif()
 
 # Configure compiler.
