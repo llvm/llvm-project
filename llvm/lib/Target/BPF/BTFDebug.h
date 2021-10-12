@@ -205,12 +205,12 @@ public:
 };
 
 /// Handle tags.
-class BTFTypeTag : public BTFTypeBase {
+class BTFTypeDeclTag : public BTFTypeBase {
   uint32_t Info;
   StringRef Tag;
 
 public:
-  BTFTypeTag(uint32_t BaseTypeId, int ComponentId, StringRef Tag);
+  BTFTypeDeclTag(uint32_t BaseTypeId, int ComponentId, StringRef Tag);
   uint32_t getSize() override { return BTFTypeBase::getSize() + 4; }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
