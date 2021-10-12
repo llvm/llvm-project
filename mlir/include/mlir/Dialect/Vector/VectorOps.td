@@ -1288,7 +1288,7 @@ def Vector_TransferReadOp :
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, "AffineMap":$permutationMap,
       CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    // Builder that sets padding to 'getMinorIdentityMap'.
+    // Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, "Value":$padding,
       CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
@@ -1305,6 +1305,17 @@ def Vector_TransferReadOp :
       "ValueRange":$indices, "AffineMap":$permutationMap, "Value":$padding,
       "ArrayAttr":$inBounds)>
   ];
+
+  let extraClassDeclaration = [{
+    /// Temporary convenience builders to account for the fact that we do not
+    /// have 0-d vectors atm. These create a constant `vector<1xt>` and
+    /// insert/extract into it.
+    // Builder that sets permutation map (resp. padding) to
+    // 'getMinorIdentityMap' (resp. zero).
+    static Value createScalarOp(OpBuilder &builder, Location loc, Value source,
+                                ValueRange indices,
+                                ArrayRef<bool> inBounds = ArrayRef<bool>{});
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -1416,11 +1427,12 @@ def Vector_TransferWriteOp :
   }];
 
   let builders = [
+    // Builder that sets an empty mask.
+    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
+      "AffineMap":$permutationMap, CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
     // Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMap":$permutationMap)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       "AffineMapAttr":$permutationMap, "ArrayAttr":$inBounds)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
@@ -1428,6 +1440,18 @@ def Vector_TransferWriteOp :
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       "AffineMap":$permutationMap, "ArrayAttr":$inBounds)>,
   ];
+
+  let extraClassDeclaration = [{
+    /// Temporary convenience builders to account for the fact that we do not
+    /// have 0-d vectors atm. These create a constant `vector<1xt>` and
+    /// insert/extract into it.
+    // Builder that sets permutation map (resp. padding) to
+    // 'getMinorIdentityMap' (resp. zero).
+    static Operation *createScalarOp(
+      OpBuilder &builder, Location loc, Value value,
+      Value dest, ValueRange indices,
+      ArrayRef<bool> inBounds = ArrayRef<bool>{});
+  }];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

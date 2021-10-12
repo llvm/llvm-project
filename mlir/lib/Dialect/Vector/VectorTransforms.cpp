@@ -2590,6 +2590,25 @@ struct VectorLoadToMemrefLoadLowering
   }
 };
 
+/// Replace a scalar vector.store with a memref.store.
+struct VectorStoreToMemrefStoreLowering
+    : public OpRewritePattern<vector::StoreOp> {
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    auto vecType = storeOp.getVectorType();
+    if (vecType.getNumElements() != 1)
+      return failure();
+    SmallVector<int64_t> indices(vecType.getRank(), 0);
+    Value extracted = rewriter.create<vector::ExtractOp>(
+        storeOp.getLoc(), storeOp.valueToStore(), indices);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        storeOp, extracted, storeOp.base(), storeOp.indices());
+    return success();
+  }
+};
+
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store` if all of the following hold:
 /// - Stride of most minor memref dimension must be 1.
@@ -2611,7 +2630,7 @@ struct TransferWriteToVectorStoreLowering
       return failure();
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
-    if (!write.permutation_map().isMinorIdentity())
+    if (!write.isZeroD() && !write.permutation_map().isMinorIdentity())
       return failure();
     auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
@@ -2766,6 +2785,9 @@ struct TransferWritePermutationLowering
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.isZeroD())
+      return failure();
+
     SmallVector<unsigned> permutation;
     AffineMap map = op.permutation_map();
     if (map.isMinorIdentity())
@@ -3581,7 +3603,9 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),
                                                    maxTransferRank);
-  patterns.add<VectorLoadToMemrefLoadLowering>(patterns.getContext());
+  patterns
+      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
+          patterns.getContext());
 }
 
 void mlir::vector::populateVectorUnrollPatterns(
