@@ -2600,8 +2600,9 @@ struct VectorStoreToMemrefStoreLowering
     auto vecType = storeOp.getVectorType();
     if (vecType.getNumElements() != 1)
       return failure();
+    SmallVector<int64_t> indices(vecType.getRank(), 0);
     Value extracted = rewriter.create<vector::ExtractOp>(
-        storeOp.getLoc(), storeOp.valueToStore(), ArrayRef<int64_t>{1});
+        storeOp.getLoc(), storeOp.valueToStore(), indices);
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
         storeOp, extracted, storeOp.base(), storeOp.indices());
     return success();
