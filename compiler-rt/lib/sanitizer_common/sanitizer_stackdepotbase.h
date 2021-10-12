@@ -135,7 +135,7 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   CHECK_EQ(s & kUnlockMask, s);
   CHECK_EQ(s & (((u32)-1) >> kReservedBits), s);
   Node &new_node = nodes[s];
-  new_node.store(args, h);
+  new_node.store(s, args, h);
   new_node.link = s2;
   unlock(p, s);
   if (inserted) *inserted = true;
@@ -151,7 +151,7 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Get(u32 id) {
   if (!nodes.contains(id))
     return args_type();
   const Node &node = nodes[id];
-  return node.load();
+  return node.load(id);
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
@@ -178,7 +178,7 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::PrintAll() {
     for (; s;) {
       const Node &node = nodes[s];
       Printf("Stack for id %u:\n", s);
-      node.load().Print();
+      node.load(s).Print();
       s = node.link;
     }
   }
