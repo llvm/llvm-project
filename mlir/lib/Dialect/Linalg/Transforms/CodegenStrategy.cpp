@@ -49,6 +49,8 @@ void mlir::linalg::CodegenStrategy::configurePassPipeline(
   LinalgVectorLoweringOptions vectorLoweringOptions;
   vectorLoweringOptions.maxTransferRank =
       lateCodegenStrategyOptions.maxTransferRank;
+  vectorLoweringOptions.enableVectorTransferLowering =
+      lateCodegenStrategyOptions.enableVectorTransferLowering;
   vectorLoweringOptions.enableVectorTransferPartialRewrite =
       lateCodegenStrategyOptions.enableVectorTransferPartialRewrite;
   vectorLoweringOptions.enableVectorContractLowering =
