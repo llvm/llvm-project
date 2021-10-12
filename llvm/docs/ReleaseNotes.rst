@@ -73,12 +73,12 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
-* ...
+* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
 
 Changes to the ARM Backend
 --------------------------
 
-During this release ...
+* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
 
 Changes to the MIPS Target
 --------------------------

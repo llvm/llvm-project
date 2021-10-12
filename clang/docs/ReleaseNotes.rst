@@ -83,6 +83,12 @@ Modified Compiler Flags
   - RISC-V SiFive S54 (``sifive-s54``).
   - RISC-V SiFive S76 (``sifive-s76``).
 
+- Support has been added for the following architectures (``-march`` identifiers in parentheses):
+
+  - Armv9-A (``armv9-a``).
+  - Armv9.1-A (``armv9.1-a``).
+  - Armv9.2-A (``armv9.2-a``).
+
 Removed Compiler Flags
 -------------------------
 
