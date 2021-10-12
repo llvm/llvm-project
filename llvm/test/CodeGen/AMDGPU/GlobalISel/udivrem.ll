@@ -830,8 +830,8 @@ define amdgpu_kernel void @udivrem_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32
 ; GFX9-LABEL: udivrem_v4i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x4f7ffffe
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x10
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x4f7ffffe
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s1
@@ -926,9 +926,10 @@ define amdgpu_kernel void @udivrem_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32
 ;
 ; GFX10-LABEL: udivrem_v4i32:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x20
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0x4f7ffffe
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x4f7ffffe
 ; GFX10-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, s8

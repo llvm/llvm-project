@@ -825,6 +825,7 @@ public:
   createPostMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
     const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+    DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
     return DAG;
   }
