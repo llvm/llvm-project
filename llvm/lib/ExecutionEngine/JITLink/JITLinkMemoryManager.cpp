@@ -356,7 +356,7 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   /// than a size_t.
   if (SegsSizes->total() > std::numeric_limits<size_t>::max()) {
     OnAllocated(make_error<JITLinkError>(
-        "Total requested size " + formatv("{0:x}", SegSizes->total()) +
+        "Total requested size " + formatv("{0:x}", SegsSizes->total()) +
         " for graph " + G.getName() + " exceeds address space"));
     return;
   }
