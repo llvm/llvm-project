@@ -172,11 +172,16 @@ public:
 
   std::unique_ptr<TargetMachine> TM;
 
+  // Emit output using the legacy pass manager for the optimization pipeline.
+  // This will be removed soon when using the legacy pass manager for the
+  // optimization pipeline is no longer supported.
+  void EmitAssemblyWithLegacyPassManager(BackendAction Action,
+                                         std::unique_ptr<raw_pwrite_stream> OS);
+
+  // Emit output using the new pass manager for the optimization pipeline. This
+  // is the default.
   void EmitAssembly(BackendAction Action,
                     std::unique_ptr<raw_pwrite_stream> OS);
-
-  void EmitAssemblyWithNewPassManager(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS);
 };
 
 // We need this wrapper to access LangOpts and CGOpts from extension functions
@@ -966,8 +971,8 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
   return true;
 }
 
-void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS) {
+void EmitAssemblyHelper::EmitAssemblyWithLegacyPassManager(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
 
   setCommandLineOpts(CodeGenOpts);
@@ -1509,8 +1514,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 ///
 /// This API is planned to have its functionality finished and then to replace
 /// `EmitAssembly` at some point in the future when the default switches.
-void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS) {
+void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
+                                      std::unique_ptr<raw_pwrite_stream> OS) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
@@ -1686,8 +1691,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
 
   EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M);
 
-  if (!CGOpts.LegacyPassManager)
-    AsmHelper.EmitAssemblyWithNewPassManager(Action, std::move(OS));
+  if (CGOpts.LegacyPassManager)
+    AsmHelper.EmitAssemblyWithLegacyPassManager(Action, std::move(OS));
   else
     AsmHelper.EmitAssembly(Action, std::move(OS));
 
