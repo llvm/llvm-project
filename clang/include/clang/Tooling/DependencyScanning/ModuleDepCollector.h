@@ -199,7 +199,7 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &I, DependencyConsumer &C,
-                     CompilerInvocation &&OriginalCI);
+                     CompilerInvocation &&OriginalCI, bool OptimizeArgs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -224,6 +224,8 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
   CompilerInvocation OriginalInvocation;
+  /// Whether to optimize the modules' command-line arguments.
+  bool OptimizeArgs;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
@@ -231,8 +233,9 @@ private:
   /// Constructs a CompilerInvocation that can be used to build the given
   /// module, excluding paths to discovered modular dependencies that are yet to
   /// be built.
-  CompilerInvocation
-  makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) const;
+  CompilerInvocation makeInvocationForModuleBuildWithoutPaths(
+      const ModuleDeps &Deps,
+      llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
 };
 
 } // end namespace dependencies

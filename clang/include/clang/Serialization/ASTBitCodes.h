@@ -405,6 +405,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for \#pragma diagnostic mappings.
   DIAG_PRAGMA_MAPPINGS,
+
+  /// Record code for the indices of used header search entries.
+  HEADER_SEARCH_ENTRY_USAGE,
 };
 
 /// Record code for extension blocks.
