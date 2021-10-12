@@ -9,6 +9,7 @@
 #include "flang/Runtime/command.h"
 #include "environment.h"
 #include "stat.h"
+#include "terminator.h"
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
 #include <limits>
@@ -89,15 +90,17 @@ static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
   return s + 1;
 }
 
-std::int64_t RTNAME(EnvVariableLength)(const Descriptor &name, bool trim_name) {
+std::int64_t RTNAME(EnvVariableLength)(
+    const Descriptor &name, bool trim_name, const char *sourceFile, int line) {
   std::size_t nameLength{
       trim_name ? LengthWithoutTrailingSpaces(name) : name.ElementBytes()};
   if (nameLength == 0) {
     return 0;
   }
 
-  const char *value{
-      executionEnvironment.GetEnv(name.OffsetElement(), nameLength)};
+  Terminator terminator{sourceFile, line};
+  const char *value{executionEnvironment.GetEnv(
+      name.OffsetElement(), nameLength, terminator)};
   if (!value) {
     return 0;
   }
