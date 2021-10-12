@@ -4693,7 +4693,9 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
 
     // Read and process a record.
     Record.clear();
-    Expected<unsigned> MaybeRecordType = Stream.readRecord(Entry.ID, Record);
+    StringRef Blob;
+    Expected<unsigned> MaybeRecordType =
+        Stream.readRecord(Entry.ID, Record, &Blob);
     if (!MaybeRecordType) {
       // FIXME this drops the error.
       return Failure;
@@ -4739,6 +4741,17 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
       else
         F->PragmaDiagMappings.insert(F->PragmaDiagMappings.end(),
                                      Record.begin(), Record.end());
+      break;
+    case HEADER_SEARCH_ENTRY_USAGE:
+      if (!F)
+        break;
+      unsigned Count = Record[0];
+      const char *Byte = Blob.data();
+      F->SearchPathUsage = llvm::BitVector(Count, 0);
+      for (unsigned I = 0; I < Count; ++Byte)
+        for (unsigned Bit = 0; Bit < 8 && I < Count; ++Bit, ++I)
+          if (*Byte & (1 << Bit))
+            F->SearchPathUsage[I] = 1;
       break;
     }
   }

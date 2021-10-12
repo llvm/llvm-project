@@ -18,8 +18,20 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
+static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
+                                     ASTReader &Reader,
+                                     const serialization::ModuleFile &MF) {
+  // Only preserve search paths that were used during the dependency scan.
+  std::vector<HeaderSearchOptions::Entry> Entries = Opts.UserEntries;
+  Opts.UserEntries.clear();
+  for (unsigned I = 0; I < Entries.size(); ++I)
+    if (MF.SearchPathUsage[I])
+      Opts.UserEntries.push_back(Entries[I]);
+}
+
 CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
-    const ModuleDeps &Deps) const {
+    const ModuleDeps &Deps,
+    llvm::function_ref<void(CompilerInvocation &)> Optimize) const {
   // Make a deep copy of the original Clang invocation.
   CompilerInvocation CI(OriginalInvocation);
 
@@ -41,6 +53,8 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
     CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
   }
+
+  Optimize(CI);
 
   return CI;
 }
@@ -253,7 +267,12 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   llvm::DenseSet<const Module *> SeenModules;
   addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
 
-  MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(MD);
+  MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(
+      MD, [&](CompilerInvocation &CI) {
+        if (MDC.OptimizeArgs)
+          optimizeHeaderSearchOpts(CI.getHeaderSearchOpts(),
+                                   *MDC.Instance.getASTReader(), *MF);
+      });
   MD.ID.ContextHash = MD.Invocation.getModuleHash(Instance.getDiagnostics());
 
   llvm::DenseSet<const Module *> AddedModules;
@@ -305,9 +324,9 @@ void ModuleDepCollectorPP::addModuleDep(
 
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts, CompilerInstance &I,
-    DependencyConsumer &C, CompilerInvocation &&OriginalCI)
+    DependencyConsumer &C, CompilerInvocation &&OriginalCI, bool OptimizeArgs)
     : Instance(I), Consumer(C), Opts(std::move(Opts)),
-      OriginalInvocation(std::move(OriginalCI)) {}
+      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(Instance, *this));
