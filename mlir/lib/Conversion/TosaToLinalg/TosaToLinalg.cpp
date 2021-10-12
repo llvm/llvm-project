@@ -2796,7 +2796,7 @@ public:
     Type inElementTy = inputTy.getElementType();
 
     ShapedType resultTy = op.getType().template cast<ShapedType>();
-    Type resultETy = inputTy.getElementType();
+    Type resultETy = op.getType().cast<ShapedType>().getElementType();
 
     Type accETy =
         inElementTy.isa<IntegerType>() ? rewriter.getI32Type() : inElementTy;
@@ -2810,9 +2810,10 @@ public:
     pad.resize(2, 0);
     getValuesFromIntArrayAttribute(op.pad(), pad);
     pad.resize(pad.size() + 2, 0);
-    Attribute initialAttr = rewriter.getZeroAttr(accETy);
-    Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
+    Attribute padAttr = rewriter.getZeroAttr(inElementTy);
+    Value paddedInput = applyPad(loc, input, pad, padAttr, rewriter);
 
+    Attribute initialAttr = rewriter.getZeroAttr(accETy);
     Value initialValue = rewriter.create<ConstantOp>(loc, initialAttr);
 
     SmallVector<int64_t> kernel, stride;
@@ -2909,8 +2910,7 @@ public:
           // to be applied.
           Value poolVal = args[0];
           if (accETy.isa<FloatType>()) {
-            auto countF =
-                rewriter.create<mlir::SIToFPOp>(loc, inElementTy, countI);
+            auto countF = rewriter.create<mlir::SIToFPOp>(loc, accETy, countI);
             poolVal =
                 rewriter.create<DivFOp>(loc, poolVal, countF)->getResult(0);
           } else {
@@ -2974,8 +2974,11 @@ public:
             auto clamp = clampHelper<mlir::CmpIOp>(
                 loc, scaled, min, max, CmpIPredicate::slt, rewriter);
 
+            poolVal = clamp;
             // Convert type.
-            poolVal = rewriter.create<TruncateIOp>(loc, resultETy, clamp);
+            if (resultETy != clamp.getType()) {
+              poolVal = rewriter.create<TruncateIOp>(loc, resultETy, poolVal);
+            }
           }
 
           // Cast to output type.
