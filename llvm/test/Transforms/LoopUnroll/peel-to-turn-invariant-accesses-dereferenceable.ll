@@ -6,25 +6,51 @@ declare void @foo()
 define i32 @peel_readonly_to_make_loads_derefenceable(i32* %ptr, i32 %N, i32* %inv, i1 %c.1) {
 ; CHECK-LABEL: @peel_readonly_to_make_loads_derefenceable(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL_BEGIN:%.*]]
+; CHECK:       loop.header.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL:%.*]]
+; CHECK:       loop.header.peel:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN_PEEL:%.*]], label [[UNREACHABLE_EXIT:%.*]]
+; CHECK:       then.peel:
+; CHECK-NEXT:    [[I_PEEL:%.*]] = load i32, i32* [[INV:%.*]], align 4
+; CHECK-NEXT:    [[C_2_PEEL:%.*]] = icmp ult i32 [[I_PEEL]], 2
+; CHECK-NEXT:    br i1 [[C_2_PEEL]], label [[LOOP_LATCH_PEEL:%.*]], label [[UNREACHABLE_EXIT]]
+; CHECK:       loop.latch.peel:
+; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[LV_PEEL:%.*]] = load i32, i32* [[GEP_PEEL]], align 4
+; CHECK-NEXT:    [[SUM_NEXT_PEEL:%.*]] = add i32 0, [[LV_PEEL]]
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw nsw i32 1, 1
+; CHECK-NEXT:    [[C_3_PEEL:%.*]] = icmp ult i32 1, 1000
+; CHECK-NEXT:    br i1 [[C_3_PEEL]], label [[LOOP_HEADER_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.header.peel.next:
+; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL_NEXT1:%.*]]
+; CHECK:       loop.header.peel.next1:
+; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
+; CHECK:       entry.peel.newph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[UNREACHABLE_EXIT:%.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[SUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[UNREACHABLE_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[INV:%.*]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[INV]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[I]], 2
-; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[UNREACHABLE_EXIT]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[UNREACHABLE_EXIT_LOOPEXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i32 [[IV]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA_PH:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT_PEEL]], [[LOOP_LATCH_PEEL]] ], [ [[SUM_NEXT_LCSSA_PH]], [[EXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+; CHECK:       unreachable.exit.loopexit:
+; CHECK-NEXT:    br label [[UNREACHABLE_EXIT]]
 ; CHECK:       unreachable.exit:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    unreachable
@@ -54,6 +80,78 @@ exit:
   ret i32 %sum.next
 
 unreachable.exit:
+  call void @foo()
+  unreachable
+}
+
+define i32 @peel_readonly_to_make_loads_derefenceable_exits_lead_to_unreachable(i32* %ptr, i32 %N, i32* %inv, i1 %c.1) {
+; CHECK-LABEL: @peel_readonly_to_make_loads_derefenceable_exits_lead_to_unreachable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[INV:%.*]], align 4
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[I]], 2
+; CHECK-NEXT:    br i1 [[C_2]], label [[THEN_2:%.*]], label [[EXIT_2]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i32 [[I]], 4
+; CHECK-NEXT:    br i1 [[C_4]], label [[LOOP_LATCH]], label [[EXIT_3:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    br label [[UNREACHABLE_BB:%.*]]
+; CHECK:       exit.3:
+; CHECK-NEXT:    br label [[UNREACHABLE_BB]]
+; CHECK:       unreachable.bb:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop.latch ]
+  br i1 %c.1, label %then, label %exit.2
+
+then:
+  %i = load i32, i32* %inv
+  %c.2 = icmp ult i32 %i, 2
+  br i1 %c.2, label %then.2, label %exit.2
+
+then.2:
+  %c.4 = icmp ult i32 %i, 4
+  br i1 %c.4, label %loop.latch, label %exit.3
+
+loop.latch:
+  %gep = getelementptr i32, i32* %ptr, i32 %iv
+  %lv = load i32, i32* %gep
+  %sum.next = add i32 %sum, %lv
+  %iv.next = add nuw nsw i32  %iv, 1
+  %c.3 = icmp ult i32 %iv, 1000
+  br i1 %c.3, label %loop.header, label %exit
+
+exit:
+  ret i32 %sum.next
+
+exit.2:
+  br label %unreachable.bb
+
+exit.3:
+  br label %unreachable.bb
+
+unreachable.bb:
   call void @foo()
   unreachable
 }
@@ -302,18 +400,18 @@ unreachable.exit:
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
-define i32 @do_not_peel_with_deopt_exit(i32* %ptr, i32 %N, i32* %inv, i1 %c.1) {
-; CHECK-LABEL: @do_not_peel_with_deopt_exit(
+define i32 @peel_with_deopt_exit(i32* %ptr, i32 %N, i32* %inv, i1 %c.1) {
+; CHECK-LABEL: @peel_with_deopt_exit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[UNREACHABLE_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[DEOPT_EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[INV:%.*]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[I]], 2
-; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[UNREACHABLE_EXIT]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[DEOPT_EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
@@ -324,7 +422,7 @@ define i32 @do_not_peel_with_deopt_exit(i32* %ptr, i32 %N, i32* %inv, i1 %c.1) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
-; CHECK:       unreachable.exit:
+; CHECK:       deopt.exit:
 ; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi i32 [ [[SUM]], [[THEN]] ], [ [[SUM]], [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[RVAL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[SUM_LCSSA]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL]]
@@ -335,12 +433,12 @@ entry:
 loop.header:
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop.latch ]
-  br i1 %c.1, label %then, label %unreachable.exit
+  br i1 %c.1, label %then, label %deopt.exit
 
 then:
   %i = load i32, i32* %inv
   %c.2 = icmp ult i32 %i, 2
-  br i1 %c.2, label %loop.latch, label %unreachable.exit
+  br i1 %c.2, label %loop.latch, label %deopt.exit
 
 loop.latch:
   %gep = getelementptr i32, i32* %ptr, i32 %iv
@@ -353,7 +451,7 @@ loop.latch:
 exit:
   ret i32 %sum.next
 
-unreachable.exit:
+deopt.exit:
   %rval = call i32(...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 %sum) ]
   ret i32 %rval
 }

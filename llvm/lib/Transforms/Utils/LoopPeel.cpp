@@ -14,6 +14,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -165,6 +166,66 @@ static unsigned calculateIterationsToInvariance(
   return ToInvariance;
 }
 
+// Try to find any invariant memory reads that will become dereferenceable in
+// the remainder loop after peeling. The load must also be used (transitively)
+// by an exit condition. Returns the number of iterations to peel off (at the
+// moment either 0 or 1).
+static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
+                                                      DominatorTree &DT) {
+  // Skip loops with a single exiting block, because there should be no benefit
+  // for the heuristic below.
+  if (L.getExitingBlock())
+    return 0;
+
+  // All non-latch exit blocks must have an UnreachableInst terminator.
+  // Otherwise the heuristic below may not be profitable.
+  SmallVector<BasicBlock *, 4> Exits;
+  L.getUniqueNonLatchExitBlocks(Exits);
+  if (any_of(Exits, [](const BasicBlock *BB) {
+        return !isa<UnreachableInst>(BB->getTerminator());
+      }))
+    return 0;
+
+  // Now look for invariant loads that dominate the latch and are not known to
+  // be dereferenceable. If there are such loads and no writes, they will become
+  // dereferenceable in the loop if the first iteration is peeled off. Also
+  // collect the set of instructions controlled by such loads. Only peel if an
+  // exit condition uses (transitively) such a load.
+  BasicBlock *Header = L.getHeader();
+  BasicBlock *Latch = L.getLoopLatch();
+  SmallPtrSet<Value *, 8> LoadUsers;
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
+      if (I.mayWriteToMemory())
+        return 0;
+
+      auto Iter = LoadUsers.find(&I);
+      if (Iter != LoadUsers.end()) {
+        for (Value *U : I.users())
+          LoadUsers.insert(U);
+      }
+      // Do not look for reads in the header; they can already be hoisted
+      // without peeling.
+      if (BB == Header)
+        continue;
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        Value *Ptr = LI->getPointerOperand();
+        if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
+            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, &DT))
+          for (Value *U : I.users())
+            LoadUsers.insert(U);
+      }
+    }
+  }
+  SmallVector<BasicBlock *> ExitingBlocks;
+  L.getExitingBlocks(ExitingBlocks);
+  for (BasicBlock *Exiting : ExitingBlocks)
+    if (LoadUsers.find(Exiting->getTerminator()) != LoadUsers.end())
+      return 1;
+  return 0;
+}
+
 // Return the number of iterations to peel off that make conditions in the
 // body true/false. For example, if we peel 2 iterations off the loop below,
 // the condition i < 2 can be evaluated at compile time.
@@ -280,8 +341,8 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
-                            unsigned &TripCount, ScalarEvolution &SE,
-                            unsigned Threshold) {
+                            unsigned &TripCount, DominatorTree &DT,
+                            ScalarEvolution &SE, unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -347,6 +408,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 
     DesiredPeelCount = std::max(DesiredPeelCount,
                                 countToEliminateCompares(*L, MaxPeelCount, SE));
+
+    if (DesiredPeelCount == 0)
+      DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
 
     if (DesiredPeelCount > 0) {
       DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
