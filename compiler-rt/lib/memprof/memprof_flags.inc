@@ -35,5 +35,7 @@ MEMPROF_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
              "realloc(p, 0) is equivalent to free(p) by default (Same as the "
              "POSIX standard). If set to false, realloc(p, 0) will return a "
              "pointer to an allocated space which can not be used.")
+MEMPROF_FLAG(bool, print_text, true,
+  "If set, prints the heap profile in text format. Else use the raw binary serialization format.")
 MEMPROF_FLAG(bool, print_terse, false,
-             "If set, prints memory profile in a terse format.")
+             "If set, prints memory profile in a terse format. Only applicable if print_text = true.")

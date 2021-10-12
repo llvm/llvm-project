@@ -17,6 +17,7 @@
 #include "memprof_mapping.h"
 #include "memprof_meminfoblock.h"
 #include "memprof_mibmap.h"
+#include "memprof_rawprofile.h"
 #include "memprof_stack.h"
 #include "memprof_thread.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -27,7 +28,9 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_list.h"
+#include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_vector.h"
 
 #include <sched.h>
 #include <time.h>
@@ -220,13 +223,20 @@ struct Allocator {
   // Holds the mapping of stack ids to MemInfoBlocks.
   MIBMapTy MIBMap;
 
-  bool destructing;
-  bool constructed = false;
+  atomic_uint8_t destructing;
+  atomic_uint8_t constructed;
+  bool print_text;
 
   // ------------------- Initialization ------------------------
-  explicit Allocator(LinkerInitialized)
-      : destructing(false), constructed(true) {}
-  ~Allocator() { FinishAndPrint(); }
+  explicit Allocator(LinkerInitialized) : print_text(flags()->print_text) {
+    atomic_store_relaxed(&destructing, 0);
+    atomic_store_relaxed(&constructed, 1);
+  }
+
+  ~Allocator() {
+    atomic_store_relaxed(&destructing, 1);
+    FinishAndWrite();
+  }
 
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
                             void *Arg) {
@@ -234,12 +244,36 @@ struct Allocator {
     Value->mib.Print(Key, bool(Arg));
   }
 
-  void FinishAndPrint() {
-    if (common_flags()->print_module_map)
+  void FinishAndWrite() {
+    if (print_text && common_flags()->print_module_map)
       DumpProcessMap();
-    if (!flags()->print_terse)
-      Printf("Live on exit:\n");
+
     allocator.ForceLock();
+
+    InsertLiveBlocks();
+    if (print_text) {
+      MIBMap.ForEach(PrintCallback,
+                     reinterpret_cast<void *>(flags()->print_terse));
+      StackDepotPrintAll();
+    } else {
+      // Serialize the contents to a raw profile. Format documented in
+      // memprof_rawprofile.h.
+      char *Buffer = nullptr;
+
+      MemoryMappingLayout Layout(/*cache_enabled=*/true);
+      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Layout, Buffer);
+      CHECK(Buffer && BytesSerialized && "could not serialize to buffer");
+      report_file.Write(Buffer, BytesSerialized);
+    }
+
+    allocator.ForceUnlock();
+  }
+
+  // Inserts any blocks which have been allocated but not yet deallocated.
+  void InsertLiveBlocks() {
+    if (print_text && !flags()->print_terse)
+      Printf("Live on exit:\n");
+
     allocator.ForEachChunk(
         [](uptr chunk, void *alloc) {
           u64 user_requested_size;
@@ -256,12 +290,6 @@ struct Allocator {
           InsertOrMerge(m->alloc_context_id, newMIB, A->MIBMap);
         },
         this);
-
-    destructing = true;
-    MIBMap.ForEach(PrintCallback,
-                   reinterpret_cast<void *>(flags()->print_terse));
-    StackDepotPrintAll();
-    allocator.ForceUnlock();
   }
 
   void InitLinkerInitialized() {
@@ -393,7 +421,9 @@ struct Allocator {
 
     u64 user_requested_size =
         atomic_exchange(&m->user_requested_size, 0, memory_order_acquire);
-    if (memprof_inited && memprof_init_done && constructed && !destructing) {
+    if (memprof_inited && memprof_init_done &&
+        atomic_load_relaxed(&constructed) &&
+        !atomic_load_relaxed(&destructing)) {
       u64 c = GetShadowCount(p, user_requested_size);
       long curtime = GetTimestamp();
 
@@ -666,7 +696,7 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 }
 
 int __memprof_profile_dump() {
-  instance.FinishAndPrint();
+  instance.FinishAndWrite();
   // In the future we may want to return non-zero if there are any errors
   // detected during the dumping process.
   return 0;
