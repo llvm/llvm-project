@@ -6,8 +6,8 @@ define amdgpu_kernel void @s_test_sdiv(i64 addrspace(1)* %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_sdiv:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
-; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0
+; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
