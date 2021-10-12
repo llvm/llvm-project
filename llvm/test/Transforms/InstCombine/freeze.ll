@@ -232,6 +232,17 @@ define i32 @propagate_drop_flags_add(i32 %arg) {
   ret i32 %v1.fr
 }
 
+define i32 @propagate_drop_flags_add_foldaway(i32 noundef %arg) {
+; CHECK-LABEL: @propagate_drop_flags_add_foldaway(
+; CHECK-NEXT:    [[V1:%.*]] = add nuw nsw i32 [[ARG:%.*]], 2
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    ret i32 [[V1_FR]]
+;
+  %v1 = add nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
 define i32 @propagate_drop_flags_sub(i32 %arg) {
 ; CHECK-LABEL: @propagate_drop_flags_sub(
 ; CHECK-NEXT:    [[V1:%.*]] = add nsw i32 [[ARG:%.*]], -2
@@ -342,4 +353,25 @@ define i32 @propagate_drop_lshr2(i32 %arg, i32 %unknown) {
   ret i32 %v1.fr
 }
 
+define i8* @propagate_drop_gep1(i8* %arg) {
+; CHECK-LABEL: @propagate_drop_gep1(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8* [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG_FR]], i64 16
+; CHECK-NEXT:    ret i8* [[V1]]
+;
+  %v1 = getelementptr i8, i8* %arg, i64 16
+  %v1.fr = freeze i8* %v1
+  ret i8* %v1.fr
+}
+
+define i8* @propagate_drop_gep2(i8* %arg, i64 %unknown) {
+; CHECK-LABEL: @propagate_drop_gep2(
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG:%.*]], i64 [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i8* [[V1]]
+; CHECK-NEXT:    ret i8* [[V1_FR]]
+;
+  %v1 = getelementptr i8, i8* %arg, i64 %unknown
+  %v1.fr = freeze i8* %v1
+  ret i8* %v1.fr
+}
 
