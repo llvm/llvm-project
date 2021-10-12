@@ -30,9 +30,9 @@ MATH_PRIVATE(tanred)(float x, int i)
 #else
     float t = BUILTIN_FMA_F32(p, x, x);
     float tt = BUILTIN_FMA_F32(p, x, -(t - x));
-    float tr = MATH_FAST_RCP(t);
-    float e = BUILTIN_FMA_F32(t, -tr, 1.0f);
-    tr = -BUILTIN_FMA_F32(BUILTIN_FMA_F32(tt, -tr, e), tr, tr);
+    float tr = -MATH_FAST_RCP(t);
+    float e = BUILTIN_FMA_F32(tt, tr, BUILTIN_FMA_F32(t, tr, 1.0f));
+    tr = BUILTIN_FMA_F32(e, tr, tr);
 #endif
 
     return i ? tr : t;
