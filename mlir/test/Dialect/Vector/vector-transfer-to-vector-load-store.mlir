@@ -12,7 +12,7 @@ func @vector_transfer_ops_0d(%M: memref<f32>) {
 //  CHECK-NEXT:   memref.store %[[V]], %[[MEM]][] : memref<f32>
     vector.transfer_write %0, %M[] {permutation_map = affine_map<()->(0)>} :
       vector<1xf32>, memref<f32>
-  
+
     return
 }
 

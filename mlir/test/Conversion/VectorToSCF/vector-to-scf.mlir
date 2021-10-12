@@ -1,6 +1,32 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -split-input-file -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 
+// CHECK-LABEL: func @vector_transfer_ops_0d(
+//  CHECK-SAME:   %[[MEM:.*]]: memref<f32>) {
+func @vector_transfer_ops_0d(%M: memref<f32>) {
+    %f0 = constant 0.0 : f32
+
+//  CHECK: %[[V0:.*]] = constant dense<0{{.*}}> : vector<1xf32>
+//  CHECK: %[[R0:.*]] = scf.for %[[I:.*]] = {{.*}} iter_args(%[[V0_ITER:.*]] = %[[V0]]) -> (vector<1xf32>) {
+//  CHECK:   %[[IDX:.*]] = index_cast %[[I]] : index to i32
+//  CHECK:   %[[S:.*]] = memref.load %[[MEM]][] : memref<f32>
+//  CHECK:   %[[R_ITER:.*]] = vector.insertelement %[[S]], %[[V0_ITER]][%[[IDX]] : i32] : vector<1xf32>
+//  CHECK:   scf.yield %[[R_ITER]] : vector<1xf32>
+    %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->(0)>} :
+      memref<f32>, vector<1xf32>
+
+//  C-HECK: scf.for %[[J:.*]] = %{{.*}}
+//  C-HECK:   %[[JDX:.*]] = index_cast %[[J]] : index to i32
+//  C-HECK:   %[[SS:.*]] = vector.extractelement %[[R0]][%[[JDX]] : i32] : vector<1xf32>
+//  C-HECK:   memref.store %[[SS]], %[[MEM]][] : memref<f32>
+    vector.transfer_write %0, %M[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, memref<f32>
+
+    return
+}
+
+// -----
+
 // CHECK-LABEL: func @materialize_read_1d() {
 func @materialize_read_1d() {
   %f0 = constant 0.0: f32
