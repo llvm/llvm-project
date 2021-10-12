@@ -342,6 +342,15 @@ TEST_F(TargetDeclTest, Types) {
   Flags.clear();
 
   Code = R"cpp(
+  template<template<typename> class ...T>
+  class C {
+    C<[[T...]]> foo;
+    };
+  )cpp";
+  EXPECT_DECLS("TemplateArgumentLoc", {"template <typename> class ...T"});
+  Flags.clear();
+
+  Code = R"cpp(
     struct S{};
     S X;
     [[decltype]](X) Y;

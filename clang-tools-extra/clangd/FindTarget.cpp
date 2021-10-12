@@ -507,7 +507,8 @@ public:
     // DeclRefExpr).
     if (Arg.getKind() == TemplateArgument::Template ||
         Arg.getKind() == TemplateArgument::TemplateExpansion) {
-      if (TemplateDecl *TD = Arg.getAsTemplate().getAsTemplateDecl()) {
+      if (TemplateDecl *TD =
+              Arg.getAsTemplateOrTemplatePattern().getAsTemplateDecl()) {
         report(TD, Flags);
       }
     }
