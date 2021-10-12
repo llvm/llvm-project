@@ -942,7 +942,7 @@ defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 let Predicates = [HasStdExtV, HasStdExtF] in {
 defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]

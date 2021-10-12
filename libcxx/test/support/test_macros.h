@@ -348,6 +348,11 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 #endif
 
+// Support for carving out parts of the test suite, like removing wide characters, etc.
+#if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#   define TEST_HAS_NO_WIDE_CHARACTERS
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif

@@ -40,6 +40,7 @@ int main(int, char**) {
     fs >> c;
     assert(c == 'r');
   }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::wifstream fs;
     assert(!fs.is_open());
@@ -52,6 +53,7 @@ int main(int, char**) {
     fs >> c;
     assert(c == L'r');
   }
+#endif
 
   return 0;
 }

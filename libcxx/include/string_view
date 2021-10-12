@@ -225,7 +225,9 @@ typedef basic_string_view<char8_t>  u8string_view;
 #endif
 typedef basic_string_view<char16_t> u16string_view;
 typedef basic_string_view<char32_t> u32string_view;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef basic_string_view<wchar_t>  wstring_view;
+#endif
 
 template<class _CharT, class _Traits>
 class
@@ -235,7 +237,7 @@ class
 #endif
     _LIBCPP_PREFERRED_NAME(u16string_view)
     _LIBCPP_PREFERRED_NAME(u32string_view)
-    _LIBCPP_PREFERRED_NAME(wstring_view)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstring_view))
     basic_string_view {
 public:
     // types
@@ -885,11 +887,13 @@ inline namespace literals
         return basic_string_view<char> (__str, __len);
     }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     basic_string_view<wchar_t> operator "" sv(const wchar_t *__str, size_t __len) _NOEXCEPT
     {
         return basic_string_view<wchar_t> (__str, __len);
     }
+#endif
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR

@@ -1087,7 +1087,9 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x)
 }
 
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>)
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>)
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

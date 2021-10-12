@@ -23,7 +23,9 @@ int main(int, char**) {
   test_library_hash_specializations_available();
   {
     test_hash_enabled_for_type<std::string_view>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_hash_enabled_for_type<std::wstring_view>();
+#endif
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test_hash_enabled_for_type<std::u8string_view>();
 #endif

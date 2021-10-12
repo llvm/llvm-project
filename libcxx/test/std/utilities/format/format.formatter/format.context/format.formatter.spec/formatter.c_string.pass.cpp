@@ -100,8 +100,10 @@ void test_char_pointer() {
 int main(int, char**) {
   test_char_pointer<char*>();
   test_char_pointer<const char*>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_char_pointer<wchar_t*>();
   test_char_pointer<const wchar_t*>();
+#endif
 
   return 0;
 }

@@ -8,6 +8,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: libcpp-has-no-wide-characters
 
 // Validate it works regardless of the signedness of `char`.
 // RUN: %{cxx} %{flags} %{compile_flags} -fsigned-char -fsyntax-only %s
