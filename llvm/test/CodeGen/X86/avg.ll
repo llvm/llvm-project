@@ -2775,53 +2775,38 @@ define <8 x i16> @PR52131_pavg_with_mask(<8 x i32> %a, <8 x i16> %b) {
 define <8 x i16> @PR52131_not_zext_with_constant(<8 x i32> %a) {
 ; SSE2-LABEL: PR52131_not_zext_with_constant:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [43,43,43,43]
-; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pslld $15, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    pslld $15, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-NEXT:    pavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: PR52131_not_zext_with_constant:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [43,43,43,43]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrld $1, %xmm2, %xmm1
-; AVX1-NEXT:    vpackusdw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vpavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR52131_not_zext_with_constant:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [43,43,43,43,43,43,43,43]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrld $1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR52131_not_zext_with_constant:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [43,43,43,43,43,43,43,43]
-; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpsrld $1, %ymm0, %ymm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NEXT:    vpavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %i = and <8 x i32> %a, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
