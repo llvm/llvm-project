@@ -23,8 +23,12 @@
 #include <cstdio>      // for EOF
 #include <cstdint>     // for uint_least16_t
 #include <cstring>     // for memcpy
-#include <cwchar>      // for wmemcpy
 #include <type_traits> // for __libcpp_is_constant_evaluated
+#include <iosfwd>      // for streampos & friends
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar> // for wmemcpy
+#endif
 
 #include <__debug>
 
@@ -423,6 +427,7 @@ char_traits<char>::find(const char_type* __s, size_t __n, const char_type& __a) 
 
 // char_traits<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 {
@@ -539,6 +544,7 @@ char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __
     return nullptr;
 #endif
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <class _Traits>
 _LIBCPP_INLINE_VISIBILITY

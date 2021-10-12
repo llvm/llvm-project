@@ -200,6 +200,9 @@ class MockGDBServerResponder:
             return self.QEnvironment(packet)
         if packet.startswith("QEnvironmentHexEncoded:"):
             return self.QEnvironmentHexEncoded(packet)
+        if packet.startswith("qRegisterInfo"):
+            regnum = int(packet[len("qRegisterInfo"):], 16)
+            return self.qRegisterInfo(regnum)
 
         return self.other(packet)
 
@@ -324,6 +327,9 @@ class MockGDBServerResponder:
 
     def QEnvironmentHexEncoded(self, packet):
         return "OK"
+
+    def qRegisterInfo(self, num):
+        return ""
 
     """
     Raised when we receive a packet for which there is no default action.

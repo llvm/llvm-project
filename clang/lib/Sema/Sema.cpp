@@ -169,7 +169,7 @@ public:
 } // end namespace clang
 
 const unsigned Sema::MaxAlignmentExponent;
-const unsigned Sema::MaximumAlignment;
+const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
@@ -365,6 +365,11 @@ void Sema::Initialize() {
 
       if (Context.getTypeSize(Context.getSizeType()) == 32) {
         AddPointerSizeDependentTypes();
+      }
+
+      if (getOpenCLOptions().isSupported("cl_khr_fp16", getLangOpts())) {
+        auto AtomicHalfT = Context.getAtomicType(Context.HalfTy);
+        addImplicitTypedef("atomic_half", AtomicHalfT);
       }
 
       std::vector<QualType> Atomic64BitTypes;

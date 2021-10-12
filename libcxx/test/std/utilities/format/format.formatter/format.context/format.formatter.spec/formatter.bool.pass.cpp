@@ -73,7 +73,9 @@ void test_boolean() {
 
 int main(int, char**) {
   test_boolean<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_boolean<wchar_t>();
+#endif
 
   return 0;
 }

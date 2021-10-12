@@ -202,7 +202,12 @@ static bool findLoopComponents(
     LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
     return false;
   }
-  const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(BackedgeTakenCount);
+  // The use of the Extend=false flag on getTripCountFromExitCount was added
+  // during a refactoring to preserve existing behavior.  However, there's
+  // nothing obvious in the surrounding code when handles the overflow case.
+  // FIXME: audit code to establish whether there's a latent bug here.
+  const SCEV *SCEVTripCount =
+    SE->getTripCountFromExitCount(BackedgeTakenCount, false);
   const SCEV *SCEVRHS = SE->getSCEV(RHS);
   if (SCEVRHS == SCEVTripCount)
     return setLoopComponents(RHS, TripCount, Increment, IterationInstructions);
@@ -214,7 +219,7 @@ static bool findLoopComponents(
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
       BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
-      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt);
+      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt, false);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
         LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
         return false;
@@ -606,7 +611,7 @@ static bool CanFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
 static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                               ScalarEvolution *SE, AssumptionCache *AC,
-                              const TargetTransformInfo *TTI) {
+                              const TargetTransformInfo *TTI, LPMUpdater *U) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
   {
@@ -662,6 +667,8 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // deleted, and any information that have about the outer loop invalidated.
   SE->forgetLoop(FI.OuterLoop);
   SE->forgetLoop(FI.InnerLoop);
+  if (U)
+    U->markLoopAsDeleted(*FI.InnerLoop, FI.InnerLoop->getName());
   LI->erase(FI.InnerLoop);
 
   // Increment statistic value.
@@ -737,7 +744,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
 static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            const TargetTransformInfo *TTI) {
+                            const TargetTransformInfo *TTI, LPMUpdater *U) {
   LLVM_DEBUG(
       dbgs() << "Loop flattening running on outer loop "
              << FI.OuterLoop->getHeader()->getName() << " and inner loop "
@@ -766,7 +773,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
   // If we have widened and can perform the transformation, do that here.
   if (CanFlatten)
-    return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+    return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI, U);
 
   // Otherwise, if we haven't widened the IV, check if the new iteration
   // variable might overflow. In this case, we need to version the loop, and
@@ -784,18 +791,18 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   }
 
   LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
-  return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+  return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI, U);
 }
 
 bool Flatten(LoopNest &LN, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-             AssumptionCache *AC, TargetTransformInfo *TTI) {
+             AssumptionCache *AC, TargetTransformInfo *TTI, LPMUpdater *U) {
   bool Changed = false;
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
     FlattenInfo FI(OuterLoop, InnerLoop);
-    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI, U);
   }
   return Changed;
 }
@@ -810,7 +817,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI);
+  Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -860,7 +867,7 @@ bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   bool Changed = false;
   for (Loop *L : *LI) {
     auto LN = LoopNest::getLoopNest(*L, *SE);
-    Changed |= Flatten(*LN, DT, LI, SE, AC, TTI);
+    Changed |= Flatten(*LN, DT, LI, SE, AC, TTI, nullptr);
   }
   return Changed;
 }

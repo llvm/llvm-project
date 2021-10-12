@@ -50,7 +50,9 @@ int main(int, char**)
     test<std::u16string>();
     test<std::u32string>();
 #endif
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wstring>();
+#endif
 
   return 0;
 }

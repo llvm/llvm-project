@@ -24,6 +24,22 @@ protected:
   DynamicRegisterInfo &operator=(DynamicRegisterInfo &) = default;
 
 public:
+  struct Register {
+    ConstString name;
+    ConstString alt_name;
+    ConstString set_name;
+    uint32_t byte_size = LLDB_INVALID_INDEX32;
+    uint32_t byte_offset = LLDB_INVALID_INDEX32;
+    lldb::Encoding encoding = lldb::eEncodingUint;
+    lldb::Format format = lldb::eFormatHex;
+    uint32_t regnum_dwarf = LLDB_INVALID_REGNUM;
+    uint32_t regnum_ehframe = LLDB_INVALID_REGNUM;
+    uint32_t regnum_generic = LLDB_INVALID_REGNUM;
+    uint32_t regnum_remote = LLDB_INVALID_REGNUM;
+    std::vector<uint32_t> value_regs;
+    std::vector<uint32_t> invalidate_regs;
+  };
+
   DynamicRegisterInfo() = default;
 
   DynamicRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
@@ -37,13 +53,11 @@ public:
   size_t SetRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                          const lldb_private::ArchSpec &arch);
 
+  size_t SetRegisterInfo(std::vector<Register> &&regs,
+                         const lldb_private::ArchSpec &arch);
+
   void AddRegister(lldb_private::RegisterInfo reg_info,
                    lldb_private::ConstString &set_name);
-
-  // Add a new register and cross-link it via invalidate_regs with other
-  // registers sharing its value_regs.
-  void AddSupplementaryRegister(lldb_private::RegisterInfo reg_info,
-                                lldb_private::ConstString &set_name);
 
   void Finalize(const lldb_private::ArchSpec &arch);
 
@@ -55,11 +69,9 @@ public:
 
   const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(uint32_t i) const;
 
-  lldb_private::RegisterInfo *GetRegisterInfoAtIndex(uint32_t i);
-
   const lldb_private::RegisterSet *GetRegisterSet(uint32_t i) const;
 
-  uint32_t GetRegisterSetIndexByName(lldb_private::ConstString &set_name,
+  uint32_t GetRegisterSetIndexByName(const lldb_private::ConstString &set_name,
                                      bool can_create);
 
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
@@ -89,8 +101,6 @@ protected:
   typedef std::vector<reg_num_collection> set_reg_num_collection;
   typedef std::vector<lldb_private::ConstString> name_collection;
   typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;
-  typedef std::vector<uint8_t> dwarf_opcode;
-  typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
 
   llvm::Expected<uint32_t> ByteOffsetFromSlice(uint32_t index,
                                                llvm::StringRef slice_str,
@@ -117,6 +127,9 @@ protected:
   bool m_finalized = false;
   bool m_is_reconfigurable = false;
 };
+
+void addSupplementaryRegister(std::vector<DynamicRegisterInfo::Register> &regs,
+                              DynamicRegisterInfo::Register new_reg_info);
 
 } // namespace lldb_private
 

@@ -85,11 +85,13 @@ struct _LIBCPP_TEMPLATE_VIS __bool_strings<char> {
   static constexpr string_view __false{"false"};
 };
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS __bool_strings<wchar_t> {
   static constexpr wstring_view __true{L"true"};
   static constexpr wstring_view __false{L"false"};
 };
+#endif
 
 template <class _CharT>
 using __formatter_bool = __formatter_integral<__parser_bool<_CharT>>;

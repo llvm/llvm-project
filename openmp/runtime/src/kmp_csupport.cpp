@@ -4327,24 +4327,35 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
   KA_TRACE(20, ("__kmpc_doacross_fini() exit: T#%d\n", gtid));
 }
 
-/* omp_alloc/omp_calloc/omp_free only defined for C/C++, not for Fortran */
+/* OpenMP 5.1 Memory Management routines */
 void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
-  return __kmpc_alloc(__kmp_entry_gtid(), size, allocator);
+  return __kmp_alloc(__kmp_entry_gtid(), 0, size, allocator);
+}
+
+void *omp_aligned_alloc(size_t align, size_t size,
+                        omp_allocator_handle_t allocator) {
+  return __kmp_alloc(__kmp_entry_gtid(), align, size, allocator);
 }
 
 void *omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t allocator) {
-  return __kmpc_calloc(__kmp_entry_gtid(), nmemb, size, allocator);
+  return __kmp_calloc(__kmp_entry_gtid(), 0, nmemb, size, allocator);
+}
+
+void *omp_aligned_calloc(size_t align, size_t nmemb, size_t size,
+                         omp_allocator_handle_t allocator) {
+  return __kmp_calloc(__kmp_entry_gtid(), align, nmemb, size, allocator);
 }
 
 void *omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                   omp_allocator_handle_t free_allocator) {
-  return __kmpc_realloc(__kmp_entry_gtid(), ptr, size, allocator,
+  return __kmp_realloc(__kmp_entry_gtid(), ptr, size, allocator,
                         free_allocator);
 }
 
 void omp_free(void *ptr, omp_allocator_handle_t allocator) {
-  __kmpc_free(__kmp_entry_gtid(), ptr, allocator);
+  ___kmpc_free(__kmp_entry_gtid(), ptr, allocator);
 }
+/* end of OpenMP 5.1 Memory Management routines */
 
 int __kmpc_get_target_offload(void) {
   if (!__kmp_init_serial) {

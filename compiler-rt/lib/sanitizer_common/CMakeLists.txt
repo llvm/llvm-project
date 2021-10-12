@@ -18,7 +18,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_mac.cpp
   sanitizer_mutex.cpp
   sanitizer_netbsd.cpp
-  sanitizer_persistent_allocator.cpp
   sanitizer_platform_limits_freebsd.cpp
   sanitizer_platform_limits_linux.cpp
   sanitizer_platform_limits_netbsd.cpp
@@ -99,7 +98,6 @@ set(SANITIZER_IMPL_HEADERS
   sancov_flags.inc
   sanitizer_addrhashmap.h
   sanitizer_allocator.h
-  sanitizer_allocator_bytemap.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
   sanitizer_allocator_interface.h
@@ -138,6 +136,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_flag_parser.h
   sanitizer_flags.h
   sanitizer_flags.inc
+  sanitizer_flat_map.h
   sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h

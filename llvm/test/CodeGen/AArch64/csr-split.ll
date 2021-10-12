@@ -85,8 +85,8 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    cbz x0, .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    adrp x8, a
-; CHECK-NEXT:    ldrsw x8, [x8, :lo12:a]
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    ldrsw x8, [x8, :lo12:a]
 ; CHECK-NEXT:    cmp x8, x0
 ; CHECK-NEXT:    b.ne .LBB1_3
 ; CHECK-NEXT:  // %bb.2: // %if.then2
@@ -112,9 +112,9 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-APPLE-NEXT:  ; %bb.1: ; %entry
 ; CHECK-APPLE-NEXT:  Lloh2:
 ; CHECK-APPLE-NEXT:    adrp x8, _a@PAGE
+; CHECK-APPLE-NEXT:    mov x19, x0
 ; CHECK-APPLE-NEXT:  Lloh3:
 ; CHECK-APPLE-NEXT:    ldrsw x8, [x8, _a@PAGEOFF]
-; CHECK-APPLE-NEXT:    mov x19, x0
 ; CHECK-APPLE-NEXT:    cmp x8, x0
 ; CHECK-APPLE-NEXT:    b.ne LBB1_3
 ; CHECK-APPLE-NEXT:  ; %bb.2: ; %if.then2

@@ -439,24 +439,22 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x) nounwind {
 define <2 x i32> @splatconstant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; SSE2-LABEL: splatconstant_funnnel_v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrld $28, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pslld $4, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    psrld $28, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pslld $4, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movsd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: splatconstant_funnnel_v2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    psrld $28, %xmm2
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pslld $4, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    psrld $28, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pslld $4, %xmm2
+; SSE41-NEXT:    por %xmm1, %xmm2
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: splatconstant_funnnel_v2i32:
@@ -520,13 +518,12 @@ define <2 x i32> @splatconstant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ;
 ; X86-SSE2-LABEL: splatconstant_funnnel_v2i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE2-NEXT:    psrld $28, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pslld $4, %xmm1
-; X86-SSE2-NEXT:    por %xmm2, %xmm1
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; X86-SSE2-NEXT:    movaps %xmm1, %xmm0
+; X86-SSE2-NEXT:    psrld $28, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    pslld $4, %xmm2
+; X86-SSE2-NEXT:    por %xmm1, %xmm2
+; X86-SSE2-NEXT:    movsd %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
   %res = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %x, <2 x i32> <i32 4, i32 4>)
   ret <2 x i32> %res

@@ -20,8 +20,9 @@ define void @test(i32 %px) {
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %for.inc
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    add w8, w20, #1
 ; CHECK-NEXT:    cmp w20, w19
-; CHECK-NEXT:    add w20, w20, #1
+; CHECK-NEXT:    mov w20, w8
 ; CHECK-NEXT:    b.gt .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

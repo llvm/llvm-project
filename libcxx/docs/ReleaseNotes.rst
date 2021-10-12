@@ -49,7 +49,9 @@ New Features
 API Changes
 -----------
 
-- ...
+- Support for building libc++ on top of a C Standard Library that does not support ``wchar_t`` was
+  added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
+  freestanding-friendly options provided by libc++.
 
 Build System Changes
 --------------------
@@ -57,3 +59,21 @@ Build System Changes
 - Building the libc++ shared or static library requires a C++ 20 capable compiler.
   Use ``-DLLVM_ENABLE_PROJECTS='clang;compiler-rt' -DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'``
   to build libc++ using a fresh build of Clang.
+
+- The functions ``std::atomic<T*>::fetch_(add|sub)`` and
+  ``std::atomic_fetch_(add|sub)`` no longer accept a function pointer. While
+  this is technically an API break, the invalid syntax isn't supported by
+  libstc++ and MSVC STL.  See https://godbolt.org/z/49fvzz98d.
+
+- The call of the functions ``std::atomic_(add|sub)(std::atomic<T*>*, ...)``
+  with the explicit template argument ``T`` are now ill-formed. While this is
+  technically an API break, the invalid syntax isn't supported by libstc++ and
+  MSVC STL. See https://godbolt.org/z/v9959re3v.
+
+  Due to this change it's now possible to call these functions with the
+  explicit template argument ``T*``. This allows using the same syntax on the
+  major Standard library implementations.
+  See https://godbolt.org/z/oEfzPhTTb.
+
+  Calls to these functions where the template argument was deduced by the
+  compiler are unaffected by this change.

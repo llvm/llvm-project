@@ -175,6 +175,7 @@ class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
 class ScriptedProcessInterface;
+class ScriptedThreadInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -367,6 +368,8 @@ typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
+typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
+    ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
@@ -399,7 +402,6 @@ typedef std::shared_ptr<lldb_private::SyntheticChildrenFrontEnd>
     SyntheticChildrenFrontEndSP;
 typedef std::shared_ptr<lldb_private::Target> TargetSP;
 typedef std::weak_ptr<lldb_private::Target> TargetWP;
-typedef std::shared_ptr<lldb_private::TargetProperties> TargetPropertiesSP;
 typedef std::shared_ptr<lldb_private::Thread> ThreadSP;
 typedef std::weak_ptr<lldb_private::Thread> ThreadWP;
 typedef std::shared_ptr<lldb_private::ThreadCollection> ThreadCollectionSP;

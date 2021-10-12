@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i8.i64(<vscale x 1 x i8> [[VALUE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf8 (int8_t *base, ptrdiff_t bstride, vint8mf8_t value, size_t vl) {
+void test_vsse8_v_i8mf8(int8_t *base, ptrdiff_t bstride, vint8mf8_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -23,7 +23,7 @@ void test_vsse8_v_i8mf8 (int8_t *base, ptrdiff_t bstride, vint8mf8_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i8.i64(<vscale x 2 x i8> [[VALUE:%.*]], <vscale x 2 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf4 (int8_t *base, ptrdiff_t bstride, vint8mf4_t value, size_t vl) {
+void test_vsse8_v_i8mf4(int8_t *base, ptrdiff_t bstride, vint8mf4_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -33,7 +33,7 @@ void test_vsse8_v_i8mf4 (int8_t *base, ptrdiff_t bstride, vint8mf4_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i8.i64(<vscale x 4 x i8> [[VALUE:%.*]], <vscale x 4 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf2 (int8_t *base, ptrdiff_t bstride, vint8mf2_t value, size_t vl) {
+void test_vsse8_v_i8mf2(int8_t *base, ptrdiff_t bstride, vint8mf2_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -43,7 +43,7 @@ void test_vsse8_v_i8mf2 (int8_t *base, ptrdiff_t bstride, vint8mf2_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i8.i64(<vscale x 8 x i8> [[VALUE:%.*]], <vscale x 8 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m1 (int8_t *base, ptrdiff_t bstride, vint8m1_t value, size_t vl) {
+void test_vsse8_v_i8m1(int8_t *base, ptrdiff_t bstride, vint8m1_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -53,7 +53,7 @@ void test_vsse8_v_i8m1 (int8_t *base, ptrdiff_t bstride, vint8m1_t value, size_t
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i8.i64(<vscale x 16 x i8> [[VALUE:%.*]], <vscale x 16 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m2 (int8_t *base, ptrdiff_t bstride, vint8m2_t value, size_t vl) {
+void test_vsse8_v_i8m2(int8_t *base, ptrdiff_t bstride, vint8m2_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -63,7 +63,7 @@ void test_vsse8_v_i8m2 (int8_t *base, ptrdiff_t bstride, vint8m2_t value, size_t
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv32i8.i64(<vscale x 32 x i8> [[VALUE:%.*]], <vscale x 32 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m4 (int8_t *base, ptrdiff_t bstride, vint8m4_t value, size_t vl) {
+void test_vsse8_v_i8m4(int8_t *base, ptrdiff_t bstride, vint8m4_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -73,7 +73,7 @@ void test_vsse8_v_i8m4 (int8_t *base, ptrdiff_t bstride, vint8m4_t value, size_t
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv64i8.i64(<vscale x 64 x i8> [[VALUE:%.*]], <vscale x 64 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m8 (int8_t *base, ptrdiff_t bstride, vint8m8_t value, size_t vl) {
+void test_vsse8_v_i8m8(int8_t *base, ptrdiff_t bstride, vint8m8_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -83,7 +83,7 @@ void test_vsse8_v_i8m8 (int8_t *base, ptrdiff_t bstride, vint8m8_t value, size_t
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i16.i64(<vscale x 1 x i16> [[VALUE:%.*]], <vscale x 1 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16mf4 (int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
+void test_vsse16_v_i16mf4(int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -93,7 +93,7 @@ void test_vsse16_v_i16mf4 (int16_t *base, ptrdiff_t bstride, vint16mf4_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i16.i64(<vscale x 2 x i16> [[VALUE:%.*]], <vscale x 2 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16mf2 (int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
+void test_vsse16_v_i16mf2(int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -103,7 +103,7 @@ void test_vsse16_v_i16mf2 (int16_t *base, ptrdiff_t bstride, vint16mf2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i16.i64(<vscale x 4 x i16> [[VALUE:%.*]], <vscale x 4 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m1 (int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
+void test_vsse16_v_i16m1(int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -113,7 +113,7 @@ void test_vsse16_v_i16m1 (int16_t *base, ptrdiff_t bstride, vint16m1_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i16.i64(<vscale x 8 x i16> [[VALUE:%.*]], <vscale x 8 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m2 (int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
+void test_vsse16_v_i16m2(int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -123,7 +123,7 @@ void test_vsse16_v_i16m2 (int16_t *base, ptrdiff_t bstride, vint16m2_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i16.i64(<vscale x 16 x i16> [[VALUE:%.*]], <vscale x 16 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m4 (int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
+void test_vsse16_v_i16m4(int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -133,7 +133,7 @@ void test_vsse16_v_i16m4 (int16_t *base, ptrdiff_t bstride, vint16m4_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv32i16.i64(<vscale x 32 x i16> [[VALUE:%.*]], <vscale x 32 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m8 (int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
+void test_vsse16_v_i16m8(int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -143,7 +143,7 @@ void test_vsse16_v_i16m8 (int16_t *base, ptrdiff_t bstride, vint16m8_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i32.i64(<vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32mf2 (int32_t *base, ptrdiff_t bstride, vint32mf2_t value, size_t vl) {
+void test_vsse32_v_i32mf2(int32_t *base, ptrdiff_t bstride, vint32mf2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -153,7 +153,7 @@ void test_vsse32_v_i32mf2 (int32_t *base, ptrdiff_t bstride, vint32mf2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i32.i64(<vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m1 (int32_t *base, ptrdiff_t bstride, vint32m1_t value, size_t vl) {
+void test_vsse32_v_i32m1(int32_t *base, ptrdiff_t bstride, vint32m1_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -163,7 +163,7 @@ void test_vsse32_v_i32m1 (int32_t *base, ptrdiff_t bstride, vint32m1_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i32.i64(<vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m2 (int32_t *base, ptrdiff_t bstride, vint32m2_t value, size_t vl) {
+void test_vsse32_v_i32m2(int32_t *base, ptrdiff_t bstride, vint32m2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -173,7 +173,7 @@ void test_vsse32_v_i32m2 (int32_t *base, ptrdiff_t bstride, vint32m2_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i32.i64(<vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m4 (int32_t *base, ptrdiff_t bstride, vint32m4_t value, size_t vl) {
+void test_vsse32_v_i32m4(int32_t *base, ptrdiff_t bstride, vint32m4_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -183,7 +183,7 @@ void test_vsse32_v_i32m4 (int32_t *base, ptrdiff_t bstride, vint32m4_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i32.i64(<vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m8 (int32_t *base, ptrdiff_t bstride, vint32m8_t value, size_t vl) {
+void test_vsse32_v_i32m8(int32_t *base, ptrdiff_t bstride, vint32m8_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -193,7 +193,7 @@ void test_vsse32_v_i32m8 (int32_t *base, ptrdiff_t bstride, vint32m8_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i64.i64(<vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m1 (int64_t *base, ptrdiff_t bstride, vint64m1_t value, size_t vl) {
+void test_vsse64_v_i64m1(int64_t *base, ptrdiff_t bstride, vint64m1_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -203,7 +203,7 @@ void test_vsse64_v_i64m1 (int64_t *base, ptrdiff_t bstride, vint64m1_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i64.i64(<vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m2 (int64_t *base, ptrdiff_t bstride, vint64m2_t value, size_t vl) {
+void test_vsse64_v_i64m2(int64_t *base, ptrdiff_t bstride, vint64m2_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -213,7 +213,7 @@ void test_vsse64_v_i64m2 (int64_t *base, ptrdiff_t bstride, vint64m2_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i64.i64(<vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m4 (int64_t *base, ptrdiff_t bstride, vint64m4_t value, size_t vl) {
+void test_vsse64_v_i64m4(int64_t *base, ptrdiff_t bstride, vint64m4_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -223,7 +223,7 @@ void test_vsse64_v_i64m4 (int64_t *base, ptrdiff_t bstride, vint64m4_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i64.i64(<vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m8 (int64_t *base, ptrdiff_t bstride, vint64m8_t value, size_t vl) {
+void test_vsse64_v_i64m8(int64_t *base, ptrdiff_t bstride, vint64m8_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -233,7 +233,7 @@ void test_vsse64_v_i64m8 (int64_t *base, ptrdiff_t bstride, vint64m8_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i8.i64(<vscale x 1 x i8> [[VALUE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf8 (uint8_t *base, ptrdiff_t bstride, vuint8mf8_t value, size_t vl) {
+void test_vsse8_v_u8mf8(uint8_t *base, ptrdiff_t bstride, vuint8mf8_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -243,7 +243,7 @@ void test_vsse8_v_u8mf8 (uint8_t *base, ptrdiff_t bstride, vuint8mf8_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i8.i64(<vscale x 2 x i8> [[VALUE:%.*]], <vscale x 2 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf4 (uint8_t *base, ptrdiff_t bstride, vuint8mf4_t value, size_t vl) {
+void test_vsse8_v_u8mf4(uint8_t *base, ptrdiff_t bstride, vuint8mf4_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -253,7 +253,7 @@ void test_vsse8_v_u8mf4 (uint8_t *base, ptrdiff_t bstride, vuint8mf4_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i8.i64(<vscale x 4 x i8> [[VALUE:%.*]], <vscale x 4 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf2 (uint8_t *base, ptrdiff_t bstride, vuint8mf2_t value, size_t vl) {
+void test_vsse8_v_u8mf2(uint8_t *base, ptrdiff_t bstride, vuint8mf2_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -263,7 +263,7 @@ void test_vsse8_v_u8mf2 (uint8_t *base, ptrdiff_t bstride, vuint8mf2_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i8.i64(<vscale x 8 x i8> [[VALUE:%.*]], <vscale x 8 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m1 (uint8_t *base, ptrdiff_t bstride, vuint8m1_t value, size_t vl) {
+void test_vsse8_v_u8m1(uint8_t *base, ptrdiff_t bstride, vuint8m1_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -273,7 +273,7 @@ void test_vsse8_v_u8m1 (uint8_t *base, ptrdiff_t bstride, vuint8m1_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i8.i64(<vscale x 16 x i8> [[VALUE:%.*]], <vscale x 16 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m2 (uint8_t *base, ptrdiff_t bstride, vuint8m2_t value, size_t vl) {
+void test_vsse8_v_u8m2(uint8_t *base, ptrdiff_t bstride, vuint8m2_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -283,7 +283,7 @@ void test_vsse8_v_u8m2 (uint8_t *base, ptrdiff_t bstride, vuint8m2_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv32i8.i64(<vscale x 32 x i8> [[VALUE:%.*]], <vscale x 32 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m4 (uint8_t *base, ptrdiff_t bstride, vuint8m4_t value, size_t vl) {
+void test_vsse8_v_u8m4(uint8_t *base, ptrdiff_t bstride, vuint8m4_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -293,7 +293,7 @@ void test_vsse8_v_u8m4 (uint8_t *base, ptrdiff_t bstride, vuint8m4_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv64i8.i64(<vscale x 64 x i8> [[VALUE:%.*]], <vscale x 64 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m8 (uint8_t *base, ptrdiff_t bstride, vuint8m8_t value, size_t vl) {
+void test_vsse8_v_u8m8(uint8_t *base, ptrdiff_t bstride, vuint8m8_t value, size_t vl) {
   return vsse8(base, bstride, value, vl);
 }
 
@@ -303,7 +303,7 @@ void test_vsse8_v_u8m8 (uint8_t *base, ptrdiff_t bstride, vuint8m8_t value, size
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i16.i64(<vscale x 1 x i16> [[VALUE:%.*]], <vscale x 1 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16mf4 (uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
+void test_vsse16_v_u16mf4(uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -313,7 +313,7 @@ void test_vsse16_v_u16mf4 (uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i16.i64(<vscale x 2 x i16> [[VALUE:%.*]], <vscale x 2 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16mf2 (uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
+void test_vsse16_v_u16mf2(uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -323,7 +323,7 @@ void test_vsse16_v_u16mf2 (uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i16.i64(<vscale x 4 x i16> [[VALUE:%.*]], <vscale x 4 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m1 (uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
+void test_vsse16_v_u16m1(uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -333,7 +333,7 @@ void test_vsse16_v_u16m1 (uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i16.i64(<vscale x 8 x i16> [[VALUE:%.*]], <vscale x 8 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m2 (uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
+void test_vsse16_v_u16m2(uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -343,7 +343,7 @@ void test_vsse16_v_u16m2 (uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i16.i64(<vscale x 16 x i16> [[VALUE:%.*]], <vscale x 16 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m4 (uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
+void test_vsse16_v_u16m4(uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -353,7 +353,7 @@ void test_vsse16_v_u16m4 (uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv32i16.i64(<vscale x 32 x i16> [[VALUE:%.*]], <vscale x 32 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m8 (uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
+void test_vsse16_v_u16m8(uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -363,7 +363,7 @@ void test_vsse16_v_u16m8 (uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i32.i64(<vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32mf2 (uint32_t *base, ptrdiff_t bstride, vuint32mf2_t value, size_t vl) {
+void test_vsse32_v_u32mf2(uint32_t *base, ptrdiff_t bstride, vuint32mf2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -373,7 +373,7 @@ void test_vsse32_v_u32mf2 (uint32_t *base, ptrdiff_t bstride, vuint32mf2_t value
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i32.i64(<vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m1 (uint32_t *base, ptrdiff_t bstride, vuint32m1_t value, size_t vl) {
+void test_vsse32_v_u32m1(uint32_t *base, ptrdiff_t bstride, vuint32m1_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -383,7 +383,7 @@ void test_vsse32_v_u32m1 (uint32_t *base, ptrdiff_t bstride, vuint32m1_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i32.i64(<vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m2 (uint32_t *base, ptrdiff_t bstride, vuint32m2_t value, size_t vl) {
+void test_vsse32_v_u32m2(uint32_t *base, ptrdiff_t bstride, vuint32m2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -393,7 +393,7 @@ void test_vsse32_v_u32m2 (uint32_t *base, ptrdiff_t bstride, vuint32m2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i32.i64(<vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m4 (uint32_t *base, ptrdiff_t bstride, vuint32m4_t value, size_t vl) {
+void test_vsse32_v_u32m4(uint32_t *base, ptrdiff_t bstride, vuint32m4_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -403,7 +403,7 @@ void test_vsse32_v_u32m4 (uint32_t *base, ptrdiff_t bstride, vuint32m4_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16i32.i64(<vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m8 (uint32_t *base, ptrdiff_t bstride, vuint32m8_t value, size_t vl) {
+void test_vsse32_v_u32m8(uint32_t *base, ptrdiff_t bstride, vuint32m8_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -413,7 +413,7 @@ void test_vsse32_v_u32m8 (uint32_t *base, ptrdiff_t bstride, vuint32m8_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1i64.i64(<vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m1 (uint64_t *base, ptrdiff_t bstride, vuint64m1_t value, size_t vl) {
+void test_vsse64_v_u64m1(uint64_t *base, ptrdiff_t bstride, vuint64m1_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -423,7 +423,7 @@ void test_vsse64_v_u64m1 (uint64_t *base, ptrdiff_t bstride, vuint64m1_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2i64.i64(<vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m2 (uint64_t *base, ptrdiff_t bstride, vuint64m2_t value, size_t vl) {
+void test_vsse64_v_u64m2(uint64_t *base, ptrdiff_t bstride, vuint64m2_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -433,7 +433,7 @@ void test_vsse64_v_u64m2 (uint64_t *base, ptrdiff_t bstride, vuint64m2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4i64.i64(<vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m4 (uint64_t *base, ptrdiff_t bstride, vuint64m4_t value, size_t vl) {
+void test_vsse64_v_u64m4(uint64_t *base, ptrdiff_t bstride, vuint64m4_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -443,7 +443,7 @@ void test_vsse64_v_u64m4 (uint64_t *base, ptrdiff_t bstride, vuint64m4_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8i64.i64(<vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m8 (uint64_t *base, ptrdiff_t bstride, vuint64m8_t value, size_t vl) {
+void test_vsse64_v_u64m8(uint64_t *base, ptrdiff_t bstride, vuint64m8_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -453,7 +453,7 @@ void test_vsse64_v_u64m8 (uint64_t *base, ptrdiff_t bstride, vuint64m8_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1f16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16mf4 (_Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
+void test_vsse16_v_f16mf4(_Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -463,7 +463,7 @@ void test_vsse16_v_f16mf4 (_Float16 *base, ptrdiff_t bstride, vfloat16mf4_t valu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2f16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16mf2 (_Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
+void test_vsse16_v_f16mf2(_Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -473,7 +473,7 @@ void test_vsse16_v_f16mf2 (_Float16 *base, ptrdiff_t bstride, vfloat16mf2_t valu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4f16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m1 (_Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
+void test_vsse16_v_f16m1(_Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -483,7 +483,7 @@ void test_vsse16_v_f16m1 (_Float16 *base, ptrdiff_t bstride, vfloat16m1_t value,
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8f16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m2 (_Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
+void test_vsse16_v_f16m2(_Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -493,7 +493,7 @@ void test_vsse16_v_f16m2 (_Float16 *base, ptrdiff_t bstride, vfloat16m2_t value,
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16f16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m4 (_Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
+void test_vsse16_v_f16m4(_Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -503,7 +503,7 @@ void test_vsse16_v_f16m4 (_Float16 *base, ptrdiff_t bstride, vfloat16m4_t value,
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv32f16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m8 (_Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
+void test_vsse16_v_f16m8(_Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
   return vsse16(base, bstride, value, vl);
 }
 
@@ -513,7 +513,7 @@ void test_vsse16_v_f16m8 (_Float16 *base, ptrdiff_t bstride, vfloat16m8_t value,
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1f32.i64(<vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32mf2 (float *base, ptrdiff_t bstride, vfloat32mf2_t value, size_t vl) {
+void test_vsse32_v_f32mf2(float *base, ptrdiff_t bstride, vfloat32mf2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -523,7 +523,7 @@ void test_vsse32_v_f32mf2 (float *base, ptrdiff_t bstride, vfloat32mf2_t value, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2f32.i64(<vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m1 (float *base, ptrdiff_t bstride, vfloat32m1_t value, size_t vl) {
+void test_vsse32_v_f32m1(float *base, ptrdiff_t bstride, vfloat32m1_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -533,7 +533,7 @@ void test_vsse32_v_f32m1 (float *base, ptrdiff_t bstride, vfloat32m1_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4f32.i64(<vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m2 (float *base, ptrdiff_t bstride, vfloat32m2_t value, size_t vl) {
+void test_vsse32_v_f32m2(float *base, ptrdiff_t bstride, vfloat32m2_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -543,7 +543,7 @@ void test_vsse32_v_f32m2 (float *base, ptrdiff_t bstride, vfloat32m2_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8f32.i64(<vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m4 (float *base, ptrdiff_t bstride, vfloat32m4_t value, size_t vl) {
+void test_vsse32_v_f32m4(float *base, ptrdiff_t bstride, vfloat32m4_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -553,7 +553,7 @@ void test_vsse32_v_f32m4 (float *base, ptrdiff_t bstride, vfloat32m4_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv16f32.i64(<vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m8 (float *base, ptrdiff_t bstride, vfloat32m8_t value, size_t vl) {
+void test_vsse32_v_f32m8(float *base, ptrdiff_t bstride, vfloat32m8_t value, size_t vl) {
   return vsse32(base, bstride, value, vl);
 }
 
@@ -563,7 +563,7 @@ void test_vsse32_v_f32m8 (float *base, ptrdiff_t bstride, vfloat32m8_t value, si
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv1f64.i64(<vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m1 (double *base, ptrdiff_t bstride, vfloat64m1_t value, size_t vl) {
+void test_vsse64_v_f64m1(double *base, ptrdiff_t bstride, vfloat64m1_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -573,7 +573,7 @@ void test_vsse64_v_f64m1 (double *base, ptrdiff_t bstride, vfloat64m1_t value, s
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv2f64.i64(<vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m2 (double *base, ptrdiff_t bstride, vfloat64m2_t value, size_t vl) {
+void test_vsse64_v_f64m2(double *base, ptrdiff_t bstride, vfloat64m2_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -583,7 +583,7 @@ void test_vsse64_v_f64m2 (double *base, ptrdiff_t bstride, vfloat64m2_t value, s
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv4f64.i64(<vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m4 (double *base, ptrdiff_t bstride, vfloat64m4_t value, size_t vl) {
+void test_vsse64_v_f64m4(double *base, ptrdiff_t bstride, vfloat64m4_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -593,7 +593,7 @@ void test_vsse64_v_f64m4 (double *base, ptrdiff_t bstride, vfloat64m4_t value, s
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.nxv8f64.i64(<vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m8 (double *base, ptrdiff_t bstride, vfloat64m8_t value, size_t vl) {
+void test_vsse64_v_f64m8(double *base, ptrdiff_t bstride, vfloat64m8_t value, size_t vl) {
   return vsse64(base, bstride, value, vl);
 }
 
@@ -603,7 +603,7 @@ void test_vsse64_v_f64m8 (double *base, ptrdiff_t bstride, vfloat64m8_t value, s
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i8.i64(<vscale x 1 x i8> [[VALUE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf8_m (vbool64_t mask, int8_t *base, ptrdiff_t bstride, vint8mf8_t value, size_t vl) {
+void test_vsse8_v_i8mf8_m(vbool64_t mask, int8_t *base, ptrdiff_t bstride, vint8mf8_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -613,7 +613,7 @@ void test_vsse8_v_i8mf8_m (vbool64_t mask, int8_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i8.i64(<vscale x 2 x i8> [[VALUE:%.*]], <vscale x 2 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf4_m (vbool32_t mask, int8_t *base, ptrdiff_t bstride, vint8mf4_t value, size_t vl) {
+void test_vsse8_v_i8mf4_m(vbool32_t mask, int8_t *base, ptrdiff_t bstride, vint8mf4_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -623,7 +623,7 @@ void test_vsse8_v_i8mf4_m (vbool32_t mask, int8_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i8.i64(<vscale x 4 x i8> [[VALUE:%.*]], <vscale x 4 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8mf2_m (vbool16_t mask, int8_t *base, ptrdiff_t bstride, vint8mf2_t value, size_t vl) {
+void test_vsse8_v_i8mf2_m(vbool16_t mask, int8_t *base, ptrdiff_t bstride, vint8mf2_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -633,7 +633,7 @@ void test_vsse8_v_i8mf2_m (vbool16_t mask, int8_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i8.i64(<vscale x 8 x i8> [[VALUE:%.*]], <vscale x 8 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m1_m (vbool8_t mask, int8_t *base, ptrdiff_t bstride, vint8m1_t value, size_t vl) {
+void test_vsse8_v_i8m1_m(vbool8_t mask, int8_t *base, ptrdiff_t bstride, vint8m1_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -643,7 +643,7 @@ void test_vsse8_v_i8m1_m (vbool8_t mask, int8_t *base, ptrdiff_t bstride, vint8m
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i8.i64(<vscale x 16 x i8> [[VALUE:%.*]], <vscale x 16 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m2_m (vbool4_t mask, int8_t *base, ptrdiff_t bstride, vint8m2_t value, size_t vl) {
+void test_vsse8_v_i8m2_m(vbool4_t mask, int8_t *base, ptrdiff_t bstride, vint8m2_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -653,7 +653,7 @@ void test_vsse8_v_i8m2_m (vbool4_t mask, int8_t *base, ptrdiff_t bstride, vint8m
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv32i8.i64(<vscale x 32 x i8> [[VALUE:%.*]], <vscale x 32 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m4_m (vbool2_t mask, int8_t *base, ptrdiff_t bstride, vint8m4_t value, size_t vl) {
+void test_vsse8_v_i8m4_m(vbool2_t mask, int8_t *base, ptrdiff_t bstride, vint8m4_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -663,7 +663,7 @@ void test_vsse8_v_i8m4_m (vbool2_t mask, int8_t *base, ptrdiff_t bstride, vint8m
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv64i8.i64(<vscale x 64 x i8> [[VALUE:%.*]], <vscale x 64 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_i8m8_m (vbool1_t mask, int8_t *base, ptrdiff_t bstride, vint8m8_t value, size_t vl) {
+void test_vsse8_v_i8m8_m(vbool1_t mask, int8_t *base, ptrdiff_t bstride, vint8m8_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -673,7 +673,7 @@ void test_vsse8_v_i8m8_m (vbool1_t mask, int8_t *base, ptrdiff_t bstride, vint8m
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i16.i64(<vscale x 1 x i16> [[VALUE:%.*]], <vscale x 1 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16mf4_m (vbool64_t mask, int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
+void test_vsse16_v_i16mf4_m(vbool64_t mask, int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -683,7 +683,7 @@ void test_vsse16_v_i16mf4_m (vbool64_t mask, int16_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i16.i64(<vscale x 2 x i16> [[VALUE:%.*]], <vscale x 2 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16mf2_m (vbool32_t mask, int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
+void test_vsse16_v_i16mf2_m(vbool32_t mask, int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -693,7 +693,7 @@ void test_vsse16_v_i16mf2_m (vbool32_t mask, int16_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i16.i64(<vscale x 4 x i16> [[VALUE:%.*]], <vscale x 4 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m1_m (vbool16_t mask, int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
+void test_vsse16_v_i16m1_m(vbool16_t mask, int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -703,7 +703,7 @@ void test_vsse16_v_i16m1_m (vbool16_t mask, int16_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i16.i64(<vscale x 8 x i16> [[VALUE:%.*]], <vscale x 8 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m2_m (vbool8_t mask, int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
+void test_vsse16_v_i16m2_m(vbool8_t mask, int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -713,7 +713,7 @@ void test_vsse16_v_i16m2_m (vbool8_t mask, int16_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i16.i64(<vscale x 16 x i16> [[VALUE:%.*]], <vscale x 16 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m4_m (vbool4_t mask, int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
+void test_vsse16_v_i16m4_m(vbool4_t mask, int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -723,7 +723,7 @@ void test_vsse16_v_i16m4_m (vbool4_t mask, int16_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv32i16.i64(<vscale x 32 x i16> [[VALUE:%.*]], <vscale x 32 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_i16m8_m (vbool2_t mask, int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
+void test_vsse16_v_i16m8_m(vbool2_t mask, int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -733,7 +733,7 @@ void test_vsse16_v_i16m8_m (vbool2_t mask, int16_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i32.i64(<vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32mf2_m (vbool64_t mask, int32_t *base, ptrdiff_t bstride, vint32mf2_t value, size_t vl) {
+void test_vsse32_v_i32mf2_m(vbool64_t mask, int32_t *base, ptrdiff_t bstride, vint32mf2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -743,7 +743,7 @@ void test_vsse32_v_i32mf2_m (vbool64_t mask, int32_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i32.i64(<vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m1_m (vbool32_t mask, int32_t *base, ptrdiff_t bstride, vint32m1_t value, size_t vl) {
+void test_vsse32_v_i32m1_m(vbool32_t mask, int32_t *base, ptrdiff_t bstride, vint32m1_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -753,7 +753,7 @@ void test_vsse32_v_i32m1_m (vbool32_t mask, int32_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i32.i64(<vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m2_m (vbool16_t mask, int32_t *base, ptrdiff_t bstride, vint32m2_t value, size_t vl) {
+void test_vsse32_v_i32m2_m(vbool16_t mask, int32_t *base, ptrdiff_t bstride, vint32m2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -763,7 +763,7 @@ void test_vsse32_v_i32m2_m (vbool16_t mask, int32_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i32.i64(<vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m4_m (vbool8_t mask, int32_t *base, ptrdiff_t bstride, vint32m4_t value, size_t vl) {
+void test_vsse32_v_i32m4_m(vbool8_t mask, int32_t *base, ptrdiff_t bstride, vint32m4_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -773,7 +773,7 @@ void test_vsse32_v_i32m4_m (vbool8_t mask, int32_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i32.i64(<vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_i32m8_m (vbool4_t mask, int32_t *base, ptrdiff_t bstride, vint32m8_t value, size_t vl) {
+void test_vsse32_v_i32m8_m(vbool4_t mask, int32_t *base, ptrdiff_t bstride, vint32m8_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -783,7 +783,7 @@ void test_vsse32_v_i32m8_m (vbool4_t mask, int32_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i64.i64(<vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m1_m (vbool64_t mask, int64_t *base, ptrdiff_t bstride, vint64m1_t value, size_t vl) {
+void test_vsse64_v_i64m1_m(vbool64_t mask, int64_t *base, ptrdiff_t bstride, vint64m1_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -793,7 +793,7 @@ void test_vsse64_v_i64m1_m (vbool64_t mask, int64_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i64.i64(<vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m2_m (vbool32_t mask, int64_t *base, ptrdiff_t bstride, vint64m2_t value, size_t vl) {
+void test_vsse64_v_i64m2_m(vbool32_t mask, int64_t *base, ptrdiff_t bstride, vint64m2_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -803,7 +803,7 @@ void test_vsse64_v_i64m2_m (vbool32_t mask, int64_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i64.i64(<vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m4_m (vbool16_t mask, int64_t *base, ptrdiff_t bstride, vint64m4_t value, size_t vl) {
+void test_vsse64_v_i64m4_m(vbool16_t mask, int64_t *base, ptrdiff_t bstride, vint64m4_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -813,7 +813,7 @@ void test_vsse64_v_i64m4_m (vbool16_t mask, int64_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i64.i64(<vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_i64m8_m (vbool8_t mask, int64_t *base, ptrdiff_t bstride, vint64m8_t value, size_t vl) {
+void test_vsse64_v_i64m8_m(vbool8_t mask, int64_t *base, ptrdiff_t bstride, vint64m8_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -823,7 +823,7 @@ void test_vsse64_v_i64m8_m (vbool8_t mask, int64_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i8.i64(<vscale x 1 x i8> [[VALUE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf8_m (vbool64_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf8_t value, size_t vl) {
+void test_vsse8_v_u8mf8_m(vbool64_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf8_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -833,7 +833,7 @@ void test_vsse8_v_u8mf8_m (vbool64_t mask, uint8_t *base, ptrdiff_t bstride, vui
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i8.i64(<vscale x 2 x i8> [[VALUE:%.*]], <vscale x 2 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf4_m (vbool32_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf4_t value, size_t vl) {
+void test_vsse8_v_u8mf4_m(vbool32_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf4_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -843,7 +843,7 @@ void test_vsse8_v_u8mf4_m (vbool32_t mask, uint8_t *base, ptrdiff_t bstride, vui
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i8.i64(<vscale x 4 x i8> [[VALUE:%.*]], <vscale x 4 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8mf2_m (vbool16_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf2_t value, size_t vl) {
+void test_vsse8_v_u8mf2_m(vbool16_t mask, uint8_t *base, ptrdiff_t bstride, vuint8mf2_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -853,7 +853,7 @@ void test_vsse8_v_u8mf2_m (vbool16_t mask, uint8_t *base, ptrdiff_t bstride, vui
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i8.i64(<vscale x 8 x i8> [[VALUE:%.*]], <vscale x 8 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m1_m (vbool8_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m1_t value, size_t vl) {
+void test_vsse8_v_u8m1_m(vbool8_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m1_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -863,7 +863,7 @@ void test_vsse8_v_u8m1_m (vbool8_t mask, uint8_t *base, ptrdiff_t bstride, vuint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i8.i64(<vscale x 16 x i8> [[VALUE:%.*]], <vscale x 16 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m2_m (vbool4_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m2_t value, size_t vl) {
+void test_vsse8_v_u8m2_m(vbool4_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m2_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -873,7 +873,7 @@ void test_vsse8_v_u8m2_m (vbool4_t mask, uint8_t *base, ptrdiff_t bstride, vuint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv32i8.i64(<vscale x 32 x i8> [[VALUE:%.*]], <vscale x 32 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m4_m (vbool2_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m4_t value, size_t vl) {
+void test_vsse8_v_u8m4_m(vbool2_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m4_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -883,7 +883,7 @@ void test_vsse8_v_u8m4_m (vbool2_t mask, uint8_t *base, ptrdiff_t bstride, vuint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv64i8.i64(<vscale x 64 x i8> [[VALUE:%.*]], <vscale x 64 x i8>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse8_v_u8m8_m (vbool1_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m8_t value, size_t vl) {
+void test_vsse8_v_u8m8_m(vbool1_t mask, uint8_t *base, ptrdiff_t bstride, vuint8m8_t value, size_t vl) {
   return vsse8(mask, base, bstride, value, vl);
 }
 
@@ -893,7 +893,7 @@ void test_vsse8_v_u8m8_m (vbool1_t mask, uint8_t *base, ptrdiff_t bstride, vuint
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i16.i64(<vscale x 1 x i16> [[VALUE:%.*]], <vscale x 1 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16mf4_m (vbool64_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
+void test_vsse16_v_u16mf4_m(vbool64_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -903,7 +903,7 @@ void test_vsse16_v_u16mf4_m (vbool64_t mask, uint16_t *base, ptrdiff_t bstride, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i16.i64(<vscale x 2 x i16> [[VALUE:%.*]], <vscale x 2 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16mf2_m (vbool32_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
+void test_vsse16_v_u16mf2_m(vbool32_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -913,7 +913,7 @@ void test_vsse16_v_u16mf2_m (vbool32_t mask, uint16_t *base, ptrdiff_t bstride, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i16.i64(<vscale x 4 x i16> [[VALUE:%.*]], <vscale x 4 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m1_m (vbool16_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
+void test_vsse16_v_u16m1_m(vbool16_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -923,7 +923,7 @@ void test_vsse16_v_u16m1_m (vbool16_t mask, uint16_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i16.i64(<vscale x 8 x i16> [[VALUE:%.*]], <vscale x 8 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m2_m (vbool8_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
+void test_vsse16_v_u16m2_m(vbool8_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -933,7 +933,7 @@ void test_vsse16_v_u16m2_m (vbool8_t mask, uint16_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i16.i64(<vscale x 16 x i16> [[VALUE:%.*]], <vscale x 16 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m4_m (vbool4_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
+void test_vsse16_v_u16m4_m(vbool4_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -943,7 +943,7 @@ void test_vsse16_v_u16m4_m (vbool4_t mask, uint16_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv32i16.i64(<vscale x 32 x i16> [[VALUE:%.*]], <vscale x 32 x i16>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_u16m8_m (vbool2_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
+void test_vsse16_v_u16m8_m(vbool2_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -953,7 +953,7 @@ void test_vsse16_v_u16m8_m (vbool2_t mask, uint16_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i32.i64(<vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32mf2_m (vbool64_t mask, uint32_t *base, ptrdiff_t bstride, vuint32mf2_t value, size_t vl) {
+void test_vsse32_v_u32mf2_m(vbool64_t mask, uint32_t *base, ptrdiff_t bstride, vuint32mf2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -963,7 +963,7 @@ void test_vsse32_v_u32mf2_m (vbool64_t mask, uint32_t *base, ptrdiff_t bstride, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i32.i64(<vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m1_m (vbool32_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m1_t value, size_t vl) {
+void test_vsse32_v_u32m1_m(vbool32_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m1_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -973,7 +973,7 @@ void test_vsse32_v_u32m1_m (vbool32_t mask, uint32_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i32.i64(<vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m2_m (vbool16_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m2_t value, size_t vl) {
+void test_vsse32_v_u32m2_m(vbool16_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -983,7 +983,7 @@ void test_vsse32_v_u32m2_m (vbool16_t mask, uint32_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i32.i64(<vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m4_m (vbool8_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m4_t value, size_t vl) {
+void test_vsse32_v_u32m4_m(vbool8_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m4_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -993,7 +993,7 @@ void test_vsse32_v_u32m4_m (vbool8_t mask, uint32_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16i32.i64(<vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_u32m8_m (vbool4_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m8_t value, size_t vl) {
+void test_vsse32_v_u32m8_m(vbool4_t mask, uint32_t *base, ptrdiff_t bstride, vuint32m8_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1003,7 +1003,7 @@ void test_vsse32_v_u32m8_m (vbool4_t mask, uint32_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1i64.i64(<vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m1_m (vbool64_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m1_t value, size_t vl) {
+void test_vsse64_v_u64m1_m(vbool64_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m1_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1013,7 +1013,7 @@ void test_vsse64_v_u64m1_m (vbool64_t mask, uint64_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2i64.i64(<vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m2_m (vbool32_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m2_t value, size_t vl) {
+void test_vsse64_v_u64m2_m(vbool32_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m2_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1023,7 +1023,7 @@ void test_vsse64_v_u64m2_m (vbool32_t mask, uint64_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4i64.i64(<vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m4_m (vbool16_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m4_t value, size_t vl) {
+void test_vsse64_v_u64m4_m(vbool16_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m4_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1033,7 +1033,7 @@ void test_vsse64_v_u64m4_m (vbool16_t mask, uint64_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8i64.i64(<vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i64>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_u64m8_m (vbool8_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m8_t value, size_t vl) {
+void test_vsse64_v_u64m8_m(vbool8_t mask, uint64_t *base, ptrdiff_t bstride, vuint64m8_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1043,7 +1043,7 @@ void test_vsse64_v_u64m8_m (vbool8_t mask, uint64_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1f16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16mf4_m (vbool64_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
+void test_vsse16_v_f16mf4_m(vbool64_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1053,7 +1053,7 @@ void test_vsse16_v_f16mf4_m (vbool64_t mask, _Float16 *base, ptrdiff_t bstride, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2f16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16mf2_m (vbool32_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
+void test_vsse16_v_f16mf2_m(vbool32_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1063,7 +1063,7 @@ void test_vsse16_v_f16mf2_m (vbool32_t mask, _Float16 *base, ptrdiff_t bstride, 
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4f16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m1_m (vbool16_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
+void test_vsse16_v_f16m1_m(vbool16_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1073,7 +1073,7 @@ void test_vsse16_v_f16m1_m (vbool16_t mask, _Float16 *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8f16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m2_m (vbool8_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
+void test_vsse16_v_f16m2_m(vbool8_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1083,7 +1083,7 @@ void test_vsse16_v_f16m2_m (vbool8_t mask, _Float16 *base, ptrdiff_t bstride, vf
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16f16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m4_m (vbool4_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
+void test_vsse16_v_f16m4_m(vbool4_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1093,7 +1093,7 @@ void test_vsse16_v_f16m4_m (vbool4_t mask, _Float16 *base, ptrdiff_t bstride, vf
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv32f16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse16_v_f16m8_m (vbool2_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
+void test_vsse16_v_f16m8_m(vbool2_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
   return vsse16(mask, base, bstride, value, vl);
 }
 
@@ -1103,7 +1103,7 @@ void test_vsse16_v_f16m8_m (vbool2_t mask, _Float16 *base, ptrdiff_t bstride, vf
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1f32.i64(<vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32mf2_m (vbool64_t mask, float *base, ptrdiff_t bstride, vfloat32mf2_t value, size_t vl) {
+void test_vsse32_v_f32mf2_m(vbool64_t mask, float *base, ptrdiff_t bstride, vfloat32mf2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1113,7 +1113,7 @@ void test_vsse32_v_f32mf2_m (vbool64_t mask, float *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2f32.i64(<vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m1_m (vbool32_t mask, float *base, ptrdiff_t bstride, vfloat32m1_t value, size_t vl) {
+void test_vsse32_v_f32m1_m(vbool32_t mask, float *base, ptrdiff_t bstride, vfloat32m1_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1123,7 +1123,7 @@ void test_vsse32_v_f32m1_m (vbool32_t mask, float *base, ptrdiff_t bstride, vflo
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4f32.i64(<vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m2_m (vbool16_t mask, float *base, ptrdiff_t bstride, vfloat32m2_t value, size_t vl) {
+void test_vsse32_v_f32m2_m(vbool16_t mask, float *base, ptrdiff_t bstride, vfloat32m2_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1133,7 +1133,7 @@ void test_vsse32_v_f32m2_m (vbool16_t mask, float *base, ptrdiff_t bstride, vflo
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8f32.i64(<vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m4_m (vbool8_t mask, float *base, ptrdiff_t bstride, vfloat32m4_t value, size_t vl) {
+void test_vsse32_v_f32m4_m(vbool8_t mask, float *base, ptrdiff_t bstride, vfloat32m4_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1143,7 +1143,7 @@ void test_vsse32_v_f32m4_m (vbool8_t mask, float *base, ptrdiff_t bstride, vfloa
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv16f32.i64(<vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse32_v_f32m8_m (vbool4_t mask, float *base, ptrdiff_t bstride, vfloat32m8_t value, size_t vl) {
+void test_vsse32_v_f32m8_m(vbool4_t mask, float *base, ptrdiff_t bstride, vfloat32m8_t value, size_t vl) {
   return vsse32(mask, base, bstride, value, vl);
 }
 
@@ -1153,7 +1153,7 @@ void test_vsse32_v_f32m8_m (vbool4_t mask, float *base, ptrdiff_t bstride, vfloa
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv1f64.i64(<vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m1_m (vbool64_t mask, double *base, ptrdiff_t bstride, vfloat64m1_t value, size_t vl) {
+void test_vsse64_v_f64m1_m(vbool64_t mask, double *base, ptrdiff_t bstride, vfloat64m1_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1163,7 +1163,7 @@ void test_vsse64_v_f64m1_m (vbool64_t mask, double *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv2f64.i64(<vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m2_m (vbool32_t mask, double *base, ptrdiff_t bstride, vfloat64m2_t value, size_t vl) {
+void test_vsse64_v_f64m2_m(vbool32_t mask, double *base, ptrdiff_t bstride, vfloat64m2_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1173,7 +1173,7 @@ void test_vsse64_v_f64m2_m (vbool32_t mask, double *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv4f64.i64(<vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m4_m (vbool16_t mask, double *base, ptrdiff_t bstride, vfloat64m4_t value, size_t vl) {
+void test_vsse64_v_f64m4_m(vbool16_t mask, double *base, ptrdiff_t bstride, vfloat64m4_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 
@@ -1183,7 +1183,7 @@ void test_vsse64_v_f64m4_m (vbool16_t mask, double *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsse.mask.nxv8f64.i64(<vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x double>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsse64_v_f64m8_m (vbool8_t mask, double *base, ptrdiff_t bstride, vfloat64m8_t value, size_t vl) {
+void test_vsse64_v_f64m8_m(vbool8_t mask, double *base, ptrdiff_t bstride, vfloat64m8_t value, size_t vl) {
   return vsse64(mask, base, bstride, value, vl);
 }
 

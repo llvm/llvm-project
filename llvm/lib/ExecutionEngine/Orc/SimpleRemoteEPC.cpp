@@ -54,8 +54,8 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
   return Result;
 }
 
-void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
-                                       ExecutorAddr WrapperFnAddr,
+void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                       IncomingWFRHandler OnComplete,
                                        ArrayRef<char> ArgBuffer) {
   uint64_t SeqNo;
   {
@@ -67,6 +67,25 @@ void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
 
   if (auto Err = sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
                              WrapperFnAddr, ArgBuffer)) {
+    IncomingWFRHandler H;
+
+    // We just registered OnComplete, but there may be a race between this
+    // thread returning from sendMessage and handleDisconnect being called from
+    // the transport's listener thread. If handleDisconnect gets there first
+    // then it will have failed 'H' for us. If we get there first (or if
+    // handleDisconnect already ran) then we need to take care of it.
+    {
+      std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
+      auto I = PendingCallWrapperResults.find(SeqNo);
+      if (I != PendingCallWrapperResults.end()) {
+        H = std::move(I->second);
+        PendingCallWrapperResults.erase(I);
+      }
+    }
+
+    if (H)
+      H(shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+
     getExecutionSession().reportError(std::move(Err));
   }
 }
@@ -121,8 +140,10 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       return std::move(Err);
     break;
   case SimpleRemoteEPCOpcode::Hangup:
-    return make_error<StringError>("Unexpected Hangup opcode",
-                                   inconvertibleErrorCode());
+    T->disconnect();
+    if (auto Err = handleHangup(std::move(ArgBytes)))
+      return std::move(Err);
+    return EndSession;
   case SimpleRemoteEPCOpcode::Result:
     if (auto Err = handleResult(SeqNo, TagAddr, std::move(ArgBytes)))
       return std::move(Err);
@@ -246,6 +267,7 @@ Error SimpleRemoteEPC::setup() {
 
   // Prepare a handler for the setup packet.
   PendingCallWrapperResults[0] =
+    RunInPlace()(
       [&](shared::WrapperFunctionResult SetupMsgBytes) {
         if (const char *ErrMsg = SetupMsgBytes.getOutOfBandError()) {
           EIP.set_value(
@@ -261,7 +283,7 @@ Error SimpleRemoteEPC::setup() {
         else
           EIP.set_value(make_error<StringError>(
               "Could not deserialize setup message", inconvertibleErrorCode()));
-      };
+      });
 
   // Start the transport.
   if (auto Err = T->start())
@@ -316,7 +338,7 @@ Error SimpleRemoteEPC::setup() {
 
 Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                                     SimpleRemoteEPCArgBytesVector ArgBytes) {
-  SendResultFunction SendResult;
+  IncomingWFRHandler SendResult;
 
   if (TagAddr)
     return make_error<StringError>("Unexpected TagAddr in result message",
@@ -351,6 +373,20 @@ void SimpleRemoteEPC::handleCallWrapper(
           getExecutionSession().reportError(std::move(Err));
       },
       TagAddr.getValue(), ArgBytes);
+}
+
+Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
+  using namespace llvm::orc::shared;
+  auto WFR = WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+  if (const char *ErrMsg = WFR.getOutOfBandError())
+    return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+
+  detail::SPSSerializableError Info;
+  SPSInputBuffer IB(WFR.data(), WFR.size());
+  if (!SPSArgList<SPSError>::deserialize(IB, Info))
+    return make_error<StringError>("Could not deserialize hangup info",
+                                   inconvertibleErrorCode());
+  return fromSPSSerializable(std::move(Info));
 }
 
 } // end namespace orc

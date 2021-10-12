@@ -641,3 +641,11 @@ func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
   // UNROLL-BY-4-NEXT: return %[[RES]]
   return %sum : f32
 }
+
+// UNROLL-FULL: func @unroll_zero_trip_count_case
+func @unroll_zero_trip_count_case() {
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to 0
+  affine.for %i = 0 to 0 {
+  }
+  return
+}

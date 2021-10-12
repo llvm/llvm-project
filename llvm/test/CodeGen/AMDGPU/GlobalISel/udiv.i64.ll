@@ -969,78 +969,28 @@ define i64 @v_udiv_i64_pow2k_denom(i64 %num) {
 ; CHECK-LABEL: v_udiv_i64_pow2k_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s4, 0x100000
-; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v0
-; CHECK-NEXT:    v_mul_hi_u32 v3, v0, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 20, v1
-; CHECK-NEXT:    v_mul_hi_u32 v5, v1, 0
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 0, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v0, v0, s4
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, v4, v5
-; CHECK-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v4, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v6, v2
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, v5, v3
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v3, v2
-; CHECK-NEXT:    v_mul_hi_u32 v1, v1, s4
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; CHECK-NEXT:    v_lshr_b64 v[0:1], v[0:1], 12
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv i64 %num, 4096
   ret i64 %result
 }
 
 define <2 x i64> @v_udiv_v2i64_pow2k_denom(<2 x i64> %num) {
-; CHECK-LABEL: v_udiv_v2i64_pow2k_denom:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s4, 0x100000
-; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 20, v0
-; CHECK-NEXT:    v_mul_hi_u32 v5, v0, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v6, 20, v1
-; CHECK-NEXT:    v_mul_hi_u32 v7, v1, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v8, 20, v2
-; CHECK-NEXT:    v_mul_hi_u32 v9, v2, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v10, 20, v3
-; CHECK-NEXT:    v_mul_hi_u32 v11, v3, 0
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 0, v4
-; CHECK-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v0, v0, s4
-; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v6, v7
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v1, v1, s4
-; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 0, v8
-; CHECK-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v2, v2, s4
-; CHECK-NEXT:    v_add_i32_e32 v10, vcc, v10, v11
-; CHECK-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
-; CHECK-NEXT:    v_mul_hi_u32 v3, v3, s4
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, v4, v5
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v6, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v8, v9
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v10, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, v12, v4
-; CHECK-NEXT:    v_add_i32_e32 v5, vcc, v7, v5
-; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v13, v6
-; CHECK-NEXT:    v_add_i32_e32 v7, vcc, v11, v8
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v4
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, v2, v6
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, v5, v4
-; CHECK-NEXT:    v_add_i32_e32 v5, vcc, v7, v6
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v4
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, v3, v5
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-LABEL: v_udiv_v2i64_pow2k_denom:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_sub_u32 s4, 63, 11
+; GISEL-NEXT:    s_sub_u32 s4, 64, s4
+; GISEL-NEXT:    v_lshr_b64 v[0:1], v[0:1], s4
+; GISEL-NEXT:    v_lshr_b64 v[2:3], v[2:3], s4
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; CGP-LABEL: v_udiv_v2i64_pow2k_denom:
+; CGP:       ; %bb.0:
+; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CGP-NEXT:    v_lshr_b64 v[0:1], v[0:1], 12
+; CGP-NEXT:    v_lshr_b64 v[2:3], v[2:3], 12
+; CGP-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv <2 x i64> %num, <i64 4096, i64 4096>
   ret <2 x i64> %result
 }

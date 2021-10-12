@@ -10,8 +10,8 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-NEXT:    movk w9, #41, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    mov w9, #48987
-; CHECK-NEXT:    and w8, w8, #0x1fffffff
 ; CHECK-NEXT:    movk w9, #82, lsl #16
+; CHECK-NEXT:    and w8, w8, #0x1fffffff
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -23,15 +23,15 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #43691
-; CHECK-NEXT:    sbfx w8, w0, #0, #4
-; CHECK-NEXT:    movk w9, #10922, lsl #16
-; CHECK-NEXT:    smull x9, w8, w9
-; CHECK-NEXT:    lsr x10, x9, #63
-; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    add w9, w9, w10
+; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    sbfx w9, w0, #0, #4
+; CHECK-NEXT:    movk w8, #10922, lsl #16
+; CHECK-NEXT:    smull x8, w9, w8
+; CHECK-NEXT:    lsr x10, x8, #63
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    add w8, w8, w10
 ; CHECK-NEXT:    mov w10, #6
-; CHECK-NEXT:    msub w8, w9, w10, w8
+; CHECK-NEXT:    msub w8, w8, w10, w9
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -59,44 +59,44 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-LABEL: test_srem_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x10, #7281
-; CHECK-NEXT:    movk x10, #29127, lsl #16
-; CHECK-NEXT:    movk x10, #50972, lsl #32
-; CHECK-NEXT:    sbfx x9, x2, #0, #33
-; CHECK-NEXT:    movk x10, #7281, lsl #48
-; CHECK-NEXT:    mov x11, #8589934591
-; CHECK-NEXT:    mov x12, #7282
-; CHECK-NEXT:    movk x12, #29127, lsl #16
-; CHECK-NEXT:    dup v0.2d, x11
-; CHECK-NEXT:    adrp x11, .LCPI3_0
-; CHECK-NEXT:    smulh x10, x9, x10
-; CHECK-NEXT:    movk x12, #50972, lsl #32
-; CHECK-NEXT:    ldr q1, [x11, :lo12:.LCPI3_0]
-; CHECK-NEXT:    adrp x11, .LCPI3_1
-; CHECK-NEXT:    sub x10, x10, x9
-; CHECK-NEXT:    sbfx x8, x1, #0, #33
-; CHECK-NEXT:    movk x12, #7281, lsl #48
-; CHECK-NEXT:    ldr q2, [x11, :lo12:.LCPI3_1]
-; CHECK-NEXT:    asr x11, x10, #3
-; CHECK-NEXT:    add x10, x11, x10, lsr #63
-; CHECK-NEXT:    smulh x11, x8, x12
-; CHECK-NEXT:    add x11, x11, x11, lsr #63
-; CHECK-NEXT:    add x11, x11, x11, lsl #3
-; CHECK-NEXT:    sub x8, x8, x11
-; CHECK-NEXT:    sbfx x11, x0, #0, #33
-; CHECK-NEXT:    smulh x12, x11, x12
+; CHECK-NEXT:    mov x11, #7282
+; CHECK-NEXT:    sbfx x10, x0, #0, #33
+; CHECK-NEXT:    movk x11, #29127, lsl #16
+; CHECK-NEXT:    mov x9, #7281
+; CHECK-NEXT:    movk x11, #50972, lsl #32
+; CHECK-NEXT:    movk x9, #29127, lsl #16
+; CHECK-NEXT:    movk x11, #7281, lsl #48
+; CHECK-NEXT:    movk x9, #50972, lsl #32
+; CHECK-NEXT:    sbfx x13, x1, #0, #33
+; CHECK-NEXT:    sbfx x8, x2, #0, #33
+; CHECK-NEXT:    smulh x12, x10, x11
+; CHECK-NEXT:    movk x9, #7281, lsl #48
+; CHECK-NEXT:    smulh x11, x13, x11
+; CHECK-NEXT:    smulh x9, x8, x9
 ; CHECK-NEXT:    add x12, x12, x12, lsr #63
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    add x11, x11, x11, lsr #63
 ; CHECK-NEXT:    add x12, x12, x12, lsl #3
-; CHECK-NEXT:    sub x11, x11, x12
-; CHECK-NEXT:    add x10, x10, x10, lsl #3
-; CHECK-NEXT:    fmov d3, x11
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    mov v3.d[1], x8
-; CHECK-NEXT:    fmov d4, x9
-; CHECK-NEXT:    and v4.16b, v4.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmeq v1.2d, v4.2d, v2.2d
+; CHECK-NEXT:    asr x14, x9, #3
+; CHECK-NEXT:    sub x10, x10, x12
+; CHECK-NEXT:    add x9, x14, x9, lsr #63
+; CHECK-NEXT:    add x11, x11, x11, lsl #3
+; CHECK-NEXT:    sub x11, x13, x11
+; CHECK-NEXT:    add x9, x9, x9, lsl #3
+; CHECK-NEXT:    fmov d0, x10
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    mov x9, #8589934591
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    dup v2.2d, x9
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    adrp x9, .LCPI3_1
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI3_1]
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    cmeq v1.2d, v1.2d, v3.2d
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    xtn v0.2s, v0.2d

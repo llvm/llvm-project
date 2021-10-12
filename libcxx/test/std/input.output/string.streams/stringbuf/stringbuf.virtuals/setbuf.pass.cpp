@@ -25,11 +25,13 @@ int main(int, char**)
         assert(sb.pubsetbuf(0, 0) == &sb);
         assert(sb.str() == "0123456789");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wstringbuf sb(L"0123456789");
         assert(sb.pubsetbuf(0, 0) == &sb);
         assert(sb.str() == L"0123456789");
     }
+#endif
 
   return 0;
 }

@@ -7,16 +7,16 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @func_vscale_none(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; CHECK-NOARG-LABEL: func_vscale_none:
 ; CHECK-NOARG:       // %bb.0:
-; CHECK-NOARG-NEXT:    ldp q0, q1, [x0]
-; CHECK-NOARG-NEXT:    ldp q2, q3, [x1]
-; CHECK-NOARG-NEXT:    ldp q4, q5, [x0, #32]
-; CHECK-NOARG-NEXT:    ldp q7, q6, [x1, #32]
-; CHECK-NOARG-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-NOARG-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NOARG-NEXT:    add v2.4s, v5.4s, v6.4s
-; CHECK-NOARG-NEXT:    add v3.4s, v4.4s, v7.4s
-; CHECK-NOARG-NEXT:    stp q3, q2, [x0, #32]
-; CHECK-NOARG-NEXT:    stp q0, q1, [x0]
+; CHECK-NOARG-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NOARG-NEXT:    ldp q4, q5, [x1, #32]
+; CHECK-NOARG-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-NOARG-NEXT:    ldp q2, q3, [x0]
+; CHECK-NOARG-NEXT:    add v1.4s, v1.4s, v5.4s
+; CHECK-NOARG-NEXT:    ldp q6, q4, [x1]
+; CHECK-NOARG-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-NOARG-NEXT:    add v2.4s, v2.4s, v6.4s
+; CHECK-NOARG-NEXT:    add v3.4s, v3.4s, v4.4s
+; CHECK-NOARG-NEXT:    stp q2, q3, [x0]
 ; CHECK-NOARG-NEXT:    ret
 ;
 ; CHECK-ARG-LABEL: func_vscale_none:
@@ -39,16 +39,16 @@ attributes #0 = { "target-features"="+sve" }
 define void @func_vscale1_1(<16 x i32>* %a, <16 x i32>* %b) #1 {
 ; CHECK-LABEL: func_vscale1_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    ldp q4, q5, [x0, #32]
-; CHECK-NEXT:    ldp q7, q6, [x1, #32]
-; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v2.4s, v5.4s, v6.4s
-; CHECK-NEXT:    add v3.4s, v4.4s, v7.4s
-; CHECK-NEXT:    stp q3, q2, [x0, #32]
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ldp q4, q5, [x1, #32]
+; CHECK-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    add v1.4s, v1.4s, v5.4s
+; CHECK-NEXT:    ldp q6, q4, [x1]
+; CHECK-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-NEXT:    add v2.4s, v2.4s, v6.4s
+; CHECK-NEXT:    add v3.4s, v3.4s, v4.4s
+; CHECK-NEXT:    stp q2, q3, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b

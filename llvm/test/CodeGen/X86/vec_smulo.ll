@@ -112,9 +112,10 @@ define <2 x i32> @smulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) noun
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    movq %xmm0, (%rdi)
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -246,9 +247,10 @@ define <3 x i32> @smulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rdi)
 ; SSE41-NEXT:    movq %xmm0, (%rdi)
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -378,9 +380,10 @@ define <4 x i32> @smulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) noun
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, (%rdi)
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3094,19 +3097,19 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; SSE41-NEXT:    pmulld %xmm0, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
-; SSE41-NEXT:    pslld $8, %xmm3
-; SSE41-NEXT:    psrad $8, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pslld $8, %xmm0
+; SSE41-NEXT:    psrad $8, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE41-NEXT:    pextrd $3, %xmm1, %eax
 ; SSE41-NEXT:    pextrd $2, %xmm1, %ecx
 ; SSE41-NEXT:    pextrd $1, %xmm1, %edx
 ; SSE41-NEXT:    movd %xmm1, %esi
 ; SSE41-NEXT:    psrad $31, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm1
+; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    movw %ax, 9(%rdi)
 ; SSE41-NEXT:    movw %cx, 6(%rdi)

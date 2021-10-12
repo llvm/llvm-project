@@ -47,7 +47,9 @@ constexpr void test() {
 
 constexpr void test() {
   test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
@@ -59,8 +61,10 @@ constexpr void test() {
 
 static_assert(std::is_same_v<std::format_parse_context,
                              std::basic_format_parse_context<char> >);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::is_same_v<std::wformat_parse_context,
                              std::basic_format_parse_context<wchar_t> >);
+#endif
 
 // Required for MSVC internal test runner compatibility.
 int main(int, char**) { return 0; }

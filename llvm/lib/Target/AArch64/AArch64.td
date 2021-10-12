@@ -479,6 +479,18 @@ def HasV8_7aOps : SubtargetFeature<
   "v8.7a", "HasV8_7aOps", "true", "Support ARM v8.7a instructions",
   [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX]>;
 
+def HasV9_0aOps : SubtargetFeature<
+  "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
+  [HasV8_5aOps, FeatureSVE2]>;
+
+def HasV9_1aOps : SubtargetFeature<
+  "v9.1a", "HasV9_1aOps", "true", "Support ARM v9.1a instructions",
+  [HasV8_6aOps, HasV9_0aOps]>;
+
+def HasV9_2aOps : SubtargetFeature<
+  "v9.2a", "HasV9_2aOps", "true", "Support ARM v9.2a instructions",
+  [HasV8_7aOps, HasV9_1aOps]>;
+
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
   [//v8.1
@@ -1156,7 +1168,7 @@ def ProcTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureFP16FML,
                                   FeatureDotProd]>;
 
-def : ProcessorModel<"generic", NoSchedModel, [
+def : ProcessorModel<"generic", CortexA55Model, [
                      FeatureFPARMv8,
                      FeatureFuseAES,
                      FeatureNEON,

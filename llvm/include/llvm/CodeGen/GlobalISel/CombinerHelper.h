@@ -610,6 +610,10 @@ public:
   bool matchUDivByConst(MachineInstr &MI);
   void applyUDivByConst(MachineInstr &MI);
 
+  // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
+  bool matchUMulHToLShr(MachineInstr &MI);
+  void applyUMulHToLShr(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
@@ -624,6 +628,15 @@ public:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)
   bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Transform (fadd x, fneg(y)) -> (fsub x, y)
+  ///           (fadd fneg(x), y) -> (fsub y, x)
+  ///           (fsub x, fneg(y)) -> (fadd x, y)
+  ///           (fmul fneg(x), fneg(y)) -> (fmul x, y)
+  ///           (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
+  ///           (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
+  ///           (fma fneg(x), fneg(y), z) -> (fma x, y, z)
+  bool matchRedundantNegOperands(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that

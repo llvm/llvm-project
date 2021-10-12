@@ -66,3 +66,10 @@
 #else
 #define NO_EXEC_STACK_DIRECTIVE
 #endif
+
+#if (defined(__x86_64__) || defined(__i386__)) && defined(__has_include) && __has_include(<cet.h>)
+#include <cet.h>
+#endif
+#ifndef _CET_ENDBR
+#define _CET_ENDBR
+#endif

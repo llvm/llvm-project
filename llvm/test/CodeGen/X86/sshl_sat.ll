@@ -205,18 +205,18 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-LABEL: func5:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rcx
-; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    sets %dl
-; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    addq %rdx, %rax
-; X64-NEXT:    movq %rdi, %rdx
-; X64-NEXT:    shlq %cl, %rdx
-; X64-NEXT:    movq %rdx, %rsi
+; X64-NEXT:    sets %al
+; X64-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    addq %rax, %rdx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shlq %cl, %rax
+; X64-NEXT:    movq %rax, %rsi
 ; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    sarq %cl, %rsi
 ; X64-NEXT:    cmpq %rsi, %rdi
-; X64-NEXT:    cmoveq %rdx, %rax
+; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func5:

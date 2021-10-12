@@ -73,6 +73,7 @@ static_library("MC") {
     "MachObjectWriter.cpp",
     "StringTableBuilder.cpp",
     "SubtargetFeature.cpp",
+    "TargetRegistry.cpp",
     "WasmObjectWriter.cpp",
     "WinCOFFObjectWriter.cpp",
     "XCOFFObjectWriter.cpp",

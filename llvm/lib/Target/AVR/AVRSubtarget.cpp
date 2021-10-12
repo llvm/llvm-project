@@ -13,7 +13,7 @@
 #include "AVRSubtarget.h"
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 #include "AVR.h"
 #include "AVRTargetMachine.h"

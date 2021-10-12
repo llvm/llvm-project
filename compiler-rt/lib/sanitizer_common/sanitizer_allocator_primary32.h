@@ -198,7 +198,7 @@ class SizeClassAllocator32 {
     return GetSizeClass(p) != 0;
   }
 
-  uptr GetSizeClass(const void *p) {
+  uptr GetSizeClass(const void *p) const {
     return possible_regions[ComputeRegionId(reinterpret_cast<uptr>(p))];
   }
 
@@ -251,7 +251,7 @@ class SizeClassAllocator32 {
 
   // Iterate over all existing chunks.
   // The allocator must be locked when calling this function.
-  void ForEachChunk(ForEachChunkCallback callback, void *arg) {
+  void ForEachChunk(ForEachChunkCallback callback, void *arg) const {
     for (uptr region = 0; region < kNumPossibleRegions; region++)
       if (possible_regions[region]) {
         uptr chunk_size = ClassIdToSize(possible_regions[region]);

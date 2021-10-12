@@ -61,8 +61,8 @@ define void @stg16(i8* %p) {
 ; CHECK-NEXT:    mov x8, #256
 ; CHECK-NEXT:  .LBB5_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    cbnz x8, .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
@@ -74,12 +74,12 @@ entry:
 define void @stg17(i8* %p) {
 ; CHECK-LABEL: stg17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stg x0, [x0], #16
 ; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    stg x0, [x0], #16
 ; CHECK-NEXT:  .LBB6_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    cbnz x8, .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
@@ -102,12 +102,12 @@ entry:
 define void @stzg17(i8* %p) {
 ; CHECK-LABEL: stzg17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stzg x0, [x0], #16
 ; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    stzg x0, [x0], #16
 ; CHECK-NEXT:  .LBB8_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    stz2g x0, [x0], #32
 ; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    stz2g x0, [x0], #32
 ; CHECK-NEXT:    cbnz x8, .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret

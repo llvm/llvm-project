@@ -62,6 +62,37 @@ private:
   linalg::LinalgPromotionOptions options;
 };
 
+/// Represent one application of createLinalgStrategyGeneralizePass.
+struct Generalize : public Transformation {
+  explicit Generalize(StringRef name,
+                      LinalgTransformationFilter::FilterFunction f = nullptr)
+      : Transformation(f), opName(name) {}
+
+  void addToPassPipeline(OpPassManager &pm,
+                         LinalgTransformationFilter m) const override {
+    pm.addPass(createLinalgStrategyGeneralizePass(opName, m));
+  }
+
+private:
+  std::string opName;
+};
+
+/// Represent one application of createLinalgStrategyInterchangePass.
+struct Interchange : public Transformation {
+  explicit Interchange(ArrayRef<int64_t> iteratorInterchange,
+                       LinalgTransformationFilter::FilterFunction f = nullptr)
+      : Transformation(f), iteratorInterchange(iteratorInterchange.begin(),
+                                               iteratorInterchange.end()) {}
+
+  void addToPassPipeline(OpPassManager &pm,
+                         LinalgTransformationFilter m) const override {
+    pm.addPass(createLinalgStrategyInterchangePass(iteratorInterchange, m));
+  }
+
+private:
+  SmallVector<int64_t> iteratorInterchange;
+};
+
 /// Represent one application of createLinalgStrategyVectorizePass.
 struct Vectorize : public Transformation {
   explicit Vectorize(linalg::LinalgVectorizationOptions options,
@@ -115,6 +146,36 @@ struct CodegenStrategy {
   promoteIf(bool b, StringRef opName, linalg::LinalgPromotionOptions options,
             LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? promote(opName, options, f) : *this;
+    return *this;
+  }
+  /// Append a pattern to generalize named operations.
+  CodegenStrategy &
+  generalize(StringRef opName,
+             LinalgTransformationFilter::FilterFunction f = nullptr) {
+    transformationSequence.emplace_back(
+        std::make_unique<Generalize>(opName, f));
+    return *this;
+  }
+  /// Conditionally append a pattern to generalize named operations.
+  CodegenStrategy &
+  generalizeIf(bool b, StringRef opName,
+               LinalgTransformationFilter::FilterFunction f = nullptr) {
+    return b ? generalize(opName, f) : *this;
+    return *this;
+  }
+  /// Append a pattern to interchange iterators.
+  CodegenStrategy &
+  interchange(ArrayRef<int64_t> iteratorInterchange,
+              LinalgTransformationFilter::FilterFunction f = nullptr) {
+    transformationSequence.emplace_back(
+        std::make_unique<Interchange>(iteratorInterchange, f));
+    return *this;
+  }
+  /// Conditionally append a pattern to interchange iterators.
+  CodegenStrategy &
+  interchangeIf(bool b, ArrayRef<int64_t> iteratorInterchange,
+                LinalgTransformationFilter::FilterFunction f = nullptr) {
+    return b ? interchange(iteratorInterchange, f) : *this;
     return *this;
   }
   /// Append a pattern to rewrite `LinalgOpType` as a vector operation.

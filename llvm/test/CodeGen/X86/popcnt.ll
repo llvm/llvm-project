@@ -27,7 +27,6 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ;
 ; X64-LABEL: cnt8:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb %al
 ; X64-NEXT:    andb $85, %al
@@ -39,9 +38,8 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-NEXT:    addb %al, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    addb %dil, %al
 ; X64-NEXT:    andb $15, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: cnt8:
@@ -1463,6 +1461,121 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-SSSE3-NEXT:    retl $4
   %cnt = tail call i128 @llvm.ctpop.i128(i128 %x)
   ret i128 %cnt
+}
+
+define i32 @popcount_zext_i32(i16 zeroext %x) {
+; X86-LABEL: popcount_zext_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl %ecx
+; X86-NEXT:    andl $21845, %ecx # imm = 0x5555
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; X86-NEXT:    imull $16843009, %ecx, %eax # imm = 0x1010101
+; X86-NEXT:    shrl $24, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: popcount_zext_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NEXT:    subl %eax, %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NEXT:    shrl $2, %edi
+; X64-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; X64-NEXT:    addl %eax, %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $4, %eax
+; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X64-NEXT:    shrl $24, %eax
+; X64-NEXT:    retq
+;
+; X86-POPCNT-LABEL: popcount_zext_i32:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: popcount_zext_i32:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    popcntl %edi, %eax
+; X64-POPCNT-NEXT:    retq
+  %z = zext i16 %x to i32
+  %cnt = tail call i32 @llvm.ctpop.i32(i32 %z)
+  ret i32 %cnt
+}
+
+define i32 @popcount_i16_zext(i16 zeroext %x) {
+; X86-LABEL: popcount_i16_zext:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl %ecx
+; X86-NEXT:    andl $21845, %ecx # imm = 0x5555
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $13107, %ecx # imm = 0x3333
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $13107, %eax # imm = 0x3333
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: popcount_i16_zext:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NEXT:    subl %eax, %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $13107, %eax # imm = 0x3333
+; X64-NEXT:    shrl $2, %edi
+; X64-NEXT:    andl $13107, %edi # imm = 0x3333
+; X64-NEXT:    addl %eax, %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $4, %eax
+; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    shll $8, %ecx
+; X64-NEXT:    addl %eax, %ecx
+; X64-NEXT:    movzbl %ch, %eax
+; X64-NEXT:    retq
+;
+; X86-POPCNT-LABEL: popcount_i16_zext:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    popcntw {{[0-9]+}}(%esp), %ax
+; X86-POPCNT-NEXT:    movzwl %ax, %eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: popcount_i16_zext:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    popcntw %di, %ax
+; X64-POPCNT-NEXT:    movzwl %ax, %eax
+; X64-POPCNT-NEXT:    retq
+  %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
+  %z = zext i16 %cnt to i32
+  ret i32 %z
 }
 
 declare i8 @llvm.ctpop.i8(i8) nounwind readnone

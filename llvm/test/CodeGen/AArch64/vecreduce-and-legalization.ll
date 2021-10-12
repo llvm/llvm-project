@@ -96,8 +96,9 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1
 ; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov w8, #-1
+; CHECK-NEXT:    umov w12, v0.b[4]
 ; CHECK-NEXT:    mov v1.b[9], w8
 ; CHECK-NEXT:    mov v1.b[10], w8
 ; CHECK-NEXT:    mov v1.b[11], w8
@@ -106,19 +107,18 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umov w8, v1.b[1]
 ; CHECK-NEXT:    umov w9, v1.b[0]
+; CHECK-NEXT:    umov w10, v1.b[2]
+; CHECK-NEXT:    umov w11, v1.b[3]
 ; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    umov w9, v1.b[2]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v1.b[3]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[4]
-; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    umov w10, v0.b[6]
+; CHECK-NEXT:    and w8, w8, w11
+; CHECK-NEXT:    umov w11, v0.b[7]
+; CHECK-NEXT:    and w8, w8, w12
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w0, w8, w11
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.and.v9i8(<9 x i8> %a)
   ret i8 %b
@@ -128,8 +128,8 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 ; CHECK-LABEL: test_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
@@ -141,13 +141,13 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    and w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    and w8, w8, w10
+; CHECK-NEXT:    and w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)

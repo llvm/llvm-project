@@ -132,11 +132,14 @@ template <class T1, class... T>
 
 // 20.4.1.6, relational operators:
 template<class... T, class... U> bool operator==(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14
-template<class... T, class... U> bool operator<(const tuple<T...>&, const tuple<U...>&);  // constexpr in C++14
-template<class... T, class... U> bool operator!=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14
-template<class... T, class... U> bool operator>(const tuple<T...>&, const tuple<U...>&);  // constexpr in C++14
-template<class... T, class... U> bool operator<=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14
-template<class... T, class... U> bool operator>=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14
+template<class... T, class... U> bool operator<(const tuple<T...>&, const tuple<U...>&);  // constexpr in C++14, removed in C++20
+template<class... T, class... U> bool operator!=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14, removed in C++20
+template<class... T, class... U> bool operator>(const tuple<T...>&, const tuple<U...>&);  // constexpr in C++14, removed in C++20
+template<class... T, class... U> bool operator<=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14, removed in C++20
+template<class... T, class... U> bool operator>=(const tuple<T...>&, const tuple<U...>&); // constexpr in C++14, removed in C++20
+template<class... T, class... U>
+  constexpr common_comparison_category_t<synth-three-way-result<T, U>...>
+    operator<=>(const tuple<T...>&, const tuple<U...>&);                                  // since C++20
 
 template <class... Types, class Alloc>
   struct uses_allocator<tuple<Types...>, Alloc>;
@@ -149,6 +152,8 @@ template <class... Types>
 
 */
 
+#include <__compare/common_comparison_category.h>
+#include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
 #include <__functional_base>
@@ -156,6 +161,7 @@ template <class... Types>
 #include <__memory/uses_allocator.h>
 #include <__tuple>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <compare>
 #include <cstddef>
@@ -1300,6 +1306,30 @@ operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
     return __tuple_equal<sizeof...(_Tp)>()(__x, __y);
 }
 
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
+// operator<=>
+
+template <class ..._Tp, class ..._Up, size_t ..._Is>
+_LIBCPP_HIDE_FROM_ABI constexpr
+auto
+__tuple_compare_three_way(const tuple<_Tp...>& __x, const tuple<_Up...>& __y, index_sequence<_Is...>) {
+    common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...> __result = strong_ordering::equal;
+    static_cast<void>(((__result = _VSTD::__synth_three_way(_VSTD::get<_Is>(__x), _VSTD::get<_Is>(__y)), __result != 0) || ...));
+    return __result;
+}
+
+template <class ..._Tp, class ..._Up>
+requires (sizeof...(_Tp) == sizeof...(_Up))
+_LIBCPP_HIDE_FROM_ABI constexpr
+common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...>
+operator<=>(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
+{
+    return _VSTD::__tuple_compare_three_way(__x, __y, index_sequence_for<_Tp...>{});
+}
+
+#else // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
 template <class ..._Tp, class ..._Up>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 bool
@@ -1367,6 +1397,8 @@ operator<=(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
 {
     return !(__y < __x);
 }
+
+#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // tuple_cat
 

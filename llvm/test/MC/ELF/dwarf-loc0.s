@@ -1,3 +1,4 @@
+# XFAIL: -aix
 # UNSUPPORTED: -zos
 # REQUIRES: default_triple
 # RUN: llvm-mc -dwarf-version 5 --defsym FILE0=1 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s

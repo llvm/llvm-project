@@ -1137,7 +1137,7 @@ public:
 
   /// overlaps(a, b) - Return true if the intervals in this map overlap with the
   /// interval [a;b].
-  bool overlaps(KeyT a, KeyT b) {
+  bool overlaps(KeyT a, KeyT b) const {
     assert(Traits::nonEmpty(a, b));
     const_iterator I = find(a);
     if (!I.valid())

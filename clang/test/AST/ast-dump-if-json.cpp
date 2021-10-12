@@ -38,6 +38,7 @@ void func(int val) {
 // using --filters=IfStmt
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -150,6 +151,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -280,6 +282,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -523,6 +526,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -650,6 +654,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -832,6 +837,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -1014,6 +1020,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -1050,6 +1057,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -1103,6 +1111,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
@@ -1140,6 +1149,7 @@ void func(int val) {
 // CHECK-NEXT: }
 
 
+// CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "IfStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {

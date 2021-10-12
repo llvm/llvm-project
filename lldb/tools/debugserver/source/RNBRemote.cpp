@@ -4306,7 +4306,7 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
         if (!first)
           ostrm << ",";
         first = false;
-        ostrm << "0x" << std::hex << addr;
+        ostrm << std::hex << addr;
       }
     }
     ostrm << ";";

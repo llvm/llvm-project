@@ -493,7 +493,6 @@ func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x
 func @cast_away_broadcast_leading_one_dims(
   %arg0: vector<8xf32>, %arg1: f32, %arg2: vector<1x4xf32>) ->
   (vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>, vector<1x1x4xf32>) {
-  // CHECK:  vector.broadcast %{{.*}} : vector<8xf32> to vector<8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
   %0 = vector.broadcast %arg0 : vector<8xf32> to vector<1x1x8xf32>
   // CHECK:  vector.broadcast %{{.*}} : f32 to vector<4xf32>

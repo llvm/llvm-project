@@ -1784,11 +1784,11 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ; SSE2-NEXT:    psraw $2, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm0[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
-; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [65535,0,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movaps %xmm1, %xmm2
+; SSE2-NEXT:    andps %xmm0, %xmm2
 ; SSE2-NEXT:    psraw $1, %xmm1
-; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    andnps %xmm1, %xmm0
 ; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1851,11 +1851,11 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ; X86-SSE-NEXT:    psraw $2, %xmm1
 ; X86-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm0[0,0]
 ; X86-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [65535,0,65535,0,65535,65535,65535,65535]
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
-; X86-SSE-NEXT:    andps %xmm2, %xmm0
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,0,65535,0,65535,65535,65535,65535]
+; X86-SSE-NEXT:    movaps %xmm1, %xmm2
+; X86-SSE-NEXT:    andps %xmm0, %xmm2
 ; X86-SSE-NEXT:    psraw $1, %xmm1
-; X86-SSE-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE-NEXT:    andnps %xmm1, %xmm0
 ; X86-SSE-NEXT:    orps %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = ashr <4 x i16> %a, <i16 0, i16 1, i16 2, i16 3>

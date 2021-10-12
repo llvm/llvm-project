@@ -95,6 +95,18 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyPromotePass(
     linalg::LinalgTransformationFilter filter =
         linalg::LinalgTransformationFilter());
 
+/// Create a LinalgStrategyGeneralizePass.
+std::unique_ptr<OperationPass<FuncOp>>
+createLinalgStrategyGeneralizePass(StringRef opName = "",
+                                   linalg::LinalgTransformationFilter filter =
+                                       linalg::LinalgTransformationFilter());
+
+/// Create a LinalgStrategyInterchangePass.
+std::unique_ptr<OperationPass<FuncOp>>
+createLinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange = {},
+                                    linalg::LinalgTransformationFilter filter =
+                                        linalg::LinalgTransformationFilter());
+
 /// Create a LinalgStrategyVectorizePass.
 std::unique_ptr<OperationPass<FuncOp>>
 createLinalgStrategyVectorizePass(StringRef opName = "",

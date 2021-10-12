@@ -1950,6 +1950,17 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
     }
   }
 
+  // (X | (X-1)) s<  0 --> X < 1
+  // (X | (X-1)) s> -1 --> X > 0
+  Value *X;
+  bool TrueIfSigned;
+  if (isSignBitCheck(Pred, C, TrueIfSigned) &&
+      match(Or, m_c_Or(m_Add(m_Value(X), m_AllOnes()), m_Deferred(X)))) {
+    auto NewPred = TrueIfSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGT;
+    Constant *NewC = ConstantInt::get(X->getType(), TrueIfSigned ? 1 : 0);
+    return new ICmpInst(NewPred, X, NewC);
+  }
+
   if (!Cmp.isEquality() || !C.isZero() || !Or->hasOneUse())
     return nullptr;
 
@@ -2579,26 +2590,38 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
                                                    const APInt &C) {
   Value *X = Sub->getOperand(0), *Y = Sub->getOperand(1);
   ICmpInst::Predicate Pred = Cmp.getPredicate();
-  const APInt *C2;
-  APInt SubResult;
+  Type *Ty = Sub->getType();
 
-  // icmp eq/ne (sub C, Y), C -> icmp eq/ne Y, 0
-  if (match(X, m_APInt(C2)) && *C2 == C && Cmp.isEquality())
-    return new ICmpInst(Cmp.getPredicate(), Y,
-                        ConstantInt::get(Y->getType(), 0));
+  // (SubC - Y) == C) --> Y == (SubC - C)
+  // (SubC - Y) != C) --> Y != (SubC - C)
+  Constant *SubC;
+  if (Cmp.isEquality() && match(X, m_ImmConstant(SubC))) {
+    return new ICmpInst(Pred, Y,
+                        ConstantExpr::getSub(SubC, ConstantInt::get(Ty, C)));
+  }
 
   // (icmp P (sub nuw|nsw C2, Y), C) -> (icmp swap(P) Y, C2-C)
+  const APInt *C2;
+  APInt SubResult;
+  ICmpInst::Predicate SwappedPred = Cmp.getSwappedPredicate();
+  bool HasNSW = Sub->hasNoSignedWrap();
+  bool HasNUW = Sub->hasNoUnsignedWrap();
   if (match(X, m_APInt(C2)) &&
-      ((Cmp.isUnsigned() && Sub->hasNoUnsignedWrap()) ||
-       (Cmp.isSigned() && Sub->hasNoSignedWrap())) &&
+      ((Cmp.isUnsigned() && HasNUW) || (Cmp.isSigned() && HasNSW)) &&
       !subWithOverflow(SubResult, *C2, C, Cmp.isSigned()))
-    return new ICmpInst(Cmp.getSwappedPredicate(), Y,
-                        ConstantInt::get(Y->getType(), SubResult));
+    return new ICmpInst(SwappedPred, Y, ConstantInt::get(Ty, SubResult));
 
   // The following transforms are only worth it if the only user of the subtract
   // is the icmp.
+  // TODO: This is an artificial restriction for all of the transforms below
+  //       that only need a single replacement icmp.
   if (!Sub->hasOneUse())
     return nullptr;
+
+  // X - Y == 0 --> X == Y.
+  // X - Y != 0 --> X != Y.
+  if (Cmp.isEquality() && C.isZero())
+    return new ICmpInst(Pred, X, Y);
 
   if (Sub->hasNoSignedWrap()) {
     // (icmp sgt (sub nsw X, Y), -1) -> (icmp sge X, Y)
@@ -2632,7 +2655,12 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   if (Pred == ICmpInst::ICMP_UGT && (C + 1).isPowerOf2() && (*C2 & C) == C)
     return new ICmpInst(ICmpInst::ICMP_NE, Builder.CreateOr(Y, C), X);
 
-  return nullptr;
+  // We have handled special cases that reduce.
+  // Canonicalize any remaining sub to add as:
+  // (C2 - Y) > C --> (Y + ~C2) < ~C
+  Value *Add = Builder.CreateAdd(Y, ConstantInt::get(Ty, ~(*C2)), "notsub",
+                                 HasNUW, HasNSW);
+  return new ICmpInst(SwappedPred, Add, ConstantInt::get(Ty, ~C));
 }
 
 /// Fold icmp (add X, Y), C.
@@ -3116,19 +3144,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
         return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
       } else if (C.isZero()) {
         // Replace ((xor A, B) != 0) with (A != B)
-        return new ICmpInst(Pred, BOp0, BOp1);
-      }
-    }
-    break;
-  case Instruction::Sub:
-    if (BO->hasOneUse()) {
-      // Only check for constant LHS here, as constant RHS will be canonicalized
-      // to add and use the fold above.
-      if (Constant *BOC = dyn_cast<Constant>(BOp0)) {
-        // Replace ((sub BOC, B) != C) with (B != BOC-C).
-        return new ICmpInst(Pred, BOp1, ConstantExpr::getSub(BOC, RHS));
-      } else if (C.isZero()) {
-        // Replace ((sub A, B) != 0) with (A != B).
         return new ICmpInst(Pred, BOp0, BOp1);
       }
     }

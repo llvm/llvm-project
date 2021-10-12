@@ -25,6 +25,7 @@
 
 int main(int, char**)
 {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::codecvt_utf8_utf16<wchar_t> C;
         C c;
@@ -37,6 +38,7 @@ int main(int, char**)
         int r = c.max_length();
         assert(r == 7);
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::codecvt_utf8_utf16<char16_t> C;
         C c;

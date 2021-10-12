@@ -13,11 +13,11 @@ define i16 @halfword(%struct.a* %ctx, i32 %xor72) nounwind {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldrh w20, [x0, x21, lsl #1]
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    ldrh w20, [x0, x21, lsl #1]
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    strh w20, [x19, x21, lsl #1]
 ; CHECK-NEXT:    mov w0, w20
+; CHECK-NEXT:    strh w20, [x19, x21, lsl #1]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -38,11 +38,11 @@ define i32 @word(%struct.b* %ctx, i32 %xor72) nounwind {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr w20, [x0, x21, lsl #2]
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    ldr w20, [x0, x21, lsl #2]
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    str w20, [x19, x21, lsl #2]
 ; CHECK-NEXT:    mov w0, w20
+; CHECK-NEXT:    str w20, [x19, x21, lsl #2]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -63,11 +63,11 @@ define i64 @doubleword(%struct.c* %ctx, i32 %xor72) nounwind {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr x20, [x0, x21, lsl #3]
 ; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    ldr x20, [x0, x21, lsl #3]
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    str x20, [x19, x21, lsl #3]
 ; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    str x20, [x19, x21, lsl #3]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret

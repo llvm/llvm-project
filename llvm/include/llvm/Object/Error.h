@@ -82,6 +82,10 @@ private:
 /// error() function needs to called on the llvm::Error.
 Error isNotObjectErrorInvalidFileType(llvm::Error Err);
 
+inline Error createError(const Twine &Err) {
+  return make_error<StringError>(Err, object_error::parse_failed);
+}
+
 } // end namespace object.
 
 } // end namespace llvm.

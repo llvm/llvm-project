@@ -129,13 +129,6 @@ void ReplaceInstWithInst(BasicBlock::InstListType &BIL,
 /// To. Copies DebugLoc from BI to I, if I doesn't already have a DebugLoc.
 void ReplaceInstWithInst(Instruction *From, Instruction *To);
 
-/// Check if we can prove that all paths starting from this block converge
-/// to a block that either has a @llvm.experimental.deoptimize call
-/// prior to its terminating return instruction or is terminated by unreachable.
-/// All blocks in the traversed sequence must have a single predecessor, maybe
-/// except for the last one.
-bool IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB);
-
 /// Option class for critical edge splitting.
 ///
 /// This provides a builder interface for overriding the default options used
