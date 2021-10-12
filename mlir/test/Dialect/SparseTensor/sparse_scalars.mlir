@@ -24,10 +24,10 @@
 // CHECK-SAME:              %[[VAL_2:.*2]]: f32,
 // CHECK-SAME:              %[[VAL_3:.*3]]: f32,
 // CHECK-SAME:              %[[VAL_4:.*4]]: tensor<32x16xf32> {linalg.inplaceable = true}) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_5:.*]] = constant 2.200000e+00 : f32
-// CHECK:           %[[VAL_6:.*]] = constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = constant 1 : index
-// CHECK:           %[[VAL_8:.*]] = addf %[[VAL_2]], %[[VAL_3]] : f32
+// CHECK:           %[[VAL_5:.*]] = arith.constant 2.200000e+00 : f32
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_8:.*]] = arith.addf %[[VAL_2]], %[[VAL_3]] : f32
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
@@ -41,18 +41,18 @@
 // CHECK:           scf.for %[[VAL_19:.*]] = %[[VAL_17]] to %[[VAL_18]] step %[[VAL_7]] {
 // CHECK:             %[[VAL_20:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_19]]] : memref<?xindex>
 // CHECK:             %[[VAL_21:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_19]]] : memref<?xindex>
-// CHECK:             %[[VAL_22:.*]] = addi %[[VAL_19]], %[[VAL_7]] : index
+// CHECK:             %[[VAL_22:.*]] = arith.addi %[[VAL_19]], %[[VAL_7]] : index
 // CHECK:             %[[VAL_23:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_22]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_23]] step %[[VAL_7]] {
 // CHECK:               %[[VAL_25:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_24]]] : memref<?xindex>
 // CHECK:               %[[VAL_26:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_24]]] : memref<?xf32>
-// CHECK:               %[[VAL_27:.*]] = mulf %[[VAL_26]], %[[VAL_16]] : f32
-// CHECK:               %[[VAL_28:.*]] = mulf %[[VAL_27]], %[[VAL_2]] : f32
-// CHECK:               %[[VAL_29:.*]] = mulf %[[VAL_28]], %[[VAL_3]] : f32
-// CHECK:               %[[VAL_30:.*]] = mulf %[[VAL_29]], %[[VAL_8]] : f32
-// CHECK:               %[[VAL_31:.*]] = mulf %[[VAL_30]], %[[VAL_5]] : f32
+// CHECK:               %[[VAL_27:.*]] = arith.mulf %[[VAL_26]], %[[VAL_16]] : f32
+// CHECK:               %[[VAL_28:.*]] = arith.mulf %[[VAL_27]], %[[VAL_2]] : f32
+// CHECK:               %[[VAL_29:.*]] = arith.mulf %[[VAL_28]], %[[VAL_3]] : f32
+// CHECK:               %[[VAL_30:.*]] = arith.mulf %[[VAL_29]], %[[VAL_8]] : f32
+// CHECK:               %[[VAL_31:.*]] = arith.mulf %[[VAL_30]], %[[VAL_5]] : f32
 // CHECK:               %[[VAL_32:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_20]], %[[VAL_25]]] : memref<32x16xf32>
-// CHECK:               %[[VAL_33:.*]] = addf %[[VAL_31]], %[[VAL_32]] : f32
+// CHECK:               %[[VAL_33:.*]] = arith.addf %[[VAL_31]], %[[VAL_32]] : f32
 // CHECK:               memref.store %[[VAL_33]], %[[VAL_15]]{{\[}}%[[VAL_20]], %[[VAL_25]]] : memref<32x16xf32>
 // CHECK:             }
 // CHECK:           }
@@ -64,18 +64,18 @@ func @mul(%arga: tensor<32x16xf32, #SparseMatrix>,
           %argq: f32,
           %argr: f32,
           %argx: tensor<32x16xf32> {linalg.inplaceable = true}) -> tensor<32x16xf32> {
-  %s = addf %argq, %argr : f32
-  %c = constant 2.2 : f32
+  %s = arith.addf %argq, %argr : f32
+  %c = arith.constant 2.2 : f32
   %0 = linalg.generic #trait
      ins(%arga, %argp, %argq: tensor<32x16xf32, #SparseMatrix>, tensor<f32>, f32)
     outs(%argx: tensor<32x16xf32>) {
       ^bb(%a: f32, %p: f32, %q: f32, %x: f32):
-        %0 = mulf %a, %p : f32     // scalar tensor argument
-        %1 = mulf %0, %q : f32     // scalar argument
-        %2 = mulf %1, %argr : f32  // scalar argument from outside block
-        %3 = mulf %2, %s : f32     // scalar value from outside block
-        %4 = mulf %3, %c : f32     // direct constant from outside block
-        %5 = addf %4, %x : f32
+        %0 = arith.mulf %a, %p : f32     // scalar tensor argument
+        %1 = arith.mulf %0, %q : f32     // scalar argument
+        %2 = arith.mulf %1, %argr : f32  // scalar argument from outside block
+        %3 = arith.mulf %2, %s : f32     // scalar value from outside block
+        %4 = arith.mulf %3, %c : f32     // direct constant from outside block
+        %5 = arith.addf %4, %x : f32
         linalg.yield %5  : f32
   } -> tensor<32x16xf32>
 

@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -38,8 +39,8 @@ using namespace mlir::linalg;
 using namespace mlir::scf;
 
 static bool isZero(Value v) {
-  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
-    return cst.getValue() == 0;
+  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cst.value() == 0;
   return false;
 }
 
@@ -110,7 +111,7 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   auto a = m_Val(block.getArgument(0));
   auto b = m_Val(block.getArgument(1));
 
-  auto addPattern = m_Op<linalg::YieldOp>(m_Op<AddIOp>(a, b));
+  auto addPattern = m_Op<linalg::YieldOp>(m_Op<arith::AddIOp>(a, b));
   if (addPattern.match(&ops.back()))
     return BinaryOpKind::IAdd;
 
@@ -184,7 +185,7 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
         boundingConst = boundingConst
                             ? std::min(boundingConst.getValue(), cst.getValue())
                             : cst.getValue();
-  } else if (auto constIndexOp = size.getDefiningOp<ConstantOp>()) {
+  } else if (auto constIndexOp = size.getDefiningOp<arith::ConstantOp>()) {
     if (constIndexOp.getType().isa<IndexType>())
       boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
   } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
@@ -194,7 +195,7 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
       boundingConst = cExpr.getValue();
   } else if (auto dimOp = size.getDefiningOp<tensor::DimOp>()) {
     auto shape = dimOp.source().getType().dyn_cast<ShapedType>();
-    if (auto constOp = dimOp.index().getDefiningOp<ConstantOp>()) {
+    if (auto constOp = dimOp.index().getDefiningOp<arith::ConstantOp>()) {
       if (auto indexAttr = constOp.value().dyn_cast<IntegerAttr>()) {
         auto dimIndex = indexAttr.getInt();
         if (!shape.isDynamicDim(dimIndex)) {
@@ -328,9 +329,9 @@ void GenerateLoopNest<AffineForOp>::doit(
   SmallVector<int64_t, 4> constantSteps;
   constantSteps.reserve(steps.size());
   for (Value v : steps) {
-    auto op = v.getDefiningOp<ConstantIndexOp>();
+    auto op = v.getDefiningOp<arith::ConstantIndexOp>();
     assert(op && "Affine loops require constant steps");
-    constantSteps.push_back(op.getValue());
+    constantSteps.push_back(op.value());
   }
 
   mlir::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
@@ -629,10 +630,10 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     // b. The subshape size is 1. According to the way the loops are set up,
     //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
-    auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
-    auto hasTileSizeOne = sizeCst && sizeCst.getValue() == 1;
+    auto sizeCst = size.getDefiningOp<arith::ConstantIndexOp>();
+    auto hasTileSizeOne = sizeCst && sizeCst.value() == 1;
     auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
-                         ((shapeSize % sizeCst.getValue()) == 0);
+                         ((shapeSize % sizeCst.value()) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize
                               << ", size: " << size
@@ -699,8 +700,9 @@ SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
     bool isTiled = !isZero(tileSizes[idx]);
-    offsets.push_back(isTiled ? ivs[idxIvs++]
-                              : b.create<ConstantIndexOp>(loc, 0).getResult());
+    offsets.push_back(
+        isTiled ? ivs[idxIvs++]
+                : b.create<arith::ConstantIndexOp>(loc, 0).getResult());
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
   }

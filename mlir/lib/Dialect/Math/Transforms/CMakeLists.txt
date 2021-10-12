@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRMathTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Math/Transforms
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRIR
   MLIRMath
   MLIRPass

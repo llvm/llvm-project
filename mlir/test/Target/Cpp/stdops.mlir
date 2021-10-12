@@ -2,12 +2,12 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
 func @std_constant() {
-  %c0 = constant 0 : i32
-  %c1 = constant 2 : index
-  %c2 = constant 2.0 : f32
-  %c3 = constant dense<0> : tensor<i32>
-  %c4 = constant dense<[0, 1]> : tensor<2xindex>
-  %c5 = constant dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 2 : index
+  %c2 = arith.constant 2.0 : f32
+  %c3 = arith.constant dense<0> : tensor<i32>
+  %c4 = arith.constant dense<[0, 1]> : tensor<2xindex>
+  %c5 = arith.constant dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>
   return
 }
 // CPP-DEFAULT: void std_constant() {
@@ -49,7 +49,7 @@ func @std_call() {
 
 
 func @std_call_two_results() {
-  %c = constant 0 : i8
+  %c = arith.constant 0 : i8
   %0:2 = call @two_results () : () -> (i32, f32)
   %1:2 = call @two_results () : () -> (i32, f32)
   return
@@ -75,7 +75,7 @@ func @std_call_two_results() {
 
 
 func @one_result() -> i32 {
-  %0 = constant 0 : i32
+  %0 = arith.constant 0 : i32
   return %0 : i32
 }
 // CPP-DEFAULT: int32_t one_result() {
@@ -89,8 +89,8 @@ func @one_result() -> i32 {
 
 
 func @two_results() -> (i32, f32) {
-  %0 = constant 0 : i32
-  %1 = constant 1.0 : f32
+  %0 = arith.constant 0 : i32
+  %1 = arith.constant 1.0 : f32
   return %0, %1 : i32, f32
 }
 // CPP-DEFAULT: std::tuple<int32_t, float> two_results() {

@@ -4,8 +4,8 @@
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
   %B = memref.view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %C = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
@@ -37,7 +37,6 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 //       CHECK:       %[[va:.*]] = affine.load %[[mA]][%[[b]], %[[m]], %[[k]]] : memref<?x?x?xf32>
 //       CHECK:       %[[vb:.*]] = affine.load %[[mB]][%[[b]], %[[k]], %[[n]]] : memref<?x?x?xf32>
 //       CHECK:       %[[vc:.*]] = affine.load %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
-//       CHECK:       %[[inc:.*]] = mulf %[[va]], %[[vb]] : f32
-//       CHECK:       %[[res:.*]] = addf %[[vc]], %[[inc]] : f32
+//       CHECK:       %[[inc:.*]] = arith.mulf %[[va]], %[[vb]] : f32
+//       CHECK:       %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
 //       CHECK:       affine.store %[[res]], %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
-

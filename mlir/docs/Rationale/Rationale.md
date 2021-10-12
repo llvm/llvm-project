@@ -58,12 +58,12 @@ polyhedral abstraction.
 
 Maps, sets, and relations with affine constraints are the core structures
 underlying a polyhedral representation of high-dimensional loop nests and
-multidimensional arrays. These structures are represented as textual
-expressions in a form close to their mathematical form. These structures are
-used to capture loop nests, tensor data structures, and how they are reordered
-and mapped for a target architecture. All structured or "conforming" loops are
-captured as part of the polyhedral information, and so are tensor variables,
-their layouts, and subscripted accesses to these tensors in memory.
+multidimensional arrays. These structures are represented as textual expressions
+in a form close to their mathematical form. These structures are used to capture
+loop nests, tensor data structures, and how they are reordered and mapped for a
+target architecture. All structured or "conforming" loops are captured as part
+of the polyhedral information, and so are tensor variables, their layouts, and
+subscripted accesses to these tensors in memory.
 
 The information captured in the IR allows a compact expression of all loop
 transformations, data remappings, explicit copying necessary for explicitly
@@ -113,17 +113,19 @@ n-ranked tensor. This disallows the equivalent of pointer arithmetic or the
 ability to index into the same memref in other ways (something which C arrays
 allow for example). Furthermore, for the affine constructs, the compiler can
 follow use-def chains (e.g. through
-[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop)) or through
-the map attributes of [affine operations](../Dialects/Affine.md/#operations)) to
-precisely analyze references at compile-time using polyhedral techniques. This
-is possible because of the [restrictions on dimensions and symbols](../Dialects/Affine.md/#restrictions-on-dimensions-and-symbols).
+[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop)) or
+through the map attributes of
+[affine operations](../Dialects/Affine.md/#operations)) to precisely analyze
+references at compile-time using polyhedral techniques. This is possible because
+of the
+[restrictions on dimensions and symbols](../Dialects/Affine.md/#restrictions-on-dimensions-and-symbols).
 
 A scalar of element-type (a primitive type or a vector type) that is stored in
 memory is modeled as a 0-d memref. This is also necessary for scalars that are
 live out of for loops and if conditionals in a function, for which we don't yet
 have an SSA representation --
-[an extension](#affineif-and-affinefor-extensions-for-escaping-scalars) to allow that is
-described later in this doc.
+[an extension](#affineif-and-affinefor-extensions-for-escaping-scalars) to allow
+that is described later in this doc.
 
 ### Symbols and types
 
@@ -136,7 +138,7 @@ Example:
 
 ```mlir
 func foo(...) {
-  %A = alloc <8x?xf32, #lmap> (%N)
+  %A = memref.alloc <8x?xf32, #lmap> (%N)
   ...
   call bar(%A) : (memref<8x?xf32, #lmap>)
 }
@@ -145,7 +147,7 @@ func bar(%A : memref<8x?xf32, #lmap>) {
   // Type of %A indicates that %A has dynamic shape with 8 rows
   // and unknown number of columns. The number of columns is queried
   // dynamically using dim instruction.
-  %N = dim %A, 1 : memref<8x?xf32, #lmap>
+  %N = memref.dim %A, 1 : memref<8x?xf32, #lmap>
 
   affine.for %i = 0 to 8 {
     affine.for %j = 0 to %N {
@@ -167,9 +169,9 @@ change.
 
 ### Block Arguments vs PHI nodes
 
-MLIR Regions represent SSA using "[block arguments](../LangRef.md/#blocks)" rather
-than [PHI instructions](http://llvm.org/docs/LangRef.html#i-phi) used in LLVM.
-This choice is representationally identical (the same constructs can be
+MLIR Regions represent SSA using "[block arguments](../LangRef.md/#blocks)"
+rather than [PHI instructions](http://llvm.org/docs/LangRef.html#i-phi) used in
+LLVM. This choice is representationally identical (the same constructs can be
 represented in either form) but block arguments have several advantages:
 
 1.  LLVM PHI nodes always have to be kept at the top of a block, and
@@ -220,10 +222,10 @@ to materialize corresponding values. However, the target might lack support for
 Data layout information such as the bit width or the alignment of types may be
 target and ABI-specific and thus should be configurable rather than imposed by
 the compiler. Especially, the layout of compound or `index` types may vary. MLIR
-specifies default bit widths for certain primitive _types_, in particular for
+specifies default bit widths for certain primitive *types*, in particular for
 integers and floats. It is equal to the number that appears in the type
 definition, e.g. the bit width of `i32` is `32`, so is the bit width of `f32`.
-The bit width is not _necessarily_ related to the amount of memory (in bytes) or
+The bit width is not *necessarily* related to the amount of memory (in bytes) or
 the register size (in bits) that is necessary to store the value of the given
 type. For example, `vector<3xi57>` is likely to be lowered to a vector of four
 64-bit integers, so that its storage requirement is `4 x 64 / 8 = 32` bytes,
@@ -250,8 +252,9 @@ type provides this as an option to help code reuse and consistency.
 
 For the standard dialect, the choice is to have signless integer types. An
 integer value does not have an intrinsic sign, and it's up to the specific op
-for interpretation. For example, ops like `addi` and `muli` do two's complement
-arithmetic, but some other operations get a sign, e.g. `divis` vs `diviu`.
+for interpretation. For example, ops like `arith.addi` and `arith.muli` do two's
+complement arithmetic, but some other operations get a sign, e.g. `arith.divsi`
+vs `arith.divui`.
 
 LLVM uses the [same design](http://llvm.org/docs/LangRef.html#integer-type),
 which was introduced in a revamp rolled out
@@ -279,11 +282,11 @@ an external system, and should aim to reflect its design as closely as possible.
 
 ### Splitting floating point vs integer operations
 
-The MLIR "standard" operation set splits many integer and floating point
-operations into different categories, for example `addf` vs `addi` and `cmpf` vs
-`cmpi`
+The MLIR "Arithmetic" dialect splits many integer and floating point operations
+into different categories, for example `arith.addf` vs `arith.addi` and
+`arith.cmpf` vs `arith.cmpi`
 ([following the design of LLVM](http://llvm.org/docs/LangRef.html#binary-operations)).
-These instructions _are_ polymorphic on the number of elements in the type
+These instructions *are* polymorphic on the number of elements in the type
 though, for example `addf` is used with scalar floats, vectors of floats, and
 tensors of floats (LLVM does the same thing with its scalar/vector types).
 
@@ -308,12 +311,12 @@ an external system, and should aim to reflect its design as closely as possible.
 
 ### Specifying sign in integer comparison operations
 
-Since integers are [signless](#integer-signedness-semantics), it is necessary to define the
-sign for integer comparison operations. This sign indicates how to treat the
-foremost bit of the integer: as sign bit or as most significant bit. For
-example, comparing two `i4` values `0b1000` and `0b0010` yields different
+Since integers are [signless](#integer-signedness-semantics), it is necessary to
+define the sign for integer comparison operations. This sign indicates how to
+treat the foremost bit of the integer: as sign bit or as most significant bit.
+For example, comparing two `i4` values `0b1000` and `0b0010` yields different
 results for unsigned (`8 > 3`) and signed (`-8 < 3`) interpretations. This
-difference is only significant for _order_ comparisons, but not for _equality_
+difference is only significant for *order* comparisons, but not for *equality*
 comparisons. Indeed, for the latter all bits must have the same value
 independently of the sign. Since both arguments have exactly the same bit width
 and cannot be padded by this operation, it is impossible to compare two values
@@ -491,10 +494,10 @@ dialect wishes to assign a canonical name to a type, it can be done via
 ### Tuple types
 
 The MLIR type system provides first class support for defining
-[tuple types](../Dialects/Builtin/#tupletype). This is due to the fact that `Tuple`
-represents a universal concept that is likely to, and has already begun to,
-present itself in many different dialects. Though this type is first class in
-the type system, it merely serves to provide a common mechanism in which to
+[tuple types](../Dialects/Builtin/#tupletype). This is due to the fact that
+`Tuple` represents a universal concept that is likely to, and has already begun
+to, present itself in many different dialects. Though this type is first class
+in the type system, it merely serves to provide a common mechanism in which to
 represent this concept in MLIR. As such, MLIR provides no standard operations
 for interfacing with `tuple` types. It is up to dialect authors to provide
 operations, e.g. extract_tuple_element, to interpret and manipulate them. When
@@ -547,7 +550,7 @@ nested in an outer function that uses affine loops.
 
 ```mlir
 func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
-  %ni = dim %A, 0 : memref<?x?xi32>
+  %ni = memref.dim %A, 0 : memref<?x?xi32>
   // This loop can be parallelized
   affine.for %i = 0 to %ni {
     call @search_body (%A, %S, %key, %i) : (memref<?x?xi32>, memref<?xi32>, i32, i32)
@@ -556,16 +559,16 @@ func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
 }
 
 func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
-  %nj = dim %A, 1 : memref<?x?xi32>
+  %nj = memref.dim %A, 1 : memref<?x?xi32>
   br ^bb1(0)
 
 ^bb1(%j: i32)
-  %p1 = cmpi "lt", %j, %nj : i32
+  %p1 = arith.cmpi "lt", %j, %nj : i32
   cond_br %p1, ^bb2, ^bb5
 
 ^bb2:
   %v = affine.load %A[%i, %j] : memref<?x?xi32>
-  %p2 = cmpi "eq", %v, %key : i32
+  %p2 = arith.cmpi "eq", %v, %key : i32
   cond_br %p2, ^bb3(%j), ^bb4
 
 ^bb3(%j: i32)
@@ -573,7 +576,7 @@ func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
   br ^bb5
 
 ^bb4:
-  %jinc = addi %j, 1 : i32
+  %jinc = arith.addi %j, 1 : i32
   br ^bb1(%jinc)
 
 ^bb5:
@@ -728,10 +731,10 @@ At a high level, we have two alternatives here:
     explicitly propagate the schedule into domains and model all the cleanup
     code. An example and more detail on the schedule tree form is in the next
     section.
-1.  Having two different forms of "affine regions": an affine loop tree form
-    and a polyhedral schedule tree form. In the latter, ops could carry
-    attributes capturing domain, scheduling, and other polyhedral code
-    generation options with IntegerSet, AffineMap, and other attributes.
+1.  Having two different forms of "affine regions": an affine loop tree form and
+    a polyhedral schedule tree form. In the latter, ops could carry attributes
+    capturing domain, scheduling, and other polyhedral code generation options
+    with IntegerSet, AffineMap, and other attributes.
 
 #### Schedule Tree Representation for Affine Regions
 
@@ -788,12 +791,11 @@ func @matmul(%A, %B, %C, %M, %N, %K) : (...)  { // %M, N, K are symbols
 
 ### Affine Relations
 
-The current MLIR spec includes affine maps and integer sets, but not
-affine relations. Affine relations are a natural way to model read and
-write access information, which can be very useful to capture the
-behavior of external library calls where no implementation is
-available, high-performance vendor libraries, or user-provided /
-user-tuned routines.
+The current MLIR spec includes affine maps and integer sets, but not affine
+relations. Affine relations are a natural way to model read and write access
+information, which can be very useful to capture the behavior of external
+library calls where no implementation is available, high-performance vendor
+libraries, or user-provided / user-tuned routines.
 
 An affine relation is a relation between input and output dimension identifiers
 while being symbolic on a list of symbolic identifiers and with affine
@@ -844,7 +846,7 @@ func @count (%A : memref<128xf32>, %pos : i32) -> f32
 bb0 (%0, %1: memref<128xf32>, i64):
   %val = affine.load %A [%pos]
   %val = affine.load %A [%pos + 1]
-  %p = mulf %val, %val : f32
+  %p = arith.mulf %val, %val : f32
   return %p : f32
 }
 ```

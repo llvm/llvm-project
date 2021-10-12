@@ -66,7 +66,7 @@ legality actions below:
 
     -   This action signals that only some instances of a given operation are
         legal. This allows for defining fine-tune constraints, e.g. saying that
-        `addi` is only legal when operating on 32-bit integers.
+        `arith.addi` is only legal when operating on 32-bit integers.
 
 *   Illegal
 

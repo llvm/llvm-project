@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRSparseTensorUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRIR
   MLIRLinalg
 )

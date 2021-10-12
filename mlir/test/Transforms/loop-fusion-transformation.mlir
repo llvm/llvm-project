@@ -3,7 +3,7 @@
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func @slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
-  %cst = constant 7.000000e+00 : f32
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     affine.store %cst, %0[%i0] : memref<100xf32>
   }
@@ -28,13 +28,13 @@ func @should_fuse_reduction_to_pointwise() {
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
 
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
       %v0 = affine.load %b[%i0] : memref<10xf32>
       %v1 = affine.load %a[%i0, %i1] : memref<10x10xf32>
-      %v3 = addf %v0, %v1 : f32
+      %v3 = arith.addf %v0, %v1 : f32
       affine.store %v3, %b[%i0] : memref<10xf32>
     }
   }
@@ -50,7 +50,7 @@ func @should_fuse_reduction_to_pointwise() {
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:      affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:      affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-  // CHECK-NEXT:      addf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:      arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    }
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
@@ -68,7 +68,7 @@ func @should_fuse_avoiding_dependence_cycle() {
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
 
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   // Set up the following dependences:
   // 1) loop0 -> loop1 on memref '%{{.*}}'

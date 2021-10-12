@@ -5,7 +5,7 @@
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func @slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
-  %cst = constant 7.000000e+00 : f32
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
     affine.store %cst, %0[%i0] : memref<100xf32>
@@ -22,7 +22,7 @@ func @slice_depth1_loop_nest() {
 // CHECK-LABEL: func @forward_slice_slice_depth1_loop_nest() {
 func @forward_slice_slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
-  %cst = constant 7.000000e+00 : f32
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 5 {
     // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
     affine.store %cst, %0[%i0] : memref<100xf32>
@@ -42,7 +42,7 @@ func @forward_slice_slice_depth1_loop_nest() {
 // CHECK-LABEL: func @slice_depth1_loop_nest_with_offsets() {
 func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
-  %cst = constant 7.000000e+00 : f32
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0 + 3), (d0) -> (d0 + 4)] )}}
     %a0 = affine.apply affine_map<(d0) -> (d0 + 2)>(%i0)
@@ -63,7 +63,7 @@ func @slice_depth1_loop_nest_with_offsets() {
 // CHECK-LABEL: func @slice_depth2_loop_nest() {
 func @slice_depth2_loop_nest() {
   %0 = memref.alloc() : memref<100x100xf32>
-  %cst = constant 7.000000e+00 : f32
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
     // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}
@@ -89,8 +89,8 @@ func @slice_depth2_loop_nest() {
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_loads() {
 func @slice_depth2_loop_nest_two_loads() {
   %0 = memref.alloc() : memref<100x100xf32>
-  %c0 = constant 0 : index
-  %cst = constant 7.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
     // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (0), (d0, d1) -> (16)] )}}
@@ -117,8 +117,8 @@ func @slice_depth2_loop_nest_two_loads() {
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_stores() {
 func @slice_depth2_loop_nest_two_stores() {
   %0 = memref.alloc() : memref<100x100xf32>
-  %c0 = constant 0 : index
-  %cst = constant 7.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
     affine.for %i1 = 0 to 16 {
@@ -142,8 +142,8 @@ func @slice_depth2_loop_nest_two_stores() {
 // CHECK-LABEL: func @slice_loop_nest_with_smaller_outer_trip_count() {
 func @slice_loop_nest_with_smaller_outer_trip_count() {
   %0 = memref.alloc() : memref<100x100xf32>
-  %c0 = constant 0 : index
-  %cst = constant 7.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (10)] )}}
     // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}

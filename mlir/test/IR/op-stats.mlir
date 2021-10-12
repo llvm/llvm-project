@@ -2,12 +2,12 @@
 
 func @main(tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32> {
 ^bb0(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>):
-  %0 = addf %arg0, %arg1 : tensor<4xf32>
-  %1 = addf %arg0, %arg1 : tensor<4xf32>
-  %2 = addf %arg0, %arg1 : tensor<4xf32>
-  %3 = addf %arg0, %arg1 : tensor<4xf32>
-  %4 = addf %arg0, %arg1 : tensor<4xf32>
-  %5 = addf %arg0, %arg1 : tensor<4xf32>
+  %0 = arith.addf %arg0, %arg1 : tensor<4xf32>
+  %1 = arith.addf %arg0, %arg1 : tensor<4xf32>
+  %2 = arith.addf %arg0, %arg1 : tensor<4xf32>
+  %3 = arith.addf %arg0, %arg1 : tensor<4xf32>
+  %4 = arith.addf %arg0, %arg1 : tensor<4xf32>
+  %5 = arith.addf %arg0, %arg1 : tensor<4xf32>
   %10 = "xla.add"(%0, %arg1) : (tensor<4xf32>,tensor<4xf32>)-> tensor<4xf32>
   %11 = "xla.add"(%0, %arg1) : (tensor<4xf32>,tensor<4xf32>)-> tensor<4xf32>
   %12 = "xla.add"(%0, %arg1) : (tensor<4xf32>,tensor<4xf32>)-> tensor<4xf32>
@@ -30,7 +30,7 @@ func @main(tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32> {
 }
 
 // CHECK-LABEL: Operations encountered
+// CHECK: arith.addf , 6
 // CHECK: long_op_name , 1
-// CHECK: std.addf , 6
 // CHECK: std.return , 1
 // CHECK: xla.add , 17

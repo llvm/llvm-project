@@ -5,16 +5,16 @@
 
 func @entry() {
   // Construct test vector.
-  %f1 = constant 1.5: f64
-  %f2 = constant 2.0: f64
-  %f3 = constant 3.0: f64
-  %f4 = constant 4.0: f64
-  %f5 = constant 5.0: f64
-  %f6 = constant -1.0: f64
-  %f7 = constant -2.0: f64
-  %f8 = constant -4.0: f64
-  %f9 = constant -0.25: f64
-  %f10 = constant -16.0: f64
+  %f1 = arith.constant 1.5: f64
+  %f2 = arith.constant 2.0: f64
+  %f3 = arith.constant 3.0: f64
+  %f4 = arith.constant 4.0: f64
+  %f5 = arith.constant 5.0: f64
+  %f6 = arith.constant -1.0: f64
+  %f7 = arith.constant -2.0: f64
+  %f8 = arith.constant -4.0: f64
+  %f9 = arith.constant -0.25: f64
+  %f10 = arith.constant -16.0: f64
   %v0 = vector.broadcast %f1 : f64 to vector<10xf64>
   %v1 = vector.insert %f2, %v0[1] : f64 into vector<10xf64>
   %v2 = vector.insert %f3, %v1[2] : f64 into vector<10xf64>

@@ -34,8 +34,8 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   return
 }
 // TILE-2-LABEL: func @matmul(
-//       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-2-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-2-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-2: %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
 //       TILE-2:   %[[szM:.*]] = affine.min #[[$bound_map]](%[[I]])[%[[M]]]
@@ -47,8 +47,8 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 //       TILE-2:   linalg.matmul ins(%[[sAi]]{{.*}} outs(%[[sCi]]
 
 // TILE-02-LABEL: func @matmul(
-//       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-02-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-02-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-02: %[[N:.*]] = memref.dim %arg1, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-02: scf.for %[[J:.*]] = %{{.*}} to %[[N]] step %{{.*}} {
 //       TILE-02:   %[[K:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
@@ -60,8 +60,8 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 //       TILE-02:   linalg.matmul ins(%{{.*}}, %[[sBj]]{{.*}} outs(%[[sCj]]
 
 // TILE-002-LABEL: func @matmul(
-//       TILE-002-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-002-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-002-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-002-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-002: %[[ubK:.*]] = memref.dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-002: scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[ubK]] step %{{.*}} {
 //       TILE-002:   %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
@@ -73,10 +73,10 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 //       TILE-002:   linalg.matmul ins(%[[sAj]], %[[sBj]]{{.*}} outs(%{{.*}}
 
 // TILE-234-LABEL: func @matmul(
-//       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-234-DAG: %[[C3:.*]] = constant 3 : index
-//       TILE-234-DAG: %[[C4:.*]] = constant 4 : index
+//       TILE-234-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-234-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-234-DAG: %[[C3:.*]] = arith.constant 3 : index
+//       TILE-234-DAG: %[[C4:.*]] = arith.constant 4 : index
 //       TILE-234: %[[ubM:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-234: %[[ubK:.*]] = memref.dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-234: %[[ubN:.*]] = memref.dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
@@ -112,40 +112,40 @@ func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>,
 //  TILE-2-SAME: %[[ARG0:[0-9a-zA-Z]*]]: memref
 //  TILE-2-SAME: %[[ARG1:[0-9a-zA-Z]*]]: memref
 //  TILE-2-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
-//       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-2-DAG: %[[M:.*]] = constant 10 : index
+//       TILE-2-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-2-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-2-DAG: %[[M:.*]] = arith.constant 10 : index
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}} to %[[M]] step %{{.*}} {
 //       TILE-2:   %[[sAi:.*]] = memref.subview %{{.*}}[%[[I]], 0] [2, 16] [1, 1] : memref<10x16xf32, #[[$strided2D]]> to memref<2x16xf32, #[[$strided2D]]>
 //       TILE-2:   %[[sCi:.*]] = memref.subview %{{.*}}[%[[I]], 0] [2, 12] [1, 1] : memref<10x12xf32, #[[$strided2D]]> to memref<2x12xf32, #[[$strided2D]]>
 //       TILE-2:   linalg.matmul ins(%[[sAi]], %{{.*}}{{.*}} outs(%[[sCi]]
 
 // TILE-02-LABEL: func @matmul_static(
-//       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-02-DAG: %[[N:.*]] = constant 12 : index
+//       TILE-02-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-02-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-02-DAG: %[[N:.*]] = arith.constant 12 : index
 //       TILE-02: scf.for %[[J:.*]] = %{{.*}} to %[[N]] step %{{.*}} {
 //       TILE-02:   %[[sBj:.*]] = memref.subview %{{.*}}[0, %[[J]]] [16, 2] [1, 1] : memref<16x12xf32, #[[$strided2D]]> to memref<16x2xf32, #[[$strided2D]]>
 //       TILE-02:   %[[sCj:.*]] = memref.subview %{{.*}}[0, %[[J]]] [10, 2] [1, 1] : memref<10x12xf32, #[[$strided2D]]> to memref<10x2xf32, #[[$strided2D]]>
 //       TILE-02:   linalg.matmul ins(%{{.*}}, %[[sBj]]{{.*}} outs(%[[sCj]]
 
 // TILE-002-LABEL: func @matmul_static(
-//       TILE-002-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-002-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-002-DAG: %[[C16:.*]] = constant 16 : index
+//       TILE-002-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-002-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-002-DAG: %[[C16:.*]] = arith.constant 16 : index
 //       TILE-002: scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[C16]] step %{{.*}} {
 //       TILE-002:   %[[sAj:.*]] = memref.subview %{{.*}}[0, %[[K]]] [10, 2] [1, 1] : memref<10x16xf32, #[[$strided2D]]> to memref<10x2xf32, #[[$strided2D]]>
 //       TILE-002:   %[[sBj:.*]] = memref.subview %{{.*}}[%[[K]], 0] [2, 12] [1, 1] : memref<16x12xf32, #[[$strided2D]]> to memref<2x12xf32, #[[$strided2D]]>
 //       TILE-002:   linalg.matmul ins(%[[sAj]], %[[sBj]]{{.*}} outs(%{{.*}}
 
 // TILE-234-LABEL: func @matmul_static(
-//       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-234-DAG: %[[C3:.*]] = constant 3 : index
-//       TILE-234-DAG: %[[C4:.*]] = constant 4 : index
-//       TILE-234-DAG: %[[C10:.*]] = constant 10 : index
-//       TILE-234-DAG: %[[C16:.*]] = constant 16 : index
-//       TILE-234-DAG: %[[C12:.*]] = constant 12 : index
+//       TILE-234-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-234-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-234-DAG: %[[C3:.*]] = arith.constant 3 : index
+//       TILE-234-DAG: %[[C4:.*]] = arith.constant 4 : index
+//       TILE-234-DAG: %[[C10:.*]] = arith.constant 10 : index
+//       TILE-234-DAG: %[[C16:.*]] = arith.constant 16 : index
+//       TILE-234-DAG: %[[C12:.*]] = arith.constant 12 : index
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[C10]] step %{{.*}} {
 //       TILE-234:    scf.for %[[J:.*]] = %{{.*}}{{.*}} to %[[C12]] step %{{.*}} {
 //       TILE-234:      scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[C16]] step %{{.*}} {
@@ -166,8 +166,8 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //  TILE-2-SAME: %[[ARG0:[0-9a-zA-Z]*]]: memref
 //  TILE-2-SAME: %[[ARG1:[0-9a-zA-Z]*]]: memref
 //  TILE-2-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
-//       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-2-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-2-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-2: %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
 //       TILE-2:   %[[szM:.*]] = affine.min #[[$bound_map]](%[[I]])[%[[M]]]
@@ -181,8 +181,8 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 // TILE-02-SAME: %[[ARG0:[0-9a-zA-Z]*]]: memref
 // TILE-02-SAME: %[[ARG1:[0-9a-zA-Z]*]]: memref
 // TILE-02-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
-//       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-02-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-02-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-02: %[[K:.*]] = memref.dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-02: scf.for %[[J:.*]] = %{{.*}}{{.*}} to %[[K]] step %{{.*}} {
 //       TILE-02:   %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
@@ -202,9 +202,9 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 // TILE-234-SAME: %[[ARG0:[0-9a-zA-Z]*]]: memref
 // TILE-234-SAME: %[[ARG1:[0-9a-zA-Z]*]]: memref
 // TILE-234-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
-//       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-234-DAG: %[[C3:.*]] = constant 3 : index
+//       TILE-234-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-234-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       TILE-234-DAG: %[[C3:.*]] = arith.constant 3 : index
 //       TILE-234: %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-234: %[[K:.*]] = memref.dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
@@ -226,8 +226,8 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
   return
 }
 // TILE-2-LABEL: func @dot(
-//       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-2-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-2-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-2: %[[M:.*]] = memref.dim %{{.*}}, %c0 : memref<?xf32, #[[$strided1D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
 //       TILE-2:   %[[szM:.*]] = affine.min #[[$bound_map]](%[[I]])[%[[M]]]
@@ -243,8 +243,8 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 //   TILE-002-NOT: scf.for
 
 // TILE-234-LABEL: func @dot(
-//       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
-//       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
+//       TILE-234-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       TILE-234-DAG: %[[C2:.*]] = arith.constant 2 : index
 //       TILE-234:  %[[ubK:.*]] = memref.dim %{{.*}}, %c0 : memref<?xf32, #[[$strided1D]]>
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}} to %[[ubK]] step %{{.*}} {
 //       TILE-234:    %[[szM:.*]] = affine.min #[[$bound_map_2]](%[[I]])[%[[ubK]]]
@@ -319,7 +319,7 @@ func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memre
     ins(%arg0, %arg1 : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>)
     outs(%arg2 : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):   // no predecessors
-    %4 = addf %arg4, %arg5 : f32
+    %4 = arith.addf %arg4, %arg5 : f32
     linalg.yield %4 : f32
   }
   return

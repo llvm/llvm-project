@@ -11,9 +11,9 @@ func @gemm(%arg0 : memref<?x?xf32>,
   return
 }
 // CHECK-LABEL: func @gemm
-//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
-//   CHECK-DAG:   %[[C4:.*]] = constant 4 : index
-//   CHECK-DAG:   %[[C8:.*]] = constant 8 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
 //       CHECK:   scf.parallel (%[[ARG3:.*]], %[[ARG4:.*]]) =
 //  CHECK-SAME:     step (%[[C2]], %[[C4]])
 //       CHECK:     scf.for %[[ARG5:.*]] =
@@ -24,7 +24,7 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //       CHECK:       linalg.matmul ins(%[[SV1]], %[[SV2]]{{.*}} outs(%[[SV3]]
 
 // TILE1-LABEL: func @gemm
-//   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
+//   TILE1-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //       TILE1:   scf.parallel (%[[ARG3:.*]]) =
 //  TILE1-SAME:     step (%[[C2]])
 //       TILE1:     %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
@@ -33,8 +33,8 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //       TILE1:     linalg.matmul ins(%[[SV1]], %{{.*}} outs(%[[SV3]]
 
 // TILE2-LABEL: func @gemm
-//   TILE2-DAG:   %[[C2:.*]] = constant 2 : index
-//   TILE2-DAG:   %[[C4:.*]] = constant 4 : index
+//   TILE2-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   TILE2-DAG:   %[[C4:.*]] = arith.constant 4 : index
 //       TILE2:   scf.parallel (%[[ARG3:.*]], %[[ARG4:.*]]) =
 //  TILE2-SAME:     step (%[[C2]], %[[C4]])
 //       TILE2:       %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0]
@@ -63,17 +63,17 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
     ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?xf32>)
    outs(%arg2 : memref<?xf32>) {
   ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32):
-    %0 = addf %arg3, %arg4 : f32
-    %1 = addf %0, %arg5 : f32
+    %0 = arith.addf %arg3, %arg4 : f32
+    %1 = arith.addf %0, %arg5 : f32
     linalg.yield %1 : f32
   }
   return
 }
 
 // CHECK-LABEL: func @reduction
-//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
-//   CHECK-DAG:   %[[C4:.*]] = constant 4 : index
-//   CHECK-DAG:   %[[C8:.*]] = constant 8 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
 //       CHECK:   scf.for %[[ARG3:.*]] =
 //  CHECK-SAME:     step %[[C2]]
 //       CHECK:     scf.parallel (%[[ARG4:.*]]) =
@@ -88,7 +88,7 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //  CHECK-SAME:          outs(%[[SV3]]
 
 // TILE1-LABEL: func @reduction
-//   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
+//   TILE1-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //       TILE1:   scf.for %[[ARG3:.*]] =
 //  TILE1-SAME:     step %[[C2]]
 //       TILE1:         %[[SV1:.*]] = memref.subview %{{.*}}[%[[ARG3]], 0, 0]
@@ -99,8 +99,8 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //  TILE1-SAME:          outs(%{{.*}}
 
 // TILE2-LABEL: func @reduction
-//   TILE2-DAG:   %[[C2:.*]] = constant 2 : index
-//   TILE2-DAG:   %[[C4:.*]] = constant 4 : index
+//   TILE2-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   TILE2-DAG:   %[[C4:.*]] = arith.constant 4 : index
 //       TILE2:   scf.for %[[ARG3:.*]] =
 //  TILE2-SAME:     step %[[C2]]
 //       TILE2:     scf.parallel (%[[ARG4:.*]]) =

@@ -33,11 +33,11 @@ func @complex_extract(%cplx: complex<f32>) {
 // CHECK:         %[[C1:.*]] = llvm.insertvalue %[[C_REAL]], %[[C0]][0] : !llvm.struct<(f64, f64)>
 // CHECK:         %[[C2:.*]] = llvm.insertvalue %[[C_IMAG]], %[[C1]][1] : !llvm.struct<(f64, f64)>
 func @complex_addition() {
-  %a_re = constant 1.2 : f64
-  %a_im = constant 3.4 : f64
+  %a_re = arith.constant 1.2 : f64
+  %a_im = arith.constant 3.4 : f64
   %a = complex.create %a_re, %a_im : complex<f64>
-  %b_re = constant 5.6 : f64
-  %b_im = constant 7.8 : f64
+  %b_re = arith.constant 5.6 : f64
+  %b_im = arith.constant 7.8 : f64
   %b = complex.create %b_re, %b_im : complex<f64>
   %c = complex.add %a, %b : complex<f64>
   return
@@ -54,11 +54,11 @@ func @complex_addition() {
 // CHECK:         %[[C1:.*]] = llvm.insertvalue %[[C_REAL]], %[[C0]][0] : !llvm.struct<(f64, f64)>
 // CHECK:         %[[C2:.*]] = llvm.insertvalue %[[C_IMAG]], %[[C1]][1] : !llvm.struct<(f64, f64)>
 func @complex_substraction() {
-  %a_re = constant 1.2 : f64
-  %a_im = constant 3.4 : f64
+  %a_re = arith.constant 1.2 : f64
+  %a_im = arith.constant 3.4 : f64
   %a = complex.create %a_re, %a_im : complex<f64>
-  %b_re = constant 5.6 : f64
-  %b_im = constant 7.8 : f64
+  %b_re = arith.constant 5.6 : f64
+  %b_im = arith.constant 7.8 : f64
   %b = complex.create %b_re, %b_im : complex<f64>
   %c = complex.sub %a, %b : complex<f64>
   return

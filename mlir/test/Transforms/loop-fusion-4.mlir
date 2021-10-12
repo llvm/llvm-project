@@ -10,7 +10,7 @@
 // PRODUCER-CONSUMER-LABEL: func @unflatten4d
 func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
   %m = memref.alloc() : memref<5040xf32>
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 7 {
     affine.for %i1 = 0 to 8 {
@@ -48,7 +48,7 @@ func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
 // PRODUCER-CONSUMER-LABEL: func @unflatten2d_with_transpose
 func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
   %m = memref.alloc() : memref<56xf32>
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 7 {
     affine.for %i1 = 0 to 8 {
@@ -73,16 +73,16 @@ func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
 
 // SIBLING-MAXIMAL-LABEL:   func @reduce_add_non_maximal_f32_f32(
 func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref<1x64xf32, 1>, %arg2 : memref<1x64xf32, 1>) {
-    %cst_0 = constant 0.000000e+00 : f32
-    %cst_1 = constant 1.000000e+00 : f32
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    %cst_1 = arith.constant 1.000000e+00 : f32
     affine.for %arg3 = 0 to 1 {
       affine.for %arg4 = 0 to 64 {
         %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst_0) -> f32 {
           %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-          %5 = addf %prevAccum, %4 : f32
+          %5 = arith.addf %prevAccum, %4 : f32
           affine.yield %5 : f32
         }
-        %accum_dbl = addf %accum, %accum : f32
+        %accum_dbl = arith.addf %accum, %accum : f32
         affine.store %accum_dbl, %arg1[%arg3, %arg4] : memref<1x64xf32, 1>
       }
     }
@@ -91,10 +91,10 @@ func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref
         // Following loop  trip count does not match the corresponding source trip count.
         %accum = affine.for %arg5 = 0 to 32 iter_args (%prevAccum = %cst_1) -> f32 {
           %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-          %5 = mulf %prevAccum, %4 : f32
+          %5 = arith.mulf %prevAccum, %4 : f32
           affine.yield %5 : f32
         }
-        %accum_sqr = mulf %accum, %accum : f32
+        %accum_sqr = arith.mulf %accum, %accum : f32
         affine.store %accum_sqr, %arg2[%arg3, %arg4] : memref<1x64xf32, 1>
       }
     }
@@ -103,8 +103,8 @@ func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref
 // Test checks the loop structure is preserved after sibling fusion
 // since the destination loop and source loop trip counts do not
 // match.
-// SIBLING-MAXIMAL:        %[[cst_0:.*]] = constant 0.000000e+00 : f32
-// SIBLING-MAXIMAL-NEXT:        %[[cst_1:.*]] = constant 1.000000e+00 : f32
+// SIBLING-MAXIMAL:        %[[cst_0:.*]] = arith.constant 0.000000e+00 : f32
+// SIBLING-MAXIMAL-NEXT:        %[[cst_1:.*]] = arith.constant 1.000000e+00 : f32
 // SIBLING-MAXIMAL-NEXT:           affine.for %[[idx_0:.*]]= 0 to 1 {
 // SIBLING-MAXIMAL-NEXT:             affine.for %[[idx_1:.*]] = 0 to 64 {
 // SIBLING-MAXIMAL-NEXT:               %[[result_1:.*]] = affine.for %[[idx_2:.*]] = 0 to 32 iter_args(%[[iter_0:.*]] = %[[cst_1]]) -> (f32) {

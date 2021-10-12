@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 #define FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 
+#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -27,7 +28,8 @@ namespace fir::support {
 #define FLANG_NONCODEGEN_DIALECT_LIST                                          \
   mlir::AffineDialect, FIROpsDialect, mlir::acc::OpenACCDialect,               \
       mlir::omp::OpenMPDialect, mlir::scf::SCFDialect,                         \
-      mlir::StandardOpsDialect, mlir::vector::VectorDialect
+      mlir::arith::ArithmeticDialect, mlir::StandardOpsDialect,                \
+      mlir::vector::VectorDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \

@@ -5,14 +5,14 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %f0 = constant 0.0: f64
-  %f1 = constant 1.0: f64
-  %f2 = constant 2.0: f64
-  %f3 = constant 3.0: f64
-  %f4 = constant 4.0: f64
-  %f5 = constant 5.0: f64
-  %f6 = constant 6.0: f64
-  %f7 = constant 7.0: f64
+  %f0 = arith.constant 0.0: f64
+  %f1 = arith.constant 1.0: f64
+  %f2 = arith.constant 2.0: f64
+  %f3 = arith.constant 3.0: f64
+  %f4 = arith.constant 4.0: f64
+  %f5 = arith.constant 5.0: f64
+  %f6 = arith.constant 6.0: f64
+  %f7 = arith.constant 7.0: f64
 
   // Construct test vectors.
   %0 = vector.broadcast %f0 : f64 to vector<4xf64>

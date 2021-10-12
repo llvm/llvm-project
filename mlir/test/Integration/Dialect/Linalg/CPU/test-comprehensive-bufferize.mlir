@@ -10,10 +10,10 @@
 #map1 = affine_map<(d0, d1)[s0] -> ((d0 - d1) ceildiv s0)>
 
 func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f32> {linalg.inplaceable = true}) -> tensor<f32> {
-  %c64 = constant 64 : index
-  %cst = constant 0.000000e+00 : f32
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
+  %c64 = arith.constant 64 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
   %0 = linalg.fill(%cst, %arg2) : f32, tensor<f32> -> tensor<f32>
   %1 = affine.apply #map0(%c0, %c64)[%c2]
   %2 = linalg.init_tensor [%1, 2] : tensor<?x2xf32>
@@ -76,9 +76,9 @@ func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f
 }
 
 func @main() {
-  %v0 = constant 0.0 : f32
-  %v1 = constant 1.0 : f32
-  %v2 = constant 2.0 : f32
+  %v0 = arith.constant 0.0 : f32
+  %v1 = arith.constant 1.0 : f32
+  %v2 = arith.constant 2.0 : f32
 
   %A = linalg.init_tensor [64] : tensor<64xf32>
   %B = linalg.init_tensor [64] : tensor<64xf32>

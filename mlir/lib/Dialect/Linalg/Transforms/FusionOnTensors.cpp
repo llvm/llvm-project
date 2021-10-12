@@ -110,7 +110,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   // `tiledSliceDims` and store the tile offset and size for the tiled slice
   // dimension. Assumes the mapping from slice dimensions to producer loops is a
   // permutation.
-  auto zero = b.create<ConstantIndexOp>(loc, 0);
+  auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<Value> tileIvs(producerOp.getNumLoops(), nullptr);
   SmallVector<Value> tileSizes(producerOp.getNumLoops(), zero);
   SmallVector<Value> allIvs(producerOp.getNumLoops(), nullptr);

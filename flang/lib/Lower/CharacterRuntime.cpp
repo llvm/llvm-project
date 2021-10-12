@@ -85,11 +85,10 @@ static int discoverKind(mlir::Type ty) {
 // Lower character operations
 //===----------------------------------------------------------------------===//
 
-mlir::Value
-Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
-                                  mlir::Location loc, mlir::CmpIPredicate cmp,
-                                  mlir::Value lhsBuff, mlir::Value lhsLen,
-                                  mlir::Value rhsBuff, mlir::Value rhsLen) {
+mlir::Value Fortran::lower::genRawCharCompare(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::arith::CmpIPredicate cmp, mlir::Value lhsBuff, mlir::Value lhsLen,
+    mlir::Value rhsBuff, mlir::Value rhsLen) {
   auto &builder = converter.getFirOpBuilder();
   mlir::FuncOp beginFunc;
   switch (discoverKind(lhsBuff.getType())) {
@@ -113,13 +112,12 @@ Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value, 4> args = {lptr, rptr, llen, rlen};
   auto tri = builder.create<mlir::CallOp>(loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
-  return builder.create<mlir::CmpIOp>(loc, cmp, tri, zero);
+  return builder.create<mlir::arith::CmpIOp>(loc, cmp, tri, zero);
 }
 
-mlir::Value
-Fortran::lower::genBoxCharCompare(Fortran::lower::AbstractConverter &converter,
-                                  mlir::Location loc, mlir::CmpIPredicate cmp,
-                                  mlir::Value lhs, mlir::Value rhs) {
+mlir::Value Fortran::lower::genBoxCharCompare(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::arith::CmpIPredicate cmp, mlir::Value lhs, mlir::Value rhs) {
   auto &builder = converter.getFirOpBuilder();
   Fortran::lower::CharacterExprHelper helper{builder, loc};
   auto lhsPair = helper.materializeCharacter(lhs);

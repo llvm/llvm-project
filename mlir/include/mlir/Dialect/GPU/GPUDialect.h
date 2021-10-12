@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_GPU_GPUDIALECT_H
 #define MLIR_DIALECT_GPU_GPUDIALECT_H
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"

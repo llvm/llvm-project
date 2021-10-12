@@ -213,7 +213,7 @@ func @tile_nofold(%arg0: tensor<3x4xf32>) -> tensor<3x8xf32> {
 // CHECK-LABEL: @transpose_fold
 func @transpose_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
   // CHECK: return %arg0
-  %0 = constant dense<[0, 1]> : tensor<2xi32>
+  %0 = arith.constant dense<[0, 1]> : tensor<2xi32>
   %1 = "tosa.transpose"(%arg0, %0) { perms = [1, 0] }: (tensor<3x4xf32>, tensor<2xi32>) -> tensor<3x4xf32>
   return %1 : tensor<3x4xf32>
 }
@@ -223,7 +223,7 @@ func @transpose_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
 // CHECK-LABEL: @transpose_nofold
 func @transpose_nofold(%arg0: tensor<3x3xf32>) -> tensor<3x3xf32> {
   // CHECK: "tosa.transpose"
-  %0 = constant dense<[1, 0]> : tensor<2xi32>
+  %0 = arith.constant dense<[1, 0]> : tensor<2xi32>
   %1 = "tosa.transpose"(%arg0, %0) { perms = [1, 0] }: (tensor<3x3xf32>, tensor<2xi32>) -> tensor<3x3xf32>
   return %1 : tensor<3x3xf32>
 }
@@ -233,7 +233,7 @@ func @transpose_nofold(%arg0: tensor<3x3xf32>) -> tensor<3x3xf32> {
 // CHECK-LABEL: @transpose_nofold_shape
 func @transpose_nofold_shape(%arg0: tensor<3x4xf32>) -> tensor<?x?xf32> {
   // CHECK: "tosa.transpose"
-  %0 = constant dense<[0, 1]> : tensor<2xi32>
+  %0 = arith.constant dense<[0, 1]> : tensor<2xi32>
   %1 = "tosa.transpose"(%arg0, %0) { perms = [1, 0] }: (tensor<3x4xf32>, tensor<2xi32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }

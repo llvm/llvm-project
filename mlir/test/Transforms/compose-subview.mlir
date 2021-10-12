@@ -34,9 +34,9 @@ func @main(%input: memref<4x1024xf32>) -> memref<1x10xf32, #map2> {
 #map = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>
 
 func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
-  // CHECK: [[CST_3:%.*]] = constant 3 : index
-  %cst_1 = constant 1 : index
-  %cst_2 = constant 2 : index
+  // CHECK: [[CST_3:%.*]] = arith.constant 3 : index
+  %cst_1 = arith.constant 1 : index
+  %cst_2 = arith.constant 2 : index
   //      CHECK: subview %arg0{{\[}}[[CST_3]], 384] [1, 128] [1, 1]
   // CHECK-SAME: memref<4x1024xf32> to memref<1x128xf32, [[MAP]]>
   %0 = memref.subview %input[%cst_2, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, #map>
@@ -50,10 +50,10 @@ func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
 #map = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>
 
 func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
-  // CHECK: [[CST_3:%.*]] = constant 3 : index
-  %cst_2 = constant 2 : index
-  // CHECK: [[CST_384:%.*]] = constant 384 : index
-  %cst_128 = constant 128 : index
+  // CHECK: [[CST_3:%.*]] = arith.constant 3 : index
+  %cst_2 = arith.constant 2 : index
+  // CHECK: [[CST_384:%.*]] = arith.constant 384 : index
+  %cst_128 = arith.constant 128 : index
   //      CHECK: subview %arg0{{\[}}[[CST_3]], [[CST_384]]] [1, 128] [1, 1]
   // CHECK-SAME: memref<4x1024xf32> to memref<1x128xf32, [[MAP]]>
   %0 = memref.subview %input[%cst_2, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, #map>

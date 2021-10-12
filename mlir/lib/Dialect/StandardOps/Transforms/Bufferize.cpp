@@ -23,20 +23,6 @@
 using namespace mlir;
 
 namespace {
-class BufferizeIndexCastOp : public OpConversionPattern<IndexCastOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(IndexCastOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto tensorType = op.getType().cast<RankedTensorType>();
-    rewriter.replaceOpWithNewOp<IndexCastOp>(
-        op, adaptor.in(),
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType()));
-    return success();
-  }
-};
-
 class BufferizeSelectOp : public OpConversionPattern<SelectOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -55,8 +41,7 @@ public:
 
 void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                         RewritePatternSet &patterns) {
-  patterns.add<BufferizeSelectOp, BufferizeIndexCastOp>(typeConverter,
-                                                        patterns.getContext());
+  patterns.add<BufferizeSelectOp>(typeConverter, patterns.getContext());
 }
 
 namespace {
@@ -74,8 +59,6 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
     // We only bufferize the case of tensor selected type and scalar condition,
     // as that boils down to a select over memref descriptors (don't need to
     // touch the data).
-    target.addDynamicallyLegalOp<IndexCastOp>(
-        [&](IndexCastOp op) { return typeConverter.isLegal(op.getType()); });
     target.addDynamicallyLegalOp<SelectOp>([&](SelectOp op) {
       return typeConverter.isLegal(op.getType()) ||
              !op.condition().getType().isa<IntegerType>();

@@ -44,126 +44,126 @@
 module {
   //
   // Various kernels that cast a sparse vector from one type to another.
-  // Standard supports the following casts.
+  // Arithmetic supports the following casts.
   //   sitofp
   //   uitofp
   //   fptosi
   //   fptoui
-  //   fpext
-  //   fptrunc
-  //   sexti
-  //   zexti
+  //   extf
+  //   truncf
+  //   extsi
+  //   extui
   //   trunci
   //   bitcast
   // Since all casts are "zero preserving" unary operations, lattice computation
   // and conversion to sparse code is straightforward.
   //
   func @sparse_cast_s32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
-    %argx = constant dense<0.0> : tensor<10xf32>
+    %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
       outs(%argx: tensor<10xf32>) {
         ^bb(%a: i32, %x : f32):
-          %cst = sitofp %a : i32 to f32
+          %cst = arith.sitofp %a : i32 to f32
           linalg.yield %cst : f32
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
   func @sparse_cast_u32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
-    %argx = constant dense<0.0> : tensor<10xf32>
+    %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
       outs(%argx: tensor<10xf32>) {
         ^bb(%a: i32, %x : f32):
-          %cst = uitofp %a : i32 to f32
+          %cst = arith.uitofp %a : i32 to f32
           linalg.yield %cst : f32
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
   func @sparse_cast_f32_to_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
-    %argx = constant dense<0> : tensor<10xi32>
+    %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
       outs(%argx: tensor<10xi32>) {
         ^bb(%a: f32, %x : i32):
-          %cst = fptosi %a : f32 to i32
+          %cst = arith.fptosi %a : f32 to i32
           linalg.yield %cst : i32
     } -> tensor<10xi32>
     return %0 : tensor<10xi32>
   }
   func @sparse_cast_f64_to_u32(%arga: tensor<10xf64, #SV>) -> tensor<10xi32> {
-    %argx = constant dense<0> : tensor<10xi32>
+    %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf64, #SV>)
       outs(%argx: tensor<10xi32>) {
         ^bb(%a: f64, %x : i32):
-          %cst = fptoui %a : f64 to i32
+          %cst = arith.fptoui %a : f64 to i32
           linalg.yield %cst : i32
     } -> tensor<10xi32>
     return %0 : tensor<10xi32>
   }
   func @sparse_cast_f32_to_f64(%arga: tensor<10xf32, #SV>) -> tensor<10xf64> {
-    %argx = constant dense<0.0> : tensor<10xf64>
+    %argx = arith.constant dense<0.0> : tensor<10xf64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
       outs(%argx: tensor<10xf64>) {
         ^bb(%a: f32, %x : f64):
-          %cst = fpext %a : f32 to f64
+          %cst = arith.extf %a : f32 to f64
           linalg.yield %cst : f64
     } -> tensor<10xf64>
     return %0 : tensor<10xf64>
   }
   func @sparse_cast_f64_to_f32(%arga: tensor<10xf64, #SV>) -> tensor<10xf32> {
-    %argx = constant dense<0.0> : tensor<10xf32>
+    %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf64, #SV>)
       outs(%argx: tensor<10xf32>) {
         ^bb(%a: f64, %x : f32):
-          %cst = fptrunc %a : f64 to f32
+          %cst = arith.truncf %a : f64 to f32
           linalg.yield %cst : f32
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
   func @sparse_cast_s32_to_u64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
-    %argx = constant dense<0> : tensor<10xi64>
+    %argx = arith.constant dense<0> : tensor<10xi64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
       outs(%argx: tensor<10xi64>) {
         ^bb(%a: i32, %x : i64):
-          %cst = sexti %a : i32 to i64
+          %cst = arith.extsi %a : i32 to i64
           linalg.yield %cst : i64
     } -> tensor<10xi64>
     return %0 : tensor<10xi64>
   }
   func @sparse_cast_u32_to_s64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
-    %argx = constant dense<0> : tensor<10xi64>
+    %argx = arith.constant dense<0> : tensor<10xi64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
       outs(%argx: tensor<10xi64>) {
         ^bb(%a: i32, %x : i64):
-          %cst = zexti %a : i32 to i64
+          %cst = arith.extui %a : i32 to i64
           linalg.yield %cst : i64
     } -> tensor<10xi64>
     return %0 : tensor<10xi64>
   }
   func @sparse_cast_i32_to_i8(%arga: tensor<10xi32, #SV>) -> tensor<10xi8> {
-    %argx = constant dense<0> : tensor<10xi8>
+    %argx = arith.constant dense<0> : tensor<10xi8>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
       outs(%argx: tensor<10xi8>) {
         ^bb(%a: i32, %x : i8):
-          %cst = trunci %a : i32 to i8
+          %cst = arith.trunci %a : i32 to i8
           linalg.yield %cst : i8
     } -> tensor<10xi8>
     return %0 : tensor<10xi8>
   }
   func @sparse_cast_f32_as_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
-    %argx = constant dense<0> : tensor<10xi32>
+    %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
       outs(%argx: tensor<10xi32>) {
         ^bb(%a: f32, %x : i32):
-          %cst = bitcast %a : f32 to i32
+          %cst = arith.bitcast %a : f32 to i32
           linalg.yield %cst : i32
     } -> tensor<10xi32>
     return %0 : tensor<10xi32>
@@ -174,21 +174,21 @@ module {
   // and then calls the sparse casting kernel.
   //
   func @entry() {
-    %z = constant 0 : index
-    %b = constant 0 : i8
-    %i = constant 0 : i32
-    %l = constant 0 : i64
-    %f = constant 0.0 : f32
-    %d = constant 0.0 : f64
+    %z = arith.constant 0 : index
+    %b = arith.constant 0 : i8
+    %i = arith.constant 0 : i32
+    %l = arith.constant 0 : i64
+    %f = arith.constant 0.0 : f32
+    %d = arith.constant 0.0 : f64
 
     // Initialize dense tensors, convert to a sparse vectors.
-    %0 = constant dense<[ -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 ]> : tensor<10xi32>
+    %0 = arith.constant dense<[ -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 ]> : tensor<10xi32>
     %1 = sparse_tensor.convert %0 : tensor<10xi32> to tensor<10xi32, #SV>
-    %2 = constant dense<[ -4.4, -3.3, -2.2, -1.1, 0.0, 1.1, 2.2, 3.3, 4.4, 305.5 ]> : tensor<10xf32>
+    %2 = arith.constant dense<[ -4.4, -3.3, -2.2, -1.1, 0.0, 1.1, 2.2, 3.3, 4.4, 305.5 ]> : tensor<10xf32>
     %3 = sparse_tensor.convert %2 : tensor<10xf32> to tensor<10xf32, #SV>
-    %4 = constant dense<[ -4.4, -3.3, -2.2, -1.1, 0.0, 1.1, 2.2, 3.3, 4.4, 305.5 ]> : tensor<10xf64>
+    %4 = arith.constant dense<[ -4.4, -3.3, -2.2, -1.1, 0.0, 1.1, 2.2, 3.3, 4.4, 305.5 ]> : tensor<10xf64>
     %5 = sparse_tensor.convert %4 : tensor<10xf64> to tensor<10xf64, #SV>
-    %6 = constant dense<[ 4294967295.0, 4294967294.0, 4294967293.0, 4294967292.0,
+    %6 = arith.constant dense<[ 4294967295.0, 4294967294.0, 4294967293.0, 4294967292.0,
                           0.0, 1.1, 2.2, 3.3, 4.4, 305.5 ]> : tensor<10xf64>
     %7 = sparse_tensor.convert %6 : tensor<10xf64> to tensor<10xf64, #SV>
 

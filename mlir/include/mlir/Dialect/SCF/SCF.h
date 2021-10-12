@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_H_
 #define MLIR_DIALECT_SCF_H_
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
@@ -86,9 +87,9 @@ LoopNest buildLoopNest(
 /// expect the body building functions to return their current value.
 /// The built nested scf::For are captured in `capturedLoops` when non-null.
 LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
-                          ValueRange ubs, ValueRange steps,
-                          function_ref<void(OpBuilder &, Location, ValueRange)>
-                              bodyBuilder = nullptr);
+                       ValueRange ubs, ValueRange steps,
+                       function_ref<void(OpBuilder &, Location, ValueRange)>
+                           bodyBuilder = nullptr);
 
 } // end namespace scf
 } // end namespace mlir

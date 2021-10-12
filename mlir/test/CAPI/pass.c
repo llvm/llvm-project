@@ -30,7 +30,7 @@ void testRunPassOnModule() {
       // clang-format off
                             mlirStringRefCreateFromCString(
 "func @foo(%arg0 : i32) -> i32 {                                            \n"
-"  %res = addi %arg0, %arg0 : i32                                           \n"
+"  %res = arith.addi %arg0, %arg0 : i32                                     \n"
 "  return %res : i32                                                        \n"
 "}"));
   // clang-format on
@@ -41,8 +41,8 @@ void testRunPassOnModule() {
 
   // Run the print-op-stats pass on the top-level module:
   // CHECK-LABEL: Operations encountered:
+  // CHECK: arith.addi        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
@@ -63,17 +63,17 @@ void testRunPassOnNestedModule() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
 
-  MlirModule module = mlirModuleCreateParse(
-      ctx,
-      // clang-format off
+  MlirModule module =
+      mlirModuleCreateParse(ctx,
+                            // clang-format off
                             mlirStringRefCreateFromCString(
 "func @foo(%arg0 : i32) -> i32 {                                            \n"
-"  %res = addi %arg0, %arg0 : i32                                           \n"
+"  %res = arith.addi %arg0, %arg0 : i32                                     \n"
 "  return %res : i32                                                        \n"
 "}                                                                          \n"
 "module {                                                                   \n"
 "  func @bar(%arg0 : f32) -> f32 {                                          \n"
-"    %res = addf %arg0, %arg0 : f32                                         \n"
+"    %res = arith.addf %arg0, %arg0 : f32                                         \n"
 "    return %res : f32                                                      \n"
 "  }                                                                        \n"
 "}"));
@@ -83,8 +83,8 @@ void testRunPassOnNestedModule() {
 
   // Run the print-op-stats pass on functions under the top-level module:
   // CHECK-LABEL: Operations encountered:
+  // CHECK: arith.addi        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
@@ -99,8 +99,8 @@ void testRunPassOnNestedModule() {
   }
   // Run the print-op-stats pass on functions under the nested module:
   // CHECK-LABEL: Operations encountered:
+  // CHECK: arith.addf        , 1
   // CHECK: builtin.func      , 1
-  // CHECK: std.addf          , 1
   // CHECK: std.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);

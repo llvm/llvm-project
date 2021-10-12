@@ -2,7 +2,7 @@
 
 func @load_number_of_indices(%v : memref<f32>) {
   // expected-error @+2 {{incorrect number of indices for load}}
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
 
@@ -10,8 +10,8 @@ func @load_number_of_indices(%v : memref<f32>) {
 
 func @store_number_of_indices(%v : memref<f32>) {
   // expected-error @+3 {{store index operand count not equal to memref rank}}
-  %c0 = constant 0 : index
-  %f0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
   memref.store %f0, %v[%c0] : memref<f32>
 }
 
@@ -109,7 +109,7 @@ func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) 
 // -----
 
 func @generic_scalar_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   // expected-error @+1 {{expected operand rank (0) to match the result rank of indexing_map #0 (1)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0)>, affine_map<() -> (0, 0)> ],
@@ -130,7 +130,7 @@ func @generic_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(o
     iterator_types = ["parallel"]}
       outs(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
     ^bb(%0: f32):
-      %1 = constant 1: i4
+      %1 = arith.constant 1: i4
       linalg.yield %1: i4
   }
 }
@@ -159,7 +159,7 @@ func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>
 // -----
 
 func @generic_empty_region(%arg0: memref<f32>) {
-  %f0 = constant 0.0: f32
+  %f0 = arith.constant 0.0: f32
   // expected-error @+1 {{op expected 1 region with 1 block}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
@@ -176,7 +176,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func @generic_empty_region(%arg0: memref<f32>) {
-  %f0 = constant 0.0: f32
+  %f0 = arith.constant 0.0: f32
   // expected-error @+1 {{linalg.generic' op expected 1 region with 1 block}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()> , affine_map<() -> ()> ],
@@ -234,7 +234,7 @@ func @generic_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(o
     iterator_types = ["parallel"]}
       outs(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
     ^bb(%i: f32):
-      %0 = constant 0: i1
+      %0 = arith.constant 0: i1
       linalg.yield %0: i1
   }
 }
@@ -272,14 +272,14 @@ func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
 // -----
 
 func @generic(%arg0: memref<?x?xi4>) {
-  // expected-error @+2 {{op expects regions to end with 'linalg.yield', found 'std.addf'}}
+  // expected-error @+2 {{op expects regions to end with 'linalg.yield', found 'arith.addf'}}
   // expected-note @+1 {{in custom textual format, the absence of terminator implies 'linalg.yield'}}
   linalg.generic  {
     indexing_maps = [ affine_map<(i, j) -> (i, j)> ],
     iterator_types = ["parallel", "parallel"]}
       outs(%arg0 : memref<?x?xi4>) {
     ^bb(%0: i4) :
-      %1 = std.addf %0, %0: i4
+      %1 = arith.addf %0, %0: i4
   }
   return
 }
@@ -569,9 +569,9 @@ func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
 func @tiled_loop_incorrent_num_yield_operands(%A: memref<192x192xf32>,
     %B: memref<192x192xf32>, %C: memref<192x192xf32>,
     %C_tensor: tensor<192x192xf32>) {
-  %c24 = constant 24 : index
-  %c0 = constant 0 : index
-  %c192 = constant 192 : index
+  %c24 = arith.constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c192 = arith.constant 192 : index
   %0 = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
       step (%c24, %c24)
       ins (%A_ = %A: memref<192x192xf32>, %B_ = %B: memref<192x192xf32>)
@@ -597,9 +597,9 @@ func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
 func @tiled_loop_incorrent_yield_operand_type(%A: memref<192x192xf32>,
     %B: memref<192x192xf32>, %C: memref<192x192xf32>,
     %C_tensor: tensor<192x192xf32>) {
-  %c24 = constant 24 : index
-  %c0 = constant 0 : index
-  %c192 = constant 192 : index
+  %c24 = arith.constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c192 = arith.constant 192 : index
   %0 = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
       step (%c24, %c24)
       ins (%A_ = %A: memref<192x192xf32>, %B_ = %B: memref<192x192xf32>)
@@ -621,9 +621,9 @@ func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
 func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
     %B: memref<192x192xf32>, %C: memref<192x192xf32>,
     %C_tensor: tensor<192x192xf32>) {
-  %c24 = constant 24 : index
-  %c0 = constant 0 : index
-  %c192 = constant 192 : index
+  %c24 = arith.constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c192 = arith.constant 192 : index
   // expected-error @+1 {{expected iterator types array attribute size = 1 to match the number of loops = 2}}
   %0 = "linalg.tiled_loop"(%c0, %c0, %c192, %c192, %c24, %c24, %A, %B, %C_tensor, %C) ( {
     ^bb0(%arg4: index, %arg5: index, %A_: memref<192x192xf32>,
@@ -646,9 +646,9 @@ func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
 func private @foo(%A: memref<100xf32>) -> ()
 
 func @tiled_loop_incorrent_block_arg_type(%A: memref<192xf32>) {
-  %c0 = constant 0 : index
-  %c192 = constant 192 : index
-  %c24 = constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c192 = arith.constant 192 : index
+  %c24 = arith.constant 24 : index
   // expected-error @+1 {{expected output arg 0 with type = 'memref<192xf32>' to match region arg 1 type = 'memref<100xf32>'}}
   "linalg.tiled_loop"(%c0, %c192, %c24, %A) ( {
     ^bb0(%arg4: index, %A_: memref<100xf32>):

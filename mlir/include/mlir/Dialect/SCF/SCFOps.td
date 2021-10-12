@@ -20,6 +20,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
+  let dependentDialects = ["arith::ArithmeticDialect"];
 }
 
 // Base class for SCF dialect ops.
@@ -170,7 +171,7 @@ def ForOp : SCF_Op<"for",
       %sum = scf.for %iv = %lb to %ub step %step
           iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
-        %sum_next = addf %sum_iter, %t : f32
+        %sum_next = arith.addf %sum_iter, %t : f32
         // Yield current iteration sum to next iteration %sum_iter or to %sum
         // if final iteration.
         scf.yield %sum_next : f32
@@ -194,9 +195,9 @@ def ForOp : SCF_Op<"for",
       %sum = scf.for %iv = %lb to %ub step %step
           iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
-        %cond = cmpf "ugt", %t, %c0 : f32
+        %cond = arith.cmpf "ugt", %t, %c0 : f32
         %sum_next = scf.if %cond -> (f32) {
-          %new_sum = addf %sum_iter, %t : f32
+          %new_sum = arith.addf %sum_iter, %t : f32
           scf.yield %new_sum : f32
         } else {
           scf.yield %sum_iter : f32
@@ -451,7 +452,7 @@ def ParallelOp : SCF_Op<"parallel",
       %elem_to_reduce = load %buffer[%iv] : memref<100xf32>
       scf.reduce(%elem_to_reduce) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
-          %res = addf %lhs, %rhs : f32
+          %res = arith.addf %lhs, %rhs : f32
           scf.reduce.return %res : f32
       }
     }
@@ -519,7 +520,7 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
     %operand = constant 1.0 : f32
     scf.reduce(%operand) : f32 {
       ^bb0(%lhs : f32, %rhs: f32):
-        %res = addf %lhs, %rhs : f32
+        %res = arith.addf %lhs, %rhs : f32
         scf.reduce.return %res : f32
     }
     ```

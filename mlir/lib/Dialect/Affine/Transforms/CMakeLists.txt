@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRAffineUtils
+  MLIRArithmetic
   MLIRIR
   MLIRMemRef
   MLIRPass

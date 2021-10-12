@@ -325,7 +325,7 @@ def DotOp : AVX_LowOp<"dot", [NoSideEffect, SameOperandsAndResultType]> {
     %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
     %1 = vector.extractelement %0[%i0 : i32]: vector<8xf32>
     %2 = vector.extractelement %0[%i4 : i32]: vector<8xf32>
-    %d = addf %1, %2 : f32
+    %d = arith.addf %1, %2 : f32
     ```
   }];
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a,

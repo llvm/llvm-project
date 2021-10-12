@@ -55,7 +55,7 @@ func @test_if_else(%arg0: i1, %arg1: f32) {
 
 
 func @test_if_yield(%arg0: i1, %arg1: f32) {
-  %0 = constant 0 : i8
+  %0 = arith.constant 0 : i8
   %x, %y = scf.if %arg0 -> (i32, f64) {
     %1 = emitc.call "func_true_1"(%arg1) : (f32) -> i32
     %2 = emitc.call "func_true_2"(%arg1) : (f32) -> f64

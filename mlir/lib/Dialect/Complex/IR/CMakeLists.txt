@@ -9,6 +9,8 @@ add_mlir_dialect_library(MLIRComplex
   MLIRComplexOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRDialect
   MLIRIR
+  MLIRStandard
   )

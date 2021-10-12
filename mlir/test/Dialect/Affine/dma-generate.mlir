@@ -57,7 +57,7 @@ func @loop_nest_1d() {
 // -----
 
 // CHECK-LABEL: func @loop_nest_high_d
-// CHECK:      %{{.*}} = constant 16384 : index
+// CHECK:      %{{.*}} = arith.constant 16384 : index
 // CHECK-DAG:  [[BUFB:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
 // CHECK-DAG:  [[BUFA:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
 // CHECK-DAG:  [[BUFC:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
@@ -204,8 +204,8 @@ func @loop_nest_tiled() -> memref<256x1024xf32> {
 
 // CHECK-LABEL: func @dma_constant_dim_access
 func @dma_constant_dim_access(%A : memref<100x100xf32>) {
-  %one = constant 1 : index
-  %N = constant 100 : index
+  %one = arith.constant 1 : index
+  %N = arith.constant 100 : index
   // CHECK:      memref.alloc() : memref<1x100xf32, 2>
   // CHECK-NEXT: memref.alloc() : memref<1xi32>
   // No strided DMA needed here.
@@ -224,7 +224,7 @@ func @dma_constant_dim_access(%A : memref<100x100xf32>) {
 
 // CHECK-LABEL: func @dma_with_symbolic_accesses
 func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
-  %N = constant 9 : index
+  %N = arith.constant 9 : index
   affine.for %i = 0 to 100 {
     affine.for %j = 0 to 100 {
       %idy = affine.apply affine_map<(d0, d1) [s0, s1] -> (d1 + s0 + s1)>(%i, %j)[%M, %N]
@@ -248,7 +248,7 @@ func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
 
 // CHECK-LABEL: func @dma_with_symbolic_loop_bounds
 func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: index) {
-  %K = constant 9 : index
+  %K = arith.constant 9 : index
 // The buffer size can't be bound by a constant smaller than the original
 // memref size; so the DMA buffer is the entire 100x100.
 // CHECK:       memref.alloc() : memref<100x100xf32, 2>
@@ -268,7 +268,7 @@ func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: in
 
 // CHECK-LABEL: func @dma_unknown_size
 func @dma_unknown_size(%arg0: memref<?x?xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %M = memref.dim %arg0, %c0 : memref<? x ? x f32>
   %N = memref.dim %arg0, %c0 : memref<? x ? x f32>
   affine.for %i = 0 to %M {
@@ -361,8 +361,8 @@ func @multi_load_store_union() {
 
 // CHECK-LABEL: func @dma_loop_straightline_interspersed() {
 func @dma_loop_straightline_interspersed() {
-  %c0 = constant 0 : index
-  %c255 = constant 255 : index
+  %c0 = arith.constant 0 : index
+  %c255 = arith.constant 255 : index
   %A = memref.alloc() : memref<256 x f32>
   %v = affine.load %A[%c0] : memref<256 x f32>
   affine.for %i = 1 to 255 {
@@ -409,7 +409,7 @@ func @dma_loop_straightline_interspersed() {
 
 // CHECK-LABEL: func @dma_mixed_loop_blocks() {
 func @dma_mixed_loop_blocks() {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %A = memref.alloc() : memref<256 x 256 x vector<8 x f32>>
   affine.for %i = 0 to 256 {
     %v = affine.load %A[%c0, %c0] : memref<256 x 256 x vector<8 x f32>>
@@ -437,7 +437,7 @@ func @dma_mixed_loop_blocks() {
 func @relative_loop_bounds(%arg0: memref<1027xf32>) {
   affine.for %i0 = 0 to 1024 {
     affine.for %i2 = affine_map<(d0) -> (d0)>(%i0) to affine_map<(d0) -> (d0 + 4)>(%i0) {
-      %0 = constant 0.0 : f32
+      %0 = arith.constant 0.0 : f32
       affine.store %0, %arg0[%i2] : memref<1027xf32>
     }
   }
@@ -492,10 +492,10 @@ func @test_read_write_region_union() {
 #map_acc = affine_map<(d0) -> (d0 floordiv 8)>
 // CHECK-LABEL: func @test_analysis_util
 func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<2xf32>) -> (memref<144x9xf32>, memref<2xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<64x1xf32>
   %1 = memref.alloc() : memref<144x4xf32>
-  %2 =  constant 0.0 : f32
+  %2 =  arith.constant 0.0 : f32
   affine.for %i8 = 0 to 9 step 3 {
     affine.for %i9 = #map_lb(%i8) to #map_ub(%i8) {
       affine.for %i17 = 0 to 64 {
@@ -525,7 +525,7 @@ func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, 
 // Test for test case in b/128303048 #4.
 // CHECK-LABEL: func @test_memref_bounds
 func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: memref<144x9xvector<8x128xf32>>, %arg2: memref<2xvector<8x128xf32>>) -> (memref<144x9xvector<8x128xf32>>, memref<2xvector<8x128xf32>>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   affine.for %i8 = 0 to 9 step 3 {
     affine.for %i9 = #map3(%i8) to #map12(%i8) {
       affine.for %i10 = 0 to 64 {
@@ -563,7 +563,7 @@ func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
         // FAST-MEM-16KB:  affine.for %{{.*}}
         affine.for %i3 = affine_map<(d0) -> (d0)>(%i1) to affine_map<(d0) -> (d0 + 4)>(%i1) {
           %3 = affine.load %arg0[%i2, %i3] : memref<256x1024xf32>
-          %4 = mulf %3, %3 : f32
+          %4 = arith.mulf %3, %3 : f32
           affine.store %4, %arg0[%i2, %i3] : memref<256x1024xf32>
         } // FAST-MEM-16KB: }
       } // FAST-MEM-16KB: }
@@ -596,8 +596,8 @@ func @simple_matmul(%arg0: memref<8x8xvector<64xf32>>, %arg1: memref<8x8xvector<
               %5 = affine.load %arg0[%ii, %kk] : memref<8x8xvector<64xf32>>
               %6 = affine.load %arg1[%kk, %jj] : memref<8x8xvector<64xf32>>
               %7 = affine.load %arg2[%ii, %jj] : memref<8x8xvector<64xf32>>
-              %8 = mulf %5, %6 : vector<64xf32>
-              %9 = addf %7, %8 : vector<64xf32>
+              %8 = arith.mulf %5, %6 : vector<64xf32>
+              %9 = arith.addf %7, %8 : vector<64xf32>
               affine.store %9, %arg2[%ii, %jj] : memref<8x8xvector<64xf32>>
             }
           }

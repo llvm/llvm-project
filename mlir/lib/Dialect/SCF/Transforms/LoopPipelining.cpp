@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/SCF/Utils.h"
@@ -80,14 +81,16 @@ public:
 bool LoopPipelinerInternal::initializeLoopInfo(
     ForOp op, const PipeliningOption &options) {
   forOp = op;
-  auto upperBoundCst = forOp.upperBound().getDefiningOp<ConstantIndexOp>();
-  auto lowerBoundCst = forOp.lowerBound().getDefiningOp<ConstantIndexOp>();
-  auto stepCst = forOp.step().getDefiningOp<ConstantIndexOp>();
+  auto upperBoundCst =
+      forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto lowerBoundCst =
+      forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCst = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
   if (!upperBoundCst || !lowerBoundCst || !stepCst)
     return false;
-  ub = upperBoundCst.getValue();
-  lb = lowerBoundCst.getValue();
-  step = stepCst.getValue();
+  ub = upperBoundCst.value();
+  lb = lowerBoundCst.value();
+  step = stepCst.value();
   int64_t numIteration = ceilDiv(ub - lb, step);
   std::vector<std::pair<Operation *, unsigned>> schedule;
   options.getScheduleFn(forOp, schedule);
@@ -135,7 +138,7 @@ void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
   auto yield = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
   for (int64_t i = 0; i < maxStage; i++) {
     // special handling for induction variable as the increment is implicit.
-    Value iv = rewriter.create<ConstantIndexOp>(forOp.getLoc(), lb + i);
+    Value iv = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i);
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
       if (stages[op] > i)
@@ -221,8 +224,8 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
 
   // Create the new kernel loop. Since we need to peel `numStages - 1`
   // iteration we change the upper bound to remove those iterations.
-  Value newUb =
-      rewriter.create<ConstantIndexOp>(forOp.getLoc(), ub - maxStage * step);
+  Value newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
+                                                        ub - maxStage * step);
   auto newForOp = rewriter.create<scf::ForOp>(
       forOp.getLoc(), forOp.lowerBound(), newUb, forOp.step(), newLoopArg);
   return newForOp;
@@ -252,10 +255,10 @@ void LoopPipelinerInternal::createKernel(
       // version incremented based on the stage where it is used.
       if (operand.get() == forOp.getInductionVar()) {
         rewriter.setInsertionPoint(newOp);
-        Value offset = rewriter.create<ConstantIndexOp>(
+        Value offset = rewriter.create<arith::ConstantIndexOp>(
             forOp.getLoc(), (maxStage - stages[op]) * step);
-        Value iv = rewriter.create<AddIOp>(forOp.getLoc(),
-                                           newForOp.getInductionVar(), offset);
+        Value iv = rewriter.create<arith::AddIOp>(
+            forOp.getLoc(), newForOp.getInductionVar(), offset);
         newOp->setOperand(operand.getOperandNumber(), iv);
         rewriter.setInsertionPointAfter(newOp);
         continue;
@@ -339,7 +342,7 @@ LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
   for (int64_t i = 0; i < maxStage; i++) {
-    Value newlastIter = rewriter.create<ConstantIndexOp>(
+    Value newlastIter = rewriter.create<arith::ConstantIndexOp>(
         forOp.getLoc(), lb + step * ((((ub - 1) - lb) / step) - i));
     setValueMapping(forOp.getInductionVar(), newlastIter, maxStage - i);
   }

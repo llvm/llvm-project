@@ -22,7 +22,7 @@ func @num_elements_to_reduce_on_index(%shape : tensor<?xindex>) -> index {
   %num_elements = shape.num_elements %shape : tensor<?xindex> -> index
   return %num_elements : index
 }
-// CHECK: [[C1:%.*]] = constant 1 : index
+// CHECK: [[C1:%.*]] = arith.constant 1 : index
 // CHECK: [[NUM_ELEMENTS:%.*]] = shape.reduce([[ARG]], [[C1]]) : tensor<?xindex> -> index
 // CHECK: ^bb0({{.*}}: index, [[DIM:%.*]]: index, [[ACC:%.*]]: index
 // CHECK:   [[NEW_ACC:%.*]] = shape.mul [[DIM]], [[ACC]]

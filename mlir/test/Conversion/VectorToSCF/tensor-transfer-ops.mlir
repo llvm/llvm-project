@@ -11,7 +11,7 @@
 //       CHECK: return %[[LOADED]] : vector<4x9xf32>
 func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
     -> (vector<4x9xf32>){
-  %p = constant -42.0: f32
+  %p = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %p {in_bounds = [true, true]}
       : tensor<?x?xf32>, vector<4x9xf32>
   return %f : vector<4x9xf32>

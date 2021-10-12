@@ -16,7 +16,7 @@ before adding or changing any operation in this dialect.**
 Syntax:
 
 ```
-operation ::= `dma_start` ssa-use`[`ssa-use-list`]` `,`
+operation ::= `memref.dma_start` ssa-use`[`ssa-use-list`]` `,`
                ssa-use`[`ssa-use-list`]` `,` ssa-use `,`
                ssa-use`[`ssa-use-list`]` (`,` ssa-use `,` ssa-use)?
               `:` memref-type `,` memref-type `,` memref-type
@@ -39,17 +39,17 @@ computation, and checking for matching start/end operations. The source and
 destination memref need not be of the same dimensionality, but need to have the
 same elemental type.
 
-For example, a `dma_start` operation that transfers 32 vector elements from a
-memref `%src` at location `[%i, %j]` to memref `%dst` at `[%k, %l]` would be
-specified as shown below.
+For example, a `memref.dma_start` operation that transfers 32 vector elements
+from a memref `%src` at location `[%i, %j]` to memref `%dst` at `[%k, %l]` would
+be specified as shown below.
 
 Example:
 
 ```mlir
-%size = constant 32 : index
-%tag = alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
-%idx = constant 0 : index
-dma_start %src[%i, %j], %dst[%k, %l], %size, %tag[%idx] :
+%size = arith.constant 32 : index
+%tag = memref.alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
+%idx = arith.constant 0 : index
+memref.dma_start %src[%i, %j], %dst[%k, %l], %size, %tag[%idx] :
      memref<40 x 8 x vector<16xf32>, affine_map<(d0, d1) -> (d0, d1)>, 0>,
      memref<2 x 4 x vector<16xf32>, affine_map<(d0, d1) -> (d0, d1)>, 2>,
      memref<1 x i32>, affine_map<(d0) -> (d0)>, 4>
@@ -60,7 +60,7 @@ dma_start %src[%i, %j], %dst[%k, %l], %size, %tag[%idx] :
 Syntax:
 
 ```
-operation ::= `dma_wait` ssa-use`[`ssa-use-list`]` `,` ssa-use `:` memref-type
+operation ::= `memref.dma_wait` ssa-use`[`ssa-use-list`]` `,` ssa-use `:` memref-type
 ```
 
 Blocks until the completion of a DMA operation associated with the tag element
@@ -72,5 +72,5 @@ load/store indices.
 Example:
 
 ```mlir
-dma_wait %tag[%idx], %size : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
+memref.dma_wait %tag[%idx], %size : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
 ```

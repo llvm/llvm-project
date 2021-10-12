@@ -20,9 +20,9 @@ func @create_value() {
 
 // CHECK-LABEL: @create_group
 func @create_group() {
-  // CHECK: %[[C:.*]] = constant 1 : index
+  // CHECK: %[[C:.*]] = arith.constant 1 : index
   // CHECK: %[[S:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup(%[[S]])
   %0 = async.runtime.create_group  %c: !async.group
   return
@@ -84,7 +84,7 @@ func @await_value() {
 
 // CHECK-LABEL: @await_group
 func @await_group() {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup
   %0 = async.runtime.create_group %c: !async.group
   // CHECK: call @mlirAsyncRuntimeAwaitAllInGroup(%[[GROUP]])
@@ -122,7 +122,7 @@ func @await_and_resume_value() {
 
 // CHECK-LABEL: @await_and_resume_group
 func @await_and_resume_group() {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   %0 = async.coro.id
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
@@ -148,8 +148,8 @@ func @resume() {
 
 // CHECK-LABEL: @store
 func @store() {
-  // CHECK: %[[CST:.*]] = constant 1.0
-  %0 = constant 1.0 : f32
+  // CHECK: %[[CST:.*]] = arith.constant 1.0
+  %0 = arith.constant 1.0 : f32
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
   %1 = async.runtime.create : !async.value<f32>
   // CHECK: %[[P0:.*]] = call @mlirAsyncRuntimeGetValueStorage(%[[VALUE]])
@@ -173,7 +173,7 @@ func @load() -> f32 {
 
 // CHECK-LABEL: @add_token_to_group
 func @add_token_to_group() {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken
   %0 = async.runtime.create : !async.token
   // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup

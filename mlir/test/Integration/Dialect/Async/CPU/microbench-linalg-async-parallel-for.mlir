@@ -45,7 +45,7 @@ func @linalg_generic(%lhs: memref<?x?xf32>,
     outs(%sum : memref<?x?xf32>)
   {
     ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):
-      %0 = addf %lhs_in, %rhs_in : f32
+      %0 = arith.addf %lhs_in, %rhs_in : f32
       linalg.yield %0 : f32
   }
 
@@ -53,11 +53,11 @@ func @linalg_generic(%lhs: memref<?x?xf32>,
 }
 
 func @entry() {
-  %f1 = constant 1.0 : f32
-  %f4 = constant 4.0 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cM = constant 1000 : index
+  %f1 = arith.constant 1.0 : f32
+  %f4 = arith.constant 4.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cM = arith.constant 1000 : index
 
   //
   // Sanity check for the function under test.
@@ -114,7 +114,7 @@ func @entry() {
       : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   }
   %t1 = call @rtclock() : () -> f64
-  %t1024 = subf %t1, %t0 : f64
+  %t1024 = arith.subf %t1, %t0 : f64
 
   // Print timings.
   vector.print %t1024 : f64

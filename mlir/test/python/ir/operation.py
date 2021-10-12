@@ -5,6 +5,7 @@ import io
 import itertools
 from mlir.ir import *
 
+
 def run(f):
   print("\nTEST:", f.__name__)
   f()
@@ -17,7 +18,8 @@ def run(f):
 def testTraverseOpRegionBlockIterators():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -66,6 +68,7 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:           OP 1: return
   walk_operations("", op)
 
+
 run(testTraverseOpRegionBlockIterators)
 
 
@@ -74,7 +77,8 @@ run(testTraverseOpRegionBlockIterators)
 def testTraverseOpRegionBlockIndices():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -106,13 +110,15 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:           OP 1: parent builtin.func
   walk_operations("", module.operation)
 
+
 run(testTraverseOpRegionBlockIndices)
 
 
 # CHECK-LABEL: TEST: testBlockArgumentList
 def testBlockArgumentList():
   with Context() as ctx:
-    module = Module.parse(r"""
+    module = Module.parse(
+        r"""
       func @f1(%arg0: i32, %arg1: f64, %arg2: index) {
         return
       }
@@ -275,7 +281,10 @@ def testDetachedOperation():
   with Location.unknown(ctx):
     i32 = IntegerType.get_signed(32)
     op1 = Operation.create(
-        "custom.op1", results=[i32, i32], regions=1, attributes={
+        "custom.op1",
+        results=[i32, i32],
+        regions=1,
+        attributes={
             "foo": StringAttr.get("foo_value"),
             "bar": StringAttr.get("bar_value"),
         })
@@ -285,6 +294,7 @@ def testDetachedOperation():
 
   # TODO: Check successors once enough infra exists to do it properly.
 
+
 run(testDetachedOperation)
 
 
@@ -292,7 +302,8 @@ run(testDetachedOperation)
 def testOperationInsertionPoint():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -322,6 +333,7 @@ def testOperationInsertionPoint():
     pass
   else:
     assert False, "expected insert of attached op to raise"
+
 
 run(testOperationInsertionPoint)
 
@@ -364,13 +376,15 @@ def testOperationWithRegion():
     # CHECK: %0 = "custom.addi"
     print(module)
 
+
 run(testOperationWithRegion)
 
 
 # CHECK-LABEL: TEST: testOperationResultList
 def testOperationResultList():
   ctx = Context()
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1() {
       %0:3 = call @f2() : () -> (i32, f64, index)
       return
@@ -451,7 +465,8 @@ run(testOperationResultListSlice)
 def testOperationAttributes():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     "some.op"() { some.attribute = 1 : i8,
                   other.attribute = 3.0,
                   dependent = "text" } : () -> ()
@@ -497,9 +512,10 @@ run(testOperationAttributes)
 # CHECK-LABEL: TEST: testOperationPrint
 def testOperationPrint():
   ctx = Context()
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
-      %0 = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+      %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
       return %arg0 : i32
     }
   """, ctx)
@@ -529,8 +545,13 @@ def testOperationPrint():
   # Test get_asm with options.
   # CHECK: value = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>
   # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
-  module.operation.print(large_elements_limit=2, enable_debug_info=True,
-      pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
+  module.operation.print(
+      large_elements_limit=2,
+      enable_debug_info=True,
+      pretty_debug_info=True,
+      print_generic_op_form=True,
+      use_local_scope=True)
+
 
 run(testOperationPrint)
 
@@ -542,14 +563,14 @@ def testKnownOpView():
     module = Module.parse(r"""
       %1 = "custom.f32"() : () -> f32
       %2 = "custom.f32"() : () -> f32
-      %3 = addf %1, %2 : f32
+      %3 = arith.addf %1, %2 : f32
     """)
     print(module)
 
     # addf should map to a known OpView class in the std dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
-    # CHECK: <mlir.dialects._std_ops_gen._AddFOp object
+    # CHECK: <mlir.dialects._arith_ops_gen._AddFOp object
     print(repr(addf))
     # CHECK: "custom.f32"()
     print(addf.lhs)
@@ -563,6 +584,7 @@ def testKnownOpView():
     custom = module.body.operations[0]
     # CHECK: OpView object
     print(repr(custom))
+
 
 run(testKnownOpView)
 
@@ -597,7 +619,9 @@ def testSingleResultProperty():
   # CHECK: %1 = "custom.one_result"() : () -> f32
   print(module.body.operations[2])
 
+
 run(testSingleResultProperty)
+
 
 # CHECK-LABEL: TEST: testPrintInvalidOperation
 def testPrintInvalidOperation():
@@ -613,6 +637,8 @@ def testPrintInvalidOperation():
     print(module)
     # CHECK: .verify = False
     print(f".verify = {module.operation.verify()}")
+
+
 run(testPrintInvalidOperation)
 
 
@@ -642,6 +668,8 @@ def testCreateWithInvalidAttributes():
     except Exception as e:
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)
+
+
 run(testCreateWithInvalidAttributes)
 
 
@@ -649,7 +677,8 @@ run(testCreateWithInvalidAttributes)
 def testOperationName():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     %0 = "custom.op1"() : () -> f32
     %1 = "custom.op2"() : () -> i32
     %2 = "custom.op1"() : () -> f32
@@ -661,7 +690,9 @@ def testOperationName():
   for op in module.body.operations:
     print(op.operation.name)
 
+
 run(testOperationName)
+
 
 # CHECK-LABEL: TEST: testCapsuleConversions
 def testCapsuleConversions():
@@ -674,7 +705,9 @@ def testCapsuleConversions():
     m2 = Operation._CAPICreate(m_capsule)
     assert m2 is m
 
+
 run(testCapsuleConversions)
+
 
 # CHECK-LABEL: TEST: testOperationErase
 def testOperationErase():
@@ -695,5 +728,6 @@ def testOperationErase():
 
       # Ensure we can create another operation
       Operation.create("custom.op2")
+
 
 run(testOperationErase)

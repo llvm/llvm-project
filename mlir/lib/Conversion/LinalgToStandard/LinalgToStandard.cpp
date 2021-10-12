@@ -184,7 +184,8 @@ struct ConvertLinalgToStandardPass
 void ConvertLinalgToStandardPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
-  target.addLegalDialect<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+  target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
+                         memref::MemRefDialect, scf::SCFDialect,
                          StandardOpsDialect>();
   target.addLegalOp<ModuleOp, FuncOp, ReturnOp, linalg::RangeOp>();
   RewritePatternSet patterns(&getContext());

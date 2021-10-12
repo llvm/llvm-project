@@ -69,14 +69,14 @@ func @test_load_store(%arg0 : memref<1x16x14x14xf32>) -> () {
     // CHECK: %[[v1:.*]] = memref.alloc() : memref<1x16x14x14xf32>
     "test.op_norm"(%0, %1) : (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32>) -> ()
     // CHECK: "test.op_norm"(%[[v0]], %[[v1]]) : (memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>) -> ()
-    %cst = constant 3.0 : f32
+    %cst = arith.constant 3.0 : f32
     affine.for %i = 0 to 1 {
       affine.for %j = 0 to 16 {
         affine.for %k = 0 to 14 {
           affine.for %l = 0 to 14 {
             %2 = memref.load %1[%i, %j, %k, %l] : memref<1x16x14x14xf32>
             // CHECK: memref<1x16x14x14xf32>
-            %3 = addf %2, %cst : f32
+            %3 = arith.addf %2, %cst : f32
             memref.store %3, %arg0[%i, %j, %k, %l] : memref<1x16x14x14xf32>
             // CHECK: memref<1x16x14x14xf32>
           }

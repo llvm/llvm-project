@@ -51,6 +51,8 @@ def GPU_Dialect : Dialect {
     /// space.
     static unsigned getPrivateAddressSpace() { return 5; }
   }];
+
+  let dependentDialects = ["arith::ArithmeticDialect"];
 }
 
 def GPU_AsyncToken : DialectType<

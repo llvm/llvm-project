@@ -134,9 +134,9 @@ func @async_execute_with_scf_if(%cond : i1) {
 func @scf_for_constant_bounds() {
   // CHECK: Block: 0
   // CHECK-NEXT: Number of executions: 1
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
 
   scf.for %i = %c0 to %c2 step %c1 {
     // CHECK: Block: 1
@@ -152,9 +152,9 @@ func @scf_for_constant_bounds() {
 func @propagate_parent_num_executions() {
   // CHECK: Block: 0
   // CHECK-NEXT: Number of executions: 1
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
 
   scf.for %i = %c0 to %c2 step %c1 {
     // CHECK: Block: 1
@@ -175,8 +175,8 @@ func @propagate_parent_num_executions() {
 func @clear_num_executions(%step : index) {
   // CHECK: Block: 0
   // CHECK-NEXT: Number of executions: 1
-  %c0 = constant 0 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
 
   scf.for %i = %c0 to %c2 step %step {
     // CHECK: Block: 1

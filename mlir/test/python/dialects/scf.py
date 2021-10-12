@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
+from mlir.dialects import arith
 from mlir.dialects import scf
 from mlir.dialects import std
 from mlir.dialects import builtin
@@ -60,9 +61,9 @@ def testOpsAsArguments():
       "callee", ([], [index_type, index_type]), visibility="private")
   func = builtin.FuncOp("ops_as_arguments", ([], []))
   with InsertionPoint(func.add_entry_block()):
-    lb = std.ConstantOp.create_index(0)
-    ub = std.ConstantOp.create_index(42)
-    step = std.ConstantOp.create_index(2)
+    lb = arith.ConstantOp.create_index(0)
+    ub = arith.ConstantOp.create_index(42)
+    step = arith.ConstantOp.create_index(2)
     iter_args = std.CallOp(callee, [])
     loop = scf.ForOp(lb, ub, step, iter_args)
     with InsertionPoint(loop.body):
@@ -73,9 +74,9 @@ def testOpsAsArguments():
 # CHECK-LABEL: TEST: testOpsAsArguments
 # CHECK: func private @callee() -> (index, index)
 # CHECK: func @ops_as_arguments() {
-# CHECK:   %[[LB:.*]] = constant 0
-# CHECK:   %[[UB:.*]] = constant 42
-# CHECK:   %[[STEP:.*]] = constant 2
+# CHECK:   %[[LB:.*]] = arith.constant 0
+# CHECK:   %[[UB:.*]] = arith.constant 42
+# CHECK:   %[[STEP:.*]] = arith.constant 2
 # CHECK:   %[[ARGS:.*]]:2 = call @callee()
 # CHECK:   scf.for %arg0 = %c0 to %c42 step %c2
 # CHECK:   iter_args(%{{.*}} = %[[ARGS]]#0, %{{.*}} = %[[ARGS]]#1)

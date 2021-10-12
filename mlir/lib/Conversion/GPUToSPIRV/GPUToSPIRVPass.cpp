@@ -14,6 +14,7 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 
 #include "../PassDetail.h"
+#include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
@@ -63,6 +64,7 @@ void GPUToSPIRVPass::runOnOperation() {
 
   // TODO: Change SPIR-V conversion to be progressive and remove the following
   // patterns.
+  mlir::arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateStandardToSPIRVPatterns(typeConverter, patterns);
 

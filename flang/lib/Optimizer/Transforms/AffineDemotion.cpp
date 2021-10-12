@@ -144,6 +144,7 @@ public:
       return true;
     });
     target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                           mlir::arith::ArithmeticDialect,
                            mlir::StandardOpsDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(function, target,

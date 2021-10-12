@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
@@ -337,8 +338,8 @@ static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
   if (!floatType.isa<FloatType>())
     return failure();
   if (!isOutput) {
-    Value cst =
-        b.create<ConstantOp>(src.getLoc(), FloatAttr::get(floatType, 42.0));
+    Value cst = b.create<arith::ConstantOp>(src.getLoc(),
+                                            FloatAttr::get(floatType, 42.0));
     b.create<FillOp>(src.getLoc(), cst, dst);
   }
   b.create<CopyOp>(src.getLoc(), src, dst);
@@ -573,7 +574,8 @@ static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
 // In the future, it should be the zero of type + op.
 static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
   auto t = getElementTypeOrSelf(op.get());
-  return b.create<ConstantOp>(op.getOwner()->getLoc(), t, b.getZeroAttr(t));
+  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
+                                     b.getZeroAttr(t));
 }
 
 static void applyTilePattern(FuncOp funcOp, std::string loopType,

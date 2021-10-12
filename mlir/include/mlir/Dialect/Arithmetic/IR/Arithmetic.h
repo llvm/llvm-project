@@ -10,6 +10,7 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
@@ -32,6 +33,64 @@
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.h.inc"
+
+namespace mlir {
+namespace arith {
+
+/// Specialization of `arith.constant` op that returns an integer value.
+class ConstantIntOp : public arith::ConstantOp {
+public:
+  using arith::ConstantOp::ConstantOp;
+
+  /// Build a constant int op that produces an integer of the specified width.
+  static void build(OpBuilder &builder, OperationState &result, int64_t value,
+                    unsigned width);
+
+  /// Build a constant int op that produces an integer of the specified type,
+  /// which must be an integer type.
+  static void build(OpBuilder &builder, OperationState &result, int64_t value,
+                    Type type);
+
+  inline int64_t value() {
+    return arith::ConstantOp::value().cast<IntegerAttr>().getInt();
+  }
+
+  static bool classof(Operation *op);
+};
+
+/// Specialization of `arith.constant` op that returns a floating point value.
+class ConstantFloatOp : public arith::ConstantOp {
+public:
+  using arith::ConstantOp::ConstantOp;
+
+  /// Build a constant float op that produces a float of the specified type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    const APFloat &value, FloatType type);
+
+  inline APFloat value() {
+    return arith::ConstantOp::value().cast<FloatAttr>().getValue();
+  }
+
+  static bool classof(Operation *op);
+};
+
+/// Specialization of `arith.constant` op that returns an integer of index type.
+class ConstantIndexOp : public arith::ConstantOp {
+public:
+  using arith::ConstantOp::ConstantOp;
+
+  /// Build a constant int op that produces an index.
+  static void build(OpBuilder &builder, OperationState &result, int64_t value);
+
+  inline int64_t value() {
+    return arith::ConstantOp::value().cast<IntegerAttr>().getInt();
+  }
+
+  static bool classof(Operation *op);
+};
+
+} // end namespace arith
+} // end namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Utility Functions

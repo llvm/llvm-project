@@ -11,26 +11,26 @@
 func @main() {
   %data = memref.alloc() : memref<2x6xi32>
   %sum = memref.alloc() : memref<2xi32>
-  %cst0 = constant 0 : i32
-  %cst1 = constant 1 : i32
-  %cst2 = constant 2 : i32
-  %cst4 = constant 4 : i32
-  %cst8 = constant 8 : i32
-  %cst16 = constant 16 : i32
+  %cst0 = arith.constant 0 : i32
+  %cst1 = arith.constant 1 : i32
+  %cst2 = arith.constant 2 : i32
+  %cst4 = arith.constant 4 : i32
+  %cst8 = arith.constant 8 : i32
+  %cst16 = arith.constant 16 : i32
 
-  %cst3 = constant 3 : i32
-  %cst6 = constant 6 : i32
-  %cst7 = constant 7 : i32
-  %cst10 = constant 10 : i32
-  %cst11 = constant 11 : i32
+  %cst3 = arith.constant 3 : i32
+  %cst6 = arith.constant 6 : i32
+  %cst7 = arith.constant 7 : i32
+  %cst10 = arith.constant 10 : i32
+  %cst11 = arith.constant 11 : i32
 
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %c5 = constant 5 : index
-  %c6 = constant 6 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
 
   %cast_data = memref.cast %data : memref<2x6xi32> to memref<*xi32>
   gpu.host_register %cast_data : memref<*xi32>

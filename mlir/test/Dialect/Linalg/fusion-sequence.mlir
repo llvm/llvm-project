@@ -3,9 +3,9 @@
 module {
   func @three_op_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                         %arg2: memref<?xf32>, %arg3 : memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %cst = arith.constant 0.000000e+00 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %d0 = memref.dim %arg0, %c0 : memref<?x?xf32>
     %d1 = memref.dim %arg1, %c1 : memref<?x?xf32>
     %0 = memref.alloc(%d0, %d1) : memref<?x?xf32>
@@ -20,7 +20,7 @@ module {
       ins(%0, %arg2 : memref<?x?xf32>, memref<?xf32>)
       outs(%arg3 : memref<?x?xf32>) {
       ^bb0(%arg4 : f32, %arg5 : f32, %arg6 : f32) :
-        %5 = addf %arg4, %arg5 : f32
+        %5 = arith.addf %arg4, %arg5 : f32
         linalg.yield %5 : f32
       }
     return
@@ -61,9 +61,9 @@ module {
   func @sequence_of_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                            %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>,
                            %arg4: memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %cst = arith.constant 0.000000e+00 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %m = memref.dim %arg0, %c0 : memref<?x?xf32>
     %n1 = memref.dim %arg1, %c1 : memref<?x?xf32>
     %n2 = memref.dim %arg2, %c1 : memref<?x?xf32>
@@ -95,9 +95,9 @@ module {
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//   CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//   CHECK-DAG:   %[[C16:.+]] = constant 16 : index
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
 //   CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
 //   CHECK-DAG:   %[[N1:.+]] = memref.dim %[[ARG1]], %[[C1]]
 //   CHECK-DAG:   %[[N2:.+]] = memref.dim %[[ARG2]], %[[C1]]
@@ -148,8 +148,8 @@ module {
   func @tensor_op_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                          %arg2: tensor<?x?xf32>, %arg3: tensor<?xf32>)
     -> tensor<?x?xf32> {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
     %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
@@ -163,7 +163,7 @@ module {
       ins(%0, %arg3 : tensor<?x?xf32>, tensor<?xf32>)
       outs(%3 : tensor<?x?xf32>) {
       ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):
-        %5 = addf %arg4, %arg5 : f32
+        %5 = arith.addf %arg4, %arg5 : f32
         linalg.yield %5 : f32
       } -> tensor<?x?xf32>
     return %4 : tensor<?x?xf32>
@@ -223,8 +223,8 @@ module {
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG5:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-//   CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //       CHECK:   %[[M:.+]] = tensor.dim %[[ARG0]], %c0 : tensor<?x?xf32>
 //       CHECK:   %[[R0:.+]] = scf.for %[[IV0:[a-zA-Z0-9_]+]] =
 //  CHECK-SAME:     iter_args(%[[ARG8:.+]] = %[[ARG6]]) -> (tensor<?x?xf32>) {

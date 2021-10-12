@@ -135,8 +135,8 @@ func @value_coro_await_and_resume(%arg0: !async.value<f32>) -> !async.token {
   // CHECK:   %[[LOADED:.*]] = async.runtime.load %[[VALUE]]
   // CHECK:   async.runtime.drop_ref %[[VALUE]] {count = 1 : i64}
   %0 = async.runtime.load %arg0 : !async.value<f32>
-  // CHECK:  addf %[[LOADED]], %[[LOADED]]
-  %1 = addf %0, %0 : f32
+  // CHECK:  arith.addf %[[LOADED]], %[[LOADED]]
+  %1 = arith.addf %0, %0 : f32
   br ^cleanup
 ^cleanup:
   async.coro.free %id, %hdl

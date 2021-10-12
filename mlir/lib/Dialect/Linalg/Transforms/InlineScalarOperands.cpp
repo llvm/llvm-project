@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -70,7 +71,8 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
       SmallVector<int64_t> indices = map.getConstantResults();
       SmallVector<Value> indicesValues;
       for (auto idx : indices)
-        indicesValues.emplace_back(rewriter.create<ConstantIndexOp>(loc, idx));
+        indicesValues.emplace_back(
+            rewriter.create<arith::ConstantIndexOp>(loc, idx));
       Value extractedValue = rewriter.create<tensor::ExtractOp>(
           loc, opOperand->get(), indicesValues);
       body->getArgument(idx).replaceAllUsesWith(extractedValue);

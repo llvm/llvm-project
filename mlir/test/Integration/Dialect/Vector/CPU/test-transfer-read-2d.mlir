@@ -24,7 +24,7 @@ memref.global "private" @gv : memref<3x4xf32> = dense<[[0. , 1. , 2. , 3. ],
 
 // Vector load.
 func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -34,8 +34,8 @@ func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
 
 // Vector load with mask.
 func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
                           [0, 0, 1, 1, 1, 1, 1, 0, 1],
                           [1, 1, 1, 1, 1, 1, 1, 0, 1],
                           [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
@@ -49,8 +49,8 @@ func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) 
 // Vector load with mask + transpose.
 func @transfer_read_2d_mask_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
                           [1, 1, 1, 1], [0, 1, 1, 0],
                           [1, 1, 1, 1], [1, 1, 1, 1],
                           [1, 1, 1, 1], [0, 0, 0, 0],
@@ -65,8 +65,8 @@ func @transfer_read_2d_mask_transposed(
 // Vector load with mask + broadcast.
 func @transfer_read_2d_mask_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (0, d1)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -77,8 +77,8 @@ func @transfer_read_2d_mask_broadcast(
 // Transpose + vector load with mask + broadcast.
 func @transfer_read_2d_mask_transpose_broadcast_last_dim(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[1, 0, 1, 1]> : vector<4xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[1, 0, 1, 1]> : vector<4xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -89,7 +89,7 @@ func @transfer_read_2d_mask_transpose_broadcast_last_dim(
 // Load + transpose.
 func @transfer_read_2d_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -100,7 +100,7 @@ func @transfer_read_2d_transposed(
 // Load 1D + broadcast to 2D.
 func @transfer_read_2d_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
@@ -110,7 +110,7 @@ func @transfer_read_2d_broadcast(
 
 // Vector store.
 func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fn1 = constant -1.0 : f32
+  %fn1 = arith.constant -1.0 : f32
   %vf0 = splat %fn1 : vector<1x4xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
     {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
@@ -120,8 +120,8 @@ func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
 
 // Vector store with mask.
 func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
-  %fn1 = constant -2.0 : f32
-  %mask = constant dense<[[1, 0, 1, 0]]> : vector<1x4xi1>
+  %fn1 = arith.constant -2.0 : f32
+  %mask = arith.constant dense<[[1, 0, 1, 0]]> : vector<1x4xi1>
   %vf0 = splat %fn1 : vector<1x4xf32>
   vector.transfer_write %vf0, %A[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
@@ -130,10 +130,10 @@ func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index)
 }
 
 func @entry() {
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c2 = constant 2: index
-  %c3 = constant 3: index
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c2 = arith.constant 2: index
+  %c3 = arith.constant 3: index
   %0 = memref.get_global @gv : memref<3x4xf32>
   %A = memref.cast %0 : memref<3x4xf32> to memref<?x?xf32>
 

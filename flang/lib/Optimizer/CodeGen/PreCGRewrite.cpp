@@ -62,11 +62,14 @@ namespace {
 /// ```
 /// %1 = fir.shape_shift %4, %5 : (index, index) -> !fir.shapeshift<1>
 /// %2 = fir.slice %6, %7, %8 : (index, index, index) -> !fir.slice<1>
-/// %3 = fir.embox %0 (%1) [%2] : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
+/// %3 = fir.embox %0 (%1) [%2] : (!fir.ref<!fir.array<?xi32>>,
+/// !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
 /// ```
 /// can be rewritten as
 /// ```
-/// %1 = fircg.ext_embox %0(%5) origin %4[%6, %7, %8] : (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index) -> !fir.box<!fir.array<?xi32>>
+/// %1 = fircg.ext_embox %0(%5) origin %4[%6, %7, %8] :
+/// (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index) ->
+/// !fir.box<!fir.array<?xi32>>
 /// ```
 class EmboxConversion : public mlir::OpRewritePattern<EmboxOp> {
 public:
@@ -94,7 +97,7 @@ public:
     auto idxTy = rewriter.getIndexType();
     for (auto ext : seqTy.getShape()) {
       auto iAttr = rewriter.getIndexAttr(ext);
-      auto extVal = rewriter.create<mlir::ConstantOp>(loc, idxTy, iAttr);
+      auto extVal = rewriter.create<mlir::arith::ConstantOp>(loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
     auto xbox = rewriter.create<cg::XEmboxOp>(
@@ -139,11 +142,13 @@ public:
 ///
 /// For example,
 /// ```
-/// %5 = fir.rebox %3(%1) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
+/// %5 = fir.rebox %3(%1) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) ->
+/// !fir.box<!fir.array<?xi32>>
 /// ```
 /// converted to
 /// ```
-/// %5 = fircg.ext_rebox %3(%13) origin %12 : (!fir.box<!fir.array<?xi32>>, index, index) -> !fir.box<!fir.array<?xi32>>
+/// %5 = fircg.ext_rebox %3(%13) origin %12 : (!fir.box<!fir.array<?xi32>>,
+/// index, index) -> !fir.box<!fir.array<?xi32>>
 /// ```
 class ReboxConversion : public mlir::OpRewritePattern<ReboxOp> {
 public:
@@ -187,11 +192,14 @@ public:
 ///
 /// For example,
 /// ```
-///  %4 = fir.array_coor %addr (%1) [%2] %0 : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>, !fir.slice<1>, index) -> !fir.ref<i32>
+///  %4 = fir.array_coor %addr (%1) [%2] %0 : (!fir.ref<!fir.array<?xi32>>,
+///  !fir.shapeshift<1>, !fir.slice<1>, index) -> !fir.ref<i32>
 /// ```
 /// converted to
 /// ```
-/// %40 = fircg.ext_array_coor %addr(%9) origin %8[%4, %5, %6<%39> : (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index, index) -> !fir.ref<i32>
+/// %40 = fircg.ext_array_coor %addr(%9) origin %8[%4, %5, %6<%39> :
+/// (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index, index) ->
+/// !fir.ref<i32>
 /// ```
 class ArrayCoorConversion : public mlir::OpRewritePattern<ArrayCoorOp> {
 public:
@@ -237,8 +245,8 @@ public:
     auto &context = getContext();
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
-    target.addLegalDialect<FIROpsDialect, FIRCodeGenDialect,
-                           mlir::StandardOpsDialect>();
+    target.addLegalDialect<mlir::arith::ArithmeticDialect, FIROpsDialect,
+                           FIRCodeGenDialect, mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayCoorOp>();
     target.addIllegalOp<ReboxOp>();
     target.addDynamicallyLegalOp<EmboxOp>([](EmboxOp embox) {

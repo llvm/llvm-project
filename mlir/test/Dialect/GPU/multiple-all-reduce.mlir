@@ -4,7 +4,7 @@ func @main() {
   %data = memref.alloc() : memref<2x6xf32>
   %sum = memref.alloc() : memref<2xf32>
   %mul = memref.alloc() : memref<2xf32>
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
 
   // ADD + MUL
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)

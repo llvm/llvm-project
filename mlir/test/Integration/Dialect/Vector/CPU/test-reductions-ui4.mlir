@@ -4,7 +4,8 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %v = std.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xui4>
+  %v0 = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi4>
+  %v = vector.bitcast %v0 : vector<16xi4> to vector<16xui4>
   vector.print %v : vector<16xui4>
   //
   // Test vector:

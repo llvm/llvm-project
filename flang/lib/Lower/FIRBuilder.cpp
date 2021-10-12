@@ -48,12 +48,13 @@ Fortran::lower::FirOpBuilder::createNullConstant(mlir::Location loc) {
 
 mlir::Value Fortran::lower::FirOpBuilder::createIntegerConstant(
     mlir::Location loc, mlir::Type ty, std::int64_t cst) {
-  return create<mlir::ConstantOp>(loc, ty, getIntegerAttr(ty, cst));
+  return create<mlir::arith::ConstantOp>(loc, ty, getIntegerAttr(ty, cst));
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
     mlir::Location loc, mlir::Type realType, const llvm::APFloat &val) {
-  return create<mlir::ConstantOp>(loc, realType, getFloatAttr(realType, val));
+  return create<mlir::arith::ConstantOp>(loc, realType,
+                                         getFloatAttr(realType, val));
 }
 
 mlir::Value
@@ -67,7 +68,7 @@ Fortran::lower::FirOpBuilder::createRealZeroConstant(mlir::Location loc,
   } else { // mlir::FloatType.
     attr = getZeroAttr(realType);
   }
-  return create<mlir::ConstantOp>(loc, realType, attr);
+  return create<mlir::arith::ConstantOp>(loc, realType, attr);
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(

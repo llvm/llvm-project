@@ -527,7 +527,7 @@ func @test_padding_no_const(%arg0 : tensor<1x2xf32>, %arg1 : tensor<2x2xi32>) ->
 
 // CHECK-LABEL:@test_padding_dynamic_input
 func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
-  %0 = constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+  %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
   // CHECK: "tosa.pad"(%arg0, %cst) : (tensor<1x?xf32>, tensor<2x2xi32>) -> tensor<4x?xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x?xf32>, tensor<2x2xi32>)  -> (tensor<?x?xf32>)
   return
@@ -537,7 +537,7 @@ func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
 
 // CHECK-LABEL: @test_padding_simple
 func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
-  %0 = constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+  %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
   // CHECK: "tosa.pad"(%arg0, %cst) : (tensor<1x2xf32>, tensor<2x2xi32>) -> tensor<4x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x?xf32>)
   return
@@ -583,7 +583,7 @@ func @test_transpose_perm_unknown(%arg0 : tensor<4x4x5xi32>, %arg1 : tensor<3xi3
 
 // CHECK-LABEL: @test_transpose_static
 func @test_transpose_static(%arg0 : tensor<3x4x5xi32>) -> () {
-  %0 = constant dense<[2, 1, 0]> : tensor<3xi32>
+  %0 = arith.constant dense<[2, 1, 0]> : tensor<3xi32>
   // CHECK: "tosa.transpose"(%arg0, %cst) : (tensor<3x4x5xi32>, tensor<3xi32>) -> tensor<5x4x3xi32>
   %1 = "tosa.transpose"(%arg0, %0) : (tensor<3x4x5xi32>, tensor<3xi32>)  -> (tensor<?x?x?xi32>)
   return

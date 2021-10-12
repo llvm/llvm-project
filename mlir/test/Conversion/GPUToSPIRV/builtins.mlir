@@ -2,7 +2,7 @@
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_workgroup_id_x
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -26,8 +26,8 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
-    %c256 = constant 256 : i32
+    %c0 = arith.constant 1 : index
+    %c256 = arith.constant 256 : i32
     gpu.launch_func @kernels::@builtin_workgroup_id_y
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
         dynamic_shared_memory_size %c256
@@ -52,7 +52,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_workgroup_id_z
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -76,7 +76,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_workgroup_size_x
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -101,7 +101,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_workgroup_size_y
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -123,7 +123,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_workgroup_size_z
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -145,7 +145,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_local_id_x
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
@@ -169,7 +169,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @builtin() {
-    %c0 = constant 1 : index
+    %c0 = arith.constant 1 : index
     gpu.launch_func @kernels::@builtin_num_workgroups_x
         blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return

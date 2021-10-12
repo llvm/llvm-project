@@ -6,6 +6,7 @@
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -convert-linalg-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
+// RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
@@ -16,16 +17,16 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %i0 = constant 0 : index
-  %i1 = constant 1 : index
-  %i2 = constant 2 : index
-  %i3 = constant 3 : index
+  %i0 = arith.constant 0 : index
+  %i1 = arith.constant 1 : index
+  %i2 = arith.constant 2 : index
+  %i3 = arith.constant 3 : index
 
-  %c0 = constant 0.0 : f32
-  %c1 = constant 1.0 : f32
-  %c2 = constant 2.0 : f32
-  %c3 = constant 3.0 : f32
-  %c4 = constant 4.0 : f32
+  %c0 = arith.constant 0.0 : f32
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %c3 = arith.constant 3.0 : f32
+  %c4 = arith.constant 4.0 : f32
 
   %A = memref.alloc() : memref<4xf32>
   linalg.fill(%c0, %A) : f32, memref<4xf32>

@@ -2,6 +2,7 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
+// RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
@@ -19,7 +20,7 @@ func @main() {
   // Blocking async.await outside of the async.execute.
   // ------------------------------------------------------------------------ //
   %token, %result = async.execute -> !async.value<f32> {
-    %0 = constant 123.456 : f32
+    %0 = arith.constant 123.456 : f32
     async.yield %0 : f32
   }
   %1 = async.await %result : !async.value<f32>
@@ -32,7 +33,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token0, %result0 = async.execute -> !async.value<f32> {
     %token1, %result2 = async.execute -> !async.value<f32> {
-      %2 = constant 456.789 : f32
+      %2 = arith.constant 456.789 : f32
       async.yield %2 : f32
     }
     %3 = async.await %result2 : !async.value<f32>
@@ -48,7 +49,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token2, %result2 = async.execute[%token0] -> !async.value<memref<f32>> {
     %5 = memref.alloc() : memref<f32>
-    %c0 = constant 0.25 : f32
+    %c0 = arith.constant 0.25 : f32
     memref.store %c0, %5[]: memref<f32>
     async.yield %5 : memref<f32>
   }
@@ -65,7 +66,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token3 = async.execute(%result2 as %unwrapped : !async.value<memref<f32>>) {
     %8 = memref.load %unwrapped[]: memref<f32>
-    %9 = addf %8, %8 : f32
+    %9 = arith.addf %8, %8 : f32
     memref.store %9, %unwrapped[]: memref<f32>
     async.yield
   }

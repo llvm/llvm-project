@@ -30,11 +30,11 @@ module {
   //
   func @sparse_scale(%argx: tensor<8x8xf32, #CSR>
                      {linalg.inplaceable = true}) -> tensor<8x8xf32, #CSR> {
-    %c = constant 2.0 : f32
+    %c = arith.constant 2.0 : f32
     %0 = linalg.generic #trait_scale
       outs(%argx: tensor<8x8xf32, #CSR>) {
         ^bb(%x: f32):
-          %1 = mulf %x, %c : f32
+          %1 = arith.mulf %x, %c : f32
           linalg.yield %1 : f32
     } -> tensor<8x8xf32, #CSR>
     return %0 : tensor<8x8xf32, #CSR>
@@ -46,11 +46,11 @@ module {
   // as input argument.
   //
   func @entry() {
-    %c0 = constant 0 : index
-    %f0 = constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    %f0 = arith.constant 0.0 : f32
 
     // Initialize a dense tensor.
-    %0 = constant dense<[
+    %0 = arith.constant dense<[
        [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
        [0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
        [0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0],

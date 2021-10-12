@@ -319,8 +319,9 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     auto complexPartAddr = [&](int index) {
       return builder.create<fir::CoordinateOp>(
           loc, complexPartType, originalItemAddr,
-          llvm::SmallVector<mlir::Value, 1>{builder.create<mlir::ConstantOp>(
-              loc, builder.getI32IntegerAttr(index))});
+          llvm::SmallVector<mlir::Value, 1>{
+              builder.create<mlir::arith::ConstantOp>(
+                  loc, builder.getI32IntegerAttr(index))});
     };
     if (complexPartType)
       itemAddr = complexPartAddr(0); // real part
@@ -332,7 +333,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
       inputFuncArgs.push_back(
           builder.createConvert(loc, inputFunc.getType().getInput(2), len));
     } else if (itemType.isa<mlir::IntegerType>()) {
-      inputFuncArgs.push_back(builder.create<mlir::ConstantOp>(
+      inputFuncArgs.push_back(builder.create<mlir::arith::ConstantOp>(
           loc, builder.getI32IntegerAttr(
                    itemType.cast<mlir::IntegerType>().getWidth() / 8)));
     }
@@ -373,7 +374,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   auto upperValue = genFIRLoopIndex(control.upper);
   auto stepValue = control.step.has_value()
                        ? genFIRLoopIndex(*control.step)
-                       : builder.create<mlir::ConstantIndexOp>(loc, 1);
+                       : builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
   auto genItemList = [&](const D &ioImpliedDo, bool inIterWhileLoop) {
     if constexpr (std::is_same_v<D, Fortran::parser::InputImpliedDo>)
       genInputItemList(converter, cookie, itemList, insertPt, checkResult, ok,
@@ -430,28 +431,28 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
 
 static mlir::Value getDefaultFilename(Fortran::lower::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Type toType) {
-  mlir::Value null =
-      builder.create<mlir::ConstantOp>(loc, builder.getI64IntegerAttr(0));
+  mlir::Value null = builder.create<mlir::arith::ConstantOp>(
+      loc, builder.getI64IntegerAttr(0));
   return builder.createConvert(loc, toType, null);
 }
 
 static mlir::Value getDefaultLineNo(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Type toType) {
-  return builder.create<mlir::ConstantOp>(loc,
-                                          builder.getIntegerAttr(toType, 0));
+  return builder.create<mlir::arith::ConstantOp>(
+      loc, builder.getIntegerAttr(toType, 0));
 }
 
 static mlir::Value getDefaultScratch(Fortran::lower::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Type toType) {
-  mlir::Value null =
-      builder.create<mlir::ConstantOp>(loc, builder.getI64IntegerAttr(0));
+  mlir::Value null = builder.create<mlir::arith::ConstantOp>(
+      loc, builder.getI64IntegerAttr(0));
   return builder.createConvert(loc, toType, null);
 }
 
 static mlir::Value getDefaultScratchLen(Fortran::lower::FirOpBuilder &builder,
                                         mlir::Location loc, mlir::Type toType) {
-  return builder.create<mlir::ConstantOp>(loc,
-                                          builder.getIntegerAttr(toType, 0));
+  return builder.create<mlir::arith::ConstantOp>(
+      loc, builder.getIntegerAttr(toType, 0));
 }
 
 /// Lower a string literal. Many arguments to the runtime are conveyed as
@@ -470,7 +471,7 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   auto len = builder.createConvert(loc, lenTy, dataLen.second);
   if (ty2) {
     auto kindVal = helper.getCharacterKind(str.getType());
-    auto kind = builder.create<mlir::ConstantOp>(
+    auto kind = builder.create<mlir::arith::ConstantOp>(
         loc, builder.getIntegerAttr(ty2, kindVal));
     return {buff, len, kind};
   }
@@ -777,7 +778,7 @@ genConditionHandlerCall(Fortran::lower::AbstractConverter &converter,
       getIORuntimeFunc<mkIOKey(EnableHandlers)>(loc, builder);
   mlir::Type boolType = enableHandlers.getType().getInput(1);
   auto boolValue = [&](bool specifierIsPresent) {
-    return builder.create<mlir::ConstantOp>(
+    return builder.create<mlir::arith::ConstantOp>(
         loc, builder.getIntegerAttr(boolType, specifierIsPresent));
   };
   llvm::SmallVector<mlir::Value, 6> ioArgs = {
@@ -998,7 +999,7 @@ static mlir::Value genIOUnit(Fortran::lower::AbstractConverter &converter,
     auto ex = converter.genExprValue(Fortran::semantics::GetExpr(*e), loc);
     return builder.createConvert(loc, ty, ex);
   }
-  return builder.create<mlir::ConstantOp>(
+  return builder.create<mlir::arith::ConstantOp>(
       loc, builder.getIntegerAttr(ty, Fortran::runtime::io::DefaultUnit));
 }
 
@@ -1291,7 +1292,7 @@ void genBeginCallArguments(llvm::SmallVector<mlir::Value, 8> &ioArgs,
       ioArgs.push_back(std::get<1>(pair));
     }
     // unit (always last)
-    ioArgs.push_back(builder.create<mlir::ConstantOp>(
+    ioArgs.push_back(builder.create<mlir::arith::ConstantOp>(
         loc, builder.getIntegerAttr(ioFuncTy.getInput(ioArgs.size()),
                                     Fortran::runtime::io::DefaultUnit)));
   }

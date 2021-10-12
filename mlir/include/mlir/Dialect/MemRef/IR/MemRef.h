@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_MEMREF_IR_MEMREF_H_
 #define MLIR_DIALECT_MEMREF_IR_MEMREF_H_
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Dialect.h"

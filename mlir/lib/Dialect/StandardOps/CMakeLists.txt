@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRStandard
   MLIRStandardOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRCallInterfaces
   MLIRCastInterfaces
   MLIRControlFlowInterfaces

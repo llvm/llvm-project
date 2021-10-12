@@ -14,15 +14,15 @@ func @empty() {
 
 // CHECK-LABEL: Number of executions: propagate_parent_num_executions
 func @propagate_parent_num_executions() {
-  // CHECK: Operation: std.constant
+  // CHECK: Operation: arith.constant
   // CHECK-NEXT: Number of executions: 1
-  %c0 = constant 0 : index
-  // CHECK: Operation: std.constant
+  %c0 = arith.constant 0 : index
+  // CHECK: Operation: arith.constant
   // CHECK-NEXT: Number of executions: 1
-  %c1 = constant 1 : index
-  // CHECK: Operation: std.constant
+  %c1 = arith.constant 1 : index
+  // CHECK: Operation: arith.constant
   // CHECK-NEXT: Number of executions: 1
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
 
   // CHECK-DAG: Operation: scf.for
   // CHECK-NEXT: Number of executions: 1
@@ -43,12 +43,12 @@ func @propagate_parent_num_executions() {
 
 // CHECK-LABEL: Number of executions: clear_num_executions
 func @clear_num_executions(%step : index) {
-  // CHECK: Operation: std.constant
+  // CHECK: Operation: arith.constant
   // CHECK-NEXT: Number of executions: 1
-  %c0 = constant 0 : index
-  // CHECK: Operation: std.constant
+  %c0 = arith.constant 0 : index
+  // CHECK: Operation: arith.constant
   // CHECK-NEXT: Number of executions: 1
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
 
   // CHECK: Operation: scf.for
   // CHECK-NEXT: Number of executions: 1

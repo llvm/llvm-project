@@ -15,11 +15,11 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %A = constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  %B = constant dense<[[1.0, 2.0, 3.0, 4.0],
+  %A = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
+  %B = arith.constant dense<[[1.0, 2.0, 3.0, 4.0],
                        [5.0, 6.0, 7.0, 8.0],
                        [9.0, 10.0, 11.0, 12.0]]> : tensor<3x4xf32>
-  %C = constant dense<1000.0> : tensor<2x4xf32>
+  %C = arith.constant dense<1000.0> : tensor<2x4xf32>
 
   %D = linalg.matmul ins(%A, %B: tensor<2x3xf32>, tensor<3x4xf32>)
                      outs(%C: tensor<2x4xf32>) -> tensor<2x4xf32>

@@ -6,9 +6,9 @@
 func private @print_memref_f32(memref<*xf32>)
 
 func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %f0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %f0 = arith.constant 0.0 : f32
   %x = memref.dim %A, %c0 : memref<?x?xf32>
   %y = memref.dim %B, %c1 : memref<?x?xf32>
   %C = memref.alloc(%x, %y) : memref<?x?xf32>
@@ -19,9 +19,9 @@ func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
 }
 
 func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %f0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %f0 = arith.constant 0.0 : f32
   %m = memref.dim %A, %c0 : memref<?x?xf32>
   %x = memref.dim %A, %c1 : memref<?x?xf32>
   %n = memref.dim %B, %c1 : memref<?x?xf32>
@@ -37,13 +37,13 @@ func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
 }
 
 func @main() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %m = constant 5 : index
-  %x = constant 3 : index
-  %n = constant 2 : index
-  %val1 = constant 13.0 : f32
-  %val2 = constant 17.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %m = arith.constant 5 : index
+  %x = arith.constant 3 : index
+  %n = arith.constant 2 : index
+  %val1 = arith.constant 13.0 : f32
+  %val2 = arith.constant 17.0 : f32
   %A = memref.alloc(%m, %x) : memref<?x?xf32>
   %B = memref.alloc(%x, %n) : memref<?x?xf32>
   linalg.fill(%val1, %A) : f32, memref<?x?xf32>
@@ -55,7 +55,7 @@ func @main() {
     scf.for %j = %c0 to %n step %c1 {
       %e1 = memref.load %C1[%i, %j] : memref<?x?xf32>
       %e2 = memref.load %C2[%i, %j] : memref<?x?xf32>
-      %c = cmpf oeq, %e1, %e2 : f32
+      %c = arith.cmpf oeq, %e1, %e2 : f32
       assert %c, "Matmul does not produce same output as matvec"
     }
   }

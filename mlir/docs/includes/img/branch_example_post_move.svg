@@ -414,6 +414,6 @@
          id="tspan3407"
          x="21.911886"
          y="15.884925"
-         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%0 = alloc()</tspan></text>
+         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%0 = memref.alloc()</tspan></text>
   </g>
 </svg>

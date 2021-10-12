@@ -28,7 +28,7 @@ func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 // -----
 
 func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.enter_data if(%ifCond) copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
   return
 }
@@ -65,7 +65,7 @@ func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 // -----
 
 func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.exit_data if(%ifCond) copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
   return
 }
@@ -102,7 +102,7 @@ func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 // -----
 
 func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.update if(%ifCond) host(%b : memref<10xf32>) device(%a : memref<10xf32>)
   return
 }
@@ -132,7 +132,7 @@ func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 // -----
 
 func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.data if(%ifCond) copyin_readonly(%b : memref<10xf32>) copyout_zero(%a : memref<10xf32>) {
   }
   return
@@ -183,7 +183,7 @@ func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 // -----
 
 func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.parallel if(%ifCond) copyin_readonly(%b : memref<10xf32>) copyout_zero(%a : memref<10xf32>) {
   }
   return

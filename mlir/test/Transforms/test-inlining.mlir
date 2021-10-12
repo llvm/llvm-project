@@ -2,11 +2,11 @@
 
 // CHECK-LABEL: func @inline_with_arg
 func @inline_with_arg(%arg0 : i32) -> i32 {
-  // CHECK-NEXT: %[[ADD:.*]] = addi %{{.*}}, %{{.*}} : i32
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
   // CHECK-NEXT: return %[[ADD]] : i32
   %fn = "test.functional_region_op"() ({
   ^bb0(%a : i32):
-    %b = addi %a, %a : i32
+    %b = arith.addi %a, %a : i32
     "test.return"(%b) : (i32) -> ()
   }) : () -> ((i32) -> i32)
 

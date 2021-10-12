@@ -39,10 +39,10 @@ func @remove_op_with_variadic_results_and_folder(%arg0 : i32, %arg1 : i32) -> (i
 // CHECK-LABEL: func @test_commutative_multi
 // CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
 func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK-DAG: %[[C42:.*]] = constant 42 : i32
-  %c42_i32 = constant 42 : i32
-  // CHECK-DAG: %[[C43:.*]] = constant 43 : i32
-  %c43_i32 = constant 43 : i32
+  // CHECK-DAG: %[[C42:.*]] = arith.constant 42 : i32
+  %c42_i32 = arith.constant 42 : i32
+  // CHECK-DAG: %[[C43:.*]] = arith.constant 43 : i32
+  %c43_i32 = arith.constant 43 : i32
   // CHECK-NEXT: %[[O0:.*]] = "test.op_commutative"(%[[ARG_0]], %[[ARG_1]], %[[C42]], %[[C43]]) : (i32, i32, i32, i32) -> i32
   %y = "test.op_commutative"(%c42_i32, %arg0, %arg1, %c43_i32) : (i32, i32, i32, i32) -> i32
 
@@ -55,13 +55,13 @@ func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
 
 // CHECK-LABEL: func @test_commutative_multi_cst
 func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK-NEXT: %c42_i32 = constant 42 : i32
-  %c42_i32 = constant 42 : i32
-  %c42_i32_2 = constant 42 : i32
+  // CHECK-NEXT: %c42_i32 = arith.constant 42 : i32
+  %c42_i32 = arith.constant 42 : i32
+  %c42_i32_2 = arith.constant 42 : i32
   // CHECK-NEXT: %[[O0:.*]] = "test.op_commutative"(%arg0, %arg1, %c42_i32, %c42_i32) : (i32, i32, i32, i32) -> i32
   %y = "test.op_commutative"(%c42_i32, %arg0, %arg1, %c42_i32_2) : (i32, i32, i32, i32) -> i32
 
-  %c42_i32_3 = constant 42 : i32
+  %c42_i32_3 = arith.constant 42 : i32
 
   // CHECK-NEXT: %[[O1:.*]] = "test.op_commutative"(%arg0, %arg1, %c42_i32, %c42_i32) : (i32, i32, i32, i32) -> i32
   %z = "test.op_commutative"(%arg0, %c42_i32_3, %c42_i32_2, %arg1): (i32, i32, i32, i32) -> i32
@@ -72,7 +72,7 @@ func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
 // CHECK-LABEL: func @typemismatch
 
 func @typemismatch() -> i32 {
-  %c42 = constant 42.0 : f32
+  %c42 = arith.constant 42.0 : f32
 
   // The "passthrough_fold" folder will naively return its operand, but we don't
   // want to fold here because of the type mismatch.
@@ -85,7 +85,7 @@ func @typemismatch() -> i32 {
 // CHECK-LABEL: test_dialect_canonicalizer
 func @test_dialect_canonicalizer() -> (i32) {
   %0 = "test.dialect_canonicalizable"() : () -> (i32)
-  // CHECK: %[[CST:.*]] = constant 42 : i32
+  // CHECK: %[[CST:.*]] = arith.constant 42 : i32
   // CHECK: return %[[CST]]
   return %0 : i32
 }

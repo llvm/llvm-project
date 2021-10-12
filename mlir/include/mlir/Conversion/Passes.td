@@ -39,10 +39,10 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
     %d0 = <...>
     %d1 = <...>
     %s0 = <...>
-    %0 = constant 2 : index
-    %1 = muli %0, %d1
-    %2 = addi %d0, %1
-    %r = addi %2, %s0
+    %0 = arith.constant 2 : index
+    %1 = arith.muli %0, %d1
+    %2 = arith.addi %d0, %1
+    %r = arith.addi %2, %s0
     ```
 
     #### Input invariant
@@ -75,6 +75,40 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithmeticToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertArithmeticToLLVM : FunctionPass<"convert-arith-to-llvm"> {
+  let summary = "Convert Arithmetic dialect to LLVM dialect";
+  let description = [{
+    This pass converts supported Arithmetic ops to LLVM dialect instructions.
+  }];
+  let constructor = "mlir::arith::createConvertArithmeticToLLVMPass()";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ArithmeticToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertArithmeticToSPIRV : FunctionPass<"convert-arith-to-spirv"> {
+  let summary = "Convert Arithmetic dialect to SPIR-V dialect";
+  let constructor = "mlir::arith::createConvertArithmeticToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+  let options = [
+    Option<"emulateNon32BitScalarTypes", "emulate-non-32-bit-scalar-types",
+           "bool", /*default=*/"true",
+           "Emulate non-32-bit scalar types with 32-bit ones if "
+           "missing native support">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // AsyncToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -86,7 +120,10 @@ def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
     API to execute them.
   }];
   let constructor = "mlir::createConvertAsyncToLLVMPass()";
-  let dependentDialects = ["LLVM::LLVMDialect"];
+  let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "LLVM::LLVMDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -106,11 +143,7 @@ def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm", "ModuleOp"> {
 def ConvertComplexToStandard : FunctionPass<"convert-complex-to-standard"> {
   let summary = "Convert Complex dialect to standard dialect";
   let constructor = "mlir::createConvertComplexToStandardPass()";
-  let dependentDialects = [
-    "complex::ComplexDialect",
-    "math::MathDialect",
-    "StandardOpsDialect"
-  ];
+  let dependentDialects = ["math::MathDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +169,11 @@ def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
 def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
-  let dependentDialects = ["NVVM::NVVMDialect", "memref::MemRefDialect"];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "NVVM::NVVMDialect",
+    "StandardOpsDialect",
+  ];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
@@ -252,7 +289,11 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
     This pass converts supported Math ops to libm calls.
   }];
   let constructor = "mlir::createConvertMathToLibmPass()";
-  let dependentDialects = ["StandardOpsDialect", "vector::VectorDialect"];
+  let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "StandardOpsDialect",
+    "vector::VectorDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -448,7 +489,6 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
   let dependentDialects = [
     "StandardOpsDialect",
     "scf::SCFDialect",
-    "tensor::TensorDialect"
   ];
 }
 
@@ -583,7 +623,11 @@ def TosaToSCF : Pass<"tosa-to-scf"> {
 
 def TosaToStandard : Pass<"tosa-to-standard"> {
   let summary = "Lower TOSA to the Standard dialect";
-  let dependentDialects = ["StandardOpsDialect", "tensor::TensorDialect"];
+  let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "StandardOpsDialect",
+    "tensor::TensorDialect",
+  ];
   let description = [{
     Pass that converts TOSA operations to the equivalent operations using the
     operations in the Standard dialect.

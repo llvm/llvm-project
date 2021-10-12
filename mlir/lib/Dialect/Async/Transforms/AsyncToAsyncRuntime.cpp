@@ -13,6 +13,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -407,9 +408,9 @@ public:
 
       // Assert that the awaited operands is not in the error state.
       Value isError = builder.create<RuntimeIsErrorOp>(i1, operand);
-      Value notError = builder.create<XOrOp>(
-          isError,
-          builder.create<ConstantOp>(loc, i1, builder.getIntegerAttr(i1, 1)));
+      Value notError = builder.create<arith::XOrIOp>(
+          isError, builder.create<arith::ConstantOp>(
+                       loc, i1, builder.getIntegerAttr(i1, 1)));
 
       builder.create<AssertOp>(notError,
                                "Awaited async operand is in error state");
@@ -784,8 +785,8 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
     });
     return !walkResult.wasInterrupted();
   });
-  runtimeTarget
-      .addLegalOp<AssertOp, XOrOp, ConstantOp, BranchOp, CondBranchOp>();
+  runtimeTarget.addLegalOp<AssertOp, arith::XOrIOp, arith::ConstantOp,
+                           ConstantOp, BranchOp, CondBranchOp>();
 
   // Assertions must be converted to runtime errors inside async functions.
   runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {

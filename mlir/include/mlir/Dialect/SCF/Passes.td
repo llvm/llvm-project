@@ -94,18 +94,18 @@ def SCFForToWhileLoop
     ```mlir
     # Before:
       scf.for %i = %c0 to %arg1 step %c1 {
-        %0 = addi %arg2, %arg2 : i32
+        %0 = arith.addi %arg2, %arg2 : i32
         memref.store %0, %arg0[%i] : memref<?xi32>
       }
 
     # After:
       %0 = scf.while (%i = %c0) : (index) -> index {
-        %1 = cmpi slt, %i, %arg1 : index
+        %1 = arith.cmpi slt, %i, %arg1 : index
         scf.condition(%1) %i : index
       } do {
       ^bb0(%i: index):  // no predecessors
-        %1 = addi %i, %c1 : index
-        %2 = addi %arg2, %arg2 : i32
+        %1 = arith.addi %i, %c1 : index
+        %2 = arith.addi %arg2, %arg2 : i32
         memref.store %2, %arg0[%i] : memref<?xi32>
         scf.yield %1 : index
       }

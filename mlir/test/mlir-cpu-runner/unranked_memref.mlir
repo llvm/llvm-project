@@ -1,9 +1,10 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops             \
 // RUN:             -convert-scf-to-std                  \
+// RUN:             -convert-arith-to-llvm               \
 // RUN:             -convert-linalg-to-llvm              \
 // RUN:             -convert-memref-to-llvm              \
 // RUN:             -convert-std-to-llvm                 \
-// RUN:             -reconcile-unrealized-casts |      \
+// RUN:             -reconcile-unrealized-casts |        \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
@@ -42,9 +43,9 @@
 // CHECK-COUNT-4: [1, 1, 1]
 func @main() -> () {
     %A = memref.alloc() : memref<10x3xf32, 0>
-    %f2 = constant 2.00000e+00 : f32
-    %f5 = constant 5.00000e+00 : f32
-    %f10 = constant 10.00000e+00 : f32
+    %f2 = arith.constant 2.00000e+00 : f32
+    %f5 = arith.constant 5.00000e+00 : f32
+    %f10 = arith.constant 10.00000e+00 : f32
 
     %V = memref.cast %A : memref<10x3xf32, 0> to memref<?x?xf32>
     linalg.fill(%f10, %V) : f32, memref<?x?xf32, 0>
@@ -63,7 +64,7 @@ func @main() -> () {
     call @print_memref_f32(%U3) : (memref<*xf32>) -> ()
 
     // 122 is ASCII for 'z'.
-    %i8_z = constant 122 : i8
+    %i8_z = arith.constant 122 : i8
     %I8 = memref.alloc() : memref<i8>
     memref.store %i8_z, %I8[]: memref<i8>
     %U4 = memref.cast %I8 : memref<i8> to memref<*xi8>
@@ -83,7 +84,7 @@ func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface
 
 func @return_two_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
-  %c0f32 = constant 1.0 : f32
+  %c0f32 = arith.constant 1.0 : f32
   linalg.fill(%c0f32, %0) : f32, memref<4x3xf32>
   %1:2 = call @return_two_var_memref(%0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
   call @print_memref_f32(%1#0) : (memref<*xf32>) -> ()
@@ -98,7 +99,7 @@ func @return_two_var_memref_caller() {
 
 func @return_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
-  %c0f32 = constant 1.0 : f32
+  %c0f32 = arith.constant 1.0 : f32
   linalg.fill(%c0f32, %0) : f32, memref<4x3xf32>
   %1 = call @return_var_memref(%0) : (memref<4x3xf32>) -> memref<*xf32>
   call @print_memref_f32(%1) : (memref<*xf32>) -> ()
@@ -117,13 +118,13 @@ func @dim_op_of_unranked() {
   %ranked = memref.alloca() : memref<4x3xf32>
   %unranked = memref.cast %ranked: memref<4x3xf32> to memref<*xf32>
 
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %dim_0 = memref.dim %unranked, %c0 : memref<*xf32>
   call @printU64(%dim_0) : (index) -> ()
   call @printNewline() : () -> ()
   // CHECK: 4
 
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
   %dim_1 = memref.dim %unranked, %c1 : memref<*xf32>
   call @printU64(%dim_1) : (index) -> ()
   call @printNewline() : () -> ()

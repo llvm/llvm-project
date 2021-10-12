@@ -12,16 +12,16 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %c0    = constant 0 : index
-  %c1    = constant 1 : index
-  %count = constant 2 : index
+  %c0    = arith.constant 0 : index
+  %c1    = arith.constant 1 : index
+  %count = arith.constant 2 : index
 
   // initialize h0 on host
   %h0 = memref.alloc(%count) : memref<?xi32>
   %h0_unranked = memref.cast %h0 : memref<?xi32> to memref<*xi32>
   gpu.host_register %h0_unranked : memref<*xi32>
 
-  %v0 = constant 42 : i32
+  %v0 = arith.constant 42 : i32
   memref.store %v0, %h0[%c0] : memref<?xi32>
   memref.store %v0, %h0[%c1] : memref<?xi32>
 
@@ -57,7 +57,7 @@ func @main() {
                threads(%tx, %ty, %tz) in (%block_x = %count, %block_y = %c1, %block_z = %c1) {
       %v1 = memref.load %b1[%tx] : memref<?xi32>
       %v2 = memref.load %b2[%tx] : memref<?xi32>
-      %sum = addi %v1, %v2 : i32
+      %sum = arith.addi %v1, %v2 : i32
       memref.store %sum, %h0[%tx] : memref<?xi32>
       gpu.terminator
     }

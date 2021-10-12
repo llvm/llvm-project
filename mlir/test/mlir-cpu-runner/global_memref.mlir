@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
+// RUN: mlir-opt %s -convert-arith-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 func private @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
@@ -17,10 +17,10 @@ func @test1DMemref() {
   call @printNewline() : () -> ()
 
   // Overwrite some of the elements.
-  %c0 = constant 0 : index
-  %c2 = constant 2 : index
-  %fp0 = constant 4.0 : f32
-  %fp1 = constant 5.0 : f32
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %fp0 = arith.constant 4.0 : f32
+  %fp1 = arith.constant 5.0 : f32
   memref.store %fp0, %0[%c0] : memref<4xf32>
   memref.store %fp1, %0[%c2] : memref<4xf32>
   // CHECK: rank = 1
@@ -65,9 +65,9 @@ func @test2DMemref() {
   call @printNewline() : () -> ()
 
   // Overwrite the 1.0 (at index [0, 1]) with 10.0
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %fp10 = constant 10.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %fp10 = arith.constant 10.0 : f32
   memref.store %fp10, %0[%c0, %c1] : memref<4x2xf32>
   // CHECK: rank = 2
   // CHECK: offset = 0

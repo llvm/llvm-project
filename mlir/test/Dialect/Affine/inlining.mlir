@@ -2,7 +2,7 @@
 
 // Basic test that functions within affine operations are inlined.
 func @func_with_affine_ops(%N: index) {
-  %c = constant 200 : index
+  %c = arith.constant 200 : index
   affine.for %i = 1 to 10 {
     affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%c]  {
       %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%N]
@@ -13,7 +13,7 @@ func @func_with_affine_ops(%N: index) {
 
 // CHECK-LABEL: func @inline_with_affine_ops
 func @inline_with_affine_ops() {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
 
   // CHECK: affine.for
   // CHECK-NEXT: affine.if
@@ -25,7 +25,7 @@ func @inline_with_affine_ops() {
 
 // CHECK-LABEL: func @not_inline_in_affine_op
 func @not_inline_in_affine_op() {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
 
   // CHECK-NOT: affine.if
   // CHECK: call

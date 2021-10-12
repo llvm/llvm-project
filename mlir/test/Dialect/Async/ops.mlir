@@ -27,7 +27,7 @@ func @empty_async_execute() -> !async.token {
 func @return_async_value() -> !async.value<f32> {
   // CHECK: async.execute -> !async.value<f32>
   %token, %results = async.execute -> !async.value<f32> {
-    %cst = constant 1.000000e+00 : f32
+    %cst = arith.constant 1.000000e+00 : f32
     async.yield %cst : f32
   }
 
@@ -37,7 +37,7 @@ func @return_async_value() -> !async.value<f32> {
 
 // CHECK-LABEL: @return_captured_value
 func @return_captured_value() -> !async.token {
-  %cst = constant 1.000000e+00 : f32
+  %cst = arith.constant 1.000000e+00 : f32
   // CHECK: async.execute -> !async.value<f32>
   %token, %results = async.execute -> !async.value<f32> {
     async.yield %cst : f32
@@ -50,8 +50,8 @@ func @return_captured_value() -> !async.token {
 // CHECK-LABEL: @return_async_values
 func @return_async_values() -> (!async.value<f32>, !async.value<f32>) {
   %token, %results:2 = async.execute -> (!async.value<f32>, !async.value<f32>) {
-    %cst1 = constant 1.000000e+00 : f32
-    %cst2 = constant 2.000000e+00 : f32
+    %cst1 = arith.constant 1.000000e+00 : f32
+    %cst2 = arith.constant 2.000000e+00 : f32
     async.yield %cst1, %cst2 : f32, f32
   }
 
@@ -124,7 +124,7 @@ func @await_value(%arg0: !async.value<f32>) -> f32 {
 // CHECK-LABEL: @create_group_and_await_all
 func @create_group_and_await_all(%arg0: !async.token,
                                  %arg1: !async.value<f32>) -> index {
-  %c = constant 2 : index
+  %c = arith.constant 2 : index
   %0 = async.create_group %c : !async.group
 
   // CHECK: async.add_to_group %arg0
@@ -133,6 +133,6 @@ func @create_group_and_await_all(%arg0: !async.token,
   %2 = async.add_to_group %arg1, %0 : !async.value<f32>
   async.await_all %0
 
-  %3 = addi %1, %2 : index
+  %3 = arith.addi %1, %2 : index
   return %3 : index
 }

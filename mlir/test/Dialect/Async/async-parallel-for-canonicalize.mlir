@@ -15,17 +15,17 @@
 // CHECK-LABEL: @loop_1d(
 // CHECK:       %[[MEMREF:.*]]: memref<?xf32>
 func @loop_1d(%arg0: memref<?xf32>) {
-  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
-  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
-  // CHECK-DAG: %[[C100:.*]] = constant 100 : index
-  // CHECK-DAG: %[[ONE:.*]] = constant 1.000000e+00 : f32
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C100:.*]] = arith.constant 100 : index
+  // CHECK-DAG: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
   // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C100]] step %[[C1]]
   // CHECK:       memref.store %[[ONE]], %[[MEMREF]][%[[I]]]
-  %lb = constant 0 : index
-  %ub = constant 100 : index
-  %st = constant 1 : index
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 100 : index
+  %st = arith.constant 1 : index
   scf.parallel (%i) = (%lb) to (%ub) step (%st) {
-    %one = constant 1.0 : f32
+    %one = arith.constant 1.0 : f32
     memref.store %one, %arg0[%i] : memref<?xf32>
   }
 

@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 #define MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"

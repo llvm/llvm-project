@@ -220,6 +220,14 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
+                                    arith::ConstantOp constantOp) {
+  Operation *operation = constantOp.getOperation();
+  Attribute value = constantOp.value();
+
+  return printConstantOp(emitter, operation, value);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
                                     mlir::ConstantOp constantOp) {
   Operation *operation = constantOp.getOperation();
   Attribute value = constantOp.value();
@@ -898,6 +906,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Standard ops.
           .Case<BranchOp, mlir::CallOp, CondBranchOp, mlir::ConstantOp, FuncOp,
                 ModuleOp, ReturnOp>(
+              [&](auto op) { return printOperation(*this, op); })
+          // Arithmetic ops.
+          .Case<arith::ConstantOp>(
               [&](auto op) { return printOperation(*this, op); })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");

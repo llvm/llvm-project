@@ -28,15 +28,15 @@ func @matmul_tensors(
   %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
   -> tensor<?x?xf32>
 {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %cst = constant 0.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
 
-  //  CHECK-DAG: %[[C0:.*]] = constant 0 : index
-  //  CHECK-DAG: %[[C1:.*]] = constant 1 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
 
   //  CHECK-DAG: %[[dM:.*]] = tensor.dim %[[TA]], %[[C0]] : tensor<?x?xf32>
   //  CHECK-DAG: %[[dK:.*]] = tensor.dim %[[TA]], %[[C1]] : tensor<?x?xf32>
@@ -109,20 +109,20 @@ func @matmul_tensors(
         %18 = tensor.dim %arg8, %c1 : tensor<?x?xf32>
         %19 = affine.min #map4(%18, %arg5)
         %20 = tensor.extract_slice %arg8[%arg3, %arg5] [%17, %19] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-        %21 = subi %c2, %7 : index
-        %22 = subi %c4, %9 : index
+        %21 = arith.subi %c2, %7 : index
+        %22 = arith.subi %c4, %9 : index
         %23 = linalg.pad_tensor %10 low[%c0, %c0] high[%21, %22] {
         ^bb0(%arg9: index, %arg10: index):  // no predecessors
           linalg.yield %cst : f32
         } : tensor<?x?xf32> to tensor<2x4xf32>
-        %24 = subi %c4, %12 : index
-        %25 = subi %c3, %14 : index
+        %24 = arith.subi %c4, %12 : index
+        %25 = arith.subi %c3, %14 : index
         %26 = linalg.pad_tensor %15 low[%c0, %c0] high[%24, %25] {
         ^bb0(%arg9: index, %arg10: index):  // no predecessors
           linalg.yield %cst : f32
         } : tensor<?x?xf32> to tensor<4x3xf32>
-        %27 = subi %c2, %17 : index
-        %28 = subi %c3, %19 : index
+        %27 = arith.subi %c2, %17 : index
+        %28 = arith.subi %c3, %19 : index
         %29 = linalg.pad_tensor %20 low[%c0, %c0] high[%27, %28] {
         ^bb0(%arg9: index, %arg10: index):  // no predecessors
           linalg.yield %cst : f32
@@ -156,11 +156,11 @@ func @matmul_tensors(
 func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
     -> tensor<f32>
 {
-  %c8 = constant 8 : index
-  %c4 = constant 4 : index
-  %cst = constant 0.000000e+00 : f32
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
   %1 = tensor.dim %arg0, %c0 : tensor<?xf32>
   %2 = tensor.dim %arg0, %c0 : tensor<?xf32>
   %3 = tensor.dim %arg1, %c0 : tensor<?xf32>
@@ -209,12 +209,12 @@ func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
         %16 = tensor.extract_slice %11[%arg7] [%15] [1] : tensor<?xf32> to tensor<?xf32>
         %17 = affine.min #map2(%12, %arg7)
         %18 = tensor.extract_slice %13[%arg7] [%17] [1] : tensor<?xf32> to tensor<?xf32>
-        %19 = subi %c2, %15 : index
+        %19 = arith.subi %c2, %15 : index
         %20 = linalg.pad_tensor %16 low[%c0] high[%19]  {
         ^bb0(%arg9: index):  // no predecessors
           linalg.yield %cst : f32
         } : tensor<?xf32> to tensor<2xf32>
-        %21 = subi %c2, %17 : index
+        %21 = arith.subi %c2, %17 : index
         %22 = linalg.pad_tensor %18 low[%c0] high[%21]  {
         ^bb0(%arg9: index):  // no predecessors
           linalg.yield %cst : f32
@@ -234,14 +234,14 @@ func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
 // CHECK-LABEL: func @matmul_2d_tiling
 // VERIFIER-ONLY-LABEL: func @matmul_2d_tiling
 func @matmul_2d_tiling(%arg0: tensor<32x128xf32>, %arg1: tensor<128x64xf32>, %arg2: tensor<32x64xf32>) -> tensor<32x64xf32> {
-  %c128 = constant 128 : index
-  %c64 = constant 64 : index
-  %c32 = constant 32 : index
-  %c16 = constant 16 : index
-  %cst = constant 0.000000e+00 : f32
-  %c2 = constant 2 : index
-  %c4 = constant 4 : index
-  %c0 = constant 0 : index
+  %c128 = arith.constant 128 : index
+  %c64 = arith.constant 64 : index
+  %c32 = arith.constant 32 : index
+  %c16 = arith.constant 16 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
   %1 = scf.for %arg3 = %c0 to %c32 step %c16 iter_args(%arg4 = %arg2) -> (tensor<32x64xf32>) {
     %2 = scf.for %arg5 = %c0 to %c64 step %c32 iter_args(%arg6 = %arg4) -> (tensor<32x64xf32>) {
       %3 = scf.for %arg7 = %c0 to %c128 step %c32 iter_args(%arg8 = %arg6) -> (tensor<32x64xf32>) {

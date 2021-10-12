@@ -271,7 +271,7 @@ enum class DistributionMethod {
   /// to
   ///
   /// %iv = %lb + %procId * %step
-  /// %cond = cmpi "slt", %iv, %ub
+  /// %cond = arith.cmpi "slt", %iv, %ub
   /// scf.if %cond {
   ///   ...
   /// }

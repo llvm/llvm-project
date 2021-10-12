@@ -11,13 +11,13 @@ module attributes {
   gpu.module @kernels {
     gpu.func @sum(%arg0 : memref<3xf32>, %arg1 : memref<3x3xf32>, %arg2 :  memref<3x3x3xf32>)
       kernel attributes { spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32>}} {
-      %i0 = constant 0 : index
-      %i1 = constant 1 : index
-      %i2 = constant 2 : index
+      %i0 = arith.constant 0 : index
+      %i1 = arith.constant 1 : index
+      %i2 = arith.constant 2 : index
 
       %x = memref.load %arg0[%i0] : memref<3xf32>
       %y = memref.load %arg1[%i0, %i0] : memref<3x3xf32>
-      %sum = addf %x, %y : f32
+      %sum = arith.addf %x, %y : f32
 
       memref.store %sum, %arg2[%i0, %i0, %i0] : memref<3x3x3xf32>
       memref.store %sum, %arg2[%i0, %i1, %i0] : memref<3x3x3xf32>
@@ -36,9 +36,9 @@ module attributes {
     %input1 = memref.alloc() : memref<3xf32>
     %input2 = memref.alloc() : memref<3x3xf32>
     %output = memref.alloc() : memref<3x3x3xf32>
-    %0 = constant 0.0 : f32
-    %3 = constant 3.4 : f32
-    %4 = constant 4.3 : f32
+    %0 = arith.constant 0.0 : f32
+    %3 = arith.constant 3.4 : f32
+    %4 = arith.constant 4.3 : f32
     %input1_casted = memref.cast %input1 : memref<3xf32> to memref<?xf32>
     %input2_casted = memref.cast %input2 : memref<3x3xf32> to memref<?x?xf32>
     %output_casted = memref.cast %output : memref<3x3x3xf32> to memref<?x?x?xf32>
@@ -46,7 +46,7 @@ module attributes {
     call @fillF32Buffer2D(%input2_casted, %4) : (memref<?x?xf32>, f32) -> ()
     call @fillF32Buffer3D(%output_casted, %0) : (memref<?x?x?xf32>, f32) -> ()
 
-    %one = constant 1 : index
+    %one = arith.constant 1 : index
     gpu.launch_func @kernels::@sum
         blocks in (%one, %one, %one) threads in (%one, %one, %one)
         args(%input1 : memref<3xf32>, %input2 : memref<3x3xf32>, %output : memref<3x3x3xf32>)

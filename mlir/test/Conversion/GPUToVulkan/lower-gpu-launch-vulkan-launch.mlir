@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-gpu-launch-to-vulkan-launch | FileCheck %s
 
 // CHECK: %[[resource:.*]] = memref.alloc() : memref<12xf32>
-// CHECK: %[[index:.*]] = constant 1 : index
+// CHECK: %[[index:.*]] = arith.constant 1 : index
 // CHECK: call @vulkanLaunch(%[[index]], %[[index]], %[[index]], %[[resource]]) {spirv_blob = "{{.*}}", spirv_entry_point = "kernel"}
 
 module attributes {gpu.container_module} {
@@ -25,7 +25,7 @@ module attributes {gpu.container_module} {
   }
   func @foo() {
     %0 = memref.alloc() : memref<12xf32>
-    %c1 = constant 1 : index
+    %c1 = arith.constant 1 : index
     gpu.launch_func @kernels::@kernel
         blocks in(%c1, %c1, %c1)
         threads in(%c1, %c1, %c1)

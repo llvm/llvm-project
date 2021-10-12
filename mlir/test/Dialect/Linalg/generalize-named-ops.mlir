@@ -23,8 +23,8 @@ func @generalize_matmul_buffer(%A : memref<16x8xf32>, %B: memref<8x32xf32>, %C: 
 // CHECK-SAME: outs(%[[C]]
 
 // CHECK: ^{{.*}}(%[[A_ARG:.+]]: f32, %[[B_ARG:.+]]: f32, %[[C_ARG:.+]]: f32)
-// CHECK:   %[[MUL:.+]] = mulf %[[A_ARG]], %[[B_ARG]] : f32
-// CHECK:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
+// CHECK:   %[[MUL:.+]] = arith.mulf %[[A_ARG]], %[[B_ARG]] : f32
+// CHECK:   %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
 // CHECK:   linalg.yield %[[ADD]] : f32
 
 // -----
@@ -42,8 +42,8 @@ func @generalize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: 
 // CHECK-SAME: outs(%{{.+}} : tensor<16x32xf32>)
 
 // CHECK:      ^{{.*}}(%[[A_ARG:.+]]: f32, %[[B_ARG:.+]]: f32, %[[C_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[MUL:.+]] = mulf %[[A_ARG]], %[[B_ARG]] : f32
-// CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
+// CHECK-NEXT:   %[[MUL:.+]] = arith.mulf %[[A_ARG]], %[[B_ARG]] : f32
+// CHECK-NEXT:   %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
 // CHECK-NEXT:   linalg.yield %[[ADD]] : f32
 // CHECK-NEXT: -> tensor<16x32xf32>
 
@@ -70,8 +70,8 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 // CHECK-SAME: outs(%{{.+}} : memref<2x3x4x2x3xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
-// CHECK-NEXT:      %[[MUL:.+]] = mulf %[[BBARG0]], %[[BBARG1]] : f32
-// CHECK-NEXT:      %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]] : f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[BBARG0]], %[[BBARG1]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK-NEXT:      linalg.yield %[[ADD]] : f32
 
 // -----
@@ -97,8 +97,8 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 // CHECK-SAME: outs(%{{.+}} : memref<2x2x3x2x3xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
-// CHECK-NEXT:      %[[MUL:.+]] = mulf %[[BBARG0]], %[[BBARG1]] : f32
-// CHECK-NEXT:      %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]] : f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[BBARG0]], %[[BBARG1]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK-NEXT:      linalg.yield %[[ADD]] : f32
 
 // -----
@@ -123,8 +123,8 @@ func @depthwise_conv2D_nhw(%input: memref<1x113x113x96xf32>, %filter: memref<3x3
 // CHECK-SAME: outs(%{{.+}} : memref<1x56x56x96xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
-// CHECK-NEXT:      %[[MUL:.+]] = mulf %[[BBARG0]], %[[BBARG1]] : f32
-// CHECK-NEXT:      %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]] : f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[BBARG0]], %[[BBARG1]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK-NEXT:      linalg.yield %[[ADD]] : f32
 
 // -----
@@ -149,8 +149,8 @@ func @conv_1d_nwc_wcf(%input: memref<?x?x?xf32>, %filter: memref<?x?x?xf32>, %ou
 // CHECK-SAME: outs(%{{.+}} : memref<?x?x?xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
-// CHECK-NEXT:      %[[MUL:.+]] = mulf %[[BBARG0]], %[[BBARG1]] : f32
-// CHECK-NEXT:      %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]] : f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[BBARG0]], %[[BBARG1]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK-NEXT:      linalg.yield %[[ADD]] : f32
 
 // -----
@@ -194,8 +194,8 @@ func @generalize_batch_matm_vec(%lhs : memref<?x?x?xi8>, %rhs: memref<?x?xi8>,  
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?xi8>, memref<?x?xi8>)
 // CHECK-SAME: outs(%{{.+}} : memref<?x?xf32>)
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: i8, %[[BBARG1:.+]]: i8, %[[BBARG2:.+]]: f32)
-// CHECK:            %[[BBARG0_F32:.+]] = sitofp %[[BBARG0]] : i8 to f32
-// CHECK:            %[[BBARG1_F32:.+]] = sitofp %[[BBARG1]] : i8 to f32
-// CHECK:            %[[MUL:.+]] = mulf %[[BBARG0_F32]], %[[BBARG1_F32]]
-// CHECK:            %[[ADD:.+]] = addf %[[BBARG2]], %[[MUL]]
+// CHECK:            %[[BBARG0_F32:.+]] = arith.sitofp %[[BBARG0]] : i8 to f32
+// CHECK:            %[[BBARG1_F32:.+]] = arith.sitofp %[[BBARG1]] : i8 to f32
+// CHECK:            %[[MUL:.+]] = arith.mulf %[[BBARG0_F32]], %[[BBARG1_F32]]
+// CHECK:            %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]]
 // CHECK:            linalg.yield %[[ADD]] : f32

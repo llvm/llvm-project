@@ -37,7 +37,7 @@ class RewritePatternSet;
 ///    affine.for %I = 0 to 9 {
 ///      %dim = dim %A, 0 : memref<?x?x?xf32>
 ///      %add = affine.apply %I + %a
-///      %cmp = cmpi "slt", %add, %dim : index
+///      %cmp = arith.cmpi "slt", %add, %dim : index
 ///      scf.if %cmp {
 ///        %vec_2d = load %1[%I] : memref<9xvector<17x15xf32>>
 ///        vector.transfer_write %vec_2d, %A[%add, %b, %c] :

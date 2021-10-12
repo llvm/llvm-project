@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRX86VectorTransforms
   MLIRX86VectorConversionsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRX86Vector
   MLIRIR
   MLIRLLVMCommonConversion

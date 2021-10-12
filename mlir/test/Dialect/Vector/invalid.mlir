@@ -73,7 +73,7 @@ func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 // -----
 
 func @extract_element(%arg0: vector<4x4xf32>) {
-  %c = constant 3 : i32
+  %c = arith.constant 3 : i32
   // expected-error@+1 {{'vector.extractelement' op expected 1-D vector}}
   %1 = vector.extractelement %arg0[%c : i32] : vector<4x4xf32>
 }
@@ -123,7 +123,7 @@ func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func @insert_element(%arg0: f32, %arg1: vector<4x4xf32>) {
-  %c = constant 3 : i32
+  %c = arith.constant 3 : i32
   // expected-error@+1 {{'vector.insertelement' op expected 1-D vector}}
   %0 = vector.insertelement %arg0, %arg1[%c : i32] : vector<4x4xf32>
 }
@@ -131,7 +131,7 @@ func @insert_element(%arg0: f32, %arg1: vector<4x4xf32>) {
 // -----
 
 func @insert_element_wrong_type(%arg0: i32, %arg1: vector<4xf32>) {
-  %c = constant 3 : i32
+  %c = arith.constant 3 : i32
   // expected-error@+1 {{'vector.insertelement' op failed to verify that source operand type matches element type of result}}
   %0 = "vector.insertelement" (%arg0, %arg1, %c) : (i32, vector<4xf32>, i32) -> (vector<4xf32>)
 }
@@ -250,8 +250,8 @@ func @outerproduct_operand_3_result_type_generic(%arg0: vector<4xf32>, %arg1: ve
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires two types}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>
 }
@@ -259,8 +259,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{ requires memref or ranked tensor type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : vector<4x3xf32>, vector<1x1x2x3xf32>
@@ -269,8 +269,8 @@ func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<4x3xf32>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{ requires vector type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<4x3xf32>, f32
@@ -279,8 +279,8 @@ func @test_vector.transfer_read(%arg0: memref<4x3xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires 2 indices}}
   %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>, vector<128xf32>
 }
@@ -288,8 +288,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the source type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0)->(d0)>} : memref<?x?xf32>, vector<128xf32>
 }
@@ -297,8 +297,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires a permutation_map with result dims of the same rank as the vector type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xf32>, vector<128xf32>
 }
@@ -306,8 +306,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0, d1)->(d0 + d1)>} : memref<?x?xf32>, vector<128xf32>
 }
@@ -315,8 +315,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0, d1)->(d0 + 1)>} : memref<?x?xf32>, vector<128xf32>
 }
@@ -324,8 +324,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires a permutation_map that is a permutation (found one dim used more than once)}}
   %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst {permutation_map = affine_map<(d0, d1, d2)->(d0, d0)>} : memref<?x?x?xf32>, vector<3x7xf32>
 }
@@ -333,9 +333,9 @@ func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
-  %c1 = constant 1 : i1
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c1 = arith.constant 1 : i1
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-note@+1 {{prior use here}}
   %mask = splat %c1 : vector<3x8x7xi1>
   // expected-error@+1 {{expects different type than prior uses: 'vector<3x7xi1>' vs 'vector<3x8x7xi1>'}}
@@ -345,8 +345,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{requires source vector element and vector result ranks to match}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<3xf32>
@@ -355,8 +355,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<6xf32>
   // expected-error@+1 {{requires the bitwidth of the minor 1-D vector to be an integral multiple of the bitwidth of the minor 1-D vector of the source}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<?x?xvector<6xf32>>, vector<3xf32>
@@ -365,8 +365,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<2x3xf32>
   // expected-error@+1 {{ expects the optional in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
@@ -375,8 +375,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<2x3xf32>
   // expected-error@+1 {{requires broadcast dimensions to be in-bounds}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [false, true], permutation_map = affine_map<(d0, d1)->(0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
@@ -385,8 +385,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 // -----
 
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<2x3xf32>
   %mask = splat %c1 : vector<2x3xi1>
   // expected-error@+1 {{does not support masks with vector element type}}
@@ -396,8 +396,8 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires two types}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : memref<?x?xf32>
 }
@@ -405,8 +405,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<vector<4x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{ requires vector type}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : memref<vector<4x3xf32>>, vector<4x3xf32>
@@ -415,8 +415,8 @@ func @test_vector.transfer_write(%arg0: memref<vector<4x3xf32>>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: vector<4x3xf32>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{ requires memref or ranked tensor type}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : vector<4x3xf32>, f32
@@ -425,8 +425,8 @@ func @test_vector.transfer_write(%arg0: vector<4x3xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{expected 5 operand types but had 4}}
   %0 = "vector.transfer_write"(%cst, %arg0, %c3, %c3, %c3) {permutation_map = affine_map<()->(0)>} : (vector<128xf32>, memref<?x?xf32>, index, index) -> ()
 }
@@ -434,8 +434,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires 2 indices}}
   vector.transfer_write %cst, %arg0[%c3, %c3, %c3] {permutation_map = affine_map<()->(0)>} : vector<128xf32>, memref<?x?xf32>
 }
@@ -443,8 +443,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the source type}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0)->(d0)>} : vector<128xf32>, memref<?x?xf32>
 }
@@ -452,8 +452,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires a permutation_map with result dims of the same rank as the vector type}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : vector<128xf32>, memref<?x?xf32>
 }
@@ -461,8 +461,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0 + d1)>} : vector<128xf32>, memref<?x?xf32>
 }
@@ -470,8 +470,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires a projected permutation_map (at most one dim or the zero constant can appear in each result)}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0 + 1)>} : vector<128xf32>, memref<?x?xf32>
 }
@@ -479,8 +479,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?x?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<3 x 7 x f32>
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<3.0> : vector<3 x 7 x f32>
   // expected-error@+1 {{requires a permutation_map that is a permutation (found one dim used more than once)}}
   vector.transfer_write %cst, %arg0[%c3, %c3, %c3] {permutation_map = affine_map<(d0, d1, d2)->(d0, d0)>} : vector<3x7xf32>, memref<?x?x?xf32>
 }
@@ -488,8 +488,8 @@ func @test_vector.transfer_write(%arg0: memref<?x?x?xf32>) {
 // -----
 
 func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{should not have broadcast dimensions}}
   vector.transfer_write %arg1, %arg0[%c3]
       {permutation_map = affine_map<(d0) -> (0)>}
@@ -836,8 +836,8 @@ func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<
 // -----
 
 func @create_mask() {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
   // expected-error@+1 {{must specify an operand for each result vector dimension}}
   %0 = vector.create_mask %c3, %c2 : vector<4x3x7xi1>
 }
@@ -881,10 +881,10 @@ func @print_no_result(%arg0 : f32) -> i32 {
 // -----
 
 func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c9 = constant 9 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c9 = arith.constant 9 : index
   // expected-error@+1 {{invalid input shape for vector type}}
   %1 = vector.reshape %arg0, [%c3, %c6, %c3], [%c2, %c9], [4]
     : vector<3x2x4xf32> to vector<2x3x4xf32>
@@ -893,10 +893,10 @@ func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
 // -----
 
 func @reshape_bad_output_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c9 = constant 9 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c9 = arith.constant 9 : index
   // expected-error@+1 {{invalid output shape for vector type}}
   %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9, %c3], [4]
     : vector<3x2x4xf32> to vector<2x3x4xf32>
@@ -905,10 +905,10 @@ func @reshape_bad_output_shape(%arg0 : vector<3x2x4xf32>) {
 // -----
 
 func @reshape_bad_input_output_shape_product(%arg0 : vector<3x2x4xf32>) {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c9 = constant 9 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c9 = arith.constant 9 : index
   // expected-error@+1 {{product of input and output shape sizes must match}}
   %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c6], [4]
     : vector<3x2x4xf32> to vector<2x3x4xf32>
@@ -917,10 +917,10 @@ func @reshape_bad_input_output_shape_product(%arg0 : vector<3x2x4xf32>) {
 // -----
 
 func @reshape_bad_input_fixed_size(%arg0 : vector<3x2x5xf32>) {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c9 = constant 9 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c9 = arith.constant 9 : index
   // expected-error@+1 {{fixed vector size must match input vector for dim 0}}
   %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
     : vector<3x2x5xf32> to vector<2x3x4xf32>
@@ -929,10 +929,10 @@ func @reshape_bad_input_fixed_size(%arg0 : vector<3x2x5xf32>) {
 // -----
 
 func @reshape_bad_output_fixed_size(%arg0 : vector<3x2x4xf32>) {
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c9 = constant 9 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c9 = arith.constant 9 : index
   // expected-error@+1 {{fixed vector size must match output vector for dim 0}}
   %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
     : vector<3x2x4xf32> to vector<2x3x5xf32>
@@ -1120,7 +1120,7 @@ func @vector_memref_mismatch(%memref : memref<200x100xvector<4xf32>>, %i : index
 // -----
 
 func @store_base_type_mismatch(%base : memref<?xf64>, %value : vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.store' op base and valueToStore element type should match}}
   vector.store %value, %base[%c0] : memref<?xf64>, vector<16xf32>
 }
@@ -1135,7 +1135,7 @@ func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16xf32>
 // -----
 
 func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedload' op base and result element type should match}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf64>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1143,7 +1143,7 @@ func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, 
 // -----
 
 func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %pass: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedload' op expected result dim to match mask dim}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<15xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1151,7 +1151,7 @@ func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %
 // -----
 
 func @maskedload_pass_thru_type_mask_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass: vector<16xi32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedload' op expected pass_thru of same type as result type}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<16xi1>, vector<16xi32> into vector<16xf32>
 }
@@ -1166,7 +1166,7 @@ func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pa
 // -----
 
 func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op base and valueToStore element type should match}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
@@ -1174,7 +1174,7 @@ func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>,
 // -----
 
 func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op expected valueToStore dim to match mask dim}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
 }
@@ -1182,7 +1182,7 @@ func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, 
 // -----
 
 func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op requires 1 indices}}
   vector.maskedstore %base[%c0, %c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
@@ -1191,7 +1191,7 @@ func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %v
 
 func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op base and result element type should match}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
@@ -1201,7 +1201,7 @@ func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
 
 func @gather_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf64>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op requires 2 indices}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?x?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf64> into vector<16xf64>
@@ -1211,7 +1211,7 @@ func @gather_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
 
 func @gather_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                            %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op result #0 must be  of ranks 1, but got 'vector<2x16xf32>'}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<2x16xf32>
@@ -1221,7 +1221,7 @@ func @gather_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
 
 func @gather_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32>,
                                   %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op expected result dim to match indices dim}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<17xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
@@ -1231,7 +1231,7 @@ func @gather_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32>
 
 func @gather_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                                %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op expected result dim to match mask dim}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<16xi32>, vector<17xi1>, vector<16xf32> into vector<16xf32>
@@ -1241,7 +1241,7 @@ func @gather_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
 
 func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                                      %mask: vector<16xi1>, %pass_thru: vector<16xf64>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.gather' op expected pass_thru of same type as result type}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf64> into vector<16xf32>
@@ -1251,7 +1251,7 @@ func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector<16xi
 
 func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                  %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.scatter' op base and valueToStore element type should match}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf32>
@@ -1261,7 +1261,7 @@ func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
 
 func @scatter_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
                               %mask: vector<16xi1>, %value: vector<16xf64>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.scatter' op requires 2 indices}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?x?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf64>
@@ -1271,7 +1271,7 @@ func @scatter_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi32>,
 
 func @scatter_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                             %mask: vector<16xi1>, %value: vector<2x16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.scatter' op operand #4 must be  of ranks 1, but got 'vector<2x16xf32>'}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<2x16xf32>
@@ -1281,7 +1281,7 @@ func @scatter_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
 
 func @scatter_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32>,
                                    %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.scatter' op expected valueToStore dim to match indices dim}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf32>, vector<17xi32>, vector<16xi1>, vector<16xf32>
@@ -1291,7 +1291,7 @@ func @scatter_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32
 
 func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<17xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.scatter' op expected valueToStore dim to match mask dim}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf32>, vector<16xi32>, vector<17xi1>, vector<16xf32>
@@ -1300,7 +1300,7 @@ func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
 // -----
 
 func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op base and result element type should match}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf64>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1308,7 +1308,7 @@ func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pas
 // -----
 
 func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op expected result dim to match mask dim}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<17xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1316,7 +1316,7 @@ func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass
 // -----
 
 func @expand_pass_thru_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<17xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op expected pass_thru of same type as result type}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<16xi1>, vector<17xf32> into vector<16xf32>
 }
@@ -1324,7 +1324,7 @@ func @expand_pass_thru_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pas
 // -----
 
 func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op requires 2 indices}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1332,7 +1332,7 @@ func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass
 // -----
 
 func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op base and valueToStore element type should match}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
@@ -1340,7 +1340,7 @@ func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %v
 // -----
 
 func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op expected valueToStore dim to match mask dim}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
 }
@@ -1348,7 +1348,7 @@ func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %va
 // -----
 
 func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op requires 2 indices}}
   vector.compressstore %base[%c0, %c0, %c0], %mask, %value : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
 }
@@ -1399,7 +1399,7 @@ func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
 
 func @vector_transfer_ops_0d(%arg0: tensor<f32>)
   -> tensor<f32> {
-    %f0 = constant 0.0 : f32
+    %f0 = arith.constant 0.0 : f32
     // expected-error@+1 {{0-d transfer requires vector<1xt> shape and () -> (0) permutation_map}}
     %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<(d0)->(d0)>} :
       tensor<f32>, vector<1xf32>

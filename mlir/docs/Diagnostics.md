@@ -301,7 +301,7 @@ func @bad_branch() {
 // Expect an error on an adjacent line.
 func @foo(%a : f32) {
   // expected-error@+1 {{unknown comparison predicate "foo"}}
-  %result = cmpf "foo", %a, %a : f32
+  %result = arith.cmpf "foo", %a, %a : f32
   return
 }
 

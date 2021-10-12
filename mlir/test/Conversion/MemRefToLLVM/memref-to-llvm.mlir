@@ -563,7 +563,7 @@ func @assume_alignment(%0 : memref<4x4xf16>) {
 // CHECK-LABEL: func @dim_of_unranked
 // CHECK32-LABEL: func @dim_of_unranked
 func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %dim = memref.dim %unranked, %c0 : memref<*xi32>
   return %dim : index
 }
@@ -597,7 +597,7 @@ func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
 // CHECK-LABEL: func @address_space(
 func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
   %0 = memref.alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
-  %1 = constant 7 : index
+  %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} : !llvm.ptr<f32, 5>
   %2 = memref.load %0[%1] : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   std.return

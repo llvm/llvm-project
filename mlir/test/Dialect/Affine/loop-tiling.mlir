@@ -66,15 +66,15 @@ func @loop_tiling() {
 #ub = affine_map<()[s0, s1] -> (s0, 4096 floordiv s1)>
 // CHECK-LABEL: func @loop_max_min_bound(%{{.*}}: memref<?xi32>, %{{.*}}: index, %{{.*}}: index) {
 func @loop_max_min_bound(%A : memref<? x i32>, %L : index, %U : index) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %M = memref.dim %A, %c0 : memref<? x i32>
   affine.for %i = max #lb()[%L] to min #ub()[%M, %U] {
-    addi %i, %i : index
+    arith.addi %i, %i : index
   }
   return
 // CHECK:       affine.for %{{.*}} = max [[$LB]]()[%{{.*}}] to min [[$UB]]()[%{{.*}}, %{{.*}}] step 32 {
 // CHECK-NEXT:    affine.for %[[I:.*]] = [[$IDENTITY]](%{{.*}}) to min [[$UB_INTRA_TILE]](%{{.*}})[%{{.*}}, %{{.*}}] {
-// CHECK-NEXT:      addi %[[I]], %[[I]]
+// CHECK-NEXT:      arith.addi %[[I]], %[[I]]
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 }
@@ -93,8 +93,8 @@ func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256
         %l = affine.load %arg0[%i, %k] : memref<256x256xvector<64xf32>>
         %r = affine.load %arg1[%k, %j] : memref<256x256xvector<64xf32>>
         %o = affine.load %arg2[%i, %j] : memref<256x256xvector<64xf32>>
-        %m = mulf %l, %r : vector<64xf32>
-        %a = addf %o, %m : vector<64xf32>
+        %m = arith.mulf %l, %r : vector<64xf32>
+        %a = arith.addf %o, %m : vector<64xf32>
         affine.store %a, %arg2[%i, %j] : memref<256x256xvector<64xf32>>
       }
     }
@@ -111,8 +111,8 @@ func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256
 // CHECK-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + 32, s0)>
 
 func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
   affine.for %i0 = 0 to %0 {
     affine.for %i1 = 0 to %0 {
@@ -120,9 +120,9 @@ func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref
       affine.for %i2 = 0 to %0 {
         %1 = affine.load %arg0[%i0, %i2] : memref<?x?xf32>
         %2 = affine.load %arg1[%i2, %i1] : memref<?x?xf32>
-        %3 = mulf %1, %2 : f32
+        %3 = arith.mulf %1, %2 : f32
         %4 = affine.load %arg2[%i0, %i1] : memref<?x?xf32>
-        %5 = addf %4, %3 : f32
+        %5 = arith.addf %4, %3 : f32
         affine.store %5, %arg2[%i0, %i1] : memref<?x?xf32>
       }
     }
@@ -139,9 +139,9 @@ func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref
 // CHECK-NEXT:          affine.for %{{.*}} = 0 to %{{.*}} {
 // CHECK-NEXT:            affine.load
 // CHECK-NEXT:            affine.load
-// CHECK-NEXT:            mulf
+// CHECK-NEXT:            arith.mulf
 // CHECK-NEXT:            affine.load
-// CHECK-NEXT:            addf
+// CHECK-NEXT:            arith.addf
 // CHECK-NEXT:            affine.store
 // CHECK-NEXT:          }
 // CHECK-NEXT:        }
@@ -157,7 +157,7 @@ func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref
 // CHECK-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 + 32, s0 + s1)>
 
 func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %dim0 = memref.dim %arg0, %c0 : memref<?xf32>
   affine.for %i0 = 0 to affine_map<()[s0, s1] -> (s0 + s1)> ()[%dim0, %limit] {
     %v0 = affine.load %arg0[%i0] : memref<?xf32>

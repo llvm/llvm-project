@@ -8,7 +8,7 @@
 func @matmul_tensors(
   %arg0: tensor<?x?xi8>, %arg1: tensor<?x?xi8>, %arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32> {
-//      CHECK: %[[C0:.*]] = constant 0 : index
+//      CHECK: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<?x?xi32>) {
 //      CHECK:   %[[TD1:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC1:.*]] = %[[TC0]]) -> (tensor<?x?xi32>) {
 //      CHECK:     %[[TD2:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC2:.*]] = %[[TC1]]) -> (tensor<?x?xi32>) {
@@ -48,7 +48,7 @@ func @matmul_tensors(
 func @generic_scalar_and_tensor(
   %arg0: tensor<?x?x?xf32>, %arg1: f32)
     -> tensor<?x?x?xf32> {
-//      CHECK: %[[C0:.*]] = constant 0 : index
+//      CHECK: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<?x?x?xf32>) {
 //      CHECK:   %[[TD1:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC1:.*]] = %[[TC0]]) -> (tensor<?x?x?xf32>) {
 //      CHECK:     %[[TD2:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC2:.*]] = %[[TC1]]) -> (tensor<?x?x?xf32>) {
@@ -102,7 +102,7 @@ func @matmul_partially_padded_tensors(
 // CHECK-1DIM-TILE-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x8xi8>
 // CHECK-1DIM-TILE-SAME:    %[[TB:[0-9a-z]+]]: tensor<8x?xi8>
 // CHECK-1DIM-TILE-SAME:    %[[TC:[0-9a-z]+]]: tensor<?x?xi32>) -> tensor<?x?xi32> {
-//      CHECK-1DIM-TILE:        %[[C0:.*]] = constant 0 : index
+//      CHECK-1DIM-TILE:        %[[C0:.*]] = arith.constant 0 : index
 //      CHECK-1DIM-TILE:        %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<?x?xi32>) {
 //      CHECK-1DIM-TILE:            %[[TD1:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC1:.*]] = %[[TC0]]) -> (tensor<?x?xi32>) {
 //      CHECK-1DIM-TILE:                %[[sTA:.*]] = tensor.extract_slice %[[TA]][{{.*}}] : tensor<?x8xi8> to tensor<?x8xi8>
@@ -120,7 +120,7 @@ func @matmul_partially_padded_tensors(
 // shapes.
 // CHECK-LABEL: @pad_to_same_static_size
 func @pad_to_same_static_size(%arg0: tensor<2x3x4xf32>, %arg1: f32) -> tensor<2x3x4xf32> {
-  // CHECK: %[[c0:.*]] = constant 0 : index
+  // CHECK: %[[c0:.*]] = arith.constant 0 : index
   // CHECK-NOT: scf.for
   // CHECK: linalg.pad_tensor %{{.*}} nofold low[%[[c0]], %[[c0]], %[[c0]]] high[%[[c0]], %[[c0]], %[[c0]]]
   // CHECK: tensor<2x3x4xf32> to tensor<2x3x4xf32>
@@ -138,7 +138,7 @@ func @pad_to_same_static_size(%arg0: tensor<2x3x4xf32>, %arg1: f32) -> tensor<2x
 
 // CHECK-LABEL: @pad_static_divisible_size
 func @pad_static_divisible_size(%arg0: tensor<4x6x8xf32>, %arg1: f32) -> tensor<4x6x8xf32> {
-  // CHECK: %[[c0:.*]] = constant 0 : index
+  // CHECK: %[[c0:.*]] = arith.constant 0 : index
   // CHECK-COUNT-3: scf.for
   // CHECK: linalg.pad_tensor %{{.*}} nofold low[%[[c0]], %[[c0]], %[[c0]]] high[%[[c0]], %[[c0]], %[[c0]]]
   // CHECK: tensor<2x3x4xf32> to tensor<2x3x4xf32>

@@ -3,8 +3,8 @@
 // CHECK-LABEL: @step_var
 func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
   // Check that we divide by step.
-  // CHECK:  %[[range_i:.*]] = divi_signed {{.*}}, %{{.*}}
-  // CHECK:  %[[range_j:.*]] = divi_signed {{.*}}, %{{.*}}
+  // CHECK:  %[[range_i:.*]] = arith.divsi {{.*}}, %{{.*}}
+  // CHECK:  %[[range_j:.*]] = arith.divsi {{.*}}, %{{.*}}
 
   // CHECK: gpu.launch
   // CHECK-SAME: blocks(%{{[^)]*}}, %{{[^)]*}}, %{{[^)]*}}) in (%{{[^)]*}} = %[[range_i]], %{{[^)]*}} = %{{[^)]*}}, %{{[^)]*}} = %{{[^)]*}})
@@ -13,10 +13,10 @@ func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
     affine.for %j = 3 to 19 step 7 {
       // Loop induction variable remapping:
       //     iv = thread(block)_id * step + lower_bound
-      // CHECK:      %[[prod_i:.*]] = muli %{{.*}}, %{{.*}} : index
-      // CHECK-NEXT: %[[i:.*]] = addi %{{.*}}, %[[prod_i]] : index
-      // CHECK-NEXT: %[[prod_j:.*]] = muli %{{.*}}, %{{.*}} : index
-      // CHECK-NEXT: %[[j:.*]] = addi %{{.*}}, %[[prod_j]] : index
+      // CHECK:      %[[prod_i:.*]] = arith.muli %{{.*}}, %{{.*}} : index
+      // CHECK-NEXT: %[[i:.*]] = arith.addi %{{.*}}, %[[prod_i]] : index
+      // CHECK-NEXT: %[[prod_j:.*]] = arith.muli %{{.*}}, %{{.*}} : index
+      // CHECK-NEXT: %[[j:.*]] = arith.addi %{{.*}}, %[[prod_j]] : index
 
       // CHECK:     {{.*}} = memref.load %{{.*}}[%[[i]], %[[j]]] : memref<?x?xf32>
       %0 = memref.load %A[%i, %j] : memref<?x?xf32>

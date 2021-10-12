@@ -33,8 +33,8 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
               %5 = affine.load %A[%ii, %kk] : memref<4096x4096xf32>
               %6 = affine.load %B[%kk, %jj] : memref<4096x4096xf32>
               %7 = affine.load %C[%ii, %jj] : memref<4096x4096xf32>
-              %8 = mulf %5, %6 : f32
-              %9 = addf %7, %8 : f32
+              %8 = arith.mulf %5, %6 : f32
+              %9 = arith.addf %7, %8 : f32
               affine.store %9, %C[%ii, %jj] : memref<4096x4096xf32>
             }
           }
@@ -85,8 +85,8 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:             affine.load [[BUFA]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:             affine.load [[BUFB]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:             affine.load [[BUFC]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
-// CHECK:             mulf %{{.*}}, %{{.*}} : f32
-// CHECK:             addf %{{.*}}, %{{.*}} : f32
+// CHECK:             arith.mulf %{{.*}}, %{{.*}} : f32
+// CHECK:             arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK:             affine.store %{{.*}}, [[BUFC]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:           }
 // CHECK:         }
@@ -136,7 +136,7 @@ func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf
       affine.for %k = 0 to 1024 {
         %6 = affine.load %arg1[%k, %j] : memref<1024x1024xf32>
         %7 = affine.load %arg2[%i, %j] : memref<1024x1024xf32>
-        %9 = addf %6, %7 : f32
+        %9 = arith.addf %6, %7 : f32
         affine.store %9, %arg2[%i, %j] : memref<1024x1024xf32>
       }
     }
@@ -154,7 +154,7 @@ func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf
 // CHECK-SMALL:       affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
 // CHECK-SMALL:       affine.load %{{.*}}[0, 0] : memref<1x1xf32>
 // CHECK-SMALL:       affine.load %{{.*}}[0, 0] : memref<1x1xf32>
-// CHECK-SMALL:       addf %{{.*}}, %{{.*}} : f32
+// CHECK-SMALL:       arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-SMALL:       affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
 // CHECK-SMALL:       memref.dealloc %{{.*}} : memref<1x1xf32>
 // CHECK-SMALL:     }
@@ -209,7 +209,7 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
   affine.for %i = 0 to 4096 step 100 {
     affine.for %ii = affine_map<(d0) -> (d0)>(%i) to min #map_ub(%i) {
       %5 = affine.load %A[%ii] : memref<4096xf32>
-      %6 = mulf %5, %5 : f32
+      %6 = arith.mulf %5, %5 : f32
       affine.store %6, %A[%ii] : memref<4096xf32>
     }
   }
@@ -223,7 +223,7 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB2]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
-// CHECK-NEXT:     mulf
+// CHECK-NEXT:     arith.mulf
 // CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:   }
 // CHECK:        affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB1]](%[[IV1]]) {

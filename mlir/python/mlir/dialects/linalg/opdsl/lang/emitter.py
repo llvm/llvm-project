@@ -10,6 +10,7 @@ from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
 from .... import linalg
 from .... import std
 from .... import math
+from .... import arith
 from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
 
 from .scalar_expr import *
@@ -216,10 +217,10 @@ class _BodyBuilder:
                          f"this structured op.")
     elif expr.scalar_const:
       value_attr = Attribute.parse(expr.scalar_const.value)
-      return std.ConstantOp(value_attr.type, value_attr).result
+      return arith.ConstantOp(value_attr.type, value_attr).result
     elif expr.scalar_index:
-      dim_attr = IntegerAttr.get(IntegerType.get_signless(64),
-                                 expr.scalar_index.dim)
+      dim_attr = IntegerAttr.get(
+          IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(IndexType.get(), dim_attr).result
     elif expr.scalar_apply:
       try:
@@ -258,18 +259,18 @@ class _BodyBuilder:
     operand_type = operand.type
     if _is_floating_point_type(operand_type):
       if is_unsigned_cast:
-        return std.FPToUIOp(to_type, operand).result
-      return std.FPToSIOp(to_type, operand).result
+        return arith.FPToUIOp(to_type, operand).result
+      return arith.FPToSIOp(to_type, operand).result
     if _is_index_type(operand_type):
-      return std.IndexCastOp(to_type, operand).result
+      return arith.IndexCastOp(to_type, operand).result
     # Assume integer.
     from_width = IntegerType(operand_type).width
     if to_width > from_width:
       if is_unsigned_cast:
-        return std.ZeroExtendIOp(to_type, operand).result
-      return std.SignExtendIOp(to_type, operand).result
+        return arith.ExtUIOp(to_type, operand).result
+      return arith.ExtSIOp(to_type, operand).result
     elif to_width < from_width:
-      return std.TruncateIOp(to_type, operand).result
+      return arith.TruncIOp(to_type, operand).result
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
@@ -278,15 +279,15 @@ class _BodyBuilder:
     operand_type = operand.type
     if _is_integer_type(operand_type):
       if is_unsigned_cast:
-        return std.UIToFPOp(to_type, operand).result
-      return std.SIToFPOp(to_type, operand).result
+        return arith.UIToFPOp(to_type, operand).result
+      return arith.SIToFPOp(to_type, operand).result
     # Assume FloatType.
     to_width = _get_floating_point_width(to_type)
     from_width = _get_floating_point_width(operand_type)
     if to_width > from_width:
-      return std.FPExtOp(to_type, operand).result
+      return arith.ExtFOp(to_type, operand).result
     elif to_width < from_width:
-      return std.FPTruncOp(to_type, operand).result
+      return arith.TruncFOp(to_type, operand).result
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
@@ -302,9 +303,9 @@ class _BodyBuilder:
 
   def _eval_add(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.AddFOp(lhs.type, lhs, rhs).result
+      return arith.AddFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.AddIOp(lhs.type, lhs, rhs).result
+      return arith.AddIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operand: {lhs}")
 
   def _eval_exp(self, x: Value) -> Value:
@@ -319,16 +320,16 @@ class _BodyBuilder:
 
   def _eval_sub(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.SubFOp(lhs.type, lhs, rhs).result
+      return arith.SubFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.SubIOp(lhs.type, lhs, rhs).result
+      return arith.SubIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'sub' operand: {lhs}")
 
   def _eval_mul(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MulFOp(lhs.type, lhs, rhs).result
+      return arith.MulFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MulIOp(lhs.type, lhs, rhs).result
+      return arith.MulIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operand: {lhs}")
 
   def _eval_max(self, lhs: Value, rhs: Value) -> Value:
@@ -358,6 +359,7 @@ class _BodyBuilder:
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return std.MinUIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
+
 
 def _infer_structured_outs(
     op_config: LinalgStructuredOpConfig,

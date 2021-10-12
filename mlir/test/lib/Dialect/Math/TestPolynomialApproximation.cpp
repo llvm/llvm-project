@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -24,7 +25,8 @@ struct TestMathPolynomialApproximationPass
     : public PassWrapper<TestMathPolynomialApproximationPass, FunctionPass> {
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<vector::VectorDialect, math::MathDialect>();
+    registry.insert<arith::ArithmeticDialect, math::MathDialect,
+                    vector::VectorDialect>();
   }
   StringRef getArgument() const final {
     return "test-math-polynomial-approximation";

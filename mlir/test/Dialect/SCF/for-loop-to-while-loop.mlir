@@ -5,25 +5,25 @@
 // CHECK-SAME:                              %[[VAL_0:.*]]: memref<?xi32>,
 // CHECK-SAME:                              %[[VAL_1:.*]]: index,
 // CHECK-SAME:                              %[[VAL_2:.*]]: i32) {
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = scf.while (%[[VAL_6:.*]] = %[[VAL_3]]) : (index) -> index {
-// CHECK:             %[[VAL_7:.*]] = cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:             %[[VAL_7:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
 // CHECK:             scf.condition(%[[VAL_7]]) %[[VAL_6]] : index
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_8:.*]]: index):
-// CHECK:             %[[VAL_9:.*]] = addi %[[VAL_8]], %[[VAL_4]] : index
-// CHECK:             %[[VAL_10:.*]] = addi %[[VAL_2]], %[[VAL_2]] : i32
+// CHECK:             %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_10:.*]] = arith.addi %[[VAL_2]], %[[VAL_2]] : i32
 // CHECK:             memref.store %[[VAL_10]], %[[VAL_0]]{{\[}}%[[VAL_8]]] : memref<?xi32>
 // CHECK:             scf.yield %[[VAL_9]] : index
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
 func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   scf.for %i = %c0 to %arg1 step %c1 {
-    %0 = addi %arg2, %arg2 : i32
+    %0 = arith.addi %arg2, %arg2 : i32
     memref.store %0, %arg0[%i] : memref<?xi32>
   }
   return
@@ -35,21 +35,21 @@ func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
 // CHECK-SAME:                              %[[VAL_0:.*]]: memref<?xi32>,
 // CHECK-SAME:                              %[[VAL_1:.*]]: index,
 // CHECK-SAME:                              %[[VAL_2:.*]]: i32) {
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = scf.while (%[[VAL_6:.*]] = %[[VAL_3]]) : (index) -> index {
-// CHECK:             %[[VAL_7:.*]] = cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:             %[[VAL_7:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
 // CHECK:             scf.condition(%[[VAL_7]]) %[[VAL_6]] : index
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_8:.*]]: index):
-// CHECK:             %[[VAL_9:.*]] = addi %[[VAL_8]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_4]] : index
 // CHECK:             %[[VAL_10:.*]] = scf.while (%[[VAL_11:.*]] = %[[VAL_3]]) : (index) -> index {
-// CHECK:               %[[VAL_12:.*]] = cmpi slt, %[[VAL_11]], %[[VAL_1]] : index
+// CHECK:               %[[VAL_12:.*]] = arith.cmpi slt, %[[VAL_11]], %[[VAL_1]] : index
 // CHECK:               scf.condition(%[[VAL_12]]) %[[VAL_11]] : index
 // CHECK:             } do {
 // CHECK:             ^bb0(%[[VAL_13:.*]]: index):
-// CHECK:               %[[VAL_14:.*]] = addi %[[VAL_13]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_15:.*]] = addi %[[VAL_2]], %[[VAL_2]] : i32
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_4]] : index
+// CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_2]], %[[VAL_2]] : i32
 // CHECK:               memref.store %[[VAL_15]], %[[VAL_0]]{{\[}}%[[VAL_8]]] : memref<?xi32>
 // CHECK:               memref.store %[[VAL_15]], %[[VAL_0]]{{\[}}%[[VAL_13]]] : memref<?xi32>
 // CHECK:               scf.yield %[[VAL_14]] : index
@@ -59,11 +59,11 @@ func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
 // CHECK:           return
 // CHECK:         }
 func @nested_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   scf.for %i = %c0 to %arg1 step %c1 {
     scf.for %j = %c0 to %arg1 step %c1 {
-      %0 = addi %arg2, %arg2 : i32
+      %0 = arith.addi %arg2, %arg2 : i32
       memref.store %0, %arg0[%i] : memref<?xi32>
       memref.store %0, %arg0[%j] : memref<?xi32>
     }
@@ -76,22 +76,22 @@ func @nested_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
 // CHECK-LABEL:   func @for_iter_args(
 // CHECK-SAME:                                %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index,
 // CHECK-SAME:                                %[[VAL_2:.*]]: index) -> f32 {
-// CHECK:           %[[VAL_3:.*]] = constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]]:3 = scf.while (%[[VAL_5:.*]] = %[[VAL_0]], %[[VAL_6:.*]] = %[[VAL_3]], %[[VAL_7:.*]] = %[[VAL_3]]) : (index, f32, f32) -> (index, f32, f32) {
-// CHECK:             %[[VAL_8:.*]] = cmpi slt, %[[VAL_5]], %[[VAL_1]] : index
+// CHECK:             %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_5]], %[[VAL_1]] : index
 // CHECK:             scf.condition(%[[VAL_8]]) %[[VAL_5]], %[[VAL_6]], %[[VAL_7]] : index, f32, f32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_9:.*]]: index, %[[VAL_10:.*]]: f32, %[[VAL_11:.*]]: f32):
-// CHECK:             %[[VAL_12:.*]] = addi %[[VAL_9]], %[[VAL_2]] : index
-// CHECK:             %[[VAL_13:.*]] = addf %[[VAL_10]], %[[VAL_11]] : f32
+// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_9]], %[[VAL_2]] : index
+// CHECK:             %[[VAL_13:.*]] = arith.addf %[[VAL_10]], %[[VAL_11]] : f32
 // CHECK:             scf.yield %[[VAL_12]], %[[VAL_13]], %[[VAL_13]] : index, f32, f32
 // CHECK:           }
 // CHECK:           return %[[VAL_14:.*]]#2 : f32
 // CHECK:         }
 func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
-  %s0 = constant 0.0 : f32
+  %s0 = arith.constant 0.0 : f32
   %result:2 = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%iarg0 = %s0, %iarg1 = %s0) -> (f32, f32) {
-    %sn = addf %iarg0, %iarg1 : f32
+    %sn = arith.addf %iarg0, %iarg1 : f32
     scf.yield %sn, %sn : f32, f32
   }
   return %result#1 : f32
@@ -103,22 +103,22 @@ func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
 // CHECK-SAME:                                              %[[VAL_0:.*]]: i32,
 // CHECK-SAME:                                              %[[VAL_1:.*]]: index,
 // CHECK-SAME:                                              %[[VAL_2:.*]]: i32) -> i32 {
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]]:2 = scf.while (%[[VAL_6:.*]] = %[[VAL_3]], %[[VAL_7:.*]] = %[[VAL_0]]) : (index, i32) -> (index, i32) {
-// CHECK:             %[[VAL_8:.*]] = cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:             %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_1]] : index
 // CHECK:             scf.condition(%[[VAL_8]]) %[[VAL_6]], %[[VAL_7]] : index, i32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_9:.*]]: index, %[[VAL_10:.*]]: i32):
-// CHECK:             %[[VAL_11:.*]] = addi %[[VAL_9]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             %[[VAL_12:.*]] = scf.execute_region -> i32 {
-// CHECK:               %[[VAL_13:.*]] = cmpi slt, %[[VAL_9]], %[[VAL_4]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:               cond_br %[[VAL_13]], ^bb1, ^bb2
 // CHECK:             ^bb1:
-// CHECK:               %[[VAL_14:.*]] = subi %[[VAL_10]], %[[VAL_0]] : i32
+// CHECK:               %[[VAL_14:.*]] = arith.subi %[[VAL_10]], %[[VAL_0]] : i32
 // CHECK:               scf.yield %[[VAL_14]] : i32
 // CHECK:             ^bb2:
-// CHECK:               %[[VAL_15:.*]] = muli %[[VAL_10]], %[[VAL_2]] : i32
+// CHECK:               %[[VAL_15:.*]] = arith.muli %[[VAL_10]], %[[VAL_2]] : i32
 // CHECK:               scf.yield %[[VAL_15]] : i32
 // CHECK:             }
 // CHECK:             scf.yield %[[VAL_11]], %[[VAL_16:.*]] : index, i32
@@ -126,20 +126,20 @@ func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
 // CHECK:           return %[[VAL_17:.*]]#1 : i32
 // CHECK:         }
 func @exec_region_multiple_yields(%arg0: i32, %arg1: index, %arg2: i32) -> i32 {
-  %c1_i32 = constant 1 : i32
-  %c2_i32 = constant 2 : i32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c5 = constant 5 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
   %0 = scf.for %i = %c0 to %arg1 step %c1 iter_args(%iarg0 = %arg0) -> i32 {
     %2 = scf.execute_region -> i32 {
-      %1 = cmpi slt, %i, %c1 : index
+      %1 = arith.cmpi slt, %i, %c1 : index
       cond_br %1, ^bb1, ^bb2
     ^bb1:
-      %2 = subi %iarg0, %arg0 : i32
+      %2 = arith.subi %iarg0, %arg0 : i32
       scf.yield %2 : i32
     ^bb2:
-      %3 = muli %iarg0, %arg2 : i32
+      %3 = arith.muli %iarg0, %arg2 : i32
       scf.yield %3 : i32
     }
     scf.yield %2 : i32

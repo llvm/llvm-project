@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -45,8 +46,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   auto rank = memRefType.getRank();
 
   SmallVector<Value, 4> lbs, ubs, steps;
-  Value zero = b.create<ConstantIndexOp>(0);
-  Value one = b.create<ConstantIndexOp>(1);
+  Value zero = b.create<arith::ConstantIndexOp>(0);
+  Value one = b.create<arith::ConstantIndexOp>(1);
 
   // Make sure we have enough loops to use all thread dimensions, these trivial
   // loops should be outermost and therefore inserted first.
@@ -62,8 +63,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   ubs.reserve(lbs.size());
   steps.reserve(lbs.size());
   for (auto idx = 0; idx < rank; ++idx) {
-    ubs.push_back(
-        b.createOrFold<memref::DimOp>(from, b.create<ConstantIndexOp>(idx)));
+    ubs.push_back(b.createOrFold<memref::DimOp>(
+        from, b.create<arith::ConstantIndexOp>(idx)));
     steps.push_back(one);
   }
 

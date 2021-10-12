@@ -7,7 +7,7 @@
 // RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='builtin.func(cse,test-pass-failure)' -print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
 
 func @foo() {
-  %0 = constant 0 : i32
+  %0 = arith.constant 0 : i32
   return
 }
 

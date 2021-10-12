@@ -12,8 +12,9 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   MLIRAsyncPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRArithmetic
   MLIRAsync
+  MLIRIR
   MLIRPass
   MLIRSCF
   MLIRSCFToStandard

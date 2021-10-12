@@ -9,8 +9,8 @@ func @alloc() {
   // CHECK: %0 = memref.alloc() : memref<1024x64xf32, 1>
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
-  %c0 = "std.constant"() {value = 0: index} : () -> index
-  %c1 = "std.constant"() {value = 1: index} : () -> index
+  %c0 = "arith.constant"() {value = 0: index} : () -> index
+  %c1 = "arith.constant"() {value = 1: index} : () -> index
 
   // Test alloc with dynamic dimensions.
   // CHECK: %1 = memref.alloc(%c0, %c1) : memref<?x?xf32, 1>
@@ -40,8 +40,8 @@ func @alloca() {
   // CHECK: %0 = memref.alloca() : memref<1024x64xf32, 1>
   %0 = memref.alloca() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
-  %c0 = "std.constant"() {value = 0: index} : () -> index
-  %c1 = "std.constant"() {value = 1: index} : () -> index
+  %c0 = "arith.constant"() {value = 0: index} : () -> index
+  %c1 = "arith.constant"() {value = 1: index} : () -> index
 
   // Test alloca with dynamic dimensions.
   // CHECK: %1 = memref.alloca(%c0, %c1) : memref<?x?xf32, 1>
@@ -79,8 +79,8 @@ func @load_store() {
   // CHECK: %0 = memref.alloc() : memref<1024x64xf32, 1>
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
-  %1 = constant 0 : index
-  %2 = constant 1 : index
+  %1 = arith.constant 0 : index
+  %2 = arith.constant 1 : index
 
   // CHECK: %1 = memref.load %0[%c0, %c1] : memref<1024x64xf32, 1>
   %3 = memref.load %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
@@ -93,15 +93,15 @@ func @load_store() {
 
 // CHECK-LABEL: func @dma_ops()
 func @dma_ops() {
-  %c0 = constant 0 : index
-  %stride = constant 32 : index
-  %elt_per_stride = constant 16 : index
+  %c0 = arith.constant 0 : index
+  %stride = arith.constant 32 : index
+  %elt_per_stride = arith.constant 16 : index
 
   %A = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
   %Ah = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 1>
   %tag = memref.alloc() : memref<1 x f32>
 
-  %num_elements = constant 256 : index
+  %num_elements = arith.constant 256 : index
 
   memref.dma_start %A[%c0], %Ah[%c0], %num_elements, %tag[%c0] : memref<256 x f32>, memref<256 x f32, 1>, memref<1 x f32>
   memref.dma_wait %tag[%c0], %num_elements : memref<1 x f32>

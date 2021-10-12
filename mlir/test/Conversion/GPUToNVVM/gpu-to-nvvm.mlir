@@ -64,7 +64,7 @@ gpu.module @test_module {
   builtin.func @gpu_index_comp(%idx : index) -> index {
     // CHECK: = llvm.add %{{.*}}, %{{.*}} : i64
     // CHECK32: = llvm.add %{{.*}}, %{{.*}} : i32
-    %0 = addi %idx, %idx : index
+    %0 = arith.addi %idx, %idx : index
     // CHECK: llvm.return %{{.*}} : i64
     // CHECK32: llvm.return %{{.*}} : i32
     std.return %0 : index
@@ -76,7 +76,7 @@ gpu.module @test_module {
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_op()
   gpu.func @gpu_all_reduce_op() {
-    %arg0 = constant 1.0 : f32
+    %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
@@ -92,13 +92,13 @@ gpu.module @test_module {
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_region()
   gpu.func @gpu_all_reduce_region() {
-    %arg0 = constant 1 : i32
+    %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     %result = "gpu.all_reduce"(%arg0) ({
     ^bb(%lhs : i32, %rhs : i32):
-      %xor = xor %lhs, %rhs : i32
+      %xor = arith.xori %lhs, %rhs : i32
       "gpu.yield"(%xor) : (i32) -> ()
     }) : (i32) -> (i32)
     gpu.return
@@ -111,11 +111,11 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_shuffle()
   builtin.func @gpu_shuffle() -> (f32) {
     // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-    %arg0 = constant 1.0 : f32
+    %arg0 = arith.constant 1.0 : f32
     // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
-    %arg1 = constant 4 : i32
+    %arg1 = arith.constant 4 : i32
     // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(23 : i32) : i32
-    %arg2 = constant 23 : i32
+    %arg2 = arith.constant 23 : i32
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: %[[#SHL:]] = llvm.shl %[[#ONE]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.sub %[[#SHL]], %[[#ONE]] : i32
@@ -147,9 +147,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__nv_fabs(f64) -> f64
   // CHECK-LABEL: func @gpu_fabs
   builtin.func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.absf %arg_f32 : f32
+    %result32 = math.abs %arg_f32 : f32
     // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (f32) -> f32
-    %result64 = std.absf %arg_f64 : f64
+    %result64 = math.abs %arg_f64 : f64
     // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -162,9 +162,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__nv_ceil(f64) -> f64
   // CHECK-LABEL: func @gpu_ceil
   builtin.func @gpu_ceil(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.ceilf %arg_f32 : f32
+    %result32 = math.ceil %arg_f32 : f32
     // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (f32) -> f32
-    %result64 = std.ceilf %arg_f64 : f64
+    %result64 = math.ceil %arg_f64 : f64
     // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
@@ -177,9 +177,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__nv_floor(f64) -> f64
   // CHECK-LABEL: func @gpu_floor
   builtin.func @gpu_floor(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = std.floorf %arg_f32 : f32
+    %result32 = math.floor %arg_f32 : f32
     // CHECK: llvm.call @__nv_floorf(%{{.*}}) : (f32) -> f32
-    %result64 = std.floorf %arg_f64 : f64
+    %result64 = math.floor %arg_f64 : f64
     // CHECK: llvm.call @__nv_floor(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }

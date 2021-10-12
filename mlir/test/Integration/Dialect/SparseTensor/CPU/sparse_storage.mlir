@@ -55,14 +55,14 @@ module {
   // everything is working "under the hood".
   //
   func @entry() {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %d0 = constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d0 = arith.constant 0.0 : f64
 
     //
     // Initialize a dense tensor.
     //
-    %t = constant dense<[
+    %t = arith.constant dense<[
        [ 1.0,  0.0,  2.0,  0.0,  0.0,  0.0,  0.0,  3.0],
        [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
        [ 0.0,  0.0,  4.0,  0.0,  0.0,  0.0,  0.0,  0.0],

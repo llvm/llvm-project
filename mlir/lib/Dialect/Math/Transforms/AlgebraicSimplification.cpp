@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -76,22 +77,23 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, 2.0)` with `x * x`.
   if (isExponentValue(2.0)) {
-    rewriter.replaceOpWithNewOp<MulFOp>(op, ValueRange({x, x}));
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, x}));
     return success();
   }
 
   // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
-    Value square = rewriter.create<MulFOp>(op.getLoc(), ValueRange({x, x}));
-    rewriter.replaceOpWithNewOp<MulFOp>(op, ValueRange({x, square}));
+    Value square =
+        rewriter.create<arith::MulFOp>(op.getLoc(), ValueRange({x, x}));
+    rewriter.replaceOpWithNewOp<arith::MulFOp>(op, ValueRange({x, square}));
     return success();
   }
 
   // Replace `pow(x, -1.0)` with `1.0 / x`.
   if (isExponentValue(-1.0)) {
-    Value one = rewriter.create<ConstantOp>(
+    Value one = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getFloatAttr(getElementTypeOrSelf(op.getType()), 1.0));
-    rewriter.replaceOpWithNewOp<DivFOp>(op, ValueRange({bcast(one), x}));
+    rewriter.replaceOpWithNewOp<arith::DivFOp>(op, ValueRange({bcast(one), x}));
     return success();
   }
 

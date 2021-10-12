@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
@@ -19,8 +20,8 @@ using namespace mlir;
 /// Matches a ConstantIndexOp.
 /// TODO: This should probably just be a general matcher that uses matchConstant
 /// and checks the operation for an index type.
-detail::op_matcher<ConstantIndexOp> mlir::matchConstantIndex() {
-  return detail::op_matcher<ConstantIndexOp>();
+detail::op_matcher<arith::ConstantIndexOp> mlir::matchConstantIndex() {
+  return detail::op_matcher<arith::ConstantIndexOp>();
 }
 
 /// Detects the `values` produced by a ConstantIndexOp and places the new
@@ -32,8 +33,9 @@ void mlir::canonicalizeSubViewPart(
     if (ofr.is<Attribute>())
       continue;
     // Newly static, move from Value to constant.
-    if (auto cstOp = ofr.dyn_cast<Value>().getDefiningOp<ConstantIndexOp>())
-      ofr = OpBuilder(cstOp).getIndexAttr(cstOp.getValue());
+    if (auto cstOp =
+            ofr.dyn_cast<Value>().getDefiningOp<arith::ConstantIndexOp>())
+      ofr = OpBuilder(cstOp).getIndexAttr(cstOp.value());
   }
 }
 
@@ -55,7 +57,7 @@ Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
     return value;
   auto attr = ofr.dyn_cast<Attribute>().dyn_cast<IntegerAttr>();
   assert(attr && "expect the op fold result casts to an integer attribute");
-  return b.create<ConstantIndexOp>(loc, attr.getValue().getSExtValue());
+  return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }
 
 SmallVector<Value>
@@ -68,27 +70,27 @@ mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
 }
 
 Value ArithBuilder::_and(Value lhs, Value rhs) {
-  return b.create<AndOp>(loc, lhs, rhs);
+  return b.create<arith::AndIOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::add(Value lhs, Value rhs) {
   if (lhs.getType().isa<IntegerType>())
-    return b.create<AddIOp>(loc, lhs, rhs);
-  return b.create<AddFOp>(loc, lhs, rhs);
+    return b.create<arith::AddIOp>(loc, lhs, rhs);
+  return b.create<arith::AddFOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::mul(Value lhs, Value rhs) {
   if (lhs.getType().isa<IntegerType>())
-    return b.create<MulIOp>(loc, lhs, rhs);
-  return b.create<MulFOp>(loc, lhs, rhs);
+    return b.create<arith::MulIOp>(loc, lhs, rhs);
+  return b.create<arith::MulFOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::sgt(Value lhs, Value rhs) {
   if (lhs.getType().isa<IndexType, IntegerType>())
-    return b.create<CmpIOp>(loc, CmpIPredicate::sgt, lhs, rhs);
-  return b.create<CmpFOp>(loc, CmpFPredicate::OGT, lhs, rhs);
+    return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs);
+  return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs);
 }
 Value ArithBuilder::slt(Value lhs, Value rhs) {
   if (lhs.getType().isa<IndexType, IntegerType>())
-    return b.create<CmpIOp>(loc, CmpIPredicate::slt, lhs, rhs);
-  return b.create<CmpFOp>(loc, CmpFPredicate::OLT, lhs, rhs);
+    return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs);
+  return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs);
 }
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
   return b.create<SelectOp>(loc, cmp, lhs, rhs);

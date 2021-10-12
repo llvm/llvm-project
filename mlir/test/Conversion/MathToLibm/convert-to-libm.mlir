@@ -52,10 +52,10 @@ func @expm1_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector
 // CHECK-LABEL:   func @expm1_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = constant dense<0.000000e+00> : vector<2xf64>
-// CHECK-DAG:       %[[C0:.*]] = constant 0 : i32
-// CHECK-DAG:       %[[C1:.*]] = constant 1 : i32
+// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[IN0_F32:.*]] = vector.extractelement %[[VAL_0]]{{\[}}%[[C0]] : i32] : vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @expm1f(%[[IN0_F32]]) : (f32) -> f32
 // CHECK:           %[[VAL_8:.*]] = vector.insertelement %[[OUT0_F32]], %[[CVF]]{{\[}}%[[C0]] : i32] : vector<2xf32>

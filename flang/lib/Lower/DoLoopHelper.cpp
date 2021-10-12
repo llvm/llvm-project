@@ -39,6 +39,6 @@ void Fortran::lower::DoLoopHelper::createLoop(
   auto indexType = builder.getIndexType();
   auto zero = builder.createIntegerConstant(loc, indexType, 0);
   auto one = builder.createIntegerConstant(loc, count.getType(), 1);
-  auto up = builder.create<mlir::SubIOp>(loc, count, one);
+  auto up = builder.create<mlir::arith::SubIOp>(loc, count, one);
   createLoop(zero, up, one, bodyGenerator);
 }

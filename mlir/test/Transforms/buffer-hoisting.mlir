@@ -384,7 +384,7 @@ func @nested_regions_and_cond_branch(
 func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi eq, %arg0, %arg1 : index
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     scf.yield %1 : memref<?x?xf32>
@@ -410,7 +410,7 @@ func @nested_region_control_flow(
 func @nested_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi eq, %arg0, %arg1 : index
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     scf.yield %1 : memref<?x?xf32>
@@ -436,7 +436,7 @@ func @nested_region_control_flow_div(
 func @nested_region_control_flow_div_nested(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi eq, %arg0, %arg1 : index
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     %3 = scf.if %0 -> (memref<?x?xf32>) {
@@ -469,15 +469,15 @@ func @nested_region_control_flow_div_nested_dependencies(
   %arg1: i1,
   %arg2: index) -> memref<?x?xf32> {
   %0 = scf.if %arg1 -> (memref<?x?xf32>) {
-    %1 = constant 1 : i32
-    %2 = addi %arg0, %1 : i32
-    %3 = index_cast %2 : i32 to index
+    %1 = arith.constant 1 : i32
+    %2 = arith.addi %arg0, %1 : i32
+    %3 = arith.index_cast %2 : i32 to index
     %4 = memref.alloc(%arg2, %3) : memref<?x?xf32>
     scf.yield %4 : memref<?x?xf32>
   } else {
-    %1 = constant 2 : i32
-    %2 = addi %arg0, %1 : i32
-    %3 = index_cast %2 : i32 to index
+    %1 = arith.constant 2 : i32
+    %2 = arith.addi %arg0, %1 : i32
+    %3 = arith.index_cast %2 : i32 to index
     %4 = memref.alloc(%arg2, %3) : memref<?x?xf32>
     scf.yield %4 : memref<?x?xf32>
   }
@@ -486,15 +486,15 @@ func @nested_region_control_flow_div_nested_dependencies(
 
 //      CHECK: (%[[ARG0:.*]]: {{.*}}
 // CHECK-NEXT: %{{.*}} = scf.if
-// CHECK-NEXT: %{{.*}} = constant
-// CHECK-NEXT: %{{.*}} = addi
-// CHECK-NEXT: %[[FUNC:.*]] = index_cast
+// CHECK-NEXT: %{{.*}} = arith.constant
+// CHECK-NEXT: %{{.*}} = arith.addi
+// CHECK-NEXT: %[[FUNC:.*]] = arith.index_cast
 // CHECK-NEXT: alloc(%arg2, %[[FUNC]])
 // CHECK-NEXT: scf.yield
 // CHECK-NEXT: } else {
-// CHECK-NEXT: %{{.*}} = constant
-// CHECK-NEXT: %{{.*}} = addi
-// CHECK-NEXT: %[[FUNC:.*]] = index_cast
+// CHECK-NEXT: %{{.*}} = arith.constant
+// CHECK-NEXT: %{{.*}} = arith.addi
+// CHECK-NEXT: %[[FUNC:.*]] = arith.index_cast
 // CHECK-NEXT: alloc(%arg2, %[[FUNC]])
 
 // -----
@@ -661,7 +661,7 @@ func @loop_alloc(
   %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %2 = cmpi eq, %i, %ub : index
+    %2 = arith.cmpi eq, %i, %ub : index
     %3 = memref.alloc() : memref<2xf32>
     scf.yield %3 : memref<2xf32>
   }
@@ -688,7 +688,7 @@ func @loop_nested_if_alloc(
   %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %2 = cmpi eq, %i, %ub : index
+    %2 = arith.cmpi eq, %i, %ub : index
     %3 = scf.if %2 -> (memref<2xf32>) {
       %4 = memref.alloc() : memref<2xf32>
       scf.yield %4 : memref<2xf32>
@@ -725,7 +725,7 @@ func @loop_nested_alloc(
       %3 = scf.for %i3 = %lb to %ub step %step
         iter_args(%iterBuf3 = %iterBuf2) -> memref<2xf32> {
         %4 = memref.alloc() : memref<2xf32>
-        %5 = cmpi eq, %i, %ub : index
+        %5 = arith.cmpi eq, %i, %ub : index
         %6 = scf.if %5 -> (memref<2xf32>) {
           %7 = memref.alloc() : memref<2xf32>
           scf.yield %7 : memref<2xf32>
@@ -766,7 +766,7 @@ func @loop_nested_alloc_dyn_dependency(
       iter_args(%iterBuf2 = %iterBuf) -> memref<?xf32> {
       %3 = scf.for %i3 = %lb to %ub step %step
         iter_args(%iterBuf3 = %iterBuf2) -> memref<?xf32> {
-        %5 = cmpi eq, %i, %ub : index
+        %5 = arith.cmpi eq, %i, %ub : index
         %6 = scf.if %5 -> (memref<?xf32>) {
           %7 = memref.alloc(%i3) : memref<?xf32>
           scf.yield %7 : memref<?xf32>

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -28,10 +29,18 @@ struct ArithmeticInlinerInterface : public DialectInlinerInterface {
 };
 } // end anonymous namespace
 
-void mlir::arith::ArithmeticDialect::initialize() {
+void arith::ArithmeticDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.cpp.inc"
       >();
   addInterfaces<ArithmeticInlinerInterface>();
+}
+
+/// Materialize an integer or floating point constant.
+Operation *arith::ArithmeticDialect::materializeConstant(OpBuilder &builder,
+                                                         Attribute value,
+                                                         Type type,
+                                                         Location loc) {
+  return builder.create<arith::ConstantOp>(loc, value, type);
 }

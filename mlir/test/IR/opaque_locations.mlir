@@ -6,9 +6,9 @@
 // CHECK: MyLocation: 0: 'test.foo' op
 // CHECK: nullptr: 'test.foo' op
 // CHECK: MyLocation: 0: 'test.foo' op
-// CHECK: MyLocation: 1: 'std.constant' op
-// CHECK: nullptr: 'std.constant' op
-// CHECK: MyLocation: 1: 'std.constant' op
+// CHECK: MyLocation: 1: 'arith.constant' op
+// CHECK: nullptr: 'arith.constant' op
+// CHECK: MyLocation: 1: 'arith.constant' op
 
 // CHECK-LABEL: func @inline_notation
 func @inline_notation() -> i32 {
@@ -17,10 +17,10 @@ func @inline_notation() -> i32 {
   // CHECK: -> i32 loc(unknown)
   %1 = "test.foo"() : () -> i32 loc("foo")
 
-  // CHECK: constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
-  // CHECK: constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
-  // CHECK: constant 4 : index loc(unknown)
-  %2 = constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
+  // CHECK: arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
+  // CHECK: arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
+  // CHECK: arith.constant 4 : index loc(unknown)
+  %2 = arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
 
   // CHECK: } loc(unknown)
   affine.for %i0 = 0 to 8 {

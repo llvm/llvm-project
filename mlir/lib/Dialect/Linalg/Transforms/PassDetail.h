@@ -18,6 +18,10 @@ namespace mlir {
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace arith {
+class ArithmeticDialect;
+} // end namespace arith
+
 namespace linalg {
 class LinalgDialect;
 } // end namespace linalg

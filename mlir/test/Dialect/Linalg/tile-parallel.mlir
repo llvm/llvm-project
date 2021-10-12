@@ -19,15 +19,15 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                      memref<?x?xf32, offset: ?, strides: [?, 1]>)
     outs(%sum : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):
-    %result = addf %lhs_in, %rhs_in : f32
+    %result = arith.addf %lhs_in, %rhs_in : f32
     linalg.yield %result : f32
   }
   return
 }
 // TILE-2-LABEL: func @sum(
 // TILE-2-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
-// TILE-2-DAG: [[C0:%.*]] = constant 0 : index
-// TILE-2-DAG: [[C2:%.*]] = constant 2 : index
+// TILE-2-DAG: [[C0:%.*]] = arith.constant 0 : index
+// TILE-2-DAG: [[C2:%.*]] = arith.constant 2 : index
 // TILE-2: [[LHS_ROWS:%.*]] = memref.dim [[LHS]], %c0
 // TILE-2: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_ROWS]]) step ([[C2]]) {
 // TILE-2-NO: scf.parallel
@@ -38,8 +38,8 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 
 // TILE-02-LABEL: func @sum(
 // TILE-02-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
-// TILE-02-DAG: [[C0:%.*]] = constant 0 : index
-// TILE-02-DAG: [[C2:%.*]] = constant 2 : index
+// TILE-02-DAG: [[C0:%.*]] = arith.constant 0 : index
+// TILE-02-DAG: [[C2:%.*]] = arith.constant 2 : index
 // TILE-02: [[LHS_COLS:%.*]] = memref.dim [[LHS]], %c1
 // TILE-02: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_COLS]]) step ([[C2]]) {
 // TILE-02-NO: scf.parallel
@@ -55,9 +55,9 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 
 // TILE-234-LABEL: func @sum(
 // TILE-234-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
-// TILE-234-DAG: [[C0:%.*]] = constant 0 : index
-// TILE-234-DAG: [[C2:%.*]] = constant 2 : index
-// TILE-234-DAG: [[C3:%.*]] = constant 3 : index
+// TILE-234-DAG: [[C0:%.*]] = arith.constant 0 : index
+// TILE-234-DAG: [[C2:%.*]] = arith.constant 2 : index
+// TILE-234-DAG: [[C3:%.*]] = arith.constant 3 : index
 // TILE-234: [[LHS_ROWS:%.*]] = memref.dim [[LHS]], %c0
 // TILE-234: [[LHS_COLS:%.*]] = memref.dim [[LHS]], %c1
 // TILE-234: scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]]) to ([[LHS_ROWS]], [[LHS_COLS]]) step ([[C2]], [[C3]]) {

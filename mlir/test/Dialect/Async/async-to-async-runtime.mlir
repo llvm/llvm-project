@@ -4,7 +4,7 @@
 // CHECK-LABEL: @execute_no_async_args
 func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
   %token = async.execute {
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
@@ -47,10 +47,10 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn_0(%arg0, %arg2, %arg1)
   %token0 = async.execute {
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
 
     %token1 = async.execute {
-      %c1 = constant 1: index
+      %c1 = arith.constant 1: index
       memref.store %arg0, %arg2[%c0] : memref<1xf32>
       async.yield
     }
@@ -61,8 +61,8 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
   }
   // CHECK: async.runtime.await %[[TOKEN]]
   // CHECK: %[[IS_ERROR:.*]] = async.runtime.is_error %[[TOKEN]]
-  // CHECK: %[[TRUE:.*]] = constant true
-  // CHECK: %[[NOT_ERROR:.*]] = xor %[[IS_ERROR]], %[[TRUE]] : i1
+  // CHECK: %[[TRUE:.*]] = arith.constant true
+  // CHECK: %[[NOT_ERROR:.*]] = arith.xori %[[IS_ERROR]], %[[TRUE]] : i1
   // CHECK: assert %[[NOT_ERROR]]
   // CHECK-NEXT: return
   async.await %token0 : !async.token
@@ -126,13 +126,13 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
   %token = async.execute {
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
   // CHECK: call @async_execute_fn_0(%[[TOKEN]], %arg0, %arg1)
   %token_0 = async.execute [%token] {
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
   }
@@ -183,8 +183,8 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 
 // CHECK-LABEL: @async_group_await_all
 func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
-  // CHECK: %[[C:.*]] = constant 1 : index
-  %c = constant 1 : index
+  // CHECK: %[[C:.*]] = arith.constant 1 : index
+  %c = arith.constant 1 : index
   // CHECK: %[[GROUP:.*]] = async.runtime.create_group %[[C]] : !async.group
   %0 = async.create_group %c : !async.group
 
@@ -240,7 +240,7 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 func @execute_and_return_f32() -> f32 {
  // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
-    %c0 = constant 123.0 : f32
+    %c0 = arith.constant 123.0 : f32
     async.yield %c0 : f32
   }
 
@@ -265,7 +265,7 @@ func @execute_and_return_f32() -> f32 {
 
 // Emplace result value.
 // CHECK: ^[[RESUME]]:
-// CHECK:   %[[CST:.*]] = constant 1.230000e+02 : f32
+// CHECK:   %[[CST:.*]] = arith.constant 1.230000e+02 : f32
 // CHECK:   async.runtime.store %cst, %[[VALUE]]
 // CHECK:   async.runtime.set_available %[[VALUE]]
 // CHECK:   async.runtime.set_available %[[TOKEN]]
@@ -279,13 +279,13 @@ func @execute_and_return_f32() -> f32 {
 func @async_value_operands() {
   // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
-    %c0 = constant 123.0 : f32
+    %c0 = arith.constant 123.0 : f32
     async.yield %c0 : f32
   }
 
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn_0(%[[RET]]#1)
   %token0 = async.execute(%result as %value: !async.value<f32>) {
-    %0 = addf %value, %value : f32
+    %0 = arith.addf %value, %value : f32
     async.yield
   }
 
@@ -324,7 +324,7 @@ func @async_value_operands() {
 // // Load from the async.value argument after error checking.
 // CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   %[[LOADED:.*]] = async.runtime.load %[[ARG]] : !async.value<f32
-// CHECK:   addf %[[LOADED]], %[[LOADED]] : f32
+// CHECK:   arith.addf %[[LOADED]], %[[LOADED]] : f32
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:
@@ -417,7 +417,7 @@ func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
 
 // CHECK-LABEL: @clone_constants
 func @clone_constants(%arg0: f32, %arg1: memref<1xf32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %token = async.execute {
     memref.store %arg0, %arg1[%c0] : memref<1xf32>
     async.yield
@@ -431,5 +431,5 @@ func @clone_constants(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK-SAME:    %[[VALUE:arg[0-9]+]]: f32,
 // CHECK-SAME:    %[[MEMREF:arg[0-9]+]]: memref<1xf32>
 // CHECK-SAME:  ) -> !async.token
-// CHECK:         %[[CST:.*]] = constant 0 : index
+// CHECK:         %[[CST:.*]] = arith.constant 0 : index
 // CHECK:         memref.store %[[VALUE]], %[[MEMREF]][%[[CST]]]

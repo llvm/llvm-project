@@ -51,7 +51,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
       ins(%input : memref<16xi32>)
      outs(%output : memref<1xi32>) {
     ^bb(%in: i32, %out: i32):
-      %sum = addi %in, %out : i32
+      %sum = arith.addi %in, %out : i32
       linalg.yield %sum : i32
   }
   spv.Return
@@ -80,7 +80,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
       ins(%input : memref<16xi32>)
      outs(%output : memref<1xi32>) {
     ^bb(%in: i32, %out: i32):
-      %sum = addi %in, %out : i32
+      %sum = arith.addi %in, %out : i32
       linalg.yield %sum : i32
   }
   return
@@ -111,7 +111,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
       ins(%input : memref<16xi32>)
      outs(%output : memref<1xi32>) {
     ^bb(%in: i32, %out: i32):
-      %sum = addi %in, %out : i32
+      %sum = arith.addi %in, %out : i32
       linalg.yield %sum : i32
   }
   spv.Return
@@ -142,7 +142,7 @@ func @single_workgroup_reduction(%input: memref<16x8xi32>, %output: memref<16xi3
       ins(%input : memref<16x8xi32>)
      outs(%output : memref<16xi32>) {
     ^bb(%in: i32, %out: i32):
-      %sum = addi %in, %out : i32
+      %sum = arith.addi %in, %out : i32
       linalg.yield %sum : i32
   }
   spv.Return

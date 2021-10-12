@@ -58,21 +58,21 @@ Moreover, SPIR-V supports the notion of array stride. Currently only natural
 strides (based on [`VulkanLayoutUtils`][VulkanLayoutUtils]) are supported. They
 are also mapped to LLVM array.
 
-SPIR-V Dialect                        | LLVM Dialect
-:-----------------------------------: | :-----------------------------------:
-`!spv.array<<count> x <element-type>>`| `!llvm.array<<count> x <element-type>>`
-`!spv.rtarray< <element-type> >`      | `!llvm.array<0 x <element-type>>`
+SPIR-V Dialect                         | LLVM Dialect
+:------------------------------------: | :-------------------------------------:
+`!spv.array<<count> x <element-type>>` | `!llvm.array<<count> x <element-type>>`
+`!spv.rtarray< <element-type> >`       | `!llvm.array<0 x <element-type>>`
 
 ### Struct types
 
 Members of SPIR-V struct types may have decorations and offset information.
 Currently, there is **no** support of member decorations conversion for structs.
-For more information see section on [Decorations](#Decorations-conversion). 
+For more information see section on [Decorations](#Decorations-conversion).
 
 Usually we expect that each struct member has a natural size and alignment.
-However, there are cases (*e.g.* in graphics) where one would place struct 
-members explicitly at particular offsets. This case is **not** supported
-at the moment. Hence, we adhere to the following mapping:
+However, there are cases (*e.g.* in graphics) where one would place struct
+members explicitly at particular offsets. This case is **not** supported at the
+moment. Hence, we adhere to the following mapping:
 
 *   Structs with no offset are modelled as LLVM packed structures.
 
@@ -86,14 +86,11 @@ at the moment. Hence, we adhere to the following mapping:
     a design would require index recalculation in the conversion of ops that
     involve memory addressing.
 
-Examples of SPIR-V struct conversion are:
-```mlir
-!spv.struct<i8, i32>          =>  !llvm.struct<packed (i8, i32)>
-!spv.struct<i8 [0], i32 [4]>  =>  !llvm.struct<(i8, i32)>
+Examples of SPIR-V struct conversion are: ```mlir !spv.struct<i8, i32> =>
+!llvm.struct<packed (i8, i32)> !spv.struct<i8 [0], i32 [4]> => !llvm.struct<(i8,
+i32)>
 
-// error
-!spv.struct<i8 [0], i32 [8]>
-```
+// error !spv.struct<i8 [0], i32 [8]> ```
 
 ### Not implemented types
 
@@ -104,10 +101,10 @@ conversion. This includes `ImageType` and `MatrixType`.
 
 This section describes how SPIR-V Dialect operations are converted to LLVM
 Dialect. It lists already working conversion patterns, as well as those that are
-an ongoing work. 
+an ongoing work.
 
 There are also multiple ops for which there is no clear mapping in LLVM.
-Conversion for those have to be discussed within the community on the 
+Conversion for those have to be discussed within the community on the
 case-by-case basis.
 
 ### Arithmetic ops
@@ -115,21 +112,21 @@ case-by-case basis.
 SPIR-V arithmetic ops mostly have a direct equivalent in LLVM Dialect. Such
 exceptions as `spv.SMod` and `spv.FMod` are rare.
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.FAdd`                            | `llvm.fadd`
-`spv.FDiv`                            | `llvm.fdiv`
-`spv.FNegate`                         | `llvm.fneg`
-`spv.FMul`                            | `llvm.fmul`
-`spv.FRem`                            | `llvm.frem`
-`spv.FSub`                            | `llvm.fsub`
-`spv.IAdd`                            | `llvm.add`
-`spv.IMul`                            | `llvm.mul`
-`spv.ISub`                            | `llvm.sub`
-`spv.SDiv`                            | `llvm.sdiv`
-`spv.SRem`                            | `llvm.srem`
-`spv.UDiv`                            | `llvm.udiv`
-`spv.UMod`                            | `llvm.urem`
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :-------------:
+`spv.FAdd`        | `llvm.fadd`
+`spv.FDiv`        | `llvm.fdiv`
+`spv.FNegate`     | `llvm.fneg`
+`spv.FMul`        | `llvm.fmul`
+`spv.FRem`        | `llvm.frem`
+`spv.FSub`        | `llvm.fsub`
+`spv.IAdd`        | `llvm.add`
+`spv.IMul`        | `llvm.mul`
+`spv.ISub`        | `llvm.sub`
+`spv.SDiv`        | `llvm.sdiv`
+`spv.SRem`        | `llvm.srem`
+`spv.UDiv`        | `llvm.udiv`
+`spv.UMod`        | `llvm.urem`
 
 ### Bitwise ops
 
@@ -141,18 +138,18 @@ may have a specific conversion pattern.
 As with arithmetic ops, most of bitwise ops have a semantically equivalent op in
 LLVM:
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.BitwiseAnd`                      | `llvm.and`
-`spv.BitwiseOr`                       | `llvm.or`
-`spv.BitwiseXor`                      | `llvm.xor`
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :-------------:
+`spv.BitwiseAnd`  | `llvm.and`
+`spv.BitwiseOr`   | `llvm.or`
+`spv.BitwiseXor`  | `llvm.xor`
 
 Also, some of bitwise ops can be modelled with LLVM intrinsics:
 
-SPIR-V Dialect op                     | LLVM Dialect intrinsic
-:-----------------------------------: | :-----------------------------------:
-`spv.BitCount`                        | `llvm.intr.ctpop`
-`spv.BitReverse`                      | `llvm.intr.bitreverse`
+SPIR-V Dialect op | LLVM Dialect intrinsic
+:---------------: | :--------------------:
+`spv.BitCount`    | `llvm.intr.ctpop`
+`spv.BitReverse`  | `llvm.intr.bitreverse`
 
 #### `spv.Not`
 
@@ -170,9 +167,8 @@ SPIR-V dialect has three bitfield ops: `spv.BitFieldInsert`,
 outline the general design of conversion patterns for this ops, and then
 describe each of them.
 
-All of these ops take `base`, `offset` and `count` (`insert` for 
-`spv.BitFieldInsert`) as arguments. There are two important things
-to note:
+All of these ops take `base`, `offset` and `count` (`insert` for
+`spv.BitFieldInsert`) as arguments. There are two important things to note:
 
 *   `offset` and `count` are always scalar. This means that we can have the
     following case:
@@ -220,10 +216,9 @@ and their operands.
 ##### `spv.BitFieldInsert`
 
 This operation is implemented as a series of LLVM Dialect operations. First step
-would be to create a mask with bits set outside
-[`offset`, `offset` + `count` - 1]. Then, unchanged bits are extracted from
-`base` that are outside of [`offset`, `offset` + `count` - 1]. The result is
-`or`ed with shifted `insert`.
+would be to create a mask with bits set outside [`offset`, `offset` + `count` -
+1]. Then, unchanged bits are extracted from `base` that are outside of
+[`offset`, `offset` + `count` - 1]. The result is `or`ed with shifted `insert`.
 
 ```mlir
 // Create mask
@@ -284,73 +279,79 @@ and the mask is applied.
 
 #### Direct conversions
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.ConvertFToS`                     | `llvm.fptosi`
-`spv.ConvertFToU`                     | `llvm.fptoui`
-`spv.ConvertSToF`                     | `llvm.sitofp`
-`spv.ConvertUToF`                     | `llvm.uitofp`
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :-------------:
+`spv.ConvertFToS` | `llvm.fptosi`
+`spv.ConvertFToU` | `llvm.fptoui`
+`spv.ConvertSToF` | `llvm.sitofp`
+`spv.ConvertUToF` | `llvm.uitofp`
 
 #### spv.Bitcast
+
 This operation has a direct counterpart in LLVM: `llvm.bitcast`. It is treated
 separately since it also supports pointer to pointer bit pattern-preserving type
 conversion, apart from regular scalar or vector of numerical type.
 
 #### Special cases
+
 Special cases include `spv.FConvert`, `spv.SConvert` and `spv.UConvert`. These
 operations are either a truncate or extend. Let's denote the operand component
 width as A, and result component width as R. Then, the following mappings are
 used:
 
-##### `spv.FConvert` 
-Case            | LLVM Dialect op
-:-------------: | :-----------------------------------:
-A < R           | `llvm.fpext`
-A > R           | `llvm.fptrunc`
+##### `spv.FConvert`
 
-##### `spv.SConvert` 
-Case            | LLVM Dialect op
-:-------------: | :-----------------------------------:
-A < R           | `llvm.sext`
-A > R           | `llvm.trunc`
+Case  | LLVM Dialect op
+:---: | :-------------:
+A < R | `llvm.fpext`
+A > R | `llvm.fptrunc`
 
-##### `spv.UConvert` 
-Case            | LLVM Dialect op
-:-------------: | :-----------------------------------:
-A < R           | `llvm.zext`
-A > R           | `llvm.trunc`
+##### `spv.SConvert`
+
+Case  | LLVM Dialect op
+:---: | :-------------:
+A < R | `llvm.sext`
+A > R | `llvm.trunc`
+
+##### `spv.UConvert`
+
+Case  | LLVM Dialect op
+:---: | :-------------:
+A < R | `llvm.zext`
+A > R | `llvm.trunc`
 
 The case when A = R is not possible, based on SPIR-V Dialect specification:
+
 > The component width cannot equal the component width in Result Type.
 
 ### Comparison ops
 
 SPIR-V comparison ops are mapped to LLVM `icmp` and `fcmp` operations.
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.IEqual`                          | `llvm.icmp "eq"`
-`spv.INotEqual`                       | `llvm.icmp "ne"`
-`spv.FOrdEqual`                       | `llvm.fcmp "oeq"`
-`spv.FOrdGreaterThan`                 | `llvm.fcmp "ogt"`
-`spv.FOrdGreaterThanEqual`            | `llvm.fcmp "oge"`
-`spv.FOrdLessThan`                    | `llvm.fcmp "olt"`
-`spv.FOrdLessThanEqual`               | `llvm.fcmp "ole"`
-`spv.FOrdNotEqual`                    | `llvm.fcmp "one"`
-`spv.FUnordEqual`                     | `llvm.fcmp "ueq"`
-`spv.FUnordGreaterThan`               | `llvm.fcmp "ugt"`
-`spv.FUnordGreaterThanEqual`          | `llvm.fcmp "uge"`
-`spv.FUnordLessThan`                  | `llvm.fcmp "ult"`
-`spv.FUnordLessThanEqual`             | `llvm.fcmp "ule"`
-`spv.FUnordNotEqual`                  | `llvm.fcmp "une"`
-`spv.SGreaterThan`                    | `llvm.icmp "sgt"`
-`spv.SGreaterThanEqual`               | `llvm.icmp "sge"`
-`spv.SLessThan`                       | `llvm.icmp "slt"`
-`spv.SLessThanEqual`                  | `llvm.icmp "sle"`
-`spv.UGreaterThan`                    | `llvm.icmp "ugt"`
-`spv.UGreaterThanEqual`               | `llvm.icmp "uge"`
-`spv.ULessThan`                       | `llvm.icmp "ult"`
-`spv.ULessThanEqual`                  | `llvm.icmp "ule"`
+SPIR-V Dialect op            | LLVM Dialect op
+:--------------------------: | :---------------:
+`spv.IEqual`                 | `llvm.icmp "eq"`
+`spv.INotEqual`              | `llvm.icmp "ne"`
+`spv.FOrdEqual`              | `llvm.fcmp "oeq"`
+`spv.FOrdGreaterThan`        | `llvm.fcmp "ogt"`
+`spv.FOrdGreaterThanEqual`   | `llvm.fcmp "oge"`
+`spv.FOrdLessThan`           | `llvm.fcmp "olt"`
+`spv.FOrdLessThanEqual`      | `llvm.fcmp "ole"`
+`spv.FOrdNotEqual`           | `llvm.fcmp "one"`
+`spv.FUnordEqual`            | `llvm.fcmp "ueq"`
+`spv.FUnordGreaterThan`      | `llvm.fcmp "ugt"`
+`spv.FUnordGreaterThanEqual` | `llvm.fcmp "uge"`
+`spv.FUnordLessThan`         | `llvm.fcmp "ult"`
+`spv.FUnordLessThanEqual`    | `llvm.fcmp "ule"`
+`spv.FUnordNotEqual`         | `llvm.fcmp "une"`
+`spv.SGreaterThan`           | `llvm.icmp "sgt"`
+`spv.SGreaterThanEqual`      | `llvm.icmp "sge"`
+`spv.SLessThan`              | `llvm.icmp "slt"`
+`spv.SLessThanEqual`         | `llvm.icmp "sle"`
+`spv.UGreaterThan`           | `llvm.icmp "ugt"`
+`spv.UGreaterThanEqual`      | `llvm.icmp "uge"`
+`spv.ULessThan`              | `llvm.icmp "ult"`
+`spv.ULessThanEqual`         | `llvm.icmp "ule"`
 
 ### Composite ops
 
@@ -359,12 +360,12 @@ Currently, conversion supports rewrite patterns for `spv.CompositeExtract` and
 composite object is a vector, and when the composite object is of a non-vector
 type (*i.e.* struct, array or runtime array).
 
-Composite type  | SPIR-V Dialect op      | LLVM Dialect op
-:-------------: | :--------------------: | :--------------------:
-vector          | `spv.CompositeExtract` | `llvm.extractelement`
-vector          | `spv.CompositeInsert`  | `llvm.insertelement`
-non-vector      | `spv.CompositeExtract` | `llvm.extractvalue`
-non-vector      | `spv.CompositeInsert`  | `llvm.insertvalue`
+Composite type | SPIR-V Dialect op      | LLVM Dialect op
+:------------: | :--------------------: | :-------------------:
+vector         | `spv.CompositeExtract` | `llvm.extractelement`
+vector         | `spv.CompositeInsert`  | `llvm.insertelement`
+non-vector     | `spv.CompositeExtract` | `llvm.extractvalue`
+non-vector     | `spv.CompositeInsert`  | `llvm.insertvalue`
 
 ### `spv.EntryPoint` and `spv.ExecutionMode`
 
@@ -381,7 +382,7 @@ entry points in LLVM. At the moment, we use the following approach:
     struct global variable that stores the execution mode id and any variables
     associated with it. In C, the struct has the structure shown below.
 
-    ```C
+    ```c
     // No values are associated      // There are values that are associated
     // with this entry point.        // with this entry point.
     struct {                         struct {
@@ -406,12 +407,12 @@ Logical ops follow a similar pattern as bitwise ops, with the difference that
 they operate on `i1` or vector of `i1` values. The following mapping is used to
 emulate SPIR-V ops behaviour:
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.LogicalAnd`                      | `llvm.and`
-`spv.LogicalOr`                       | `llvm.or`
-`spv.LogicalEqual`                    | `llvm.icmp "eq"`
-`spv.LogicalNotEqual`                 | `llvm.icmp "ne"`
+SPIR-V Dialect op     | LLVM Dialect op
+:-------------------: | :--------------:
+`spv.LogicalAnd`      | `llvm.and`
+`spv.LogicalOr`       | `llvm.or`
+`spv.LogicalEqual`    | `llvm.icmp "eq"`
+`spv.LogicalNotEqual` | `llvm.icmp "ne"`
 
 `spv.LogicalNot` has the same conversion pattern as bitwise `spv.Not`. It is
 modelled with `xor` operation with a mask with all bits set.
@@ -468,13 +469,13 @@ following cases, based on the value of the attribute:
 
 #### `spv.GlobalVariable` and `spv.mlir.addressof`
 
-`spv.GlobalVariable` is modelled with `llvm.mlir.global` op. However, there
-is a difference that has to be pointed out.
+`spv.GlobalVariable` is modelled with `llvm.mlir.global` op. However, there is a
+difference that has to be pointed out.
 
 In SPIR-V dialect, the global variable returns a pointer, whereas in LLVM
 dialect the global holds an actual value. This difference is handled by
-`spv.mlir.addressof` and `llvm.mlir.addressof` ops that both return a pointer and
-are used to reference the global.
+`spv.mlir.addressof` and `llvm.mlir.addressof` ops that both return a pointer
+and are used to reference the global.
 
 ```mlir
 // Original SPIR-V module
@@ -496,9 +497,9 @@ module {
 }
 ```
 
-The SPIR-V to LLVM conversion does not involve modelling of workgroups.
-Hence, we say that only current invocation is in conversion's scope. This means
-that global variables with pointers of `Input`, `Output`, and `Private` storage
+The SPIR-V to LLVM conversion does not involve modelling of workgroups. Hence,
+we say that only current invocation is in conversion's scope. This means that
+global variables with pointers of `Input`, `Output`, and `Private` storage
 classes are supported. Also, `StorageBuffer` storage class is allowed for
 executing [`mlir-spirv-cpu-runner`](#mlir-spirv-cpu-runner).
 
@@ -510,8 +511,8 @@ Currently `llvm.mlir.global`s are created with `private` linkage for `Private`
 storage class and `External` for other storage classes, based on SPIR-V spec:
 
 > By default, functions and global variables are private to a module and cannot
-be accessed by other modules. However, a module may be written to export or
-import functions and global (module scope) variables.
+> be accessed by other modules. However, a module may be written to export or
+> import functions and global (module scope) variables.
 
 If the global variable's pointer has `Input` storage class, then a `constant`
 flag is added to LLVM op:
@@ -554,10 +555,10 @@ There are multiple SPIR-V ops that do not fit in a particular group but can be
 converted directly to LLVM dialect. Their conversion is addressed in this
 section.
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.Select`                          | `llvm.select`
-`spv.Undef`                           | `llvm.mlir.undef`
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------:
+`spv.Select`      | `llvm.select`
+`spv.Undef`       | `llvm.mlir.undef`
 
 ### Shift ops
 
@@ -665,10 +666,10 @@ spv.FunctionCall @bar(%0) : (i32) -> ()     =>    llvm.call @bar(%0) : (f32) -> 
 
 ### `spv.mlir.selection` and `spv.mlir.loop`
 
-Control flow within `spv.mlir.selection` and `spv.mlir.loop` is lowered directly to LLVM
-via branch ops. The conversion can only be applied to selection or loop with all
-blocks being reachable. Moreover, selection and loop control attributes (such as
-`Flatten` or `Unroll`) are not supported at the moment.
+Control flow within `spv.mlir.selection` and `spv.mlir.loop` is lowered directly
+to LLVM via branch ops. The conversion can only be applied to selection or loop
+with all blocks being reachable. Moreover, selection and loop control attributes
+(such as `Flatten` or `Unroll`) are not supported at the moment.
 
 ```mlir
 // Conversion of selection
@@ -727,20 +728,20 @@ mapped to LLVM Dialect.
 
 ### Direct conversions
 
-SPIR-V Dialect op                     | LLVM Dialect op
-:-----------------------------------: | :-----------------------------------:
-`spv.GLSL.Ceil`                       | `llvm.intr.ceil`
-`spv.GLSL.Cos`                        | `llvm.intr.cos`
-`spv.GLSL.Exp`                        | `llvm.intr.exp`
-`spv.GLSL.FAbs`                       | `llvm.intr.fabs`
-`spv.GLSL.Floor`                      | `llvm.intr.floor`
-`spv.GLSL.FMax`                       | `llvm.intr.maxnum`
-`spv.GLSL.FMin`                       | `llvm.intr.minnum`
-`spv.GLSL.Log`                        | `llvm.intr.log`
-`spv.GLSL.Sin`                        | `llvm.intr.sin`
-`spv.GLSL.Sqrt`                       | `llvm.intr.sqrt`
-`spv.GLSL.SMax`                       | `llvm.intr.smax`
-`spv.GLSL.SMin`                       | `llvm.intr.smin`
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :----------------:
+`spv.GLSL.Ceil`   | `llvm.intr.ceil`
+`spv.GLSL.Cos`    | `llvm.intr.cos`
+`spv.GLSL.Exp`    | `llvm.intr.exp`
+`spv.GLSL.FAbs`   | `llvm.intr.fabs`
+`spv.GLSL.Floor`  | `llvm.intr.floor`
+`spv.GLSL.FMax`   | `llvm.intr.maxnum`
+`spv.GLSL.FMin`   | `llvm.intr.minnum`
+`spv.GLSL.Log`    | `llvm.intr.log`
+`spv.GLSL.Sin`    | `llvm.intr.sin`
+`spv.GLSL.Sqrt`   | `llvm.intr.sqrt`
+`spv.GLSL.SMax`   | `llvm.intr.smax`
+`spv.GLSL.SMin`   | `llvm.intr.smin`
 
 ### Special cases
 
@@ -760,7 +761,8 @@ SPIR-V Dialect op                     | LLVM Dialect op
                                    %res = fdiv %sin, %cos : f32
 ```
 
-`spv.Tanh` is modelled using the equality `tanh(x) = {exp(2x) - 1}/{exp(2x) + 1}`:
+`spv.Tanh` is modelled using the equality `tanh(x) = {exp(2x) - 1}/{exp(2x) +
+1}`:
 
 ```mlir
                                      %two   = llvm.mlir.constant(2.0: f32) : f32
@@ -778,20 +780,23 @@ This section describes the conversion of function-related operations from SPIR-V
 to LLVM dialect.
 
 ### `spv.func`
-This op declares or defines a SPIR-V function and it is converted to `llvm.func`.
-This conversion handles signature conversion, and function control attributes
-remapping to LLVM dialect function [`passthrough` attribute](Dialects/LLVM.md/#attribute-pass-through).
 
-The following mapping is used to map [SPIR-V function control][SPIRVFunctionAttributes] to
+This op declares or defines a SPIR-V function and it is converted to
+`llvm.func`. This conversion handles signature conversion, and function control
+attributes remapping to LLVM dialect function
+[`passthrough` attribute](Dialects/LLVM.md/#attribute-pass-through).
+
+The following mapping is used to map
+[SPIR-V function control][SPIRVFunctionAttributes] to
 [LLVM function attributes][LLVMFunctionAttributes]:
 
-SPIR-V Function Control Attributes    | LLVM Function Attributes
-:-----------------------------------: | :-----------------------------------:
-None                                  | No function attributes passed
-Inline                                | `alwaysinline`
-DontInline                            | `noinline`
-Pure                                  | `readonly`
-Const                                 | `readnone`
+SPIR-V Function Control Attributes | LLVM Function Attributes
+:--------------------------------: | :---------------------------:
+None                               | No function attributes passed
+Inline                             | `alwaysinline`
+DontInline                         | `noinline`
+Pure                               | `readonly`
+Const                              | `readnone`
 
 ### `spv.Return` and `spv.ReturnValue`
 
@@ -816,10 +821,8 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 SPIR-V to LLVM dialect conversion. Currently, only single-threaded kernel is
 supported.
 
-To build the runner, add the following option to `cmake`:
-```bash
--DMLIR_ENABLE_SPIRV_CPU_RUNNER=1
-```
+To build the runner, add the following option to `cmake`: `bash
+-DMLIR_ENABLE_SPIRV_CPU_RUNNER=1`
 
 ### Pipeline
 
@@ -857,7 +860,7 @@ gpu.module @foo {
 
 func @main() {
   // Fill the buffer with some data
-  %buffer = alloc : memref<8xi32>
+  %buffer = memref.alloc : memref<8xi32>
   %data = ...
   call fillBuffer(%buffer, %data)
 
@@ -880,7 +883,7 @@ spv.module @__spv__foo /*VCE triple and other metadata here*/ {
 
 func @main() {
   // Fill the buffer with some data.
-  %buffer = alloc : memref<8xi32>
+  %buffer = memref.alloc : memref<8xi32>
   %data = ...
   call fillBuffer(%buffer, %data)
 

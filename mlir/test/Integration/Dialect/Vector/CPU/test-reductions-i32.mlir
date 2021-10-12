@@ -5,16 +5,16 @@
 
 func @entry() {
   // Construct test vector.
-  %i1 = constant 1: i32
-  %i2 = constant 2: i32
-  %i3 = constant 3: i32
-  %i4 = constant 4: i32
-  %i5 = constant 5: i32
-  %i6 = constant -1: i32
-  %i7 = constant -2: i32
-  %i8 = constant -4: i32
-  %i9 = constant -80: i32
-  %i10 = constant -16: i32
+  %i1 = arith.constant 1: i32
+  %i2 = arith.constant 2: i32
+  %i3 = arith.constant 3: i32
+  %i4 = arith.constant 4: i32
+  %i5 = arith.constant 5: i32
+  %i6 = arith.constant -1: i32
+  %i7 = arith.constant -2: i32
+  %i8 = arith.constant -4: i32
+  %i9 = arith.constant -80: i32
+  %i10 = arith.constant -16: i32
   %v0 = vector.broadcast %i1 : i32 to vector<10xi32>
   %v1 = vector.insert %i2, %v0[1] : i32 into vector<10xi32>
   %v2 = vector.insert %i3, %v1[2] : i32 into vector<10xi32>

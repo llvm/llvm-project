@@ -27,7 +27,7 @@ func @sparse_dce_convert(%arg0: tensor<64xf32>) {
 //   CHECK-NOT: sparse_tensor.values
 //       CHECK: return
 func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   %0 = sparse_tensor.pointers %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>
   %1 = sparse_tensor.indices %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>
   %2 = sparse_tensor.values %arg0 : tensor<64xf32, #SparseVector> to memref<?xf32>

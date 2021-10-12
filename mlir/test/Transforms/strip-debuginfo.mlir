@@ -13,14 +13,14 @@ func @inline_notation() -> i32 {
   } loc(fused["foo", "mysource.cc":10:8])
 
   // CHECK: } loc(unknown)
-  %2 = constant 4 : index
+  %2 = arith.constant 4 : index
   affine.if #set0(%2) {
   } loc(fused<"myPass">["foo", "foo2"])
 
   "foo.region"() ({
   // CHECK: ^bb0(%{{.*}}: i32 loc(unknown), %{{.*}}: i32 loc(unknown)):
  ^bb0(%a0: i32 loc("argloc"), %z: i32 loc("argloc2")):
-    %s = addi %a0, %a0 : i32
+    %s = arith.addi %a0, %a0 : i32
     "foo.yield"(%s) : (i32) -> ()
   }) : () -> ()
 

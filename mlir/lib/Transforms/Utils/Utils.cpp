@@ -16,6 +16,7 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -598,7 +599,7 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
       Attribute constantAttr =
           b.getIntegerAttr(b.getIndexType(), oldMemRefShape[d]);
       inAffineApply.emplace_back(
-          b.create<ConstantOp>(allocOp->getLoc(), constantAttr));
+          b.create<arith::ConstantOp>(allocOp->getLoc(), constantAttr));
     }
   }
 

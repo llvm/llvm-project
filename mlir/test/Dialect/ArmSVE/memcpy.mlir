@@ -2,10 +2,10 @@
 
 // CHECK: memcopy([[SRC:%arg[0-9]+]]: memref<?xf32>, [[DST:%arg[0-9]+]]
 func @memcopy(%src : memref<?xf32>, %dst : memref<?xf32>, %size : index) {
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
   %vs = arm_sve.vector_scale : index
-  %step = muli %c4, %vs : index
+  %step = arith.muli %c4, %vs : index
 
   // CHECK: scf.for [[LOOPIDX:%arg[0-9]+]] = {{.*}}
   scf.for %i0 = %c0 to %size step %step {

@@ -16,6 +16,7 @@
 
 #include "../PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -116,7 +117,7 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
 
 /// Return true if the constant is a splat to a 2D vector so that it can be
 /// converted to a MMA constant matrix op.
-static bool constantSupportsMMAMatrixType(ConstantOp constantOp) {
+static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
   auto vecType = constantOp.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getRank() != 2)
     return false;
@@ -138,7 +139,7 @@ static bool supportsMMaMatrixType(Operation *op) {
     return transferWriteSupportsMMAMatrixType(transferWrite);
   if (auto contract = dyn_cast<vector::ContractionOp>(op))
     return contractSupportsMMAMatrixType(contract);
-  if (auto constant = dyn_cast<ConstantOp>(op))
+  if (auto constant = dyn_cast<arith::ConstantOp>(op))
     return constantSupportsMMAMatrixType(constant);
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
     return broadcastSupportsMMAMatrixType(broadcast);
@@ -324,13 +325,13 @@ static void convertContractOp(vector::ContractionOp op,
 }
 
 /// Convert a 2D splat ConstantOp to a SubgroupMmaConstantMatrix op.
-static void convertConstantOp(ConstantOp op,
+static void convertConstantOp(arith::ConstantOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   assert(constantSupportsMMAMatrixType(op));
   OpBuilder b(op);
-  Attribute splat = op.getValue().cast<SplatElementsAttr>().getSplatValue();
+  Attribute splat = op.value().cast<SplatElementsAttr>().getSplatValue();
   auto scalarConstant =
-      b.create<ConstantOp>(op.getLoc(), splat.getType(), splat);
+      b.create<arith::ConstantOp>(op.getLoc(), splat.getType(), splat);
   const char *fragType = inferFragType(op);
   auto vecType = op.getType().cast<VectorType>();
   gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
@@ -439,7 +440,7 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertTransferWriteOp(transferWrite, valueMapping);
     } else if (auto contractOp = dyn_cast<vector::ContractionOp>(op)) {
       convertContractOp(contractOp, valueMapping);
-    } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
+    } else if (auto constantOp = dyn_cast<arith::ConstantOp>(op)) {
       convertConstantOp(constantOp, valueMapping);
     } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
       convertBroadcastOp(broadcastOp, valueMapping);

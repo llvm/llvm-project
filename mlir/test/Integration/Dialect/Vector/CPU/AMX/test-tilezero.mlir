@@ -12,12 +12,12 @@ func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
 }
 
 func @entry() -> i32 {
-  %i0 = constant 0: i32
-  %i1 = constant 1: i32
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c3 = constant 3: index
-  %c19 = constant 19: index
+  %i0 = arith.constant 0: i32
+  %i1 = arith.constant 1: i32
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c3 = arith.constant 3: index
+  %c19 = arith.constant 19: index
 
   // Set up memory.
   %a = memref.alloc(%c19, %c19) : memref<?x?xi32>

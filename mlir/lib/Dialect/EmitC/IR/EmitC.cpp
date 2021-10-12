@@ -41,7 +41,7 @@ void EmitCDialect::initialize() {
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  return builder.create<ConstantOp>(loc, type, value);
+  return builder.create<emitc::ConstantOp>(loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//

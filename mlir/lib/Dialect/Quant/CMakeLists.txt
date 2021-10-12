@@ -17,6 +17,7 @@ add_mlir_dialect_library(MLIRQuant
   MLIRQuantPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRIR
   MLIRPass
   MLIRSideEffectInterfaces

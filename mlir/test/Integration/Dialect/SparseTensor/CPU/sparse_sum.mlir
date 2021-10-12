@@ -40,7 +40,7 @@ module {
       ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%argx: tensor<f64>) {
       ^bb(%a: f64, %x: f64):
-        %0 = addf %x, %a : f64
+        %0 = arith.addf %x, %a : f64
         linalg.yield %0 : f64
     } -> tensor<f64>
     return %0 : tensor<f64>
@@ -52,8 +52,8 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.

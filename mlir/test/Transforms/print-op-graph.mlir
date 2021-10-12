@@ -28,10 +28,10 @@
 //       CFG:     subgraph {{.*}}
 //       CFG:       label = "builtin.func{{.*}}merge_blocks
 //       CFG:       subgraph {{.*}} {
-//       CFG:         v[[C1:.*]] [label = "std.constant
-//       CFG:         v[[C2:.*]] [label = "std.constant
-//       CFG:         v[[C3:.*]] [label = "std.constant
-//       CFG:         v[[C4:.*]] [label = "std.constant
+//       CFG:         v[[C1:.*]] [label = "arith.constant
+//       CFG:         v[[C2:.*]] [label = "arith.constant
+//       CFG:         v[[C3:.*]] [label = "arith.constant
+//       CFG:         v[[C4:.*]] [label = "arith.constant
 //       CFG:         v[[TEST_FUNC:.*]] [label = "test.func
 //       CFG:         subgraph [[CLUSTER_MERGE_BLOCKS:.*]] {
 //       CFG:           v[[ANCHOR:.*]] [label = " ", shape = plain]
@@ -51,10 +51,10 @@
 //       CFG:   v[[ANCHOR]] -> v[[TEST_RET]] [{{.*}}, ltail = [[CLUSTER_MERGE_BLOCKS]]]
 
 func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
-  %0 = constant dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
-  %1 = constant dense<1> : tensor<5xi32>
-  %2 = constant dense<[[0, 1]]> : tensor<1x2xi32>
-  %a = constant 10 : i32
+  %0 = arith.constant dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
+  %1 = arith.constant dense<1> : tensor<5xi32>
+  %2 = arith.constant dense<[[0, 1]]> : tensor<1x2xi32>
+  %a = arith.constant 10 : i32
   %b = "test.func"() : () -> i32
   %3:2 = "test.merge_blocks"() ({
   ^bb0:

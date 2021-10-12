@@ -7,8 +7,8 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %const = constant dense<10.0> : tensor<2xf32>
-  %insert_val = constant dense<20.0> : tensor<1xf32>
+  %const = arith.constant dense<10.0> : tensor<2xf32>
+  %insert_val = arith.constant dense<20.0> : tensor<1xf32>
 
   // Both of these insert_slice ops insert into the same original tensor
   // value `%const`. This can easily cause bugs if at the memref level

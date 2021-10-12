@@ -5,10 +5,10 @@ func private @foo(%A: tensor<64x64xf32>,
 
 func @distribute_for_gpu(%A: tensor<64x64xf32>,
                          %B: tensor<64x64xf32>) -> tensor<64x64xf32> {
-  %c0 = constant 0 : index
-  %c16 = constant 16 : index
-  %c64 = constant 64 : index
-  %c24 = constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %c24 = arith.constant 24 : index
   %0 = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c64, %c64) step (%c24, %c16)
       ins (%A_ = %A: tensor<64x64xf32>) outs (%B_ = %B:tensor<64x64xf32>)
       distribution ["block_x", "block_y"] {
@@ -23,7 +23,7 @@ func @distribute_for_gpu(%A: tensor<64x64xf32>,
 // CHECK-DAG: #[[$MAP1:.+]] = affine_map<()[s0] -> (s0 * 16)>
 
 // CHECK-LABEL: func @distribute_for_gpu
-// CHECK:  %[[C64:.*]] = constant 64 : index
+// CHECK:  %[[C64:.*]] = arith.constant 64 : index
 
 // CHECK-DAG:  %[[GPU_BLOCK_X:.*]] = "gpu.block_id"() {dimension = "x"}
 // CHECK-DAG:  %[[GPU_GRID_DIM_X:.*]] = "gpu.grid_dim"() {dimension = "x"}

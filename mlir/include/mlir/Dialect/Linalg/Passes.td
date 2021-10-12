@@ -143,7 +143,7 @@ def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let dependentDialects = [
     "linalg::LinalgDialect",
     "AffineDialect",
-    "memref::MemRefDialect"
+    "memref::MemRefDialect",
   ];
 }
 

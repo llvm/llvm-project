@@ -53,7 +53,7 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   mlirBlockAppendOwnedOperation(loopBody, loadRHS);
 
   MlirOperationState addState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.addf"), location);
+      mlirStringRefCreateFromCString("arith.addf"), location);
   MlirValue addOperands[] = {mlirOperationGetResult(loadLHS, 0),
                              mlirOperationGetResult(loadRHS, 0)};
   mlirOperationStateAddOperands(&addState, 2, addOperands);
@@ -113,7 +113,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
       indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), location);
+      mlirStringRefCreateFromCString("arith.constant"), location);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
@@ -140,7 +140,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
       indexOneLiteral);
   MlirOperationState constOneState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), location);
+      mlirStringRefCreateFromCString("arith.constant"), location);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
   mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
   MlirOperation constOne = mlirOperationCreate(&constOneState);
@@ -168,13 +168,13 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   // clang-format off
   // CHECK: module {
   // CHECK:   func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>) {
-  // CHECK:     %[[C0:.*]] = constant 0 : index
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
   // CHECK:     %[[DIM:.*]] = memref.dim %[[ARG0]], %[[C0]] : memref<?xf32>
-  // CHECK:     %[[C1:.*]] = constant 1 : index
+  // CHECK:     %[[C1:.*]] = arith.constant 1 : index
   // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
   // CHECK:       %[[LHS:.*]] = memref.load %[[ARG0]][%[[I]]] : memref<?xf32>
   // CHECK:       %[[RHS:.*]] = memref.load %[[ARG1]][%[[I]]] : memref<?xf32>
-  // CHECK:       %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
+  // CHECK:       %[[SUM:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
   // CHECK:       memref.store %[[SUM]], %[[ARG0]][%[[I]]] : memref<?xf32>
   // CHECK:     }
   // CHECK:     return
@@ -348,17 +348,17 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
-  // CHECK:   %[[C0:.*]] = constant 0 : index
+  // CHECK:   %[[C0:.*]] = arith.constant 0 : index
   // CHECK:   %[[DIM:.*]] = memref.dim %{{.*}}, %[[C0]] : memref<?xf32>
-  // CHECK:   %[[C1:.*]] = constant 1 : index
+  // CHECK:   %[[C1:.*]] = arith.constant 1 : index
   // CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
   // CHECK:     %[[LHS:.*]] = memref.load %{{.*}}[%[[I]]] : memref<?xf32>
   // CHECK:     %[[RHS:.*]] = memref.load %{{.*}}[%[[I]]] : memref<?xf32>
-  // CHECK:     %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
+  // CHECK:     %[[SUM:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
   // CHECK:     memref.store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
   // CHECK:   }
   // CHECK: return
-  // CHECK: First operation: {{.*}} = constant 0 : index
+  // CHECK: First operation: {{.*}} = arith.constant 0 : index
   // clang-format on
 
   // Get the operation name and print it.
@@ -368,7 +368,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   for (size_t i = 0; i < identStr.length; ++i)
     fputc(identStr.data[i], stderr);
   fprintf(stderr, "'\n");
-  // CHECK: Operation name: 'std.constant'
+  // CHECK: Operation name: 'arith.constant'
 
   // Get the identifier again and verify equal.
   MlirIdentifier identAgain = mlirIdentifierGet(ctx, identStr);
@@ -410,7 +410,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirValuePrint(value, printToStderr, NULL);
   fprintf(stderr, "\n");
   fprintf(stderr, "Value is null: %d\n", mlirValueIsNull(value));
-  // CHECK: Result 0: {{.*}} = constant 0 : index
+  // CHECK: Result 0: {{.*}} = arith.constant 0 : index
   // CHECK: Value is null: 0
 
   MlirType type = mlirValueGetType(value);
@@ -460,7 +460,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
-  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() {elts = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
   // clang-format on
 
   mlirOpPrintingFlagsDestroy(flags);
@@ -1585,7 +1585,7 @@ int testOperands() {
       mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
       indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), loc);
+      mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
@@ -1597,7 +1597,7 @@ int testOperands() {
       mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
       indexOneLiteral);
   MlirOperationState constOneState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), loc);
+      mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
   mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
   MlirOperation constOne = mlirOperationCreate(&constOneState);
@@ -1619,13 +1619,13 @@ int testOperands() {
   MlirValue opOperand = mlirOperationGetOperand(op, 0);
   fprintf(stderr, "Original operand: ");
   mlirValuePrint(opOperand, printToStderr, NULL);
-  // CHECK: Original operand: {{.+}} constant 0 : index
+  // CHECK: Original operand: {{.+}} arith.constant 0 : index
 
   mlirOperationSetOperand(op, 0, constOneValue);
   opOperand = mlirOperationGetOperand(op, 0);
   fprintf(stderr, "Updated operand: ");
   mlirValuePrint(opOperand, printToStderr, NULL);
-  // CHECK: Updated operand: {{.+}} constant 1 : index
+  // CHECK: Updated operand: {{.+}} arith.constant 1 : index
 
   mlirOperationDestroy(op);
   mlirOperationDestroy(constZero);
@@ -1652,7 +1652,7 @@ int testClone() {
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
       mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), loc);
+      mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
@@ -1664,8 +1664,8 @@ int testClone() {
 
   mlirOperationPrint(constZero, printToStderr, NULL);
   mlirOperationPrint(constOne, printToStderr, NULL);
-  // CHECK: constant 0 : index
-  // CHECK: constant 1 : index
+  // CHECK: arith.constant 0 : index
+  // CHECK: arith.constant 1 : index
 
   mlirOperationDestroy(constZero);
   mlirOperationDestroy(constOne);

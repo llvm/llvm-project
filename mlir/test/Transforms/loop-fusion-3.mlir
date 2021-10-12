@@ -10,7 +10,7 @@
 // Test case from github bug 777.
 // CHECK-LABEL: func @mul_add_0
 func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x3xf32>, %arg3: memref<3x3xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc() : memref<3x3xf32>
   affine.for %arg4 = 0 to 3 {
     affine.for %arg5 = 0 to 3 {
@@ -22,9 +22,9 @@ func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x
       affine.for %arg6 = 0 to 4 {
         %1 = affine.load %arg1[%arg6, %arg5] : memref<4x3xf32>
         %2 = affine.load %arg0[%arg4, %arg6] : memref<3x4xf32>
-        %3 = mulf %2, %1 : f32
+        %3 = arith.mulf %2, %1 : f32
         %4 = affine.load %0[%arg4, %arg5] : memref<3x3xf32>
-        %5 = addf %4, %3 : f32
+        %5 = arith.addf %4, %3 : f32
         affine.store %5, %0[%arg4, %arg5] : memref<3x3xf32>
       }
     }
@@ -33,7 +33,7 @@ func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x
     affine.for %arg5 = 0 to 3 {
       %6 = affine.load %arg2[%arg4, %arg5] : memref<3x3xf32>
       %7 = affine.load %0[%arg4, %arg5] : memref<3x3xf32>
-      %8 = addf %7, %6 : f32
+      %8 = arith.addf %7, %6 : f32
       affine.store %8, %arg3[%arg4, %arg5] : memref<3x3xf32>
     }
   }
@@ -43,14 +43,14 @@ func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x
   // CHECK-NEXT:     affine.for %[[i2:.*]] = 0 to 4 {
   // CHECK-NEXT:       affine.load %{{.*}}[%[[i2]], %[[i1]]] : memref<4x3xf32>
   // CHECK-NEXT:       affine.load %{{.*}}[%[[i0]], %[[i2]]] : memref<3x4xf32>
-  // CHECK-NEXT:       mulf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:       arith.mulf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:       affine.load %{{.*}}[0, 0] : memref<1x1xf32>
-  // CHECK-NEXT:       addf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:       arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:       affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
   // CHECK-NEXT:     }
   // CHECK-NEXT:     affine.load %{{.*}}[%[[i0]], %[[i1]]] : memref<3x3xf32>
   // CHECK-NEXT:     affine.load %{{.*}}[0, 0] : memref<1x1xf32>
-  // CHECK-NEXT:     addf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:     arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:     affine.store %{{.*}}, %{{.*}}[%[[i0]], %[[i1]]] : memref<3x3xf32>
   // CHECK-NEXT:   }
   // CHECK-NEXT: }
@@ -65,7 +65,7 @@ func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x
 
 // CHECK-LABEL: func @should_fuse_multi_outgoing_edge_store_producer
 func @should_fuse_multi_outgoing_edge_store_producer(%a : memref<1xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %arg0 = 0 to 1 {
     affine.store %cst, %a[%arg0] : memref<1xf32>
   }
@@ -95,7 +95,7 @@ func @should_fuse_multi_outgoing_edge_store_producer(%a : memref<1xf32>) {
 
 // CHECK-LABEL: func @should_fuse_producer_with_multi_outgoing_edges
 func @should_fuse_producer_with_multi_outgoing_edges(%a : memref<1xf32>, %b : memref<1xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %arg0 = 0 to 1 {
     %0 = affine.load %a[%arg0] : memref<1xf32>
     affine.store %cst, %b[%arg0] : memref<1xf32>
@@ -136,9 +136,9 @@ func @reshape_into_matmul(%lhs : memref<1024x1024xf32>,
       affine.for %k = 0 to 1024 {
         %0 = affine.load %rhs[%k, %j] : memref<1024x1024xf32>
         %1 = affine.load %lhs[%i, %k] : memref<1024x1024xf32>
-        %2 = mulf %1, %0 : f32
+        %2 = arith.mulf %1, %0 : f32
         %3 = affine.load %out[%i, %j] : memref<1024x1024xf32>
-        %4 = addf %3, %2 : f32
+        %4 = arith.addf %3, %2 : f32
         affine.store %4, %out[%i, %j] : memref<1024x1024xf32>
       }
     }
@@ -189,25 +189,25 @@ func @multi_outgoing_edges(%in0 : memref<32xf32>,
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = addf %lhs, %rhs : f32
+    %add = arith.addf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = subf %lhs, %rhs : f32
+    %add = arith.subf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = mulf %lhs, %rhs : f32
+    %add = arith.mulf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = divf %lhs, %rhs : f32
+    %add = arith.divf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   return
@@ -215,13 +215,13 @@ func @multi_outgoing_edges(%in0 : memref<32xf32>,
 
 // CHECK:      affine.for
 // CHECK-NOT:  affine.for
-// CHECK:        addf
+// CHECK:        arith.addf
 // CHECK-NOT:  affine.for
-// CHECK:        subf
+// CHECK:        arith.subf
 // CHECK-NOT:  affine.for
-// CHECK:        mulf
+// CHECK:        arith.mulf
 // CHECK-NOT:  affine.for
-// CHECK:        divf
+// CHECK:        arith.divf
 
 // -----
 
@@ -229,18 +229,18 @@ func @multi_outgoing_edges(%in0 : memref<32xf32>,
 
 // CHECK-LABEL: func @calc
 func @calc(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %len: index) {
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
   %1 = memref.alloc(%len) : memref<?xf32>
   affine.for %arg4 = 1 to 10 {
     %7 = affine.load %arg0[%arg4] : memref<?xf32>
     %8 = affine.load %arg1[%arg4] : memref<?xf32>
-    %9 = addf %7, %8 : f32
+    %9 = arith.addf %7, %8 : f32
     affine.store %9, %1[%arg4] : memref<?xf32>
   }
   affine.for %arg4 = 1 to 10 {
     %7 = affine.load %1[%arg4] : memref<?xf32>
     %8 = affine.load %arg1[%arg4] : memref<?xf32>
-    %9 = mulf %7, %8 : f32
+    %9 = arith.mulf %7, %8 : f32
     affine.store %9, %arg2[%arg4] : memref<?xf32>
   }
   return
@@ -249,11 +249,11 @@ func @calc(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %le
 // CHECK:       affine.for %arg{{.*}} = 1 to 10 {
 // CHECK-NEXT:    affine.load %arg{{.*}}
 // CHECK-NEXT:    affine.load %arg{{.*}}
-// CHECK-NEXT:    addf
+// CHECK-NEXT:    arith.addf
 // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
 // CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
 // CHECK-NEXT:    affine.load %arg{{.*}}[%arg{{.*}}] : memref<?xf32>
-// CHECK-NEXT:    mulf
+// CHECK-NEXT:    arith.mulf
 // CHECK-NEXT:    affine.store %{{.*}}, %arg{{.*}}[%arg{{.*}}] : memref<?xf32>
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
@@ -266,30 +266,30 @@ func @should_not_fuse_since_non_affine_users(%in0 : memref<32xf32>,
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = addf %lhs, %rhs : f32
+    %add = arith.addf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   affine.for %d = 0 to 32 {
     %lhs = memref.load %in0[%d] : memref<32xf32>
     %rhs = memref.load %in1[%d] : memref<32xf32>
-    %add = subf %lhs, %rhs : f32
+    %add = arith.subf %lhs, %rhs : f32
     memref.store %add, %in0[%d] : memref<32xf32>
   }
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = mulf %lhs, %rhs : f32
+    %add = arith.mulf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   return
 }
 
 // CHECK:  affine.for
-// CHECK:    addf
+// CHECK:    arith.addf
 // CHECK:  affine.for
-// CHECK:    subf
+// CHECK:    arith.subf
 // CHECK:  affine.for
-// CHECK:    mulf
+// CHECK:    arith.mulf
 
 // -----
 
@@ -300,7 +300,7 @@ func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = addf %lhs, %rhs : f32
+    %add = arith.addf %lhs, %rhs : f32
     memref.store %add, %sum[] : memref<f32>
     affine.store %add, %in0[%d] : memref<32xf32>
   }
@@ -308,8 +308,8 @@ func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = mulf %lhs, %rhs : f32
-    %sub = subf %add, %load_sum: f32
+    %add = arith.mulf %lhs, %rhs : f32
+    %sub = arith.subf %add, %load_sum: f32
     affine.store %sub, %in0[%d] : memref<32xf32>
   }
   memref.dealloc %sum : memref<f32>
@@ -317,39 +317,39 @@ func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
 }
 
 // CHECK:  affine.for
-// CHECK:    addf
+// CHECK:    arith.addf
 // CHECK:  affine.for
-// CHECK:    mulf
-// CHECK:    subf
+// CHECK:    arith.mulf
+// CHECK:    arith.subf
 
 // -----
 
 // CHECK-LABEL: func @should_not_fuse_since_top_level_non_affine_mem_write_users
 func @should_not_fuse_since_top_level_non_affine_mem_write_users(
     %in0 : memref<32xf32>, %in1 : memref<32xf32>) {
-  %c0 = constant 0 : index
-  %cst_0 = constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
 
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = addf %lhs, %rhs : f32
+    %add = arith.addf %lhs, %rhs : f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   memref.store %cst_0, %in0[%c0] : memref<32xf32>
   affine.for %d = 0 to 32 {
     %lhs = affine.load %in0[%d] : memref<32xf32>
     %rhs = affine.load %in1[%d] : memref<32xf32>
-    %add = addf %lhs, %rhs: f32
+    %add = arith.addf %lhs, %rhs: f32
     affine.store %add, %in0[%d] : memref<32xf32>
   }
   return
 }
 
 // CHECK:  affine.for
-// CHECK:    addf
+// CHECK:    arith.addf
 // CHECK:  affine.for
-// CHECK:    addf
+// CHECK:    arith.addf
 
 // -----
 
@@ -388,7 +388,7 @@ func @should_fuse_multi_store_producer_and_privatize_memfefs() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %arg0 = 0 to 10 {
     affine.store %cst, %a[%arg0] : memref<10xf32>
     affine.store %cst, %b[%arg0] : memref<10xf32>
@@ -421,7 +421,7 @@ func @should_fuse_multi_store_producer_and_privatize_memfefs() {
 
 func @should_fuse_multi_store_producer_with_escaping_memrefs_and_remove_src(
     %a : memref<10xf32>, %b : memref<10xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %a[%i0] : memref<10xf32>
     affine.store %cst, %b[%i0] : memref<10xf32>
@@ -453,7 +453,7 @@ func @should_fuse_multi_store_producer_with_escaping_memrefs_and_remove_src(
 
 func @should_fuse_multi_store_producer_with_escaping_memrefs_and_preserve_src(
     %a : memref<10xf32>, %b : memref<10xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %a[%i0] : memref<10xf32>
     affine.store %cst, %b[%i0] : memref<10xf32>
@@ -490,7 +490,7 @@ func @should_fuse_multi_store_producer_with_escaping_memrefs_and_preserve_src(
 func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
   %A = memref.alloc() : memref<16xf32>
   %C = memref.alloc() : memref<16xf32>
-  %cst_1 = constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %arg0[%arg1] : memref<16xf32>
     affine.store %a, %A[%arg1] : memref<16xf32>
@@ -500,7 +500,7 @@ func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
   %B = memref.alloc() : memref<16xf32>
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %A[%arg1] : memref<16xf32>
-    %b = addf %cst_1, %a : f32
+    %b = arith.addf %cst_1, %a : f32
     affine.store %b, %B[%arg1] : memref<16xf32>
   }
   memref.dealloc %A : memref<16xf32>
@@ -514,7 +514,7 @@ func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
 // CHECK:         memref.dealloc
 // CHECK:         affine.for
 // CHECK-NEXT:      affine.load
-// CHECK-NEXT:      addf
+// CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      affine.store
 
 // -----
@@ -529,7 +529,7 @@ func @should_fuse_defining_node_has_no_dependence_from_source_node(
   %0 = affine.load %b[] : memref<f32>
   affine.for %i1 = 0 to 10 {
     %1 = affine.load %a[%i1] : memref<10xf32>
-    %2 = divf %0, %1 : f32
+    %2 = arith.divf %0, %1 : f32
   }
 
 	// Loops '%i0' and '%i1' should be fused even though there is a defining
@@ -539,7 +539,7 @@ func @should_fuse_defining_node_has_no_dependence_from_source_node(
   // CHECK-NEXT:    affine.load %{{.*}}[] : memref<f32>
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:    divf
+  // CHECK-NEXT:    arith.divf
   // CHECK-NEXT:  }
   // CHECK-NOT:   affine.for
   return
@@ -550,7 +550,7 @@ func @should_fuse_defining_node_has_no_dependence_from_source_node(
 // CHECK-LABEL: func @should_not_fuse_defining_node_has_dependence_from_source_loop
 func @should_not_fuse_defining_node_has_dependence_from_source_loop(
     %a : memref<10xf32>, %b : memref<f32>) -> () {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %b[] : memref<f32>
     affine.store %cst, %a[%i0] : memref<10xf32>
@@ -558,7 +558,7 @@ func @should_not_fuse_defining_node_has_dependence_from_source_loop(
   %0 = affine.load %b[] : memref<f32>
   affine.for %i1 = 0 to 10 {
     %1 = affine.load %a[%i1] : memref<10xf32>
-    %2 = divf %0, %1 : f32
+    %2 = arith.divf %0, %1 : f32
   }
 
 	// Loops '%i0' and '%i1' should not be fused because the defining node
@@ -570,7 +570,7 @@ func @should_not_fuse_defining_node_has_dependence_from_source_loop(
   // CHECK-NEXT:  affine.load %{{.*}}[] : memref<f32>
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:    divf
+  // CHECK-NEXT:    arith.divf
   // CHECK-NEXT:  }
   return
 }
@@ -580,7 +580,7 @@ func @should_not_fuse_defining_node_has_dependence_from_source_loop(
 // CHECK-LABEL: func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop
 func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop(
     %a : memref<10xf32>, %b : memref<10xf32>, %c : memref<f32>) -> () {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %a[%i0] : memref<10xf32>
     affine.store %cst, %b[%i0] : memref<10xf32>
@@ -592,7 +592,7 @@ func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop(
   %0 = affine.load %c[] : memref<f32>
   affine.for %i2 = 0 to 10 {
     %1 = affine.load %a[%i2] : memref<10xf32>
-    %2 = divf %0, %1 : f32
+    %2 = arith.divf %0, %1 : f32
   }
 
 	// When loops '%i0' and '%i2' are evaluated first, they should not be
@@ -608,7 +608,7 @@ func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop(
   // CHECK-NEXT:  affine.load %{{.*}}[] : memref<f32>
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:    divf
+  // CHECK-NEXT:    arith.divf
   // CHECK-NEXT:  }
   // CHECK-NOT:   affine.for
   return
@@ -619,7 +619,7 @@ func @should_not_fuse_defining_node_has_transitive_dependence_from_source_loop(
 // CHECK-LABEL: func @should_not_fuse_dest_loop_nest_return_value
 func @should_not_fuse_dest_loop_nest_return_value(
     %a : memref<10xf32>) -> () {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %a[%i0] : memref<10xf32>
   }
@@ -644,9 +644,9 @@ func @should_not_fuse_dest_loop_nest_return_value(
 // CHECK-LABEL: func @should_not_fuse_src_loop_nest_return_value
 func @should_not_fuse_src_loop_nest_return_value(
     %a : memref<10xf32>) -> () {
-  %cst = constant 1.000000e+00 : f32
+  %cst = arith.constant 1.000000e+00 : f32
   %b = affine.for %i = 0 to 10 step 2 iter_args(%b_iter = %cst) -> f32 {
-    %c = addf %b_iter, %b_iter : f32
+    %c = arith.addf %b_iter, %b_iter : f32
     affine.store %c, %a[%i] : memref<10xf32>
     affine.yield %c: f32
   }
@@ -655,7 +655,7 @@ func @should_not_fuse_src_loop_nest_return_value(
   }
 
   // CHECK:       %{{.*}} = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %{{.*}}) -> (f32) {
-  // CHECK-NEXT:    %{{.*}} = addf %{{.*}}, %{{.*}} : f32
+  // CHECK-NEXT:    %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.yield %{{.*}} : f32
   // CHECK-NEXT:  }
@@ -671,7 +671,7 @@ func @should_not_fuse_src_loop_nest_return_value(
 func private @some_function(memref<16xf32>)
 func @call_op_prevents_fusion(%arg0: memref<16xf32>){
   %A = memref.alloc() : memref<16xf32>
-  %cst_1 = constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %arg0[%arg1] : memref<16xf32>
     affine.store %a, %A[%arg1] : memref<16xf32>
@@ -680,7 +680,7 @@ func @call_op_prevents_fusion(%arg0: memref<16xf32>){
   %B = memref.alloc() : memref<16xf32>
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %A[%arg1] : memref<16xf32>
-    %b = addf %cst_1, %a : f32
+    %b = arith.addf %cst_1, %a : f32
     affine.store %b, %B[%arg1] : memref<16xf32>
   }
   return
@@ -692,7 +692,7 @@ func @call_op_prevents_fusion(%arg0: memref<16xf32>){
 // CHECK:         call
 // CHECK:         affine.for
 // CHECK-NEXT:      affine.load
-// CHECK-NEXT:      addf
+// CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      affine.store
 
 // -----
@@ -700,7 +700,7 @@ func @call_op_prevents_fusion(%arg0: memref<16xf32>){
 func private @some_function()
 func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
   %A = memref.alloc() : memref<16xf32>
-  %cst_1 = constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %arg0[%arg1] : memref<16xf32>
     affine.store %a, %A[%arg1] : memref<16xf32>
@@ -709,7 +709,7 @@ func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
   %B = memref.alloc() : memref<16xf32>
   affine.for %arg1 = 0 to 16 {
     %a = affine.load %A[%arg1] : memref<16xf32>
-    %b = addf %cst_1, %a : f32
+    %b = arith.addf %cst_1, %a : f32
     affine.store %b, %B[%arg1] : memref<16xf32>
   }
   return
@@ -726,7 +726,7 @@ func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
 // This should enable both the consumers to benefit from fusion, which would not
 // be possible if private memrefs were not created.
 func @should_fuse_with_both_consumers_separately(%arg0: memref<10xf32>) {
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %arg0[%i0] : memref<10xf32>
   }
@@ -758,7 +758,7 @@ func @no_fusion_cannot_compute_valid_slice() {
   %A = memref.alloc() : memref<5xf32>
   %B = memref.alloc() : memref<6xf32>
   %C = memref.alloc() : memref<5xf32>
-  %cst = constant 0. : f32
+  %cst = arith.constant 0. : f32
 
   affine.for %arg0 = 0 to 5 {
     %a = affine.load %A[%arg0] : memref<5xf32>
@@ -782,7 +782,7 @@ func @no_fusion_cannot_compute_valid_slice() {
     // }
 
     %a = affine.load %B[%arg0] : memref<6xf32>
-    %b = mulf %a, %cst : f32
+    %b = arith.mulf %a, %cst : f32
     affine.store %b, %C[%arg0] : memref<5xf32>
   }
   return
@@ -793,23 +793,23 @@ func @no_fusion_cannot_compute_valid_slice() {
 // CHECK-NEXT:      affine.store
 // CHECK:         affine.for
 // CHECK-NEXT:      affine.load
-// CHECK-NEXT:      mulf
+// CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      affine.store
 
 // MAXIMAL-LABEL:   func @reduce_add_f32_f32(
 func @reduce_add_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf32, 1>, %arg2: memref<1x64xf32, 1>) {
-  %cst_0 = constant 0.000000e+00 : f32
-  %cst_1 = constant 1.000000e+00 : f32
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
   %0 = memref.alloca() : memref<f32, 1>
   %1 = memref.alloca() : memref<f32, 1>
   affine.for %arg3 = 0 to 1 {
     affine.for %arg4 = 0 to 64 {
       %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst_0) -> f32 {
         %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-        %5 = addf %prevAccum, %4 : f32
+        %5 = arith.addf %prevAccum, %4 : f32
         affine.yield %5 : f32
       }
-      %accum_dbl = addf %accum, %accum : f32
+      %accum_dbl = arith.addf %accum, %accum : f32
       affine.store %accum_dbl, %arg1[%arg3, %arg4] : memref<1x64xf32, 1>
     }
   }
@@ -817,10 +817,10 @@ func @reduce_add_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf32, 1>
     affine.for %arg4 = 0 to 64 {
       %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst_1) -> f32 {
         %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-        %5 = mulf %prevAccum, %4 : f32
+        %5 = arith.mulf %prevAccum, %4 : f32
         affine.yield %5 : f32
       }
-      %accum_sqr = mulf %accum, %accum : f32
+      %accum_sqr = arith.mulf %accum, %accum : f32
       affine.store %accum_sqr, %arg2[%arg3, %arg4] : memref<1x64xf32, 1>
     }
   }
@@ -832,21 +832,21 @@ func @reduce_add_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf32, 1>
 // MAXIMAL-SAME:                             %[[arg_0:.*]]: memref<64x64xf32, 1>,
 // MAXIMAL-SAME:                             %[[arg_1:.*]]: memref<1x64xf32, 1>,
 // MAXIMAL-SAME:                             %[[arg_2:.*]]: memref<1x64xf32, 1>) {
-// MAXIMAL:             %[[cst:.*]] = constant 0 : index
-// MAXIMAL-NEXT:        %[[cst_0:.*]] = constant 0.000000e+00 : f32
-// MAXIMAL-NEXT:        %[[cst_1:.*]] = constant 1.000000e+00 : f32
+// MAXIMAL:             %[[cst:.*]] = arith.constant 0 : index
+// MAXIMAL-NEXT:        %[[cst_0:.*]] = arith.constant 0.000000e+00 : f32
+// MAXIMAL-NEXT:        %[[cst_1:.*]] = arith.constant 1.000000e+00 : f32
 // MAXIMAL:             affine.for %[[idx_0:.*]] = 0 to 1 {
 // MAXIMAL-NEXT:          affine.for %[[idx_1:.*]] = 0 to 64 {
 // MAXIMAL-NEXT:            %[[results:.*]]:2 = affine.for %[[idx_2:.*]] = 0 to 64 iter_args(%[[iter_0:.*]] = %[[cst_1]], %[[iter_1:.*]] = %[[cst_0]]) -> (f32, f32) {
 // MAXIMAL-NEXT:              %[[val_0:.*]] = affine.load %[[arg_0]][%[[idx_2]], %[[idx_1]]] : memref<64x64xf32, 1>
-// MAXIMAL-NEXT:              %[[reduc_0:.*]] = addf %[[iter_1]], %[[val_0]] : f32
+// MAXIMAL-NEXT:              %[[reduc_0:.*]] = arith.addf %[[iter_1]], %[[val_0]] : f32
 // MAXIMAL-NEXT:              %[[val_1:.*]] = affine.load %[[arg_0]][%[[idx_2]], %[[idx_1]]] : memref<64x64xf32, 1>
-// MAXIMAL-NEXT:              %[[reduc_1:.*]] = mulf %[[iter_0]], %[[val_1]] : f32
+// MAXIMAL-NEXT:              %[[reduc_1:.*]] = arith.mulf %[[iter_0]], %[[val_1]] : f32
 // MAXIMAL-NEXT:              affine.yield %[[reduc_1]], %[[reduc_0]] : f32, f32
 // MAXIMAL-NEXT:            }
-// MAXIMAL-NEXT:            %[[reduc_0_dbl:.*]] = addf %[[results:.*]]#1, %[[results]]#1 : f32
+// MAXIMAL-NEXT:            %[[reduc_0_dbl:.*]] = arith.addf %[[results:.*]]#1, %[[results]]#1 : f32
 // MAXIMAL-NEXT:            affine.store %[[reduc_0_dbl]], %[[arg_1]][%[[cst]], %[[idx_1]]] : memref<1x64xf32, 1>
-// MAXIMAL-NEXT:            %[[reduc_1_sqr:.*]] = mulf %[[results]]#0, %[[results]]#0 : f32
+// MAXIMAL-NEXT:            %[[reduc_1_sqr:.*]] = arith.mulf %[[results]]#0, %[[results]]#0 : f32
 // MAXIMAL-NEXT:            affine.store %[[reduc_1_sqr]], %[[arg_2]][%[[idx_0]], %[[idx_1]]] : memref<1x64xf32, 1>
 // MAXIMAL-NEXT:          }
 // MAXIMAL-NEXT:        }
@@ -857,18 +857,18 @@ func @reduce_add_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf32, 1>
 
 // CHECK-LABEL:   func @reduce_add_non_innermost
 func @reduce_add_non_innermost(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf32, 1>, %arg2: memref<1x64xf32, 1>) {
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = memref.alloca() : memref<f32, 1>
   %1 = memref.alloca() : memref<f32, 1>
   affine.for %arg3 = 0 to 1 {
     affine.for %arg4 = 0 to 64 {
       %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst) -> f32 {
         %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-        %5 = addf %prevAccum, %4 : f32
+        %5 = arith.addf %prevAccum, %4 : f32
         affine.yield %5 : f32
       }
-      %accum_dbl = addf %accum, %accum : f32
+      %accum_dbl = arith.addf %accum, %accum : f32
       affine.store %accum_dbl, %arg1[%arg3, %arg4] : memref<1x64xf32, 1>
     }
   }
@@ -876,10 +876,10 @@ func @reduce_add_non_innermost(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf
     affine.for %arg4 = 0 to 64 {
       %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst_0) -> f32 {
         %4 = affine.load %arg0[%arg5, %arg4] : memref<64x64xf32, 1>
-        %5 = mulf %prevAccum, %4 : f32
+        %5 = arith.mulf %prevAccum, %4 : f32
         affine.yield %5 : f32
       }
-      %accum_sqr = mulf %accum, %accum : f32
+      %accum_sqr = arith.mulf %accum, %accum : f32
       affine.store %accum_sqr, %arg2[%arg3, %arg4] : memref<1x64xf32, 1>
     }
   }
@@ -897,7 +897,7 @@ func @reduce_add_non_innermost(%arg0: memref<64x64xf32, 1>, %arg1: memref<1x64xf
 
 // CHECK-LABEL: func @fuse_large_number_of_loops
 func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x10xf32, 1>, %arg2: memref<20x10xf32, 1>, %arg3: memref<20x10xf32, 1>, %arg4: memref<20x10xf32, 1>, %arg5: memref<f32, 1>, %arg6: memref<f32, 1>, %arg7: memref<f32, 1>, %arg8: memref<f32, 1>, %arg9: memref<20x10xf32, 1>, %arg10: memref<20x10xf32, 1>, %arg11: memref<20x10xf32, 1>, %arg12: memref<20x10xf32, 1>) {
-  %cst = constant 1.000000e+00 : f32
+  %cst = arith.constant 1.000000e+00 : f32
   %0 = memref.alloc() : memref<f32, 1>
   affine.store %cst, %0[] : memref<f32, 1>
   %1 = memref.alloc() : memref<20x10xf32, 1>
@@ -912,14 +912,14 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %1[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %arg3[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %2[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
   %3 = memref.alloc() : memref<f32, 1>
   %4 = affine.load %arg6[] : memref<f32, 1>
   %5 = affine.load %0[] : memref<f32, 1>
-  %6 = subf %5, %4 : f32
+  %6 = arith.subf %5, %4 : f32
   affine.store %6, %3[] : memref<f32, 1>
   %7 = memref.alloc() : memref<20x10xf32, 1>
   affine.for %arg13 = 0 to 20 {
@@ -933,7 +933,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg1[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %7[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %8[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -942,7 +942,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg1[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %8[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %9[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -950,7 +950,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %9[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %2[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = addf %22, %21 : f32
+      %23 = arith.addf %22, %21 : f32
       affine.store %23, %arg11[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -959,7 +959,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %1[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %arg2[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %10[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -967,7 +967,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %8[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %10[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = addf %22, %21 : f32
+      %23 = arith.addf %22, %21 : f32
       affine.store %23, %arg10[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -976,7 +976,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg10[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %arg10[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %11[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -985,7 +985,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %11[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %arg11[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = subf %22, %21 : f32
+      %23 = arith.subf %22, %21 : f32
       affine.store %23, %12[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1001,7 +1001,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg4[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %13[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %14[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1017,7 +1017,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %15[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %12[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = addf %22, %21 : f32
+      %23 = arith.addf %22, %21 : f32
       affine.store %23, %16[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1041,7 +1041,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg1[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %18[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = mulf %22, %21 : f32
+      %23 = arith.mulf %22, %21 : f32
       affine.store %23, %19[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1050,7 +1050,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %17[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %19[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = divf %22, %21 : f32
+      %23 = arith.divf %22, %21 : f32
       affine.store %23, %20[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1058,7 +1058,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %20[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %14[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = addf %22, %21 : f32
+      %23 = arith.addf %22, %21 : f32
       affine.store %23, %arg12[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }
@@ -1066,7 +1066,7 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
     affine.for %arg14 = 0 to 10 {
       %21 = affine.load %arg12[%arg13, %arg14] : memref<20x10xf32, 1>
       %22 = affine.load %arg0[%arg13, %arg14] : memref<20x10xf32, 1>
-      %23 = subf %22, %21 : f32
+      %23 = arith.subf %22, %21 : f32
       affine.store %23, %arg9[%arg13, %arg14] : memref<20x10xf32, 1>
     }
   }

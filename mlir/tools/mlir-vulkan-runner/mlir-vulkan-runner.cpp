@@ -19,6 +19,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -72,9 +73,9 @@ int main(int argc, char **argv) {
   jitRunnerConfig.mlirTransformer = runMLIRPasses;
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::LLVM::LLVMDialect, mlir::gpu::GPUDialect,
-                  mlir::spirv::SPIRVDialect, mlir::StandardOpsDialect,
-                  mlir::memref::MemRefDialect>();
+  registry.insert<mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect,
+                  mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
+                  mlir::StandardOpsDialect, mlir::memref::MemRefDialect>();
   mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);

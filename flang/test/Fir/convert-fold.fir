@@ -29,9 +29,9 @@ func @htest(%x : !fir.int<4>) -> !fir.int<4> {
 
 // CHECK-LABEL: @ctest
 func @ctest() -> index {
-  %1 = constant 10 : i32
+  %1 = arith.constant 10 : i32
   %2 = fir.convert %1 : (i32) -> index
-  // CHECK-NEXT: %{{.*}} = constant 10 : index
+  // CHECK-NEXT: %{{.*}} = arith.constant 10 : index
   // CHECK-NEXT: return %{{.*}} : index
   return %2 : index
 }

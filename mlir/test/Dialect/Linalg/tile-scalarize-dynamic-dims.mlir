@@ -3,8 +3,8 @@
 
 // CHECK-LABEL: func @matmul_partly_dynamic_tensor(
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: tensor<?x2000xf32>
-//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
-//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //       CHECK:   tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?xf32>
 //       CHECK:   %[[UB1:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?xf32>
 //       CHECK:   %[[UB2:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<?x?xf32>
@@ -16,8 +16,8 @@
 //       CHECK:       linalg.matmul ins(%[[S1]], %[[S2]] : tensor<1x1xf32>, tensor<1x2000xf32>) outs(%[[S3]] : tensor<1x2000xf32>) -> tensor<1x2000xf32>
 func @matmul_partly_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x2000xf32>)
     -> tensor<?x2000xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %out = linalg.init_tensor [%d0, 2000] : tensor<?x2000xf32>
   %r = linalg.matmul {__internal_linalg_transform__ = "tile"}
@@ -38,11 +38,11 @@ func @matmul_partly_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x2000x
 #map2 = affine_map<(d0)[s0] -> (d0 - (s0 floordiv 32) * 32)>
 
 func @tiled_and_peeled_matmul(%arg0: tensor<257x259xf32>, %arg1: tensor<259x258xf32>, %arg2: tensor<257x258xf32>) -> tensor<257x258xf32> {
-  %c257 = constant 257 : index
-  %c64 = constant 64 : index
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
-  %c32 = constant 32 : index
+  %c257 = arith.constant 257 : index
+  %c64 = arith.constant 64 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
   %0 = linalg.fill(%cst, %arg2) : f32, tensor<257x258xf32> -> tensor<257x258xf32>
   %1 = scf.for %arg3 = %c0 to %c257 step %c64 iter_args(%arg4 = %0) -> (tensor<257x258xf32>) {
     %2 = affine.min #map0(%arg3)
@@ -56,7 +56,7 @@ func @tiled_and_peeled_matmul(%arg0: tensor<257x259xf32>, %arg1: tensor<259x258x
       %13 = tensor.insert_slice %12 into %arg6[%arg5, 0] [32, 258] [1, 1] : tensor<32x258xf32> into tensor<?x258xf32>
       scf.yield %13 : tensor<?x258xf32>
     }
-    %7 = cmpi slt, %5, %2 : index
+    %7 = arith.cmpi slt, %5, %2 : index
     %8 = scf.if %7 -> (tensor<?x258xf32>) {
       %10 = affine.apply #map2(%2)[%2]
       %11 = tensor.extract_slice %3[%5, 0] [%10, 259] [1, 1] : tensor<?x259xf32> to tensor<?x259xf32>

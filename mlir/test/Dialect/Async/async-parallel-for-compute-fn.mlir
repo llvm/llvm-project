@@ -13,7 +13,7 @@
 
 // CHECK-LABEL: func @clone_constant(
 func @clone_constant(%arg0: memref<?xf32>, %lb: index, %ub: index, %st: index) {
-  %one = constant 1.0 : f32
+  %one = arith.constant 1.0 : f32
 
   scf.parallel (%i) = (%lb) to (%ub) step (%st) {
     memref.store %one, %arg0[%i] : memref<?xf32>
@@ -31,6 +31,6 @@ func @clone_constant(%arg0: memref<?xf32>, %lb: index, %ub: index, %st: index) {
 // CHECK-SAME:   %[[STEP:arg[0-9]+]]: index,
 // CHECK-SAME:   %[[MEMREF:arg[0-9]+]]: memref<?xf32>
 // CHECK-SAME: ) {
-// CHECK:        %[[CST:.*]] = constant 1.0{{.*}} : f32
+// CHECK:        %[[CST:.*]] = arith.constant 1.0{{.*}} : f32
 // CHECK:        scf.for
 // CHECK:          memref.store %[[CST]], %[[MEMREF]]

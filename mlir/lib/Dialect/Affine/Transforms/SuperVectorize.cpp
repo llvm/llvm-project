@@ -17,6 +17,7 @@
 #include "mlir/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -344,8 +345,8 @@ using namespace vector;
 ///   %A = alloc (%M, %N) : memref<?x?xf32, 0>
 ///   %B = alloc (%M, %N) : memref<?x?xf32, 0>
 ///   %C = alloc (%M, %N) : memref<?x?xf32, 0>
-///   %f1 = constant 1.0 : f32
-///   %f2 = constant 2.0 : f32
+///   %f1 = arith.constant 1.0 : f32
+///   %f2 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %M {
 ///     affine.for %i1 = 0 to %N {
 ///       // non-scoped %f1
@@ -362,18 +363,18 @@ using namespace vector;
 ///     affine.for %i5 = 0 to %N {
 ///       %a5 = affine.load %A[%i4, %i5] : memref<?x?xf32, 0>
 ///       %b5 = affine.load %B[%i4, %i5] : memref<?x?xf32, 0>
-///       %s5 = addf %a5, %b5 : f32
+///       %s5 = arith.addf %a5, %b5 : f32
 ///       // non-scoped %f1
-///       %s6 = addf %s5, %f1 : f32
+///       %s6 = arith.addf %s5, %f1 : f32
 ///       // non-scoped %f2
-///       %s7 = addf %s5, %f2 : f32
+///       %s7 = arith.addf %s5, %f2 : f32
 ///       // diamond dependency.
-///       %s8 = addf %s7, %s6 : f32
+///       %s8 = arith.addf %s7, %s6 : f32
 ///       affine.store %s8, %C[%i4, %i5] : memref<?x?xf32, 0>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %res = load %C[%c7, %c42] : memref<?x?xf32, 0>
 ///   return %res : f32
 /// }
@@ -390,11 +391,11 @@ using namespace vector;
 ///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %cst = constant 1.0 : f32
-///   %cst_0 = constant 2.0 : f32
+///   %cst = arith.constant 1.0 : f32
+///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 {
 ///     affine.for %i1 = 0 to %arg1 step 256 {
-///       %cst_1 = constant dense<vector<256xf32>, 1.0> :
+///       %cst_1 = arith.constant dense<vector<256xf32>, 1.0> :
 ///                vector<256xf32>
 ///       vector.transfer_write %cst_1, %0[%i0, %i1] :
 ///                vector<256xf32>, memref<?x?xf32>
@@ -402,7 +403,7 @@ using namespace vector;
 ///   }
 ///   affine.for %i2 = 0 to %arg0 {
 ///     affine.for %i3 = 0 to %arg1 step 256 {
-///       %cst_2 = constant dense<vector<256xf32>, 2.0> :
+///       %cst_2 = arith.constant dense<vector<256xf32>, 2.0> :
 ///                vector<256xf32>
 ///       vector.transfer_write %cst_2, %1[%i2, %i3] :
 ///                vector<256xf32>, memref<?x?xf32>
@@ -414,20 +415,20 @@ using namespace vector;
 ///            memref<?x?xf32>, vector<256xf32>
 ///       %4 = vector.transfer_read %1[%i4, %i5] :
 ///            memref<?x?xf32>, vector<256xf32>
-///       %5 = addf %3, %4 : vector<256xf32>
-///       %cst_3 = constant dense<vector<256xf32>, 1.0> :
+///       %5 = arith.addf %3, %4 : vector<256xf32>
+///       %cst_3 = arith.constant dense<vector<256xf32>, 1.0> :
 ///                vector<256xf32>
-///       %6 = addf %5, %cst_3 : vector<256xf32>
-///       %cst_4 = constant dense<vector<256xf32>, 2.0> :
+///       %6 = arith.addf %5, %cst_3 : vector<256xf32>
+///       %cst_4 = arith.constant dense<vector<256xf32>, 2.0> :
 ///                vector<256xf32>
-///       %7 = addf %5, %cst_4 : vector<256xf32>
-///       %8 = addf %7, %6 : vector<256xf32>
+///       %7 = arith.addf %5, %cst_4 : vector<256xf32>
+///       %8 = arith.addf %7, %6 : vector<256xf32>
 ///       vector.transfer_write %8, %2[%i4, %i5] :
 ///                vector<256xf32>, memref<?x?xf32>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %9 = load %2[%c7, %c42] : memref<?x?xf32>
 ///   return %9 : f32
 /// }
@@ -444,11 +445,11 @@ using namespace vector;
 ///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %cst = constant 1.0 : f32
-///   %cst_0 = constant 2.0 : f32
+///   %cst = arith.constant 1.0 : f32
+///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 step 32 {
 ///     affine.for %i1 = 0 to %arg1 step 256 {
-///       %cst_1 = constant dense<vector<32x256xf32>, 1.0> :
+///       %cst_1 = arith.constant dense<vector<32x256xf32>, 1.0> :
 ///                vector<32x256xf32>
 ///       vector.transfer_write %cst_1, %0[%i0, %i1] :
 ///                vector<32x256xf32>, memref<?x?xf32>
@@ -456,7 +457,7 @@ using namespace vector;
 ///   }
 ///   affine.for %i2 = 0 to %arg0 step 32 {
 ///     affine.for %i3 = 0 to %arg1 step 256 {
-///       %cst_2 = constant dense<vector<32x256xf32>, 2.0> :
+///       %cst_2 = arith.constant dense<vector<32x256xf32>, 2.0> :
 ///                vector<32x256xf32>
 ///       vector.transfer_write %cst_2, %1[%i2, %i3] :
 ///                vector<32x256xf32>, memref<?x?xf32>
@@ -468,20 +469,20 @@ using namespace vector;
 ///                memref<?x?xf32> vector<32x256xf32>
 ///       %4 = vector.transfer_read %1[%i4, %i5] :
 ///                memref<?x?xf32>, vector<32x256xf32>
-///       %5 = addf %3, %4 : vector<32x256xf32>
-///       %cst_3 = constant dense<vector<32x256xf32>, 1.0> :
+///       %5 = arith.addf %3, %4 : vector<32x256xf32>
+///       %cst_3 = arith.constant dense<vector<32x256xf32>, 1.0> :
 ///                vector<32x256xf32>
-///       %6 = addf %5, %cst_3 : vector<32x256xf32>
-///       %cst_4 = constant dense<vector<32x256xf32>, 2.0> :
+///       %6 = arith.addf %5, %cst_3 : vector<32x256xf32>
+///       %cst_4 = arith.constant dense<vector<32x256xf32>, 2.0> :
 ///                vector<32x256xf32>
-///       %7 = addf %5, %cst_4 : vector<32x256xf32>
-///       %8 = addf %7, %6 : vector<32x256xf32>
+///       %7 = arith.addf %5, %cst_4 : vector<32x256xf32>
+///       %8 = arith.addf %7, %6 : vector<32x256xf32>
 ///       vector.transfer_write %8, %2[%i4, %i5] :
 ///                vector<32x256xf32>, memref<?x?xf32>
 ///     }
 ///   }
-///   %c7 = constant 7 : index
-///   %c42 = constant 42 : index
+///   %c7 = arith.constant 7 : index
+///   %c42 = arith.constant 42 : index
 ///   %9 = load %2[%c7, %c42] : memref<?x?xf32>
 ///   return %9 : f32
 /// }
@@ -511,11 +512,11 @@ using namespace vector;
 /// Consider the following example:
 /// ```mlir
 /// func @vecred(%in: memref<512xf32>) -> f32 {
-///   %cst = constant 0.000000e+00 : f32
+///   %cst = arith.constant 0.000000e+00 : f32
 ///   %sum = affine.for %i = 0 to 500 iter_args(%part_sum = %cst) -> (f32) {
 ///     %ld = affine.load %in[%i] : memref<512xf32>
 ///     %cos = math.cos %ld : f32
-///     %add = addf %part_sum, %cos : f32
+///     %add = arith.addf %part_sum, %cos : f32
 ///     affine.yield %add : f32
 ///   }
 ///   return %sum : f32
@@ -531,18 +532,18 @@ using namespace vector;
 /// ```mlir
 /// #map = affine_map<(d0) -> (-d0 + 500)>
 /// func @vecred(%arg0: memref<512xf32>) -> f32 {
-///   %cst = constant 0.000000e+00 : f32
-///   %cst_0 = constant dense<0.000000e+00> : vector<128xf32>
+///   %cst = arith.constant 0.000000e+00 : f32
+///   %cst_0 = arith.constant dense<0.000000e+00> : vector<128xf32>
 ///   %0 = affine.for %arg1 = 0 to 500 step 128 iter_args(%arg2 = %cst_0)
 ///           -> (vector<128xf32>) {
 ///     // %2 is the number of iterations left in the original loop.
 ///     %2 = affine.apply #map(%arg1)
 ///     %3 = vector.create_mask %2 : vector<128xi1>
-///     %cst_1 = constant 0.000000e+00 : f32
+///     %cst_1 = arith.constant 0.000000e+00 : f32
 ///     %4 = vector.transfer_read %arg0[%arg1], %cst_1 :
 ///                     memref<512xf32>, vector<128xf32>
 ///     %5 = math.cos %4 : vector<128xf32>
-///     %6 = addf %arg2, %5 : vector<128xf32>
+///     %6 = arith.addf %arg2, %5 : vector<128xf32>
 ///     // We filter out the effect of last 12 elements using the mask.
 ///     %7 = select %3, %6, %arg2 : vector<128xi1>, vector<128xf32>
 ///     affine.yield %7 : vector<128xf32>
@@ -674,8 +675,8 @@ struct VectorizationState {
   /// the vectorized operations.
   ///
   /// Example:
-  ///   * 'replaced': %0 = addf %1, %2 : f32
-  ///   * 'replacement': %0 = addf %1, %2 : vector<128xf32>
+  ///   * 'replaced': %0 = arith.addf %1, %2 : f32
+  ///   * 'replacement': %0 = arith.addf %1, %2 : vector<128xf32>
   void registerOpVectorReplacement(Operation *replaced, Operation *replacement);
 
   /// Registers the vector replacement of a scalar value. The replacement
@@ -772,8 +773,8 @@ private:
 /// the vectorized operations.
 ///
 /// Example:
-///   * 'replaced': %0 = addf %1, %2 : f32
-///   * 'replacement': %0 = addf %1, %2 : vector<128xf32>
+///   * 'replaced': %0 = arith.addf %1, %2 : f32
+///   * 'replacement': %0 = arith.addf %1, %2 : vector<128xf32>
 void VectorizationState::registerOpVectorReplacement(Operation *replaced,
                                                      Operation *replacement) {
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ commit vectorized op:\n");
@@ -941,14 +942,14 @@ static VectorType getVectorType(Type scalarTy,
 /// Tries to transform a scalar constant into a vector constant. Returns the
 /// vector constant if the scalar type is valid vector element type. Returns
 /// nullptr, otherwise.
-static ConstantOp vectorizeConstant(ConstantOp constOp,
-                                    VectorizationState &state) {
+static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
+                                           VectorizationState &state) {
   Type scalarTy = constOp.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return nullptr;
 
   auto vecTy = getVectorType(scalarTy, state.strategy);
-  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.getValue());
+  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.value());
 
   OpBuilder::InsertionGuard guard(state.builder);
   Operation *parentOp = state.builder.getInsertionBlock()->getParentOp();
@@ -959,7 +960,8 @@ static ConstantOp vectorizeConstant(ConstantOp constOp,
          isa<AffineForOp>(parentOp) && "Expected a vectorized for op");
   auto vecForOp = cast<AffineForOp>(parentOp);
   state.builder.setInsertionPointToStart(vecForOp.getBody());
-  auto newConstOp = state.builder.create<ConstantOp>(constOp.getLoc(), vecAttr);
+  auto newConstOp =
+      state.builder.create<arith::ConstantOp>(constOp.getLoc(), vecAttr);
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
@@ -969,9 +971,9 @@ static ConstantOp vectorizeConstant(ConstantOp constOp,
 /// Creates a constant vector filled with the neutral elements of the given
 /// reduction. The scalar type of vector elements will be taken from
 /// `oldOperand`.
-static ConstantOp createInitialVector(AtomicRMWKind reductionKind,
-                                      Value oldOperand,
-                                      VectorizationState &state) {
+static arith::ConstantOp createInitialVector(AtomicRMWKind reductionKind,
+                                             Value oldOperand,
+                                             VectorizationState &state) {
   Type scalarTy = oldOperand.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return nullptr;
@@ -981,7 +983,7 @@ static ConstantOp createInitialVector(AtomicRMWKind reductionKind,
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, valueAttr);
   auto newConstOp =
-      state.builder.create<ConstantOp>(oldOperand.getLoc(), vecAttr);
+      state.builder.create<arith::ConstantOp>(oldOperand.getLoc(), vecAttr);
 
   return newConstOp;
 }
@@ -1128,8 +1130,8 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
          "Vector op not found in replacement map");
 
   // Vectorize constant.
-  if (auto constOp = operand.getDefiningOp<ConstantOp>()) {
-    ConstantOp vecConstant = vectorizeConstant(constOp, state);
+  if (auto constOp = operand.getDefiningOp<arith::ConstantOp>()) {
+    auto vecConstant = vectorizeConstant(constOp, state);
     LLVM_DEBUG(dbgs() << "-> constant: " << vecConstant);
     return vecConstant.getResult();
   }
@@ -1250,7 +1252,7 @@ static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
     return false;
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
-  if (auto constOp = dyn_cast_or_null<ConstantOp>(value.getDefiningOp()))
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
     return constOp.value() == valueAttr;
   return false;
 }
@@ -1425,7 +1427,7 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
   // being added to the accumulator by inserting `select` operations, for
   // example:
   //
-  //   %res = addf %acc, %val : vector<128xf32>
+  //   %res = arith.addf %acc, %val : vector<128xf32>
   //   %res_masked = select %mask, %res, %acc : vector<128xi1>, vector<128xf32>
   //   affine.yield %res_masked : vector<128xf32>
   //
@@ -1472,7 +1474,7 @@ static Operation *vectorizeOneOperation(Operation *op,
     return vectorizeAffineForOp(forOp, state);
   if (auto yieldOp = dyn_cast<AffineYieldOp>(op))
     return vectorizeAffineYieldOp(yieldOp, state);
-  if (auto constant = dyn_cast<ConstantOp>(op))
+  if (auto constant = dyn_cast<arith::ConstantOp>(op))
     return vectorizeConstant(constant, state);
 
   // Other ops with regions are not supported.

@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "../PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -314,7 +315,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   Operation *terminator = lastBodyBlock->getTerminator();
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.step();
-  auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
+  auto stepped = rewriter.create<arith::AddIOp>(loc, iv, step).getResult();
   if (!stepped)
     return failure();
 
@@ -341,8 +342,8 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison =
-      rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, iv, upperBound);
+  auto comparison = rewriter.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt, iv, upperBound);
 
   rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
                                 ArrayRef<Value>(), endBlock, ArrayRef<Value>());

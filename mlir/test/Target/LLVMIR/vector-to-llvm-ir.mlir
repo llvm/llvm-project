@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | mlir-translate -mlir-to-llvmir | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-llvm -convert-arith-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | mlir-translate -mlir-to-llvmir | FileCheck %s
 
 func @genbool_1d() -> vector<8xi1> {
   %0 = vector.constant_mask [4] : vector<8xi1>
@@ -23,7 +23,7 @@ func @genbool_3d() -> vector<2x3x4xi1> {
 // note: awkward syntax to match [[
 
 func @genbool_1d_var_but_constant() -> vector<8xi1> {
-  %i = constant 0 : index
+  %i = arith.constant 0 : index
   %v = vector.create_mask %i : vector<8xi1>
   return %v : vector<8xi1>
 }

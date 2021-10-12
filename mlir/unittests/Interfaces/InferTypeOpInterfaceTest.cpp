@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -26,19 +27,19 @@ protected:
   void SetUp() override {
     const char *ir = R"MLIR(
       func @map(%arg : tensor<1xi64>) {
-        %0 = constant dense<[10]> : tensor<1xi64>
-        %1 = addi %arg, %0 : tensor<1xi64>
+        %0 = arith.constant dense<[10]> : tensor<1xi64>
+        %1 = arith.addi %arg, %0 : tensor<1xi64>
         return
       }
     )MLIR";
 
-    registry.insert<StandardOpsDialect>();
+    registry.insert<StandardOpsDialect, arith::ArithmeticDialect>();
     ctx.appendDialectRegistry(registry);
     module = parseSourceString(ir, &ctx);
     mapFn = cast<FuncOp>(module->front());
   }
 
-  // Create ValueShapeRange on the addi operation.
+  // Create ValueShapeRange on the arith.addi operation.
   ValueShapeRange addiRange() {
     auto &fnBody = mapFn.body();
     return std::next(fnBody.front().begin())->getOperands();

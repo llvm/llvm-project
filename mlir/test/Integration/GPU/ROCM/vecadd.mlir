@@ -10,14 +10,14 @@
 // RUN: | FileCheck %s
 
 func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %block_dim = dim %arg0, %c0 : memref<?xf32>
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %block_dim, %block_y = %c1, %block_z = %c1) {
     %a = load %arg0[%tx] : memref<?xf32>
     %b = load %arg1[%tx] : memref<?xf32>
-    %c = addf %a, %b : f32
+    %c = arith.addf %a, %b : f32
     store %c, %arg2[%tx] : memref<?xf32>
     gpu.terminator
   }
@@ -26,10 +26,10 @@ func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>
 
 // CHECK: [2.46, 2.46, 2.46, 2.46, 2.46]
 func @main() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c5 = constant 5 : index
-  %cf1dot23 = constant 1.23 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %cf1dot23 = arith.constant 1.23 : f32
   %0 = alloc() : memref<5xf32>
   %1 = alloc() : memref<5xf32>
   %2 = alloc() : memref<5xf32>

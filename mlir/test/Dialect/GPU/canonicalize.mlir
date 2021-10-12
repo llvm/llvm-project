@@ -27,7 +27,7 @@ func @memset_after_cast(%arg0: memref<10xf32>, %arg1: f32) {
 //  CHECK-NEXT:   return %[[SIZE]] : index
 func @gpu_dim_of_alloc(%size: index) -> index {
   %0 = gpu.alloc(%size) : memref<?xindex>
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %1 = memref.dim %0, %c0 : memref<?xindex>
   return %1 : index
 }
@@ -36,12 +36,12 @@ func @gpu_dim_of_alloc(%size: index) -> index {
 
 // CHECK-LABEL: func @simplify_gpu_launch
 func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
-  %cst = constant 0.000000e+00 : f32
-  %c1 = constant 1 : index
-  %c32 = constant 32 : index
-  %c16 = constant 16 : index
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %c16 = arith.constant 16 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<2x16x16xf32>
   scf.for %arg0 = %c0 to %c2 step %c1 {
     scf.for %arg1 = %c0 to %c16 step %c1 {
@@ -56,17 +56,17 @@ func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
   gpu.wait [%1]
   gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1)
     threads(%arg3, %arg4, %arg5) in (%arg9 = %c32, %arg10 = %c1, %arg11 = %c1) {
-    %3 = muli %arg5, %c32 : index
-    %4 = muli %arg4, %c32 : index
-    %5 = addi %3, %4 : index
-    %6 = addi %5, %arg3 : index
-    %7 = divi_unsigned %6, %c32 : index
-    %8 = muli %arg0, %c16 : index
-    %9 = muli %arg1, %c2 : index
-    %10 = muli %7, %c2 : index
-    %11 = addi %9, %10 : index
+    %3 = arith.muli %arg5, %c32 : index
+    %4 = arith.muli %arg4, %c32 : index
+    %5 = arith.addi %3, %4 : index
+    %6 = arith.addi %5, %arg3 : index
+    %7 = arith.divui %6, %c32 : index
+    %8 = arith.muli %arg0, %c16 : index
+    %9 = arith.muli %arg1, %c2 : index
+    %10 = arith.muli %7, %c2 : index
+    %11 = arith.addi %9, %10 : index
     %12 = memref.load %memref[%11, %c0, %8] : memref<2x16x16xf32>
-    %13 = addi %11, %c1 : index
+    %13 = arith.addi %11, %c1 : index
     %14 = memref.load %memref[%13, %c0, %8] : memref<2x16x16xf32>
     memref.store %12, %memref[%11, %c0, %8] : memref<2x16x16xf32>
     memref.store %14, %memref[%13, %c0, %8] : memref<2x16x16xf32>
@@ -75,13 +75,13 @@ func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
   return
 }
 
-// CHECK-DAG: %[[C1:.*]] = constant 1 : index
-// CHECK-DAG: %[[C0:.*]] = constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C1]], %{{.*}} = %[[C1]], %{{.*}} = %[[C1]]) threads(%[[TIDX:.*]], %{{.*}}, %{{.*}}) in (%{{.*}} = %c32, %{{.*}} = %[[C1]], %{{.*}} = %[[C1]]) {
-// CHECK-NEXT:  	divi_unsigned %[[TIDX]], %c32 : index
-// CHECK-NEXT:  	muli %{{.*}}, %c2 : index
+// CHECK-NEXT:  	arith.divui %[[TIDX]], %c32 : index
+// CHECK-NEXT:  	arith.muli %{{.*}}, %c2 : index
 // CHECK-NEXT:    memref.load %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
-// CHECK-NEXT:    addi %{{.*}}, %[[C1]] : index
+// CHECK-NEXT:    arith.addi %{{.*}}, %[[C1]] : index
 // CHECK-NEXT:    memref.load %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
 // CHECK-NEXT:    memref.store %{{.*}}, %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
 // CHECK-NEXT:    memref.store %{{.*}}, %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -24,7 +25,11 @@ using namespace mlir::tensor;
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  return builder.create<mlir::ConstantOp>(loc, type, value);
+  if (arith::ConstantOp::isBuildableWith(value, type))
+    return builder.create<arith::ConstantOp>(loc, value, type);
+  if (ConstantOp::isBuildableWith(value, type))
+    return builder.create<ConstantOp>(loc, value, type);
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -207,13 +212,13 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   int64_t index) {
   auto loc = result.location;
-  Value indexValue = builder.create<ConstantIndexOp>(loc, index);
+  Value indexValue = builder.create<arith::ConstantIndexOp>(loc, index);
   build(builder, result, source, indexValue);
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {
-  if (auto constantOp = index().getDefiningOp<ConstantOp>())
-    return constantOp.getValue().cast<IntegerAttr>().getInt();
+  if (auto constantOp = index().getDefiningOp<arith::ConstantOp>())
+    return constantOp.value().cast<IntegerAttr>().getInt();
   return {};
 }
 
@@ -929,7 +934,7 @@ LogicalResult ExtractSliceOp::reifyResultShapes(
     if (droppedDims.count(size.index()))
       continue;
     if (auto attr = size.value().dyn_cast<Attribute>()) {
-      reifiedReturnShapes[0].push_back(builder.create<ConstantIndexOp>(
+      reifiedReturnShapes[0].push_back(builder.create<arith::ConstantIndexOp>(
           loc, attr.cast<IntegerAttr>().getInt()));
       continue;
     }

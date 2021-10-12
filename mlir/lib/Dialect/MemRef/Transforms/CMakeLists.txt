@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRArithmetic
   MLIRInferTypeOpInterface
   MLIRMemRef
   MLIRPass
