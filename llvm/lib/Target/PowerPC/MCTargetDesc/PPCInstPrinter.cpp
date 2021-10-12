@@ -158,7 +158,10 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   //    dcbt ra, rb, th [server]
   //    dcbt th, ra, rb [embedded]
   //  where th can be omitted when it is 0. dcbtst is the same.
-  if (MI->getOpcode() == PPC::DCBT || MI->getOpcode() == PPC::DCBTST) {
+  // On AIX, only emit the extended mnemonics for dcbt and dcbtst if
+  // the "modern assembler" is available.
+  if ((MI->getOpcode() == PPC::DCBT || MI->getOpcode() == PPC::DCBTST) &&
+      (!TT.isOSAIX() || STI.getFeatureBits()[PPC::FeatureModernAIXAs])) {
     unsigned char TH = MI->getOperand(0).getImm();
     O << "\tdcbt";
     if (MI->getOpcode() == PPC::DCBTST)
