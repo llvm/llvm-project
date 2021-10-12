@@ -92,6 +92,7 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
 Error SimpleRemoteEPC::disconnect() {
   T->disconnect();
+  D->shutdown();
   std::unique_lock<std::mutex> Lock(SimpleRemoteEPCMutex);
   DisconnectCV.wait(Lock, [this] { return Disconnected; });
   return std::move(DisconnectErr);
