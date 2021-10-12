@@ -481,7 +481,22 @@ static void instantiateOMPDeclareVariantAttr(
     }
   }
 
-  S.ActOnOpenMPDeclareVariantDirective(FD, E, TI, Attr.getRange());
+  SmallVector<Expr *, 8> NothingExprs;
+  SmallVector<Expr *, 8> NeedDevicePtrExprs;
+  for (Expr *E : Attr.adjustArgsNothing()) {
+    ExprResult ER = Subst(E);
+    if (ER.isInvalid())
+      continue;
+    NothingExprs.push_back(ER.get());
+  }
+  for (Expr *E : Attr.adjustArgsNeedDevicePtr()) {
+    ExprResult ER = Subst(E);
+    if (ER.isInvalid())
+      continue;
+    NeedDevicePtrExprs.push_back(ER.get());
+  }
+  S.ActOnOpenMPDeclareVariantDirective(FD, E, TI, NothingExprs,
+                                       NeedDevicePtrExprs, Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
