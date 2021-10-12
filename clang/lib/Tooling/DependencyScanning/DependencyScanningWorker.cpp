@@ -151,10 +151,11 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
-      ScanningOutputFormat Format, llvm::Optional<StringRef> ModuleName = None)
+      ScanningOutputFormat Format, bool OptimizeArgs,
+      llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings), Format(Format),
-        ModuleName(ModuleName) {}
+        OptimizeArgs(OptimizeArgs), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -243,15 +244,16 @@ public:
       break;
     case ScanningOutputFormat::Full:
       Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation)));
+          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation),
+          OptimizeArgs));
       break;
     }
 
     // Consider different header search and diagnostic options to create
     // different modules. This avoids the unsound aliasing of module PCMs.
     //
-    // TODO: Implement diagnostic bucketing and header search pruning to reduce
-    // the impact of strict context hashing.
+    // TODO: Implement diagnostic bucketing to reduce the impact of strict
+    // context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
     std::unique_ptr<FrontendAction> Action;
@@ -273,6 +275,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   ScanningOutputFormat Format;
+  bool OptimizeArgs;
   llvm::Optional<StringRef> ModuleName;
 };
 
@@ -280,7 +283,7 @@ private:
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
-    : Format(Service.getFormat()) {
+    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
@@ -352,7 +355,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
                       [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
                         DependencyScanningAction Action(
                             WorkingDirectory, Consumer, DepFS,
-                            PPSkipMappings.get(), Format, ModuleName);
+                            PPSkipMappings.get(), Format, OptimizeArgs,
+                            ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the

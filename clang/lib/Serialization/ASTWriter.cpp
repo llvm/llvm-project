@@ -132,6 +132,18 @@ static StringRef bytes(const SmallVectorImpl<T> &v) {
                          sizeof(T) * v.size());
 }
 
+static std::string bytes(const std::vector<bool> &V) {
+  std::string Str;
+  Str.reserve(V.size() / 8);
+  for (unsigned I = 0, E = V.size(); I < E;) {
+    char Byte = 0;
+    for (unsigned Bit = 0; Bit < 8 && I < E; ++Bit, ++I)
+      Byte |= V[I] << Bit;
+    Str += Byte;
+  }
+  return Str;
+}
+
 //===----------------------------------------------------------------------===//
 // Type serialization
 //===----------------------------------------------------------------------===//
@@ -1050,6 +1062,8 @@ ASTWriter::createSignature(StringRef AllBytes, StringRef ASTBlockBytes) {
 
 ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
                                                       ASTContext &Context) {
+  using namespace llvm;
+
   // Flush first to prepare the PCM hash (signature).
   Stream.FlushToWord();
   auto StartOfUnhashedControl = Stream.GetCurrentBitNo() >> 3;
@@ -1093,9 +1107,23 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   // Note: we don't serialize the log or serialization file names, because they
   // are generally transient files and will almost always be overridden.
   Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
+  Record.clear();
 
   // Write out the diagnostic/pragma mappings.
   WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
+
+  // Header search entry usage.
+  auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
+  auto Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(HEADER_SEARCH_ENTRY_USAGE));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
+  unsigned HSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+  {
+    RecordData::value_type Record[] = {HEADER_SEARCH_ENTRY_USAGE,
+                                       HSEntryUsage.size()};
+    Stream.EmitRecordWithBlob(HSUsageAbbrevCode, Record, bytes(HSEntryUsage));
+  }
 
   // Leave the options block.
   Stream.ExitBlock();
