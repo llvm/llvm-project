@@ -260,11 +260,10 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         CombiningKind kind) {
   result.addOperands(source);
   auto sourceVectorType = source.getType().cast<VectorType>();
-  auto targetShape = MultiDimReductionOp::inferDestShape(
-      sourceVectorType.getShape(), reductionMask);
-  auto targetVectorType =
-      VectorType::get(targetShape, sourceVectorType.getElementType());
-  result.addTypes(targetVectorType);
+  auto targetType = MultiDimReductionOp::inferDestType(
+      sourceVectorType.getShape(), reductionMask,
+      sourceVectorType.getElementType());
+  result.addTypes(targetType);
 
   SmallVector<int64_t> reductionDims;
   for (auto en : llvm::enumerate(reductionMask))
@@ -278,15 +277,21 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 
 static LogicalResult verify(MultiDimReductionOp op) {
   auto reductionMask = op.getReductionMask();
-  auto targetShape = MultiDimReductionOp::inferDestShape(
-      op.getSourceVectorType().getShape(), reductionMask);
-  auto targetVectorType =
-      VectorType::get(targetShape, op.getSourceVectorType().getElementType());
-  if (targetVectorType != op.getDestVectorType())
+  auto targetType = MultiDimReductionOp::inferDestType(
+      op.getSourceVectorType().getShape(), reductionMask,
+      op.getSourceVectorType().getElementType());
+  // TODO: update to support 0-d vectors when available.
+  if (targetType != op.getDestType())
     return op.emitError("invalid output vector type: ")
-           << op.getDestVectorType() << " (expected: " << targetVectorType
-           << ")";
+           << op.getDestType() << " (expected: " << targetType << ")";
   return success();
+}
+
+OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
+  // Single parallel dim, this is a noop.
+  if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
+    return source();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
