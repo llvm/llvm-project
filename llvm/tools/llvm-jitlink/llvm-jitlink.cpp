@@ -357,6 +357,12 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
 }
 
 class JITLinkSlabAllocator final : public JITLinkMemoryManager {
+private:
+  struct FinalizedAllocInfo {
+    sys::MemoryBlock Mem;
+    std::vector<AllocActionCall> DeallocActions;
+  };
+
 public:
   static Expected<std::unique_ptr<JITLinkSlabAllocator>>
   Create(uint64_t SlabSize) {
@@ -368,101 +374,161 @@ public:
     return std::move(Allocator);
   }
 
-  Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
-  allocate(const JITLinkDylib *JD, const SegmentsRequestMap &Request) override {
-
-    using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
+  void allocate(const JITLinkDylib *JD, LinkGraph &G,
+                OnAllocatedFunction OnAllocated) override {
 
     // Local class for allocation.
-    class IPMMAlloc : public Allocation {
+    class IPMMAlloc : public InFlightAlloc {
     public:
-      IPMMAlloc(JITLinkSlabAllocator &Parent, AllocationMap SegBlocks)
-          : Parent(Parent), SegBlocks(std::move(SegBlocks)) {}
-      MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
-        assert(SegBlocks.count(Seg) && "No allocation for segment");
-        return {static_cast<char *>(SegBlocks[Seg].base()),
-                SegBlocks[Seg].allocatedSize()};
+      IPMMAlloc(JITLinkSlabAllocator &Parent, BasicLayout BL,
+                sys::MemoryBlock StandardSegs, sys::MemoryBlock FinalizeSegs)
+          : Parent(Parent), BL(std::move(BL)),
+            StandardSegs(std::move(StandardSegs)),
+            FinalizeSegs(std::move(FinalizeSegs)) {}
+
+      void finalize(OnFinalizedFunction OnFinalized) override {
+        if (auto Err = applyProtections()) {
+          OnFinalized(std::move(Err));
+          return;
+        }
+
+        // FIXME: Run finalize actions.
+        assert(BL.graphAllocActions().empty() &&
+               "Support function calls not supported yet");
+
+        OnFinalized(FinalizedAlloc(
+            pointerToJITTargetAddress(new FinalizedAllocInfo())));
       }
-      JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
-        assert(SegBlocks.count(Seg) && "No allocation for segment");
-        return pointerToJITTargetAddress(SegBlocks[Seg].base()) +
-               Parent.TargetDelta;
-      }
-      void finalizeAsync(FinalizeContinuation OnFinalize) override {
-        OnFinalize(applyProtections());
-      }
-      Error deallocate() override {
-        for (auto &KV : SegBlocks)
-          if (auto EC = sys::Memory::releaseMappedMemory(KV.second))
-            return errorCodeToError(EC);
-        return Error::success();
+
+      void abandon(OnAbandonedFunction OnAbandoned) override {
+        OnAbandoned(joinErrors(Parent.freeBlock(StandardSegs),
+                               Parent.freeBlock(FinalizeSegs)));
       }
 
     private:
       Error applyProtections() {
-        for (auto &KV : SegBlocks) {
-          auto &Prot = KV.first;
-          auto &Block = KV.second;
-          if (auto EC = sys::Memory::protectMappedMemory(Block, Prot))
+        for (auto &KV : BL.segments()) {
+          const auto &Group = KV.first;
+          auto &Seg = KV.second;
+
+          auto Prot = toSysMemoryProtectionFlags(Group.getMemProt());
+
+          uint64_t SegSize =
+              alignTo(Seg.ContentSize + Seg.ZeroFillSize, Parent.PageSize);
+          sys::MemoryBlock MB(Seg.WorkingMem, SegSize);
+          if (auto EC = sys::Memory::protectMappedMemory(MB, Prot))
             return errorCodeToError(EC);
           if (Prot & sys::Memory::MF_EXEC)
-            sys::Memory::InvalidateInstructionCache(Block.base(),
-                                                    Block.allocatedSize());
+            sys::Memory::InvalidateInstructionCache(MB.base(),
+                                                    MB.allocatedSize());
         }
         return Error::success();
       }
 
       JITLinkSlabAllocator &Parent;
-      AllocationMap SegBlocks;
+      BasicLayout BL;
+      sys::MemoryBlock StandardSegs;
+      sys::MemoryBlock FinalizeSegs;
     };
 
-    AllocationMap Blocks;
+    BasicLayout BL(G);
+    auto SegsSizes = BL.getContiguousPageBasedLayoutSizes(PageSize);
 
-    for (auto &KV : Request) {
+    if (!SegsSizes) {
+      OnAllocated(SegsSizes.takeError());
+      return;
+    }
+
+    char *AllocBase = 0;
+    {
+      std::lock_guard<std::mutex> Lock(SlabMutex);
+
+      if (SegsSizes->total() > SlabRemaining.allocatedSize()) {
+        OnAllocated(make_error<StringError>(
+            "Slab allocator out of memory: request for " +
+                formatv("{0:x}", SegsSizes->total()) +
+                " bytes exceeds remaining capacity of " +
+                formatv("{0:x}", SlabRemaining.allocatedSize()) + " bytes",
+            inconvertibleErrorCode()));
+        return;
+      }
+
+      AllocBase = reinterpret_cast<char *>(SlabRemaining.base());
+      SlabRemaining =
+          sys::MemoryBlock(AllocBase + SegsSizes->total(),
+                           SlabRemaining.allocatedSize() - SegsSizes->total());
+    }
+
+    sys::MemoryBlock StandardSegs(AllocBase, SegsSizes->StandardSegs);
+    sys::MemoryBlock FinalizeSegs(AllocBase + SegsSizes->StandardSegs,
+                                  SegsSizes->FinalizeSegs);
+
+    auto NextStandardSegAddr = pointerToJITTargetAddress(StandardSegs.base());
+    auto NextFinalizeSegAddr = pointerToJITTargetAddress(FinalizeSegs.base());
+
+    LLVM_DEBUG({
+      dbgs() << "JITLinkSlabAllocator allocated:\n";
+      if (SegsSizes->StandardSegs)
+        dbgs() << formatv("  [ {0:x16} -- {1:x16} ]", NextStandardSegAddr,
+                          NextStandardSegAddr + StandardSegs.allocatedSize())
+               << " to stardard segs\n";
+      else
+        dbgs() << "  no standard segs\n";
+      if (SegsSizes->FinalizeSegs)
+        dbgs() << formatv("  [ {0:x16} -- {1:x16} ]", NextFinalizeSegAddr,
+                          NextFinalizeSegAddr + FinalizeSegs.allocatedSize())
+               << " to finalize segs\n";
+      else
+        dbgs() << "  no finalize segs\n";
+    });
+
+    for (auto &KV : BL.segments()) {
+      auto &Group = KV.first;
       auto &Seg = KV.second;
 
-      if (Seg.getAlignment() > PageSize)
-        return make_error<StringError>("Cannot request higher than page "
-                                       "alignment",
-                                       inconvertibleErrorCode());
+      auto &SegAddr =
+          (Group.getMemDeallocPolicy() == MemDeallocPolicy::Standard)
+              ? NextStandardSegAddr
+              : NextFinalizeSegAddr;
 
-      if (PageSize % Seg.getAlignment() != 0)
-        return make_error<StringError>("Page size is not a multiple of "
-                                       "alignment",
-                                       inconvertibleErrorCode());
+      LLVM_DEBUG({
+        dbgs() << "  " << Group << " -> " << formatv("{0:x16}", SegAddr)
+               << "\n";
+      });
+      Seg.WorkingMem = jitTargetAddressToPointer<char *>(SegAddr);
+      Seg.Addr = SegAddr + NextSlabDelta;
 
-      uint64_t ZeroFillStart = Seg.getContentSize();
-      uint64_t SegmentSize = ZeroFillStart + Seg.getZeroFillSize();
-
-      // Round segment size up to page boundary.
-      SegmentSize = (SegmentSize + PageSize - 1) & ~(PageSize - 1);
-
-      // Take segment bytes from the front of the slab.
-      void *SlabBase = SlabRemaining.base();
-      uint64_t SlabRemainingSize = SlabRemaining.allocatedSize();
-
-      if (SegmentSize > SlabRemainingSize)
-        return make_error<StringError>(
-            "Slab allocator out of memory: request for " +
-                formatv("{0:x}", SegmentSize) +
-                " bytes exceeds remaining capacity of " +
-                formatv("{0:x}", SlabRemainingSize) + " bytes",
-            inconvertibleErrorCode());
-
-      sys::MemoryBlock SegMem(SlabBase, SegmentSize);
-      SlabRemaining =
-          sys::MemoryBlock(reinterpret_cast<char *>(SlabBase) + SegmentSize,
-                           SlabRemainingSize - SegmentSize);
+      SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
 
       // Zero out the zero-fill memory.
-      memset(static_cast<char *>(SegMem.base()) + ZeroFillStart, 0,
-             Seg.getZeroFillSize());
-
-      // Record the block for this segment.
-      Blocks[KV.first] = std::move(SegMem);
+      if (Seg.ZeroFillSize != 0)
+        memset(Seg.WorkingMem + Seg.ContentSize, 0, Seg.ZeroFillSize);
     }
-    return std::unique_ptr<InProcessMemoryManager::Allocation>(
-        new IPMMAlloc(*this, std::move(Blocks)));
+
+    NextSlabDelta += SegsSizes->total();
+
+    if (auto Err = BL.apply()) {
+      OnAllocated(std::move(Err));
+      return;
+    }
+
+    OnAllocated(std::unique_ptr<InProcessMemoryManager::InFlightAlloc>(
+        new IPMMAlloc(*this, std::move(BL), std::move(StandardSegs),
+                      std::move(FinalizeSegs))));
+  }
+
+  void deallocate(std::vector<FinalizedAlloc> FinalizedAllocs,
+                  OnDeallocatedFunction OnDeallocated) override {
+    Error Err = Error::success();
+    for (auto &FA : FinalizedAllocs) {
+      std::unique_ptr<FinalizedAllocInfo> FAI(
+          jitTargetAddressToPointer<FinalizedAllocInfo *>(FA.release()));
+
+      // FIXME: Run dealloc actions.
+
+      Err = joinErrors(std::move(Err), freeBlock(FAI->Mem));
+    }
+    OnDeallocated(std::move(Err));
   }
 
 private:
@@ -510,13 +576,19 @@ private:
     // Calculate the target address delta to link as-if slab were at
     // SlabAddress.
     if (SlabAddress != ~0ULL)
-      TargetDelta =
+      NextSlabDelta =
           SlabAddress - pointerToJITTargetAddress(SlabRemaining.base());
   }
 
+  Error freeBlock(sys::MemoryBlock MB) {
+    // FIXME: Return memory to slab.
+    return Error::success();
+  }
+
+  std::mutex SlabMutex;
   sys::MemoryBlock SlabRemaining;
   uint64_t PageSize = 0;
-  int64_t TargetDelta = 0;
+  int64_t NextSlabDelta = 0;
 };
 
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
@@ -547,7 +619,7 @@ static std::unique_ptr<JITLinkMemoryManager> createMemoryManager() {
     auto SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
     return ExitOnErr(JITLinkSlabAllocator::Create(SlabSize));
   }
-  return std::make_unique<InProcessMemoryManager>();
+  return ExitOnErr(InProcessMemoryManager::Create());
 }
 
 LLVMJITLinkObjectLinkingLayer::LLVMJITLinkObjectLinkingLayer(
