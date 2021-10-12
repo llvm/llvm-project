@@ -28,6 +28,10 @@
 #   include "cwctype"
 #endif
 
+#if defined(_AIX)
+#   include <sys/localedef.h> // for __lc_ctype_ptr
+#endif
+
 #if defined(_LIBCPP_MSVCRT)
 #   define _CTYPE_DISABLE_MACROS
 #endif
