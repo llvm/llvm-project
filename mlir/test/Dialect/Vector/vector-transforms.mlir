@@ -441,10 +441,11 @@ func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %a
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element
+//  CHECK-SAME: %[[ARG0:.+]]: vector<1x1xf16>, %{{.+}}: vector<1x1x1xf16>
 func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
-  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
-  // CHECK: vector.shape_cast %{{.+}} : vector<1x1x1xf16> to vector<1xf16>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %[[ARG0]] : vector<1x1xf16> to vector<1x1x1xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x1xf16> into vector<1x1x1xf16>
+  // CHECK: return %[[CAST]]
   return %0: vector<1x1x1xf16>
 }
 
