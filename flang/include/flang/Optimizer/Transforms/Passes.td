@@ -92,6 +92,26 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
+def CFGConversion : FunctionPass<"cfg-conversion"> {
+  let summary = "Convert FIR structured control flow ops to CFG ops.";
+  let description = [{
+    Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
+    plain old test and branch operations. Removing the high-level control
+    structures can enable other optimizations.
+
+    This pass is required before code gen to the LLVM IR dialect.
+  }];
+  let constructor = "::fir::createFirToCfgPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
+  let options = [
+    Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
+           /*default=*/"false",
+           "force the body of a loop to execute at least once">
+  ];
+}
+
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let summary = "Convert name for external interoperability";
   let description = [{
