@@ -6896,28 +6896,28 @@ static void handleBPFPreserveAccessIndexAttr(Sema &S, Decl *D,
   Rec->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
 }
 
-static bool hasBTFTagAttr(Decl *D, StringRef Tag) {
-  for (const auto *I : D->specific_attrs<BTFTagAttr>()) {
-    if (I->getBTFTag() == Tag)
+static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {
+  for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
+    if (I->getBTFDeclTag() == Tag)
       return true;
   }
   return false;
 }
 
-static void handleBTFTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleBTFDeclTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
     return;
-  if (hasBTFTagAttr(D, Str))
+  if (hasBTFDeclTagAttr(D, Str))
     return;
 
-  D->addAttr(::new (S.Context) BTFTagAttr(S.Context, AL, Str));
+  D->addAttr(::new (S.Context) BTFDeclTagAttr(S.Context, AL, Str));
 }
 
-BTFTagAttr *Sema::mergeBTFTagAttr(Decl *D, const BTFTagAttr &AL) {
-  if (hasBTFTagAttr(D, AL.getBTFTag()))
+BTFDeclTagAttr *Sema::mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL) {
+  if (hasBTFDeclTagAttr(D, AL.getBTFDeclTag()))
     return nullptr;
-  return ::new (Context) BTFTagAttr(Context, AL, AL.getBTFTag());
+  return ::new (Context) BTFDeclTagAttr(Context, AL, AL.getBTFDeclTag());
 }
 
 static void handleWebAssemblyExportNameAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7956,8 +7956,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_BPFPreserveAccessIndex:
     handleBPFPreserveAccessIndexAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_BTFTag:
-    handleBTFTagAttr(S, D, AL);
+  case ParsedAttr::AT_BTFDeclTag:
+    handleBTFDeclTagAttr(S, D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyExportName:
     handleWebAssemblyExportNameAttr(S, D, AL);

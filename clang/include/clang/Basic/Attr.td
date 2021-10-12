@@ -1843,11 +1843,11 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let LangOpts = [COnly];
 }
 
-def BTFTag : InheritableAttr {
-  let Spellings = [Clang<"btf_tag">];
-  let Args = [StringArgument<"BTFTag">];
+def BTFDeclTag : InheritableAttr {
+  let Spellings = [Clang<"btf_decl_tag">];
+  let Args = [StringArgument<"BTFDeclTag">];
   let Subjects = SubjectList<[Var, Function, Record, Field], ErrorDiag>;
-  let Documentation = [BTFTagDocs];
+  let Documentation = [BTFDeclTagDocs];
   let LangOpts = [COnly];
 }
 

@@ -2170,12 +2170,12 @@ preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
-def BTFTagDocs : Documentation {
+def BTFDeclTagDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Clang supports the ``__attribute__((btf_tag("ARGUMENT")))`` attribute for all
-targets. This attribute may be attached to a struct/union, struct/union field,
-function, function parameter or variable declaration. If -g is specified,
+Clang supports the ``__attribute__((btf_decl_tag("ARGUMENT")))`` attribute for
+all targets. This attribute may be attached to a struct/union, struct/union
+field, function, function parameter or variable declaration. If -g is specified,
 the ``ARGUMENT`` info will be preserved in IR and be emitted to dwarf.
 For BPF targets, the ``ARGUMENT`` info will be emitted to .BTF ELF section too.
   }];
