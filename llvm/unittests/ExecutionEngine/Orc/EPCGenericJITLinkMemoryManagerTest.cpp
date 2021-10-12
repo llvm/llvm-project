@@ -134,6 +134,8 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
+
+  cantFail(SelfEPC->disconnect());
 }
 
 } // namespace
