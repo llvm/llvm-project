@@ -4704,9 +4704,27 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_NoOp:
   case CK_LValueToRValue:
     return EmitLValue(E->getSubExpr());
+
+  case CK_NoOp: {
+    // CK_NoOp can model a qualification conversion, which can remove an array
+    // bound and change the IR type.
+    // FIXME: Once pointee types are removed from IR, remove this.
+    LValue LV = EmitLValue(E->getSubExpr());
+    if (LV.isSimple()) {
+      Address V = LV.getAddress(*this);
+      if (V.isValid()) {
+        llvm::Type *T =
+            ConvertTypeForMem(E->getType())
+                ->getPointerTo(
+                    cast<llvm::PointerType>(V.getType())->getAddressSpace());
+        if (V.getType() != T)
+          LV.setAddress(Builder.CreateBitCast(V, T));
+      }
+    }
+    return LV;
+  }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
