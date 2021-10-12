@@ -13,6 +13,7 @@
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
@@ -151,6 +152,15 @@ public:
   static void TypeCategoryNames(CommandInterpreter &interpreter,
                                 CompletionRequest &request,
                                 SearchFilter *searcher);
+
+  /// This completer works for commands whose only arguments are a command path.
+  /// It isn't tied to an argument type because it completes not on a single
+  /// argument but on the sequence of arguments, so you have to invoke it by
+  /// hand.
+  static void
+  CompleteModifiableCmdPathArgs(CommandInterpreter &interpreter,
+                                CompletionRequest &request,
+                                OptionElementVector &opt_element_vector);
 };
 
 } // namespace lldb_private

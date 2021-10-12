@@ -231,11 +231,12 @@ public:
   };
 
   enum CommandTypes {
-    eCommandTypesBuiltin = 0x0001, // native commands such as "frame"
-    eCommandTypesUserDef = 0x0002, // scripted commands
-    eCommandTypesAliases = 0x0004, // aliases such as "po"
-    eCommandTypesHidden = 0x0008,  // commands prefixed with an underscore
-    eCommandTypesAllThem = 0xFFFF  // all commands
+    eCommandTypesBuiltin = 0x0001, //< native commands such as "frame"
+    eCommandTypesUserDef = 0x0002, //< scripted commands
+    eCommandTypesUserMW  = 0x0004, //< multiword commands (command containers)
+    eCommandTypesAliases = 0x0008, //< aliases such as "po"
+    eCommandTypesHidden  = 0x0010, //< commands prefixed with an underscore
+    eCommandTypesAllThem = 0xFFFF  //< all commands
   };
 
   CommandInterpreter(Debugger &debugger, bool synchronous_execution);
@@ -256,8 +257,8 @@ public:
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
 
-  bool AddUserCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
-                      bool can_replace);
+  Status AddUserCommand(llvm::StringRef name,
+                        const lldb::CommandObjectSP &cmd_sp, bool can_replace);
 
   lldb::CommandObjectSP GetCommandSPExact(llvm::StringRef cmd,
                                           bool include_aliases = false) const;
@@ -266,11 +267,48 @@ public:
                                   StringList *matches = nullptr,
                                   StringList *descriptions = nullptr) const;
 
+  CommandObject *GetUserCommandObject(llvm::StringRef cmd,
+                                      StringList *matches = nullptr,
+                                      StringList *descriptions = nullptr) const;
+
+  /// Determine whether a root level, built-in command with this name exists.
   bool CommandExists(llvm::StringRef cmd) const;
 
+  /// Determine whether an alias command with this name exists
   bool AliasExists(llvm::StringRef cmd) const;
 
+  /// Determine whether a root-level user command with this name exists.
   bool UserCommandExists(llvm::StringRef cmd) const;
+
+  /// Determine whether a root-level user multiword command with this name
+  /// exists.
+  bool UserMultiwordCommandExists(llvm::StringRef cmd) const;
+
+  /// Look up the command pointed to by path encoded in the arguments of
+  /// the incoming command object.  If all the path components exist
+  /// and are all actual commands - not aliases, and the leaf command is a
+  /// multiword command, return the command.  Otherwise return nullptr, and put
+  /// a useful diagnostic in the Status object.
+  ///
+  /// \param[in] path
+  ///    An Args object holding the path in its arguments
+  /// \param[in] leaf_is_command
+  ///    If true, return the container of the leaf name rather than looking up
+  ///    the whole path as a leaf command.  The leaf needn't exist in this case.
+  /// \param[in,out] result
+  ///    If the path is not found, this error shows where we got off track.
+  /// \return
+  ///    If found, a pointer to the CommandObjectMultiword pointed to by path,
+  ///    or to the container of the leaf element is is_leaf_command.
+  ///    Returns nullptr under two circumstances:
+  ///      1) The command in not found (check error.Fail)
+  ///      2) is_leaf is true and the path has only a leaf.  We don't have a
+  ///         dummy "contains everything MWC, so we return null here, but
+  ///         in this case error.Success is true.
+
+  CommandObjectMultiword *VerifyUserMultiwordCmdPath(Args &path,
+                                                     bool leaf_is_command,
+                                                     Status &result);
 
   CommandAlias *AddAlias(llvm::StringRef alias_name,
                          lldb::CommandObjectSP &command_obj_sp,
@@ -282,6 +320,11 @@ public:
   bool RemoveAlias(llvm::StringRef alias_name);
 
   bool GetAliasFullName(llvm::StringRef cmd, std::string &full_name) const;
+
+  bool RemoveUserMultiword(llvm::StringRef multiword_name);
+
+  // Do we want to allow top-level user multiword commands to be deleted?
+  void RemoveAllUserMultiword() { m_user_mw_dict.clear(); }
 
   bool RemoveUser(llvm::StringRef alias_name);
 
@@ -414,6 +457,8 @@ public:
 
   bool HasUserCommands() const;
 
+  bool HasUserMultiwordCommands() const;
+
   bool HasAliasOptions() const;
 
   void BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
@@ -421,6 +466,7 @@ public:
                              std::string &raw_input_string,
                              CommandReturnObject &result);
 
+  /// Picks the number out of a string of the form "%NNN", otherwise return 0.
   int GetOptionArgumentPosition(const char *in_string);
 
   void SkipLLDBInitFiles(bool skip_lldbinit_files) {
@@ -437,7 +483,8 @@ public:
                               StringList &commands_help,
                               bool search_builtin_commands,
                               bool search_user_commands,
-                              bool search_alias_commands);
+                              bool search_alias_commands,
+                              bool search_user_mw_commands);
 
   bool GetBatchCommandMode() { return m_batch_command_mode; }
 
@@ -504,6 +551,10 @@ public:
 
   const CommandObject::CommandMap &GetUserCommands() const {
     return m_user_dict;
+  }
+
+  const CommandObject::CommandMap &GetUserMultiwordCommands() const {
+    return m_user_mw_dict;
   }
 
   const CommandObject::CommandMap &GetCommands() const {
@@ -636,6 +687,8 @@ private:
   CommandObject::CommandMap
       m_alias_dict; // Stores user aliases/abbreviations for commands
   CommandObject::CommandMap m_user_dict; // Stores user-defined commands
+  CommandObject::CommandMap
+      m_user_mw_dict; // Stores user-defined multiword commands
   CommandHistory m_command_history;
   std::string m_repeat_command; // Stores the command that will be executed for
                                 // an empty command string.

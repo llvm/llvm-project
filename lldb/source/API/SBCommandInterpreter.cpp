@@ -574,12 +574,11 @@ lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,
   LLDB_RECORD_METHOD(lldb::SBCommand, SBCommandInterpreter, AddMultiwordCommand,
                      (const char *, const char *), name, help);
 
-  CommandObjectMultiword *new_command =
-      new CommandObjectMultiword(*m_opaque_ptr, name, help);
-  new_command->SetRemovable(true);
-  lldb::CommandObjectSP new_command_sp(new_command);
-  if (new_command_sp &&
-      m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
+  lldb::CommandObjectSP new_command_sp(
+      new CommandObjectMultiword(*m_opaque_ptr, name, help));
+  new_command_sp->GetAsMultiwordCommand()->SetRemovable(true);
+  Status add_error = m_opaque_ptr->AddUserCommand(name, new_command_sp, true);
+  if (add_error.Success())
     return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
   return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
@@ -620,8 +619,8 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
       *m_opaque_ptr, name, impl, help, syntax, /*flags=*/0,
       auto_repeat_command);
 
-  if (new_command_sp &&
-      m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
+  Status add_error = m_opaque_ptr->AddUserCommand(name, new_command_sp, true);
+  if (add_error.Success())
     return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
   return LLDB_RECORD_RESULT(lldb::SBCommand());
 }

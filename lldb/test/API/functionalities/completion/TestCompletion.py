@@ -510,7 +510,7 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_command_script_delete(self):
         self.runCmd("command script add -h test_desc -f none -s current usercmd1")
-        self.check_completion_with_desc('command script delete ', [['usercmd1', 'test_desc']])
+        self.check_completion_with_desc('command script delete ', [['usercmd1', '']])
 
     def test_command_delete(self):
         self.runCmd(r"command regex test_command s/^$/finish/ 's/([0-9]+)/frame select %1/'")

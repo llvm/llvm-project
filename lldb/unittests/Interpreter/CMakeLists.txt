@@ -1,10 +1,17 @@
 add_lldb_unittest(InterpreterTests
+  TestCommandPaths.cpp
   TestCompletion.cpp
   TestOptionArgParser.cpp
   TestOptionValue.cpp
   TestOptionValueFileColonLine.cpp
 
   LINK_LIBS
-    lldbInterpreter
-    lldbUtilityHelpers
-  )
+      lldbCore
+      lldbHost
+      lldbTarget
+      lldbSymbol
+      lldbUtility
+      lldbUtilityHelpers
+      lldbInterpreter
+      lldbPluginPlatformMacOSX
+)
