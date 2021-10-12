@@ -483,9 +483,21 @@ Type getVectorElementType(Type type);
 /// Returns the element count of any LLVM-compatible vector type.
 llvm::ElementCount getVectorNumElements(Type type);
 
+/// Returns whether a vector type is scalable or not.
+bool isScalableVectorType(Type vectorType);
+
+/// Creates an LLVM dialect-compatible vector type with the given element type
+/// and length.
+Type getVectorType(Type elementType, unsigned numElements,
+                   bool isScalable = false);
+
 /// Creates an LLVM dialect-compatible type with the given element type and
 /// length.
 Type getFixedVectorType(Type elementType, unsigned numElements);
+
+/// Creates an LLVM dialect-compatible type with the given element type and
+/// length.
+Type getScalableVectorType(Type elementType, unsigned numElements);
 
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and

@@ -21,9 +21,6 @@
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h.inc"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.h.inc"
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSVE/ArmSVE.h.inc"
 

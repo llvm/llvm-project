@@ -892,16 +892,21 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     Syntax:
 
     ```
-    vector-type ::= `vector` `<` static-dimension-list vector-element-type `>`
+    vector-type ::= `vector` `<` vector-dim-list vector-element-type `>`
     vector-element-type ::= float-type | integer-type | index-type
-
-    static-dimension-list ::= (decimal-literal `x`)*
+    vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
+    static-dim-list ::= decimal-literal (`x` decimal-literal)*
     ```
 
-    The vector type represents a SIMD style vector, used by target-specific
-    operation sets like AVX. While the most common use is for 1D vectors (e.g.
-    vector<16 x f32>) we also support multidimensional registers on targets that
-    support them (like TPUs).
+    The vector type represents a SIMD style vector used by target-specific
+    operation sets like AVX or SVE. While the most common use is for 1D
+    vectors (e.g. vector<16 x f32>) we also support multidimensional registers
+    on targets that support them (like TPUs). The dimensions of a vector type
+    can be fixed-length, scalable, or a combination of the two. The scalable
+    dimensions in a vector are indicated between square brackets ([ ]), and
+    all fixed-length dimensions, if present, must precede the set of scalable
+    dimensions. That is, a `vector<2x[4]xf32>` is valid, but `vector<[4]x2xf32>`
+    is not.
 
     Vector shapes must be positive decimal integers. 0D vectors are allowed by
     omitting the dimension: `vector<f32>`.
@@ -913,19 +918,31 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     Examples:
 
     ```mlir
+    // A 2D fixed-length vector of 3x42 i32 elements.
     vector<3x42xi32>
+
+    // A 1D scalable-length vector that contains a multiple of 4 f32 elements.
+    vector<[4]xf32>
+
+    // A 2D scalable-length vector that contains a multiple of 2x8 i8 elements.
+    vector<[2x8]xf32>
+
+    // A 2D mixed fixed/scalable vector that contains 4 scalable vectors of 4 f32 elements.
+    vector<4x[4]xf32>
     ```
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    "Type":$elementType
+    "Type":$elementType,
+    "unsigned":$numScalableDims
   );
-
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "ArrayRef<int64_t>":$shape, "Type":$elementType
+      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      CArg<"unsigned", "0">:$numScalableDims
     ), [{
-      return $_get(elementType.getContext(), shape, elementType);
+      return $_get(elementType.getContext(), shape, elementType,
+                   numScalableDims);
     }]>
   ];
   let extraClassDeclaration = [{
@@ -933,11 +950,16 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
-    /// Returns true of the given type can be used as an element of a vector
+    /// Returns true if the given type can be used as an element of a vector
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.
     static bool isValidElementType(Type t) {
       return t.isa<IntegerType, IndexType, FloatType>();
+    }
+
+    /// Returns true if the vector contains scalable dimensions.
+    bool isScalable() const {
+      return getNumScalableDims() > 0;
     }
 
     /// Get or create a new VectorType with the same shape as `this` and an

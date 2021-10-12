@@ -18,3 +18,19 @@
 
 // An unrealized N-1 conversion.
 %result3 = unrealized_conversion_cast %operand, %operand : !foo.type, !foo.type to !bar.tuple_type<!foo.type, !foo.type>
+
+//===----------------------------------------------------------------------===//
+// VectorType
+//===----------------------------------------------------------------------===//
+
+// A basic 1D scalable vector
+%scalable_vector_1d = "foo.op"() : () -> vector<[4]xi32>
+
+// A 2D scalable vector
+%scalable_vector_2d = "foo.op"() : () -> vector<[2x2]xf64>
+
+// A 2D scalable vector with fixed-length dimensions
+%scalable_vector_2d_mixed = "foo.op"() : () -> vector<2x[4]xbf16>
+
+// A multi-dimensional vector with mixed scalable and fixed-length dimensions
+%scalable_vector_multi_mixed = "foo.op"() : () -> vector<2x2x[4x4]xi8>

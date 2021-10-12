@@ -137,6 +137,9 @@ private:
   llvm::Type *translate(VectorType type) {
     assert(LLVM::isCompatibleVectorType(type) &&
            "expected compatible with LLVM vector type");
+    if (type.isScalable())
+      return llvm::ScalableVectorType::get(translateType(type.getElementType()),
+                                           type.getNumElements());
     return llvm::FixedVectorType::get(translateType(type.getElementType()),
                                       type.getNumElements());
   }
