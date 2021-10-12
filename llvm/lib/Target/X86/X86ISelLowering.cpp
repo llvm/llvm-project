@@ -46823,7 +46823,6 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
     // demote it and emit X86ISD::AVG instruction.
     SDValue VecOnes = DAG.getConstant(1, DL, InVT);
     Operands[1] = DAG.getNode(ISD::SUB, DL, InVT, Operands[1], VecOnes);
-    Operands[1] = DAG.getNode(ISD::TRUNCATE, DL, VT, Operands[1]);
     return AVGSplitter({Operands[0].getOperand(0), Operands[1]});
   }
 
