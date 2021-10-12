@@ -193,11 +193,10 @@ static StringRef getDeviceFileExtension(StringRef Device) {
     return ".bc";
   if (Device.contains("sm_"))
     return ".cubin";
-  else {
-    WithColor::warning() << "Could not determine extension for archive"
-                            "members, using \".o\"\n";
-    return ".o";
-  }
+
+  WithColor::warning() << "Could not determine extension for archive"
+                          "members, using \".o\"\n";
+  return ".o";
 }
 
 static std::string getDeviceLibraryFileName(StringRef BundleFileName,
@@ -1404,6 +1403,9 @@ static Error UnbundleArchive() {
                                              CodeObjectInfo.TargetID))
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
+          // cross-platform validity.
+          std::replace(OutputBundleName.begin(), OutputBundleName.end(), ':',
+                       '_');
 
           std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
               DataStream.str(), OutputBundleName);
