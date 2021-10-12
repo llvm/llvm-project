@@ -539,8 +539,8 @@ public:
           [&](serialization::ModuleFile &Mod) -> bool {
             bool isSystemMod = false;
             if (Mod.isModule()) {
-              if (auto *M =
-                      HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false))
+              if (auto *M = HS.lookupModule(Mod.ModuleName, SourceLocation(),
+                                            /*AllowSearch=*/false))
                 isSystemMod = M->IsSystem;
             }
             if (!isSystemMod || needSystemDependencies())
@@ -773,7 +773,7 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
     RootFile = SM.getFileEntryForID(SM.getMainFileID());
   }
   if (isModuleGeneration) {
-    UnitMod = HS.lookupModule(CI.getLangOpts().CurrentModule,
+    UnitMod = HS.lookupModule(CI.getLangOpts().CurrentModule, SourceLocation(),
                               /*AllowSearch=*/false);
   }
 
@@ -844,7 +844,8 @@ static void writeUnitData(const CompilerInstance &CI,
       });
   DepProvider.visitModuleImports(CI, [&](serialization::ModuleFile &Mod,
                                          bool isSystemMod) {
-    Module *UnitMod = HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false);
+    Module *UnitMod = HS.lookupModule(Mod.ModuleName, Mod.ImportLoc,
+                                      /*AllowSearch=*/false);
     UnitWriter.addASTFileDependency(Mod.File, isSystemMod, UnitMod);
     if (Mod.isModule()) {
       produceIndexDataForModuleFile(Mod, CI, IndexOpts, RecordOpts, UnitWriter);
@@ -927,7 +928,8 @@ public:
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     for (auto *Mod : ModFile.Imports) {
       bool isSystemMod = false;
-      if (auto *M = HS.lookupModule(Mod->ModuleName, /*AllowSearch=*/false))
+      if (auto *M = HS.lookupModule(Mod->ModuleName, Mod->ImportLoc,
+                                    /*AllowSearch=*/false))
         isSystemMod = M->IsSystem;
       if (!isSystemMod || RecordOpts.RecordSystemDependencies)
         visitor(*Mod, isSystemMod);
@@ -945,7 +947,8 @@ static void indexModule(serialization::ModuleFile &Mod,
 
   StringRef SysrootPath = CI.getHeaderSearchOpts().Sysroot;
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-  Module *UnitMod = HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false);
+  Module *UnitMod =
+      HS.lookupModule(Mod.ModuleName, Mod.ImportLoc, /*AllowSearch=*/false);
 
   IndexDataRecorder Recorder;
   IndexingContext IndexCtx(IndexOpts, Recorder);
