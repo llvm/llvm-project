@@ -300,8 +300,8 @@ class CGDebugInfo {
   llvm::DINodeArray CollectCXXTemplateParams(const RecordDecl *TS,
                                              llvm::DIFile *F);
 
-  /// A helper function to collect debug info for btf_tag annotations.
-  llvm::DINodeArray CollectBTFTagAnnotations(const Decl *D);
+  /// A helper function to collect debug info for btf_decl_tag annotations.
+  llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,

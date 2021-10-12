@@ -90,11 +90,10 @@ static bool isInteresting(const SCEV *S, const Instruction *I, const Loop *L,
   return false;
 }
 
-/// Return true if all loop headers that dominate this block are in simplified
-/// form.
-static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
-                                 const LoopInfo *LI,
-                                 SmallPtrSetImpl<Loop*> &SimpleLoopNests) {
+/// Return true if all loop headers that dominate this block have a preheader.
+static bool isPreheaderLoopNest(BasicBlock *BB, const DominatorTree *DT,
+                                const LoopInfo *LI,
+                                SmallPtrSetImpl<Loop*> &PreheaderLoopNests) {
   Loop *NearestLoop = nullptr;
   for (DomTreeNode *Rung = DT->getNode(BB);
        Rung; Rung = Rung->getIDom()) {
@@ -102,10 +101,10 @@ static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
     Loop *DomLoop = LI->getLoopFor(DomBB);
     if (DomLoop && DomLoop->getHeader() == DomBB) {
       // If we have already checked this loop nest, stop checking.
-      if (SimpleLoopNests.count(DomLoop))
+      if (PreheaderLoopNests.count(DomLoop))
         break;
       // If the domtree walk reaches a loop with no preheader, return false.
-      if (!DomLoop->isLoopSimplifyForm())
+      if (!DomLoop->getLoopPreheader())
         return false;
       // If we have not already checked this loop nest, remember the loop
       // header nearest to BB. The nearest loop may not contain BB.
@@ -114,7 +113,7 @@ static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
     }
   }
   if (NearestLoop)
-    SimpleLoopNests.insert(NearestLoop);
+    PreheaderLoopNests.insert(NearestLoop);
   return true;
 }
 
@@ -166,7 +165,7 @@ static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
 /// reducible SCEV, recursively add its users to the IVUsesByStride set and
 /// return true.  Otherwise, return false.
 bool IVUsers::AddUsersImpl(Instruction *I,
-                           SmallPtrSetImpl<Loop*> &SimpleLoopNests) {
+                           SmallPtrSetImpl<Loop*> &PreheaderLoopNests) {
   const DataLayout &DL = I->getModule()->getDataLayout();
 
   // Add this IV user to the Processed set before returning false to ensure that
@@ -222,7 +221,7 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       unsigned ValNo = PHINode::getIncomingValueNumForOperand(OperandNo);
       UseBB = PHI->getIncomingBlock(ValNo);
     }
-    if (!isSimplifiedLoopNest(UseBB, DT, LI, SimpleLoopNests))
+    if (!isPreheaderLoopNest(UseBB, DT, LI, PreheaderLoopNests))
       return false;
 
     // Descend recursively, but not into PHI nodes outside the current loop.
@@ -234,12 +233,13 @@ bool IVUsers::AddUsersImpl(Instruction *I,
     bool AddUserToIVUsers = false;
     if (LI->getLoopFor(User->getParent()) != L) {
       if (isa<PHINode>(User) || Processed.count(User) ||
-          !AddUsersImpl(User, SimpleLoopNests)) {
+          !AddUsersImpl(User, PreheaderLoopNests)) {
         LLVM_DEBUG(dbgs() << "FOUND USER in other loop: " << *User << '\n'
                           << "   OF SCEV: " << *ISE << '\n');
         AddUserToIVUsers = true;
       }
-    } else if (Processed.count(User) || !AddUsersImpl(User, SimpleLoopNests)) {
+    } else if (Processed.count(User) ||
+               !AddUsersImpl(User, PreheaderLoopNests)) {
       LLVM_DEBUG(dbgs() << "FOUND USER: " << *User << '\n'
                         << "   OF SCEV: " << *ISE << '\n');
       AddUserToIVUsers = true;
@@ -289,12 +289,12 @@ bool IVUsers::AddUsersImpl(Instruction *I,
 }
 
 bool IVUsers::AddUsersIfInteresting(Instruction *I) {
-  // SCEVExpander can only handle users that are dominated by simplified loop
-  // entries. Keep track of all loops that are only dominated by other simple
+  // SCEVExpander can only handle users that are dominated by loops with
+  // preheaders. Keep track of all loops that are only dominated by preheader
   // loops so we don't traverse the domtree for each user.
-  SmallPtrSet<Loop*,16> SimpleLoopNests;
+  SmallPtrSet<Loop*,16> PreheaderLoopNests;
 
-  return AddUsersImpl(I, SimpleLoopNests);
+  return AddUsersImpl(I, PreheaderLoopNests);
 }
 
 IVStrideUse &IVUsers::AddUser(Instruction *User, Value *Operand) {

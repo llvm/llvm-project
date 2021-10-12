@@ -28,8 +28,6 @@ int main() {
   // CHECK: [[DEPOBJ_SIZE_ADDR1:%.+]] = alloca i64,
   // CHECK: = alloca i64,
   // CHECK: [[DEP_COUNTER_ADDR:%.+]] = alloca i64,
-  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR1]],
-  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR]],
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
   // CHECK: [[ALLOC:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 65, i64 48, i64 0, i32 (i32, i8*)* bitcast (i32 (i32, [[PRIVATES_TY:%.+]]*)* [[TASK_ENTRY:@.+]] to i32 (i32, i8*)*))
   // CHECK: [[EVT_VAL:%.+]] = call i8* @__kmpc_task_allow_completion_event(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]])
@@ -41,6 +39,7 @@ int main() {
   // CHECK: [[D_DEP_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[D_DEP]], i{{.+}} -1
   // CHECK: [[D_DEP_BASE_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[D_DEP_BASE]], i{{.+}} 0, i{{.+}} 0
   // CHECK: [[SIZE1:%.+]] = load i64, i64* [[D_DEP_BASE_SIZE]],
+  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR]],
   // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR]],
   // CHECK: [[SIZE:%.+]] = add nuw i64 [[SZ]], [[SIZE1]]
   // CHECK: store i64 [[SIZE]], i64* [[DEPOBJ_SIZE_ADDR]],
@@ -49,6 +48,7 @@ int main() {
   // CHECK: [[X_DEP_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[X_DEP]], i{{.+}} -1
   // CHECK: [[X_DEP_BASE_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[X_DEP_BASE]], i{{.+}} 0, i{{.+}} 0
   // CHECK: [[SIZE2:%.+]] = load i64, i64* [[X_DEP_BASE_SIZE]],
+  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR1]],
   // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR1]],
   // CHECK: [[SIZE3:%.+]] = add nuw i64 [[SZ]], [[SIZE2]]
   // CHECK: store i64 [[SIZE3]], i64* [[DEPOBJ_SIZE_ADDR1]],

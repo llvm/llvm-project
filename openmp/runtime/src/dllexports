@@ -526,6 +526,7 @@ kmp_set_disp_num_buffers                    890
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator
         __kmpc_alloc
+        __kmpc_aligned_alloc
         __kmpc_calloc
         __kmpc_realloc
         __kmpc_free
@@ -551,6 +552,8 @@ kmp_set_disp_num_buffers                    890
     omp_display_env                         733
     omp_calloc                              776
     omp_realloc                             777
+    omp_aligned_alloc                       778
+    omp_aligned_calloc                      806
 
     omp_ext_get_warp_id                     810
     omp_ext_get_lane_id                     811

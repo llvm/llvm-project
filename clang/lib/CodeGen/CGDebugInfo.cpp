@@ -1424,7 +1424,7 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
     Offset = BitFieldInfo.StorageSize - BitFieldInfo.Size - Offset;
   uint64_t OffsetInBits = StorageOffsetInBits + Offset;
   llvm::DINode::DIFlags Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
-  llvm::DINodeArray Annotations = CollectBTFTagAnnotations(BitFieldDecl);
+  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(BitFieldDecl);
   return DBuilder.createBitFieldMemberType(
       RecordTy, Name, File, Line, SizeInBits, OffsetInBits, StorageOffsetInBits,
       Flags, DebugType, Annotations);
@@ -1541,7 +1541,7 @@ void CGDebugInfo::CollectRecordNormalField(
     FieldType = createBitFieldType(field, RecordTy, RD);
   } else {
     auto Align = getDeclAlignIfRequired(field, CGM.getContext());
-    llvm::DINodeArray Annotations = CollectBTFTagAnnotations(field);
+    llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(field);
     FieldType =
         createFieldType(name, type, field->getLocation(), field->getAccess(),
                         OffsetInBits, Align, tunit, RecordTy, RD, Annotations);
@@ -2141,15 +2141,15 @@ llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(const RecordDecl *RD,
   return CollectTemplateParams(GetTemplateArgs(RD), Unit);
 }
 
-llvm::DINodeArray CGDebugInfo::CollectBTFTagAnnotations(const Decl *D) {
-  if (!D->hasAttr<BTFTagAttr>())
+llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
+  if (!D->hasAttr<BTFDeclTagAttr>())
     return nullptr;
 
   SmallVector<llvm::Metadata *, 4> Annotations;
-  for (const auto *I : D->specific_attrs<BTFTagAttr>()) {
+  for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     llvm::Metadata *Ops[2] = {
-        llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_tag")),
-        llvm::MDString::get(CGM.getLLVMContext(), I->getBTFTag())};
+        llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_decl_tag")),
+        llvm::MDString::get(CGM.getLLVMContext(), I->getBTFDeclTag())};
     Annotations.push_back(llvm::MDNode::get(CGM.getLLVMContext(), Ops));
   }
   return DBuilder.getOrCreateArray(Annotations);
@@ -3523,7 +3523,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
         Flags |= llvm::DINode::FlagExportSymbols;
   }
 
-  llvm::DINodeArray Annotations = CollectBTFTagAnnotations(D);
+  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align,
       Flags, Identifier, Annotations);
@@ -4043,7 +4043,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     Decl = isa<ObjCMethodDecl>(D)
                ? getObjCMethodDeclaration(D, DIFnType, LineNo, Flags, SPFlags)
                : getFunctionDeclaration(D);
-    Annotations = CollectBTFTagAnnotations(D);
+    Annotations = CollectBTFDeclTagAnnotations(D);
   }
 
   // FIXME: The function declaration we're constructing here is mostly reusing
@@ -4113,7 +4113,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
-  llvm::DINodeArray Annotations = CollectBTFTagAnnotations(D);
+  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo,
       getOrCreateFunctionType(D, FnType, Unit), ScopeLine, Flags, SPFlags,
@@ -4454,7 +4454,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // Create the descriptor for the variable.
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
-    llvm::DINodeArray Annotations = CollectBTFTagAnnotations(VD);
+    llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
     D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
                                          CGM.getLangOpts().Optimize, Flags,
                                          Annotations);
@@ -5075,7 +5075,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     }
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
-    llvm::DINodeArray Annotations = CollectBTFTagAnnotations(D);
+    llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
     GVE = DBuilder.createGlobalVariableExpression(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
         Var->hasLocalLinkage(), true,

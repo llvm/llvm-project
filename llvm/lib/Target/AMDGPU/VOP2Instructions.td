@@ -270,12 +270,11 @@ multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {
 class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
   field dag Ins32 = !if(!eq(vt.Size, 32),
-                        (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
-                        (ins VCSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
+                        (ins VSrc_f32_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm),
+                        (ins VSrc_f16_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm));
+  field string Asm32 = "$vdst, $src0, $src1, $imm";
   field bit HasExt = 0;
   let IsSingle = 1;
-
-  field string Asm32 = "$vdst, $src0, $src1, $imm";
 }
 
 def VOP_MADAK_F16 : VOP_MADAK <f16>;
@@ -283,11 +282,10 @@ def VOP_MADAK_F32 : VOP_MADAK <f32>;
 
 class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
-  field dag Ins32 = (ins VCSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1);
+  field dag Ins32 = (ins VSrc_f32_Deferred:$src0, ImmOpType:$imm, VGPR_32:$src1);
+  field string Asm32 = "$vdst, $src0, $imm, $src1";
   field bit HasExt = 0;
   let IsSingle = 1;
-
-  field string Asm32 = "$vdst, $src0, $imm, $src1";
 }
 
 def VOP_MADMK_F16 : VOP_MADMK <f16>;

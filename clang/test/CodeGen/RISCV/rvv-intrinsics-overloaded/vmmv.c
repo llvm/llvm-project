@@ -9,7 +9,7 @@
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.riscv.vmand.nxv64i1.i64(<vscale x 64 x i1> [[OP1:%.*]], <vscale x 64 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
 //
-vbool1_t test_vmmv_m_b1 (vbool1_t op1, size_t vl) {
+vbool1_t test_vmmv_m_b1(vbool1_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -18,7 +18,7 @@ vbool1_t test_vmmv_m_b1 (vbool1_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i1> @llvm.riscv.vmand.nxv32i1.i64(<vscale x 32 x i1> [[OP1:%.*]], <vscale x 32 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP0]]
 //
-vbool2_t test_vmmv_m_b2 (vbool2_t op1, size_t vl) {
+vbool2_t test_vmmv_m_b2(vbool2_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -27,7 +27,7 @@ vbool2_t test_vmmv_m_b2 (vbool2_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmand.nxv16i1.i64(<vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-vbool4_t test_vmmv_m_b4 (vbool4_t op1, size_t vl) {
+vbool4_t test_vmmv_m_b4(vbool4_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -36,7 +36,7 @@ vbool4_t test_vmmv_m_b4 (vbool4_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.riscv.vmand.nxv8i1.i64(<vscale x 8 x i1> [[OP1:%.*]], <vscale x 8 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP0]]
 //
-vbool8_t test_vmmv_m_b8 (vbool8_t op1, size_t vl) {
+vbool8_t test_vmmv_m_b8(vbool8_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -45,7 +45,7 @@ vbool8_t test_vmmv_m_b8 (vbool8_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.riscv.vmand.nxv4i1.i64(<vscale x 4 x i1> [[OP1:%.*]], <vscale x 4 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP0]]
 //
-vbool16_t test_vmmv_m_b16 (vbool16_t op1, size_t vl) {
+vbool16_t test_vmmv_m_b16(vbool16_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -54,7 +54,7 @@ vbool16_t test_vmmv_m_b16 (vbool16_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[OP1:%.*]], <vscale x 2 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP0]]
 //
-vbool32_t test_vmmv_m_b32 (vbool32_t op1, size_t vl) {
+vbool32_t test_vmmv_m_b32(vbool32_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 
@@ -63,7 +63,7 @@ vbool32_t test_vmmv_m_b32 (vbool32_t op1, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[OP1:%.*]], <vscale x 1 x i1> [[OP1]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
 //
-vbool64_t test_vmmv_m_b64 (vbool64_t op1, size_t vl) {
+vbool64_t test_vmmv_m_b64(vbool64_t op1, size_t vl) {
   return vmmv(op1, vl);
 }
 

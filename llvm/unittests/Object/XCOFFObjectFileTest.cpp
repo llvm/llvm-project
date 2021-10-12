@@ -445,7 +445,8 @@ TEST(XCOFFObjectFileTest, XCOFFGetCsectAuxRef32) {
   Expected<XCOFFCsectAuxRef> ExpectErr = SymRef.getXCOFFCsectAuxRef();
   EXPECT_THAT_ERROR(
       ExpectErr.takeError(),
-      FailedWithMessage("csect symbol \".data\" contains no auxiliary entry"));
+      FailedWithMessage(
+          "csect symbol \".data\" with index 2 contains no auxiliary entry"));
 }
 
 TEST(XCOFFObjectFileTest, XCOFFGetCsectAuxRef64) {
@@ -500,15 +501,16 @@ TEST(XCOFFObjectFileTest, XCOFFGetCsectAuxRef64) {
   Expected<XCOFFCsectAuxRef> NotFoundErr = SymRef.getXCOFFCsectAuxRef();
   EXPECT_THAT_ERROR(
       NotFoundErr.takeError(),
-      FailedWithMessage(
-          "a csect auxiliary entry is not found for symbol \".data\""));
+      FailedWithMessage("a csect auxiliary entry has not been found for symbol "
+                        "\".data\" with index 2"));
 
   // Set csect symbol's auxiliary entry count to 0.
   XCOFF64Binary[149] = 0;
   Expected<XCOFFCsectAuxRef> ExpectErr = SymRef.getXCOFFCsectAuxRef();
   EXPECT_THAT_ERROR(
       ExpectErr.takeError(),
-      FailedWithMessage("csect symbol \".data\" contains no auxiliary entry"));
+      FailedWithMessage(
+          "csect symbol \".data\" with index 2 contains no auxiliary entry"));
 }
 
 TEST(XCOFFObjectFileTest, XCOFFTracebackTableErrorAtParameterType) {

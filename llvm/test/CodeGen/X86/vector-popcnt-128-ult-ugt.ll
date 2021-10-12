@@ -14,14 +14,13 @@
 define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; SSE-LABEL: ugt_1_v16i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    paddb %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    paddb %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_1_v16i8:
@@ -141,10 +140,9 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $4, %xmm1
-; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: ugt_2_v16i8:
@@ -161,10 +159,9 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; SSE3-NEXT:    paddb %xmm2, %xmm0
 ; SSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-NEXT:    psrlw $4, %xmm1
-; SSE3-NEXT:    paddb %xmm0, %xmm1
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE3-NEXT:    paddb %xmm1, %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: ugt_2_v16i8:
@@ -426,10 +423,9 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $4, %xmm1
-; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: ugt_3_v16i8:
@@ -446,10 +442,9 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; SSE3-NEXT:    paddb %xmm2, %xmm0
 ; SSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-NEXT:    psrlw $4, %xmm1
-; SSE3-NEXT:    paddb %xmm0, %xmm1
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE3-NEXT:    paddb %xmm1, %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: ugt_3_v16i8:
@@ -711,10 +706,9 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $4, %xmm1
-; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: ugt_4_v16i8:
@@ -731,10 +725,9 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; SSE3-NEXT:    paddb %xmm2, %xmm0
 ; SSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-NEXT:    psrlw $4, %xmm1
-; SSE3-NEXT:    paddb %xmm0, %xmm1
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE3-NEXT:    paddb %xmm1, %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: ugt_4_v16i8:
@@ -996,10 +989,9 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $4, %xmm1
-; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: ugt_5_v16i8:
@@ -1016,10 +1008,9 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; SSE3-NEXT:    paddb %xmm2, %xmm0
 ; SSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-NEXT:    psrlw $4, %xmm1
-; SSE3-NEXT:    paddb %xmm0, %xmm1
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE3-NEXT:    paddb %xmm1, %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: ugt_5_v16i8:
@@ -1281,10 +1272,9 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $4, %xmm1
-; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: ugt_6_v16i8:
@@ -1301,10 +1291,9 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; SSE3-NEXT:    paddb %xmm2, %xmm0
 ; SSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-NEXT:    psrlw $4, %xmm1
-; SSE3-NEXT:    paddb %xmm0, %xmm1
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSE3-NEXT:    paddb %xmm1, %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: ugt_6_v16i8:
@@ -1554,14 +1543,13 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 define <8 x i16> @ugt_1_v8i16(<8 x i16> %0) {
 ; SSE-LABEL: ugt_1_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    paddw %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    paddw %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_1_v8i16:
@@ -5816,14 +5804,13 @@ define <8 x i16> @ult_15_v8i16(<8 x i16> %0) {
 define <4 x i32> @ugt_1_v4i32(<4 x i32> %0) {
 ; SSE-LABEL: ugt_1_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    paddd %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    paddd %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_1_v4i32:
@@ -17020,14 +17007,13 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ;
 ; SSE41-LABEL: ugt_1_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    paddq %xmm2, %xmm1
-; SSE41-NEXT:    pand %xmm0, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE41-NEXT:    pxor %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    paddq %xmm1, %xmm2
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_1_v2i64:

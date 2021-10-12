@@ -1020,6 +1020,30 @@ def VSrc_128 : RegisterOperand<VReg_128> {
 }
 
 //===----------------------------------------------------------------------===//
+//  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
+//  with FMAMK/FMAAK
+//===----------------------------------------------------------------------===//
+
+multiclass SIRegOperand32_Deferred <string rc, string MatchName, string opType,
+                           string rc_suffix = "_32"> {
+  let OperandNamespace = "AMDGPU" in {
+    def _f16_Deferred : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
+      let OperandType = opType#"_FP16_DEFERRED";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F16">;
+      let DecoderMethod = "decodeOperand_" # rc # "_16_Deferred";
+    }
+
+    def _f32_Deferred : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
+      let OperandType = opType#"_FP32_DEFERRED";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F32">;
+      let DecoderMethod = "decodeOperand_" # rc # "_32_Deferred";
+    }
+  }
+}
+
+defm VSrc : SIRegOperand32_Deferred<"VS", "VSrc", "OPERAND_REG_IMM">;
+
+//===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//
 

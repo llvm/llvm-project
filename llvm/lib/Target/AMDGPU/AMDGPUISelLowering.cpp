@@ -45,9 +45,7 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
 }
 
 unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
-  EVT VT = Op.getValueType();
-  KnownBits Known = DAG.computeKnownBits(Op);
-  return VT.getSizeInBits() - Known.countMinLeadingZeros();
+  return DAG.computeKnownBits(Op).countMaxActiveBits();
 }
 
 unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
@@ -3360,7 +3358,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
       KnownBits Known = DAG.computeKnownBits(Amt);
       unsigned Size = VT.getScalarSizeInBits();
       if ((Known.isConstant() && Known.getConstant().ule(Size)) ||
-          (Known.getBitWidth() - Known.countMinLeadingZeros() <= Log2_32(Size))) {
+          (Known.countMaxActiveBits() <= Log2_32(Size))) {
         EVT MidVT = VT.isVector() ?
           EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                            VT.getVectorNumElements()) : MVT::i32;

@@ -202,7 +202,12 @@ static bool findLoopComponents(
     LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
     return false;
   }
-  const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(BackedgeTakenCount);
+  // The use of the Extend=false flag on getTripCountFromExitCount was added
+  // during a refactoring to preserve existing behavior.  However, there's
+  // nothing obvious in the surrounding code when handles the overflow case.
+  // FIXME: audit code to establish whether there's a latent bug here.
+  const SCEV *SCEVTripCount =
+    SE->getTripCountFromExitCount(BackedgeTakenCount, false);
   const SCEV *SCEVRHS = SE->getSCEV(RHS);
   if (SCEVRHS == SCEVTripCount)
     return setLoopComponents(RHS, TripCount, Increment, IterationInstructions);
@@ -214,7 +219,7 @@ static bool findLoopComponents(
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
       BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
-      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt);
+      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt, false);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
         LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
         return false;

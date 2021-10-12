@@ -619,6 +619,61 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
   return LLVMErrorSuccess;
 }
 
+LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
+    LLVMOrcDefinitionGeneratorRef *Result, const char *FileName,
+    char GlobalPrefix, LLVMOrcSymbolPredicate Filter, void *FilterCtx) {
+  assert(Result && "Result can not be null");
+  assert(FileName && "FileName can not be null");
+  assert((Filter || !FilterCtx) &&
+         "if Filter is null then FilterCtx must also be null");
+
+  DynamicLibrarySearchGenerator::SymbolPredicate Pred;
+  if (Filter)
+    Pred = [=](const SymbolStringPtr &Name) -> bool {
+      return Filter(FilterCtx, wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(Name)));
+    };
+
+  auto LibrarySymsGenerator =
+      DynamicLibrarySearchGenerator::Load(FileName, GlobalPrefix, Pred);
+
+  if (!LibrarySymsGenerator) {
+    *Result = 0;
+    return wrap(LibrarySymsGenerator.takeError());
+  }
+
+  *Result = wrap(LibrarySymsGenerator->release());
+  return LLVMErrorSuccess;
+}
+
+LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
+    LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,
+    const char *FileName, const char *TargetTriple) {
+  assert(Result && "Result can not be null");
+  assert(FileName && "Filename can not be null");
+  assert(ObjLayer && "ObjectLayer can not be null");
+
+  if (TargetTriple) {
+    auto TT = Triple(TargetTriple);
+    auto LibrarySymsGenerator =
+        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName, TT);
+    if (!LibrarySymsGenerator) {
+      *Result = 0;
+      return wrap(LibrarySymsGenerator.takeError());
+    }
+    *Result = wrap(LibrarySymsGenerator->release());
+    return LLVMErrorSuccess;
+  } else {
+    auto LibrarySymsGenerator =
+        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
+    if (!LibrarySymsGenerator) {
+      *Result = 0;
+      return wrap(LibrarySymsGenerator.takeError());
+    }
+    *Result = wrap(LibrarySymsGenerator->release());
+    return LLVMErrorSuccess;
+  }
+}
+
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
   return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
 }

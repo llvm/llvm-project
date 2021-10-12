@@ -21,16 +21,17 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/Passes.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 
 namespace fir::support {
 
-// The definitive list of dialects used by flang.
-#define FLANG_DIALECT_LIST                                                     \
-  mlir::AffineDialect, FIROpsDialect, FIRCodeGenDialect,                       \
-      mlir::LLVM::LLVMDialect, mlir::acc::OpenACCDialect,                      \
+#define FLANG_NONCODEGEN_DIALECT_LIST                                          \
+  mlir::AffineDialect, FIROpsDialect, mlir::acc::OpenACCDialect,               \
       mlir::omp::OpenMPDialect, mlir::scf::SCFDialect,                         \
       mlir::StandardOpsDialect, mlir::vector::VectorDialect
+
+// The definitive list of dialects used by flang.
+#define FLANG_DIALECT_LIST                                                     \
+  FLANG_NONCODEGEN_DIALECT_LIST, FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
 /// Register all the dialects used by flang.
 inline void registerDialects(mlir::DialectRegistry &registry) {
@@ -70,9 +71,6 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::registerAffineDataCopyGenerationPass();
 
   mlir::registerConvertAffineToStandardPass();
-
-  // Flang passes
-  fir::registerOptCodeGenPasses();
 }
 
 } // namespace fir::support

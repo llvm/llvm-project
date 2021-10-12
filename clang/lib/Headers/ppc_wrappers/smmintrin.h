@@ -32,7 +32,7 @@
 #if defined(__linux__) && defined(__ppc64__)
 
 #include <altivec.h>
-#include <emmintrin.h>
+#include <tmmintrin.h>
 
 extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))

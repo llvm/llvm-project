@@ -1052,6 +1052,8 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.hasValue()) {
     uint64_t tripCount = mayBeConstantTripCount.getValue();
+    if (tripCount == 0)
+      return success();
     if (tripCount == 1)
       return promoteIfSingleIteration(forOp);
     return loopUnrollByFactor(forOp, tripCount);

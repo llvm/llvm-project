@@ -2711,7 +2711,8 @@ CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
   return addStmt(C->getCond());
 }
 
-CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C, bool ExternallyDestructed) {
+CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C,
+                                        bool ExternallyDestructed) {
   LocalScope::const_iterator scopeBeginPos = ScopePos;
   addLocalScopeForStmt(C);
 
@@ -2723,11 +2724,10 @@ CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C, bool ExternallyDestruct
 
   CFGBlock *LastBlock = Block;
 
-  for (CompoundStmt::reverse_body_iterator I=C->body_rbegin(), E=C->body_rend();
-       I != E; ++I ) {
+  for (Stmt *S : llvm::reverse(C->body())) {
     // If we hit a segment of code just containing ';' (NullStmts), we can
     // get a null block back.  In such cases, just use the LastBlock
-    CFGBlock *newBlock = Visit(*I, AddStmtChoice::AlwaysAdd,
+    CFGBlock *newBlock = Visit(S, AddStmtChoice::AlwaysAdd,
                                ExternallyDestructed);
 
     if (newBlock)
@@ -3124,9 +3124,9 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
     if (Expr *O = RS->getRetValue())
       return Visit(O, AddStmtChoice::AlwaysAdd, /*ExternallyDestructed=*/true);
     return Block;
-  } else { // co_return
-    return VisitChildren(S);
   }
+  // co_return
+  return VisitChildren(S);
 }
 
 CFGBlock *CFGBuilder::VisitSEHExceptStmt(SEHExceptStmt *ES) {
