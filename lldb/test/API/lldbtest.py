@@ -50,10 +50,16 @@ class LLDBTest(TestFormat):
         # build with.
         executable = test.config.python_executable
 
+        isLuaTest = testFile == test.config.lua_test_entry
+
         # On Windows, the system does not always correctly interpret
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
+
+        if isLuaTest:
+            luaExecutable = test.config.lua_executable
+            cmd.extend(['--env', 'LUA_EXECUTABLE=%s' % luaExecutable])
 
         timeoutInfo = None
         try:

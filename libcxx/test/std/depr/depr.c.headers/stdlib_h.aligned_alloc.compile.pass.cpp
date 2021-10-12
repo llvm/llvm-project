@@ -16,7 +16,7 @@
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 // ::aligned_alloc is not implemented on Windows
-// XFAIL: target={{.+}}-pc-windows-{{.+}}
+// XFAIL: target={{.+}}-windows-{{.+}}
 
 #include <stdlib.h>
 #include <type_traits>

@@ -1796,6 +1796,12 @@ static LogicalResult verify(InsertStridedSliceOp op) {
   return success();
 }
 
+OpFoldResult InsertStridedSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (getSourceVectorType() == getDestVectorType())
+    return source();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // OuterProductOp
 //===----------------------------------------------------------------------===//
