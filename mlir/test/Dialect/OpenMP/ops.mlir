@@ -375,11 +375,41 @@ omp.critical.declare @mutex
 
 // CHECK-LABEL: omp_critical
 func @omp_critical() -> () {
+  // CHECK: omp.critical
   omp.critical {
     omp.terminator
   }
 
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended)
+  omp.critical(@mutex) hint(uncontended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended)
+  omp.critical(@mutex) hint(contended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(nonspeculative)
   omp.critical(@mutex) hint(nonspeculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended, nonspeculative)
+  omp.critical(@mutex) hint(uncontended, nonspeculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended, nonspeculative)
+  omp.critical(@mutex) hint(nonspeculative, contended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(speculative)
+  omp.critical(@mutex) hint(speculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended, speculative)
+  omp.critical(@mutex) hint(uncontended, speculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended, speculative)
+  omp.critical(@mutex) hint(speculative, contended) {
     omp.terminator
   }
   return
