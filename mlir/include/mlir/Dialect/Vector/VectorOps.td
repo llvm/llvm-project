@@ -851,6 +851,8 @@ def Vector_InsertStridedSliceOp :
       return dest().getType().cast<VectorType>();
     }
   }];
+
+  let hasFolder = 1;
 }
 
 def Vector_OuterProductOp :

@@ -1037,3 +1037,13 @@ func @vector_multi_reduction_single_parallel(%arg0: vector<2xf32>) -> vector<2xf
 //       CHECK:     return %[[v]] : vector<2xf32>
     return %0 : vector<2xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @insert_strided_slice_full_range
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<16x16xf16>, %{{.+}}: vector<16x16xf16>
+func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<16x16xf16>) -> vector<16x16xf16> {
+  %0 = vector.insert_strided_slice %source, %dest {offsets = [0, 0], strides = [1, 1]} : vector<16x16xf16> into vector<16x16xf16>
+  // CHECK: return %[[SOURCE]]
+  return %0: vector<16x16xf16>
+}
