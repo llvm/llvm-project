@@ -301,7 +301,7 @@ ScanOperands:
       if (IgnoreNodeResults(N->getOperand(i).getNode()))
         continue;
 
-      const auto Op = N->getOperand(i);
+      const auto &Op = N->getOperand(i);
       LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
       EVT OpVT = Op.getValueType();
       switch (getTypeAction(OpVT)) {
