@@ -40,6 +40,18 @@ namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
 
+/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// semantics of the `vector.broadcast` op.
+enum class BroadcastableToResult {
+  Success = 0,
+  SourceRankHigher = 1,
+  DimensionMismatch = 2,
+  SourceTypeNotAVector = 3
+};
+BroadcastableToResult
+isBroadcastableTo(Type srcType, VectorType dstVectorType,
+                  std::pair<int, int> *mismatchingDims = nullptr);
+
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
     RewritePatternSet &patterns);

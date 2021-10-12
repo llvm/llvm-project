@@ -30,6 +30,13 @@ func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func @broadcast_unknown(%arg0: memref<4x8xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
+  %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
+}
+
+// -----
+
 func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
   // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xi32>
