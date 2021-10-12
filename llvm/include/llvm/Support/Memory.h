@@ -37,7 +37,7 @@ namespace sys {
     /// The size as it was allocated. This is always greater or equal to the
     /// size that was originally requested.
     size_t allocatedSize() const { return AllocatedSize; }
-
+  
   private:
     void *Address;    ///< Address of first byte of memory area
     size_t AllocatedSize; ///< Size, in bytes of the memory area

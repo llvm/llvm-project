@@ -39,58 +39,17 @@ public:
   EPCGenericJITLinkMemoryManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
       : EPC(EPC), SAs(SAs) {}
 
-  void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
-                OnAllocatedFunction OnAllocated) override;
-
-  // Use overloads from base class.
-  using JITLinkMemoryManager::allocate;
-
-  void deallocate(std::vector<FinalizedAlloc> Allocs,
-                  OnDeallocatedFunction OnDeallocated) override;
-
-  // Use overloads from base class.
-  using JITLinkMemoryManager::deallocate;
+  Expected<std::unique_ptr<Allocation>>
+  allocate(const jitlink::JITLinkDylib *JD,
+           const SegmentsRequestMap &Request) override;
 
 private:
-  class InFlightAlloc;
-
-  void completeAllocation(ExecutorAddr AllocAddr, jitlink::BasicLayout BL,
-                          OnAllocatedFunction OnAllocated);
+  class Alloc;
 
   ExecutorProcessControl &EPC;
   SymbolAddrs SAs;
 };
 
-namespace shared {
-
-/// FIXME: This specialization should be moved into TargetProcessControlTypes.h
-///        (or whereever those types get merged to) once ORC depends on JITLink.
-template <>
-class SPSSerializationTraits<SPSExecutorAddr,
-                             jitlink::JITLinkMemoryManager::FinalizedAlloc> {
-public:
-  static size_t size(const jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    return SPSArgList<SPSExecutorAddr>::size(ExecutorAddr(FA.getAddress()));
-  }
-
-  static bool
-  serialize(SPSOutputBuffer &OB,
-            const jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    return SPSArgList<SPSExecutorAddr>::serialize(
-        OB, ExecutorAddr(FA.getAddress()));
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    ExecutorAddr A;
-    if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, A))
-      return false;
-    FA = jitlink::JITLinkMemoryManager::FinalizedAlloc(A.getValue());
-    return true;
-  }
-};
-
-} // end namespace shared
 } // end namespace orc
 } // end namespace llvm
 

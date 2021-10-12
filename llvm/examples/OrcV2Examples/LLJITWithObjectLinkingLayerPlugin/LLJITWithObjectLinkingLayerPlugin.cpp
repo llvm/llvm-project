@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
               [&](ExecutionSession &ES, const Triple &TT) {
                 // Create ObjectLinkingLayer.
                 auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-                    ES, ExitOnErr(jitlink::InProcessMemoryManager::Create()));
+                    ES, std::make_unique<jitlink::InProcessMemoryManager>());
                 // Add an instance of our plugin.
                 ObjLinkingLayer->addPlugin(std::make_unique<MyPlugin>());
                 return ObjLinkingLayer;

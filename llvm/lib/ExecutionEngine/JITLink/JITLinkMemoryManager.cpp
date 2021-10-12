@@ -7,479 +7,128 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
-
-#define DEBUG_TYPE "jitlink"
 
 namespace llvm {
 namespace jitlink {
 
 JITLinkMemoryManager::~JITLinkMemoryManager() = default;
-JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
+JITLinkMemoryManager::Allocation::~Allocation() = default;
 
-static Error runAllocAction(JITLinkMemoryManager::AllocActionCall &C) {
-  using DeallocFnTy = char *(*)(const void *, size_t);
-  auto *Fn = jitTargetAddressToPointer<DeallocFnTy>(C.FnAddr);
+Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
+InProcessMemoryManager::allocate(const JITLinkDylib *JD,
+                                 const SegmentsRequestMap &Request) {
 
-  if (char *ErrMsg = Fn(jitTargetAddressToPointer<const void *>(C.CtxAddr),
-                        static_cast<size_t>(C.CtxSize))) {
-    auto E = make_error<StringError>(ErrMsg, inconvertibleErrorCode());
-    free(ErrMsg);
-    return E;
-  }
+  using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
 
-  return Error::success();
-}
+  // Local class for allocation.
+  class IPMMAlloc : public Allocation {
+  public:
+    IPMMAlloc(AllocationMap SegBlocks) : SegBlocks(std::move(SegBlocks)) {}
+    MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
+      assert(SegBlocks.count(Seg) && "No allocation for segment");
+      return {static_cast<char *>(SegBlocks[Seg].base()),
+              SegBlocks[Seg].allocatedSize()};
+    }
+    JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
+      assert(SegBlocks.count(Seg) && "No allocation for segment");
+      return pointerToJITTargetAddress(SegBlocks[Seg].base());
+    }
+    void finalizeAsync(FinalizeContinuation OnFinalize) override {
+      OnFinalize(applyProtections());
+    }
+    Error deallocate() override {
+      if (SegBlocks.empty())
+        return Error::success();
+      void *SlabStart = SegBlocks.begin()->second.base();
+      char *SlabEnd = (char *)SlabStart;
+      for (auto &KV : SegBlocks) {
+        SlabStart = std::min(SlabStart, KV.second.base());
+        SlabEnd = std::max(SlabEnd, (char *)(KV.second.base()) +
+                                        KV.second.allocatedSize());
+      }
+      size_t SlabSize = SlabEnd - (char *)SlabStart;
+      assert((SlabSize % sys::Process::getPageSizeEstimate()) == 0 &&
+             "Slab size is not a multiple of page size");
+      sys::MemoryBlock Slab(SlabStart, SlabSize);
+      if (auto EC = sys::Memory::releaseMappedMemory(Slab))
+        return errorCodeToError(EC);
+      return Error::success();
+    }
 
-// Align a JITTargetAddress to conform with block alignment requirements.
-static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
-  uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
-  return Addr + Delta;
-}
+  private:
+    Error applyProtections() {
+      for (auto &KV : SegBlocks) {
+        auto &Prot = KV.first;
+        auto &Block = KV.second;
+        if (auto EC = sys::Memory::protectMappedMemory(Block, Prot))
+          return errorCodeToError(EC);
+        if (Prot & sys::Memory::MF_EXEC)
+          sys::Memory::InvalidateInstructionCache(Block.base(),
+                                                  Block.allocatedSize());
+      }
+      return Error::success();
+    }
 
-BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
-
-  for (auto &Sec : G.sections()) {
-    // Skip empty sections.
-    if (empty(Sec.blocks()))
-      continue;
-
-    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];
-    for (auto *B : Sec.blocks())
-      if (LLVM_LIKELY(!B->isZeroFill()))
-        Seg.ContentBlocks.push_back(B);
-      else
-        Seg.ZeroFillBlocks.push_back(B);
-  }
-
-  // Build Segments map.
-  auto CompareBlocks = [](const Block *LHS, const Block *RHS) {
-    // Sort by section, address and size
-    if (LHS->getSection().getOrdinal() != RHS->getSection().getOrdinal())
-      return LHS->getSection().getOrdinal() < RHS->getSection().getOrdinal();
-    if (LHS->getAddress() != RHS->getAddress())
-      return LHS->getAddress() < RHS->getAddress();
-    return LHS->getSize() < RHS->getSize();
+    AllocationMap SegBlocks;
   };
 
-  LLVM_DEBUG(dbgs() << "Generated BasicLayout for " << G.getName() << ":\n");
-  for (auto &KV : Segments) {
-    auto &Seg = KV.second;
+  if (!isPowerOf2_64((uint64_t)sys::Process::getPageSizeEstimate()))
+    return make_error<StringError>("Page size is not a power of 2",
+                                   inconvertibleErrorCode());
 
-    llvm::sort(Seg.ContentBlocks, CompareBlocks);
-    llvm::sort(Seg.ZeroFillBlocks, CompareBlocks);
+  AllocationMap Blocks;
+  const sys::Memory::ProtectionFlags ReadWrite =
+      static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                sys::Memory::MF_WRITE);
 
-    for (auto *B : Seg.ContentBlocks) {
-      Seg.ContentSize = alignToBlock(Seg.ContentSize, *B);
-      Seg.ContentSize += B->getSize();
-      Seg.Alignment = std::max(Seg.Alignment, Align(B->getAlignment()));
-    }
+  // Compute the total number of pages to allocate.
+  size_t TotalSize = 0;
+  for (auto &KV : Request) {
+    const auto &Seg = KV.second;
 
-    uint64_t SegEndOffset = Seg.ContentSize;
-    for (auto *B : Seg.ZeroFillBlocks) {
-      SegEndOffset = alignToBlock(SegEndOffset, *B);
-      SegEndOffset += B->getSize();
-      Seg.Alignment = std::max(Seg.Alignment, Align(B->getAlignment()));
-    }
-    Seg.ZeroFillSize = SegEndOffset - Seg.ContentSize;
-
-    LLVM_DEBUG({
-      dbgs() << "  Seg " << KV.first
-             << ": content-size=" << formatv("{0:x}", Seg.ContentSize)
-             << ", zero-fill-size=" << formatv("{0:x}", Seg.ZeroFillSize)
-             << ", align=" << formatv("{0:x}", Seg.Alignment.value()) << "\n";
-    });
-  }
-}
-
-Expected<BasicLayout::ContiguousPageBasedLayoutSizes>
-BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
-  ContiguousPageBasedLayoutSizes SegsSizes;
-
-  for (auto &KV : segments()) {
-    auto &AG = KV.first;
-    auto &Seg = KV.second;
-
-    if (Seg.Alignment > PageSize)
-      return make_error<StringError>("Segment alignment greater than page size",
+    if (Seg.getAlignment() > sys::Process::getPageSizeEstimate())
+      return make_error<StringError>("Cannot request higher than page "
+                                     "alignment",
                                      inconvertibleErrorCode());
 
-    uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemDeallocPolicy() == MemDeallocPolicy::Standard)
-      SegsSizes.StandardSegs += SegSize;
-    else
-      SegsSizes.FinalizeSegs += SegSize;
+    TotalSize = alignTo(TotalSize, sys::Process::getPageSizeEstimate());
+    TotalSize += Seg.getContentSize();
+    TotalSize += Seg.getZeroFillSize();
   }
 
-  return SegsSizes;
-}
+  // Allocate one slab to cover all the segments.
+  std::error_code EC;
+  auto SlabRemaining =
+      sys::Memory::allocateMappedMemory(TotalSize, nullptr, ReadWrite, EC);
 
-Error BasicLayout::apply() {
-  for (auto &KV : Segments) {
-    auto &Seg = KV.second;
+  if (EC)
+    return errorCodeToError(EC);
 
-    assert(!(Seg.ContentBlocks.empty() && Seg.ZeroFillBlocks.empty()) &&
-           "Empty section recorded?");
+  // Allocate segment memory from the slab.
+  for (auto &KV : Request) {
 
-    for (auto *B : Seg.ContentBlocks) {
-      // Align addr and working-mem-offset.
-      Seg.Addr = alignToBlock(Seg.Addr, *B);
-      Seg.NextWorkingMemOffset = alignToBlock(Seg.NextWorkingMemOffset, *B);
+    const auto &Seg = KV.second;
 
-      // Update block addr.
-      B->setAddress(Seg.Addr);
-      Seg.Addr += B->getSize();
+    uint64_t SegmentSize = alignTo(Seg.getContentSize() + Seg.getZeroFillSize(),
+                                   sys::Process::getPageSizeEstimate());
+    assert(SlabRemaining.allocatedSize() >= SegmentSize &&
+           "Mapping exceeds allocation");
 
-      // Copy content to working memory, then update content to point at working
-      // memory.
-      memcpy(Seg.WorkingMem + Seg.NextWorkingMemOffset, B->getContent().data(),
-             B->getSize());
-      B->setMutableContent(
-          {Seg.WorkingMem + Seg.NextWorkingMemOffset, B->getSize()});
-      Seg.NextWorkingMemOffset += B->getSize();
-    }
+    sys::MemoryBlock SegMem(SlabRemaining.base(), SegmentSize);
+    SlabRemaining = sys::MemoryBlock((char *)SlabRemaining.base() + SegmentSize,
+                                     SlabRemaining.allocatedSize() - SegmentSize);
 
-    for (auto *B : Seg.ZeroFillBlocks) {
-      // Align addr.
-      Seg.Addr = alignToBlock(Seg.Addr, *B);
-      // Update block addr.
-      B->setAddress(Seg.Addr);
-      Seg.Addr += B->getSize();
-    }
+    // Zero out the zero-fill memory.
+    memset(static_cast<char *>(SegMem.base()) + Seg.getContentSize(), 0,
+           Seg.getZeroFillSize());
 
-    Seg.ContentBlocks.clear();
-    Seg.ZeroFillBlocks.clear();
+    // Record the block for this segment.
+    Blocks[KV.first] = std::move(SegMem);
   }
 
-  return Error::success();
-}
-
-JITLinkMemoryManager::AllocActions &BasicLayout::graphAllocActions() {
-  return G.allocActions();
-}
-
-void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
-                                const JITLinkDylib *JD, SegmentMap Segments,
-                                OnCreatedFunction OnCreated) {
-
-  static_assert(AllocGroup::NumGroups == 16,
-                "AllocGroup has changed. Section names below must be updated");
-  StringRef AGSectionNames[] = {
-      "__---.standard", "__R--.standard", "__-W-.standard", "__RW-.standard",
-      "__--X.standard", "__R-X.standard", "__-WX.standard", "__RWX.standard",
-      "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
-      "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
-
-  auto G =
-      std::make_unique<LinkGraph>("", Triple(), 0, support::native, nullptr);
-  AllocGroupSmallMap<Block *> ContentBlocks;
-
-  JITTargetAddress NextAddr = 0x100000;
-  for (auto &KV : Segments) {
-    auto &AG = KV.first;
-    auto &Seg = KV.second;
-
-    auto AGSectionName =
-        AGSectionNames[static_cast<unsigned>(AG.getMemProt()) |
-                       static_cast<bool>(AG.getMemDeallocPolicy()) << 3];
-
-    auto &Sec = G->createSection(AGSectionName, AG.getMemProt());
-    Sec.setMemDeallocPolicy(AG.getMemDeallocPolicy());
-
-    if (Seg.ContentSize != 0) {
-      NextAddr = alignTo(NextAddr, Seg.ContentAlign);
-      auto &B =
-          G->createMutableContentBlock(Sec, G->allocateBuffer(Seg.ContentSize),
-                                       NextAddr, Seg.ContentAlign.value(), 0);
-      ContentBlocks[AG] = &B;
-      NextAddr += Seg.ContentSize;
-    }
-  }
-
-  // GRef declared separately since order-of-argument-eval isn't specified.
-  auto &GRef = *G;
-  MemMgr.allocate(JD, GRef,
-                  [G = std::move(G), ContentBlocks = std::move(ContentBlocks),
-                   OnCreated = std::move(OnCreated)](
-                      JITLinkMemoryManager::AllocResult Alloc) mutable {
-                    if (!Alloc)
-                      OnCreated(Alloc.takeError());
-                    else
-                      OnCreated(SimpleSegmentAlloc(std::move(G),
-                                                   std::move(ContentBlocks),
-                                                   std::move(*Alloc)));
-                  });
-}
-
-Expected<SimpleSegmentAlloc>
-SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-                           SegmentMap Segments) {
-  std::promise<MSVCPExpected<SimpleSegmentAlloc>> AllocP;
-  auto AllocF = AllocP.get_future();
-  Create(MemMgr, JD, std::move(Segments),
-         [&](Expected<SimpleSegmentAlloc> Result) {
-           AllocP.set_value(std::move(Result));
-         });
-  return AllocF.get();
-}
-
-SimpleSegmentAlloc::SimpleSegmentAlloc(SimpleSegmentAlloc &&) = default;
-SimpleSegmentAlloc &
-SimpleSegmentAlloc::operator=(SimpleSegmentAlloc &&) = default;
-SimpleSegmentAlloc::~SimpleSegmentAlloc() {}
-
-SimpleSegmentAlloc::SegmentInfo SimpleSegmentAlloc::getSegInfo(AllocGroup AG) {
-  auto I = ContentBlocks.find(AG);
-  if (I != ContentBlocks.end()) {
-    auto &B = *I->second;
-    return {B.getAddress(), B.getAlreadyMutableContent()};
-  }
-  return {};
-}
-
-SimpleSegmentAlloc::SimpleSegmentAlloc(
-    std::unique_ptr<LinkGraph> G, AllocGroupSmallMap<Block *> ContentBlocks,
-    std::unique_ptr<JITLinkMemoryManager::InFlightAlloc> Alloc)
-    : G(std::move(G)), ContentBlocks(std::move(ContentBlocks)),
-      Alloc(std::move(Alloc)) {}
-
-class InProcessMemoryManager::IPInFlightAlloc
-    : public JITLinkMemoryManager::InFlightAlloc {
-public:
-  IPInFlightAlloc(InProcessMemoryManager &MemMgr, LinkGraph &G, BasicLayout BL,
-                  sys::MemoryBlock StandardSegments,
-                  sys::MemoryBlock FinalizationSegments)
-      : MemMgr(MemMgr), G(G), BL(std::move(BL)),
-        StandardSegments(std::move(StandardSegments)),
-        FinalizationSegments(std::move(FinalizationSegments)) {}
-
-  void finalize(OnFinalizedFunction OnFinalized) override {
-
-    // Apply memory protections to all segments.
-    if (auto Err = applyProtections()) {
-      OnFinalized(std::move(Err));
-      return;
-    }
-
-    // Run finalization actions.
-    // FIXME: Roll back previous successful actions on failure.
-    std::vector<AllocActionCall> DeallocActions;
-    DeallocActions.reserve(G.allocActions().size());
-    for (auto &ActPair : G.allocActions()) {
-      if (ActPair.Finalize.FnAddr)
-        if (auto Err = runAllocAction(ActPair.Finalize)) {
-          OnFinalized(std::move(Err));
-          return;
-        }
-      if (ActPair.Dealloc.FnAddr)
-        DeallocActions.push_back(ActPair.Dealloc);
-    }
-    G.allocActions().clear();
-
-    // Release the finalize segments slab.
-    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
-      OnFinalized(errorCodeToError(EC));
-      return;
-    }
-
-    // Continue with finalized allocation.
-    OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
-                                            std::move(DeallocActions)));
-  }
-
-  void abandon(OnAbandonedFunction OnAbandoned) override {
-    Error Err = Error::success();
-    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments))
-      Err = joinErrors(std::move(Err), errorCodeToError(EC));
-    if (auto EC = sys::Memory::releaseMappedMemory(StandardSegments))
-      Err = joinErrors(std::move(Err), errorCodeToError(EC));
-    OnAbandoned(std::move(Err));
-  }
-
-private:
-  Error applyProtections() {
-    for (auto &KV : BL.segments()) {
-      const auto &AG = KV.first;
-      auto &Seg = KV.second;
-
-      auto Prot = toSysMemoryProtectionFlags(AG.getMemProt());
-
-      uint64_t SegSize =
-          alignTo(Seg.ContentSize + Seg.ZeroFillSize, MemMgr.PageSize);
-      sys::MemoryBlock MB(Seg.WorkingMem, SegSize);
-      if (auto EC = sys::Memory::protectMappedMemory(MB, Prot))
-        return errorCodeToError(EC);
-      if (Prot & sys::Memory::MF_EXEC)
-        sys::Memory::InvalidateInstructionCache(MB.base(), MB.allocatedSize());
-    }
-    return Error::success();
-  }
-
-  InProcessMemoryManager &MemMgr;
-  LinkGraph &G;
-  BasicLayout BL;
-  sys::MemoryBlock StandardSegments;
-  sys::MemoryBlock FinalizationSegments;
-};
-
-Expected<std::unique_ptr<InProcessMemoryManager>>
-InProcessMemoryManager::Create() {
-  if (auto PageSize = sys::Process::getPageSize())
-    return std::make_unique<InProcessMemoryManager>(*PageSize);
-  else
-    return PageSize.takeError();
-}
-
-void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
-                                      OnAllocatedFunction OnAllocated) {
-
-  // FIXME: Just check this once on startup.
-  if (!isPowerOf2_64((uint64_t)PageSize)) {
-    OnAllocated(make_error<StringError>("Page size is not a power of 2",
-                                        inconvertibleErrorCode()));
-    return;
-  }
-
-  BasicLayout BL(G);
-
-  /// Scan the request and calculate the group and total sizes.
-  /// Check that segment size is no larger than a page.
-  auto SegsSizes = BL.getContiguousPageBasedLayoutSizes(PageSize);
-  if (!SegsSizes) {
-    OnAllocated(SegsSizes.takeError());
-    return;
-  }
-
-  // Allocate one slab for the whole thing (to make sure everything is
-  // in-range), then partition into standard and finalization blocks.
-  //
-  // FIXME: Make two separate allocations in the future to reduce
-  // fragmentation: finalization segments will usually be a single page, and
-  // standard segments are likely to be more than one page. Where multiple
-  // allocations are in-flight at once (likely) the current approach will leave
-  // a lot of single-page holes.
-  sys::MemoryBlock Slab;
-  sys::MemoryBlock StandardSegsMem;
-  sys::MemoryBlock FinalizeSegsMem;
-  {
-    const sys::Memory::ProtectionFlags ReadWrite =
-        static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                  sys::Memory::MF_WRITE);
-
-    std::error_code EC;
-    Slab = sys::Memory::allocateMappedMemory(SegsSizes->total(), nullptr,
-                                             ReadWrite, EC);
-
-    if (EC) {
-      OnAllocated(errorCodeToError(EC));
-      return;
-    }
-
-    // Zero-fill the whole slab up-front.
-    memset(Slab.base(), 0, Slab.allocatedSize());
-
-    StandardSegsMem = {Slab.base(), SegsSizes->StandardSegs};
-    FinalizeSegsMem = {(void *)((char *)Slab.base() + SegsSizes->StandardSegs),
-                       SegsSizes->FinalizeSegs};
-  }
-
-  auto NextStandardSegAddr = pointerToJITTargetAddress(StandardSegsMem.base());
-  auto NextFinalizeSegAddr = pointerToJITTargetAddress(FinalizeSegsMem.base());
-
-  LLVM_DEBUG({
-    dbgs() << "InProcessMemoryManager allocated:\n";
-    if (SegsSizes->StandardSegs)
-      dbgs() << formatv("  [ {0:x16} -- {1:x16} ]", NextStandardSegAddr,
-                        NextStandardSegAddr + StandardSegsMem.allocatedSize())
-             << " to stardard segs\n";
-    else
-      dbgs() << "  no standard segs\n";
-    if (SegsSizes->FinalizeSegs)
-      dbgs() << formatv("  [ {0:x16} -- {1:x16} ]", NextFinalizeSegAddr,
-                        NextFinalizeSegAddr + FinalizeSegsMem.allocatedSize())
-             << " to finalize segs\n";
-    else
-      dbgs() << "  no finalize segs\n";
-  });
-
-  // Build ProtMap, assign addresses.
-  for (auto &KV : BL.segments()) {
-    auto &AG = KV.first;
-    auto &Seg = KV.second;
-
-    auto &SegAddr = (AG.getMemDeallocPolicy() == MemDeallocPolicy::Standard)
-                        ? NextStandardSegAddr
-                        : NextFinalizeSegAddr;
-
-    Seg.WorkingMem = jitTargetAddressToPointer<char *>(SegAddr);
-    Seg.Addr = SegAddr;
-
-    SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-  }
-
-  if (auto Err = BL.apply()) {
-    OnAllocated(std::move(Err));
-    return;
-  }
-
-  OnAllocated(std::make_unique<IPInFlightAlloc>(*this, G, std::move(BL),
-                                                std::move(StandardSegsMem),
-                                                std::move(FinalizeSegsMem)));
-}
-
-void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
-                                        OnDeallocatedFunction OnDeallocated) {
-  std::vector<sys::MemoryBlock> StandardSegmentsList;
-  std::vector<std::vector<AllocActionCall>> DeallocActionsList;
-
-  {
-    std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
-    for (auto &Alloc : Allocs) {
-      auto *FA =
-          jitTargetAddressToPointer<FinalizedAllocInfo *>(Alloc.release());
-      StandardSegmentsList.push_back(std::move(FA->StandardSegments));
-      if (!FA->DeallocActions.empty())
-        DeallocActionsList.push_back(std::move(FA->DeallocActions));
-      FA->~FinalizedAllocInfo();
-      FinalizedAllocInfos.Deallocate(FA);
-    }
-  }
-
-  Error DeallocErr = Error::success();
-
-  while (!DeallocActionsList.empty()) {
-    auto &DeallocActions = DeallocActionsList.back();
-    auto &StandardSegments = StandardSegmentsList.back();
-
-    /// Run any deallocate calls.
-    while (!DeallocActions.empty()) {
-      if (auto Err = runAllocAction(DeallocActions.back()))
-        DeallocErr = joinErrors(std::move(DeallocErr), std::move(Err));
-      DeallocActions.pop_back();
-    }
-
-    /// Release the standard segments slab.
-    if (auto EC = sys::Memory::releaseMappedMemory(StandardSegments))
-      DeallocErr = joinErrors(std::move(DeallocErr), errorCodeToError(EC));
-
-    DeallocActionsList.pop_back();
-    StandardSegmentsList.pop_back();
-  }
-
-  OnDeallocated(std::move(DeallocErr));
-}
-
-JITLinkMemoryManager::FinalizedAlloc
-InProcessMemoryManager::createFinalizedAlloc(
-    sys::MemoryBlock StandardSegments,
-    std::vector<AllocActionCall> DeallocActions) {
-  std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
-  auto *FA = FinalizedAllocInfos.Allocate<FinalizedAllocInfo>();
-  new (FA) FinalizedAllocInfo(
-      {std::move(StandardSegments), std::move(DeallocActions)});
-  return FinalizedAlloc(pointerToJITTargetAddress(FA));
+  return std::unique_ptr<InProcessMemoryManager::Allocation>(
+      new IPMMAlloc(std::move(Blocks)));
 }
 
 } // end namespace jitlink

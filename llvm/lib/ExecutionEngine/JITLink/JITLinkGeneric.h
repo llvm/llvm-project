@@ -42,9 +42,14 @@ public:
   virtual ~JITLinkerBase();
 
 protected:
-  using InFlightAlloc = JITLinkMemoryManager::InFlightAlloc;
-  using AllocResult = Expected<std::unique_ptr<InFlightAlloc>>;
-  using FinalizeResult = Expected<JITLinkMemoryManager::FinalizedAlloc>;
+  struct SegmentLayout {
+    using BlocksList = std::vector<Block *>;
+
+    BlocksList ContentBlocks;
+    BlocksList ZeroFillBlocks;
+  };
+
+  using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
 
   // Returns the PassConfiguration for this instance. This can be used by
   // JITLinkerBase implementations to add late passes that reference their
@@ -56,27 +61,39 @@ protected:
   //   1.1: Run pre-prune passes
   //   1.2: Prune graph
   //   1.3: Run post-prune passes
-  //   1.4: Allocate memory.
+  //   1.4: Sort blocks into segments
+  //   1.5: Allocate segment memory, update node vmaddrs to target vmaddrs
+  //   1.6: Run post-allocation passes
+  //   1.7: Notify context of final assigned symbol addresses
+  //   1.8: Identify external symbols and make an async call to resolve
   void linkPhase1(std::unique_ptr<JITLinkerBase> Self);
 
   // Phase 2:
-  //   2.2: Run post-allocation passes
-  //   2.3: Notify context of final assigned symbol addresses
-  //   2.4: Identify external symbols and make an async call to resolve
-  void linkPhase2(std::unique_ptr<JITLinkerBase> Self, AllocResult AR);
+  //   2.1: Apply resolution results
+  //   2.2: Run pre-fixup passes
+  //   2.3: Fix up block contents
+  //   2.4: Run post-fixup passes
+  //   2.5: Make an async call to transfer and finalize memory.
+  void linkPhase2(std::unique_ptr<JITLinkerBase> Self,
+                  Expected<AsyncLookupResult> LookupResult,
+                  SegmentLayoutMap Layout);
 
   // Phase 3:
-  //   3.1: Apply resolution results
-  //   3.2: Run pre-fixup passes
-  //   3.3: Fix up block contents
-  //   3.4: Run post-fixup passes
-  //   3.5: Make an async call to transfer and finalize memory.
-  void linkPhase3(std::unique_ptr<JITLinkerBase> Self,
-                  Expected<AsyncLookupResult> LookupResult);
+  //   3.1: Call OnFinalized callback, handing off allocation.
+  void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
 
-  // Phase 4:
-  //   4.1: Call OnFinalized callback, handing off allocation.
-  void linkPhase4(std::unique_ptr<JITLinkerBase> Self, FinalizeResult FR);
+  // Align a JITTargetAddress to conform with block alignment requirements.
+  static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
+    uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
+    return Addr + Delta;
+  }
+
+  // Align a pointer to conform with block alignment requirements.
+  static char *alignToBlock(char *P, Block &B) {
+    uint64_t PAddr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(P));
+    uint64_t Delta = (B.getAlignmentOffset() - PAddr) % B.getAlignment();
+    return P + Delta;
+  }
 
 private:
   // Run all passes in the given pass list, bailing out immediately if any pass
@@ -87,14 +104,18 @@ private:
   // Implemented in JITLinker.
   virtual Error fixUpBlocks(LinkGraph &G) const = 0;
 
+  SegmentLayoutMap layOutBlocks();
+  Error allocateSegments(const SegmentLayoutMap &Layout);
   JITLinkContext::LookupMap getExternalSymbolNames() const;
   void applyLookupResult(AsyncLookupResult LR);
-  void abandonAllocAndBailOut(std::unique_ptr<JITLinkerBase> Self, Error Err);
+  void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
+                                       JITLinkMemoryManager::Allocation &Alloc);
+  void deallocateAndBailOut(Error Err);
 
   std::unique_ptr<JITLinkContext> Ctx;
   std::unique_ptr<LinkGraph> G;
   PassConfiguration Passes;
-  std::unique_ptr<InFlightAlloc> Alloc;
+  std::unique_ptr<JITLinkMemoryManager::Allocation> Alloc;
 };
 
 template <typename LinkerImpl> class JITLinker : public JITLinkerBase {
@@ -131,8 +152,6 @@ private:
 
       // Copy Block data and apply fixups.
       LLVM_DEBUG(dbgs() << "    Applying fixups.\n");
-      assert((!B->isZeroFill() || B->edges_size() == 0) &&
-             "Edges in zero-fill block?");
       for (auto &E : B->edges()) {
 
         // Skip non-relocation edges.

@@ -116,24 +116,27 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
 
+  jitlink::JITLinkMemoryManager::SegmentsRequestMap SRM;
   StringRef Hello = "hello";
-  auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {Hello.size(), Align(1)}}});
-  EXPECT_THAT_EXPECTED(SSA, Succeeded());
-  auto SegInfo = SSA->getSegInfo(jitlink::MemProt::Read);
-  memcpy(SegInfo.WorkingMem.data(), Hello.data(), Hello.size());
+  SRM[sys::Memory::MF_READ] = {8, Hello.size(), 8};
+  auto Alloc = MemMgr->allocate(nullptr, SRM);
+  EXPECT_THAT_EXPECTED(Alloc, Succeeded());
 
-  auto FA = SSA->finalize();
-  EXPECT_THAT_EXPECTED(FA, Succeeded());
+  MutableArrayRef<char> WorkingMem =
+      (*Alloc)->getWorkingMemory(sys::Memory::MF_READ);
+  memcpy(WorkingMem.data(), Hello.data(), Hello.size());
 
-  ExecutorAddr TargetAddr(SegInfo.Addr);
+  auto Err = (*Alloc)->finalize();
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+
+  ExecutorAddr TargetAddr((*Alloc)->getTargetMemory(sys::Memory::MF_READ));
 
   const char *TargetMem = TargetAddr.toPtr<const char *>();
-  EXPECT_NE(TargetMem, SegInfo.WorkingMem.data());
+  EXPECT_NE(TargetMem, WorkingMem.data());
   StringRef TargetHello(TargetMem, Hello.size());
   EXPECT_EQ(Hello, TargetHello);
 
-  auto Err2 = MemMgr->deallocate(std::move(*FA));
+  auto Err2 = (*Alloc)->deallocate();
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 }
 

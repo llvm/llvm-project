@@ -19,6 +19,9 @@ using namespace llvm::orc;
 
 namespace {
 
+auto RWFlags =
+    sys::Memory::ProtectionFlags(sys::Memory::MF_READ | sys::Memory::MF_WRITE);
+
 const char BlockContentBytes[] = {0x01, 0x02, 0x03, 0x04,
                                   0x05, 0x06, 0x07, 0x08};
 
@@ -35,7 +38,7 @@ protected:
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
-      ES, std::make_unique<InProcessMemoryManager>(4096)};
+      ES, std::make_unique<InProcessMemoryManager>()};
 };
 
 TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
@@ -43,7 +46,7 @@ TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
       std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
                                   support::little, x86_64::getEdgeKindName);
 
-  auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec1 = G->createSection("__data", RWFlags);
   auto &B1 = G->createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   G->addDefinedSymbol(B1, 4, "_X", 4, Linkage::Strong, Scope::Default, false,
                       false);

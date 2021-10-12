@@ -7,168 +7,132 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-
-#include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <limits>
 
-using namespace llvm::jitlink;
-
 namespace llvm {
 namespace orc {
 
-class EPCGenericJITLinkMemoryManager::InFlightAlloc
-    : public jitlink::JITLinkMemoryManager::InFlightAlloc {
+class EPCGenericJITLinkMemoryManager::Alloc
+    : public jitlink::JITLinkMemoryManager::Allocation {
 public:
   struct SegInfo {
     char *WorkingMem = nullptr;
-    ExecutorAddr Addr;
+    ExecutorAddr TargetAddr;
     uint64_t ContentSize = 0;
     uint64_t ZeroFillSize = 0;
   };
-  using SegInfoMap = AllocGroupSmallMap<SegInfo>;
+  using SegInfoMap = DenseMap<unsigned, SegInfo>;
 
-  InFlightAlloc(EPCGenericJITLinkMemoryManager &Parent, LinkGraph &G,
-                ExecutorAddr AllocAddr, SegInfoMap Segs)
-      : Parent(Parent), G(G), AllocAddr(AllocAddr), Segs(std::move(Segs)) {}
+  Alloc(EPCGenericJITLinkMemoryManager &Parent, ExecutorAddr TargetAddr,
+        std::unique_ptr<char[]> WorkingBuffer, SegInfoMap Segs)
+      : Parent(Parent), TargetAddr(TargetAddr),
+        WorkingBuffer(std::move(WorkingBuffer)), Segs(std::move(Segs)) {}
 
-  void finalize(OnFinalizedFunction OnFinalize) override {
+  MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
+    auto I = Segs.find(Seg);
+    assert(I != Segs.end() && "No allocation for seg");
+    assert(I->second.ContentSize <= std::numeric_limits<size_t>::max());
+    return {I->second.WorkingMem, static_cast<size_t>(I->second.ContentSize)};
+  }
+
+  JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
+    auto I = Segs.find(Seg);
+    assert(I != Segs.end() && "No allocation for seg");
+    return I->second.TargetAddr.getValue();
+  }
+
+  void finalizeAsync(FinalizeContinuation OnFinalize) override {
+    char *WorkingMem = WorkingBuffer.get();
     tpctypes::FinalizeRequest FR;
     for (auto &KV : Segs) {
       assert(KV.second.ContentSize <= std::numeric_limits<size_t>::max());
       FR.Segments.push_back(tpctypes::SegFinalizeRequest{
           tpctypes::toWireProtectionFlags(
-              toSysMemoryProtectionFlags(KV.first.getMemProt())),
-          KV.second.Addr,
+              static_cast<sys::Memory::ProtectionFlags>(KV.first)),
+          KV.second.TargetAddr,
           alignTo(KV.second.ContentSize + KV.second.ZeroFillSize,
                   Parent.EPC.getPageSize()),
-          {KV.second.WorkingMem, static_cast<size_t>(KV.second.ContentSize)}});
+          {WorkingMem, static_cast<size_t>(KV.second.ContentSize)}});
+      WorkingMem += KV.second.ContentSize;
     }
-
-    // Transfer allocation actions.
-    // FIXME: Merge JITLink and ORC SupportFunctionCall and Action list types,
-    //        turn this into a std::swap.
-    FR.Actions.reserve(G.allocActions().size());
-    for (auto &ActPair : G.allocActions())
-      FR.Actions.push_back(
-          {{ExecutorAddr(ActPair.Finalize.FnAddr),
-            ExecutorAddr(ActPair.Finalize.CtxAddr), ActPair.Finalize.CtxSize},
-           {ExecutorAddr(ActPair.Dealloc.FnAddr),
-            ExecutorAddr(ActPair.Dealloc.CtxAddr), ActPair.Dealloc.CtxSize}});
-    G.allocActions().clear();
-
     Parent.EPC.callSPSWrapperAsync<
         rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(
         Parent.SAs.Finalize,
-        [OnFinalize = std::move(OnFinalize), AllocAddr = this->AllocAddr](
-            Error SerializationErr, Error FinalizeErr) mutable {
-          // FIXME: Release abandoned alloc.
+        [OnFinalize = std::move(OnFinalize)](Error SerializationErr,
+                                             Error FinalizeErr) {
           if (SerializationErr) {
             cantFail(std::move(FinalizeErr));
             OnFinalize(std::move(SerializationErr));
-          } else if (FinalizeErr)
+          } else
             OnFinalize(std::move(FinalizeErr));
-          else
-            OnFinalize(FinalizedAlloc(AllocAddr.getValue()));
         },
         Parent.SAs.Allocator, std::move(FR));
   }
 
-  void abandon(OnAbandonedFunction OnAbandoned) override {
-    // FIXME: Return memory to pool instead.
-    Parent.EPC.callSPSWrapperAsync<
-        rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
-        Parent.SAs.Deallocate,
-        [OnAbandoned = std::move(OnAbandoned)](Error SerializationErr,
-                                               Error DeallocateErr) mutable {
-          if (SerializationErr) {
-            cantFail(std::move(DeallocateErr));
-            OnAbandoned(std::move(SerializationErr));
-          } else
-            OnAbandoned(std::move(DeallocateErr));
-        },
-        Parent.SAs.Allocator, ArrayRef<ExecutorAddr>(AllocAddr));
+  Error deallocate() override {
+    Error Err = Error::success();
+    if (auto E2 = Parent.EPC.callSPSWrapper<
+                  rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
+            Parent.SAs.Deallocate, Err, Parent.SAs.Allocator,
+            ArrayRef<ExecutorAddr>(TargetAddr)))
+      return E2;
+    return Err;
   }
 
 private:
   EPCGenericJITLinkMemoryManager &Parent;
-  LinkGraph &G;
-  ExecutorAddr AllocAddr;
+  ExecutorAddr TargetAddr;
+  std::unique_ptr<char[]> WorkingBuffer;
   SegInfoMap Segs;
 };
 
-void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
-                                              LinkGraph &G,
-                                              OnAllocatedFunction OnAllocated) {
-  BasicLayout BL(G);
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>>
+EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
+                                         const SegmentsRequestMap &Request) {
+  Alloc::SegInfoMap Segs;
+  uint64_t AllocSize = 0;
+  size_t WorkingSize = 0;
+  for (auto &KV : Request) {
+    if (!isPowerOf2_64(KV.second.getAlignment()))
+      return make_error<StringError>("Alignment is not a power of two",
+                                     inconvertibleErrorCode());
+    if (KV.second.getAlignment() > EPC.getPageSize())
+      return make_error<StringError>("Alignment exceeds page size",
+                                     inconvertibleErrorCode());
 
-  auto Pages = BL.getContiguousPageBasedLayoutSizes(EPC.getPageSize());
-  if (!Pages)
-    return OnAllocated(Pages.takeError());
-
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
-      SAs.Reserve,
-      [this, BL = std::move(BL), OnAllocated = std::move(OnAllocated)](
-          Error SerializationErr, Expected<ExecutorAddr> AllocAddr) mutable {
-        if (SerializationErr) {
-          cantFail(AllocAddr.takeError());
-          return OnAllocated(std::move(SerializationErr));
-        }
-        if (!AllocAddr)
-          return OnAllocated(AllocAddr.takeError());
-
-        completeAllocation(*AllocAddr, std::move(BL), std::move(OnAllocated));
-      },
-      SAs.Allocator, Pages->total());
-}
-
-void EPCGenericJITLinkMemoryManager::deallocate(
-    std::vector<FinalizedAlloc> Allocs, OnDeallocatedFunction OnDeallocated) {
-  EPC.callSPSWrapperAsync<
-      rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
-      SAs.Deallocate,
-      [OnDeallocated = std::move(OnDeallocated)](Error SerErr,
-                                                 Error DeallocErr) mutable {
-        if (SerErr) {
-          cantFail(std::move(DeallocErr));
-          OnDeallocated(std::move(SerErr));
-        } else
-          OnDeallocated(std::move(DeallocErr));
-      },
-      SAs.Allocator, Allocs);
-  for (auto &A : Allocs)
-    A.release();
-}
-
-void EPCGenericJITLinkMemoryManager::completeAllocation(
-    ExecutorAddr AllocAddr, BasicLayout BL, OnAllocatedFunction OnAllocated) {
-
-  InFlightAlloc::SegInfoMap SegInfos;
-
-  ExecutorAddr NextSegAddr = AllocAddr;
-  for (auto &KV : BL.segments()) {
-    const auto &AG = KV.first;
-    auto &Seg = KV.second;
-
-    Seg.Addr = NextSegAddr.getValue();
-    KV.second.WorkingMem = BL.getGraph().allocateBuffer(Seg.ContentSize).data();
-    NextSegAddr += ExecutorAddrDiff(
-        alignTo(Seg.ContentSize + Seg.ZeroFillSize, EPC.getPageSize()));
-
-    auto &SegInfo = SegInfos[AG];
-    SegInfo.ContentSize = Seg.ContentSize;
-    SegInfo.ZeroFillSize = Seg.ZeroFillSize;
-    SegInfo.Addr = ExecutorAddr(Seg.Addr);
-    SegInfo.WorkingMem = Seg.WorkingMem;
+    auto &Seg = Segs[KV.first];
+    Seg.ContentSize = KV.second.getContentSize();
+    Seg.ZeroFillSize = KV.second.getZeroFillSize();
+    AllocSize += alignTo(Seg.ContentSize + Seg.ZeroFillSize, EPC.getPageSize());
+    WorkingSize += Seg.ContentSize;
   }
 
-  if (auto Err = BL.apply())
-    return OnAllocated(std::move(Err));
+  std::unique_ptr<char[]> WorkingBuffer;
+  if (WorkingSize > 0)
+    WorkingBuffer = std::make_unique<char[]>(WorkingSize);
+  Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
+  if (auto Err = EPC.callSPSWrapper<
+                 rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
+          SAs.Reserve, TargetAllocAddr, SAs.Allocator, AllocSize))
+    return std::move(Err);
+  if (!TargetAllocAddr)
+    return TargetAllocAddr.takeError();
 
-  OnAllocated(std::make_unique<InFlightAlloc>(*this, BL.getGraph(), AllocAddr,
-                                              std::move(SegInfos)));
+  char *WorkingMem = WorkingBuffer.get();
+  JITTargetAddress SegAddr = TargetAllocAddr->getValue();
+  for (auto &KV : Segs) {
+    auto &Seg = KV.second;
+    Seg.TargetAddr.setValue(SegAddr);
+    SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, EPC.getPageSize());
+    Seg.WorkingMem = WorkingMem;
+    WorkingMem += Seg.ContentSize;
+  }
+
+  return std::make_unique<Alloc>(*this, *TargetAllocAddr,
+                                 std::move(WorkingBuffer), std::move(Segs));
 }
 
 } // end namespace orc

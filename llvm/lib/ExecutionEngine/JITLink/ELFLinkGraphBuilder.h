@@ -36,9 +36,11 @@ protected:
   }
 
   Section &getCommonSection() {
-    if (!CommonSection)
-      CommonSection =
-          &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+    if (!CommonSection) {
+      auto Prot = static_cast<sys::Memory::ProtectionFlags>(
+          sys::Memory::MF_READ | sys::Memory::MF_WRITE);
+      CommonSection = &G->createSection(CommonSectionName, Prot);
+    }
     return *CommonSection;
   }
 
@@ -293,11 +295,13 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     });
 
     // Get the section's memory protection flags.
-    MemProt Prot;
+    sys::Memory::ProtectionFlags Prot;
     if (Sec.sh_flags & ELF::SHF_EXECINSTR)
-      Prot = MemProt::Read | MemProt::Exec;
+      Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                       sys::Memory::MF_EXEC);
     else
-      Prot = MemProt::Read | MemProt::Write;
+      Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                       sys::Memory::MF_WRITE);
 
     // For now we just use this to skip the "undefined" section, probably need
     // to revist.
