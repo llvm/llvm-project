@@ -677,8 +677,12 @@ private:
       auto *V = CS.getArgOperand(A->getArgNo());
       if (isa<PoisonValue>(V))
         return false;
-      if (isa<ConstantExpr>(V))
-        return false;
+
+      // For now, constant expressions are fine but only if they are function
+      // calls.
+      if (auto *CE =  dyn_cast<ConstantExpr>(V))
+        if (!isa<Function>(CE->getOperand(0)))
+          return false;
 
       // TrackValueOfGlobalVariable only tracks scalar global variables.
       if (auto *GV = dyn_cast<GlobalVariable>(V)) {
