@@ -25,9 +25,9 @@ struct StackDepotHandle {
   StackDepotNode *node_;
   StackDepotHandle() : node_(nullptr) {}
   explicit StackDepotHandle(StackDepotNode *node) : node_(node) {}
-  bool valid() { return node_; }
-  u32 id();
-  int use_count();
+  bool valid() const { return node_; }
+  u32 id() const;
+  int use_count() const;
   void inc_use_count_unsafe();
 };
 

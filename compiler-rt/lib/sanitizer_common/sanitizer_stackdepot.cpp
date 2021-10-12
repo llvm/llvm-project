@@ -69,8 +69,8 @@ struct StackDepotNode {
 
 COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
-u32 StackDepotHandle::id() { return node_->id; }
-int StackDepotHandle::use_count() {
+u32 StackDepotHandle::id() const { return node_->id; }
+int StackDepotHandle::use_count() const {
   return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
 }
