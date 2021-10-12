@@ -683,7 +683,7 @@ private:
   const Symbol *GetParentComponent(const Scope * = nullptr) const;
 
   template <std::size_t> friend class Symbols;
-  template <class, std::size_t> friend struct std::array;
+  template <class, std::size_t> friend class std::array;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, Symbol::Flag);

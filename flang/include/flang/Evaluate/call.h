@@ -252,9 +252,6 @@ public:
       : ProcedureRef{std::move(p), std::move(a)} {}
 
   std::optional<DynamicType> GetType() const { return proc_.GetType(); }
-  std::optional<Constant<Result>> Fold(FoldingContext &); // for intrinsics
 };
-
-FOR_EACH_SPECIFIC_TYPE(extern template class FunctionRef, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

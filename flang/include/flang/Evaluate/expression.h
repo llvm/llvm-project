@@ -619,7 +619,8 @@ FOR_EACH_CHARACTER_KIND(extern template class Expr, )
 // There are no relations between LOGICAL values.
 
 template <typename T>
-struct Relational : public Operation<Relational<T>, LogicalResult, T, T> {
+class Relational : public Operation<Relational<T>, LogicalResult, T, T> {
+public:
   using Result = LogicalResult;
   using Base = Operation<Relational, LogicalResult, T, T>;
   using Operand = typename Base::template Operand<0>;
@@ -651,10 +652,10 @@ public:
   common::MapTemplate<Relational, DirectlyComparableTypes> u;
 };
 
-FOR_EACH_INTEGER_KIND(extern template struct Relational, )
-FOR_EACH_REAL_KIND(extern template struct Relational, )
-FOR_EACH_CHARACTER_KIND(extern template struct Relational, )
-extern template struct Relational<SomeType>;
+FOR_EACH_INTEGER_KIND(extern template class Relational, )
+FOR_EACH_REAL_KIND(extern template class Relational, )
+FOR_EACH_CHARACTER_KIND(extern template class Relational, )
+extern template class Relational<SomeType>;
 
 // Logical expressions of a kind bigger than LogicalResult
 // do not include Relational<> operations as possibilities,
