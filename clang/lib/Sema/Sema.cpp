@@ -373,6 +373,11 @@ void Sema::Initialize() {
         AddPointerSizeDependentTypes();
       }
 
+      if (getOpenCLOptions().isSupported("cl_khr_fp16", getLangOpts())) {
+        auto AtomicHalfT = Context.getAtomicType(Context.HalfTy);
+        addImplicitTypedef("atomic_half", AtomicHalfT);
+      }
+
       std::vector<QualType> Atomic64BitTypes;
       if (getOpenCLOptions().isSupported("cl_khr_int64_base_atomics",
                                          getLangOpts()) &&
