@@ -56,6 +56,7 @@ private:
   void UpdateGVDependencies(GlobalValue &GV);
   void MarkLive(GlobalValue &GV,
                 SmallVectorImpl<GlobalValue *> *Updates = nullptr);
+  void PropagateLivenessInGlobalValues();
   bool RemoveUnusedGlobalValue(GlobalValue &GV);
 
   // Dead virtual function elimination.
@@ -65,6 +66,9 @@ private:
   void ScanVTableLoad(Function *Caller, Metadata *TypeId, uint64_t CallOffset);
 
   void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
+
+  GlobalValue *TargetFromConditionalUsedIfLive(MDNode *M);
+  void PropagateLivenessToConditionallyUsed(Module &M);
 };
 
 }

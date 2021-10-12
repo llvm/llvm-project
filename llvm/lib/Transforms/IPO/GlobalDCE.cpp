@@ -28,6 +28,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -155,6 +156,18 @@ void GlobalDCEPass::MarkLive(GlobalValue &GV,
       MarkLive(*CM.second, Updates); // Recursion depth is only two because only
                                      // globals in the same comdat are visited.
     }
+  }
+}
+
+void GlobalDCEPass::PropagateLivenessInGlobalValues() {
+  // Propagate liveness from collected Global Values through the computed
+  // dependencies.
+  SmallVector<GlobalValue *, 8> NewLiveGVs{AliveGlobals.begin(),
+                                           AliveGlobals.end()};
+  while (!NewLiveGVs.empty()) {
+    GlobalValue *LGV = NewLiveGVs.pop_back_val();
+    for (auto *GVD : GVDependencies[LGV])
+      MarkLive(*GVD, &NewLiveGVs);
   }
 }
 
@@ -334,6 +347,135 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
              << "  " << Entry.first->getName() << "\n";);
 }
 
+static bool RemoveConditionalTargetsFromUsedList(Module &M) {
+  auto *Used = M.getGlobalVariable("llvm.used");
+  if (!Used)
+    return false;
+
+  auto *UsedConditional = M.getNamedMetadata("llvm.used.conditional");
+  if (!UsedConditional)
+    return false;
+  if (UsedConditional->getNumOperands() == 0)
+    return false;
+
+  // Construct a set of conditionally used targets.
+  SmallPtrSet<GlobalValue *, 8> Targets;
+  for (auto *M : UsedConditional->operands()) {
+    assert(M->getNumOperands() == 3);
+    auto *V = mdconst::extract_or_null<GlobalValue>(M->getOperand(0));
+    if (!V)
+      continue;
+    Targets.insert(V);
+  }
+
+  if (Targets.empty())
+    return false;
+
+  // Now remove all targets from @llvm.used.
+  SmallPtrSet<GlobalValue *, 8> NewUsedArray;
+  const ConstantArray *UsedList = cast<ConstantArray>(Used->getInitializer());
+  for (Value *Op : UsedList->operands()) {
+    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCasts());
+    if (Targets.contains(G))
+      continue;
+    NewUsedArray.insert(G);
+  }
+  Used = setUsedInitializer(*Used, NewUsedArray);
+  return true;
+}
+
+// Parse one entry from !llvm.used.conditional list as a triplet of
+// { target, type, dependencies } and evaluate the conditional dependency, i.e.
+// check liveness of all dependencies and based on type conclude whether the
+// target is supposed to be declared alive. If yes, return the target, otherwise
+// return nullptr.
+GlobalValue *GlobalDCEPass::TargetFromConditionalUsedIfLive(MDNode *M) {
+  assert(M->getNumOperands() == 3);
+  auto *Target = mdconst::extract_or_null<GlobalValue>(M->getOperand(0));
+  if (!Target)
+    return nullptr;
+
+  auto *DependenciesMD = dyn_cast_or_null<MDNode>(M->getOperand(2).get());
+  SmallPtrSet<GlobalValue *, 8> Dependencies;
+  if (DependenciesMD == nullptr) {
+    Dependencies.insert(nullptr);
+  } else {
+    for (auto &DependencyMD : DependenciesMD->operands()) {
+      auto *Dependency = DependencyMD.get();
+      if (!Dependency)
+        continue; // Allow null, skip.
+      auto *C =
+          mdconst::extract_or_null<Constant>(Dependency)->stripPointerCasts();
+      if (dyn_cast<UndefValue>(C))
+        continue; // Allow undef, skip.
+      Dependencies.insert(cast<GlobalValue>(C));
+    }
+  }
+
+  bool AllDependenciesAlive = Dependencies.empty() ? false : true;
+  bool AnyDependencyAlive = false;
+  for (auto *Dep : Dependencies) {
+    bool Live = AliveGlobals.count(Dep) != 0;
+    if (Live)
+      AnyDependencyAlive = true;
+    else
+      AllDependenciesAlive = false;
+  }
+
+  auto *Type = mdconst::extract_or_null<ConstantInt>(M->getOperand(1));
+  switch (Type->getValue().getSExtValue()) {
+  case 0:
+    return AnyDependencyAlive ? Target : nullptr;
+  case 1:
+    return AllDependenciesAlive ? Target : nullptr;
+  default:
+    llvm_unreachable("bad !llvm.used.conditional type");
+  }
+}
+
+void GlobalDCEPass::PropagateLivenessToConditionallyUsed(Module &M) {
+  auto *Used = M.getGlobalVariable("llvm.used");
+  if (!Used)
+    return;
+  auto *UsedConditional = M.getNamedMetadata("llvm.used.conditional");
+  if (!UsedConditional)
+    return;
+
+  SmallPtrSet<GlobalValue *, 8> NewUsedArray;
+  const ConstantArray *UsedList = cast<ConstantArray>(Used->getInitializer());
+  for (Value *Op : UsedList->operands()) {
+    NewUsedArray.insert(cast<GlobalValue>(Op->stripPointerCasts()));
+  }
+
+  // Repeat the liveness propagation iteraticely, one iteration might force
+  // other conditionally used globals to become alive.
+  while (true) {
+    PropagateLivenessInGlobalValues();
+
+    unsigned OldSize = NewUsedArray.size();
+    for (auto *M : UsedConditional->operands()) {
+      auto *Target = TargetFromConditionalUsedIfLive(M);
+      if (!Target) continue;
+
+      NewUsedArray.insert(Target);
+      MarkLive(*Target);
+      LLVM_DEBUG(dbgs() << "Conditionally used target alive: "
+                        << Target->getName() << "\n");
+    }
+
+    unsigned NewSize = NewUsedArray.size();
+    LLVM_DEBUG(dbgs() << "Conditionally used iteration end, old size: "
+                      << OldSize << " new size: " << NewSize << "\n");
+
+    // Stop the iteration once we reach a steady state (no new additions to
+    // @llvm.used).
+    if (NewSize == OldSize) break;
+  }
+
+  Used = setUsedInitializer(*Used, NewUsedArray);
+  MarkLive(*Used);
+}
+
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
@@ -362,6 +504,11 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // Add dependencies between virtual call sites and the virtual functions they
   // might call, if we have that information.
   AddVirtualFunctionDependencies(M);
+
+  // Process the !llvm.used.conditional list and (temporarily, see below)
+  // remove all "targets" from @llvm.used. No effect if `!llvm.used.conditional`
+  // is not present in the module.
+  bool UsedConditionalPresent = RemoveConditionalTargetsFromUsedList(M);
 
   // Loop over the module, adding globals which are obviously necessary.
   for (GlobalObject &GO : M.global_objects()) {
@@ -396,15 +543,13 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     UpdateGVDependencies(GIF);
   }
 
-  // Propagate liveness from collected Global Values through the computed
-  // dependencies.
-  SmallVector<GlobalValue *, 8> NewLiveGVs{AliveGlobals.begin(),
-                                           AliveGlobals.end()};
-  while (!NewLiveGVs.empty()) {
-    GlobalValue *LGV = NewLiveGVs.pop_back_val();
-    for (auto *GVD : GVDependencies[LGV])
-      MarkLive(*GVD, &NewLiveGVs);
+  // Step 2 of !llvm.used.conditional processing: If any conditionally used
+  // "targets" are alive, put them back into @llvm.used.
+  if (UsedConditionalPresent) {
+    PropagateLivenessToConditionallyUsed(M);
   }
+
+  PropagateLivenessInGlobalValues();
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
   // through the program, deleting those which are not alive.

@@ -7304,6 +7304,55 @@ For example, the following metadata section contains two library specifiers::
 Each library specifier will be handled independently by the consuming linker.
 The effect of the library specifiers are defined by the consuming linker.
 
+.. _llvm_used_conditional:
+
+Conditionally Used Globals
+==========================
+
+When a global variable is mentioned in the `@llvm.used` list, it's always going
+to be retained, but sometimes it's desirable to allow such a global variable to
+still be discardable by optimization passes. Using the `!llvm.used.conditional`
+named metadata allows expressing *when* it is legal to discard a global (from
+the `@llvm.used` list) in terms of liveness of other globals.
+
+If `!llvm.used.conditional` named metadata is present in IR of a module, it's
+expected to be a list of metadata triplets. Each triplet has the following form:
+
+1. The first element is the "target", the global variable from `@llvm.used` that
+   we are allowing removal of. If the global variable is not present in the
+   `@llvm.used` list, then there is no effect from using a entry in
+   `!llvm.used.conditional` for it.
+2. The second element is a "type", a boolean flag expressing what behavior do
+   we want if the list of "dependencies" (third element) contains more than one
+   element. `0` means if *any dependency* in the list is alive, the target symbol
+   must stay alive, otherwise removal is allowed (in other words: if all globals
+   from the dependency list are removed, the target can be removed too). `1`
+   means if *all dependencies* in the list are alive, the target must stay
+   alive, otherwise removal is allowed (in other words: if any global from the
+   dependency list is removed, the target can be removed too).
+3. The third element is a list of "dependencies", a list of globals.
+
+The following example expresses that the global `@record` (which is listed in
+`@llvm.used` otherwise it would be trivially discarded as nothing references it)
+is allowed to be optimized away, if *either of* `@a` or `@b` globals are
+themselves removable::
+
+    @record = internal global [...] {
+        @a, @b
+    }
+    @llvm.used = appending global [...] [ ..., @record ]
+
+    !1 = !{
+        @record,     ; target
+        1,           ; type
+        !{ @a, @b }  ; dependencies
+    }
+    !llvm.used.conditional = !{ !1 }
+
+The semantics of `!llvm.used.conditional` are only *allowing an optimization*,
+and are not requiring optimizations to follow them --- it is correct for any
+optimization/transformation to ignore `!llvm.used.conditional` or even drop it.
+
 .. _summary:
 
 ThinLTO Summary

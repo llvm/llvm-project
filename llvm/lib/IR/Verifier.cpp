@@ -875,6 +875,34 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
 
     visitMDNode(*MD, AreDebugLocsAllowed::Yes);
   }
+
+  if (NMD.getName() == "llvm.used.conditional") {
+    for (const MDNode *MD : NMD.operands()) {
+      Assert(MD->getNumOperands() == 3, "invalid llvm.used.conditional member");
+      auto *TargetMD = MD->getOperand(0).get();
+      if (TargetMD != nullptr) {
+        Assert(mdconst::dyn_extract<GlobalValue>(TargetMD),
+               "invalid llvm.used.conditional member");
+      }
+      auto *TypeMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1));
+      int64_t Type = TypeMD->getValue().getSExtValue();
+      Assert(Type == 0 || Type == 1, "invalid llvm.used.conditional member");
+      auto *DependenciesMD = dyn_cast<MDNode>(MD->getOperand(2).get());
+      Assert(DependenciesMD, "invalid llvm.used.conditional member");
+      Assert(DependenciesMD->getNumOperands() > 0,
+             "invalid llvm.used.conditional member");
+      for (auto &DependencyMD : DependenciesMD->operands()) {
+        auto *Dependency = DependencyMD.get();
+        if (!Dependency)
+          continue; // Allow null, skip.
+        auto *C =
+            mdconst::dyn_extract<Constant>(Dependency)->stripPointerCasts();
+        if (dyn_cast<UndefValue>(C))
+          continue; // Allow undef, skip.
+        Assert(isa<GlobalValue>(C), "invalid llvm.used.conditional member");
+      }
+    }
+  }
 }
 
 void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {

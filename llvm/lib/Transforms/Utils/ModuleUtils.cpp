@@ -111,6 +111,44 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
   appendToUsedList(M, "llvm.compiler.used", Values);
 }
 
+static int compareNames(Constant *const *A, Constant *const *B) {
+  Value *AStripped = (*A)->stripPointerCasts();
+  Value *BStripped = (*B)->stripPointerCasts();
+  return AStripped->getName().compare(BStripped->getName());
+}
+
+GlobalVariable *
+llvm::setUsedInitializer(GlobalVariable &V,
+                         const SmallPtrSetImpl<GlobalValue *> &Init) {
+  if (Init.empty()) {
+    V.eraseFromParent();
+    return nullptr;
+  }
+
+  // Type of pointer to the array of pointers.
+  PointerType *Int8PtrTy = Type::getInt8PtrTy(V.getContext(), 0);
+
+  SmallVector<Constant *, 8> UsedArray;
+  for (GlobalValue *GV : Init) {
+    Constant *Cast =
+        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+    UsedArray.push_back(Cast);
+  }
+  // Sort to get deterministic order.
+  array_pod_sort(UsedArray.begin(), UsedArray.end(), compareNames);
+  ArrayType *ATy = ArrayType::get(Int8PtrTy, UsedArray.size());
+
+  Module *M = V.getParent();
+  V.removeFromParent();
+  GlobalVariable *NV =
+      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
+                         ConstantArray::get(ATy, UsedArray), "");
+  NV->takeName(&V);
+  NV->setSection("llvm.metadata");
+  delete &V;
+  return NV;
+}
+
 FunctionCallee
 llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
                                    ArrayRef<Type *> InitArgTypes) {
