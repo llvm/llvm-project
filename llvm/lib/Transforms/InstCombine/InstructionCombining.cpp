@@ -3544,8 +3544,14 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // While we could change the other users of OrigOp to use freeze(OrigOp), that
   // potentially reduces their optimization potential, so let's only do this iff
   // the OrigOp is only used by the freeze.
-  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp) ||
-      canCreateUndefOrPoison(dyn_cast<Operator>(OrigOp)))
+  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp))
+    return nullptr;
+
+  // We can't push the freeze through an instruction which can itself create
+  // poison.  If the only source of new poison is flags, we can simply
+  // strip them (since we know the only use is the freeze and nothing can
+  // benefit from them.)
+  if (canCreateUndefOrPoison(cast<Operator>(OrigOp), /*ConsiderFlags*/ false))
     return nullptr;
 
   // If operand is guaranteed not to be poison, there is no need to add freeze
@@ -3560,6 +3566,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     else
       return nullptr;
   }
+
+  OrigOpInst->dropPoisonGeneratingFlags();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
   if (!MaybePoisonOperand)
