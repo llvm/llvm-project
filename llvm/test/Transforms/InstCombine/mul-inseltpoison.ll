@@ -720,7 +720,7 @@ define i32 @negate_if_false(i32 %x, i1 %cond) {
 
 define i32 @negate_if_true_nsw(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -731,7 +731,7 @@ define i32 @negate_if_true_nsw(i32 %x, i1 %cond) {
 
 define i32 @negate_if_true_nuw(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -742,7 +742,7 @@ define i32 @negate_if_true_nuw(i32 %x, i1 %cond) {
 
 define i32 @negate_if_false_nsw(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_false_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[X]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -753,7 +753,7 @@ define i32 @negate_if_false_nsw(i32 %x, i1 %cond) {
 
 define i32 @negate_if_false_nuw(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_false_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[X]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
