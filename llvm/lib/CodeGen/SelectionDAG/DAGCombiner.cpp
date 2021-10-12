@@ -7315,7 +7315,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // TODO: If there is evidence that running this later would help, this
   //       limitation could be removed. Legality checks may need to be added
   //       for the created store and optional bswap/rotate.
-  if (LegalOperations)
+  if (LegalOperations || OptLevel == CodeGenOpt::None)
     return SDValue();
 
   // We only handle merging simple stores of 1-4 bytes.
