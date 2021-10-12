@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <regex>
+
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -73,11 +75,19 @@ TEST(SanitizerCommon, StackDepotPrint) {
   StackTrace s2(array2, ARRAY_SIZE(array2));
   u32 i2 = StackDepotPut(s2);
   EXPECT_NE(i1, i2);
-  EXPECT_EXIT((StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-              "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*");
+
+  auto fix_regex = [](const std::string& s) -> std::string {
+    if (!SANITIZER_WINDOWS)
+      return s;
+    return std::regex_replace(s, std::regex("\\.\\*"), ".*\\n.*");
+  };
   EXPECT_EXIT(
       (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-      "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*");
+      fix_regex("Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*"));
+  EXPECT_EXIT(
+      (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
+      fix_regex(
+          "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
 }
 
 TEST(SanitizerCommon, StackDepotPrintNoLock) {
