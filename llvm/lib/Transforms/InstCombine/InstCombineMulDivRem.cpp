@@ -107,14 +107,19 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   // mul (select Cond, 1, -1), OtherOp --> select Cond, OtherOp, -OtherOp
   // mul OtherOp, (select Cond, 1, -1) --> select Cond, OtherOp, -OtherOp
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
-                        m_Value(OtherOp))))
-    return Builder.CreateSelect(Cond, OtherOp, Builder.CreateNeg(OtherOp));
-
+                        m_Value(OtherOp)))) {
+    bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
+    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    return Builder.CreateSelect(Cond, OtherOp, Neg);
+  }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
   // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
-                        m_Value(OtherOp))))
-    return Builder.CreateSelect(Cond, Builder.CreateNeg(OtherOp), OtherOp);
+                        m_Value(OtherOp)))) {
+    bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
+    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    return Builder.CreateSelect(Cond, Neg, OtherOp);
+  }
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
