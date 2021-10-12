@@ -2292,11 +2292,14 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
   return success();
 }
 
-static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
-                                      VectorType vectorType,
-                                      VectorType maskType,
-                                      AffineMap permutationMap,
-                                      ArrayAttr inBounds) {
+static LogicalResult
+verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
+                 VectorType vectorType, VectorType maskType,
+                 AffineMap permutationMap, ArrayAttr inBounds) {
+  if (shapedType.getRank() == 0 && !op.isZeroD())
+    return op->emitOpError("0-d transfer requires vector<1xt> shape and () -> "
+                           "(0) permutation_map");
+
   if (op->hasAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
@@ -2358,7 +2361,8 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
 
   if (permutationMap.getNumSymbols() != 0)
     return op->emitOpError("requires permutation_map without symbols");
-  if (permutationMap.getNumInputs() != shapedType.getRank())
+  // TODO: implement 0-d vector corner cases.
+  if (!op.isZeroD() && permutationMap.getNumInputs() != shapedType.getRank())
     return op->emitOpError("requires a permutation_map with input dims of the "
                            "same rank as the source type");
 
@@ -2534,9 +2538,10 @@ static LogicalResult verify(TransferReadOp op) {
   if (static_cast<int64_t>(op.indices().size()) != shapedType.getRank())
     return op.emitOpError("requires ") << shapedType.getRank() << " indices";
 
-  if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              maskType, permutationMap,
-                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
+  if (failed(
+          verifyTransferOp(cast<VectorTransferOpInterface>(op.getOperation()),
+                           shapedType, vectorType, maskType, permutationMap,
+                           op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   if (auto sourceVectorElementType = sourceElementType.dyn_cast<VectorType>()) {
@@ -2609,6 +2614,9 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
 template <typename TransferOp>
 static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
+  // TODO: Be less conservative once we have 0-d vectors.
+  if (op.isZeroD())
+    return failure();
   AffineMap permutationMap = op.permutation_map();
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
@@ -2885,9 +2893,10 @@ static LogicalResult verify(TransferWriteOp op) {
   if (op.hasBroadcastDim())
     return op.emitOpError("should not have broadcast dimensions");
 
-  if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              maskType, permutationMap,
-                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
+  if (failed(
+          verifyTransferOp(cast<VectorTransferOpInterface>(op.getOperation()),
+                           shapedType, vectorType, maskType, permutationMap,
+                           op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   return verifyPermutationMap(permutationMap,
