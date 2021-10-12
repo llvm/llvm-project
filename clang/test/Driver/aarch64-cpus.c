@@ -339,13 +339,6 @@
 // ARM64-A64FX: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "a64fx"
 // ARM64-A64FX-TUNE: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "generic"
 
-// RUN: %clang -target arm64-apple-darwin -arch arm64 -mcpu=vortex -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VORTEX %s
-// ARM64-VORTEX: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vortex" "-target-feature" "+v8.3a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+rcpc" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+sha2" "-target-feature" "+aes"
-
-// Check that we also support -march, which overrides -mcpu (same for e.g. -march=v8.1a -mcpu=cyclone not enabling crc).
-// RUN: %clang -target arm64-apple-darwin -arch arm64 -march=armv8.3a -mcpu=vortex -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VORTEX-V83 %s
-// ARM64-VORTEX-V83: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vortex" "-target-feature" "+neon" "-target-feature" "+v8.3a" "-target-feature" "+zcm" "-target-feature" "+zcz"
-
 // RUN: %clang -target aarch64 -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL %s
 // RUN: %clang -target aarch64 -mtune=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL-TUNE %s

@@ -1001,13 +1001,6 @@ INSTANTIATE_TEST_SUITE_P(
                          AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD,
                          "8-A"),
-        ARMCPUTestParams("vortex", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_LSE | AArch64::AEK_RAS |
-                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
-                             AArch64::AEK_FP16,
-                         "8.3-A"),
         ARMCPUTestParams("apple-a7", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD,
@@ -1187,15 +1180,13 @@ INSTANTIATE_TEST_SUITE_P(
 
 static constexpr unsigned NumAArch64CPUArchs = 48;
 
-static constexpr unsigned AdditionalAArch64CPUArchs = 1;
-
 TEST(TargetParserTest, testAArch64CPUArchList) {
-  SmallVector<StringRef, NumAArch64CPUArchs + AdditionalAArch64CPUArchs> List;
+  SmallVector<StringRef, NumAArch64CPUArchs> List;
   AArch64::fillValidCPUArchList(List);
 
   // No list exists for these in this test suite, so ensure all are
   // valid, and match the expected 'magic' count.
-  EXPECT_EQ(List.size(), NumAArch64CPUArchs + AdditionalAArch64CPUArchs);
+  EXPECT_EQ(List.size(), NumAArch64CPUArchs);
   for(StringRef CPU : List) {
     EXPECT_NE(AArch64::parseCPUArch(CPU), AArch64::ArchKind::INVALID);
   }

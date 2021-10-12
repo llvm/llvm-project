@@ -196,8 +196,6 @@ AARCH64_CPU_NAME("neoverse-v1", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,
                   AArch64::AEK_DOTPROD ))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
-AARCH64_CPU_NAME("vortex", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_FP16))
 AARCH64_CPU_NAME("apple-a7", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("apple-a8", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,

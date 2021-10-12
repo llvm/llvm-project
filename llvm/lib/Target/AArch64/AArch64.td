@@ -1222,7 +1222,6 @@ def : ProcessorModel<"tsv110", TSV110Model, [ProcTSV110]>;
 
 // Support some CPU codenames as aliases for apple-aN so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, [ProcAppleA7]>;
-def : ProcessorModel<"vortex", CycloneModel, [ProcAppleA12]>;
 
 // iPhone and iPad CPUs
 def : ProcessorModel<"apple-a7", CycloneModel, [ProcAppleA7]>;

@@ -62,6 +62,6 @@
 // Check the CPU defaults and overrides.
 
 // RUN: %clang -target arm64e-apple-darwin -c %s -### 2>&1 | FileCheck %s --check-prefix APPLE-A12
-// RUN: %clang -target arm64e-apple-darwin -mcpu=vortex -c %s -### 2>&1 | FileCheck %s --check-prefix VORTEX
+// RUN: %clang -target arm64e-apple-darwin -mcpu=apple-a13 -c %s -### 2>&1 | FileCheck %s --check-prefix APPLE-A13
 // APPLE-A12: "-cc1"{{.*}} "-target-cpu" "apple-a12"
-// VORTEX: "-cc1"{{.*}} "-target-cpu" "vortex"
+// APPLE-A13: "-cc1"{{.*}} "-target-cpu" "apple-a13"
