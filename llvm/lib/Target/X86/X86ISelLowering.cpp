@@ -46766,6 +46766,11 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
     });
   };
 
+  auto IsZExtLike = [DAG = &DAG, ScalarVT](SDValue V) {
+    unsigned MaxActiveBits = DAG->computeKnownBits(V).countMaxActiveBits();
+    return MaxActiveBits <= ScalarVT.getSizeInBits();
+  };
+
   // Check if each element of the vector is right-shifted by one.
   SDValue LHS = In.getOperand(0);
   SDValue RHS = In.getOperand(1);
@@ -46785,6 +46790,9 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   };
 
   auto AVGSplitter = [&](std::array<SDValue, 2> Ops) {
+    for (SDValue &Op : Ops)
+      if (Op.getValueType() != VT)
+        Op = DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     // Pad to a power-of-2 vector, split+apply and extract the original vector.
     unsigned NumElemsPow2 = PowerOf2Ceil(NumElems);
     EVT Pow2VT = EVT::getVectorVT(*DAG.getContext(), ScalarVT, NumElemsPow2);
@@ -46855,12 +46863,9 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
 
     // Check if Operands[0] and Operands[1] are results of type promotion.
     for (int j = 0; j < 2; ++j)
-      if (Operands[j].getValueType() != VT) {
-        if (Operands[j].getOpcode() != ISD::ZERO_EXTEND ||
-            Operands[j].getOperand(0).getValueType() != VT)
+      if (Operands[j].getValueType() != VT)
+        if (!IsZExtLike(Operands[j]))
           return SDValue();
-        Operands[j] = Operands[j].getOperand(0);
-      }
 
     // The pattern is detected, emit X86ISD::AVG instruction(s).
     return AVGSplitter({Operands[0], Operands[1]});
