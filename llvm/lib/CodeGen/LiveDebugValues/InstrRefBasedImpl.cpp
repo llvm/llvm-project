@@ -755,6 +755,7 @@ public:
 
 ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
 
+#ifndef NDEBUG
 void DbgValue::dump(const MLocTracker *MTrack) const {
   if (Kind == Const) {
     MO.dump();
@@ -771,6 +772,7 @@ void DbgValue::dump(const MLocTracker *MTrack) const {
   if (Properties.DIExpr)
     dbgs() << " " << *Properties.DIExpr;
 }
+#endif
 
 MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
                          const TargetRegisterInfo &TRI,
@@ -862,6 +864,7 @@ std::string MLocTracker::IDAsString(const ValueIDNum &Num) const {
   return Num.asString(DefName);
 }
 
+#ifndef NDEBUG
 LLVM_DUMP_METHOD void MLocTracker::dump() {
   for (auto Location : locations()) {
     std::string MLocName = LocIdxToName(Location.Value.getLoc());
@@ -876,6 +879,7 @@ LLVM_DUMP_METHOD void MLocTracker::dump_mloc_map() {
     dbgs() << "Idx " << Location.Idx.asU64() << " " << foo << "\n";
   }
 }
+#endif
 
 MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
                                          const DebugVariable &Var,

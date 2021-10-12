@@ -1127,11 +1127,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
-        {{"count", AnyInt, Rank::scalar, Optionality::optional,
+        {{"count", SameInt, Rank::scalar, Optionality::optional,
              common::Intent::Out},
             {"count_rate", AnyIntOrReal, Rank::scalar, Optionality::optional,
                 common::Intent::Out},
-            {"count_max", AnyInt, Rank::scalar, Optionality::optional,
+            {"count_max", SameInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };

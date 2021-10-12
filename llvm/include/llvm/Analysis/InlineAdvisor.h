@@ -219,15 +219,16 @@ public:
   InlineAdvisorAnalysis() = default;
   struct Result {
     Result(Module &M, ModuleAnalysisManager &MAM) : M(M), MAM(MAM) {}
-    bool invalidate(Module &, const PreservedAnalyses &,
+    bool invalidate(Module &, const PreservedAnalyses &PA,
                     ModuleAnalysisManager::Invalidator &) {
-      // InlineAdvisor must be preserved across analysis invalidations.
-      return false;
+      // Check whether the analysis has been explicitly invalidated. Otherwise,
+      // it's stateless and remains preserved.
+      auto PAC = PA.getChecker<InlineAdvisorAnalysis>();
+      return !PAC.preservedWhenStateless();
     }
     bool tryCreate(InlineParams Params, InliningAdvisorMode Mode,
                    StringRef ReplayFile);
     InlineAdvisor *getAdvisor() const { return Advisor.get(); }
-    void clear() { Advisor.reset(); }
 
   private:
     Module &M;

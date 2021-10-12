@@ -1380,3 +1380,17 @@ func @concretize_broadcast_result_type(%arg0 : tensor<2xindex>,
       -> tensor<?xindex>
   return %0 : tensor<?xindex>
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_shapeof
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<?x?xf64>
+func @extract_shapeof(%arg0 : tensor<?x?xf64>) -> index {
+ %c1 = constant 1 : index
+// CHECK:        %[[C1:.*]] = constant 1
+ %shape = shape.shape_of %arg0 : tensor<?x?xf64> -> tensor<2xindex>
+// CHECK:        %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C1]]
+ %result = tensor.extract %shape[%c1] : tensor<2xindex>
+// CHECK:        return %[[DIM]]
+ return %result : index
+}
