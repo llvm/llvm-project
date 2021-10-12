@@ -836,7 +836,7 @@ struct LateCodegenStrategyOptions {
   /// Vector lowering operations may result in surprising behavior when
   /// composing multiple codegen strategies and must be enabled explicitly.
   int64_t maxTransferRank = 1;
-  bool enableVectorTransferLowering = false;
+  bool enableVectorTransferLowering = true;
   bool enableVectorTransferPartialRewrite = false;
   bool enableVectorContractLowering = false;
   bool enableVectorToSCFConversion = false;
@@ -855,7 +855,7 @@ struct LinalgEnablingOptions {
 /// form.
 struct LinalgVectorLoweringOptions {
   int64_t maxTransferRank = 1;
-  bool enableVectorTransferLowering = false;
+  bool enableVectorTransferLowering = true;
   bool enableVectorTransferPartialRewrite = false;
   bool enableVectorContractLowering = false;
   bool enableVectorToSCFConversion = false;
