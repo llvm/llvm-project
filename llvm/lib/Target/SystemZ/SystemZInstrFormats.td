@@ -5356,6 +5356,10 @@ multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
                                   imm64:$length),
                           [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
                                            imm64:$length))]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           ADDR64:$length))]>;
   }
 }
 
