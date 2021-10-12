@@ -122,10 +122,14 @@ getKindForOp(Operation *reductionOp) {
   return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
              reductionOp)
       .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<AndOp>([&](auto op) { return vector::CombiningKind::AND; })
       .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
       .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
       .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
       .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<MulIOp, MulFOp>([&](auto op) { return vector::CombiningKind::MUL; })
+      .Case<OrOp>([&](auto op) { return vector::CombiningKind::OR; })
+      .Case<XOrOp>([&](auto op) { return vector::CombiningKind::XOR; })
       .Default([&](auto op) { return llvm::None; });
 }
 
