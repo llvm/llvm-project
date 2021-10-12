@@ -84,3 +84,9 @@ vle1.v v8, (a0)
 # ALIAS:    vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
 # NO-ALIAS: vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
 vse1.v v8, (a0)
+# ALIAS:    vfredusum.vs v8, v4, v20, v0.t    # encoding: [0x57,0x14,0x4a,0x04]
+# NO-ALIAS: vfredusum.vs v8, v4, v20, v0.t   # encoding: [0x57,0x14,0x4a,0x04]
+vfredsum.vs v8, v4, v20, v0.t
+# ALIAS:    vfwredusum.vs v8, v4, v20, v0.t   # encoding: [0x57,0x14,0x4a,0xc4]
+# NO-ALIAS: vfwredusum.vs v8, v4, v20, v0.t  # encoding: [0x57,0x14,0x4a,0xc4]
+vfwredsum.vs v8, v4, v20, v0.t

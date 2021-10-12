@@ -81,8 +81,9 @@ define <16 x i8> @cmp_allbits_concat_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    pcmpeqw %xmm0, %xmm1
-; CHECK-NEXT:    pcmpeqw %xmm2, %xmm0
-; CHECK-NEXT:    packsswb %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqw %xmm0, %xmm2
+; CHECK-NEXT:    packsswb %xmm1, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %zx = zext <16 x i8> %x to <16 x i16>
   %zy = zext <16 x i8> %y to <16 x i16>

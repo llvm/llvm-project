@@ -41,18 +41,17 @@ define i32 @fold_urem_positive_even(i32 %x) {
 define i32 @combine_urem_udiv(i32 %x) {
 ; CHECK-LABEL: combine_urem_udiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    imulq $1491936009, %rax, %rax # imm = 0x58ED2309
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    subl %eax, %ecx
-; CHECK-NEXT:    shrl %ecx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    shrl $6, %ecx
-; CHECK-NEXT:    imull $95, %ecx, %eax
-; CHECK-NEXT:    subl %eax, %edi
-; CHECK-NEXT:    leal (%rdi,%rcx), %eax
+; CHECK-NEXT:    imulq $1491936009, %rax, %rcx # imm = 0x58ED2309
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    shrl $6, %eax
+; CHECK-NEXT:    imull $95, %eax, %ecx
+; CHECK-NEXT:    subl %ecx, %edi
+; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = urem i32 %x, 95
   %2 = udiv i32 %x, 95

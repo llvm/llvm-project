@@ -20,6 +20,7 @@ static_library("JITLink") {
     "MachOLinkGraphBuilder.cpp",
     "MachO_arm64.cpp",
     "MachO_x86_64.cpp",
+    "MemoryFlags.cpp",
     "aarch64.cpp",
     "riscv.cpp",
     "x86_64.cpp",

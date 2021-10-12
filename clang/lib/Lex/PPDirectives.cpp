@@ -745,7 +745,7 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
   // to the current module, if there is one.
   return getLangOpts().CurrentModule.empty()
              ? nullptr
-             : HeaderInfo.lookupModule(getLangOpts().CurrentModule);
+             : HeaderInfo.lookupModule(getLangOpts().CurrentModule, Loc);
 }
 
 const FileEntry *

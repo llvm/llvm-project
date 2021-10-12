@@ -20,96 +20,104 @@
 int main(int, char**)
 {
     assert(std::stol("0") == 0);
-    assert(std::stol(L"0") == 0);
     assert(std::stol("-0") == 0);
-    assert(std::stol(L"-0") == 0);
     assert(std::stol("-10") == -10);
-    assert(std::stol(L"-10") == -10);
     assert(std::stol(" 10") == 10);
-    assert(std::stol(L" 10") == 10);
-    size_t idx = 0;
-    assert(std::stol("10g", &idx, 16) == 16);
-    assert(idx == 2);
-    idx = 0;
-    assert(std::stol(L"10g", &idx, 16) == 16);
-    assert(idx == 2);
+    {
+        size_t idx = 0;
+        assert(std::stol("10g", &idx, 16) == 16);
+        assert(idx == 2);
+    }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    idx = 0;
-    try
     {
-        std::stol("", &idx);
-        assert(false);
+        size_t idx = 0;
+        try {
+            std::stol("", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    catch (const std::invalid_argument&)
     {
-        assert(idx == 0);
+        size_t idx = 0;
+        try {
+            std::stol("  - 8", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    try
     {
-        std::stol(L"", &idx);
-        assert(false);
+        size_t idx = 0;
+        try {
+            std::stol("a1", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    catch (const std::invalid_argument&)
     {
-        assert(idx == 0);
+        size_t idx = 0;
+        try {
+            // LWG#2009 and PR14919
+            std::stol("9999999999999999999999999999999999999999999999999", &idx);
+            assert(false);
+        } catch (const std::out_of_range&) {
+            assert(idx == 0);
+        }
     }
-    try
+#endif // TEST_HAS_NO_EXCEPTIONS
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert(std::stol(L"0") == 0);
+    assert(std::stol(L"-0") == 0);
+    assert(std::stol(L"-10") == -10);
+    assert(std::stol(L" 10") == 10);
     {
-        std::stol("  - 8", &idx);
-        assert(false);
+        size_t idx = 0;
+        assert(std::stol(L"10g", &idx, 16) == 16);
+        assert(idx == 2);
     }
-    catch (const std::invalid_argument&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        assert(idx == 0);
+        size_t idx = 0;
+        try {
+            std::stol(L"", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    try
     {
-        std::stol(L"  - 8", &idx);
-        assert(false);
+        size_t idx = 0;
+        try {
+            std::stol(L"  - 8", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    catch (const std::invalid_argument&)
     {
-        assert(idx == 0);
+        size_t idx = 0;
+        try {
+            std::stol(L"a1", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    try
     {
-        std::stol("a1", &idx);
-        assert(false);
+        size_t idx = 0;
+        try {
+            // LWG#2009 and PR14919
+            std::stol(L"9999999999999999999999999999999999999999999999999", &idx);
+            assert(false);
+        } catch (const std::out_of_range&) {
+            assert(idx == 0);
+        }
     }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        std::stol(L"a1", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        // LWG#2009 and PR14919
-        std::stol("9999999999999999999999999999999999999999999999999", &idx);
-        assert(false);
-    }
-    catch (const std::out_of_range&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        // LWG#2009 and PR14919
-        std::stol(L"9999999999999999999999999999999999999999999999999", &idx);
-        assert(false);
-    }
-    catch (const std::out_of_range&)
-    {
-        assert(idx == 0);
-    }
-#endif
+#endif // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

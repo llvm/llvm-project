@@ -555,6 +555,20 @@ void insert(Args &&...args);
 void foo() {
   insert(Foo(2, 2, 2)); // expected-error{{no viable constructor or deduction guide}}
 }
+
+namespace PR52139 {
+  struct Abstract {
+    template <class... Ts>
+    struct overloaded : Ts... {
+      using Ts::operator()...;
+    };
+    template <class... Ts>
+    overloaded(Ts...) -> overloaded<Ts...>;
+
+  private:
+    virtual void f() = 0;
+  };
+}
 #else
 
 // expected-no-diagnostics

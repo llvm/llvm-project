@@ -1185,11 +1185,11 @@ let TargetPrefix = "riscv" in {
   defm vwredsum : RISCVReduction;
 
   defm vfredosum : RISCVReduction;
-  defm vfredsum : RISCVReduction;
+  defm vfredusum : RISCVReduction;
   defm vfredmin : RISCVReduction;
   defm vfredmax : RISCVReduction;
 
-  defm vfwredsum : RISCVReduction;
+  defm vfwredusum : RISCVReduction;
   defm vfwredosum : RISCVReduction;
 
   def int_riscv_vmand: RISCVBinaryAAANoMask;

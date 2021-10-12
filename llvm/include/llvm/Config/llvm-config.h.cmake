@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 401441
+#define LLVM_MAIN_REVISION 401565
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -103,9 +103,5 @@
 
 /* Define if the xar_open() function is supported on this platform. */
 #cmakedefine LLVM_HAVE_LIBXAR ${LLVM_HAVE_LIBXAR}
-
-/* Whether Timers signpost passes in Xcode Instruments */
-#cmakedefine01 LLVM_SUPPORT_XCODE_SIGNPOSTS
-
 
 #endif

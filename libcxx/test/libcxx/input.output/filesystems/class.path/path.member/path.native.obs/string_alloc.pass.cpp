@@ -146,7 +146,9 @@ int main(int, char**)
   {
     auto const& S = shortString;
     doShortStringTest<char>(S);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     doShortStringTest<wchar_t>(S);
+#endif
     doShortStringTest<char16_t>(S);
     doShortStringTest<char32_t>(S);
 #if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)
@@ -156,7 +158,9 @@ int main(int, char**)
   {
     auto const& S = longString;
     doLongStringTest<char>(S);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     doLongStringTest<wchar_t>(S);
+#endif
     doLongStringTest<char16_t>(S);
     doLongStringTest<char32_t>(S);
 #if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)

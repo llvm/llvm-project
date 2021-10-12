@@ -479,16 +479,14 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ);
+      GOTSection = &G.createSection("$__GOT", MemProt::Read);
     return *GOTSection;
   }
 
   Section &getStubsSection() {
-    if (!StubsSection) {
-      auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
-          sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", StubsProt);
-    }
+    if (!StubsSection)
+      StubsSection =
+          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
     return *StubsSection;
   }
 

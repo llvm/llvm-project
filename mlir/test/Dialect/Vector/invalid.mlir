@@ -30,6 +30,13 @@ func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func @broadcast_unknown(%arg0: memref<4x8xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
+  %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
+}
+
+// -----
+
 func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
   // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xi32>
@@ -1386,4 +1393,17 @@ func @insert_map_size(%v: vector<3xf32>, %v1: vector<64xf32>, %id : index) {
 func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
   // expected-error@+1 {{'vector.insert_map' op expected number of ids must match the number of dimensions distributed}}
   %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
+}
+
+// -----
+
+func @vector_transfer_ops_0d(%arg0: tensor<f32>)
+  -> tensor<f32> {
+    %f0 = constant 0.0 : f32
+    // expected-error@+1 {{0-d transfer requires vector<1xt> shape and () -> (0) permutation_map}}
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<(d0)->(d0)>} :
+      tensor<f32>, vector<1xf32>
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, tensor<f32>
+    return %1: tensor<f32>
 }

@@ -301,14 +301,17 @@ def Vector_MultiDimReductionOp :
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
-    Reduces an n-D vector into an (n-k)-D vector using the given operation
-    (add/mul/min/max for int/fp and and/or/xor for int only).
+    Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n) 
+    using the given operation (add/mul/min/max for int/fp and and/or/xor for
+    int only).
 
     Example:
 
     ```mlir
     %1 = vector.multi_reduction "add", %0 [1, 3] :
       vector<4x8x16x32xf32> into vector<4x16xf32>
+    %2 = vector.multi_reduction "add", %1 [0, 1] :
+      vector<4x16xf32> into f32
     ```
   }];
   let builders = [
@@ -322,8 +325,14 @@ def Vector_MultiDimReductionOp :
     VectorType getSourceVectorType() {
       return source().getType().cast<VectorType>();
     }
-    VectorType getDestVectorType() {
-      return dest().getType().cast<VectorType>();
+    Type getDestType() {
+      return dest().getType();
+    }
+
+    bool isReducedDim(int64_t d) {
+      assert(d >= 0 && d < static_cast<int64_t>(getReductionMask().size()) &&
+        "d overflows the number of dims");
+      return getReductionMask()[d];
     }
 
     SmallVector<bool> getReductionMask() {
@@ -341,18 +350,28 @@ def Vector_MultiDimReductionOp :
     }
 
     static SmallVector<int64_t> inferDestShape(
-      ArrayRef<int64_t> shape, ArrayRef<bool> reducedDimsMask) {
-      assert(shape.size() == reducedDimsMask.size() &&
-             "shape and maks of different sizes");
+      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask) {
+      assert(sourceShape.size() == reducedDimsMask.size() &&
+             "sourceShape and maks of different sizes");
       SmallVector<int64_t> res;
-      for (auto it : llvm::zip(reducedDimsMask, shape))
+      for (auto it : llvm::zip(reducedDimsMask, sourceShape))
         if (!std::get<0>(it))
           res.push_back(std::get<1>(it));
       return res;
     }
+
+    static Type inferDestType(
+      ArrayRef<int64_t> sourceShape, ArrayRef<bool> reducedDimsMask, Type elementType) {
+      auto targetShape = inferDestShape(sourceShape, reducedDimsMask);
+      // TODO: update to also allow 0-d vectors when available.
+      if (targetShape.empty())
+        return elementType;
+      return VectorType::get(targetShape, elementType);
+    }
   }];
   let assemblyFormat =
     "$kind `,` $source attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+  let hasFolder = 1;
 }
 
 def Vector_BroadcastOp :
@@ -1256,6 +1275,11 @@ def Vector_TransferReadOp :
     %4 = vector.transfer_read %arg1[%c3, %c3], %vf0
       {permutation_map = (d0, d1)->(d0, d1)}
         : tensor<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
+
+    // Special encoding for 0-d transfer with 0-d tensor/memref, vector shape
+    // {1} and permutation_map () -> (0).
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
     ```
   }];
 
@@ -1383,6 +1407,11 @@ def Vector_TransferWriteOp :
     %5 = vector.transfer_write %4, %arg1[%c3, %c3]
       {permutation_map = (d0, d1)->(d0, d1)}
         : vector<1x1x4x3xf32>, tensor<?x?xvector<4x3xf32>>
+
+    // Special encoding for 0-d transfer with 0-d tensor/memref, vector shape
+    // {1} and permutation_map () -> (0).
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, tensor<f32>
     ```
   }];
 

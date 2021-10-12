@@ -36,11 +36,13 @@ int main(int, char**)
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == ',');
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == L',');
         }
+#endif
     }
     {
         std::locale l(LOCALE_en_US_UTF_8);
@@ -49,32 +51,39 @@ int main(int, char**)
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == ',');
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == L',');
         }
+#endif
     }
     {
+        // The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
         std::locale l(LOCALE_fr_FR_UTF_8);
-// The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
-#if defined(_CS_GNU_LIBC_VERSION)
-        const char sep = ' ';
-        const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
-#else
-        const char sep = ',';
-        const wchar_t wsep = L',';
-#endif
         {
+#if defined(_CS_GNU_LIBC_VERSION)
+            const char sep = ' ';
+#else
+            const char sep = ',';
+#endif
             typedef char C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == sep);
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
+#if defined(_CS_GNU_LIBC_VERSION)
+            const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
+#else
+            const wchar_t wsep = L',';
+#endif
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.thousands_sep() == wsep);
         }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
     }
 
     return 0;

@@ -1796,7 +1796,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  I->getOwnKind() == OwnershipAttr::Returns) {
         // A returns attribute conflicts with any other returns attribute using
         // a different index.
-        if (std::find(I->args_begin(), I->args_end(), Idx) == I->args_end()) {
+        if (!llvm::is_contained(I->args(), Idx)) {
           S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
               << I->args_begin()->getSourceIndex();
           if (I->args_size())
@@ -2492,6 +2492,15 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         (!IsUnavailable && !Deprecated.isValid())) {
       S.Diag(AL.getLoc(),
              diag::warn_availability_swift_unavailable_deprecated_only);
+      return;
+    }
+  }
+
+  if (II->isStr("fuchsia")) {
+    Optional<unsigned> Min, Sub;
+    if ((Min = Introduced.Version.getMinor()) ||
+        (Sub = Introduced.Version.getSubminor())) {
+      S.Diag(AL.getLoc(), diag::warn_availability_fuchsia_unavailable_minor);
       return;
     }
   }
@@ -6878,28 +6887,28 @@ static void handleBPFPreserveAccessIndexAttr(Sema &S, Decl *D,
   Rec->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
 }
 
-static bool hasBTFTagAttr(Decl *D, StringRef Tag) {
-  for (const auto *I : D->specific_attrs<BTFTagAttr>()) {
-    if (I->getBTFTag() == Tag)
+static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {
+  for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
+    if (I->getBTFDeclTag() == Tag)
       return true;
   }
   return false;
 }
 
-static void handleBTFTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleBTFDeclTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
     return;
-  if (hasBTFTagAttr(D, Str))
+  if (hasBTFDeclTagAttr(D, Str))
     return;
 
-  D->addAttr(::new (S.Context) BTFTagAttr(S.Context, AL, Str));
+  D->addAttr(::new (S.Context) BTFDeclTagAttr(S.Context, AL, Str));
 }
 
-BTFTagAttr *Sema::mergeBTFTagAttr(Decl *D, const BTFTagAttr &AL) {
-  if (hasBTFTagAttr(D, AL.getBTFTag()))
+BTFDeclTagAttr *Sema::mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL) {
+  if (hasBTFDeclTagAttr(D, AL.getBTFDeclTag()))
     return nullptr;
-  return ::new (Context) BTFTagAttr(Context, AL, AL.getBTFTag());
+  return ::new (Context) BTFDeclTagAttr(Context, AL, AL.getBTFDeclTag());
 }
 
 static void handleWebAssemblyExportNameAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7938,8 +7947,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_BPFPreserveAccessIndex:
     handleBPFPreserveAccessIndexAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_BTFTag:
-    handleBTFTagAttr(S, D, AL);
+  case ParsedAttr::AT_BTFDeclTag:
+    handleBTFDeclTagAttr(S, D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyExportName:
     handleWebAssemblyExportNameAttr(S, D, AL);

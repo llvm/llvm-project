@@ -251,6 +251,15 @@ libc++ specific options
    This option can be used to enable or disable the filesystem components on
    platforms that may not support them. For example on Windows when using MSVC.
 
+.. option:: LIBCXX_ENABLE_WIDE_CHARACTERS:BOOL
+
+   **Default**: ``ON``
+
+   This option can be used to disable support for ``wchar_t`` in the library. It also
+   allows the library to work on top of a C Standard Library that does not provide
+   support for ``wchar_t``. This is especially useful in embedded settings where
+   C Standard Libraries don't always provide all the usual bells and whistles.
+
 .. option:: LIBCXX_ENABLE_INCOMPLETE_FEATURES:BOOL
 
   **Default**: ``ON``

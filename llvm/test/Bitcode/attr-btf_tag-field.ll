@@ -59,14 +59,14 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !15 = !{!16}
 !16 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !14, file: !1, line: 8, baseType: !12, size: 32, annotations: !17)
 !17 = !{!18, !19}
-!18 = !{!"btf_tag", !"tag1"}
-!19 = !{!"btf_tag", !"tag2"}
+!18 = !{!"btf_decl_tag", !"tag1"}
+!19 = !{!"btf_decl_tag", !"tag2"}
 
 ; CHECK:        !DIDerivedType(tag: DW_TAG_member, name: "a"
 ; CHECK-SAME:   annotations: ![[ANNOT:[0-9]+]]
 ; CHECK:        ![[ANNOT]] = !{![[TAG1:[0-9]+]], ![[TAG2:[0-9]+]]}
-; CHECK:        ![[TAG1]] = !{!"btf_tag", !"tag1"}
-; CHECK:        ![[TAG2]] = !{!"btf_tag", !"tag2"}
+; CHECK:        ![[TAG1]] = !{!"btf_decl_tag", !"tag1"}
+; CHECK:        ![[TAG2]] = !{!"btf_decl_tag", !"tag2"}
 
 !20 = !DILocalVariable(name: "arg", arg: 1, scope: !9, file: !1, line: 11, type: !13)
 !21 = !DILocation(line: 11, column: 20, scope: !9)

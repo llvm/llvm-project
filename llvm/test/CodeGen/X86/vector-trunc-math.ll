@@ -2816,8 +2816,8 @@ define <16 x i8> @trunc_and_v16i32_v16i8(<16 x i32> %a0, <16 x i32> %a1) nounwin
 ; SSE-NEXT:    packuswb %xmm7, %xmm6
 ; SSE-NEXT:    pand %xmm8, %xmm5
 ; SSE-NEXT:    pand %xmm1, %xmm5
-; SSE-NEXT:    pand %xmm8, %xmm4
-; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm8
+; SSE-NEXT:    pand %xmm8, %xmm0
 ; SSE-NEXT:    packuswb %xmm5, %xmm0
 ; SSE-NEXT:    packuswb %xmm6, %xmm0
 ; SSE-NEXT:    retq
@@ -2868,8 +2868,8 @@ define <16 x i8> @trunc_and_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE-NEXT:    pand %xmm4, %xmm3
 ; SSE-NEXT:    pand %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm4, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm4
+; SSE-NEXT:    pand %xmm4, %xmm0
 ; SSE-NEXT:    packuswb %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;

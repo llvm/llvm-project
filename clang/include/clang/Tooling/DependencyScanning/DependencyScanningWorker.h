@@ -83,6 +83,8 @@ private:
   /// worker. If null, the file manager will not be reused.
   llvm::IntrusiveRefCntPtr<FileManager> Files;
   ScanningOutputFormat Format;
+  /// Whether to optimize the modules' command-line arguments.
+  bool OptimizeArgs;
 };
 
 } // end namespace dependencies

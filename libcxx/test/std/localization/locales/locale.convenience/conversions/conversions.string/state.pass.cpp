@@ -12,6 +12,8 @@
 
 // state_type state() const;
 
+// XFAIL: libcpp-has-no-wide-characters
+
 #include <locale>
 #include <codecvt>
 

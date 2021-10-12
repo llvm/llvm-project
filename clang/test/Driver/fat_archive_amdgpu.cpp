@@ -1,6 +1,7 @@
 // REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
+// UNSUPPORTED: -aix
 
 // See the steps to create a fat archive are given at the end of the file.
 

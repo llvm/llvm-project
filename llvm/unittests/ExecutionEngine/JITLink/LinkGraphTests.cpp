@@ -15,9 +15,6 @@
 using namespace llvm;
 using namespace llvm::jitlink;
 
-static auto RWFlags =
-    sys::Memory::ProtectionFlags(sys::Memory::MF_READ | sys::Memory::MF_WRITE);
-
 static const char BlockContentBytes[] = {
     0x54, 0x68, 0x65, 0x72, 0x65, 0x20, 0x77, 0x61, 0x73, 0x20, 0x6d, 0x6f,
     0x76, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x61, 0x74, 0x20, 0x74, 0x68,
@@ -78,7 +75,7 @@ TEST(LinkGraphTest, AddressAccess) {
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
 
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 4, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
@@ -94,7 +91,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
@@ -102,7 +99,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   auto &S2 = G.addDefinedSymbol(B2, 4, "S2", 4, Linkage::Strong, Scope::Default,
                                 false, false);
 
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
   auto &B3 = G.createContentBlock(Sec2, BlockContent, 0x3000, 8, 0);
   auto &B4 = G.createContentBlock(Sec2, BlockContent, 0x4000, 8, 0);
   auto &S3 = G.addDefinedSymbol(B3, 0, "S3", 4, Linkage::Strong, Scope::Default,
@@ -141,7 +138,7 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
@@ -208,7 +205,7 @@ TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
@@ -253,7 +250,7 @@ TEST(LinkGraphTest, MakeDefined) {
   // Check that we can make an external symbol defined.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
@@ -297,7 +294,7 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   // Check that we can transfer a defined symbol from one block to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
@@ -328,8 +325,8 @@ TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
 
   // Create blocks in each section.
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
@@ -357,8 +354,8 @@ TEST(LinkGraphTest, TransferBlock) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
@@ -401,9 +398,9 @@ TEST(LinkGraphTest, MergeSections) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
-  auto &Sec3 = G.createSection("__data.3", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  auto &Sec3 = G.createSection("__data.3", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
@@ -475,7 +472,7 @@ TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create the block to split.
   auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
