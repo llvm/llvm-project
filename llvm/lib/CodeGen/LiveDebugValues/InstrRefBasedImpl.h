@@ -235,7 +235,9 @@ public:
            "Empty DbgValue constructor must pass in Undef kind");
   }
 
+#ifndef NDEBUG
   void dump(const MLocTracker *MTrack) const;
+#endif
 
   bool operator==(const DbgValue &Other) const {
     if (std::tie(Kind, Properties) != std::tie(Other.Kind, Other.Properties))
@@ -527,9 +529,11 @@ public:
 
   std::string IDAsString(const ValueIDNum &Num) const;
 
+#ifndef NDEBUG
   LLVM_DUMP_METHOD void dump();
 
   LLVM_DUMP_METHOD void dump_mloc_map();
+#endif
 
   /// Create a DBG_VALUE based on  machine location \p MLoc. Qualify it with the
   /// information in \pProperties, for variable Var. Don't insert it anywhere,
