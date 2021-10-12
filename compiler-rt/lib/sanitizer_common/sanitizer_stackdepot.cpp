@@ -24,9 +24,8 @@ static PersistentAllocator<uptr> traceAllocator;
 struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
-  StackDepotNode *link;
   uptr *stack_trace;
-  u32 id;
+  u32 link;
   atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
@@ -58,18 +57,19 @@ struct StackDepotNode {
     internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   }
   args_type load() const {
+    if (!stack_trace)
+      return {};
     u32 tag =
         atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
     return args_type(stack_trace + 1, *stack_trace, tag);
   }
-  StackDepotHandle get_handle() { return StackDepotHandle(this); }
+  static StackDepotHandle get_handle(u32 id);
 
   typedef StackDepotHandle handle_type;
 };
 
 COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
-u32 StackDepotHandle::id() const { return node_->id; }
 int StackDepotHandle::use_count() const {
   return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
@@ -88,13 +88,10 @@ static StackDepot theDepot;
 
 StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
 
-u32 StackDepotPut(StackTrace stack) {
-  StackDepotHandle h = theDepot.Put(stack);
-  return h.valid() ? h.id() : 0;
-}
+u32 StackDepotPut(StackTrace stack) { return theDepot.Put(stack); }
 
 StackDepotHandle StackDepotPut_WithHandle(StackTrace stack) {
-  return theDepot.Put(stack);
+  return StackDepotNode::get_handle(theDepot.Put(stack));
 }
 
 StackTrace StackDepotGet(u32 id) {
@@ -115,6 +112,10 @@ void StackDepotPrintAll() {
 #endif
 }
 
+StackDepotHandle StackDepotNode::get_handle(u32 id) {
+  return StackDepotHandle(&theDepot.nodes[id], id);
+}
+
 bool StackDepotReverseMap::IdDescPair::IdComparator(
     const StackDepotReverseMap::IdDescPair &a,
     const StackDepotReverseMap::IdDescPair &b) {
@@ -126,12 +127,13 @@ void StackDepotReverseMap::Init() const {
     return;
   map_.reserve(StackDepotGetStats().n_uniq_ids + 100);
   for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
-    atomic_uintptr_t *p = &theDepot.tab[idx];
-    uptr v = atomic_load(p, memory_order_consume);
-    StackDepotNode *s = (StackDepotNode*)(v & ~1);
-    for (; s; s = s->link) {
-      IdDescPair pair = {s->id, s};
+    u32 s = atomic_load(&theDepot.tab[idx], memory_order_consume) &
+            StackDepot::kUnlockMask;
+    for (; s;) {
+      const StackDepotNode &node = theDepot.nodes[s];
+      IdDescPair pair = {s, &node};
       map_.push_back(pair);
+      s = node.link;
     }
   }
   Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
