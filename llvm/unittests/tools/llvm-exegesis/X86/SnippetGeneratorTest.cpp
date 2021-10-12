@@ -213,26 +213,6 @@ TEST_F(X86SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
   ASSERT_TRUE(BC.Key.Instructions[0].getOperand(3).isImm());
 }
 
-TEST_F(X86ParallelSnippetGeneratorTest, ParallelInstruction) {
-  // - BNDCL32rr
-  // - Op0 Explicit Use RegClass(BNDR)
-  // - Op1 Explicit Use RegClass(GR32)
-  // - Var0 [Op0]
-  // - Var1 [Op1]
-  const unsigned Opcode = X86::BNDCL32rr;
-  const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("parallel"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions, SizeIs(1));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(2));
-  EXPECT_THAT(IT.getVariableValues()[0], IsInvalid());
-  EXPECT_THAT(IT.getVariableValues()[1], IsInvalid());
-}
-
 TEST_F(X86ParallelSnippetGeneratorTest, SerialInstruction) {
   // - CDQ
   // - Op0 Implicit Def Reg(EAX)
