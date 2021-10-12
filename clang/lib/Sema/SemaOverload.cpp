@@ -3820,8 +3820,8 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
   //   if not that,
   // — L1 and L2 convert to arrays of the same element type, and either the
   //   number of elements n_1 initialized by L1 is less than the number of
-  //   elements n_2 initialized by L2, or (unimplemented:C++20) n_1 = n_2 and L2
-  //   converts to an array of unknown bound and L1 does not,
+  //   elements n_2 initialized by L2, or (C++20) n_1 = n_2 and L2 converts to
+  //   an array of unknown bound and L1 does not,
   // even if one of the other rules in this paragraph would otherwise apply.
   if (!ICS1.isBad()) {
     bool StdInit1 = false, StdInit2 = false;
@@ -3840,13 +3840,23 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
       if (auto *CAT1 = S.Context.getAsConstantArrayType(
               ICS1.getInitializerListContainerType()))
         if (auto *CAT2 = S.Context.getAsConstantArrayType(
-                ICS2.getInitializerListContainerType()))
+                ICS2.getInitializerListContainerType())) {
           if (S.Context.hasSameUnqualifiedType(CAT1->getElementType(),
-                                               CAT2->getElementType()) &&
-              CAT1->getSize() != CAT2->getSize())
-            return CAT1->getSize().ult(CAT2->getSize())
-                       ? ImplicitConversionSequence::Better
-                       : ImplicitConversionSequence::Worse;
+                                               CAT2->getElementType())) {
+            // Both to arrays of the same element type
+            if (CAT1->getSize() != CAT2->getSize())
+              // Different sized, the smaller wins
+              return CAT1->getSize().ult(CAT2->getSize())
+                         ? ImplicitConversionSequence::Better
+                         : ImplicitConversionSequence::Worse;
+            if (ICS1.isInitializerListOfIncompleteArray() !=
+                ICS2.isInitializerListOfIncompleteArray())
+              // One is incomplete, it loses
+              return ICS2.isInitializerListOfIncompleteArray()
+                         ? ImplicitConversionSequence::Better
+                         : ImplicitConversionSequence::Worse;
+          }
+        }
   }
 
   if (ICS1.isStandard())
@@ -5004,9 +5014,15 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   ImplicitConversionSequence Result;
   Result.setBad(BadConversionSequence::no_conversion, From, ToType);
 
-  // We need a complete type for what follows. Incomplete types can never be
-  // initialized from init lists.
-  if (!S.isCompleteType(From->getBeginLoc(), ToType))
+  // We need a complete type for what follows.  With one C++20 exception,
+  // incomplete types can never be initialized from init lists.
+  QualType InitTy = ToType;
+  const ArrayType *AT = S.Context.getAsArrayType(ToType);
+  if (AT && S.getLangOpts().CPlusPlus20)
+    if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
+      // C++20 allows list initialization of an incomplete array type.
+      InitTy = IAT->getElementType();
+  if (!S.isCompleteType(From->getBeginLoc(), InitTy))
     return Result;
 
   // Per DR1467:
@@ -5030,18 +5046,16 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                      AllowObjCWritebackConversion);
     }
 
-    if (const auto *AT = S.Context.getAsArrayType(ToType)) {
-      if (S.IsStringInit(From->getInit(0), AT)) {
-        InitializedEntity Entity =
+    if (AT && S.IsStringInit(From->getInit(0), AT)) {
+      InitializedEntity Entity =
           InitializedEntity::InitializeParameter(S.Context, ToType,
                                                  /*Consumed=*/false);
-        if (S.CanPerformCopyInitialization(Entity, From)) {
-          Result.setStandard();
-          Result.Standard.setAsIdentityConversion();
-          Result.Standard.setFromType(ToType);
-          Result.Standard.setAllToTypes(ToType);
-          return Result;
-        }
+      if (S.CanPerformCopyInitialization(Entity, From)) {
+        Result.setStandard();
+        Result.Standard.setAsIdentityConversion();
+        Result.Standard.setFromType(ToType);
+        Result.Standard.setAllToTypes(ToType);
+        return Result;
       }
     }
   }
@@ -5059,22 +5073,21 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   default-constructible, and if all the elements of the initializer list
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
-  QualType InitTy = ToType;
-  ArrayType const *AT = S.Context.getAsArrayType(ToType);
   if (AT || S.isStdInitializerList(ToType, &InitTy)) {
     unsigned e = From->getNumInits();
     ImplicitConversionSequence DfltElt;
     DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
                    QualType());
+    QualType ContTy = ToType;
+    bool IsUnbounded = false;
     if (AT) {
-      // Result has been initialized above as a BadConversionSequence
       InitTy = AT->getElementType();
       if (ConstantArrayType const *CT = dyn_cast<ConstantArrayType>(AT)) {
         if (CT->getSize().ult(e)) {
           // Too many inits, fatally bad
           Result.setBad(BadConversionSequence::too_many_initializers, From,
                         ToType);
-          Result.setInitializerListContainerType(ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
           return Result;
         }
         if (CT->getSize().ugt(e)) {
@@ -5089,10 +5102,23 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
             // No {} init, fatally bad
             Result.setBad(BadConversionSequence::too_few_initializers, From,
                           ToType);
-            Result.setInitializerListContainerType(ToType);
+            Result.setInitializerListContainerType(ContTy, IsUnbounded);
             return Result;
           }
         }
+      } else {
+        assert(isa<IncompleteArrayType>(AT) && "Expected incomplete array");
+        IsUnbounded = true;
+        if (!e) {
+          // Cannot convert to zero-sized.
+          Result.setBad(BadConversionSequence::too_few_initializers, From,
+                        ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
+          return Result;
+        }
+        llvm::APInt Size(S.Context.getTypeSize(S.Context.getSizeType()), e);
+        ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr,
+                                                ArrayType::Normal, 0);
       }
     }
 
@@ -5115,7 +5141,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         Result = ICS;
         // Bail as soon as we find something unconvertible.
         if (Result.isBad()) {
-          Result.setInitializerListContainerType(ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
           return Result;
         }
       }
@@ -5128,8 +5154,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                 S, From->getEndLoc(), DfltElt, Result) ==
                                 ImplicitConversionSequence::Worse)
       Result = DfltElt;
-
-    Result.setInitializerListContainerType(ToType);
+    // Record the type being initialized so that we may compare sequences
+    Result.setInitializerListContainerType(ContTy, IsUnbounded);
     return Result;
   }
 

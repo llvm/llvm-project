@@ -5874,14 +5874,14 @@ void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
     // FIXME: Consider also unwrapping array of unknown bound and VLA.
     if (auto *CAT1 = dyn_cast<ConstantArrayType>(AT1)) {
       auto *CAT2 = dyn_cast<ConstantArrayType>(AT2);
-      if (!(CAT2 && CAT1->getSize() == CAT2->getSize()) &&
-          !(getLangOpts().CPlusPlus20 && AllowPiMismatch &&
-            isa<IncompleteArrayType>(AT2)))
+      if (!((CAT2 && CAT1->getSize() == CAT2->getSize()) ||
+            (AllowPiMismatch && getLangOpts().CPlusPlus20 &&
+             isa<IncompleteArrayType>(AT2))))
         return;
     } else if (isa<IncompleteArrayType>(AT1)) {
-      if (!isa<IncompleteArrayType>(AT2) &&
-          !(getLangOpts().CPlusPlus20 && AllowPiMismatch &&
-            isa<ConstantArrayType>(AT2)))
+      if (!(isa<IncompleteArrayType>(AT2) ||
+            (AllowPiMismatch && getLangOpts().CPlusPlus20 &&
+             isa<ConstantArrayType>(AT2))))
         return;
     } else {
       return;
