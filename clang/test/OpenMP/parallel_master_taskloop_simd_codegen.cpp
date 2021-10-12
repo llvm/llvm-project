@@ -70,7 +70,6 @@ struct S {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR__CASTED10:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
@@ -114,6 +113,7 @@ struct S {
 // CHECK1:       omp_if.else:
 // CHECK1-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 [[TMP0]], i32* [[DOTTHREADID_TEMP_]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @.omp_outlined..5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTBOUND_ZERO_ADDR]], i32* [[I]], i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]], i64 [[TMP10]], i64 [[TMP12]]) #[[ATTR2:[0-9]+]]
 // CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
@@ -915,7 +915,6 @@ struct S {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR__CASTED10:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK2-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK2-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
@@ -959,6 +958,7 @@ struct S {
 // CHECK2:       omp_if.else:
 // CHECK2-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK2-NEXT:    store i32 [[TMP0]], i32* [[DOTTHREADID_TEMP_]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @.omp_outlined..5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTBOUND_ZERO_ADDR]], i32* [[I]], i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]], i64 [[TMP10]], i64 [[TMP12]]) #[[ATTR2:[0-9]+]]
 // CHECK2-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK2-NEXT:    br label [[OMP_IF_END]]
@@ -1760,7 +1760,6 @@ struct S {
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR__CASTED10:%.*]] = alloca i64, align 8
 // CHECK3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK3-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
@@ -1804,6 +1803,7 @@ struct S {
 // CHECK3:       omp_if.else:
 // CHECK3-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    store i32 [[TMP0]], i32* [[DOTTHREADID_TEMP_]], align 4
+// CHECK3-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK3-NEXT:    call void @.omp_outlined..5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTBOUND_ZERO_ADDR]], i32* [[I]], i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]], i64 [[TMP10]], i64 [[TMP12]]) #[[ATTR2:[0-9]+]]
 // CHECK3-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
@@ -2660,7 +2660,6 @@ struct S {
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR__CASTED10:%.*]] = alloca i64, align 8
 // CHECK4-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK4-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK4-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK4-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
@@ -2704,6 +2703,7 @@ struct S {
 // CHECK4:       omp_if.else:
 // CHECK4-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK4-NEXT:    store i32 [[TMP0]], i32* [[DOTTHREADID_TEMP_]], align 4
+// CHECK4-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK4-NEXT:    call void @.omp_outlined..5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTBOUND_ZERO_ADDR]], i32* [[I]], i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]], i64 [[TMP10]], i64 [[TMP12]]) #[[ATTR2:[0-9]+]]
 // CHECK4-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK4-NEXT:    br label [[OMP_IF_END]]

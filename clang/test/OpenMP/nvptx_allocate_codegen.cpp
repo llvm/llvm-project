@@ -91,7 +91,7 @@ void bar() {
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, i32* @_ZZ4mainE1a, align 4
 // CHECK1-NEXT:    store double 3.000000e+00, double* [[B]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v() #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -127,7 +127,7 @@ void bar() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load float, float* [[BAR_A]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
 // CHECK1-NEXT:    store double [[CONV]], double* addrspacecast (double addrspace(3)* @bar_b to double*), align 8
-// CHECK1-NEXT:    call void @_Z3bazRf(float* nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_Z3bazRf(float* nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR7]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -138,9 +138,9 @@ void bar() {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR5:[0-9]+]]
 // CHECK1-NEXT:    ret void
