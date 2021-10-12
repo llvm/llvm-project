@@ -572,7 +572,8 @@ public:
   /// in subdirectories.
   ///
   /// \returns The module with the given name.
-  Module *lookupModule(StringRef ModuleName, SourceLocation ImportLoc,
+  Module *lookupModule(StringRef ModuleName,
+                       SourceLocation ImportLoc = SourceLocation(),
                        bool AllowSearch = true,
                        bool AllowExtraModuleMapSearch = false);
 

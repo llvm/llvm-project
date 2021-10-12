@@ -518,8 +518,7 @@ Module *Preprocessor::getCurrentModule() {
   if (!getLangOpts().isCompilingModule())
     return nullptr;
 
-  return getHeaderSearchInfo().lookupModule(getLangOpts().CurrentModule,
-                                            SourceLocation());
+  return getHeaderSearchInfo().lookupModule(getLangOpts().CurrentModule);
 }
 
 //===----------------------------------------------------------------------===//
