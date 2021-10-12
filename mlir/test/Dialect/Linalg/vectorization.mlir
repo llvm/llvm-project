@@ -203,8 +203,9 @@ func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
 
 // CHECK-LABEL: func @test_vectorize_fill
 func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
-  //  CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[V:.*]]: f32)
-  //       CHECK:   store %[[V]], %[[M]][] : memref<f32>
+  // CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[val:.*]]: f32)
+  //      CHECK:   %[[VEC:.*]] = vector.broadcast %[[val]] : f32 to vector<1xf32>
+  //      CHECK:   vector.transfer_write %[[VEC]], %[[M]][] {{.*}} : vector<1xf32>, memref<f32>
   linalg.fill(%arg0, %A) : f32, memref<f32>
   return
 }
@@ -223,8 +224,11 @@ func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
 
 // CHECK-LABEL: func @test_vectorize_copy_scalar
 func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
-  //       CHECK: %[[V:.*]] = memref.load {{.*}} : memref<f32>
-  //       CHECK: store %[[V]], {{.*}} : memref<f32>
+  //  CHECK-SAME: (%[[A:.*]]: memref<f32>, %[[B:.*]]: memref<f32>)
+  //       CHECK:   %[[V:.*]] = vector.transfer_read %[[A]][]{{.*}} : memref<f32>, vector<1xf32>
+  //       CHECK:   %[[val:.*]] = vector.extract %[[V]][0] : vector<1xf32>
+  //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<1xf32>
+  //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] {{.*}} : vector<1xf32>, memref<f32>
   linalg.copy(%A, %B) :  memref<f32>, memref<f32>
   return
 }
@@ -855,5 +859,44 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
+}
+
+// -----
+
+//  CHECK-LABEL: func @reduce_1d(
+//   CHECK-SAME:   %[[A:.*]]: tensor<32xf32>
+func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
+  //  CHECK-DAG: %[[F0_v1:.*]] = constant dense<0.000000e+00> : vector<1xf32>
+  //  CHECK-DAG: %[[F0_v32:.*]] = constant dense<0.000000e+00> : vector<32xf32>
+  //  CHECK-DAG: %[[C0:.*]] = constant 0 : index
+  %f0 = constant 0.000000e+00 : f32
+
+  //      CHECK: %[[init:.*]] = linalg.init_tensor [] : tensor<f32>
+  %0 = linalg.init_tensor [] : tensor<f32>
+
+  //      CHECK: %[[f:.*]] = vector.transfer_write %[[F0_v1]], %[[init]][]
+  // CHECK-SAME:   : vector<1xf32>, tensor<f32>
+  %1 = linalg.fill(%f0, %0) : f32, tensor<f32> -> tensor<f32>
+
+  //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
+  // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
+  //      CHECK: %[[a:.*]] = addf %[[r]], %[[F0_v32]] : vector<32xf32>
+  //      CHECK: %[[red:.*]] = vector.multi_reduction #vector.kind<add>, %[[a]] [0]
+  // CHECK-SAME:   : vector<32xf32> to f32
+  //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[red]] : f32 to vector<1xf32>
+  //      CHECK: %[[res:.*]] = vector.transfer_write %[[red_v1]], %[[f]][]
+  // CHECK-SAME:   : vector<1xf32>, tensor<f32>
+  %2 = linalg.generic {
+         indexing_maps = [affine_map<(d0) -> (d0)>,
+                          affine_map<(d0) -> ()>],
+         iterator_types = ["reduction"]}
+         ins(%arg0 : tensor<32xf32>)
+         outs(%1 : tensor<f32>) {
+    ^bb0(%a: f32, %b: f32):  // no predecessors
+      %3 = addf %a, %b : f32
+      linalg.yield %3 : f32
+    } -> tensor<f32>
+
+  return %2 : tensor<f32>
 }
 
