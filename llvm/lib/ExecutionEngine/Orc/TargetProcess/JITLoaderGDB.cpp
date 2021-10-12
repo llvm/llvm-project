@@ -64,15 +64,16 @@ LLVM_ATTRIBUTE_NOINLINE void __jit_debug_register_code() {
 }
 
 using namespace llvm;
+using namespace llvm::orc;
 
 // Serialize rendezvous with the debugger as well as access to shared data.
 ManagedStatic<std::mutex> JITDebugLock;
 
 // Register debug object, return error message or null for success.
-static void registerJITLoaderGDBImpl(JITTargetAddress Addr, uint64_t Size) {
+static void registerJITLoaderGDBImpl(ExecutorAddrRange DebugObjRange) {
   jit_code_entry *E = new jit_code_entry;
-  E->symfile_addr = jitTargetAddressToPointer<const char *>(Addr);
-  E->symfile_size = Size;
+  E->symfile_addr = DebugObjRange.Start.toPtr<const char *>();
+  E->symfile_size = DebugObjRange.size().getValue();
   E->prev_entry = nullptr;
 
   std::lock_guard<std::mutex> Lock(*JITDebugLock);
@@ -95,7 +96,7 @@ static void registerJITLoaderGDBImpl(JITTargetAddress Addr, uint64_t Size) {
 extern "C" orc::shared::detail::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<void(SPSExecutorAddr, uint64_t)>::handle(
+  return WrapperFunction<void(SPSExecutorAddrRange)>::handle(
              Data, Size, registerJITLoaderGDBImpl)
       .release();
 }

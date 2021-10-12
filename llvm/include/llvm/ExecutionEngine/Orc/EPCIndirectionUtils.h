@@ -126,7 +126,7 @@ public:
   }
 
 private:
-  using Allocation = jitlink::JITLinkMemoryManager::Allocation;
+  using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
   struct IndirectStubInfo {
     IndirectStubInfo() = default;
@@ -149,12 +149,12 @@ private:
   ExecutorProcessControl &EPC;
   std::unique_ptr<ABISupport> ABI;
   JITTargetAddress ResolverBlockAddr;
-  std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation> ResolverBlock;
+  FinalizedAlloc ResolverBlock;
   std::unique_ptr<TrampolinePool> TP;
   std::unique_ptr<LazyCallThroughManager> LCTM;
 
   std::vector<IndirectStubInfo> AvailableIndirectStubs;
-  std::vector<std::unique_ptr<Allocation>> IndirectStubAllocs;
+  std::vector<FinalizedAlloc> IndirectStubAllocs;
 };
 
 /// This will call writeResolver on the given EPCIndirectionUtils instance

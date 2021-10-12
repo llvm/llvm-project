@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
@@ -32,7 +33,7 @@ class ExecutionSession;
 /// Abstract interface for registering debug objects in the executor process.
 class DebugObjectRegistrar {
 public:
-  virtual Error registerDebugObject(sys::MemoryBlock) = 0;
+  virtual Error registerDebugObject(ExecutorAddrRange TargetMem) = 0;
   virtual ~DebugObjectRegistrar() {}
 };
 
@@ -43,7 +44,7 @@ public:
   EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
       : ES(ES), RegisterFn(RegisterFn) {}
 
-  Error registerDebugObject(sys::MemoryBlock TargetMem) override;
+  Error registerDebugObject(ExecutorAddrRange TargetMem) override;
 
 private:
   ExecutionSession &ES;
