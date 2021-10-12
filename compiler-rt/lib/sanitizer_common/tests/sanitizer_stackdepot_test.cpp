@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <regex>
+
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -73,11 +75,19 @@ TEST(SanitizerCommon, StackDepotPrint) {
   StackTrace s2(array2, ARRAY_SIZE(array2));
   u32 i2 = StackDepotPut(s2);
   EXPECT_NE(i1, i2);
-  EXPECT_EXIT((StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-              "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*");
+
+  auto fix_regex = [](const std::string& s) -> std::string {
+    if (!SANITIZER_WINDOWS)
+      return s;
+    return std::regex_replace(s, std::regex("\\.\\*"), ".*\\n.*");
+  };
   EXPECT_EXIT(
       (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-      "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*");
+      fix_regex("Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*"));
+  EXPECT_EXIT(
+      (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
+      fix_regex(
+          "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
 }
 
 TEST(SanitizerCommon, StackDepotPrintNoLock) {
@@ -93,31 +103,6 @@ TEST(SanitizerCommon, StackDepotPrintNoLock) {
     uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
     StackTrace s(array, ARRAY_SIZE(array));
     CHECK_EQ(idx2id[i], StackDepotPut(s));
-  }
-}
-
-TEST(SanitizerCommon, StackDepotReverseMap) {
-  uptr array1[] = {1, 2, 3, 4, 5};
-  uptr array2[] = {7, 1, 3, 0};
-  uptr array3[] = {10, 2, 5, 3};
-  uptr array4[] = {1, 3, 2, 5};
-  u32 ids[4] = {0};
-  StackTrace s1(array1, ARRAY_SIZE(array1));
-  StackTrace s2(array2, ARRAY_SIZE(array2));
-  StackTrace s3(array3, ARRAY_SIZE(array3));
-  StackTrace s4(array4, ARRAY_SIZE(array4));
-  ids[0] = StackDepotPut(s1);
-  ids[1] = StackDepotPut(s2);
-  ids[2] = StackDepotPut(s3);
-  ids[3] = StackDepotPut(s4);
-
-  StackDepotReverseMap map;
-
-  for (uptr i = 0; i < 4; i++) {
-    StackTrace stack = StackDepotGet(ids[i]);
-    StackTrace from_map = map.Get(ids[i]);
-    EXPECT_EQ(stack.size, from_map.size);
-    EXPECT_EQ(stack.trace, from_map.trace);
   }
 }
 
