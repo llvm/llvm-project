@@ -25,14 +25,6 @@
   multiple Python implementations, setting this explicitly to the preferred
   `python3` executable is strongly recommended.
 
-* **`MLIR_BINDINGS_PYTHON_LOCK_VERSION`**`:BOOL`
-
-  Links the native extension against the Python runtime library, which is
-  optional on some platforms. While setting this to `OFF` can yield some greater
-  deployment flexibility, linking in this way allows the linker to report
-  compile time errors for unresolved symbols on all platforms, which makes for a
-  smoother development workflow. Defaults to `ON`.
-
 ### Recommended development practices
 
 It is recommended to use a python virtual environment. Many ways exist for this,
