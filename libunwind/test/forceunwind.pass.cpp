@@ -12,9 +12,6 @@
 // TODO: Investigate these failures
 // XFAIL: asan, tsan, ubsan
 
-// TODO: Investigate this failure
-// XFAIL: 32bits-on-64bits
-
 // Basic test for _Unwind_ForcedUnwind.
 // See libcxxabi/test/forced_unwind* tests too.
 

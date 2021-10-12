@@ -15,9 +15,6 @@
 // TODO: Investigate this failure on macOS
 // XFAIL: target={{.+}}-apple-darwin{{.+}}
 
-// TODO: Investigate this failure
-// XFAIL: 32bits-on-64bits
-
 // UNSUPPORTED: libunwind-arm-ehabi
 
 #include <assert.h>

@@ -1,9 +1,6 @@
 // TODO: Investigate these failures
 // XFAIL: asan, tsan, ubsan
 
-// TODO: Investigate this failure
-// XFAIL: 32bits-on-64bits
-
 // The other libunwind tests don't test internal interfaces, so the include path
 // is a little wonky.
 #include "../src/config.h"
