@@ -260,6 +260,8 @@ struct LinalgStrategyLowerVectorsPass
 
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet patterns(context);
+    vector::populateVectorTransferLoweringPatterns(patterns,
+                                                   options.maxTransferRank);
     if (options.enableVectorTransferPartialRewrite) {
       patterns.add<vector::VectorTransferFullPartialRewriter>(
           context, options.vectorTransformOptions);
