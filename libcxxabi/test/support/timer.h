@@ -9,8 +9,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-// Define LIBCXXABI_NO_TIMER to disable testing with a timer.
-#ifndef LIBCXXABI_NO_TIMER
+// Define LIBCXXABI_USE_TIMER to enable testing with a timer.
+#if defined(LIBCXXABI_USE_TIMER)
 
 #include <chrono>
 #include <cstdio>
@@ -38,7 +38,7 @@ private:
     TimePoint m_start;
 };
 
-#else /* LIBCXXABI_NO_TIMER */
+#else /* LIBCXXABI_USE_TIMER */
 
 class timer
 {
@@ -49,6 +49,6 @@ public:
     ~timer() {}
 };
 
-#endif /* LIBCXXABI_NO_TIMER */
+#endif /* LIBCXXABI_USE_TIMER */
 
 #endif /* TIMER_H */
