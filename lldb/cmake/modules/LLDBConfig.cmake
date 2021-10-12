@@ -345,4 +345,19 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
   add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  check_cxx_source_compiles(
+    "#include <asm/ptrace.h>
+     struct user_sve_header hdr;
+     int main(void){return 0;}
+    "
+    user_sve_header_available)
+  if(user_sve_header_available)
+    set(LLDB_HAVE_USER_SVE_HEADER ON)
+    message(STATUS "AArch64 SVE support enabled.")
+  else()
+    message(STATUS "AArch64 SVE support disabled.")
+  endif()
+endif()
+
 include(LLDBGenerateConfig)
