@@ -510,7 +510,7 @@ ParseResult OperationParser::finalize() {
       errors.push_back(entry.second.getPointer());
     llvm::array_pod_sort(errors.begin(), errors.end());
 
-    for (auto entry : errors) {
+    for (const char *entry : errors) {
       auto loc = SMLoc::getFromPointer(entry);
       emitError(loc, "use of undeclared SSA value name");
     }
@@ -989,9 +989,18 @@ Operation *OperationParser::parseGenericOperation() {
   // Lazy load dialects in the context as needed.
   if (!result.name.getAbstractOperation()) {
     StringRef dialectName = StringRef(name).split('.').first;
-    if (!getContext()->getLoadedDialect(dialectName) &&
-        getContext()->getOrLoadDialect(dialectName)) {
-      result.name = OperationName(name, getContext());
+    if (!getContext()->getLoadedDialect(dialectName)) {
+      if (getContext()->getOrLoadDialect(dialectName)) {
+        result.name = OperationName(name, getContext());
+      } else if (!getContext()->allowsUnregisteredDialects()) {
+        // Emit an error if the dialect couldn't be loaded (i.e., it was not
+        // registered) and unregistered dialects aren't allowed.
+        return emitError(
+                   "operation being parsed with an unregistered dialect. If "
+                   "this is intended, please use -allow-unregistered-dialect "
+                   "with the MLIR tool used"),
+               nullptr;
+      }
     }
   }
 
@@ -1689,8 +1698,8 @@ ParseResult OperationParser::parseRegionBody(
   pushSSANameScope(isIsolatedNameScope);
 
   // Parse the first block directly to allow for it to be unnamed.
-  auto owning_block = std::make_unique<Block>();
-  Block *block = owning_block.get();
+  auto owningBlock = std::make_unique<Block>();
+  Block *block = owningBlock.get();
 
   // If this block is not defined in the source file, add a definition for it
   // now in the assembly state. Blocks with a name will be defined when the name
@@ -1737,7 +1746,7 @@ ParseResult OperationParser::parseRegionBody(
   }
 
   // Parse the rest of the region.
-  region.push_back(owning_block.release());
+  region.push_back(owningBlock.release());
   while (getToken().isNot(Token::r_brace)) {
     Block *newBlock = nullptr;
     if (parseBlock(newBlock))
@@ -2071,13 +2080,13 @@ LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
     return emitError(mlir::UnknownLoc::get(context),
                      "only main buffer parsed at the moment");
   }
-  auto file_or_err = llvm::MemoryBuffer::getFileOrSTDIN(filename);
-  if (std::error_code error = file_or_err.getError())
+  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(filename);
+  if (std::error_code error = fileOrErr.getError())
     return emitError(mlir::UnknownLoc::get(context),
                      "could not open input file " + filename);
 
   // Load the MLIR source file.
-  sourceMgr.AddNewSourceBuffer(std::move(*file_or_err), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
   return parseSourceFile(sourceMgr, block, context, sourceFileLoc, asmState);
 }
 
