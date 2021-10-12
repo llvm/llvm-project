@@ -20,14 +20,14 @@
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !6, file: !3, line: 1, baseType: !9, size: 32)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !10 = !{!11, !12}
-!11 = !{!"btf_tag", !"a"}
-!12 = !{!"btf_tag", !"b"}
+!11 = !{!"btf_decl_tag", !"a"}
+!12 = !{!"btf_decl_tag", !"b"}
 
 ; CHECK:        distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t"
 ; CHECK-SAME:   annotations: ![[ANNOT:[0-9]+]]
 ; CHECK:        ![[ANNOT]] = !{![[TAG1:[0-9]+]], ![[TAG2:[0-9]+]]}
-; CHECK:        ![[TAG1]] = !{!"btf_tag", !"a"}
-; CHECK:        ![[TAG2]] = !{!"btf_tag", !"b"}
+; CHECK:        ![[TAG1]] = !{!"btf_decl_tag", !"a"}
+; CHECK:        ![[TAG2]] = !{!"btf_decl_tag", !"b"}
 !13 = !{i32 7, !"Dwarf Version", i32 4}
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{i32 1, !"wchar_size", i32 4}
