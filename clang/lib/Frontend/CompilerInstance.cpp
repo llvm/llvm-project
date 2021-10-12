@@ -1783,7 +1783,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     SourceLocation ModuleNameLoc, bool IsInclusionDirective) {
   // Search for a module with the given name.
   HeaderSearch &HS = PP->getHeaderSearchInfo();
-  Module *M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+  Module *M =
+      HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
@@ -1842,7 +1843,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // A prebuilt module is indexed as a ModuleFile; the Module does not exist
     // until the first call to ReadAST.  Look it up now.
-    M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+    M = HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
@@ -1965,7 +1966,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building.
     Module = PP->getHeaderSearchInfo().lookupModule(
-        ModuleName, /*AllowSearch*/ true,
+        ModuleName, ImportLoc, /*AllowSearch*/ true,
         /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
     /// FIXME: perhaps we should (a) look for a module using the module name
     //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
@@ -2014,8 +2015,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
             PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
         PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
-        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, true,
-                                                   !IsInclusionDirective))
+        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc,
+                                                   true, !IsInclusionDirective))
           Sub =
               loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
         if (Sub) {

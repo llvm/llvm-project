@@ -1726,7 +1726,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     // Find the module we're entering. We require that a module map for it
     // be loaded or implicitly loadable.
     auto &HSI = PP.getHeaderSearchInfo();
-    Module *M = HSI.lookupModule(Current);
+    Module *M = HSI.lookupModule(Current, ModuleName.front().second);
     if (!M) {
       PP.Diag(ModuleName.front().second,
               diag::err_pp_module_begin_no_module_map) << Current;

@@ -143,7 +143,7 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -471,7 +471,7 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
 
   // Dig out the module definition.
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-  Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule,
+  Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule, SourceLocation(),
                               /*AllowSearch=*/true);
   if (!M) {
     CI.getDiagnostics().Report(diag::err_missing_module)
@@ -617,7 +617,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (Kind.getFormat() == InputKind::ModuleMap) {
       Module *ASTModule =
           AST->getPreprocessor().getHeaderSearchInfo().lookupModule(
-              AST->getLangOpts().CurrentModule, /*AllowSearch*/ false);
+              AST->getLangOpts().CurrentModule, SourceLocation(),
+              /*AllowSearch*/ false);
       assert(ASTModule && "module file does not define its own module");
       Input = FrontendInputFile(ASTModule->PresumedModuleMapFile, Kind);
     } else {
