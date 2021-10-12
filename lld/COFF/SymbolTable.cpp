@@ -265,7 +265,7 @@ void SymbolTable::loadMinGWSymbols() {
 
     if (config->machine == I386 && config->stdcallFixup) {
       // Check if we can resolve an undefined decorated symbol by finding
-      // the indended target as an undecorated symbol (only with a leading
+      // the intended target as an undecorated symbol (only with a leading
       // underscore).
       StringRef origName = name;
       StringRef baseName = name;

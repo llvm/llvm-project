@@ -77,7 +77,8 @@ static OpType getSingleOpOfType(Block &block) {
 /// map is reindexed to `affine_map<(d0, d1, d2) -> (d2, d0, d1)>`, the second
 /// affine map is reindexed to `affine_map<(d0, d1) -> (d0, d1)>`.
 static AffineMap reindexIndexingMap(AffineMap map) {
-  assert(map.isProjectedPermutation() && "expected projected permutation");
+  assert(map.isProjectedPermutation(/*allowZerosInResults=*/true) &&
+         "expected projected permutation");
   auto res = compressUnusedDims(map);
   assert(res.getNumDims() == res.getNumResults() &&
          "expected reindexed map with same number of dims and results");
@@ -121,10 +122,14 @@ getKindForOp(Operation *reductionOp) {
   return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
              reductionOp)
       .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<AndOp>([&](auto op) { return vector::CombiningKind::AND; })
       .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
       .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
       .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
       .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<MulIOp, MulFOp>([&](auto op) { return vector::CombiningKind::MUL; })
+      .Case<OrOp>([&](auto op) { return vector::CombiningKind::OR; })
+      .Case<XOrOp>([&](auto op) { return vector::CombiningKind::XOR; })
       .Default([&](auto op) { return llvm::None; });
 }
 
@@ -593,8 +598,9 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
 }
 
 static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(),
-                      [](AffineMap m) { return m.isProjectedPermutation(); });
+  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+    return m.isProjectedPermutation(/*allowZerosInResults=*/true);
+  });
 }
 
 // TODO: probably need some extra checks for reduction followed by consumer

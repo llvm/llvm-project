@@ -1465,15 +1465,14 @@ func @avg_pool_i8(%arg0 : tensor<1x128x128x2xi8>) -> () {
   // CHECK: %[[SCALE:.+]] = "tosa.apply_scale"(%{{.+}}, %[[MULTIPLIER]], %[[SHIFT]]) {double_round = false}
   // CHECK: %[[OUTZP:.+]] = constant -128
   // CHECK: %[[OUT:.+]] = addi %[[SCALE]], %[[OUTZP]]
-  // CHECK: %[[MIN:.+]] = constant -128
-  // CHECK: %[[MAX:.+]] = constant 127
+  // CHECK: %[[MIN:.+]] = constant -2147483648
+  // CHECK: %[[MAX:.+]] = constant 2147483647
   // CHECK: %[[CMP_MIN:.+]] = cmpi slt, %[[OUT]], %[[MIN]]
   // CHECK: %[[CLMP_MIN:.+]] = select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
   // CHECK: %[[CMP_MAX:.+]] = cmpi slt, %[[MAX]], %[[OUT]]
   // CHECK: %[[CLMP_MAX:.+]] = select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
-  // CHECK: %[[TRUNC:.+]] = trunci %[[CLMP_MAX]]
-  // CHECK: linalg.yield %[[TRUNC]]
-  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 4], pad = [0, 0, 0, 0], quantization_info = {input_zp = -128 : i32, output_zp = -128 : i32}, stride = [4, 4]} : (tensor<1x128x128x2xi8>) -> tensor<1x32x32x2xi8>
+  // CHECK: linalg.yield %[[CLMP_MAX]]
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 4], pad = [0, 0, 0, 0], quantization_info = {input_zp = -128 : i32, output_zp = -128 : i32}, stride = [4, 4]} : (tensor<1x128x128x2xi8>) -> tensor<1x32x32x2xi32>
   return
 }
 

@@ -822,9 +822,9 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: maxf {{.*}} : vector<4x4xf32>
   // CHECK: vector.multi_reduction #vector.kind<maxf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
-  %minf32 = constant -3.40282e+38 : f32
+  %ident = constant -3.40282e+38 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
-  %fill = linalg.fill(%minf32, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %fill = linalg.fill(%ident, %init) : f32, tensor<4xf32> -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
@@ -858,6 +858,165 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
     %min = minf %in0, %out0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_mul_2d(
+func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+  // CHECK: linalg.init_tensor [4] : tensor<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4xf32>, vector<4x4xf32>
+  // CHECK: mulf {{.*}} : vector<4x4xf32>
+  // CHECK: vector.multi_reduction #vector.kind<mul>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  %ident = constant 1.0 : f32
+  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %fill = linalg.fill(%ident, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
+  ^bb0(%in0: f32, %out0: f32):  // no predecessors
+    %mul = mulf %in0, %out0 : f32
+    linalg.yield %mul : f32
+  } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_or_2d(
+func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
+  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4xi1>, vector<4x4xi1>
+  // CHECK: or {{.*}} : vector<4x4xi1>
+  // CHECK: vector.multi_reduction #vector.kind<or>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  %ident = constant false
+  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
+  ^bb0(%in0: i1, %out0: i1):  // no predecessors
+    %or = or %in0, %out0 : i1
+    linalg.yield %or : i1
+  } -> tensor<4xi1>
+  return %red : tensor<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_and_2d(
+func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
+  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4xi1>, vector<4x4xi1>
+  // CHECK: and {{.*}} : vector<4x4xi1>
+  // CHECK: vector.multi_reduction #vector.kind<and>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  %ident = constant true
+  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
+  ^bb0(%in0: i1, %out0: i1):  // no predecessors
+    %and = and %in0, %out0 : i1
+    linalg.yield %and : i1
+  } -> tensor<4xi1>
+  return %red : tensor<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_xor_2d(
+func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
+  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4xi1>, vector<4x4xi1>
+  // CHECK: xor {{.*}} : vector<4x4xi1>
+  // CHECK: vector.multi_reduction #vector.kind<xor>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
+  %ident = constant false
+  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %fill = linalg.fill(%ident, %init) : i1, tensor<4xi1> -> tensor<4xi1>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
+  ^bb0(%in0: i1, %out0: i1):  // no predecessors
+    %xor = xor %in0, %out0 : i1
+    linalg.yield %xor : i1
+  } -> tensor<4xi1>
+  return %red : tensor<4xi1>
+}
+
+// -----
+
+// CHECK-DAG: #[[$M5:.*]] = affine_map<(d0, d1) -> (d0, 0)>
+
+// CHECK-LABEL:   func @explicit_broadcast(
+func @explicit_broadcast(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> tensor<4x4xf32> {
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M5]]} : tensor<4x1xf32>, vector<4x4xf32>
+  // CHECK: subf {{.*}} : vector<4x4xf32>
+  // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<4x4xf32>, tensor<4x4xf32>
+  %c0 = constant 0.0 : f32
+  %init = linalg.init_tensor [4, 4] : tensor<4x4xf32>
+  %fill = linalg.fill(%c0, %init) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0, 0)>,
+                                          affine_map<(d0, d1) -> (d0, d1)>],
+   iterator_types = ["parallel", "parallel"]}
+   ins(%arg0, %arg1 : tensor<4x4xf32>, tensor<4x1xf32>)
+   outs(%fill : tensor<4x4xf32>) {
+    ^bb0(%arg7: f32, %arg8: f32, %arg9: f32):
+      %40 = subf %arg7, %arg8 : f32
+      linalg.yield %40 : f32
+    } -> tensor<4x4xf32>
+  return %red : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$M6:.*]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK-DAG: #[[$M7:.*]] = affine_map<(d0) -> (d0, 0)>
+
+// CHECK-LABEL:   func @fused_broadcast_red_2d
+func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> tensor<4xf32> {
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M6]]} : tensor<4x1xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M7]]} : tensor<4xf32>, vector<4x4xf32>
+  // CHECK: subf {{.*}} : vector<4x4xf32>
+  // CHECK: math.exp {{.*}} : vector<4x4xf32>
+  // CHECK: addf {{.*}} : vector<4x4xf32>
+  // CHECK: vector.multi_reduction #vector.kind<add>, {{.*}} : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  %c0 = constant 0.0 : f32
+  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %fill = linalg.fill(%c0, %init) : f32, tensor<4xf32> -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0, 0)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+   iterator_types = ["parallel", "reduction"]}
+   ins(%arg0, %arg1 : tensor<4x4xf32>, tensor<4x1xf32>)
+   outs(%fill : tensor<4xf32>) {
+    ^bb0(%arg7: f32, %arg8: f32, %arg9: f32):
+      %40 = subf %arg7, %arg8 : f32
+      %41 = math.exp %40 : f32
+      %42 = addf %41, %arg9 : f32
+      linalg.yield %42 : f32
+    } -> tensor<4xf32>
   return %red : tensor<4xf32>
 }
 
@@ -899,4 +1058,3 @@ func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
 
   return %2 : tensor<f32>
 }
-

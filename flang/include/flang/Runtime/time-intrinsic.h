@@ -14,6 +14,7 @@
 
 #include "flang/Runtime/entry-names.h"
 #include <cinttypes>
+#include <cstddef>
 
 namespace Fortran::runtime {
 
