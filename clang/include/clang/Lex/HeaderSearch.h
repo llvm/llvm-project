@@ -560,6 +560,8 @@ public:
   ///
   /// \param ModuleName The name of the module we're looking for.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowSearch Whether we are allowed to search in the various
   /// search directories to produce a module definition. If not, this lookup
   /// will only return an already-known module.
@@ -568,7 +570,8 @@ public:
   /// in subdirectories.
   ///
   /// \returns The module with the given name.
-  Module *lookupModule(StringRef ModuleName, bool AllowSearch = true,
+  Module *lookupModule(StringRef ModuleName, SourceLocation ImportLoc,
+                       bool AllowSearch = true,
                        bool AllowExtraModuleMapSearch = false);
 
   /// Try to find a module map file in the given directory, returning
@@ -638,11 +641,14 @@ private:
   /// but for compatibility with some buggy frameworks, additional attempts
   /// may be made to find the module under a related-but-different search-name.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
   /// \returns The module named ModuleName.
   Module *lookupModule(StringRef ModuleName, StringRef SearchName,
+                       SourceLocation ImportLoc,
                        bool AllowExtraModuleMapSearch = false);
 
   /// Retrieve the name of the (to-be-)cached module file that should

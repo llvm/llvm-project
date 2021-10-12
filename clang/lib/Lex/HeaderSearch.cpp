@@ -229,7 +229,8 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
   return Result.str().str();
 }
 
-Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch,
+Module *HeaderSearch::lookupModule(StringRef ModuleName,
+                                   SourceLocation ImportLoc, bool AllowSearch,
                                    bool AllowExtraModuleMapSearch) {
   // Look in the module map to determine if there is a module by this name.
   Module *Module = ModMap.findModule(ModuleName);
@@ -237,7 +238,8 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch,
     return Module;
 
   StringRef SearchName = ModuleName;
-  Module = lookupModule(ModuleName, SearchName, AllowExtraModuleMapSearch);
+  Module = lookupModule(ModuleName, SearchName, ImportLoc,
+                        AllowExtraModuleMapSearch);
 
   // The facility for "private modules" -- adjacent, optional module maps named
   // module.private.modulemap that are supposed to define private submodules --
@@ -248,13 +250,16 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch,
   // could force building unwanted dependencies into the parent module and cause
   // dependency cycles.
   if (!Module && SearchName.consume_back("_Private"))
-    Module = lookupModule(ModuleName, SearchName, AllowExtraModuleMapSearch);
+    Module = lookupModule(ModuleName, SearchName, ImportLoc,
+                          AllowExtraModuleMapSearch);
   if (!Module && SearchName.consume_back("Private"))
-    Module = lookupModule(ModuleName, SearchName, AllowExtraModuleMapSearch);
+    Module = lookupModule(ModuleName, SearchName, ImportLoc,
+                          AllowExtraModuleMapSearch);
   return Module;
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
+                                   SourceLocation ImportLoc,
                                    bool AllowExtraModuleMapSearch) {
   Module *Module = nullptr;
 
