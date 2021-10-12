@@ -39,6 +39,25 @@ def testFileLineCol():
 run(testFileLineCol)
 
 
+# CHECK-LABEL: TEST: testName
+def testName():
+  with Context() as ctx:
+    loc = Location.name("nombre")
+    locWithChildLoc = Location.name("naam", loc)
+  ctx = None
+  gc.collect()
+  # CHECK: file str: loc("nombre")
+  print("file str:", str(loc))
+  # CHECK: file repr: loc("nombre")
+  print("file repr:", repr(loc))
+  # CHECK: file str: loc("naam"("nombre"))
+  print("file str:", str(locWithChildLoc))
+  # CHECK: file repr: loc("naam"("nombre"))
+  print("file repr:", repr(locWithChildLoc))
+
+run(testName)
+
+
 # CHECK-LABEL: TEST: testLocationCapsule
 def testLocationCapsule():
   with Context() as ctx:

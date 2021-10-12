@@ -5325,6 +5325,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   assert(useMaskedInterleavedAccesses(TTI) &&
          "Masked interleave-groups for predicated accesses are not enabled.");
 
+  if (Group->isReverse())
+    return false;
+
   auto *Ty = getLoadStoreType(I);
   const Align Alignment = getLoadStoreAlignment(I);
   return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment)
