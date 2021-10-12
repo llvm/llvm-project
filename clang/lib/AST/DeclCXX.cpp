@@ -1803,7 +1803,7 @@ void CXXRecordDecl::removeConversion(const NamedDecl *ConvDecl) {
   for (unsigned I = 0, E = Convs.size(); I != E; ++I) {
     if (Convs[I].getDecl() == ConvDecl) {
       Convs.erase(I);
-      assert(llvm::find(Convs, ConvDecl) == Convs.end() &&
+      assert(!llvm::is_contained(Convs, ConvDecl) &&
              "conversion was found multiple times in unresolved set");
       return;
     }
@@ -3041,8 +3041,7 @@ CXXRecordDecl *ConstructorUsingShadowDecl::getNominatedBaseClass() const {
 void BaseUsingDecl::anchor() {}
 
 void BaseUsingDecl::addShadowDecl(UsingShadowDecl *S) {
-  assert(std::find(shadow_begin(), shadow_end(), S) == shadow_end() &&
-         "declaration already in set");
+  assert(!llvm::is_contained(shadows(), S) && "declaration already in set");
   assert(S->getIntroducer() == this);
 
   if (FirstUsingShadow.getPointer())
@@ -3051,8 +3050,7 @@ void BaseUsingDecl::addShadowDecl(UsingShadowDecl *S) {
 }
 
 void BaseUsingDecl::removeShadowDecl(UsingShadowDecl *S) {
-  assert(std::find(shadow_begin(), shadow_end(), S) != shadow_end() &&
-         "declaration not in set");
+  assert(llvm::is_contained(shadows(), S) && "declaration not in set");
   assert(S->getIntroducer() == this);
 
   // Remove S from the shadow decl chain. This is O(n) but hopefully rare.

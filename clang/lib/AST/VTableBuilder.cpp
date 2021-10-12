@@ -1070,7 +1070,7 @@ void ItaniumVTableBuilder::AddThunk(const CXXMethodDecl *MD,
   SmallVectorImpl<ThunkInfo> &ThunksVector = Thunks[MD];
 
   // Check if we have this thunk already.
-  if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
+  if (llvm::is_contained(ThunksVector, Thunk))
     return;
 
   ThunksVector.push_back(Thunk);
@@ -2586,7 +2586,7 @@ private:
     SmallVector<ThunkInfo, 1> &ThunksVector = Thunks[MD];
 
     // Check if we have this thunk already.
-    if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
+    if (llvm::is_contained(ThunksVector, Thunk))
       return;
 
     ThunksVector.push_back(Thunk);
