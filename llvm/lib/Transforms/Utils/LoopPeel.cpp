@@ -220,9 +220,10 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   }
   SmallVector<BasicBlock *> ExitingBlocks;
   L.getExitingBlocks(ExitingBlocks);
-  for (BasicBlock *Exiting : ExitingBlocks)
-    if (LoadUsers.find(Exiting->getTerminator()) != LoadUsers.end())
-      return 1;
+  if (any_of(ExitingBlocks, [&LoadUsers](BasicBlock *Exiting) {
+        return LoadUsers.contains(Exiting->getTerminator());
+      }))
+    return 1;
   return 0;
 }
 
