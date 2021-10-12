@@ -43,32 +43,6 @@ void StackDepotLockAll();
 void StackDepotUnlockAll();
 void StackDepotPrintAll();
 
-// Instantiating this class creates a snapshot of StackDepot which can be
-// efficiently queried with StackDepotGet(). You can use it concurrently with
-// StackDepot, but the snapshot is only guaranteed to contain those stack traces
-// which were stored before it was instantiated.
-class StackDepotReverseMap {
- public:
-  StackDepotReverseMap() = default;
-  StackTrace Get(u32 id) const;
-
- private:
-  struct IdDescPair {
-    u32 id;
-    const StackDepotNode *desc;
-
-    static bool IdComparator(const IdDescPair &a, const IdDescPair &b);
-  };
-
-  void Init() const;
-
-  mutable InternalMmapVector<IdDescPair> map_;
-
-  // Disallow evil constructors.
-  StackDepotReverseMap(const StackDepotReverseMap&);
-  void operator=(const StackDepotReverseMap&);
-};
-
 } // namespace __sanitizer
 
 #endif // SANITIZER_STACKDEPOT_H
