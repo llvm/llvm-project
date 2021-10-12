@@ -361,7 +361,9 @@ int main(int, char**)
       assert(&Ref == &LHS);
     }
     doConcatSourceTest<char>    (TC);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     doConcatSourceTest<wchar_t> (TC);
+#endif
     doConcatSourceTest<char16_t>(TC);
     doConcatSourceTest<char32_t>(TC);
   }
@@ -392,11 +394,15 @@ int main(int, char**)
       assert(LHS == E);
     }
     LIBCPP_ONLY(doConcatSourceAllocTest<char>(TC));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     LIBCPP_ONLY(doConcatSourceAllocTest<wchar_t>(TC));
+#endif
   }
   for (auto const& TC : CharTestCases) {
     doConcatECharTest<char>(TC);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     doConcatECharTest<wchar_t>(TC);
+#endif
     doConcatECharTest<char16_t>(TC);
     doConcatECharTest<char32_t>(TC);
   }

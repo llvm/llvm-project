@@ -524,7 +524,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <cwchar>
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
@@ -534,6 +533,10 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <utility>
 #include <version>
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar>
+#endif
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 # include <cstdint>
@@ -1729,11 +1732,15 @@ private:
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#   endif
 #else
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#   endif
 #endif
 
 
@@ -4395,6 +4402,7 @@ _LIBCPP_FUNC_VIS string to_string(float __val);
 _LIBCPP_FUNC_VIS string to_string(double __val);
 _LIBCPP_FUNC_VIS string to_string(long double __val);
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
@@ -4414,6 +4422,7 @@ _LIBCPP_FUNC_VIS wstring to_wstring(unsigned long long __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(float __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(double __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(long double __val);
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template<class _CharT, class _Traits, class _Allocator>
 _LIBCPP_TEMPLATE_DATA_VIS
@@ -4535,11 +4544,13 @@ inline namespace literals
         return basic_string<char> (__str, __len);
     }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     inline _LIBCPP_INLINE_VISIBILITY
     basic_string<wchar_t> operator "" s( const wchar_t *__str, size_t __len )
     {
         return basic_string<wchar_t> (__str, __len);
     }
+#endif
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_INLINE_VISIBILITY

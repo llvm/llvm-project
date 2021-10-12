@@ -27,7 +27,7 @@ static_assert(std::same_as<decltype(std::ranges::subrange(fi, fi)),
 static_assert(std::same_as<decltype(std::ranges::subrange(ptr, ptr, 0)),
                            std::ranges::subrange<int*, int*, std::ranges::subrange_kind::sized>>);
 static_assert(std::same_as<decltype(std::ranges::subrange(ptr, nullptr, 0)),
-                           std::ranges::subrange<int*, nullptr_t, std::ranges::subrange_kind::sized>>);
+                           std::ranges::subrange<int*, std::nullptr_t, std::ranges::subrange_kind::sized>>);
 
 struct ForwardRange {
   forward_iterator<int*> begin() const;

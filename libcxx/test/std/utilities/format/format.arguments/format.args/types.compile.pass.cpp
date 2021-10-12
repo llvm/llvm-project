@@ -25,19 +25,23 @@
 
 static_assert(std::is_same_v<std::format_args,
                              std::basic_format_args<std::format_context>>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::is_same_v<std::wformat_args,
                              std::basic_format_args<std::wformat_context>>);
+#endif
 
 static_assert(std::is_same_v<
               std::format_args_t<std::back_insert_iterator<std::string>, char>,
               std::basic_format_args<std::basic_format_context<
                   std::back_insert_iterator<std::string>, char>>>);
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(
     std::is_same_v<
         std::format_args_t<std::back_insert_iterator<std::wstring>, wchar_t>,
         std::basic_format_args<std::basic_format_context<
             std::back_insert_iterator<std::wstring>, wchar_t>>>);
+#endif
 
 static_assert(
     std::is_same_v<

@@ -118,7 +118,9 @@ int main(int, char**)
 #endif
     test<char16_t>           ();
     test<char32_t>           ();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>            ();
+#endif
 
     test<int_least8_t>   ();
     test<uint_least8_t>  ();

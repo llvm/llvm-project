@@ -25,10 +25,12 @@ int main(int, char**)
         std::ostreambuf_iterator<char> i(nullptr);
         assert(i.failed());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::ostreambuf_iterator<wchar_t> i(nullptr);
         assert(i.failed());
     }
+#endif
 
   return 0;
 }
