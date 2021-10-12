@@ -32,10 +32,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/TargetRegistry.h"
 
 #include <limits>
 
@@ -2068,7 +2068,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     clearFeatureBits(RISCV::FeatureStdExtF, "f");
     clearFeatureBits(RISCV::FeatureStdExtD, "d");
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
-    clearFeatureBits(RISCV::FeatureStdExtB, "experimental-b");
     clearFeatureBits(RISCV::FeatureStdExtV, "experimental-v");
     clearFeatureBits(RISCV::FeatureStdExtZfh, "experimental-zfh");
     clearFeatureBits(RISCV::FeatureStdExtZba, "experimental-zba");
@@ -2107,8 +2106,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
         setFeatureBits(RISCV::FeatureStdExtD, "d");
       } else if (Arch[0] == 'c') {
         setFeatureBits(RISCV::FeatureStdExtC, "c");
-      } else if (Arch[0] == 'b') {
-        setFeatureBits(RISCV::FeatureStdExtB, "experimental-b");
       } else if (Arch[0] == 'v') {
         setFeatureBits(RISCV::FeatureStdExtV, "experimental-v");
       } else if (Arch[0] == 's' || Arch[0] == 'x' || Arch[0] == 'z') {
@@ -2182,8 +2179,6 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
         formalArchStr = (Twine(formalArchStr) + "_d2p0").str();
       if (getFeatureBits(RISCV::FeatureStdExtC))
         formalArchStr = (Twine(formalArchStr) + "_c2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtB))
-        formalArchStr = (Twine(formalArchStr) + "_b0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtV))
         formalArchStr = (Twine(formalArchStr) + "_v0p10").str();
       if (getFeatureBits(RISCV::FeatureStdExtZfh))

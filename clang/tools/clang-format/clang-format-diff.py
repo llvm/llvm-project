@@ -90,9 +90,11 @@ def main():
       line_count = 1
       if match.group(3):
         line_count = int(match.group(3))
-      if line_count == 0:
-        continue
-      end_line = start_line + line_count - 1
+      # Also format lines range if line_count is 0 in case of deleting
+      # surrounding statements.
+      end_line = start_line
+      if line_count != 0:
+        end_line += line_count - 1
       lines_by_file.setdefault(filename, []).extend(
           ['-lines', str(start_line) + ':' + str(end_line)])
 

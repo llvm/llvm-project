@@ -54,9 +54,9 @@ define i32* @test_array5(i32* %a, i32 %i) {
 ; CHECK-LABEL: test_array5:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
-; CHECK-NEXT:    mov x9, #4
-; CHECK-NEXT:    madd x0, x8, x9, x0
+; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    madd x0, x9, x8, x0
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i32, i32* %a, i32 %i
   ret i32* %1

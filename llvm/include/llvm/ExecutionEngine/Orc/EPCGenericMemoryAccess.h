@@ -43,35 +43,35 @@ public:
                         WriteResultFn OnWriteComplete) override {
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt8Write>)>(
-        std::move(OnWriteComplete), FAs.WriteUInt8s, Ws);
+        FAs.WriteUInt8s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt16Write>)>(
-        std::move(OnWriteComplete), FAs.WriteUInt16s, Ws);
+        FAs.WriteUInt16s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt32Write>)>(
-        std::move(OnWriteComplete), FAs.WriteUInt32s, Ws);
+        FAs.WriteUInt32s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt64Write>)>(
-        std::move(OnWriteComplete), FAs.WriteUInt64s, Ws);
+        FAs.WriteUInt64s, std::move(OnWriteComplete), Ws);
   }
 
   void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
     EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessBufferWrite>)>(
-        std::move(OnWriteComplete), FAs.WriteBuffers, Ws);
+        FAs.WriteBuffers, std::move(OnWriteComplete), Ws);
   }
 
 private:

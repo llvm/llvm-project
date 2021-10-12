@@ -13,17 +13,17 @@ define i32 @combine_gt_ge_10() #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #10
+; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    cmp w9, #10
 ; CHECK-NEXT:    b.le .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
-; CHECK-NEXT:    adrp x10, :got:c
-; CHECK-NEXT:    ldr w9, [x8]
-; CHECK-NEXT:    ldr x10, [x10, :got_lo12:c]
-; CHECK-NEXT:    ldr w10, [x10]
-; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    adrp x9, :got:c
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:c]
+; CHECK-NEXT:    ldr w10, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w10, w9
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, #1
@@ -32,8 +32,8 @@ define i32 @combine_gt_ge_10() #0 {
 ; CHECK-NEXT:    b.lt .LBB0_6
 ; CHECK-NEXT:  .LBB0_4: // %land.lhs.true3
 ; CHECK-NEXT:    adrp x9, :got:d
-; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    b.ne .LBB0_6
@@ -145,17 +145,17 @@ define i32 @combine_lt_ge_5() #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #5
+; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    cmp w9, #5
 ; CHECK-NEXT:    b.ge .LBB2_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
-; CHECK-NEXT:    adrp x10, :got:c
-; CHECK-NEXT:    ldr w9, [x8]
-; CHECK-NEXT:    ldr x10, [x10, :got_lo12:c]
-; CHECK-NEXT:    ldr w10, [x10]
-; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    adrp x9, :got:c
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:c]
+; CHECK-NEXT:    ldr w10, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w10, w9
 ; CHECK-NEXT:    b.ne .LBB2_4
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, #1
@@ -164,8 +164,8 @@ define i32 @combine_lt_ge_5() #0 {
 ; CHECK-NEXT:    b.gt .LBB2_6
 ; CHECK-NEXT:  .LBB2_4: // %land.lhs.true3
 ; CHECK-NEXT:    adrp x9, :got:d
-; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    b.ne .LBB2_6
@@ -424,13 +424,13 @@ define void @combine_non_adjacent_cmp_br(%struct.Struct* nocapture readonly %hdC
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w22, -32
 ; CHECK-NEXT:    .cfi_offset w30, -48
-; CHECK-NEXT:    ldr x19, [x0]
-; CHECK-NEXT:    mov w20, #24
+; CHECK-NEXT:    ldr x20, [x0]
+; CHECK-NEXT:    mov w19, #24
 ; CHECK-NEXT:    adrp x22, glob
-; CHECK-NEXT:    add x21, x19, #2
+; CHECK-NEXT:    add x21, x20, #2
 ; CHECK-NEXT:  .LBB6_1: // %land.rhs
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x8, [x20]
+; CHECK-NEXT:    ldr x8, [x19]
 ; CHECK-NEXT:    cmp x8, #1
 ; CHECK-NEXT:    b.lt .LBB6_3
 ; CHECK-NEXT:  // %bb.2: // %while.body
@@ -438,7 +438,7 @@ define void @combine_non_adjacent_cmp_br(%struct.Struct* nocapture readonly %hdC
 ; CHECK-NEXT:    ldr x0, [x22, :lo12:glob]
 ; CHECK-NEXT:    bl Update
 ; CHECK-NEXT:    sub x21, x21, #2
-; CHECK-NEXT:    cmp x19, x21
+; CHECK-NEXT:    cmp x20, x21
 ; CHECK-NEXT:    b.lt .LBB6_1
 ; CHECK-NEXT:  .LBB6_3: // %while.end
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -662,15 +662,15 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    mov w0, #-1
 ; CHECK-NEXT:    bl yoo
 ; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    mov w1, #2
+; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl xoo
 ; CHECK-NEXT:    fmov d0, #-1.00000000
-; CHECK-NEXT:    fadd d0, d8, d0
 ; CHECK-NEXT:    fcmp d8, #0.0
-; CHECK-NEXT:    fcsel d0, d8, d0, gt
 ; CHECK-NEXT:    fmov d1, #-2.00000000
+; CHECK-NEXT:    fadd d0, d8, d0
+; CHECK-NEXT:    fcsel d0, d8, d0, gt
 ; CHECK-NEXT:    bl woo
 ; CHECK-NEXT:    mov w0, #4
 ; CHECK-NEXT:  .LBB9_4: // %return
@@ -720,8 +720,8 @@ define void @cmp_shifted(i32 %in, i32 %lhs, i32 %rhs) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csinc w8, w8, wzr, gt
 ; CHECK-NEXT:    cmp w0, #2, lsl #12 // =8192
 ; CHECK-NEXT:    mov w9, #128

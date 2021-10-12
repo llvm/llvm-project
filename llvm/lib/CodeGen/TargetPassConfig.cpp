@@ -1465,9 +1465,6 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   if (addRegAssignAndRewriteOptimized()) {
     // Perform stack slot coloring and post-ra machine LICM.
-    //
-    // FIXME: Re-enable coloring with register when it's capable of adding
-    // kill markers.
     addPass(&StackSlotColoringID);
 
     // Allow targets to expand pseudo instructions depending on the choice of

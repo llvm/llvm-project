@@ -42,6 +42,8 @@ struct BCDumpOptions {
   bool Symbolic = false;
   /// Print binary blobs using hex escapes.
   bool ShowBinaryBlobs = false;
+  /// Print BLOCKINFO block details.
+  bool DumpBlockinfo = false;
 
   BCDumpOptions(raw_ostream &OS) : OS(OS) {}
 };

@@ -2308,6 +2308,26 @@ std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
 
+inline bool
+MatchTemplateArgLocAt(const DeclRefExpr &Node, unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  llvm::ArrayRef<TemplateArgumentLoc> ArgLocs = Node.template_arguments();
+  return Index < ArgLocs.size() &&
+         InnerMatcher.matches(ArgLocs[Index], Finder, Builder);
+}
+
+inline bool
+MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
+                      unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  return !Node.isNull() && Index < Node.getNumArgs() &&
+         InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
+
 } // namespace internal
 
 } // namespace ast_matchers

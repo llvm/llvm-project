@@ -19,7 +19,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_mac.cpp
   sanitizer_mutex.cpp
   sanitizer_netbsd.cpp
-  sanitizer_persistent_allocator.cpp
   sanitizer_platform_limits_freebsd.cpp
   sanitizer_platform_limits_linux.cpp
   sanitizer_platform_limits_netbsd.cpp

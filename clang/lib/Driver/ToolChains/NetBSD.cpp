@@ -29,14 +29,16 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfoList &Inputs,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
-  const Driver &D = getToolChain().getDriver();
+  const toolchains::NetBSD &ToolChain =
+    static_cast<const toolchains::NetBSD &>(getToolChain());
+  const Driver &D = ToolChain.getDriver();
 
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
   // GNU as needs different flags for creating the correct output format
   // on architectures with different ABIs or optional feature sets.
-  switch (getToolChain().getArch()) {
+  switch (ToolChain.getArch()) {
   case llvm::Triple::x86:
     CmdArgs.push_back("--32");
     break;
@@ -47,7 +49,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef MArch, MCPU;
     arm::getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
     std::string Arch =
-        arm::getARMTargetCPU(MCPU, MArch, getToolChain().getTriple());
+        arm::getARMTargetCPU(MCPU, MArch, ToolChain.getTriple());
     CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch));
     break;
   }
@@ -58,7 +60,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::mips64el: {
     StringRef CPUName;
     StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
+    mips::getMipsCPUAndABI(Args, ToolChain.getTriple(), CPUName, ABIName);
 
     CmdArgs.push_back("-march");
     CmdArgs.push_back(CPUName.data());
@@ -66,31 +68,31 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
-    if (getToolChain().getTriple().isLittleEndian())
+    if (ToolChain.getTriple().isLittleEndian())
       CmdArgs.push_back("-EL");
     else
       CmdArgs.push_back("-EB");
 
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
-    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
+    std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
     CmdArgs.push_back(
-        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
+    std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
     CmdArgs.push_back(
-        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
@@ -106,7 +108,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
-  const char *Exec = Args.MakeArgString((getToolChain().GetProgramPath("as")));
+  const char *Exec = Args.MakeArgString((ToolChain.GetProgramPath("as")));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
@@ -258,9 +260,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_Z_Flag);
   Args.AddAllArgs(CmdArgs, options::OPT_r);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
   if (SanArgs.needsSharedRt()) {
@@ -297,7 +299,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
                         !Args.hasArg(options::OPT_static);
-    addOpenMPRuntime(CmdArgs, getToolChain(), Args, StaticOpenMP);
+    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -305,7 +307,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
     if (Args.hasArg(options::OPT_pthread))

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScheduleTreeTransform.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -20,10 +21,103 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
+#define DEBUG_TYPE "polly-opt-isl"
+
 using namespace polly;
 using namespace llvm;
 
 namespace {
+
+/// Copy the band member attributes (coincidence, loop type, isolate ast loop
+/// type) from one band to another.
+static isl::schedule_node_band
+applyBandMemberAttributes(isl::schedule_node_band Target, int TargetIdx,
+                          const isl::schedule_node_band &Source,
+                          int SourceIdx) {
+  bool Coincident = Source.member_get_coincident(SourceIdx).release();
+  Target = Target.member_set_coincident(TargetIdx, Coincident);
+
+  isl_ast_loop_type LoopType =
+      isl_schedule_node_band_member_get_ast_loop_type(Source.get(), SourceIdx);
+  Target = isl::manage(isl_schedule_node_band_member_set_ast_loop_type(
+                           Target.release(), TargetIdx, LoopType))
+               .as<isl::schedule_node_band>();
+
+  isl_ast_loop_type IsolateType =
+      isl_schedule_node_band_member_get_isolate_ast_loop_type(Source.get(),
+                                                              SourceIdx);
+  Target = isl::manage(isl_schedule_node_band_member_set_isolate_ast_loop_type(
+                           Target.release(), TargetIdx, IsolateType))
+               .as<isl::schedule_node_band>();
+
+  return Target;
+}
+
+/// Create a new band by copying members from another @p Band. @p IncludeCb
+/// decides which band indices are copied to the result.
+template <typename CbTy>
+static isl::schedule rebuildBand(isl::schedule_node_band OldBand,
+                                 isl::schedule Body, CbTy IncludeCb) {
+  int NumBandDims = OldBand.n_member().release();
+
+  bool ExcludeAny = false;
+  bool IncludeAny = false;
+  for (auto OldIdx : seq<int>(0, NumBandDims)) {
+    if (IncludeCb(OldIdx))
+      IncludeAny = true;
+    else
+      ExcludeAny = true;
+  }
+
+  // Instead of creating a zero-member band, don't create a band at all.
+  if (!IncludeAny)
+    return Body;
+
+  isl::multi_union_pw_aff PartialSched = OldBand.get_partial_schedule();
+  isl::multi_union_pw_aff NewPartialSched;
+  if (ExcludeAny) {
+    // Select the included partial scatter functions.
+    isl::union_pw_aff_list List = PartialSched.list();
+    int NewIdx = 0;
+    for (auto OldIdx : seq<int>(0, NumBandDims)) {
+      if (IncludeCb(OldIdx))
+        NewIdx += 1;
+      else
+        List = List.drop(NewIdx, 1);
+    }
+    isl::space ParamSpace = PartialSched.get_space().params();
+    isl::space NewScatterSpace = ParamSpace.add_unnamed_tuple(NewIdx);
+    NewPartialSched = isl::multi_union_pw_aff(NewScatterSpace, List);
+  } else {
+    // Just reuse original scatter function of copying all of them.
+    NewPartialSched = PartialSched;
+  }
+
+  // Create the new band node.
+  isl::schedule_node_band NewBand =
+      Body.insert_partial_schedule(NewPartialSched)
+          .get_root()
+          .child(0)
+          .as<isl::schedule_node_band>();
+
+  // If OldBand was permutable, so is the new one, even if some dimensions are
+  // missing.
+  bool IsPermutable = OldBand.permutable().release();
+  NewBand = NewBand.set_permutable(IsPermutable);
+
+  // Reapply member attributes.
+  int NewIdx = 0;
+  for (auto OldIdx : seq<int>(0, NumBandDims)) {
+    if (!IncludeCb(OldIdx))
+      continue;
+    NewBand =
+        applyBandMemberAttributes(std::move(NewBand), NewIdx, OldBand, OldIdx);
+    NewIdx += 1;
+  }
+
+  return NewBand.get_schedule();
+}
+
 /// Recursively visit all nodes of a schedule tree while allowing changes.
 ///
 /// The visit methods return an isl::schedule_node that is used to continue
@@ -75,23 +169,9 @@ struct ScheduleTreeRewriter
   }
 
   isl::schedule visitBand(isl::schedule_node_band Band, Args... args) {
-    isl::multi_union_pw_aff PartialSched =
-        isl::manage(isl_schedule_node_band_get_partial_schedule(Band.get()));
     isl::schedule NewChild =
         getDerived().visit(Band.child(0), std::forward<Args>(args)...);
-    isl::schedule_node NewNode =
-        NewChild.insert_partial_schedule(PartialSched).get_root().child(0);
-
-    // Reapply permutability and coincidence attributes.
-    NewNode = isl::manage(isl_schedule_node_band_set_permutable(
-        NewNode.release(), isl_schedule_node_band_get_permutable(Band.get())));
-    unsigned BandDims = isl_schedule_node_band_n_member(Band.get());
-    for (unsigned i = 0; i < BandDims; i += 1)
-      NewNode = isl::manage(isl_schedule_node_band_member_set_coincident(
-          NewNode.release(), i,
-          isl_schedule_node_band_member_get_coincident(Band.get(), i)));
-
-    return NewNode.get_schedule();
+    return rebuildBand(Band, NewChild, [](int) { return true; });
   }
 
   isl::schedule visitSequence(isl::schedule_node_sequence Sequence,
@@ -158,6 +238,10 @@ struct ScheduleTreeRewriter
     llvm_unreachable("Not implemented");
   }
 };
+
+/// Rewrite the schedule tree without any changes. Useful to copy a subtree into
+/// a new schedule, discarding everything but.
+struct IdentityRewriter : public ScheduleTreeRewriter<IdentityRewriter> {};
 
 /// Rewrite a schedule tree to an equivalent one without extension nodes.
 ///
@@ -265,11 +349,9 @@ struct ExtensionNodeRewriter
     NewNode = isl::manage(isl_schedule_node_band_set_permutable(
         NewNode.release(),
         isl_schedule_node_band_get_permutable(OldNode.get())));
-    for (unsigned i = 0; i < BandDims; i += 1) {
-      NewNode = isl::manage(isl_schedule_node_band_member_set_coincident(
-          NewNode.release(), i,
-          isl_schedule_node_band_member_get_coincident(OldNode.get(), i)));
-    }
+    for (unsigned i = 0; i < BandDims; i += 1)
+      NewNode = applyBandMemberAttributes(NewNode.as<isl::schedule_node_band>(),
+                                          i, OldNode, i);
 
     return NewNode.get_schedule();
   }
@@ -504,6 +586,404 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
   ExtConstr = ExtConstr.set_coefficient_si(isl::dim::set, Dims - 1, -1);
   return Set.add_constraint(ExtConstr);
 }
+
+/// Collapse perfectly nested bands into a single band.
+class BandCollapseRewriter : public ScheduleTreeRewriter<BandCollapseRewriter> {
+private:
+  using BaseTy = ScheduleTreeRewriter<BandCollapseRewriter>;
+  BaseTy &getBase() { return *this; }
+  const BaseTy &getBase() const { return *this; }
+
+public:
+  isl::schedule visitBand(isl::schedule_node_band RootBand) {
+    isl::schedule_node_band Band = RootBand;
+    isl::ctx Ctx = Band.ctx();
+
+    // Do not merge permutable band to avoid loosing the permutability property.
+    // Cannot collapse even two permutable loops, they might be permutable
+    // individually, but not necassarily accross.
+    if (Band.n_member().release() > 1 && Band.permutable())
+      return getBase().visitBand(Band);
+
+    // Find collapsable bands.
+    SmallVector<isl::schedule_node_band> Nest;
+    int NumTotalLoops = 0;
+    isl::schedule_node Body;
+    while (true) {
+      Nest.push_back(Band);
+      NumTotalLoops += Band.n_member().release();
+      Body = Band.first_child();
+      if (!Body.isa<isl::schedule_node_band>())
+        break;
+      Band = Body.as<isl::schedule_node_band>();
+
+      // Do not include next band if it is permutable to not lose its
+      // permutability property.
+      if (Band.n_member().release() > 1 && Band.permutable())
+        break;
+    }
+
+    // Nothing to collapse, preserve permutability.
+    if (Nest.size() <= 1)
+      return getBase().visitBand(Band);
+
+    LLVM_DEBUG({
+      dbgs() << "Found loops to collapse between\n";
+      dumpIslObj(RootBand, dbgs());
+      dbgs() << "and\n";
+      dumpIslObj(Body, dbgs());
+      dbgs() << "\n";
+    });
+
+    isl::schedule NewBody = visit(Body);
+
+    // Collect partial schedules from all members.
+    isl::union_pw_aff_list PartScheds{Ctx, NumTotalLoops};
+    for (isl::schedule_node_band Band : Nest) {
+      int NumLoops = Band.n_member().release();
+      isl::multi_union_pw_aff BandScheds = Band.get_partial_schedule();
+      for (auto j : seq<int>(0, NumLoops))
+        PartScheds = PartScheds.add(BandScheds.at(j));
+    }
+    isl::space ScatterSpace = isl::space(Ctx, 0, NumTotalLoops);
+    isl::multi_union_pw_aff PartSchedsMulti{ScatterSpace, PartScheds};
+
+    isl::schedule_node_band CollapsedBand =
+        NewBody.insert_partial_schedule(PartSchedsMulti)
+            .get_root()
+            .first_child()
+            .as<isl::schedule_node_band>();
+
+    // Copy over loop attributes form original bands.
+    int LoopIdx = 0;
+    for (isl::schedule_node_band Band : Nest) {
+      int NumLoops = Band.n_member().release();
+      for (int i : seq<int>(0, NumLoops)) {
+        CollapsedBand = applyBandMemberAttributes(std::move(CollapsedBand),
+                                                  LoopIdx, Band, i);
+        LoopIdx += 1;
+      }
+    }
+    assert(LoopIdx == NumTotalLoops &&
+           "Expect the same number of loops to add up again");
+
+    return CollapsedBand.get_schedule();
+  }
+};
+
+static isl::schedule collapseBands(isl::schedule Sched) {
+  LLVM_DEBUG(dbgs() << "Collapse bands in schedule\n");
+  BandCollapseRewriter Rewriter;
+  return Rewriter.visit(Sched);
+}
+
+/// Collect sequentially executed bands (or anything else), even if nested in a
+/// mark or other nodes whose child is executed just once. If we can
+/// successfully fuse the bands, we allow them to be removed.
+static void collectPotentiallyFusableBands(
+    isl::schedule_node Node,
+    SmallVectorImpl<std::pair<isl::schedule_node, isl::schedule_node>>
+        &ScheduleBands,
+    const isl::schedule_node &DirectChild) {
+  switch (isl_schedule_node_get_type(Node.get())) {
+  case isl_schedule_node_sequence:
+  case isl_schedule_node_set:
+  case isl_schedule_node_mark:
+  case isl_schedule_node_domain:
+  case isl_schedule_node_filter:
+    if (Node.has_children()) {
+      isl::schedule_node C = Node.first_child();
+      while (true) {
+        collectPotentiallyFusableBands(C, ScheduleBands, DirectChild);
+        if (!C.has_next_sibling())
+          break;
+        C = C.next_sibling();
+      }
+    }
+    break;
+
+  default:
+    // Something that does not execute suquentially (e.g. a band)
+    ScheduleBands.push_back({Node, DirectChild});
+    break;
+  }
+}
+
+/// Remove dependencies that are resolved by @p PartSched. That is, remove
+/// everything that we already know is executed in-order.
+static isl::union_map remainingDepsFromPartialSchedule(isl::union_map PartSched,
+                                                       isl::union_map Deps) {
+  int NumDims = getNumScatterDims(PartSched);
+  auto ParamSpace = PartSched.get_space().params();
+
+  // { Scatter[] }
+  isl::space ScatterSpace =
+      ParamSpace.set_from_params().add_dims(isl::dim::set, NumDims);
+
+  // { Scatter[] -> Domain[] }
+  isl::union_map PartSchedRev = PartSched.reverse();
+
+  // { Scatter[] -> Scatter[] }
+  isl::map MaybeBefore = isl::map::lex_le(ScatterSpace);
+
+  // { Domain[] -> Domain[] }
+  isl::union_map DomMaybeBefore =
+      MaybeBefore.apply_domain(PartSchedRev).apply_range(PartSchedRev);
+
+  // { Domain[] -> Domain[] }
+  isl::union_map ChildRemainingDeps = Deps.intersect(DomMaybeBefore);
+
+  return ChildRemainingDeps;
+}
+
+/// Remove dependencies that are resolved by executing them in the order
+/// specified by @p Domains;
+static isl::union_map remainigDepsFromSequence(ArrayRef<isl::union_set> Domains,
+                                               isl::union_map Deps) {
+  isl::ctx Ctx = Deps.ctx();
+  isl::space ParamSpace = Deps.get_space().params();
+
+  // Create a partial schedule mapping to constants that reflect the execution
+  // order.
+  isl::union_map PartialSchedules = isl::union_map::empty(Ctx);
+  for (auto P : enumerate(Domains)) {
+    isl::val ExecTime = isl::val(Ctx, P.index());
+    isl::union_pw_aff DomSched{P.value(), ExecTime};
+    PartialSchedules = PartialSchedules.unite(DomSched.as_union_map());
+  }
+
+  return remainingDepsFromPartialSchedule(PartialSchedules, Deps);
+}
+
+/// Determine whether the outermost loop of to bands can be fused while
+/// respecting validity dependencies.
+static bool canFuseOutermost(const isl::schedule_node_band &LHS,
+                             const isl::schedule_node_band &RHS,
+                             const isl::union_map &Deps) {
+  // { LHSDomain[] -> Scatter[] }
+  isl::union_map LHSPartSched =
+      LHS.get_partial_schedule().get_at(0).as_union_map();
+
+  // { Domain[] -> Scatter[] }
+  isl::union_map RHSPartSched =
+      RHS.get_partial_schedule().get_at(0).as_union_map();
+
+  // Dependencies that are already resolved because LHS executes before RHS, but
+  // will not be anymore after fusion. { DefDomain[] -> UseDomain[] }
+  isl::union_map OrderedBySequence =
+      Deps.intersect_domain(LHSPartSched.domain())
+          .intersect_range(RHSPartSched.domain());
+
+  isl::space ParamSpace = OrderedBySequence.get_space().params();
+  isl::space NewScatterSpace = ParamSpace.add_unnamed_tuple(1);
+
+  // { Scatter[] -> Scatter[] }
+  isl::map After = isl::map::lex_gt(NewScatterSpace);
+
+  // After fusion, instances with smaller (or equal, which means they will be
+  // executed in the same iteration, but the LHS instance is still sequenced
+  // before RHS) scatter value will still be executed before. This are the
+  // orderings where this is not necessarily the case.
+  // { LHSDomain[] -> RHSDomain[] }
+  isl::union_map MightBeAfterDoms = After.apply_domain(LHSPartSched.reverse())
+                                        .apply_range(RHSPartSched.reverse());
+
+  // Dependencies that are not resolved by the new execution order.
+  isl::union_map WithBefore = OrderedBySequence.intersect(MightBeAfterDoms);
+
+  return WithBefore.is_empty();
+}
+
+/// Fuse @p LHS and @p RHS if possible while preserving validity dependenvies.
+static isl::schedule tryGreedyFuse(isl::schedule_node_band LHS,
+                                   isl::schedule_node_band RHS,
+                                   const isl::union_map &Deps) {
+  if (!canFuseOutermost(LHS, RHS, Deps))
+    return {};
+
+  LLVM_DEBUG({
+    dbgs() << "Found loops for greedy fusion:\n";
+    dumpIslObj(LHS, dbgs());
+    dbgs() << "and\n";
+    dumpIslObj(RHS, dbgs());
+    dbgs() << "\n";
+  });
+
+  // The partial schedule of the bands outermost loop that we need to combine
+  // for the fusion.
+  isl::union_pw_aff LHSPartOuterSched = LHS.get_partial_schedule().get_at(0);
+  isl::union_pw_aff RHSPartOuterSched = RHS.get_partial_schedule().get_at(0);
+
+  // Isolate band bodies as roots of their own schedule trees.
+  IdentityRewriter Rewriter;
+  isl::schedule LHSBody = Rewriter.visit(LHS.first_child());
+  isl::schedule RHSBody = Rewriter.visit(RHS.first_child());
+
+  // Reconstruct the non-outermost (not going to be fused) loops from both
+  // bands.
+  // TODO: Maybe it is possibly to transfer the 'permutability' property from
+  // LHS+RHS. At minimum we need merge multiple band members at once, otherwise
+  // permutability has no meaning.
+  isl::schedule LHSNewBody =
+      rebuildBand(LHS, LHSBody, [](int i) { return i > 0; });
+  isl::schedule RHSNewBody =
+      rebuildBand(RHS, RHSBody, [](int i) { return i > 0; });
+
+  // The loop body of the fused loop.
+  isl::schedule NewCommonBody = LHSNewBody.sequence(RHSNewBody);
+
+  // Combine the partial schedules of both loops to a new one. Instances with
+  // the same scatter value are put together.
+  isl::union_map NewCommonPartialSched =
+      LHSPartOuterSched.as_union_map().unite(RHSPartOuterSched.as_union_map());
+  isl::schedule NewCommonSchedule = NewCommonBody.insert_partial_schedule(
+      NewCommonPartialSched.as_multi_union_pw_aff());
+
+  return NewCommonSchedule;
+}
+
+static isl::schedule tryGreedyFuse(isl::schedule_node LHS,
+                                   isl::schedule_node RHS,
+                                   const isl::union_map &Deps) {
+  // TODO: Non-bands could be interpreted as a band with just as single
+  // iteration. However, this is only useful if both ends of a fused loop were
+  // originally loops themselves.
+  if (!LHS.isa<isl::schedule_node_band>())
+    return {};
+  if (!RHS.isa<isl::schedule_node_band>())
+    return {};
+
+  return tryGreedyFuse(LHS.as<isl::schedule_node_band>(),
+                       RHS.as<isl::schedule_node_band>(), Deps);
+}
+
+/// Fuse all fusable loop top-down in a schedule tree.
+///
+/// The isl::union_map parameters is the set of validity dependencies that have
+/// not been resolved/carried by a parent schedule node.
+class GreedyFusionRewriter
+    : public ScheduleTreeRewriter<GreedyFusionRewriter, isl::union_map> {
+private:
+  using BaseTy = ScheduleTreeRewriter<GreedyFusionRewriter, isl::union_map>;
+  BaseTy &getBase() { return *this; }
+  const BaseTy &getBase() const { return *this; }
+
+public:
+  /// Is set to true if anything has been fused.
+  bool AnyChange = false;
+
+  isl::schedule visitBand(isl::schedule_node_band Band, isl::union_map Deps) {
+    int NumLoops = Band.n_member().release();
+
+    // { Domain[] -> Scatter[] }
+    isl::union_map PartSched =
+        isl::union_map::from(Band.get_partial_schedule());
+    assert(getNumScatterDims(PartSched) == NumLoops);
+    isl::space ParamSpace = PartSched.get_space().params();
+
+    // { Scatter[] -> Domain[] }
+    isl::union_map PartSchedRev = PartSched.reverse();
+
+    // Possible within the same iteration. Dependencies with smaller scatter
+    // value are carried by this loop and therefore have been resolved by the
+    // in-order execution if the loop iteration. A dependency with small scatter
+    // value would be a dependency violation that we assume did not happen. {
+    // Domain[] -> Domain[] }
+    isl::union_map Unsequenced = PartSchedRev.apply_domain(PartSchedRev);
+
+    // Actual dependencies within the same iteration.
+    // { DefDomain[] -> UseDomain[] }
+    isl::union_map RemDeps = Deps.intersect(Unsequenced);
+
+    return getBase().visitBand(Band, RemDeps);
+  }
+
+  isl::schedule visitSequence(isl::schedule_node_sequence Sequence,
+                              isl::union_map Deps) {
+    int NumChildren = isl_schedule_node_n_children(Sequence.get());
+
+    // List of fusion candidates. The first element is the fusion candidate, the
+    // second is candidate's ancestor that is the sequence's direct child. It is
+    // preferable to use the direct child if not if its non-direct children is
+    // fused to preserve its structure such as mark nodes.
+    SmallVector<std::pair<isl::schedule_node, isl::schedule_node>> Bands;
+    for (auto i : seq<int>(0, NumChildren)) {
+      isl::schedule_node Child = Sequence.child(i);
+      collectPotentiallyFusableBands(Child, Bands, Child);
+    }
+
+    // Direct children that had at least one of its decendants fused.
+    SmallDenseSet<isl_schedule_node *, 4> ChangedDirectChildren;
+
+    // Fuse neigboring bands until reaching the end of candidates.
+    int i = 0;
+    while (i + 1 < (int)Bands.size()) {
+      isl::schedule Fused =
+          tryGreedyFuse(Bands[i].first, Bands[i + 1].first, Deps);
+      if (Fused.is_null()) {
+        // Cannot merge this node with the next; look at next pair.
+        i += 1;
+        continue;
+      }
+
+      // Mark the direct children as (partially) fused.
+      if (!Bands[i].second.is_null())
+        ChangedDirectChildren.insert(Bands[i].second.get());
+      if (!Bands[i + 1].second.is_null())
+        ChangedDirectChildren.insert(Bands[i + 1].second.get());
+
+      // Collapse the neigbros to a single new candidate that could be fused
+      // with the next candidate.
+      Bands[i] = {Fused.get_root(), {}};
+      Bands.erase(Bands.begin() + i + 1);
+
+      AnyChange = true;
+    }
+
+    // By construction equal if done with collectPotentiallyFusableBands's
+    // output.
+    SmallVector<isl::union_set> SubDomains;
+    SubDomains.reserve(NumChildren);
+    for (int i = 0; i < NumChildren; i += 1)
+      SubDomains.push_back(Sequence.child(i).domain());
+    auto SubRemainingDeps = remainigDepsFromSequence(SubDomains, Deps);
+
+    // We may iterate over direct children multiple times, be sure to add each
+    // at most once.
+    SmallDenseSet<isl_schedule_node *, 4> AlreadyAdded;
+
+    isl::schedule Result;
+    for (auto &P : Bands) {
+      isl::schedule_node MaybeFused = P.first;
+      isl::schedule_node DirectChild = P.second;
+
+      // If not modified, use the direct child.
+      if (!DirectChild.is_null() &&
+          !ChangedDirectChildren.count(DirectChild.get())) {
+        if (AlreadyAdded.count(DirectChild.get()))
+          continue;
+        AlreadyAdded.insert(DirectChild.get());
+        MaybeFused = DirectChild;
+      } else {
+        assert(AnyChange &&
+               "Need changed flag for be consistent with actual change");
+      }
+
+      // Top-down recursion: If the outermost loop has been fused, their nested
+      // bands might be fusable now as well.
+      isl::schedule InnerFused = visit(MaybeFused, SubRemainingDeps);
+
+      // Reconstruct the sequence, with some of the children fused.
+      if (Result.is_null())
+        Result = InnerFused;
+      else
+        Result = Result.sequence(InnerFused);
+    }
+
+    return Result;
+  }
+};
+
 } // namespace
 
 bool polly::isBandMark(const isl::schedule_node &Node) {
@@ -773,4 +1253,20 @@ isl::schedule polly::applyMaxFission(isl::schedule_node BandToFission) {
   isl::schedule_node Fissioned = BandToFission.insert_sequence(DomList);
 
   return Fissioned.get_schedule();
+}
+
+isl::schedule polly::applyGreedyFusion(isl::schedule Sched,
+                                       const isl::union_map &Deps) {
+  LLVM_DEBUG(dbgs() << "Greedy loop fusion\n");
+
+  GreedyFusionRewriter Rewriter;
+  isl::schedule Result = Rewriter.visit(Sched, Deps);
+  if (!Rewriter.AnyChange) {
+    LLVM_DEBUG(dbgs() << "Found nothing to fuse\n");
+    return Sched;
+  }
+
+  // GreedyFusionRewriter due to working loop-by-loop, bands with multiple loops
+  // may have been split into multiple bands.
+  return collapseBands(Result);
 }

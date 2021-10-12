@@ -2621,6 +2621,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // LLVM flags based on the final state.
   bool HonorINFs = true;
   bool HonorNaNs = true;
+  bool ApproxFunc = false;
   // -fmath-errno is the default on some platforms, e.g. BSD-derived OSes.
   bool MathErrno = TC.IsMathErrnoDefault();
   bool AssociativeMath = false;
@@ -2725,6 +2726,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fno_honor_infinities: HonorINFs = false;        break;
     case options::OPT_fhonor_nans:          HonorNaNs = true;         break;
     case options::OPT_fno_honor_nans:       HonorNaNs = false;        break;
+    case options::OPT_fapprox_func:         ApproxFunc = true;        break;
+    case options::OPT_fno_approx_func:      ApproxFunc = false;       break;
     case options::OPT_fmath_errno:          MathErrno = true;         break;
     case options::OPT_fno_math_errno:       MathErrno = false;        break;
     case options::OPT_fassociative_math:    AssociativeMath = true;   break;
@@ -2924,6 +2927,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (!HonorNaNs)
     CmdArgs.push_back("-menable-no-nans");
+
+  if (ApproxFunc)
+    CmdArgs.push_back("-fapprox-func");
 
   if (MathErrno)
     CmdArgs.push_back("-fmath-errno");
@@ -5836,6 +5842,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_cuda_force_full_runtime,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-cuda-force-full-runtime");
+
+      // When in OpenMP offloading mode, forward assumptions information about
+      // thread and team counts in the device.
+      if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                       options::OPT_fno_openmp_assume_teams_oversubscription,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+      if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                       options::OPT_fno_openmp_assume_threads_oversubscription,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code

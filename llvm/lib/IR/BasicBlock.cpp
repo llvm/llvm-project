@@ -12,6 +12,7 @@
 
 #include "llvm/IR/BasicBlock.h"
 #include "SymbolTableListTraitsImpl.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -22,6 +23,9 @@
 #include <algorithm>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "ir"
+STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   if (Function *F = getParent())
@@ -505,6 +509,8 @@ void BasicBlock::renumberInstructions() {
   BasicBlockBits Bits = getBasicBlockBits();
   Bits.InstrOrderValid = true;
   setBasicBlockBits(Bits);
+
+  NumInstrRenumberings++;
 }
 
 #ifndef NDEBUG

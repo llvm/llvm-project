@@ -11,14 +11,14 @@ define swifttailcc void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: sub sp, sp, #32
 ; CHECK: stp x29, x30, [sp, #16]
 
-; CHECK-NOAUTH: str x22, [sp, #8]
+; CHECK-NOAUTH-DAG: str x22, [sp, #8]
 ; CHECK-AUTH: add x16, sp, #8
 ; CHECK-AUTH: movk x16, #49946, lsl #48
 ; CHECK-AUTH: mov x17, x22
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #8]
 
-; CHECK: add x29, sp, #16
+; CHECK-DAG: add x29, sp, #16
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
@@ -38,14 +38,14 @@ define swifttailcc void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: str x23, [sp, #-32]!
 ; CHECK: stp x29, x30, [sp, #16]
 
-; CHECK-NOAUTH: str x22, [sp, #8]
+; CHECK-NOAUTH-DAG: str x22, [sp, #8]
 ; CHECK-AUTH: add x16, sp, #8
 ; CHECK-AUTH: movk x16, #49946, lsl #48
 ; CHECK-AUTH: mov x17, x22
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #8]
 
-; CHECK: add x29, sp, #16
+; CHECK-DAG: add x29, sp, #16
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
@@ -66,14 +66,14 @@ define swifttailcc void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: sub sp, sp, #64
 ; CHECK: stp x29, x30, [sp, #48]
 
-; CHECK-NOAUTH: str x22, [sp, #40]
+; CHECK-NOAUTH-DAG: str x22, [sp, #40]
 ; CHECK-AUTH: add x16, sp, #40
 ; CHECK-AUTH: movk x16, #49946, lsl #48
 ; CHECK-AUTH: mov x17, x22
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #40]
 
-; CHECK: add x29, sp, #48
+; CHECK-DAG: add x29, sp, #48
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
@@ -138,8 +138,8 @@ define swifttailcc void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" 
 ; CHECK-LABEL: large_frame:
 ; CHECK: str x28, [sp, #-32]!
 ; CHECK: stp x29, x30, [sp, #16]
-; CHECK-NOAUTH: str x22, [sp, #8]
-; CHECK: add x29, sp, #16
+; CHECK-NOAUTH-DAG: str x22, [sp, #8]
+; CHECK-DAG: add x29, sp, #16
 ; CHECK: sub sp, sp, #1024
 ; [...]
 ; CHECK: add sp, sp, #1024
@@ -157,8 +157,8 @@ define swifttailcc void @two_unpaired_csrs(i8* swiftasync) "frame-pointer"="all"
 ; CHECK: str d8, [sp, #-48]!
 ; CHECK: str x19, [sp, #16]
 ; CHECK: stp x29, x30, [sp, #32]
-; CHECK-NOAUTH: str x22, [sp, #24]
-; CHECK: add x29, sp, #32
+; CHECK-NOAUTH-DAG: str x22, [sp, #24]
+; CHECK-DAG: add x29, sp, #32
 
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8

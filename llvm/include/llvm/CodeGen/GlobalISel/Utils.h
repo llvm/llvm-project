@@ -16,6 +16,7 @@
 
 #include "GISelWorkList.h"
 #include "LostDebugLocObserver.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
@@ -271,6 +272,11 @@ Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
 Optional<APFloat> ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
                                          Register Src,
                                          const MachineRegisterInfo &MRI);
+
+/// Tries to constant fold a G_CTLZ operation on \p Src. If \p Src is a vector
+/// then it tries to do an element-wise constant fold.
+Optional<SmallVector<unsigned>>
+ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is

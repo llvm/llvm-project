@@ -13,20 +13,20 @@ void func(char *data) {
   // CHECK:   store i8* %[[DATA]], i8** %[[DATA_ADDR]], align 8
   // CHECK:   %[[DATA_RELOADED:.*]] = load i8*, i8** %[[DATA_ADDR]], align 8
   // CHECK-SANITIZE-NEXT:   %[[PTRINT:.*]] = ptrtoint i8* %[[DATA_RELOADED]] to i64
-  // CHECK-SANITIZE-NEXT:   %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 2147483647
+  // CHECK-SANITIZE-NEXT:   %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 4294967295
   // CHECK-SANITIZE-NEXT:   %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0
   // CHECK-SANITIZE-NEXT:               %[[PTRINT_DUP:.*]] = ptrtoint i8* %[[DATA_RELOADED]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[MASKCOND]], label %[[CONT:.*]], label %[[HANDLER_ALIGNMENT_ASSUMPTION:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_ALIGNMENT_ASSUMPTION]]:
-  // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_alignment_assumption_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}, {{{.*}}}* }* @[[LINE_100_ALIGNMENT_ASSUMPTION]] to i8*), i64 %[[PTRINT_DUP]], i64 2147483648, i64 0){{.*}}, !nosanitize
-  // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_alignment_assumption(i8* bitcast ({ {{{.*}}}, {{{.*}}}, {{{.*}}}* }* @[[LINE_100_ALIGNMENT_ASSUMPTION]] to i8*), i64 %[[PTRINT_DUP]], i64 2147483648, i64 0){{.*}}, !nosanitize
+  // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_alignment_assumption_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}, {{{.*}}}* }* @[[LINE_100_ALIGNMENT_ASSUMPTION]] to i8*), i64 %[[PTRINT_DUP]], i64 4294967296, i64 0){{.*}}, !nosanitize
+  // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_alignment_assumption(i8* bitcast ({ {{{.*}}}, {{{.*}}}, {{{.*}}}* }* @[[LINE_100_ALIGNMENT_ASSUMPTION]] to i8*), i64 %[[PTRINT_DUP]], i64 4294967296, i64 0){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 23){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:
-  // CHECK-NEXT:                        call void @llvm.assume(i1 true) [ "align"(i8* %[[DATA_RELOADED]], i64 2147483648) ]
+  // CHECK-NEXT:                        call void @llvm.assume(i1 true) [ "align"(i8* %[[DATA_RELOADED]], i64 4294967296) ]
 
 #line 100
-#pragma omp for simd aligned(data : 0x80000000)
+#pragma omp for simd aligned(data : 0x100000000)
   for (int x = 0; x < 1; x++)
     data[x] = data[x];
 }

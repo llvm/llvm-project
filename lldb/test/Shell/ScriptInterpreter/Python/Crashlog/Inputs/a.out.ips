@@ -170,5 +170,9 @@
   "threadTriggered" : {
     "queue" : "com.apple.main-thread"
   }
-}
+},
+  "reportNotes" : [
+  "invalid foo",
+  "invalid bar"
+]
 }

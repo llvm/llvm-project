@@ -26,8 +26,8 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include <set>
 using namespace llvm;

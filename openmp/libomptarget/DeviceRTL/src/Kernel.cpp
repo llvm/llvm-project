@@ -81,7 +81,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
     return -1;
   }
 
-  if (mapping::isMainThreadInGenericMode())
+  if (mapping::isMainThreadInGenericMode(IsSPMD))
     return -1;
 
   if (UseGenericStateMachine)

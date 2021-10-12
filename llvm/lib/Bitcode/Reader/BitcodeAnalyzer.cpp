@@ -747,7 +747,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   // BLOCKINFO is a special part of the stream.
   bool DumpRecords = O.hasValue();
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
-    if (O)
+    if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
     Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
         Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
@@ -761,8 +761,8 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
     if (Error Err = Stream.JumpToBit(BlockBitStart))
       return Err;
     // It's not really interesting to dump the contents of the blockinfo
-    // block.
-    DumpRecords = false;
+    // block, so only do it if the user explicitly requests it.
+    DumpRecords = O && O->DumpBlockinfo;
   }
 
   unsigned NumWords = 0;

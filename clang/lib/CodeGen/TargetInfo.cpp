@@ -3415,6 +3415,9 @@ static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
 
   // If this is a struct, recurse into the field at the specified offset.
   if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
+    if (!STy->getNumContainedTypes())
+      return nullptr;
+
     const llvm::StructLayout *SL = TD.getStructLayout(STy);
     unsigned Elt = SL->getElementContainingOffset(IROffset);
     IROffset -= SL->getElementOffset(Elt);

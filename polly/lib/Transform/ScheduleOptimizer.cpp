@@ -92,14 +92,15 @@ static cl::opt<int> MaxCoefficient(
     cl::desc("The maximal coefficient allowed (-1 is unlimited)"), cl::Hidden,
     cl::init(20), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::opt<std::string> FusionStrategy(
-    "polly-opt-fusion", cl::desc("The fusion strategy to choose (min/max)"),
-    cl::Hidden, cl::init("min"), cl::ZeroOrMore, cl::cat(PollyCategory));
-
 static cl::opt<std::string>
     MaximizeBandDepth("polly-opt-maximize-bands",
                       cl::desc("Maximize the band depth (yes/no)"), cl::Hidden,
                       cl::init("yes"), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<bool>
+    GreedyFusion("polly-loopfusion-greedy",
+                 cl::desc("Aggressively try to fuse everything"), cl::Hidden,
+                 cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<std::string> OuterCoincidence(
     "polly-opt-outer-coincidence",
@@ -838,6 +839,13 @@ static bool runIslScheduleOptimizer(
   // touch the schedule.
   if (Schedule.is_null())
     return false;
+
+  if (GreedyFusion) {
+    isl::union_map Validity = D.getDependences(
+        Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW);
+    Schedule = applyGreedyFusion(Schedule, Validity);
+    assert(!Schedule.is_null());
+  }
 
   // Apply post-rescheduling optimizations (if enabled) and/or prevectorization.
   const OptimizerAdditionalInfoTy OAI = {

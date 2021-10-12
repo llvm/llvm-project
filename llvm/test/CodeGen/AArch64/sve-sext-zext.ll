@@ -240,11 +240,11 @@ define <vscale x 16 x i64> @sext_b_to_d(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sext_b_to_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
-; CHECK-NEXT:    sunpkhi z0.h, z0.b
+; CHECK-NEXT:    sunpkhi z6.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
-; CHECK-NEXT:    sunpklo z5.s, z0.h
-; CHECK-NEXT:    sunpkhi z7.s, z0.h
+; CHECK-NEXT:    sunpklo z5.s, z6.h
+; CHECK-NEXT:    sunpkhi z7.s, z6.h
 ; CHECK-NEXT:    sunpklo z0.d, z2.s
 ; CHECK-NEXT:    sunpkhi z1.d, z2.s
 ; CHECK-NEXT:    sunpklo z2.d, z3.s
@@ -309,11 +309,11 @@ define <vscale x 16 x i64> @zext_b_to_d(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: zext_b_to_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
-; CHECK-NEXT:    uunpkhi z0.h, z0.b
+; CHECK-NEXT:    uunpkhi z6.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z5.s, z0.h
-; CHECK-NEXT:    uunpkhi z7.s, z0.h
+; CHECK-NEXT:    uunpklo z5.s, z6.h
+; CHECK-NEXT:    uunpkhi z7.s, z6.h
 ; CHECK-NEXT:    uunpklo z0.d, z2.s
 ; CHECK-NEXT:    uunpkhi z1.d, z2.s
 ; CHECK-NEXT:    uunpklo z2.d, z3.s

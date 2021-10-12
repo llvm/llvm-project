@@ -279,32 +279,33 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
   return NoInt;
 }
 
-TargetInfo::RealType TargetInfo::getRealTypeByWidth(unsigned BitWidth,
-                                                    bool ExplicitIEEE) const {
+FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
+                                             FloatModeKind ExplicitType) const {
   if (getFloatWidth() == BitWidth)
-    return Float;
+    return FloatModeKind::Float;
   if (getDoubleWidth() == BitWidth)
-    return Double;
+    return FloatModeKind::Double;
 
   switch (BitWidth) {
   case 96:
     if (&getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
-      return LongDouble;
+      return FloatModeKind::LongDouble;
     break;
   case 128:
     // The caller explicitly asked for an IEEE compliant type but we still
     // have to check if the target supports it.
-    if (ExplicitIEEE)
-      return hasFloat128Type() ? Float128 : NoFloat;
+    if (ExplicitType == FloatModeKind::Float128)
+      return hasFloat128Type() ? FloatModeKind::Float128
+                               : FloatModeKind::NoFloat;
     if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble() ||
         &getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
-      return LongDouble;
+      return FloatModeKind::LongDouble;
     if (hasFloat128Type())
-      return Float128;
+      return FloatModeKind::Float128;
     break;
   }
 
-  return NoFloat;
+  return FloatModeKind::NoFloat;
 }
 
 /// getTypeAlign - Return the alignment (in bits) of the specified integer type

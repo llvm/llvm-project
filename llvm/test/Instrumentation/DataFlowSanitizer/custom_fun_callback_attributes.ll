@@ -1,5 +1,4 @@
-; RUN: opt < %s -dfsan -dfsan-args-abi -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s
-; RUN: opt < %s -dfsan                 -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s
+; RUN: opt < %s -dfsan -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Declare custom functions.  Inputs/abilist.txt causes any function with a

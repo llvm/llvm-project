@@ -165,6 +165,56 @@ func @vec_constant_with_two_users(%M : index, %N : index) -> (f32, f32) {
 
 // -----
 
+// CHECK-LABEL: func @vec_block_arg
+func @vec_block_arg(%A : memref<32x512xi32>) {
+  // CHECK:      affine.for %[[IV0:[arg0-9]+]] = 0 to 512 step 128 {
+  // CHECK-NEXT:   affine.for %[[IV1:[arg0-9]+]] = 0 to 32 {
+  // CHECK-NEXT:     %[[BROADCAST:.*]] = vector.broadcast %[[IV1]] : index to vector<128xindex>
+  // CHECK-NEXT:     %[[CAST:.*]] = index_cast %[[BROADCAST]] : vector<128xindex> to vector<128xi32>
+  // CHECK-NEXT:     vector.transfer_write %[[CAST]], {{.*}}[%[[IV1]], %[[IV0]]] : vector<128xi32>, memref<32x512xi32>
+  affine.for %i = 0 to 512 {  // vectorized
+    affine.for %j = 0 to 32 {
+      %idx = std.index_cast %j : index to i32
+      affine.store %idx, %A[%j, %i] : memref<32x512xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$map0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 2 + d1 - 1)>
+// CHECK-DAG: #[[$map1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK-LABEL: func @vec_block_arg_2
+func @vec_block_arg_2(%A : memref<?x512xindex>) {
+  %c0 = constant 0 : index
+  %N = memref.dim %A, %c0 : memref<?x512xindex>
+  // CHECK:      affine.for %[[IV0:[arg0-9]+]] = 0 to %{{.*}} {
+  // CHECK-NEXT:   %[[BROADCAST1:.*]] = vector.broadcast %[[IV0]] : index to vector<128xindex>
+  // CHECK-NEXT:   affine.for %[[IV1:[arg0-9]+]] = 0 to 512 step 128 {
+  // CHECK-NOT:      vector.broadcast %[[IV1]]
+  // CHECK:          affine.for %[[IV2:[arg0-9]+]] = 0 to 2 {
+  // CHECK-NEXT:       %[[BROADCAST2:.*]] = vector.broadcast %[[IV2]] : index to vector<128xindex>
+  // CHECK-NEXT:       %[[INDEX1:.*]] = affine.apply #[[$map0]](%[[IV0]], %[[IV2]], %[[IV1]])
+  // CHECK-NEXT:       %[[INDEX2:.*]] = affine.apply #[[$map1]](%[[IV0]], %[[IV2]], %[[IV1]])
+  // CHECK:            %[[LOAD:.*]] = vector.transfer_read %{{.*}}[%[[INDEX1]], %[[INDEX2]]], %{{.*}} : memref<?x512xindex>, vector<128xindex>
+  // CHECK-NEXT:       muli %[[BROADCAST1]], %[[LOAD]] : vector<128xindex>
+  // CHECK-NEXT:       addi %{{.*}}, %[[BROADCAST2]] : vector<128xindex>
+  // CHECK:          }
+  affine.for %i0 = 0 to %N {
+    affine.for %i1 = 0 to 512 { // vectorized
+      affine.for %i2 = 0 to 2 {
+        %0 = affine.load %A[%i0 * 2 + %i2 - 1, %i1] : memref<?x512xindex>
+        %mul = muli %i0, %0 : index
+        %add = addi %mul, %i2 : index
+      }
+    }  
+  }  
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @vec_rejected_1
 func @vec_rejected_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index

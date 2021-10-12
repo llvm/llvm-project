@@ -2274,8 +2274,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
                                CI.getArgOperand(0)->getType(), 0});
     }
-    Info.Callee =
-        MachineOperand::CreateES(MF->createExternalSymbolName(TrapFuncName));
+    Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
     Info.CB = &CI;
     Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
     return CLI->lowerCall(MIRBuilder, Info);

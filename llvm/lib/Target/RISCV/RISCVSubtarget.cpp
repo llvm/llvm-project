@@ -17,7 +17,7 @@
 #include "RISCVLegalizerInfo.h"
 #include "RISCVRegisterBankInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 

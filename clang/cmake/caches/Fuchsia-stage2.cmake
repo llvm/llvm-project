@@ -270,6 +270,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-ifs
   llvm-gsymutil
   llvm-lib
+  llvm-libtool-darwin
   llvm-lipo
   llvm-mt
   llvm-nm

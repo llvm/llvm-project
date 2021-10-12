@@ -5404,8 +5404,8 @@ DISubrange
 :ref:`DICompositeType`.
 
 - ``count: -1`` indicates an empty array.
-- ``count: !9`` describes the count with a :ref:`DILocalVariable`.
-- ``count: !11`` describes the count with a :ref:`DIGlobalVariable`.
+- ``count: !10`` describes the count with a :ref:`DILocalVariable`.
+- ``count: !12`` describes the count with a :ref:`DIGlobalVariable`.
 
 .. code-block:: text
 

@@ -103,8 +103,8 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
       if (TId < NumThreads)
         invokeMicrotask(TId, 0, fn, args, nargs);
+      synchronize::threads();
     }
-    synchronize::threads();
     return;
   }
 

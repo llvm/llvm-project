@@ -47,19 +47,6 @@ llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUThreadID(CodeGenFunction &CGF) {
   return Bld.CreateCall(F, llvm::None, "nvptx_tid");
 }
 
-llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Module *M = &CGF.CGM.getModule();
-  const char *LocSize = "__kmpc_amdgcn_gpu_num_threads";
-  llvm::Function *F = M->getFunction(LocSize);
-  if (!F) {
-    F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int32Ty, llvm::None, false),
-        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
-  }
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
-}
-
 std::pair<bool, RValue> CGOpenMPRuntimeAMDGCN::emitFastFPAtomicCall(
     CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
   CGBuilderTy &Bld = CGF.Builder;

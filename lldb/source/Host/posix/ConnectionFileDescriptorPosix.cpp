@@ -50,27 +50,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const char *ConnectionFileDescriptor::LISTEN_SCHEME = "listen";
-const char *ConnectionFileDescriptor::ACCEPT_SCHEME = "accept";
-const char *ConnectionFileDescriptor::UNIX_ACCEPT_SCHEME = "unix-accept";
-const char *ConnectionFileDescriptor::CONNECT_SCHEME = "connect";
-const char *ConnectionFileDescriptor::TCP_CONNECT_SCHEME = "tcp-connect";
-const char *ConnectionFileDescriptor::UDP_SCHEME = "udp";
-const char *ConnectionFileDescriptor::UNIX_CONNECT_SCHEME = "unix-connect";
-const char *ConnectionFileDescriptor::UNIX_ABSTRACT_CONNECT_SCHEME =
-    "unix-abstract-connect";
-const char *ConnectionFileDescriptor::FD_SCHEME = "fd";
-const char *ConnectionFileDescriptor::FILE_SCHEME = "file";
-
-static llvm::Optional<llvm::StringRef> GetURLAddress(llvm::StringRef url,
-                                                     llvm::StringRef scheme) {
-  if (!url.consume_front(scheme))
-    return llvm::None;
-  if (!url.consume_front("://"))
-    return llvm::None;
-  return url;
-}
-
 ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)
     : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
 
@@ -85,9 +64,8 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
     : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
       m_waiting_for_accept(false), m_child_processes_inherit(false) {
   m_write_sp =
-      std::make_shared<NativeFile>(fd, File::eOpenOptionWriteOnly, owns_fd);
-  m_read_sp =
-      std::make_shared<NativeFile>(fd, File::eOpenOptionReadOnly, false);
+      std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, owns_fd);
+  m_read_sp = m_write_sp;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));
@@ -155,135 +133,41 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
 
   OpenCommandPipe();
 
-  if (!path.empty()) {
-    llvm::Optional<llvm::StringRef> addr;
-    if ((addr = GetURLAddress(path, LISTEN_SCHEME))) {
-      // listen://HOST:PORT
-      return SocketListenAndAccept(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, ACCEPT_SCHEME))) {
-      // unix://SOCKNAME
-      return NamedSocketAccept(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, UNIX_ACCEPT_SCHEME))) {
-      // unix://SOCKNAME
-      return NamedSocketAccept(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, CONNECT_SCHEME))) {
-      return ConnectTCP(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, TCP_CONNECT_SCHEME))) {
-      return ConnectTCP(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, UDP_SCHEME))) {
-      return ConnectUDP(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, UNIX_CONNECT_SCHEME))) {
-      // unix-connect://SOCKNAME
-      return NamedSocketConnect(*addr, error_ptr);
-    } else if ((addr = GetURLAddress(path, UNIX_ABSTRACT_CONNECT_SCHEME))) {
-      // unix-abstract-connect://SOCKNAME
-      return UnixAbstractSocketConnect(*addr, error_ptr);
-    }
-#if LLDB_ENABLE_POSIX
-    else if ((addr = GetURLAddress(path, FD_SCHEME))) {
-      // Just passing a native file descriptor within this current process that
-      // is already opened (possibly from a service or other source).
-      int fd = -1;
-
-      if (!addr->getAsInteger(0, fd)) {
-        // We have what looks to be a valid file descriptor, but we should make
-        // sure it is. We currently are doing this by trying to get the flags
-        // from the file descriptor and making sure it isn't a bad fd.
-        errno = 0;
-        int flags = ::fcntl(fd, F_GETFL, 0);
-        if (flags == -1 || errno == EBADF) {
-          if (error_ptr)
-            error_ptr->SetErrorStringWithFormat("stale file descriptor: %s",
-                                                path.str().c_str());
-          m_read_sp.reset();
-          m_write_sp.reset();
-          return eConnectionStatusError;
-        } else {
-          // Don't take ownership of a file descriptor that gets passed to us
-          // since someone else opened the file descriptor and handed it to us.
-          // TODO: Since are using a URL to open connection we should
-          // eventually parse options using the web standard where we have
-          // "fd://123?opt1=value;opt2=value" and we can have an option be
-          // "owns=1" or "owns=0" or something like this to allow us to specify
-          // this. For now, we assume we must assume we don't own it.
-
-          std::unique_ptr<TCPSocket> tcp_socket;
-          tcp_socket = std::make_unique<TCPSocket>(fd, false, false);
-          // Try and get a socket option from this file descriptor to see if
-          // this is a socket and set m_is_socket accordingly.
-          int resuse;
-          bool is_socket =
-              !!tcp_socket->GetOption(SOL_SOCKET, SO_REUSEADDR, resuse);
-          if (is_socket) {
-            m_read_sp = std::move(tcp_socket);
-            m_write_sp = m_read_sp;
-          } else {
-            m_read_sp = std::make_shared<NativeFile>(
-                fd, File::eOpenOptionReadOnly, false);
-            m_write_sp = std::make_shared<NativeFile>(
-                fd, File::eOpenOptionWriteOnly, false);
-          }
-          m_uri = std::string(*addr);
-          return eConnectionStatusSuccess;
-        }
-      }
-
-      if (error_ptr)
-        error_ptr->SetErrorStringWithFormat("invalid file descriptor: \"%s\"",
-                                            path.str().c_str());
-      m_read_sp.reset();
-      m_write_sp.reset();
-      return eConnectionStatusError;
-    } else if ((addr = GetURLAddress(path, FILE_SCHEME))) {
-      std::string addr_str = addr->str();
-      // file:///PATH
-      int fd = llvm::sys::RetryAfterSignal(-1, ::open, addr_str.c_str(), O_RDWR);
-      if (fd == -1) {
-        if (error_ptr)
-          error_ptr->SetErrorToErrno();
-        return eConnectionStatusError;
-      }
-
-      if (::isatty(fd)) {
-        // Set up serial terminal emulation
-        struct termios options;
-        ::tcgetattr(fd, &options);
-
-        // Set port speed to maximum
-        ::cfsetospeed(&options, B115200);
-        ::cfsetispeed(&options, B115200);
-
-        // Raw input, disable echo and signals
-        options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-
-        // Make sure only one character is needed to return from a read
-        options.c_cc[VMIN] = 1;
-        options.c_cc[VTIME] = 0;
-
-        llvm::sys::RetryAfterSignal(-1, ::tcsetattr, fd, TCSANOW, &options);
-      }
-
-      int flags = ::fcntl(fd, F_GETFL, 0);
-      if (flags >= 0) {
-        if ((flags & O_NONBLOCK) == 0) {
-          flags |= O_NONBLOCK;
-          ::fcntl(fd, F_SETFL, flags);
-        }
-      }
-      m_read_sp =
-          std::make_shared<NativeFile>(fd, File::eOpenOptionReadOnly, true);
-      m_write_sp =
-          std::make_shared<NativeFile>(fd, File::eOpenOptionWriteOnly, false);
-      return eConnectionStatusSuccess;
-    }
-#endif
+  if (path.empty()) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("unsupported connection URL: '%s'",
-                                          path.str().c_str());
+      error_ptr->SetErrorString("invalid connect arguments");
     return eConnectionStatusError;
   }
+
+  llvm::StringRef scheme;
+  std::tie(scheme, path) = path.split("://");
+
+  if (!path.empty()) {
+    auto method =
+        llvm::StringSwitch<ConnectionStatus (ConnectionFileDescriptor::*)(
+            llvm::StringRef, Status *)>(scheme)
+            .Case("listen", &ConnectionFileDescriptor::SocketListenAndAccept)
+            .Cases("accept", "unix-accept",
+                   &ConnectionFileDescriptor::NamedSocketAccept)
+            .Cases("connect", "tcp-connect",
+                   &ConnectionFileDescriptor::ConnectTCP)
+            .Case("udp", &ConnectionFileDescriptor::ConnectUDP)
+            .Case("unix-connect", &ConnectionFileDescriptor::NamedSocketConnect)
+            .Case("unix-abstract-connect",
+                  &ConnectionFileDescriptor::UnixAbstractSocketConnect)
+#if LLDB_ENABLE_POSIX
+            .Case("fd", &ConnectionFileDescriptor::ConnectFD)
+            .Case("file", &ConnectionFileDescriptor::ConnectFile)
+#endif
+            .Default(nullptr);
+
+    if (method)
+      return (this->*method)(path, error_ptr);
+  }
+
   if (error_ptr)
-    error_ptr->SetErrorString("invalid connect arguments");
+    error_ptr->SetErrorStringWithFormat("unsupported connection URL: '%s'",
+                                        path.str().c_str());
   return eConnectionStatusError;
 }
 
@@ -762,6 +646,111 @@ ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
   m_read_sp = m_write_sp;
   m_uri.assign(std::string(s));
   return eConnectionStatusSuccess;
+}
+
+ConnectionStatus ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
+                                                     Status *error_ptr) {
+#if LLDB_ENABLE_POSIX
+  // Just passing a native file descriptor within this current process that
+  // is already opened (possibly from a service or other source).
+  int fd = -1;
+
+  if (!s.getAsInteger(0, fd)) {
+    // We have what looks to be a valid file descriptor, but we should make
+    // sure it is. We currently are doing this by trying to get the flags
+    // from the file descriptor and making sure it isn't a bad fd.
+    errno = 0;
+    int flags = ::fcntl(fd, F_GETFL, 0);
+    if (flags == -1 || errno == EBADF) {
+      if (error_ptr)
+        error_ptr->SetErrorStringWithFormat("stale file descriptor: %s",
+                                            s.str().c_str());
+      m_read_sp.reset();
+      m_write_sp.reset();
+      return eConnectionStatusError;
+    } else {
+      // Don't take ownership of a file descriptor that gets passed to us
+      // since someone else opened the file descriptor and handed it to us.
+      // TODO: Since are using a URL to open connection we should
+      // eventually parse options using the web standard where we have
+      // "fd://123?opt1=value;opt2=value" and we can have an option be
+      // "owns=1" or "owns=0" or something like this to allow us to specify
+      // this. For now, we assume we must assume we don't own it.
+
+      std::unique_ptr<TCPSocket> tcp_socket;
+      tcp_socket = std::make_unique<TCPSocket>(fd, false, false);
+      // Try and get a socket option from this file descriptor to see if
+      // this is a socket and set m_is_socket accordingly.
+      int resuse;
+      bool is_socket =
+          !!tcp_socket->GetOption(SOL_SOCKET, SO_REUSEADDR, resuse);
+      if (is_socket) {
+        m_read_sp = std::move(tcp_socket);
+        m_write_sp = m_read_sp;
+      } else {
+        m_read_sp =
+            std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, false);
+        m_write_sp = m_read_sp;
+      }
+      m_uri = s.str();
+      return eConnectionStatusSuccess;
+    }
+  }
+
+  if (error_ptr)
+    error_ptr->SetErrorStringWithFormat("invalid file descriptor: \"%s\"",
+                                        s.str().c_str());
+  m_read_sp.reset();
+  m_write_sp.reset();
+  return eConnectionStatusError;
+#endif // LLDB_ENABLE_POSIX
+  llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
+}
+
+ConnectionStatus ConnectionFileDescriptor::ConnectFile(llvm::StringRef s,
+                                                       Status *error_ptr) {
+#if LLDB_ENABLE_POSIX
+  std::string addr_str = s.str();
+  // file:///PATH
+  int fd = llvm::sys::RetryAfterSignal(-1, ::open, addr_str.c_str(), O_RDWR);
+  if (fd == -1) {
+    if (error_ptr)
+      error_ptr->SetErrorToErrno();
+    return eConnectionStatusError;
+  }
+
+  if (::isatty(fd)) {
+    // Set up serial terminal emulation
+    struct termios options;
+    ::tcgetattr(fd, &options);
+
+    // Set port speed to maximum
+    ::cfsetospeed(&options, B115200);
+    ::cfsetispeed(&options, B115200);
+
+    // Raw input, disable echo and signals
+    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+
+    // Make sure only one character is needed to return from a read
+    options.c_cc[VMIN] = 1;
+    options.c_cc[VTIME] = 0;
+
+    llvm::sys::RetryAfterSignal(-1, ::tcsetattr, fd, TCSANOW, &options);
+  }
+
+  int flags = ::fcntl(fd, F_GETFL, 0);
+  if (flags >= 0) {
+    if ((flags & O_NONBLOCK) == 0) {
+      flags |= O_NONBLOCK;
+      ::fcntl(fd, F_SETFL, flags);
+    }
+  }
+  m_read_sp =
+      std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
+  m_write_sp = m_read_sp;
+  return eConnectionStatusSuccess;
+#endif // LLDB_ENABLE_POSIX
+  llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
 }
 
 uint16_t

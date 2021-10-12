@@ -51,7 +51,7 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ...
+- -Wbitwise-instead-of-logical (part of -Wbool-operation) warns about use of bitwise operators with boolean operands which have side effects.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -134,6 +134,8 @@ C++20 Feature Support
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented `P1938R3: if consteval <https://wg21.link/P1938R3>`_.
+- Implemented `P2360R0: Extend init-statement to allow alias-declaration <https://wg21.link/P2360R0>`_.
+
 
 CUDA Language Changes in Clang
 ------------------------------

@@ -209,14 +209,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PlatformDarwinKernelProperties>
-    PlatformDarwinKernelPropertiesSP;
-
-static const PlatformDarwinKernelPropertiesSP &GetGlobalProperties() {
-  static PlatformDarwinKernelPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PlatformDarwinKernelProperties>();
-  return g_settings_sp;
+static PlatformDarwinKernelProperties &GetGlobalProperties() {
+  static PlatformDarwinKernelProperties g_settings;
+  return g_settings;
 }
 
 void PlatformDarwinKernel::DebuggerInitialize(
@@ -225,7 +220,7 @@ void PlatformDarwinKernel::DebuggerInitialize(
           debugger, PlatformDarwinKernelProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties()->GetValueProperties(),
+        debugger, GetGlobalProperties().GetValueProperties(),
         ConstString("Properties for the PlatformDarwinKernel plug-in."),
         is_global_setting);
   }
@@ -377,7 +372,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 }
 
 void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
-  FileSpecList user_dirs(GetGlobalProperties()->GetKextDirectories());
+  FileSpecList user_dirs(GetGlobalProperties().GetKextDirectories());
   std::vector<FileSpec> possible_sdk_dirs;
 
   const uint32_t user_dirs_count = user_dirs.GetSize();

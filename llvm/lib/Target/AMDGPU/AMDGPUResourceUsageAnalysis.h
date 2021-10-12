@@ -43,6 +43,10 @@ public:
     bool HasIndirectCall = false;
 
     int32_t getTotalNumSGPRs(const GCNSubtarget &ST) const;
+    // Total number of VGPRs is actually a combination of AGPR and VGPR
+    // depending on architecture - and some alignment constraints
+    int32_t getTotalNumVGPRs(const GCNSubtarget &ST, int32_t NumAGPR,
+                             int32_t NumVGPR) const;
     int32_t getTotalNumVGPRs(const GCNSubtarget &ST) const;
   };
 

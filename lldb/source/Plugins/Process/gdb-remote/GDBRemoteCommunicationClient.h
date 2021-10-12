@@ -451,9 +451,8 @@ public:
   GetModulesInfo(llvm::ArrayRef<FileSpec> module_file_specs,
                  const llvm::Triple &triple);
 
-  bool ReadExtFeature(const lldb_private::ConstString object,
-                      const lldb_private::ConstString annex, std::string &out,
-                      lldb_private::Status &err);
+  llvm::Expected<std::string> ReadExtFeature(llvm::StringRef object,
+                                             llvm::StringRef annex);
 
   void ServeSymbolLookups(lldb_private::Process *process);
 

@@ -53,11 +53,3 @@ llvm::Value *CGOpenMPRuntimeNVPTX::getGPUThreadID(CodeGenFunction &CGF) {
       &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x);
   return Bld.CreateCall(F, llvm::None, "nvptx_tid");
 }
-
-llvm::Value *CGOpenMPRuntimeNVPTX::getGPUNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Function *F;
-  F = llvm::Intrinsic::getDeclaration(
-      &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x);
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
-}

@@ -244,6 +244,8 @@ LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, "Number of the reduction records i
 LANGOPT(OpenMPTargetNewRuntime , 1, 0, "Use the new bitcode library for OpenMP offloading")
 LANGOPT(OpenMPTargetDebug , 32, 0, "Enable debugging in the OpenMP offloading device RTL")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, "Use at most 32 bits to represent the collapsed loop nest counter.")
+LANGOPT(OpenMPThreadSubscription  , 1, 0, "Assume work-shared loops do not have more iterations than participating threads.")
+LANGOPT(OpenMPTeamSubscription  , 1, 0, "Assume distributed loops do not have more iterations than participating teams.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")

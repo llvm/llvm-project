@@ -662,7 +662,7 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.
 static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
-  memset(CCs, ISD::SETCC_INVALID, sizeof(ISD::CondCode)*RTLIB::UNKNOWN_LIBCALL);
+  std::fill(CCs, CCs + RTLIB::UNKNOWN_LIBCALL, ISD::SETCC_INVALID);
   CCs[RTLIB::OEQ_F32] = ISD::SETEQ;
   CCs[RTLIB::OEQ_F64] = ISD::SETEQ;
   CCs[RTLIB::OEQ_F128] = ISD::SETEQ;
@@ -1695,7 +1695,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
 /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
 /// function arguments in the caller parameter area.  This is the actual
 /// alignment, not its logarithm.
-unsigned TargetLoweringBase::getByValTypeAlignment(Type *Ty,
+uint64_t TargetLoweringBase::getByValTypeAlignment(Type *Ty,
                                                    const DataLayout &DL) const {
   return DL.getABITypeAlign(Ty).value();
 }

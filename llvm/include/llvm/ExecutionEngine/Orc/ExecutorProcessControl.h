@@ -207,8 +207,8 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  virtual void callWrapperAsync(SendResultFunction OnComplete,
-                                ExecutorAddr WrapperFnAddr,
+  virtual void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                SendResultFunction OnComplete,
                                 ArrayRef<char> ArgBuffer) = 0;
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -222,21 +222,22 @@ public:
     std::promise<shared::WrapperFunctionResult> RP;
     auto RF = RP.get_future();
     callWrapperAsync(
+        WrapperFnAddr,
         [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
-        WrapperFnAddr, ArgBuffer);
+        ArgBuffer);
     return RF.get();
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
+  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
                            const ArgTs &...Args) {
     shared::WrapperFunction<SPSSignature>::callAsync(
         [this,
          WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
                         const char *ArgData, size_t ArgSize) {
-          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
+          callWrapperAsync(WrapperFnAddr, std::move(SendResult),
                            ArrayRef<char>(ArgData, ArgSize));
         },
         std::move(SendResult), Args...);
@@ -304,8 +305,8 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  void callWrapperAsync(SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr,
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        SendResultFunction OnComplete,
                         ArrayRef<char> ArgBuffer) override {
     llvm_unreachable("Unsupported");
   }
@@ -339,8 +340,8 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  void callWrapperAsync(SendResultFunction OnComplete,
-                        ExecutorAddr WrapperFnAddr,
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        SendResultFunction OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
