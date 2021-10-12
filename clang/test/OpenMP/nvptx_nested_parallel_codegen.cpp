@@ -45,7 +45,7 @@ int main() {
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK1-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5:[0-9]+]]
+// CHECK1-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
@@ -84,7 +84,7 @@ int main() {
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 8
-// CHECK1-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -95,9 +95,9 @@ int main() {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
@@ -118,7 +118,7 @@ int main() {
 // CHECK1-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 8
-// CHECK1-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -132,7 +132,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK1-NEXT:    call void @__atomic_load(i64 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__atomic_load(i64 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -141,7 +141,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK1-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR5]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR6]]
 // CHECK1-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK1:       atomic_exit:
 // CHECK1-NEXT:    ret void
@@ -154,9 +154,9 @@ int main() {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
@@ -178,7 +178,7 @@ int main() {
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK2-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5:[0-9]+]]
+// CHECK2-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
@@ -217,7 +217,7 @@ int main() {
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
-// CHECK2-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -228,9 +228,9 @@ int main() {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
@@ -251,7 +251,7 @@ int main() {
 // CHECK2-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 4
-// CHECK2-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -265,7 +265,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK2-NEXT:    call void @__atomic_load(i32 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR5]]
+// CHECK2-NEXT:    call void @__atomic_load(i32 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK2:       atomic_cont:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -274,7 +274,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK2-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR5]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR6]]
 // CHECK2-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK2:       atomic_exit:
 // CHECK2-NEXT:    ret void
@@ -287,9 +287,9 @@ int main() {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
@@ -311,7 +311,7 @@ int main() {
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5:[0-9]+]]
+// CHECK3-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK3-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
@@ -350,7 +350,7 @@ int main() {
 // CHECK3-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK3-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
-// CHECK3-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -361,9 +361,9 @@ int main() {
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
@@ -384,7 +384,7 @@ int main() {
 // CHECK3-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 4
-// CHECK3-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @_Z4workPi(i32* [[TMP1]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -398,7 +398,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK3-NEXT:    call void @__atomic_load(i32 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR5]]
+// CHECK3-NEXT:    call void @__atomic_load(i32 4, i8* [[TMP1]], i8* [[TMP2]], i32 0) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -407,7 +407,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK3-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR5]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 4, i8* [[TMP4]], i8* [[TMP5]], i8* [[TMP6]], i32 0, i32 0) #[[ATTR6]]
 // CHECK3-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK3:       atomic_exit:
 // CHECK3-NEXT:    ret void
@@ -420,9 +420,9 @@ int main() {
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0

@@ -17,10 +17,10 @@ void foo() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    store i32 [[TMP0]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA3:![0-9]+]]
+// CHECK-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK-NEXT:    call void @.omp_outlined.(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    ret void

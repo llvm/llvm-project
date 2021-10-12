@@ -1485,9 +1485,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK1-NEXT:    ret void
@@ -1512,9 +1512,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK1-NEXT:    ret void
@@ -1539,9 +1539,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK1-NEXT:    ret void
@@ -1613,9 +1613,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK1-NEXT:    ret void
@@ -1701,9 +1701,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
@@ -1760,9 +1760,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR1:[0-9]+]]
 // CHECK2-NEXT:    ret void
@@ -1787,9 +1787,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR1]]
 // CHECK2-NEXT:    ret void
@@ -1814,9 +1814,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR1]]
 // CHECK2-NEXT:    ret void
@@ -1886,9 +1886,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR1]]
 // CHECK2-NEXT:    ret void
@@ -1973,9 +1973,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
-// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+// CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0

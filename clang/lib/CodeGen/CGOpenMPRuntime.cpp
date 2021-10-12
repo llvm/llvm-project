@@ -2121,7 +2121,7 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     Address ZeroAddrBound =
         CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                          /*Name=*/".bound.zero.addr");
-    CGF.InitTempAlloca(ZeroAddrBound, CGF.Builder.getInt32(/*C*/ 0));
+    CGF.Builder.CreateStore(CGF.Builder.getInt32(/*C*/ 0), ZeroAddrBound);
     llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
     // ThreadId for serialized parallels is 0.
     OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
@@ -4780,8 +4780,8 @@ emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       LValue NumLVal = CGF.MakeAddrLValue(
           CGF.CreateMemTemp(C.getUIntPtrType(), "depobj.size.addr"),
           C.getUIntPtrType());
-      CGF.InitTempAlloca(NumLVal.getAddress(CGF),
-                         llvm::ConstantInt::get(CGF.IntPtrTy, 0));
+      CGF.Builder.CreateStore(llvm::ConstantInt::get(CGF.IntPtrTy, 0),
+                              NumLVal.getAddress(CGF));
       llvm::Value *PrevVal = CGF.EmitLoadOfScalar(NumLVal, E->getExprLoc());
       llvm::Value *Add = CGF.Builder.CreateNUWAdd(PrevVal, NumDeps);
       CGF.EmitStoreOfScalar(Add, NumLVal);
