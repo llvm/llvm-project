@@ -1135,9 +1135,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   BasicBlock *NonConstBB = nullptr;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
-    // If I is a freeze instruction, count undef as a non-constant.
-    if (match(InVal, m_ImmConstant()) &&
-        (!isa<FreezeInst>(I) || isGuaranteedNotToBeUndefOrPoison(InVal)))
+    // For non-freeze, require constant operand
+    // For freeze, require non-undef, non-poison operand
+    if (!isa<FreezeInst>(I) && match(InVal, m_ImmConstant()))
+      continue;
+    if (isa<FreezeInst>(I) && isGuaranteedNotToBeUndefOrPoison(InVal))
       continue;
 
     if (isa<PHINode>(InVal)) return nullptr;  // Itself a phi.
