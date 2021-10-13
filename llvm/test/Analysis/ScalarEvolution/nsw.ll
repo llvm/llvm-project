@@ -393,3 +393,39 @@ loop:
 leave:
   ret void
 }
+
+define void @select_cond_poison_propagation(double* %p, i32 %x) nounwind {
+; CHECK-LABEL: 'select_cond_poison_propagation'
+; CHECK-NEXT:  Classifying expressions for: @select_cond_poison_propagation
+; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %sel = select i1 %cmp, i32 10, i32 20
+; CHECK-NEXT:    --> %sel U: [0,31) S: [0,31) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %cond = call i1 @cond()
+; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @select_cond_poison_propagation
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv.next = add nsw i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %x
+  %sel = select i1 %cmp, i32 10, i32 20
+  call void @foo(i32 noundef %sel)
+  %cond = call i1 @cond()
+  br i1 %cond, label %loop, label %return
+
+return:
+  ret void
+}
+
+declare void @foo(i32)
+
+declare i1 @cond()
