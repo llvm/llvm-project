@@ -489,6 +489,17 @@ struct DenseMapInfo<mlir::BlockArgument> : public DenseMapInfo<mlir::Value> {
     return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
   }
 };
+template <>
+struct DenseMapInfo<mlir::OpResult> : public DenseMapInfo<mlir::Value> {
+  static mlir::OpResult getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
+  }
+  static mlir::OpResult getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
+  }
+};
 
 /// Allow stealing the low bits of a value.
 template <>
@@ -511,6 +522,14 @@ struct PointerLikeTypeTraits<mlir::BlockArgument>
 public:
   static inline mlir::BlockArgument getFromVoidPointer(void *pointer) {
     return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
+  }
+};
+template <>
+struct PointerLikeTypeTraits<mlir::OpResult>
+    : public PointerLikeTypeTraits<mlir::Value> {
+public:
+  static inline mlir::OpResult getFromVoidPointer(void *pointer) {
+    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
   }
 };
 
