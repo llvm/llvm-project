@@ -50,8 +50,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 48 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX512: LV: Found an estimated cost of 8 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX512: LV: Found an estimated cost of 16 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX512: LV: Found an estimated cost of 10 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX512: LV: Found an estimated cost of 22 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 10 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 18 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 36 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4

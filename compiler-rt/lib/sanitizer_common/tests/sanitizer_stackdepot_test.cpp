@@ -11,7 +11,12 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <atomic>
+#include <numeric>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <thread>
 
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
@@ -105,5 +110,82 @@ TEST(SanitizerCommon, StackDepotPrintNoLock) {
     CHECK_EQ(idx2id[i], StackDepotPut(s));
   }
 }
+
+static struct SanitizerCommonBenchmarkparams {
+  int UniqueStacksPerThread;
+  int RepeatPerThread;
+  int Threads;
+  bool UniqueThreads;
+  bool UseCount;
+} Params[] = {
+    // All traces are unique, very unusual.
+    {10000000, 1, 1},
+    {8000000, 1, 4},
+    {8000000, 1, 16},
+    // Probably most realistic sets.
+    {3000000, 10, 1},
+    {3000000, 10, 4},
+    {3000000, 10, 16},
+    // Update use count as msan/dfsan.
+    {3000000, 10, 16, false, true},
+    // As above, but traces are unique inside of thread.
+    {4000000, 1, 4, true},
+    {2000000, 1, 16, true},
+    {2000000, 10, 4, true},
+    {500000, 10, 16, true},
+    {3000000, 10, 16, true, true},
+};
+
+std::string PrintSanitizerCommonBenchmarkparams(
+    const testing::TestParamInfo<SanitizerCommonBenchmarkparams>& info) {
+  std::stringstream name;
+  name << info.param.UniqueStacksPerThread << "_" << info.param.RepeatPerThread
+       << "_" << info.param.Threads << (info.param.UseCount ? "_UseCount" : "")
+       << (info.param.UniqueThreads ? "_UniqueThreads" : "");
+  return name.str();
+}
+
+class SanitizerCommonBenchmark
+    : public testing::TestWithParam<SanitizerCommonBenchmarkparams> {
+ protected:
+  void Run() {
+    auto Param = GetParam();
+    std::atomic<unsigned int> here = {};
+
+    auto thread = [&](int idx) {
+      here++;
+      while (here < Param.UniqueThreads) std::this_thread::yield();
+
+      std::vector<uptr> frames(64);
+      for (int r = 0; r < Param.RepeatPerThread; ++r) {
+        std::iota(frames.begin(), frames.end(), idx + 1);
+        for (int i = 0; i < Param.UniqueStacksPerThread; ++i) {
+          StackTrace s(frames.data(), frames.size());
+          auto h = StackDepotPut_WithHandle(s);
+          if (Param.UseCount)
+            h.inc_use_count_unsafe();
+          std::next_permutation(frames.begin(), frames.end());
+        };
+      }
+    };
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < Param.Threads; ++i)
+      threads.emplace_back(thread, Param.UniqueThreads * i);
+    for (auto& t : threads) t.join();
+  }
+};
+
+// Test which can be used as a simple benchmark. It's disabled to avoid slowing
+// down check-sanitizer.
+// Usage: Sanitizer-<ARCH>-Test --gtest_also_run_disabled_tests \
+//   '--gtest_filter=*Benchmark*'
+TEST_P(SanitizerCommonBenchmark, DISABLED_BenchmarkInsertUniqueThreaded) {
+  EXPECT_EXIT((Run(), exit(0)), ::testing::ExitedWithCode(0), "");
+}
+
+INSTANTIATE_TEST_SUITE_P(SanitizerCommonBenchmarkSuite,
+                         SanitizerCommonBenchmark, testing::ValuesIn(Params),
+                         PrintSanitizerCommonBenchmarkparams);
 
 }  // namespace __sanitizer
