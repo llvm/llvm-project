@@ -635,7 +635,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   if (V->getType()->isPointerTy()) {
     if (RetainedKnowledge RK = getKnowledgeValidInContext(
             V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
-      Known.Zero.setLowBits(Log2_32(RK.ArgValue));
+      Known.Zero.setLowBits(Log2_64(RK.ArgValue));
     }
   }
 
@@ -4948,15 +4948,24 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
-static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
-  // See whether I has flags that may create poison
-  if (const auto *OvOp = dyn_cast<OverflowingBinaryOperator>(Op)) {
-    if (OvOp->hasNoSignedWrap() || OvOp->hasNoUnsignedWrap())
-      return true;
+static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
+                                   bool ConsiderFlags) {
+  if (ConsiderFlags) {
+    // See whether I has flags that may create poison
+    if (const auto *OvOp = dyn_cast<OverflowingBinaryOperator>(Op)) {
+      if (OvOp->hasNoSignedWrap() || OvOp->hasNoUnsignedWrap())
+        return true;
+    }
+    if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(Op))
+      if (ExactOp->isExact())
+        return true;
+    if (const auto *GEP = dyn_cast<GEPOperator>(Op))
+      if (GEP->isInBounds())
+        return true;
   }
-  if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(Op))
-    if (ExactOp->isExact())
-      return true;
+
+  // TODO: this should really be under the ConsiderFlags block, but currently
+  // these are not dropped by dropPoisonGeneratingFlags
   if (const auto *FP = dyn_cast<FPMathOperator>(Op)) {
     auto FMF = FP->getFastMathFlags();
     if (FMF.noNaNs() || FMF.noInfs())
@@ -5045,10 +5054,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
   case Instruction::ICmp:
   case Instruction::FCmp:
     return false;
-  case Instruction::GetElementPtr: {
-    const auto *GEP = cast<GEPOperator>(Op);
-    return GEP->isInBounds();
-  }
+  case Instruction::GetElementPtr:
+    // inbounds is handled above
+    // TODO: what about inrange on constexpr?
+    return false;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))
@@ -5061,12 +5070,12 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
   }
 }
 
-bool llvm::canCreateUndefOrPoison(const Operator *Op) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false);
+bool llvm::canCreateUndefOrPoison(const Operator *Op, bool ConsiderFlags) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false, ConsiderFlags);
 }
 
-bool llvm::canCreatePoison(const Operator *Op) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true);
+bool llvm::canCreatePoison(const Operator *Op, bool ConsiderFlags) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true, ConsiderFlags);
 }
 
 static bool directlyImpliesPoison(const Value *ValAssumedPoison,

@@ -18,9 +18,9 @@ module attributes {gpu.container_module} {
   }
 
   func @foo(%buffer: memref<?xf32>) {
-    %c8 = constant 8 : index
-    %c32 = constant 32 : i32
-    %c256 = constant 256 : i32
+    %c8 = arith.constant 8 : index
+    %c32 = arith.constant 32 : i32
+    %c256 = arith.constant 256 : i32
     gpu.launch_func @kernel_module::@kernel
         blocks in (%c8, %c8, %c8)
         threads in (%c8, %c8, %c8)

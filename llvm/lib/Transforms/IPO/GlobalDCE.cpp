@@ -88,7 +88,7 @@ ModulePass *llvm::createGlobalDCEPass() {
 static bool isEmptyFunction(Function *F) {
   BasicBlock &Entry = F->getEntryBlock();
   for (auto &I : Entry) {
-    if (isa<DbgInfoIntrinsic>(I))
+    if (I.isDebugOrPseudoInst())
       continue;
     if (auto *RI = dyn_cast<ReturnInst>(&I))
       return !RI->getReturnValue();

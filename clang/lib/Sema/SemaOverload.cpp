@@ -3246,6 +3246,19 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
       !PreviousToQualsIncludeConst)
     return false;
 
+  // The following wording is from C++20, where the result of the conversion
+  // is T3, not T2.
+  //   -- if [...] P1,i [...] is "array of unknown bound of", P3,i is
+  //      "array of unknown bound of"
+  if (FromType->isIncompleteArrayType() && !ToType->isIncompleteArrayType())
+    return false;
+
+  //   -- if the resulting P3,i is different from P1,i [...], then const is
+  //      added to every cv 3_k for 0 < k < i.
+  if (!CStyle && FromType->isConstantArrayType() &&
+      ToType->isIncompleteArrayType() && !PreviousToQualsIncludeConst)
+    return false;
+
   // Keep track of whether all prior cv-qualifiers in the "to" type
   // include const.
   PreviousToQualsIncludeConst =
@@ -3807,8 +3820,8 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
   //   if not that,
   // — L1 and L2 convert to arrays of the same element type, and either the
   //   number of elements n_1 initialized by L1 is less than the number of
-  //   elements n_2 initialized by L2, or (unimplemented:C++20) n_1 = n_2 and L2
-  //   converts to an array of unknown bound and L1 does not,
+  //   elements n_2 initialized by L2, or (C++20) n_1 = n_2 and L2 converts to
+  //   an array of unknown bound and L1 does not,
   // even if one of the other rules in this paragraph would otherwise apply.
   if (!ICS1.isBad()) {
     bool StdInit1 = false, StdInit2 = false;
@@ -3827,13 +3840,23 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
       if (auto *CAT1 = S.Context.getAsConstantArrayType(
               ICS1.getInitializerListContainerType()))
         if (auto *CAT2 = S.Context.getAsConstantArrayType(
-                ICS2.getInitializerListContainerType()))
+                ICS2.getInitializerListContainerType())) {
           if (S.Context.hasSameUnqualifiedType(CAT1->getElementType(),
-                                               CAT2->getElementType()) &&
-              CAT1->getSize() != CAT2->getSize())
-            return CAT1->getSize().ult(CAT2->getSize())
-                       ? ImplicitConversionSequence::Better
-                       : ImplicitConversionSequence::Worse;
+                                               CAT2->getElementType())) {
+            // Both to arrays of the same element type
+            if (CAT1->getSize() != CAT2->getSize())
+              // Different sized, the smaller wins
+              return CAT1->getSize().ult(CAT2->getSize())
+                         ? ImplicitConversionSequence::Better
+                         : ImplicitConversionSequence::Worse;
+            if (ICS1.isInitializerListOfIncompleteArray() !=
+                ICS2.isInitializerListOfIncompleteArray())
+              // One is incomplete, it loses
+              return ICS2.isInitializerListOfIncompleteArray()
+                         ? ImplicitConversionSequence::Better
+                         : ImplicitConversionSequence::Worse;
+          }
+        }
   }
 
   if (ICS1.isStandard())
@@ -4199,12 +4222,15 @@ static ImplicitConversionSequence::CompareKind
 CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2) {
-  // C++ 13.3.3.2p3:
+  // C++ [over.ics.rank]p3:
   //  -- S1 and S2 differ only in their qualification conversion and
-  //     yield similar types T1 and T2 (C++ 4.4), respectively, and the
-  //     cv-qualification signature of type T1 is a proper subset of
-  //     the cv-qualification signature of type T2, and S1 is not the
+  //     yield similar types T1 and T2 (C++ 4.4), respectively, [...]
+  // [C++98]
+  //     [...] and the cv-qualification signature of type T1 is a proper subset
+  //     of the cv-qualification signature of type T2, and S1 is not the
   //     deprecated string literal array-to-pointer conversion (4.2).
+  // [C++2a]
+  //     [...] where T1 can be converted to T2 by a qualification conversion.
   if (SCS1.First != SCS2.First || SCS1.Second != SCS2.Second ||
       SCS1.Third != SCS2.Third || SCS1.Third != ICK_Qualification)
     return ImplicitConversionSequence::Indistinguishable;
@@ -4225,79 +4251,35 @@ CompareQualificationConversions(Sema &S,
   if (UnqualT1 == UnqualT2)
     return ImplicitConversionSequence::Indistinguishable;
 
-  ImplicitConversionSequence::CompareKind Result
-    = ImplicitConversionSequence::Indistinguishable;
+  // Don't ever prefer a standard conversion sequence that uses the deprecated
+  // string literal array to pointer conversion.
+  bool CanPick1 = !SCS1.DeprecatedStringLiteralToCharPtr;
+  bool CanPick2 = !SCS2.DeprecatedStringLiteralToCharPtr;
 
   // Objective-C++ ARC:
   //   Prefer qualification conversions not involving a change in lifetime
-  //   to qualification conversions that do not change lifetime.
-  if (SCS1.QualificationIncludesObjCLifetime !=
-                                      SCS2.QualificationIncludesObjCLifetime) {
-    Result = SCS1.QualificationIncludesObjCLifetime
-               ? ImplicitConversionSequence::Worse
-               : ImplicitConversionSequence::Better;
-  }
+  //   to qualification conversions that do change lifetime.
+  if (SCS1.QualificationIncludesObjCLifetime &&
+      !SCS2.QualificationIncludesObjCLifetime)
+    CanPick1 = false;
+  if (SCS2.QualificationIncludesObjCLifetime &&
+      !SCS1.QualificationIncludesObjCLifetime)
+    CanPick2 = false;
 
-  while (S.Context.UnwrapSimilarTypes(T1, T2)) {
-    // Within each iteration of the loop, we check the qualifiers to
-    // determine if this still looks like a qualification
-    // conversion. Then, if all is well, we unwrap one more level of
-    // pointers or pointers-to-members and do it all again
-    // until there are no more pointers or pointers-to-members left
-    // to unwrap. This essentially mimics what
-    // IsQualificationConversion does, but here we're checking for a
-    // strict subset of qualifiers.
-    if (T1.getQualifiers().withoutObjCLifetime() ==
-        T2.getQualifiers().withoutObjCLifetime())
-      // The qualifiers are the same, so this doesn't tell us anything
-      // about how the sequences rank.
-      // ObjC ownership quals are omitted above as they interfere with
-      // the ARC overload rule.
-      ;
-    else if (T2.isMoreQualifiedThan(T1)) {
-      // T1 has fewer qualifiers, so it could be the better sequence.
-      if (Result == ImplicitConversionSequence::Worse)
-        // Neither has qualifiers that are a subset of the other's
-        // qualifiers.
-        return ImplicitConversionSequence::Indistinguishable;
+  bool ObjCLifetimeConversion;
+  if (CanPick1 &&
+      !S.IsQualificationConversion(T1, T2, false, ObjCLifetimeConversion))
+    CanPick1 = false;
+  // FIXME: In Objective-C ARC, we can have qualification conversions in both
+  // directions, so we can't short-cut this second check in general.
+  if (CanPick2 &&
+      !S.IsQualificationConversion(T2, T1, false, ObjCLifetimeConversion))
+    CanPick2 = false;
 
-      Result = ImplicitConversionSequence::Better;
-    } else if (T1.isMoreQualifiedThan(T2)) {
-      // T2 has fewer qualifiers, so it could be the better sequence.
-      if (Result == ImplicitConversionSequence::Better)
-        // Neither has qualifiers that are a subset of the other's
-        // qualifiers.
-        return ImplicitConversionSequence::Indistinguishable;
-
-      Result = ImplicitConversionSequence::Worse;
-    } else {
-      // Qualifiers are disjoint.
-      return ImplicitConversionSequence::Indistinguishable;
-    }
-
-    // If the types after this point are equivalent, we're done.
-    if (S.Context.hasSameUnqualifiedType(T1, T2))
-      break;
-  }
-
-  // Check that the winning standard conversion sequence isn't using
-  // the deprecated string literal array to pointer conversion.
-  switch (Result) {
-  case ImplicitConversionSequence::Better:
-    if (SCS1.DeprecatedStringLiteralToCharPtr)
-      Result = ImplicitConversionSequence::Indistinguishable;
-    break;
-
-  case ImplicitConversionSequence::Indistinguishable:
-    break;
-
-  case ImplicitConversionSequence::Worse:
-    if (SCS2.DeprecatedStringLiteralToCharPtr)
-      Result = ImplicitConversionSequence::Indistinguishable;
-    break;
-  }
-
-  return Result;
+  if (CanPick1 != CanPick2)
+    return CanPick1 ? ImplicitConversionSequence::Better
+                    : ImplicitConversionSequence::Worse;
+  return ImplicitConversionSequence::Indistinguishable;
 }
 
 /// CompareDerivedToBaseConversions - Compares two standard conversion
@@ -5032,9 +5014,15 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   ImplicitConversionSequence Result;
   Result.setBad(BadConversionSequence::no_conversion, From, ToType);
 
-  // We need a complete type for what follows. Incomplete types can never be
-  // initialized from init lists.
-  if (!S.isCompleteType(From->getBeginLoc(), ToType))
+  // We need a complete type for what follows.  With one C++20 exception,
+  // incomplete types can never be initialized from init lists.
+  QualType InitTy = ToType;
+  const ArrayType *AT = S.Context.getAsArrayType(ToType);
+  if (AT && S.getLangOpts().CPlusPlus20)
+    if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
+      // C++20 allows list initialization of an incomplete array type.
+      InitTy = IAT->getElementType();
+  if (!S.isCompleteType(From->getBeginLoc(), InitTy))
     return Result;
 
   // Per DR1467:
@@ -5058,18 +5046,16 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                      AllowObjCWritebackConversion);
     }
 
-    if (const auto *AT = S.Context.getAsArrayType(ToType)) {
-      if (S.IsStringInit(From->getInit(0), AT)) {
-        InitializedEntity Entity =
+    if (AT && S.IsStringInit(From->getInit(0), AT)) {
+      InitializedEntity Entity =
           InitializedEntity::InitializeParameter(S.Context, ToType,
                                                  /*Consumed=*/false);
-        if (S.CanPerformCopyInitialization(Entity, From)) {
-          Result.setStandard();
-          Result.Standard.setAsIdentityConversion();
-          Result.Standard.setFromType(ToType);
-          Result.Standard.setAllToTypes(ToType);
-          return Result;
-        }
+      if (S.CanPerformCopyInitialization(Entity, From)) {
+        Result.setStandard();
+        Result.Standard.setAsIdentityConversion();
+        Result.Standard.setFromType(ToType);
+        Result.Standard.setAllToTypes(ToType);
+        return Result;
       }
     }
   }
@@ -5087,22 +5073,21 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   default-constructible, and if all the elements of the initializer list
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
-  QualType InitTy = ToType;
-  ArrayType const *AT = S.Context.getAsArrayType(ToType);
   if (AT || S.isStdInitializerList(ToType, &InitTy)) {
     unsigned e = From->getNumInits();
     ImplicitConversionSequence DfltElt;
     DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
                    QualType());
+    QualType ContTy = ToType;
+    bool IsUnbounded = false;
     if (AT) {
-      // Result has been initialized above as a BadConversionSequence
       InitTy = AT->getElementType();
       if (ConstantArrayType const *CT = dyn_cast<ConstantArrayType>(AT)) {
         if (CT->getSize().ult(e)) {
           // Too many inits, fatally bad
           Result.setBad(BadConversionSequence::too_many_initializers, From,
                         ToType);
-          Result.setInitializerListContainerType(ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
           return Result;
         }
         if (CT->getSize().ugt(e)) {
@@ -5117,10 +5102,23 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
             // No {} init, fatally bad
             Result.setBad(BadConversionSequence::too_few_initializers, From,
                           ToType);
-            Result.setInitializerListContainerType(ToType);
+            Result.setInitializerListContainerType(ContTy, IsUnbounded);
             return Result;
           }
         }
+      } else {
+        assert(isa<IncompleteArrayType>(AT) && "Expected incomplete array");
+        IsUnbounded = true;
+        if (!e) {
+          // Cannot convert to zero-sized.
+          Result.setBad(BadConversionSequence::too_few_initializers, From,
+                        ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
+          return Result;
+        }
+        llvm::APInt Size(S.Context.getTypeSize(S.Context.getSizeType()), e);
+        ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr,
+                                                ArrayType::Normal, 0);
       }
     }
 
@@ -5143,7 +5141,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         Result = ICS;
         // Bail as soon as we find something unconvertible.
         if (Result.isBad()) {
-          Result.setInitializerListContainerType(ToType);
+          Result.setInitializerListContainerType(ContTy, IsUnbounded);
           return Result;
         }
       }
@@ -5156,8 +5154,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                 S, From->getEndLoc(), DfltElt, Result) ==
                                 ImplicitConversionSequence::Worse)
       Result = DfltElt;
-
-    Result.setInitializerListContainerType(ToType);
+    // Record the type being initialized so that we may compare sequences
+    Result.setInitializerListContainerType(ContTy, IsUnbounded);
     return Result;
   }
 

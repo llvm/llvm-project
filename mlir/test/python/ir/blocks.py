@@ -51,3 +51,22 @@ def testBlockCreation():
     print(module.operation)
     # Ensure region back references are coherent.
     assert entry_block.region == middle_block.region == successor_block.region
+
+
+# CHECK-LABEL: TEST: testFirstBlockCreation
+# CHECK: func @test(%{{.*}}: f32)
+# CHECK:   return
+@run
+def testFirstBlockCreation():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      func = builtin.FuncOp("test", ([f32], []))
+      entry_block = Block.create_at_start(func.operation.regions[0], [f32])
+      with InsertionPoint(entry_block):
+        std.ReturnOp([])
+
+    print(module)
+    assert module.operation.verify()
+    assert func.body.blocks[0] == entry_block

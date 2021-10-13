@@ -17,6 +17,7 @@
 #include "mlir-c/Debug.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
@@ -40,8 +41,14 @@ Returns a Type object or raises a ValueError if the type cannot be parsed.
 See also: https://mlir.llvm.org/docs/LangRef/#type-system
 )";
 
+static const char kContextGetCallSiteLocationDocstring[] =
+    R"(Gets a Location representing a caller and callsite)";
+
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
+
+static const char kContextGetNameLocationDocString[] =
+    R"(Gets a Location representing a named location with optional child location)";
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -1541,6 +1548,9 @@ public:
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
     cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
+    cls.def_static("isinstance", [](PyValue &otherValue) -> bool {
+      return DerivedTy::isaFunction(otherValue);
+    });
     DerivedTy::bindDerived(cls);
   }
 
@@ -1960,6 +1970,21 @@ void mlir::python::populateIRCore(py::module &m) {
           py::arg("context") = py::none(),
           "Gets a Location representing an unknown location")
       .def_static(
+          "callsite",
+          [](PyLocation callee, const std::vector<PyLocation> &frames,
+             DefaultingPyMlirContext context) {
+            if (frames.empty())
+              throw py::value_error("No caller frames provided");
+            MlirLocation caller = frames.back().get();
+            for (PyLocation frame :
+                 llvm::reverse(llvm::makeArrayRef(frames).drop_back()))
+              caller = mlirLocationCallSiteGet(frame.get(), caller);
+            return PyLocation(context->getRef(),
+                              mlirLocationCallSiteGet(callee.get(), caller));
+          },
+          py::arg("callee"), py::arg("frames"), py::arg("context") = py::none(),
+          kContextGetCallSiteLocationDocstring)
+      .def_static(
           "file",
           [](std::string filename, int line, int col,
              DefaultingPyMlirContext context) {
@@ -1970,6 +1995,19 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           py::arg("filename"), py::arg("line"), py::arg("col"),
           py::arg("context") = py::none(), kContextGetFileLocationDocstring)
+      .def_static(
+          "name",
+          [](std::string name, llvm::Optional<PyLocation> childLoc,
+             DefaultingPyMlirContext context) {
+            return PyLocation(
+                context->getRef(),
+                mlirLocationNameGet(
+                    context->get(), toMlirStringRef(name),
+                    childLoc ? childLoc->get()
+                             : mlirLocationUnknownGet(context->get())));
+          },
+          py::arg("name"), py::arg("childLoc") = py::none(),
+          py::arg("context") = py::none(), kContextGetNameLocationDocString)
       .def_property_readonly(
           "context",
           [](PyLocation &self) { return self.getContext().getObject(); },
@@ -2213,6 +2251,12 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyBlockList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of blocks.")
+      .def_property_readonly(
+          "owner",
+          [](PyRegion &self) {
+            return self.getParentOperation()->createOpView();
+          },
+          "Returns the operation owning this region.")
       .def(
           "__iter__",
           [](PyRegion &self) {
@@ -2256,6 +2300,23 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyOperationList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of operations.")
+      .def_static(
+          "create_at_start",
+          [](PyRegion &parent, py::list pyArgTypes) {
+            parent.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            mlirRegionInsertOwnedBlock(parent, 0, block);
+            return PyBlock(parent.getParentOperation(), block);
+          },
+          py::arg("parent"), py::arg("pyArgTypes") = py::list(),
+          "Creates and returns a new Block at the beginning of the given "
+          "region (with given argument types).")
       .def(
           "create_before",
           [](PyBlock &self, py::args pyArgTypes) {

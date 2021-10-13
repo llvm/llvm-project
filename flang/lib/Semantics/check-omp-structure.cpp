@@ -1024,9 +1024,39 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   const auto &dir{std::get<parser::OmpCriticalDirective>(x.t)};
+  const auto &endDir{std::get<parser::OmpEndCriticalDirective>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_critical);
   const auto &block{std::get<parser::Block>(x.t)};
   CheckNoBranching(block, llvm::omp::Directive::OMPD_critical, dir.source);
+  const auto &dirName{std::get<std::optional<parser::Name>>(dir.t)};
+  const auto &endDirName{std::get<std::optional<parser::Name>>(endDir.t)};
+  const auto &ompClause{std::get<parser::OmpClauseList>(dir.t)};
+  if (dirName && endDirName &&
+      dirName->ToString().compare(endDirName->ToString())) {
+    context_
+        .Say(endDirName->source,
+            parser::MessageFormattedText{
+                "CRITICAL directive names do not match"_err_en_US})
+        .Attach(dirName->source, "should be "_en_US);
+  } else if (dirName && !endDirName) {
+    context_
+        .Say(dirName->source,
+            parser::MessageFormattedText{
+                "CRITICAL directive names do not match"_err_en_US})
+        .Attach(dirName->source, "should be NULL"_en_US);
+  } else if (!dirName && endDirName) {
+    context_
+        .Say(endDirName->source,
+            parser::MessageFormattedText{
+                "CRITICAL directive names do not match"_err_en_US})
+        .Attach(endDirName->source, "should be NULL"_en_US);
+  }
+  if (!dirName && !ompClause.source.empty() &&
+      ompClause.source.NULTerminatedToString() != "hint(omp_sync_hint_none)") {
+    context_.Say(dir.source,
+        parser::MessageFormattedText{
+            "Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive"_err_en_US});
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
@@ -1392,6 +1422,7 @@ CHECK_SIMPLE_CLAUSE(Novariants, OMPC_novariants)
 CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
 CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
 CHECK_SIMPLE_CLAUSE(When, OMPC_when)
+CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)

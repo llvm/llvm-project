@@ -167,6 +167,13 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
+/// OpenMP adjust-op kinds for 'adjust_args' clause.
+enum OpenMPAdjustArgsOpKind {
+#define OPENMP_ADJUST_ARGS_KIND(Name) OMPC_ADJUST_ARGS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ADJUST_ARGS_unknown,
+};
+
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);

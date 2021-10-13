@@ -409,6 +409,11 @@
 ; GCN-O2-NEXT:       OpenMP specific optimizations
 ; GCN-O2-NEXT:       Deduce function attributes
 ; GCN-O2-NEXT:       FunctionPass Manager
+; GCN-O2-NEXT:         Dominator Tree Construction
+; GCN-O2-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:         Function Alias Analysis Results
+; GCN-O2-NEXT:         Memory SSA
+; GCN-O2-NEXT:         AMDGPU Promote Kernel Arguments
 ; GCN-O2-NEXT:         Infer address spaces
 ; GCN-O2-NEXT:     AMDGPU Kernel Attributes
 ; GCN-O2-NEXT:     FunctionPass Manager
@@ -768,6 +773,11 @@
 ; GCN-O3-NEXT:       Deduce function attributes
 ; GCN-O3-NEXT:       Promote 'by reference' arguments to scalars
 ; GCN-O3-NEXT:       FunctionPass Manager
+; GCN-O3-NEXT:         Dominator Tree Construction
+; GCN-O3-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:         Function Alias Analysis Results
+; GCN-O3-NEXT:         Memory SSA
+; GCN-O3-NEXT:         AMDGPU Promote Kernel Arguments
 ; GCN-O3-NEXT:         Infer address spaces
 ; GCN-O3-NEXT:     AMDGPU Kernel Attributes
 ; GCN-O3-NEXT:     FunctionPass Manager

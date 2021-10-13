@@ -5,19 +5,19 @@
 
 // CHECK-LABEL: @simple_constant
 func @simple_constant() -> (i32, i32) {
-  // CHECK-NEXT: %c1_i32 = constant 1 : i32
-  %0 = constant 1 : i32
+  // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
 
   // CHECK-NEXT: return %c1_i32, %c1_i32 : i32, i32
-  %1 = constant 1 : i32
+  %1 = arith.constant 1 : i32
   return %0, %1 : i32, i32
 }
 
 // CHECK-LABEL: @basic
 func @basic() -> (index, index) {
-  // CHECK: %c0 = constant 0 : index
-  %c0 = constant 0 : index
-  %c1 = constant 0 : index
+  // CHECK: %c0 = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 0 : index
 
   // CHECK-NEXT: %0 = affine.apply #[[$MAP]](%c0)
   %0 = affine.apply #map0(%c0)
@@ -30,23 +30,23 @@ func @basic() -> (index, index) {
 // CHECK-LABEL: @many
 func @many(f32, f32) -> (f32) {
 ^bb0(%a : f32, %b : f32):
-  // CHECK-NEXT: %0 = addf %arg0, %arg1 : f32
-  %c = addf %a, %b : f32
-  %d = addf %a, %b : f32
-  %e = addf %a, %b : f32
-  %f = addf %a, %b : f32
+  // CHECK-NEXT: %0 = arith.addf %arg0, %arg1 : f32
+  %c = arith.addf %a, %b : f32
+  %d = arith.addf %a, %b : f32
+  %e = arith.addf %a, %b : f32
+  %f = arith.addf %a, %b : f32
 
-  // CHECK-NEXT: %1 = addf %0, %0 : f32
-  %g = addf %c, %d : f32
-  %h = addf %e, %f : f32
-  %i = addf %c, %e : f32
+  // CHECK-NEXT: %1 = arith.addf %0, %0 : f32
+  %g = arith.addf %c, %d : f32
+  %h = arith.addf %e, %f : f32
+  %i = arith.addf %c, %e : f32
 
-  // CHECK-NEXT: %2 = addf %1, %1 : f32
-  %j = addf %g, %h : f32
-  %k = addf %h, %i : f32
+  // CHECK-NEXT: %2 = arith.addf %1, %1 : f32
+  %j = arith.addf %g, %h : f32
+  %k = arith.addf %h, %i : f32
 
-  // CHECK-NEXT: %3 = addf %2, %2 : f32
-  %l = addf %j, %k : f32
+  // CHECK-NEXT: %3 = arith.addf %2, %2 : f32
+  %l = arith.addf %j, %k : f32
 
   // CHECK-NEXT: return %3 : f32
   return %l : f32
@@ -55,10 +55,10 @@ func @many(f32, f32) -> (f32) {
 /// Check that operations are not eliminated if they have different operands.
 // CHECK-LABEL: @different_ops
 func @different_ops() -> (i32, i32) {
-  // CHECK: %c0_i32 = constant 0 : i32
-  // CHECK: %c1_i32 = constant 1 : i32
-  %0 = constant 0 : i32
-  %1 = constant 1 : i32
+  // CHECK: %c0_i32 = arith.constant 0 : i32
+  // CHECK: %c1_i32 = arith.constant 1 : i32
+  %0 = arith.constant 0 : i32
+  %1 = arith.constant 1 : i32
 
   // CHECK-NEXT: return %c0_i32, %c1_i32 : i32, i32
   return %0, %1 : i32, i32
@@ -81,13 +81,13 @@ func @different_results(%arg0: tensor<*xf32>) -> (tensor<?x?xf32>, tensor<4x?xf3
 // CHECK-LABEL: @different_attributes
 func @different_attributes(index, index) -> (i1, i1, i1) {
 ^bb0(%a : index, %b : index):
-  // CHECK: %0 = cmpi slt, %arg0, %arg1 : index
-  %0 = cmpi slt, %a, %b : index
+  // CHECK: %0 = arith.cmpi slt, %arg0, %arg1 : index
+  %0 = arith.cmpi slt, %a, %b : index
 
-  // CHECK-NEXT: %1 = cmpi ne, %arg0, %arg1 : index
+  // CHECK-NEXT: %1 = arith.cmpi ne, %arg0, %arg1 : index
   /// Predicate 1 means inequality comparison.
-  %1 = cmpi ne, %a, %b : index
-  %2 = "std.cmpi"(%a, %b) {predicate = 1} : (index, index) -> i1
+  %1 = arith.cmpi ne, %a, %b : index
+  %2 = "arith.cmpi"(%a, %b) {predicate = 1} : (index, index) -> i1
 
   // CHECK-NEXT: return %0, %1, %1 : i1, i1, i1
   return %0, %1, %2 : i1, i1, i1
@@ -110,13 +110,13 @@ func @side_effect() -> (memref<2x1xf32>, memref<2x1xf32>) {
 /// tree.
 // CHECK-LABEL: @down_propagate_for
 func @down_propagate_for() {
-  // CHECK: %c1_i32 = constant 1 : i32
-  %0 = constant 1 : i32
+  // CHECK: %c1_i32 = arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
 
   // CHECK-NEXT: affine.for {{.*}} = 0 to 4 {
   affine.for %i = 0 to 4 {
     // CHECK-NEXT: "foo"(%c1_i32, %c1_i32) : (i32, i32) -> ()
-    %1 = constant 1 : i32
+    %1 = arith.constant 1 : i32
     "foo"(%0, %1) : (i32, i32) -> ()
   }
   return
@@ -124,18 +124,18 @@ func @down_propagate_for() {
 
 // CHECK-LABEL: @down_propagate
 func @down_propagate() -> i32 {
-  // CHECK-NEXT: %c1_i32 = constant 1 : i32
-  %0 = constant 1 : i32
+  // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
 
-  // CHECK-NEXT: %true = constant true
-  %cond = constant true
+  // CHECK-NEXT: %true = arith.constant true
+  %cond = arith.constant true
 
   // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c1_i32 : i32)
   cond_br %cond, ^bb1, ^bb2(%0 : i32)
 
 ^bb1: // CHECK: ^bb1:
   // CHECK-NEXT: br ^bb2(%c1_i32 : i32)
-  %1 = constant 1 : i32
+  %1 = arith.constant 1 : i32
   br ^bb2(%1 : i32)
 
 ^bb2(%arg : i32):
@@ -147,42 +147,42 @@ func @down_propagate() -> i32 {
 func @up_propagate_for() -> i32 {
   // CHECK: affine.for {{.*}} = 0 to 4 {
   affine.for %i = 0 to 4 {
-    // CHECK-NEXT: %c1_i32_0 = constant 1 : i32
+    // CHECK-NEXT: %c1_i32_0 = arith.constant 1 : i32
     // CHECK-NEXT: "foo"(%c1_i32_0) : (i32) -> ()
-    %0 = constant 1 : i32
+    %0 = arith.constant 1 : i32
     "foo"(%0) : (i32) -> ()
   }
 
-  // CHECK: %c1_i32 = constant 1 : i32
+  // CHECK: %c1_i32 = arith.constant 1 : i32
   // CHECK-NEXT: return %c1_i32 : i32
-  %1 = constant 1 : i32
+  %1 = arith.constant 1 : i32
   return %1 : i32
 }
 
 // CHECK-LABEL: func @up_propagate
 func @up_propagate() -> i32 {
-  // CHECK-NEXT:  %c0_i32 = constant 0 : i32
-  %0 = constant 0 : i32
+  // CHECK-NEXT:  %c0_i32 = arith.constant 0 : i32
+  %0 = arith.constant 0 : i32
 
-  // CHECK-NEXT: %true = constant true
-  %cond = constant true
+  // CHECK-NEXT: %true = arith.constant true
+  %cond = arith.constant true
 
   // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c0_i32 : i32)
   cond_br %cond, ^bb1, ^bb2(%0 : i32)
 
 ^bb1: // CHECK: ^bb1:
-  // CHECK-NEXT: %c1_i32 = constant 1 : i32
-  %1 = constant 1 : i32
+  // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
+  %1 = arith.constant 1 : i32
 
   // CHECK-NEXT: br ^bb2(%c1_i32 : i32)
   br ^bb2(%1 : i32)
 
 ^bb2(%arg : i32): // CHECK: ^bb2
-  // CHECK-NEXT: %c1_i32_0 = constant 1 : i32
-  %2 = constant 1 : i32
+  // CHECK-NEXT: %c1_i32_0 = arith.constant 1 : i32
+  %2 = arith.constant 1 : i32
 
-  // CHECK-NEXT: %1 = addi %0, %c1_i32_0 : i32
-  %add = addi %arg, %2 : i32
+  // CHECK-NEXT: %1 = arith.addi %0, %c1_i32_0 : i32
+  %add = arith.addi %arg, %2 : i32
 
   // CHECK-NEXT: return %1 : i32
   return %add : i32
@@ -194,28 +194,28 @@ func @up_propagate() -> i32 {
 func @up_propagate_region() -> i32 {
   // CHECK-NEXT: %0 = "foo.region"
   %0 = "foo.region"() ({
-    // CHECK-NEXT:  %c0_i32 = constant 0 : i32
-    // CHECK-NEXT: %true = constant true
+    // CHECK-NEXT:  %c0_i32 = arith.constant 0 : i32
+    // CHECK-NEXT: %true = arith.constant true
     // CHECK-NEXT: cond_br
 
-    %1 = constant 0 : i32
-    %true = constant true
+    %1 = arith.constant 0 : i32
+    %true = arith.constant true
     cond_br %true, ^bb1, ^bb2(%1 : i32)
 
   ^bb1: // CHECK: ^bb1:
-    // CHECK-NEXT: %c1_i32 = constant 1 : i32
+    // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
     // CHECK-NEXT: br
 
-    %c1_i32 = constant 1 : i32
+    %c1_i32 = arith.constant 1 : i32
     br ^bb2(%c1_i32 : i32)
 
   ^bb2(%arg : i32): // CHECK: ^bb2(%1: i32):
-    // CHECK-NEXT: %c1_i32_0 = constant 1 : i32
-    // CHECK-NEXT: %2 = addi %1, %c1_i32_0 : i32
+    // CHECK-NEXT: %c1_i32_0 = arith.constant 1 : i32
+    // CHECK-NEXT: %2 = arith.addi %1, %c1_i32_0 : i32
     // CHECK-NEXT: "foo.yield"(%2) : (i32) -> ()
 
-    %c1_i32_0 = constant 1 : i32
-    %2 = addi %arg, %c1_i32_0 : i32
+    %c1_i32_0 = arith.constant 1 : i32
+    %2 = arith.addi %arg, %c1_i32_0 : i32
     "foo.yield" (%2) : (i32) -> ()
   }) : () -> (i32)
   return %0 : i32
@@ -225,20 +225,20 @@ func @up_propagate_region() -> i32 {
 /// properly handled.
 // CHECK-LABEL: @nested_isolated
 func @nested_isolated() -> i32 {
-  // CHECK-NEXT: constant 1
-  %0 = constant 1 : i32
+  // CHECK-NEXT: arith.constant 1
+  %0 = arith.constant 1 : i32
 
   // CHECK-NEXT: @nested_func
   builtin.func @nested_func() {
-    // CHECK-NEXT: constant 1
-    %foo = constant 1 : i32
+    // CHECK-NEXT: arith.constant 1
+    %foo = arith.constant 1 : i32
     "foo.yield"(%foo) : (i32) -> ()
   }
 
   // CHECK: "foo.region"
   "foo.region"() ({
-    // CHECK-NEXT: constant 1
-    %foo = constant 1 : i32
+    // CHECK-NEXT: arith.constant 1
+    %foo = arith.constant 1 : i32
     "foo.yield"(%foo) : (i32) -> ()
   }) : () -> ()
 
@@ -252,13 +252,13 @@ func @nested_isolated() -> i32 {
 func @use_before_def() {
   // CHECK-NEXT: test.graph_region
   test.graph_region {
-    // CHECK-NEXT: addi %c1_i32, %c1_i32_0
-    %0 = addi %1, %2 : i32
+    // CHECK-NEXT: arith.addi %c1_i32, %c1_i32_0
+    %0 = arith.addi %1, %2 : i32
 
-    // CHECK-NEXT: constant 1
-    // CHECK-NEXT: constant 1
-    %1 = constant 1 : i32
-    %2 = constant 1 : i32
+    // CHECK-NEXT: arith.constant 1
+    // CHECK-NEXT: arith.constant 1
+    %1 = arith.constant 1 : i32
+    %2 = arith.constant 1 : i32
 
     // CHECK-NEXT: "foo.yield"(%0) : (i32) -> ()
     "foo.yield"(%0) : (i32) -> ()

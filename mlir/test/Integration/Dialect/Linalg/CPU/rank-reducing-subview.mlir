@@ -6,13 +6,13 @@
 func private @print_memref_f32(memref<*xf32>)
 
 func @main() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %f0 = constant 0.0 : f32
-  %f1 = constant 1.0 : f32
-  %f2 = constant 2.0 : f32
-  %f3 = constant 3.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %f0 = arith.constant 0.0 : f32
+  %f1 = arith.constant 1.0 : f32
+  %f2 = arith.constant 2.0 : f32
+  %f3 = arith.constant 3.0 : f32
   %A = memref.alloc(%c2, %c2) : memref<?x?xf32>
   memref.store %f0, %A[%c0, %c0] : memref<?x?xf32>
   memref.store %f1, %A[%c0, %c1] : memref<?x?xf32>

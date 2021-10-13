@@ -2,7 +2,7 @@
 
 gpu.module @test_read{
 builtin.func @transfer_readx2(%A : memref<?xf32>, %base: index) -> vector<2xf32> {
-  %f0 = constant 0.0: f32
+  %f0 = arith.constant 0.0: f32
   %f = vector.transfer_read %A[%base], %f0
       {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32>, vector<2xf32>
@@ -12,7 +12,7 @@ builtin.func @transfer_readx2(%A : memref<?xf32>, %base: index) -> vector<2xf32>
 // CHECK: rocdl.buffer.load {{.*}} vector<2xf32>
 
 builtin.func @transfer_readx4(%A : memref<?xf32>, %base: index) -> vector<4xf32> {
-  %f0 = constant 0.0: f32
+  %f0 = arith.constant 0.0: f32
   %f = vector.transfer_read %A[%base], %f0
       {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32>, vector<4xf32>
@@ -22,7 +22,7 @@ builtin.func @transfer_readx4(%A : memref<?xf32>, %base: index) -> vector<4xf32>
 // CHECK: rocdl.buffer.load {{.*}} vector<4xf32>
 
 builtin.func @transfer_read_dwordConfig(%A : memref<?xf32>, %base: index) -> vector<4xf32> {
-  %f0 = constant 0.0: f32
+  %f0 = arith.constant 0.0: f32
   %f = vector.transfer_read %A[%base], %f0
       {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32>, vector<4xf32>

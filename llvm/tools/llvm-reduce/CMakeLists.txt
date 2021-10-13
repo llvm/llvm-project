@@ -29,6 +29,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceOperandBundles.cpp
   deltas/ReduceSpecialGlobals.cpp
   deltas/ReduceOperands.cpp
+  deltas/ReduceOperandsToArgs.cpp
   llvm-reduce.cpp
 
   DEPENDS

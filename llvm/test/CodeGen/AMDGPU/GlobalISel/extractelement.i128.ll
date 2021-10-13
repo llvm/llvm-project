@@ -215,21 +215,20 @@ define i128 @extractelement_vgpr_v4i128_vgpr_idx(<4 x i128> addrspace(1)* %ptr, 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 16, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v4, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[3:4]
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v16, 1, v2
 ; GFX8-NEXT:    v_add_u32_e32 v17, vcc, 1, v16
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v17
 ; GFX8-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v16
 ; GFX8-NEXT:    v_cmp_eq_u32_e64 s[6:7], 6, v16
 ; GFX8-NEXT:    v_cmp_eq_u32_e64 s[8:9], 7, v16
-; GFX8-NEXT:    s_waitcnt vmcnt(1)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, v8, v10, s[4:5]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v3, v9, v11, s[4:5]
 ; GFX8-NEXT:    v_cndmask_b32_e32 v8, v8, v10, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v16
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v17

@@ -60,8 +60,8 @@ static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
   auto getConstantIntValue = [](OpFoldResult ofr) -> llvm::Optional<int64_t> {
     Attribute attr = ofr.dyn_cast<Attribute>();
     // Note: isa+cast-like pattern allows writing the condition below as 1 line.
-    if (!attr && ofr.get<Value>().getDefiningOp<ConstantOp>())
-      attr = ofr.get<Value>().getDefiningOp<ConstantOp>().getValue();
+    if (!attr && ofr.get<Value>().getDefiningOp<arith::ConstantOp>())
+      attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().value();
     if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
       return intAttr.getValue().getSExtValue();
     return llvm::None;

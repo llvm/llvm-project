@@ -24,7 +24,7 @@ func @col4bytemultiple() {
 // -----
 
 func @memtilesize(%arg0: memref<?x?xf32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   // expected-error@+1 {{'amx.tile_load' op bad column width: 68}}
   %1 = amx.tile_load %arg0[%0, %0] : memref<?x?xf32> into vector<16x17xf32>
 }
@@ -32,7 +32,7 @@ func @memtilesize(%arg0: memref<?x?xf32>) {
 // -----
 
 func @memindexsize(%arg0: memref<?x?xf32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   // expected-error@+1 {{'amx.tile_load' op requires 2 indices}}
   %1 = amx.tile_load %arg0[%0] : memref<?x?xf32> into vector<16x16xf32>
 }

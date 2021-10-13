@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
@@ -83,8 +84,8 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // original const and the qbarrier that led to the quantization.
   auto fusedLoc = rewriter.getFusedLoc(
       {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()});
-  auto newConstOp =
-      rewriter.create<ConstantOp>(fusedLoc, newConstValueType, newConstValue);
+  auto newConstOp = rewriter.create<arith::ConstantOp>(
+      fusedLoc, newConstValueType, newConstValue);
   rewriter.replaceOpWithNewOp<StorageCastOp>(qbarrier, qbarrier.getType(),
                                              newConstOp);
   return success();

@@ -273,8 +273,11 @@ public:
   SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
-  /// symbol-less permutation map.
-  bool isProjectedPermutation() const;
+  /// symbol-less permutation map. `allowZeroInResults` allows projected
+  /// permutation maps with constant zero result expressions.
+  /// TODO: Remove `allowZeroInResults` when constant zero result expressions
+  /// are broadly supported.
+  bool isProjectedPermutation(bool allowZeroInResults = false) const;
 
   /// Returns true if the AffineMap represents a symbol-less permutation map.
   bool isPermutation() const;
@@ -464,6 +467,17 @@ AffineMap inversePermutation(AffineMap map);
 /// ```mlir
 ///    affine_map<(d0) -> (0, 0, d0, 0)>
 /// ```
+/// Example 4:
+///
+/// ```mlir
+///    affine_map<(d0, d1, d2) -> (d0, 0)>
+/// ```
+///
+/// returns:
+///
+/// ```mlir
+///    affine_map<(d0, d1) -> (d0, 0, 0)>
+/// ```
 AffineMap inverseAndBroadcastProjectedPermuation(AffineMap map);
 
 /// Concatenates a list of `maps` into a single AffineMap, stepping over
@@ -518,9 +532,16 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   assert(map.getNumInputs() == source.size());
   SmallVector<T> result;
   result.reserve(map.getNumResults());
-  for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
-    unsigned dim = map.getDimPosition(i);
-    result.push_back(source[dim]);
+  for (AffineExpr expr : map.getResults()) {
+    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+      result.push_back(source[dimExpr.getPosition()]);
+    } else if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+      assert(constExpr.getValue() == 0 &&
+             "Unexpected constant in projected permutation map");
+      result.push_back(0);
+    } else {
+      llvm_unreachable("Unexpected result in projected permutation map");
+    }
   }
   return result;
 }

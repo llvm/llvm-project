@@ -19,15 +19,13 @@
 
 namespace __sanitizer {
 
-static PersistentAllocator<StackDepotNode> allocator;
 static PersistentAllocator<uptr> traceAllocator;
 
 struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
-  StackDepotNode *link;
   uptr *stack_trace;
-  u32 id;
+  u32 link;
   atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
@@ -39,12 +37,7 @@ struct StackDepotNode {
   bool eq(hash_type hash, const args_type &args) const {
     return hash == stack_hash;
   }
-  static uptr allocated() {
-    return allocator.allocated() + traceAllocator.allocated();
-  }
-  static StackDepotNode *allocate(const args_type &args) {
-    return allocator.alloc();
-  }
+  static uptr allocated() { return traceAllocator.allocated(); }
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
@@ -64,19 +57,20 @@ struct StackDepotNode {
     internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   }
   args_type load() const {
+    if (!stack_trace)
+      return {};
     u32 tag =
         atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
     return args_type(stack_trace + 1, *stack_trace, tag);
   }
-  StackDepotHandle get_handle() { return StackDepotHandle(this); }
+  static StackDepotHandle get_handle(u32 id);
 
   typedef StackDepotHandle handle_type;
 };
 
 COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
-u32 StackDepotHandle::id() { return node_->id; }
-int StackDepotHandle::use_count() {
+int StackDepotHandle::use_count() const {
   return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
 }
@@ -94,13 +88,10 @@ static StackDepot theDepot;
 
 StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
 
-u32 StackDepotPut(StackTrace stack) {
-  StackDepotHandle h = theDepot.Put(stack);
-  return h.valid() ? h.id() : 0;
-}
+u32 StackDepotPut(StackTrace stack) { return theDepot.Put(stack); }
 
 StackDepotHandle StackDepotPut_WithHandle(StackTrace stack) {
-  return theDepot.Put(stack);
+  return StackDepotNode::get_handle(theDepot.Put(stack));
 }
 
 StackTrace StackDepotGet(u32 id) {
@@ -121,37 +112,8 @@ void StackDepotPrintAll() {
 #endif
 }
 
-bool StackDepotReverseMap::IdDescPair::IdComparator(
-    const StackDepotReverseMap::IdDescPair &a,
-    const StackDepotReverseMap::IdDescPair &b) {
-  return a.id < b.id;
-}
-
-void StackDepotReverseMap::Init() const {
-  if (LIKELY(map_.capacity()))
-    return;
-  map_.reserve(StackDepotGetStats().n_uniq_ids + 100);
-  for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
-    atomic_uintptr_t *p = &theDepot.tab[idx];
-    uptr v = atomic_load(p, memory_order_consume);
-    StackDepotNode *s = (StackDepotNode*)(v & ~1);
-    for (; s; s = s->link) {
-      IdDescPair pair = {s->id, s};
-      map_.push_back(pair);
-    }
-  }
-  Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
-}
-
-StackTrace StackDepotReverseMap::Get(u32 id) const {
-  Init();
-  if (!map_.size())
-    return StackTrace();
-  IdDescPair pair = {id, nullptr};
-  uptr idx = InternalLowerBound(map_, pair, IdDescPair::IdComparator);
-  if (idx > map_.size() || map_[idx].id != id)
-    return StackTrace();
-  return map_[idx].desc->load();
+StackDepotHandle StackDepotNode::get_handle(u32 id) {
+  return StackDepotHandle(&theDepot.nodes[id], id);
 }
 
 } // namespace __sanitizer

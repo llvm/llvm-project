@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-memref-to-llvm -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -reconcile-unrealized-casts | mlir-cpu-runner -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -convert-scf-to-std -convert-arith-to-llvm -convert-memref-to-llvm -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -reconcile-unrealized-casts | mlir-cpu-runner -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void | FileCheck %s
 
 // Verify bare pointer memref calling convention. `simple_add1_add2_test`
 // gets two 2xf32 memrefs, adds 1.0f to the first one and 2.0f to the second
@@ -6,19 +6,19 @@
 // and {4, 4} are the expected outputs.
 
 func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cst = constant 1.000000e+00 : f32
-  %cst_0 = constant 2.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst_0 = arith.constant 2.000000e+00 : f32
   scf.for %arg2 = %c0 to %c2 step %c1 {
     %0 = memref.load %arg0[%arg2] : memref<2xf32>
-    %1 = addf %0, %cst : f32
+    %1 = arith.addf %0, %cst : f32
     memref.store %1, %arg0[%arg2] : memref<2xf32>
     // CHECK: 2, 2
 
     %2 = memref.load %arg1[%arg2] : memref<2xf32>
-    %3 = addf %1, %cst_0 : f32
+    %3 = arith.addf %1, %cst_0 : f32
     memref.store %3, %arg1[%arg2] : memref<2xf32>
     // CHECK-NEXT: 4, 4
   }
@@ -34,11 +34,11 @@ func private @printNewline()
 
 func @main()
 {
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cst = constant 1.000000e+00 : f32
-  %cst_0 = constant 2.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst_0 = arith.constant 2.000000e+00 : f32
   %a = memref.alloc() : memref<2xf32>
   %b = memref.alloc() : memref<2xf32>
   scf.for %i = %c0 to %c2 step %c1 {

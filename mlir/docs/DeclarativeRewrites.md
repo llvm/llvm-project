@@ -68,8 +68,8 @@ class Pattern<
 
 A declarative rewrite rule contains two main components:
 
-*   A _source pattern_, which is used for matching a DAG of operations.
-*   One or more _result patterns_, which are used for generating DAGs of
+*   A *source pattern*, which is used for matching a DAG of operations.
+*   One or more *result patterns*, which are used for generating DAGs of
     operations to replace the matched DAG of operations.
 
 We allow multiple result patterns to support
@@ -380,8 +380,8 @@ array attribute). Typically the string should be a function call.
 ##### `NativeCodeCall` placeholders
 
 In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N` and `$N...`.
-The former is called _special placeholder_, while the latter is called
-_positional placeholder_ and _positional range placeholder_.
+The former is called *special placeholder*, while the latter is called
+*positional placeholder* and *positional range placeholder*.
 
 `NativeCodeCall` right now only supports three special placeholders:
 `$_builder`, `$_loc`, and `$_self`:
@@ -405,15 +405,16 @@ def : Pat<(OneAttrOp (NativeCodeCall<"Foo($_self, &$0)"> I32Attr:$val)),
 ```
 
 In the above, `$_self` is substituted by the defining operation of the first
-operand of OneAttrOp. Note that we don't support binding name to `NativeCodeCall`
-in the source pattern. To carry some return values from a helper function, put the
-names (constraint is optional) in the parameter list and they will be bound to
-the variables with correspoding type. Then these names must be either passed by
-reference or pointer to the variable used as argument so that the matched value
-can be returned. In the same example, `$val` will be bound to a variable with
-`Attribute` type (as `I32Attr`) and the type of the second argument in `Foo()`
-could be `Attribute&` or `Attribute*`. Names with attribute constraints will be
-captured as `Attribute`s while everything else will be treated as `Value`s.
+operand of OneAttrOp. Note that we don't support binding name to
+`NativeCodeCall` in the source pattern. To carry some return values from a
+helper function, put the names (constraint is optional) in the parameter list
+and they will be bound to the variables with correspoding type. Then these names
+must be either passed by reference or pointer to the variable used as argument
+so that the matched value can be returned. In the same example, `$val` will be
+bound to a variable with `Attribute` type (as `I32Attr`) and the type of the
+second argument in `Foo()` could be `Attribute&` or `Attribute*`. Names with
+attribute constraints will be captured as `Attribute`s while everything else
+will be treated as `Value`s.
 
 Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :
@@ -445,9 +446,9 @@ Use `NativeCodeCallVoid` for cases with no return value.
 The correct number of returned value specified in NativeCodeCall is important.
 It will be used to verify the consistency of the number of return values.
 Additionally, `mlir-tblgen` will try to capture the return values of
-`NativeCodeCall` in the generated code so that it will trigger a later compilation
-error if a `NativeCodeCall` that doesn't return any result isn't labeled with 0
-returns.
+`NativeCodeCall` in the generated code so that it will trigger a later
+compilation error if a `NativeCodeCall` that doesn't return any result isn't
+labeled with 0 returns.
 
 ##### Customizing entire op building
 
@@ -471,7 +472,7 @@ def : Pat<(... $input, $attr), (createMyOp $input, $attr)>;
 ### Supporting auxiliary ops
 
 A declarative rewrite rule supports multiple result patterns. One of the
-purposes is to allow generating _auxiliary ops_. Auxiliary ops are operations
+purposes is to allow generating *auxiliary ops*. Auxiliary ops are operations
 used for building the replacement ops; but they are not directly used for
 replacement themselves.
 
@@ -486,17 +487,17 @@ argument to consuming op. But that is not always possible. For example, if we
 want to allocate memory and store some computation (in pseudocode):
 
 ```mlir
-%dst = addi %lhs, %rhs
+%dst = arith.addi %lhs, %rhs
 ```
 
 into
 
 ```mlir
 %shape = shape %lhs
-%mem = alloc %shape
-%sum = addi %lhs, %rhs
-store %mem, %sum
-%dst = load %mem
+%mem = memref.alloc %shape
+%sum = arith.addi %lhs, %rhs
+memref.store %mem, %sum
+%dst = memref.load %mem
 ```
 
 We cannot fit in with just one result pattern given `store` does not return a
@@ -610,10 +611,10 @@ def : Pattern<(ThreeResultOp ...),
 Before going into details on variadic op support, we need to define a few terms
 regarding an op's values.
 
-*   _Value_: either an operand or a result
-*   _Declared operand/result/value_: an operand/result/value statically declared
+*   *Value*: either an operand or a result
+*   *Declared operand/result/value*: an operand/result/value statically declared
     in ODS of the op
-*   _Actual operand/result/value_: an operand/result/value of an op instance at
+*   *Actual operand/result/value*: an operand/result/value of an op instance at
     runtime
 
 The above terms are needed because ops can have multiple results, and some of
@@ -754,12 +755,12 @@ builders with return type deduction.
 The `returnType` directive must be used as a trailing argument to a node
 describing a replacement op. The directive comes in three forms:
 
-* `(returnType $value)`: copy the type of the operand or result bound to
-  `value`.
-* `(returnType "$_builder.getI32Type()")`: a string literal embedding C++. The
-  embedded snippet is expected to return a `Type` or a `TypeRange`.
-* `(returnType (NativeCodeCall<"myFunc($0)"> $value))`: a DAG node with a native
-  code call that can be passed any bound variables arguments.
+*   `(returnType $value)`: copy the type of the operand or result bound to
+    `value`.
+*   `(returnType "$_builder.getI32Type()")`: a string literal embedding C++. The
+    embedded snippet is expected to return a `Type` or a `TypeRange`.
+*   `(returnType (NativeCodeCall<"myFunc($0)"> $value))`: a DAG node with a
+    native code call that can be passed any bound variables arguments.
 
 Specify multiple return types with a mix of any of the above. Example:
 

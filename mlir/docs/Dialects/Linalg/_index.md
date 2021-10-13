@@ -125,14 +125,14 @@ materialized by a lowering into a form that will resemble:
 #map0 = affine_map<(d0) -> (d0 * 2 + 1)>
 
 func @example(%arg0: memref<?xf32>, %arg1: memref<?xvector<4xf32>, #map0>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %0 = dim %arg0, %c0 : memref<?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.dim %arg0, %c0 : memref<?xf32>
   scf.for %arg2 = %c0 to %0 step %c1 {
-    %1 = load %arg0[%arg2] : memref<?xf32>
-    %2 = load %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
+    %1 = memref.load %arg0[%arg2] : memref<?xf32>
+    %2 = memref.load %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
     %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
-    store %3, %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
+    memref.store %3, %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
   }
   return
 }
@@ -207,16 +207,16 @@ materialized by a lowering into a form that will resemble:
 #map0 = affine_map<(d0, d1) -> (d0 * 2 + d1 * 2)>
 
 func @example(%arg0: memref<8x?xf32, #map0>, %arg1: memref<?xvector<4xf32>>) {
-  %c8 = constant 8 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %0 = dim %arg0, %c1 : memref<8x?xf32, #map0>
+  %c8 = arith.constant 8 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.dim %arg0, %c1 : memref<8x?xf32, #map0>
   scf.for %arg2 = %c0 to %0 step %c1 {
     scf.for %arg3 = %c0 to %c8 step %c1 {
-      %1 = load %arg0[%arg3, %arg2] : memref<8x?xf32, #map0>
-      %2 = load %arg1[%arg3] : memref<?xvector<4xf32>>
+      %1 = memref.load %arg0[%arg3, %arg2] : memref<8x?xf32, #map0>
+      %2 = memref.load %arg1[%arg3] : memref<?xvector<4xf32>>
       %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
-      store %3, %arg1[%arg3] : memref<?xvector<4xf32>>
+      memref.store %3, %arg1[%arg3] : memref<?xvector<4xf32>>
     }
   }
   return
@@ -314,7 +314,7 @@ func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
   outs(%C: memref<?x?xf32>) {
     ^bb0(%a: f32, %b: f32, %c: f32):
-      %d = addf %a, %b : f32
+      %d = arith.addf %a, %b : f32
       linalg.yield %d : f32
   }
 
@@ -330,16 +330,16 @@ by a lowering into a form that will resemble:
 
 ```mlir
 func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %0 = dim %arg0, %c0 : memref<?x?xf32>
-  %1 = dim %arg0, %c1 : memref<?x?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %1 = memref.dim %arg0, %c1 : memref<?x?xf32>
   scf.for %arg3 = %c0 to %0 step %c1 {
     scf.for %arg4 = %c0 to %1 step %c1 {
-      %2 = load %arg0[%arg3, %arg4] : memref<?x?xf32>
-      %3 = load %arg1[%arg3, %arg4] : memref<?x?xf32>
-      %4 = addf %2, %3 : f32
-      store %4, %arg2[%arg3, %arg4] : memref<?x?xf32>
+      %2 = memref.load %arg0[%arg3, %arg4] : memref<?x?xf32>
+      %3 = memref.load %arg1[%arg3, %arg4] : memref<?x?xf32>
+      %4 = arith.addf %2, %3 : f32
+      memref.store %4, %arg2[%arg3, %arg4] : memref<?x?xf32>
     }
   }
   return
@@ -387,7 +387,7 @@ func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
   outs(%C: memref<?x?xf32>) {
   ^bb0(%a: f32, %b: f32, %c: f32):
-    %d = addf %a, %b : f32
+    %d = arith.addf %a, %b : f32
     linalg.yield %d : f32
   }
   return
@@ -518,7 +518,7 @@ generally alias the operand `view`. At the moment the existing ops are:
 
 ```
 * `memref.view`,
-* `std.subview`,
+* `memref.subview`,
 * `memref.transpose`.
 * `linalg.range`,
 * `linalg.slice`,

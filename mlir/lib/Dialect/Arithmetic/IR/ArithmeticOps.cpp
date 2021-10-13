@@ -76,6 +76,112 @@ namespace {
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+void arith::ConstantOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  auto type = getType();
+  if (auto intCst = value().dyn_cast<IntegerAttr>()) {
+    auto intType = type.dyn_cast<IntegerType>();
+
+    // Sugar i1 constants with 'true' and 'false'.
+    if (intType && intType.getWidth() == 1)
+      return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
+
+    // Otherwise, build a compex name with the value and type.
+    SmallString<32> specialNameBuffer;
+    llvm::raw_svector_ostream specialName(specialNameBuffer);
+    specialName << 'c' << intCst.getInt();
+    if (intType)
+      specialName << '_' << type;
+    setNameFn(getResult(), specialName.str());
+  } else {
+    setNameFn(getResult(), "cst");
+  }
+}
+
+/// TODO: disallow arith.constant to return anything other than signless integer
+/// or float like.
+static LogicalResult verify(arith::ConstantOp op) {
+  auto type = op.getType();
+  // The value's type must match the return type.
+  if (op.value().getType() != type) {
+    return op.emitOpError() << "value type " << op.value().getType()
+                            << " must match return type: " << type;
+  }
+  // Integer values must be signless.
+  if (type.isa<IntegerType>() && !type.cast<IntegerType>().isSignless())
+    return op.emitOpError("integer return type must be signless");
+  // Any float or elements attribute are acceptable.
+  if (!op.value().isa<IntegerAttr, FloatAttr, ElementsAttr>()) {
+    return op.emitOpError(
+        "value must be an integer, float, or elements attribute");
+  }
+  return success();
+}
+
+bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
+  // The value's type must be the same as the provided type.
+  if (value.getType() != type)
+    return false;
+  // Integer values must be signless.
+  if (type.isa<IntegerType>() && !type.cast<IntegerType>().isSignless())
+    return false;
+  // Integer, float, and element attributes are buildable.
+  return value.isa<IntegerAttr, FloatAttr, ElementsAttr>();
+}
+
+OpFoldResult arith::ConstantOp::fold(ArrayRef<Attribute> operands) {
+  return value();
+}
+
+void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
+                                 int64_t value, unsigned width) {
+  auto type = builder.getIntegerType(width);
+  arith::ConstantOp::build(builder, result, type,
+                           builder.getIntegerAttr(type, value));
+}
+
+void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
+                                 int64_t value, Type type) {
+  assert(type.isSignlessInteger() &&
+         "ConstantIntOp can only have signless integer type values");
+  arith::ConstantOp::build(builder, result, type,
+                           builder.getIntegerAttr(type, value));
+}
+
+bool arith::ConstantIntOp::classof(Operation *op) {
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
+    return constOp.getType().isSignlessInteger();
+  return false;
+}
+
+void arith::ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
+                                   const APFloat &value, FloatType type) {
+  arith::ConstantOp::build(builder, result, type,
+                           builder.getFloatAttr(type, value));
+}
+
+bool arith::ConstantFloatOp::classof(Operation *op) {
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
+    return constOp.getType().isa<FloatType>();
+  return false;
+}
+
+void arith::ConstantIndexOp::build(OpBuilder &builder, OperationState &result,
+                                   int64_t value) {
+  arith::ConstantOp::build(builder, result, builder.getIndexType(),
+                           builder.getIndexAttr(value));
+}
+
+bool arith::ConstantIndexOp::classof(Operation *op) {
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
+    return constOp.getType().isIndex();
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // AddIOp
 //===----------------------------------------------------------------------===//
 
@@ -377,6 +483,10 @@ OpFoldResult arith::OrIOp::fold(ArrayRef<Attribute> operands) {
   /// or(x, x) -> x
   if (lhs() == rhs())
     return rhs();
+  /// or(x, <all ones>) -> <all ones>
+  if (auto rhsAttr = operands[1].dyn_cast_or_null<IntegerAttr>())
+    if (rhsAttr.getValue().isAllOnes())
+      return rhsAttr;
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a | b; });
@@ -440,6 +550,49 @@ OpFoldResult arith::DivFOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Utility functions for verifying cast ops
+//===----------------------------------------------------------------------===//
+
+template <typename... Types>
+using type_list = std::tuple<Types...> *;
+
+/// Returns a non-null type only if the provided type is one of the allowed
+/// types or one of the allowed shaped types of the allowed types. Returns the
+/// element type if a valid shaped type is provided.
+template <typename... ShapedTypes, typename... ElementTypes>
+static Type getUnderlyingType(Type type, type_list<ShapedTypes...>,
+                              type_list<ElementTypes...>) {
+  if (type.isa<ShapedType>() && !type.isa<ShapedTypes...>())
+    return {};
+
+  auto underlyingType = getElementTypeOrSelf(type);
+  if (!underlyingType.isa<ElementTypes...>())
+    return {};
+
+  return underlyingType;
+}
+
+/// Get allowed underlying types for vectors and tensors.
+template <typename... ElementTypes>
+static Type getTypeIfLike(Type type) {
+  return getUnderlyingType(type, type_list<VectorType, TensorType>(),
+                           type_list<ElementTypes...>());
+}
+
+/// Get allowed underlying types for vectors, tensors, and memrefs.
+template <typename... ElementTypes>
+static Type getTypeIfLikeOrMemRef(Type type) {
+  return getUnderlyingType(type,
+                           type_list<VectorType, TensorType, MemRefType>(),
+                           type_list<ElementTypes...>());
+}
+
+static bool areValidCastInputsAndOutputs(TypeRange inputs, TypeRange outputs) {
+  return inputs.size() == 1 && outputs.size() == 1 &&
+         succeeded(verifyCompatibleShapes(inputs.front(), outputs.front()));
+}
+
+//===----------------------------------------------------------------------===//
 // Verifiers for integer and floating point extension/truncation ops
 //===----------------------------------------------------------------------===//
 
@@ -469,6 +622,21 @@ static LogicalResult verifyTruncateOp(Op op) {
   return success();
 }
 
+/// Validate a cast that changes the width of a type.
+template <template <typename> class WidthComparator, typename... ElementTypes>
+static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
+
+  auto srcType = getTypeIfLike<ElementTypes...>(inputs.front());
+  auto dstType = getTypeIfLike<ElementTypes...>(outputs.front());
+  if (!srcType || !dstType)
+    return false;
+
+  return WidthComparator<unsigned>()(dstType.getIntOrFloatBitWidth(),
+                                     srcType.getIntOrFloatBitWidth());
+}
+
 //===----------------------------------------------------------------------===//
 // ExtUIOp
 //===----------------------------------------------------------------------===//
@@ -479,6 +647,10 @@ OpFoldResult arith::ExtUIOp::fold(ArrayRef<Attribute> operands) {
         getType(), lhs.getValue().zext(getType().getIntOrFloatBitWidth()));
 
   return {};
+}
+
+bool arith::ExtUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkWidthChangeCast<std::greater, IntegerType>(inputs, outputs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -493,53 +665,120 @@ OpFoldResult arith::ExtSIOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-// TODO temporary fixes until second patch is in
-OpFoldResult arith::TruncFOp::fold(ArrayRef<Attribute> operands) {
-  return {};
+bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkWidthChangeCast<std::greater, IntegerType>(inputs, outputs);
 }
 
-bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+//===----------------------------------------------------------------------===//
+// ExtFOp
+//===----------------------------------------------------------------------===//
+
+bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkWidthChangeCast<std::greater, FloatType>(inputs, outputs);
 }
+
+//===----------------------------------------------------------------------===//
+// TruncIOp
+//===----------------------------------------------------------------------===//
 
 OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
+  // trunci(zexti(a)) -> a
+  // trunci(sexti(a)) -> a
+  if (matchPattern(getOperand(), m_Op<arith::ExtUIOp>()) ||
+      matchPattern(getOperand(), m_Op<arith::ExtSIOp>()))
+    return getOperand().getDefiningOp()->getOperand(0);
+
+  assert(operands.size() == 1 && "unary operation takes one operand");
+
+  if (!operands[0])
+    return {};
+
+  if (auto lhs = operands[0].dyn_cast<IntegerAttr>()) {
+    return IntegerAttr::get(
+        getType(), lhs.getValue().trunc(getType().getIntOrFloatBitWidth()));
+  }
+
   return {};
 }
 
 bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+  return checkWidthChangeCast<std::less, IntegerType>(inputs, outputs);
 }
 
-bool arith::ExtUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
-}
+//===----------------------------------------------------------------------===//
+// TruncFOp
+//===----------------------------------------------------------------------===//
 
-bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
-}
+/// Perform safe const propagation for truncf, i.e. only propagate if FP value
+/// can be represented without precision loss or rounding.
+OpFoldResult arith::TruncFOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary operation takes one operand");
 
-bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
-}
+  auto constOperand = operands.front();
+  if (!constOperand || !constOperand.isa<FloatAttr>())
+    return {};
 
-OpFoldResult arith::ConstantOp::fold(ArrayRef<Attribute> operands) {
+  // Convert to target type via 'double'.
+  double sourceValue =
+      constOperand.dyn_cast<FloatAttr>().getValue().convertToDouble();
+  auto targetAttr = FloatAttr::get(getType(), sourceValue);
+
+  // Propagate if constant's value does not change after truncation.
+  if (sourceValue == targetAttr.getValue().convertToDouble())
+    return targetAttr;
+
   return {};
 }
 
-bool arith::SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkWidthChangeCast<std::less, FloatType>(inputs, outputs);
 }
+
+//===----------------------------------------------------------------------===//
+// Verifiers for casts between integers and floats.
+//===----------------------------------------------------------------------===//
+
+template <typename From, typename To>
+static bool checkIntFloatCast(TypeRange inputs, TypeRange outputs) {
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
+
+  auto srcType = getTypeIfLike<From>(inputs.front());
+  auto dstType = getTypeIfLike<To>(outputs.back());
+
+  return srcType && dstType;
+}
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
 
 bool arith::UIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+  return checkIntFloatCast<IntegerType, FloatType>(inputs, outputs);
 }
 
-bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+//===----------------------------------------------------------------------===//
+// SIToFPOp
+//===----------------------------------------------------------------------===//
+
+bool arith::SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkIntFloatCast<IntegerType, FloatType>(inputs, outputs);
 }
+
+//===----------------------------------------------------------------------===//
+// FPToUIOp
+//===----------------------------------------------------------------------===//
 
 bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  return true;
+  return checkIntFloatCast<FloatType, IntegerType>(inputs, outputs);
+}
+
+//===----------------------------------------------------------------------===//
+// FPToSIOp
+//===----------------------------------------------------------------------===//
+
+bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  return checkIntFloatCast<FloatType, IntegerType>(inputs, outputs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -548,12 +787,13 @@ bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
                                            TypeRange outputs) {
-  assert(inputs.size() == 1 && outputs.size() == 1 &&
-         "index_cast op expects one result and one result");
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
 
-  // Shape equivalence is guaranteed by op traits.
-  auto srcType = getElementTypeOrSelf(inputs.front());
-  auto dstType = getElementTypeOrSelf(outputs.front());
+  auto srcType = getTypeIfLikeOrMemRef<IntegerType, IndexType>(inputs.front());
+  auto dstType = getTypeIfLikeOrMemRef<IntegerType, IndexType>(outputs.front());
+  if (!srcType || !dstType)
+    return false;
 
   return (srcType.isIndex() && dstType.isSignlessInteger()) ||
          (srcType.isSignlessInteger() && dstType.isIndex());
@@ -579,14 +819,16 @@ void arith::IndexCastOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 bool arith::BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-  assert(inputs.size() == 1 && outputs.size() == 1 &&
-         "bitcast op expects one operand and one result");
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
 
-  // Shape equivalence is guaranteed by op traits.
-  auto srcType = getElementTypeOrSelf(inputs.front());
-  auto dstType = getElementTypeOrSelf(outputs.front());
+  auto srcType =
+      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(inputs.front());
+  auto dstType =
+      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(outputs.front());
+  if (!srcType || !dstType)
+    return false;
 
-  // Types are guarnateed to be integers or floats by constraints.
   return srcType.getIntOrFloatBitWidth() == dstType.getIntOrFloatBitWidth();
 }
 

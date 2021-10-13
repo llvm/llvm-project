@@ -158,7 +158,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     omp.wsloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-      %sum = addf %a, %b : f32
+      %sum = arith.addf %a, %b : f32
       store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
       omp.yield
     }

@@ -179,9 +179,6 @@ void __llvm_profile_initialize(void) {
    * also consumes the VMO handle. */
   __sanitizer_publish_data(ProfileSinkName, Vmo);
 
-  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
-  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
-
   /* Update the profile fields based on the current mapping. */
   INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =
       (intptr_t)Mapping - (uintptr_t)CountersBegin + CountersOffset;

@@ -4,10 +4,10 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %a = constant dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
-  %b = constant dense<[10.0, 20.0, 30.0]> : tensor<3xf32>
+  %a = arith.constant dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
+  %b = arith.constant dense<[10.0, 20.0, 30.0]> : tensor<3xf32>
 
-  %addf = addf %a, %b : tensor<3xf32>
+  %addf = arith.addf %a, %b : tensor<3xf32>
   %addf_unranked = tensor.cast %addf : tensor<3xf32> to tensor<*xf32>
   call @print_memref_f32(%addf_unranked) : (tensor<*xf32>) -> ()
   // CHECK: Unranked Memref base@ = {{.*}} rank = 1 offset = 0 sizes = [3] strides = [1] data =

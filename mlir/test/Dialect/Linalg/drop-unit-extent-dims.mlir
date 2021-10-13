@@ -56,12 +56,12 @@ func @drop_one_trip_loops_indexed
          %idx2 = linalg.index 2 : index
          %idx3 = linalg.index 3 : index
          %idx4 = linalg.index 4 : index
-         %1 = addi %idx0, %idx1 : index
-         %2 = subi %1, %idx2 : index
-         %3 = subi %2, %idx3 : index
-         %4 = addi %3, %idx4 : index
-         %5 = index_cast %4 : index to i32
-         %6 = addi %5, %arg6 : i32
+         %1 = arith.addi %idx0, %idx1 : index
+         %2 = arith.subi %1, %idx2 : index
+         %3 = arith.subi %2, %idx3 : index
+         %4 = arith.addi %3, %idx4 : index
+         %5 = arith.index_cast %4 : index to i32
+         %6 = arith.addi %5, %arg6 : i32
          linalg.yield %6 : i32
        } -> tensor<?x1x?x1x?xi32>
   return %0 : tensor<?x1x?x1x?xi32>
@@ -75,10 +75,10 @@ func @drop_one_trip_loops_indexed
 //       CHECK:     %[[IDX0:.+]] = linalg.index 0 : index
 //       CHECK:     %[[IDX1:.+]] = linalg.index 1 : index
 //       CHECK:     %[[IDX2:.+]] = linalg.index 2 : index
-//       CHECK:     %[[T3:.+]] = addi %[[IDX0]], %[[IDX1]]
-//       CHECK:     %[[T4:.+]] = addi %[[T3]], %[[IDX2]]
-//       CHECK:     %[[T5:.+]] = index_cast %[[T4]] : index to i32
-//       CHECK:     %[[T6:.+]] = addi %[[T5]], %[[ARG4]] : i32
+//       CHECK:     %[[T3:.+]] = arith.addi %[[IDX0]], %[[IDX1]]
+//       CHECK:     %[[T4:.+]] = arith.addi %[[T3]], %[[IDX2]]
+//       CHECK:     %[[T5:.+]] = arith.index_cast %[[T4]] : index to i32
+//       CHECK:     %[[T6:.+]] = arith.addi %[[T5]], %[[ARG4]] : i32
 //       CHECK:     linalg.yield %[[T6]] : i32
 
 // -----
@@ -126,9 +126,9 @@ func @drop_all_loops_indexed
        ^bb0(%arg3: i32, %arg4: i32) :
          %idx0 = linalg.index 0 : index
          %idx1 = linalg.index 1 : index
-         %1 = addi %idx0, %idx1 : index
-         %2 = index_cast %1 : index to i32
-         %3 = addi %2, %arg3 : i32
+         %1 = arith.addi %idx0, %idx1 : index
+         %2 = arith.index_cast %1 : index to i32
+         %3 = arith.addi %2, %arg3 : i32
          linalg.yield %3 : i32
        } -> tensor<1x1xi32>
   return %0 : tensor<1x1xi32>
@@ -191,7 +191,7 @@ func @broadcast_test(%arg0 : tensor<5xf32>, %arg1 : tensor<5xf32>, %shape : tens
      ins(%0, %1 : tensor<1x5xf32>, tensor<5x1xf32>)
     outs(%shape : tensor<5x5xf32>) {
        ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):
-         %3 = addf %arg3, %arg4 : f32
+         %3 = arith.addf %arg3, %arg4 : f32
          linalg.yield %3 : f32
        } -> tensor<5x5xf32>
   return %2 : tensor<5x5xf32>
@@ -264,7 +264,7 @@ func @fold_unit_dim_tensor_reshape_op(%arg0 : tensor<5xf32>) -> tensor<2x5xf32>
 // -----
 
 func @fold_unit_dim_for_init_tensor(%input: tensor<1x1000xf32>) -> tensor<1xf32> {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   %init = linalg.init_tensor [1] : tensor<1xf32>
   %fill = linalg.fill(%cst, %init) : f32, tensor<1xf32> -> tensor<1xf32>
   %add = linalg.generic {
@@ -272,7 +272,7 @@ func @fold_unit_dim_for_init_tensor(%input: tensor<1x1000xf32>) -> tensor<1xf32>
       iterator_types = ["parallel", "reduction"]}
     ins(%input : tensor<1x1000xf32>)outs(%fill : tensor<1xf32>) {
   ^bb0(%arg1: f32, %arg2: f32):
-    %1823 = addf %arg1, %arg2 : f32
+    %1823 = arith.addf %arg1, %arg2 : f32
     linalg.yield %1823 : f32
   } -> tensor<1xf32>
   return %add : tensor<1xf32>
@@ -327,8 +327,8 @@ func @fold_slice(
 // -----
 
 func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
-  %cst = constant 1.000000e+00 : f32
-  %c3 = constant 3 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c3 = arith.constant 3 : index
   %0 = tensor.dim %arg0, %c3 : tensor<1x?x1x?xf32>
   %1 = linalg.init_tensor [1, %0] : tensor<1x?xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<1x?xf32> -> tensor<1x?xf32>
@@ -339,7 +339,7 @@ func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
     ins(%arg0 : tensor<1x?x1x?xf32>)
     outs(%2 : tensor<1x?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
-    %4 = addf %arg1, %arg2 : f32
+    %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<1x?xf32>
   return %3 : tensor<1x?xf32>
@@ -362,8 +362,8 @@ func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
 // -----
 
 func @unit_dim_for_both_reduction(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32> {
-  %cst = constant 1.000000e+00 : f32
-  %c3 = constant 3 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c3 = arith.constant 3 : index
   %1 = linalg.init_tensor [1, 1] : tensor<1x1xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<1x1xf32> -> tensor<1x1xf32>
   %3 = linalg.generic {
@@ -373,7 +373,7 @@ func @unit_dim_for_both_reduction(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32>
     ins(%arg0 : tensor<1x?x1x1xf32>)
     outs(%2 : tensor<1x1xf32>) {
   ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
-    %4 = addf %arg1, %arg2 : f32
+    %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<1x1xf32>
   return %3 : tensor<1x1xf32>
@@ -395,8 +395,8 @@ func @unit_dim_for_both_reduction(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32>
 // -----
 
 func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32> {
-  %cst = constant 1.000000e+00 : f32
-  %c2 = constant 2 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c2 = arith.constant 2 : index
   %0 = tensor.dim %arg0, %c2 : tensor<?x1x?x1xf32>
   %1 = linalg.init_tensor [%0, 1] : tensor<?x1xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<?x1xf32> -> tensor<?x1xf32>
@@ -407,7 +407,7 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
     ins(%arg0 : tensor<?x1x?x1xf32>)
     outs(%2 : tensor<?x1xf32>) {
   ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
-    %4 = addf %arg1, %arg2 : f32
+    %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<?x1xf32>
   return %3 : tensor<?x1xf32>
@@ -508,12 +508,12 @@ func @drop_one_trip_loops_indexed
          %idx2 = linalg.index 2 : index
          %idx3 = linalg.index 3 : index
          %idx4 = linalg.index 4 : index
-         %1 = addi %idx0, %idx1 : index
-         %2 = subi %1, %idx2 : index
-         %3 = subi %2, %idx3 : index
-         %4 = addi %3, %idx4 : index
-         %5 = index_cast %4 : index to i32
-         %6 = addi %5, %arg6 : i32
+         %1 = arith.addi %idx0, %idx1 : index
+         %2 = arith.subi %1, %idx2 : index
+         %3 = arith.subi %2, %idx3 : index
+         %4 = arith.addi %3, %idx4 : index
+         %5 = arith.index_cast %4 : index to i32
+         %6 = arith.addi %5, %arg6 : i32
          linalg.yield %6 : i32
        }
   return %shape : memref<?x1x?x1x?xi32>
@@ -527,10 +527,10 @@ func @drop_one_trip_loops_indexed
 //       CHECK:     %[[IDX0:.+]] = linalg.index 0 : index
 //       CHECK:     %[[IDX1:.+]] = linalg.index 1 : index
 //       CHECK:     %[[IDX2:.+]] = linalg.index 2 : index
-//       CHECK:     %[[T3:.+]] = addi %[[IDX0]], %[[IDX1]]
-//       CHECK:     %[[T4:.+]] = addi %[[T3]], %[[IDX2]]
-//       CHECK:     %[[T5:.+]] = index_cast %[[T4]] : index to i32
-//       CHECK:     %[[T6:.+]] = addi %[[T5]], %[[ARG4]] : i32
+//       CHECK:     %[[T3:.+]] = arith.addi %[[IDX0]], %[[IDX1]]
+//       CHECK:     %[[T4:.+]] = arith.addi %[[T3]], %[[IDX2]]
+//       CHECK:     %[[T5:.+]] = arith.index_cast %[[T4]] : index to i32
+//       CHECK:     %[[T6:.+]] = arith.addi %[[T5]], %[[ARG4]] : i32
 //       CHECK:     linalg.yield %[[T6]] : i32
 
 // -----
@@ -578,9 +578,9 @@ func @drop_all_loops_indexed
        ^bb0(%arg3: i32, %arg4: i32) :
          %idx0 = linalg.index 0 : index
          %idx1 = linalg.index 1 : index
-         %1 = addi %idx0, %idx1 : index
-         %2 = index_cast %1 : index to i32
-         %3 = addi %2, %arg3 : i32
+         %1 = arith.addi %idx0, %idx1 : index
+         %2 = arith.index_cast %1 : index to i32
+         %3 = arith.addi %2, %arg3 : i32
          linalg.yield %3 : i32
        }
   return %arg0 : memref<1x1xi32>
@@ -643,7 +643,7 @@ func @broadcast_test(%arg0 : memref<5xf32>, %arg1 : memref<5xf32>, %shape : memr
      ins(%0, %1 : memref<1x5xf32>, memref<5x1xf32>)
     outs(%shape : memref<5x5xf32>) {
        ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):
-         %3 = addf %arg3, %arg4 : f32
+         %3 = arith.addf %arg3, %arg4 : f32
          linalg.yield %3 : f32
        }
   return %shape : memref<5x5xf32>
@@ -720,14 +720,14 @@ func @fold_unit_dim_memref_reshape_op(%arg0 : memref<5xf32>) -> memref<2x5xf32>
 // -----
 
 func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1xf32> {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   %init = memref.alloc() : memref<1xf32>
   linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>],
       iterator_types = ["parallel", "reduction"]}
     ins(%input : memref<1x1000xf32>)outs(%init : memref<1xf32>) {
   ^bb0(%arg1: f32, %arg2: f32):
-    %1823 = addf %arg1, %arg2 : f32
+    %1823 = arith.addf %arg1, %arg2 : f32
     linalg.yield %1823 : f32
   }
   return %init : memref<1xf32>
@@ -817,8 +817,8 @@ func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> tensor<
       ins(%arg0, %arg1: tensor<8x8xf32, #CSR>, tensor<8xf32>)
       outs(%0: tensor<8xf32>) {
       ^bb(%a: f32, %b: f32, %x: f32):
-        %m = mulf %a, %b : f32
-        %add = addf %x, %m : f32
+        %m = arith.mulf %a, %b : f32
+        %add = arith.addf %x, %m : f32
         linalg.yield %add : f32
     } -> tensor<8xf32>
     return %1: tensor<8xf32>

@@ -11,6 +11,7 @@
 #ifndef FORTRAN_RUNTIME_IO_API_H_
 #define FORTRAN_RUNTIME_IO_API_H_
 
+#include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat.h"
 #include <cinttypes>
@@ -56,7 +57,7 @@ extern "C" {
 // These functions initiate data transfer statements (READ, WRITE, PRINT).
 // Example: PRINT *, 666 is implemented as the series of calls:
 //   Cookie cookie{BeginExternalListOutput(DefaultUnit,__FILE__,__LINE__)};
-//   OutputInteger64(cookie, 666);
+//   OutputInteger32(cookie, 666);
 //   EndIoStatement(cookie);
 
 // Internal I/O initiation
@@ -225,7 +226,13 @@ bool IONAME(OutputUnformattedBlock)(
 bool IONAME(InputUnformattedBlock)(
     Cookie, char *, std::size_t, std::size_t elementBytes);
 // Formatted (including list directed) I/O data items
+bool IONAME(OutputInteger8)(Cookie, std::int8_t);
+bool IONAME(OutputInteger16)(Cookie, std::int16_t);
+bool IONAME(OutputInteger32)(Cookie, std::int32_t);
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
+#ifdef __SIZEOF_INT128__
+bool IONAME(OutputInteger128)(Cookie, common::int128_t);
+#endif
 bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
 bool IONAME(OutputReal32)(Cookie, float);
 bool IONAME(InputReal32)(Cookie, float &);

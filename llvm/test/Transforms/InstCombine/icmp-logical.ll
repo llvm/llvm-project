@@ -15,6 +15,20 @@ define i1 @masked_and_notallzeroes(i32 %A) {
   ret i1 %res
 }
 
+define <2 x i1> @masked_and_notallzeroes_splat(<2 x i32> %A) {
+; CHECK-LABEL: @masked_and_notallzeroes_splat(
+; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TST1:%.*]] = icmp ne <2 x i32> [[MASK1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TST1]]
+;
+  %mask1 = and <2 x i32> %A, <i32 7, i32 7>
+  %tst1 = icmp ne <2 x i32> %mask1, <i32 0, i32 0>
+  %mask2 = and <2 x i32> %A, <i32 39, i32 39>
+  %tst2 = icmp ne <2 x i32> %mask2, <i32 0, i32 0>
+  %res = and <2 x i1> %tst1, %tst2
+  ret <2 x i1> %res
+}
+
 define i1 @masked_and_notallzeroes_logical(i32 %A) {
 ; CHECK-LABEL: @masked_and_notallzeroes_logical(
 ; CHECK-NEXT:    [[MASK1:%.*]] = and i32 [[A:%.*]], 7

@@ -696,8 +696,8 @@ define amdgpu_kernel void @urem16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX9-LABEL: urem16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GFX9-NEXT:    s_mov_b32 s6, 0xffff
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX9-NEXT:    s_mov_b32 s6, 0xffff
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_movk_i32 s8, 0x400
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)

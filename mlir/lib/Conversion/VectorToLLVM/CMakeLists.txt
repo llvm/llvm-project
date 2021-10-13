@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRArmNeon
   MLIRArmSVE
   MLIRArmSVETransforms

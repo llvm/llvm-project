@@ -3432,8 +3432,7 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   // For __rlwnm, __rlwimi and __rldimi, the last parameter mask must
   // be a constant that represents a contiguous bit field.
   case PPC::BI__builtin_ppc_rlwnm:
-    return SemaBuiltinConstantArg(TheCall, 1, Result) ||
-           SemaValueIsRunOfOnes(TheCall, 2);
+    return SemaValueIsRunOfOnes(TheCall, 2);
   case PPC::BI__builtin_ppc_rlwimi:
   case PPC::BI__builtin_ppc_rldimi:
     return SemaBuiltinConstantArg(TheCall, 2, Result) ||
@@ -7527,13 +7526,23 @@ bool Sema::SemaBuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
     }
 
     Expr *Arg = TheCall->getArg(ArgNum);
-    QualType ArgType = Arg->getType();
+    QualType PassedType = Arg->getType();
+    QualType StrippedRVType = PassedType.getCanonicalType();
 
-    if ((ExpectedType->isVoidPointerType() && !ArgType->isPointerType()) ||
-        (!ExpectedType->isVoidPointerType() &&
-           ArgType.getCanonicalType() != ExpectedType))
-      return Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
-             << ArgType << ExpectedType << 1 << 0 << 0;
+    // Strip Restrict/Volatile qualifiers.
+    if (StrippedRVType.isRestrictQualified() ||
+        StrippedRVType.isVolatileQualified())
+      StrippedRVType = StrippedRVType.getCanonicalType().getUnqualifiedType();
+
+    // The only case where the argument type and expected type are allowed to
+    // mismatch is if the argument type is a non-void pointer and expected type
+    // is a void pointer.
+    if (StrippedRVType != ExpectedType)
+      if (!(ExpectedType->isVoidPointerType() &&
+            StrippedRVType->isPointerType()))
+        return Diag(Arg->getBeginLoc(),
+                    diag::err_typecheck_convert_incompatible)
+               << PassedType << ExpectedType << 1 << 0 << 0;
 
     // If the value of the Mask is not 0, we have a constraint in the size of
     // the integer argument so here we ensure the argument is a constant that

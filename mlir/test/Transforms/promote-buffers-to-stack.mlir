@@ -417,7 +417,7 @@ func @memref_in_function_results(
 func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi eq, %arg0, %arg1 : index
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     scf.yield %1 : memref<?x?xf32>
@@ -482,7 +482,7 @@ func @loop_alloc(
   %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %2 = cmpi eq, %i, %ub : index
+    %2 = arith.cmpi eq, %i, %ub : index
     %3 = memref.alloc() : memref<2xf32>
     scf.yield %3 : memref<2xf32>
   }
@@ -512,7 +512,7 @@ func @loop_nested_if_no_alloc(
   %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %2 = cmpi eq, %i, %ub : index
+    %2 = arith.cmpi eq, %i, %ub : index
     %3 = scf.if %2 -> (memref<2xf32>) {
       scf.yield %0 : memref<2xf32>
     } else {
@@ -547,7 +547,7 @@ func @loop_nested_if_alloc(
   %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %2 = cmpi eq, %i, %ub : index
+    %2 = arith.cmpi eq, %i, %ub : index
     %3 = scf.if %2 -> (memref<2xf32>) {
       %4 = memref.alloc() : memref<2xf32>
       scf.yield %4 : memref<2xf32>

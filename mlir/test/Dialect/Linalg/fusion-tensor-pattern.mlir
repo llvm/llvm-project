@@ -25,11 +25,11 @@ module {
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
-//  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
-//  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C32:.+]] = arith.constant 32 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
 //  CHECK-DAG:   %[[M:.+]] = tensor.dim %[[ARG0]], %[[C0]]
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:     %[[C0]] to %[[M]] step %[[C32]]
@@ -90,11 +90,11 @@ module {
 // TLOOP-SAME: %[[C:[a-zA-Z0-9_]+]]: tensor<?x?xf32>,
 // TLOOP-SAME: %[[ABC_INIT:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
-// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
-// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
-// TLOOP-DAG:  %[[C16:.*]] = constant 16 : index
-// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C32:.*]] = arith.constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = arith.constant 64 : index
+// TLOOP-DAG:  %[[C16:.*]] = arith.constant 16 : index
+// TLOOP-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = arith.constant 1 : index
 
 // TLOOP:  %[[DIM_A0:.*]] = tensor.dim %[[A]], %[[C0]] : [[TY:.*]]
 
@@ -146,8 +146,8 @@ module {
 module {
   func @matmul_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                            %arg2: tensor<?x?xf32>) -> tensor<?x?xf32>{
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %0 = tensor.dim %arg2, %c0 : tensor<?x?xf32>
     %1 = tensor.dim %arg2, %c1 : tensor<?x?xf32>
     %2 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -164,7 +164,7 @@ module {
       ins(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%5 : tensor<?x?xf32>) {
       ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
-        %7 = addf %arg3, %arg4 : f32
+        %7 = arith.addf %arg3, %arg4 : f32
         linalg.yield %7 : f32
       } -> tensor<?x?xf32>
     return %6 : tensor<?x?xf32>
@@ -200,10 +200,10 @@ module {
 // TLOOP-SAME:    %[[B:[a-zA-Z0-9_]+]]: tensor<?x?xf32>,
 // TLOOP-SAME:    %[[AB:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 
-// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
-// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
-// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C32:.*]] = arith.constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = arith.constant 64 : index
+// TLOOP-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = arith.constant 1 : index
 
 // TLOOP:  %[[DIM_A_0:.*]] = tensor.dim %[[A]], %[[C0]] : [[TY:.*]]
 // TLOOP:  %[[DIM_B_1:.*]] = tensor.dim %[[B]], %[[C1]] : [[TY]]
@@ -242,7 +242,7 @@ module {
 module {
   func @matmul_out_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                       %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
-    %c0 = constant 0.0 : f32
+    %c0 = arith.constant 0.0 : f32
     %0 = linalg.fill(%c0, %arg0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
     %1 = linalg.matmul {__internal_linalg_transform__ = "out_fusion"}
       ins(%arg1, %arg2 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -255,7 +255,7 @@ module {
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
-//       CHECK: %[[C0:.*]] = constant 0.0{{.*}} : f32
+//       CHECK: %[[C0:.*]] = arith.constant 0.0{{.*}} : f32
 //   CHECK-NOT: fill
 //       CHECK: scf.for %[[I:.*]]{{.*}}iter_args(%{{.*}} = %[[ARG0]]) -> (tensor<?x?xf32>) {
 //       CHECK:   scf.for %[[J:.*]]
@@ -274,12 +274,12 @@ module {
 // TLOOP-SAME:    %[[A:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 // TLOOP-SAME:    %[[B:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 
-// TLOOP-DAG:  %[[C0_F32:.*]] = constant 0.0
-// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
-// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
-// TLOOP-DAG:  %[[C16:.*]] = constant 16 : index
-// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C0_F32:.*]] = arith.constant 0.0
+// TLOOP-DAG:  %[[C32:.*]] = arith.constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = arith.constant 64 : index
+// TLOOP-DAG:  %[[C16:.*]] = arith.constant 16 : index
+// TLOOP-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = arith.constant 1 : index
 
 // TLOOP:  %[[DIM_A_0:.*]] = tensor.dim %[[A]], %[[C0]] : [[TY:.*]]
 // TLOOP:  %[[DIM_B_1:.*]] = tensor.dim %[[B]], %[[C1]] : [[TY]]
@@ -324,7 +324,7 @@ module {
 module {
   func @generic_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                       %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
-    %c0 = constant 0.0 : f32
+    %c0 = arith.constant 0.0 : f32
     %0 = linalg.generic {
       indexing_maps = [affine_map<(m, n) -> ()>, affine_map<(m, n) -> (m, n)>],
       iterator_types = ["parallel", "parallel"]}
@@ -345,12 +345,12 @@ module {
 // TLOOP-SAME:    %[[A:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 // TLOOP-SAME:    %[[B:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 
-// TLOOP-DAG:  %[[C0_F32:.*]] = constant 0.0
-// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
-// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
-// TLOOP-DAG:  %[[C16:.*]] = constant 16 : index
-// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C0_F32:.*]] = arith.constant 0.0
+// TLOOP-DAG:  %[[C32:.*]] = arith.constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = arith.constant 64 : index
+// TLOOP-DAG:  %[[C16:.*]] = arith.constant 16 : index
+// TLOOP-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = arith.constant 1 : index
 
 // TLOOP:  %[[DIM_A_0:.*]] = tensor.dim %[[A]], %[[C0]] : [[TY:.*]]
 // TLOOP:  %[[DIM_B_1:.*]] = tensor.dim %[[B]], %[[C1]] : [[TY]]
