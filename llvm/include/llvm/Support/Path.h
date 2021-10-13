@@ -174,6 +174,21 @@ bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
                          StringRef NewPrefix,
                          Style style = Style::native);
 
+/// Remove redundant leading "./" pieces and consecutive separators.
+///
+/// @param path Input path.
+/// @result The cleaned-up \a path.
+StringRef remove_leading_dotslash(StringRef path, Style style = Style::native);
+
+/// In-place remove any './' and optionally '../' components from a path.
+///
+/// @param path processed path
+/// @param remove_dot_dot specify if '../' (except for leading "../") should be
+/// removed
+/// @result True if path was changed
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
+                 Style style = Style::native);
+
 /// Append to path.
 ///
 /// @code
@@ -212,7 +227,7 @@ void append(SmallVectorImpl<char> &path, const_iterator begin,
 
 /// Convert path to the native form. This is used to give paths to users and
 /// operating system calls in the platform's normal way. For example, on Windows
-/// all '/' are converted to '\'.
+/// all '/' are converted to '\'. On Unix, it converts all '\' to '/'.
 ///
 /// @param path A path that is transformed to native format.
 /// @param result Holds the result of the transformation.
@@ -498,21 +513,6 @@ bool is_absolute_gnu(const Twine &path, Style style = Style::native);
 /// @param path Input path.
 /// @result True if the path is relative, false if it is not.
 bool is_relative(const Twine &path, Style style = Style::native);
-
-/// Remove redundant leading "./" pieces and consecutive separators.
-///
-/// @param path Input path.
-/// @result The cleaned-up \a path.
-StringRef remove_leading_dotslash(StringRef path, Style style = Style::native);
-
-/// In-place remove any './' and optionally '../' components from a path.
-///
-/// @param path processed path
-/// @param remove_dot_dot specify if '../' (except for leading "../") should be
-/// removed
-/// @result True if path was changed
-bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
-                 Style style = Style::native);
 
 } // end namespace path
 } // end namespace sys

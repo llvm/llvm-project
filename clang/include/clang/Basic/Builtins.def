@@ -80,9 +80,7 @@
 //       builtin even if type doesn't match signature, and don't warn if we
 //       can't be sure the type is right
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
-//  f -> this is a libc/libm function without the '__builtin_' prefix. It can
-//       be followed by ':headername:' to state which header this function
-//       comes from.
+//  f -> this is a libc/libm function without the '__builtin_' prefix.
 //  h -> this function requires a specific header or an explicit declaration.
 //  i -> this is a runtime library implemented function without the
 //       '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.

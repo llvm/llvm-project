@@ -13,6 +13,22 @@ func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // -----
 
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_init()
+//   CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+//   CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+//       CHECK: %[[T:.*]] = sparse_tensor.init[%[[C16]], %[[C32]]] : tensor<?x32xf64, #{{.*}}>
+//       CHECK: return %[[T]] : tensor<?x32xf64, #{{.*}}>
+func @sparse_init() -> tensor<?x32xf64, #SparseMatrix> {
+  %d1 = arith.constant 16 : index
+  %d2 = arith.constant 32 : index
+  %0 = sparse_tensor.init [%d1, %d2] : tensor<?x32xf64, #SparseMatrix>
+  return %0 : tensor<?x32xf64, #SparseMatrix>
+}
+
+// -----
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_release(

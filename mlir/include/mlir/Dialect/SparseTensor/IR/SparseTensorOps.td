@@ -31,16 +31,16 @@ class SparseTensor_Op<string mnemonic, list<OpTrait> traits = []>
 def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
     Arguments<(ins AnyType:$source)>,
     Results<(outs TensorOf<[AnyType]>:$result)> {
-  string summary = "Constructs a new sparse tensor";
+  string summary = "Materializes a new sparse tensor from given source";
   string description = [{
-    Constructs a sparse tensor value with contents taken from an opaque
-    pointer provided by `source`. For targets that have access to a file
-    system, for example, this pointer may be a filename (or file) of a sparse
+    Materializes a sparse tensor with contents taken from an opaque pointer
+    provided by `source`. For targets that have access to a file system,
+    for example, this pointer may be a filename (or file) of a sparse
     tensor in a particular external storage format. The form of the operation
     is kept deliberately very general to allow for alternative implementations
     in the future, such as pointers to buffers or runnable initialization
-    code. The operation is provided as an anchor that materializes a fully
-    typed sparse tensor values into a computation.
+    code. The operation is provided as an anchor that materializes a properly
+    typed sparse tensor with inital contents into a computation.
 
     Example:
 
@@ -49,6 +49,28 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
     ```
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
+}
+
+def SparseTensor_InitOp : SparseTensor_Op<"init", []>,
+    Arguments<(ins Variadic<Index>:$sizes)>,
+    Results<(outs AnyTensor:$result)> {
+  string summary = "Materializes an empty sparse tensor";
+  string description = [{
+    Materializes an empty sparse tensor with given shape (either static or dynamic).
+    The operation is provided as an anchor that materializes a properly typed sparse
+    tensor into the output clause of a subsequent operation that yields a sparse tensor
+    as the result.
+
+    Example:
+
+    ```mlir
+    %c = sparse_tensor.init_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
+    %0 = linalg.matmul
+      ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
+    ```
+  }];
+  let assemblyFormat = "`[` $sizes `]` attr-dict `:` type($result)";
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
@@ -89,8 +111,8 @@ def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
     Arguments<(ins AnyTensor:$tensor)> {
   string description = [{
     Releases the underlying sparse storage scheme for a tensor that
-    materialized earlier through a `new` operator or a non-trivial
-    `convert` operator with an annotated tensor type as destination.
+    materialized earlier through a `new` operator, `init` operator, or a
+    non-trivial `convert` operator with an annotated tensor type as destination.
     This operation should only be called once for any materialized tensor.
     Also, after this operation, any subsequent `memref` querying operation
     on the tensor returns undefined results.
@@ -177,9 +199,9 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
 def SparseTensor_ToTensorOp : SparseTensor_Op<"tensor", [NoSideEffect]>,
     Arguments<(ins Variadic<AnyStridedMemRefOfRank<1>>:$memrefs)>,
     Results<(outs AnyTensor:$result)> {
-  let summary = "Reconstructs tensor from arrays(s)";
+  let summary = "Rematerializes tensor from arrays(s)";
   let description = [{
-    Reconstructs the sparse tensor from the sparse storage scheme array(s).
+    Rematerializes the sparse tensor from the sparse storage scheme array(s).
     This is similar to the `memref.load` operation in the sense that it
     provides a bridge between a bufferized world view and a tensor world
     view. Unlike the `memref.load` operation, however, this sparse operation

@@ -462,6 +462,17 @@ func @fold_extract_broadcast(%a : f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: fold_extract_splat
+//  CHECK-SAME:   %[[A:.*]]: f32
+//       CHECK:   return %[[A]] : f32
+func @fold_extract_splat(%a : f32) -> f32 {
+  %b = splat %a : vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
+  return %r : f32
+}
+
+// -----
+
 // CHECK-LABEL: fold_extract_broadcast_vector
 //  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
 //       CHECK:   return %[[A]] : vector<4xf32>
@@ -1046,4 +1057,17 @@ func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<
   %0 = vector.insert_strided_slice %source, %dest {offsets = [0, 0], strides = [1, 1]} : vector<16x16xf16> into vector<16x16xf16>
   // CHECK: return %[[SOURCE]]
   return %0: vector<16x16xf16>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_splat
+//       CHECK:   %[[B:.*]] = splat %{{.*}} : vector<2x4xf16>
+//  CHECK-NEXT:   return %[[B]] : vector<2x4xf16>
+func @extract_strided_splat(%arg0: f16) -> vector<2x4xf16> {
+ %0 = splat %arg0 : vector<16x4xf16>
+ %1 = vector.extract_strided_slice %0
+  {offsets = [1, 0], sizes = [2, 4], strides = [1, 1]} :
+  vector<16x4xf16> to vector<2x4xf16>
+  return %1 : vector<2x4xf16>
 }
