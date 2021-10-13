@@ -201,9 +201,6 @@ public:
   // init the RVVIntrinsic ID and IntrinsicTypes.
   void emitCodeGenSwitchBody(raw_ostream &o) const;
 
-  // Emit the define macors for mask intrinsics using _mt intrinsics.
-  void emitIntrinsicMaskMacro(raw_ostream &o) const;
-
   // Emit the macros for mapping C/C++ intrinsic function to builtin functions.
   void emitIntrinsicMacro(raw_ostream &o) const;
 
@@ -785,8 +782,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     MangledName += "_" + MangledSuffix.str();
   if (IsMask) {
     Name += "_m";
-    if (HasPolicy)
-      Name += "t";
   }
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
@@ -839,10 +834,10 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
 
   if (isMask()) {
     if (hasVL()) {
+      OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
       if (hasPolicy())
-        OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);\n";
-      else
-        OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
+        OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(),"
+                               " TAIL_UNDISTURBED));\n";
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
     }
@@ -879,24 +874,6 @@ void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
     for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
       OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
   }
-  OS << ")\n";
-}
-
-void RVVIntrinsic::emitIntrinsicMaskMacro(raw_ostream &OS) const {
-  OS << "#define " << getName().drop_back() << "(";
-  if (!InputTypes.empty()) {
-    ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size() - 1; i != e; ++i)
-      OS << LS << "op" << i;
-  }
-  OS << ") \\\n";
-  OS << "__builtin_rvv_" << getName() << "(";
-  ListSeparator LS;
-  if (!InputTypes.empty()) {
-    for (unsigned i = 0, e = InputTypes.size() - 1; i != e; ++i)
-      OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
-  }
-  OS << LS << "(size_t)VE_TAIL_AGNOSTIC";
   OS << ")\n";
 }
 
@@ -1012,12 +989,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     Inst.emitIntrinsicMacro(OS);
-  });
-
-  // Use _mt to implement _m intrinsics.
-  emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
-    if (Inst.isMask() && Inst.hasPolicy())
-      Inst.emitIntrinsicMaskMacro(OS);
   });
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
@@ -1177,14 +1148,10 @@ void RVVEmitter::createRVVIntrinsics(
         ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, "m");
       }
     }
-    // If HasVL, append 'z' to the operand list.
+    // If HasVL, append 'z' to last operand
     if (HasVL) {
       ProtoSeq.push_back("z");
       ProtoMaskSeq.push_back("z");
-    }
-
-    if (HasPolicy) {
-      ProtoMaskSeq.push_back("Kz");
     }
 
     // Create Intrinsics for each type and LMUL.
