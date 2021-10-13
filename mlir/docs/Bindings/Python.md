@@ -352,8 +352,8 @@ with Context() as ctx, Location.file("f.mlir", line=42, col=1, context=ctx):
   pass
 ```
 
-Locations are owned by the context and maintain it live as long as they are
-(transitively) referenced from somewhere in Python code.
+Locations are owned by the context and live as long as they are (transitively)
+referenced from somewhere in Python code.
 
 Unlike locations, the insertion point may be left unspecified (or, equivalently,
 set to `None` or `False`) during operation construction. In this case, the
@@ -467,7 +467,7 @@ represented as either:
 
 Given an `Attribute` or `Type` object, one can obtain a concrete subclass using
 the constructor of the subclass. This may raise a `ValueError` if the attribute
-or type does not have the expected subclass:
+or type is not of the expected subclass:
 
 ```python
 from mlir.ir import Attribute, Type
