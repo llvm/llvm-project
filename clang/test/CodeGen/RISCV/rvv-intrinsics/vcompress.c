@@ -402,60 +402,6 @@ vuint64m8_t test_vcompress_vm_u64m8 (vbool8_t mask, vuint64m8_t dest, vuint64m8_
   return vcompress_vm_u64m8(mask, dest, src, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vcompress.nxv1f16.i64(<vscale x 1 x half> [[DEST:%.*]], <vscale x 1 x half> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
-//
-vfloat16mf4_t test_vcompress_vm_f16mf4 (vbool64_t mask, vfloat16mf4_t dest, vfloat16mf4_t src, size_t vl) {
-  return vcompress_vm_f16mf4(mask, dest, src, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vcompress.nxv2f16.i64(<vscale x 2 x half> [[DEST:%.*]], <vscale x 2 x half> [[SRC:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
-//
-vfloat16mf2_t test_vcompress_vm_f16mf2 (vbool32_t mask, vfloat16mf2_t dest, vfloat16mf2_t src, size_t vl) {
-  return vcompress_vm_f16mf2(mask, dest, src, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vcompress.nxv4f16.i64(<vscale x 4 x half> [[DEST:%.*]], <vscale x 4 x half> [[SRC:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
-//
-vfloat16m1_t test_vcompress_vm_f16m1 (vbool16_t mask, vfloat16m1_t dest, vfloat16m1_t src, size_t vl) {
-  return vcompress_vm_f16m1(mask, dest, src, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vcompress.nxv8f16.i64(<vscale x 8 x half> [[DEST:%.*]], <vscale x 8 x half> [[SRC:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
-//
-vfloat16m2_t test_vcompress_vm_f16m2 (vbool8_t mask, vfloat16m2_t dest, vfloat16m2_t src, size_t vl) {
-  return vcompress_vm_f16m2(mask, dest, src, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vcompress.nxv16f16.i64(<vscale x 16 x half> [[DEST:%.*]], <vscale x 16 x half> [[SRC:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
-//
-vfloat16m4_t test_vcompress_vm_f16m4 (vbool4_t mask, vfloat16m4_t dest, vfloat16m4_t src, size_t vl) {
-  return vcompress_vm_f16m4(mask, dest, src, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vcompress_vm_f16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vcompress.nxv32f16.i64(<vscale x 32 x half> [[DEST:%.*]], <vscale x 32 x half> [[SRC:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
-//
-vfloat16m8_t test_vcompress_vm_f16m8 (vbool2_t mask, vfloat16m8_t dest, vfloat16m8_t src, size_t vl) {
-  return vcompress_vm_f16m8(mask, dest, src, vl);
-}
-
 // CHECK-RV64-LABEL: @test_vcompress_vm_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vcompress.nxv1f32.i64(<vscale x 1 x float> [[DEST:%.*]], <vscale x 1 x float> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
@@ -535,4 +481,58 @@ vfloat64m4_t test_vcompress_vm_f64m4 (vbool16_t mask, vfloat64m4_t dest, vfloat6
 //
 vfloat64m8_t test_vcompress_vm_f64m8 (vbool8_t mask, vfloat64m8_t dest, vfloat64m8_t src, size_t vl) {
   return vcompress_vm_f64m8(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vcompress.nxv1f16.i64(<vscale x 1 x half> [[DEST:%.*]], <vscale x 1 x half> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
+//
+vfloat16mf4_t test_vcompress_vm_f16mf4 (vbool64_t mask, vfloat16mf4_t dest, vfloat16mf4_t src, size_t vl) {
+  return vcompress_vm_f16mf4(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vcompress.nxv2f16.i64(<vscale x 2 x half> [[DEST:%.*]], <vscale x 2 x half> [[SRC:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
+//
+vfloat16mf2_t test_vcompress_vm_f16mf2 (vbool32_t mask, vfloat16mf2_t dest, vfloat16mf2_t src, size_t vl) {
+  return vcompress_vm_f16mf2(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vcompress.nxv4f16.i64(<vscale x 4 x half> [[DEST:%.*]], <vscale x 4 x half> [[SRC:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
+//
+vfloat16m1_t test_vcompress_vm_f16m1 (vbool16_t mask, vfloat16m1_t dest, vfloat16m1_t src, size_t vl) {
+  return vcompress_vm_f16m1(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vcompress.nxv8f16.i64(<vscale x 8 x half> [[DEST:%.*]], <vscale x 8 x half> [[SRC:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
+//
+vfloat16m2_t test_vcompress_vm_f16m2 (vbool8_t mask, vfloat16m2_t dest, vfloat16m2_t src, size_t vl) {
+  return vcompress_vm_f16m2(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vcompress.nxv16f16.i64(<vscale x 16 x half> [[DEST:%.*]], <vscale x 16 x half> [[SRC:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
+//
+vfloat16m4_t test_vcompress_vm_f16m4 (vbool4_t mask, vfloat16m4_t dest, vfloat16m4_t src, size_t vl) {
+  return vcompress_vm_f16m4(mask, dest, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vcompress_vm_f16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vcompress.nxv32f16.i64(<vscale x 32 x half> [[DEST:%.*]], <vscale x 32 x half> [[SRC:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
+//
+vfloat16m8_t test_vcompress_vm_f16m8 (vbool2_t mask, vfloat16m8_t dest, vfloat16m8_t src, size_t vl) {
+  return vcompress_vm_f16m8(mask, dest, src, vl);
 }

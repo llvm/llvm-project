@@ -214,222 +214,6 @@ vint16m8_t test_vreinterpret_v_u16m8_i16m8(vuint16m8_t src) {
   return vreinterpret_v_u16m8_i16m8(src);
 }
 
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf4_i16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x half> [[SRC:%.*]] to <vscale x 1 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
-//
-vint16mf4_t test_vreinterpret_v_f16mf4_i16mf4(vfloat16mf4_t src) {
-  return vreinterpret_v_f16mf4_i16mf4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf2_i16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x half> [[SRC:%.*]] to <vscale x 2 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
-//
-vint16mf2_t test_vreinterpret_v_f16mf2_i16mf2(vfloat16mf2_t src) {
-  return vreinterpret_v_f16mf2_i16mf2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m1_i16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x half> [[SRC:%.*]] to <vscale x 4 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
-//
-vint16m1_t test_vreinterpret_v_f16m1_i16m1(vfloat16m1_t src) {
-  return vreinterpret_v_f16m1_i16m1(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m2_i16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x half> [[SRC:%.*]] to <vscale x 8 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
-//
-vint16m2_t test_vreinterpret_v_f16m2_i16m2(vfloat16m2_t src) {
-  return vreinterpret_v_f16m2_i16m2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m4_i16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x half> [[SRC:%.*]] to <vscale x 16 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
-//
-vint16m4_t test_vreinterpret_v_f16m4_i16m4(vfloat16m4_t src) {
-  return vreinterpret_v_f16m4_i16m4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m8_i16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x half> [[SRC:%.*]] to <vscale x 32 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
-//
-vint16m8_t test_vreinterpret_v_f16m8_i16m8(vfloat16m8_t src) {
-  return vreinterpret_v_f16m8_i16m8(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf4_u16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x half> [[SRC:%.*]] to <vscale x 1 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
-//
-vuint16mf4_t test_vreinterpret_v_f16mf4_u16mf4(vfloat16mf4_t src) {
-  return vreinterpret_v_f16mf4_u16mf4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf2_u16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x half> [[SRC:%.*]] to <vscale x 2 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
-//
-vuint16mf2_t test_vreinterpret_v_f16mf2_u16mf2(vfloat16mf2_t src) {
-  return vreinterpret_v_f16mf2_u16mf2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m1_u16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x half> [[SRC:%.*]] to <vscale x 4 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
-//
-vuint16m1_t test_vreinterpret_v_f16m1_u16m1(vfloat16m1_t src) {
-  return vreinterpret_v_f16m1_u16m1(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m2_u16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x half> [[SRC:%.*]] to <vscale x 8 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
-//
-vuint16m2_t test_vreinterpret_v_f16m2_u16m2(vfloat16m2_t src) {
-  return vreinterpret_v_f16m2_u16m2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m4_u16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x half> [[SRC:%.*]] to <vscale x 16 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
-//
-vuint16m4_t test_vreinterpret_v_f16m4_u16m4(vfloat16m4_t src) {
-  return vreinterpret_v_f16m4_u16m4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m8_u16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x half> [[SRC:%.*]] to <vscale x 32 x i16>
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
-//
-vuint16m8_t test_vreinterpret_v_f16m8_u16m8(vfloat16m8_t src) {
-  return vreinterpret_v_f16m8_u16m8(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16mf4_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i16> [[SRC:%.*]] to <vscale x 1 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
-//
-vfloat16mf4_t test_vreinterpret_v_i16mf4_f16mf4(vint16mf4_t src) {
-  return vreinterpret_v_i16mf4_f16mf4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16mf2_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i16> [[SRC:%.*]] to <vscale x 2 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
-//
-vfloat16mf2_t test_vreinterpret_v_i16mf2_f16mf2(vint16mf2_t src) {
-  return vreinterpret_v_i16mf2_f16mf2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m1_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC:%.*]] to <vscale x 4 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
-//
-vfloat16m1_t test_vreinterpret_v_i16m1_f16m1(vint16m1_t src) {
-  return vreinterpret_v_i16m1_f16m1(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m2_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i16> [[SRC:%.*]] to <vscale x 8 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
-//
-vfloat16m2_t test_vreinterpret_v_i16m2_f16m2(vint16m2_t src) {
-  return vreinterpret_v_i16m2_f16m2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m4_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i16> [[SRC:%.*]] to <vscale x 16 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
-//
-vfloat16m4_t test_vreinterpret_v_i16m4_f16m4(vint16m4_t src) {
-  return vreinterpret_v_i16m4_f16m4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m8_f16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[SRC:%.*]] to <vscale x 32 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
-//
-vfloat16m8_t test_vreinterpret_v_i16m8_f16m8(vint16m8_t src) {
-  return vreinterpret_v_i16m8_f16m8(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16mf4_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i16> [[SRC:%.*]] to <vscale x 1 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
-//
-vfloat16mf4_t test_vreinterpret_v_u16mf4_f16mf4(vuint16mf4_t src) {
-  return vreinterpret_v_u16mf4_f16mf4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16mf2_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i16> [[SRC:%.*]] to <vscale x 2 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
-//
-vfloat16mf2_t test_vreinterpret_v_u16mf2_f16mf2(vuint16mf2_t src) {
-  return vreinterpret_v_u16mf2_f16mf2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m1_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC:%.*]] to <vscale x 4 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
-//
-vfloat16m1_t test_vreinterpret_v_u16m1_f16m1(vuint16m1_t src) {
-  return vreinterpret_v_u16m1_f16m1(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m2_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i16> [[SRC:%.*]] to <vscale x 8 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
-//
-vfloat16m2_t test_vreinterpret_v_u16m2_f16m2(vuint16m2_t src) {
-  return vreinterpret_v_u16m2_f16m2(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m4_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i16> [[SRC:%.*]] to <vscale x 16 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
-//
-vfloat16m4_t test_vreinterpret_v_u16m4_f16m4(vuint16m4_t src) {
-  return vreinterpret_v_u16m4_f16m4(src);
-}
-
-// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m8_f16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[SRC:%.*]] to <vscale x 32 x half>
-// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
-//
-vfloat16m8_t test_vreinterpret_v_u16m8_f16m8(vuint16m8_t src) {
-  return vreinterpret_v_u16m8_f16m8(src);
-}
-
 // CHECK-RV64-LABEL: @test_vreinterpret_v_i32mf2_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[SRC:%.*]]
@@ -1902,7 +1686,222 @@ vuint32m4_t test_vreinterpret_v_u64m4_u32m4(vuint64m4_t src) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i64> [[SRC:%.*]] to <vscale x 16 x i32>
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-vuint32m8_t test_vreinterpret_v_u64m8_u32m8 (vuint64m8_t src) {
+vuint32m8_t test_vreinterpret_v_u64m8_u32m8(vuint64m8_t src) {
   return vreinterpret_v_u64m8_u32m8(src);
 }
 
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf4_i16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x half> [[SRC:%.*]] to <vscale x 1 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
+//
+vint16mf4_t test_vreinterpret_v_f16mf4_i16mf4 (vfloat16mf4_t src) {
+  return vreinterpret_v_f16mf4_i16mf4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf2_i16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x half> [[SRC:%.*]] to <vscale x 2 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
+//
+vint16mf2_t test_vreinterpret_v_f16mf2_i16mf2 (vfloat16mf2_t src) {
+  return vreinterpret_v_f16mf2_i16mf2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m1_i16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x half> [[SRC:%.*]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
+//
+vint16m1_t test_vreinterpret_v_f16m1_i16m1 (vfloat16m1_t src) {
+  return vreinterpret_v_f16m1_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m2_i16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x half> [[SRC:%.*]] to <vscale x 8 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+vint16m2_t test_vreinterpret_v_f16m2_i16m2 (vfloat16m2_t src) {
+  return vreinterpret_v_f16m2_i16m2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m4_i16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x half> [[SRC:%.*]] to <vscale x 16 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
+//
+vint16m4_t test_vreinterpret_v_f16m4_i16m4 (vfloat16m4_t src) {
+  return vreinterpret_v_f16m4_i16m4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m8_i16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x half> [[SRC:%.*]] to <vscale x 32 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
+//
+vint16m8_t test_vreinterpret_v_f16m8_i16m8 (vfloat16m8_t src) {
+  return vreinterpret_v_f16m8_i16m8(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf4_u16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x half> [[SRC:%.*]] to <vscale x 1 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
+//
+vuint16mf4_t test_vreinterpret_v_f16mf4_u16mf4 (vfloat16mf4_t src) {
+  return vreinterpret_v_f16mf4_u16mf4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16mf2_u16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x half> [[SRC:%.*]] to <vscale x 2 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
+//
+vuint16mf2_t test_vreinterpret_v_f16mf2_u16mf2 (vfloat16mf2_t src) {
+  return vreinterpret_v_f16mf2_u16mf2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m1_u16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x half> [[SRC:%.*]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
+//
+vuint16m1_t test_vreinterpret_v_f16m1_u16m1 (vfloat16m1_t src) {
+  return vreinterpret_v_f16m1_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m2_u16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x half> [[SRC:%.*]] to <vscale x 8 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+vuint16m2_t test_vreinterpret_v_f16m2_u16m2 (vfloat16m2_t src) {
+  return vreinterpret_v_f16m2_u16m2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m4_u16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x half> [[SRC:%.*]] to <vscale x 16 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
+//
+vuint16m4_t test_vreinterpret_v_f16m4_u16m4 (vfloat16m4_t src) {
+  return vreinterpret_v_f16m4_u16m4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_f16m8_u16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x half> [[SRC:%.*]] to <vscale x 32 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
+//
+vuint16m8_t test_vreinterpret_v_f16m8_u16m8 (vfloat16m8_t src) {
+  return vreinterpret_v_f16m8_u16m8(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16mf4_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i16> [[SRC:%.*]] to <vscale x 1 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
+//
+vfloat16mf4_t test_vreinterpret_v_i16mf4_f16mf4 (vint16mf4_t src) {
+  return vreinterpret_v_i16mf4_f16mf4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16mf2_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i16> [[SRC:%.*]] to <vscale x 2 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
+//
+vfloat16mf2_t test_vreinterpret_v_i16mf2_f16mf2 (vint16mf2_t src) {
+  return vreinterpret_v_i16mf2_f16mf2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m1_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC:%.*]] to <vscale x 4 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
+//
+vfloat16m1_t test_vreinterpret_v_i16m1_f16m1 (vint16m1_t src) {
+  return vreinterpret_v_i16m1_f16m1(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m2_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i16> [[SRC:%.*]] to <vscale x 8 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
+//
+vfloat16m2_t test_vreinterpret_v_i16m2_f16m2 (vint16m2_t src) {
+  return vreinterpret_v_i16m2_f16m2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m4_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i16> [[SRC:%.*]] to <vscale x 16 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
+//
+vfloat16m4_t test_vreinterpret_v_i16m4_f16m4 (vint16m4_t src) {
+  return vreinterpret_v_i16m4_f16m4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_i16m8_f16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[SRC:%.*]] to <vscale x 32 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
+//
+vfloat16m8_t test_vreinterpret_v_i16m8_f16m8 (vint16m8_t src) {
+  return vreinterpret_v_i16m8_f16m8(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16mf4_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i16> [[SRC:%.*]] to <vscale x 1 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
+//
+vfloat16mf4_t test_vreinterpret_v_u16mf4_f16mf4 (vuint16mf4_t src) {
+  return vreinterpret_v_u16mf4_f16mf4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16mf2_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i16> [[SRC:%.*]] to <vscale x 2 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
+//
+vfloat16mf2_t test_vreinterpret_v_u16mf2_f16mf2 (vuint16mf2_t src) {
+  return vreinterpret_v_u16mf2_f16mf2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m1_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC:%.*]] to <vscale x 4 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
+//
+vfloat16m1_t test_vreinterpret_v_u16m1_f16m1 (vuint16m1_t src) {
+  return vreinterpret_v_u16m1_f16m1(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m2_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i16> [[SRC:%.*]] to <vscale x 8 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
+//
+vfloat16m2_t test_vreinterpret_v_u16m2_f16m2 (vuint16m2_t src) {
+  return vreinterpret_v_u16m2_f16m2(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m4_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i16> [[SRC:%.*]] to <vscale x 16 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
+//
+vfloat16m4_t test_vreinterpret_v_u16m4_f16m4 (vuint16m4_t src) {
+  return vreinterpret_v_u16m4_f16m4(src);
+}
+
+// CHECK-RV64-LABEL: @test_vreinterpret_v_u16m8_f16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[SRC:%.*]] to <vscale x 32 x half>
+// CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
+//
+vfloat16m8_t test_vreinterpret_v_u16m8_f16m8 (vuint16m8_t src) {
+  return vreinterpret_v_u16m8_f16m8(src);
+}

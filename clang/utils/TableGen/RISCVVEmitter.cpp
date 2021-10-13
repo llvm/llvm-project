@@ -157,7 +157,6 @@ private:
   bool IsMask;
   bool HasMaskedOffOperand;
   bool HasVL;
-  bool HasPolicy;
   bool HasNoMaskedOverloaded;
   bool HasAutoDef; // There is automiatic definition in header
   std::string ManualCodegen;
@@ -173,7 +172,7 @@ public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
                StringRef MangledSuffix, StringRef IRName, bool HasSideEffects,
                bool IsMask, bool HasMaskedOffOperand, bool HasVL,
-               bool HasPolicy, bool HasNoMaskedOverloaded, bool HasAutoDef,
+               bool HasNoMaskedOverloaded, bool HasAutoDef,
                StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                StringRef RequiredExtension, unsigned NF);
@@ -184,7 +183,6 @@ public:
   bool hasSideEffects() const { return HasSideEffects; }
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
-  bool hasPolicy() const { return HasPolicy; }
   bool hasNoMaskedOverloaded() const { return HasNoMaskedOverloaded; }
   bool hasManualCodegen() const { return !ManualCodegen.empty(); }
   bool hasAutoDef() const { return HasAutoDef; }
@@ -200,9 +198,6 @@ public:
   // Emit the code block for switch body in EmitRISCVBuiltinExpr, it should
   // init the RVVIntrinsic ID and IntrinsicTypes.
   void emitCodeGenSwitchBody(raw_ostream &o) const;
-
-  // Emit the define macors for mask intrinsics using _mt intrinsics.
-  void emitIntrinsicMaskMacro(raw_ostream &o) const;
 
   // Emit the macros for mapping C/C++ intrinsic function to builtin functions.
   void emitIntrinsicMacro(raw_ostream &o) const;
@@ -236,8 +231,6 @@ public:
 private:
   /// Create all intrinsics and add them to \p Out
   void createRVVIntrinsics(std::vector<std::unique_ptr<RVVIntrinsic>> &Out);
-  /// Create Headers and add them to \p Out
-  void createRVVHeaders(raw_ostream &OS);
   /// Compute output and input types by applying different config (basic type
   /// and LMUL with type transformers). It also record result of type in legal
   /// or illegal set to avoid compute the  same config again. The result maybe
@@ -763,15 +756,15 @@ void RVVType::applyModifier(StringRef Transformer) {
 RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef MangledSuffix,
                            StringRef IRName, bool HasSideEffects, bool IsMask,
-                           bool HasMaskedOffOperand, bool HasVL, bool HasPolicy,
+                           bool HasMaskedOffOperand, bool HasVL,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            StringRef RequiredExtension, unsigned NF)
     : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
-      HasPolicy(HasPolicy), HasNoMaskedOverloaded(HasNoMaskedOverloaded),
-      HasAutoDef(HasAutoDef), ManualCodegen(ManualCodegen.str()), NF(NF) {
+      HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
+      ManualCodegen(ManualCodegen.str()), NF(NF) {
 
   // Init Name and MangledName
   Name = NewName.str();
@@ -785,8 +778,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     MangledName += "_" + MangledSuffix.str();
   if (IsMask) {
     Name += "_m";
-    if (HasPolicy)
-      Name += "t";
   }
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
@@ -839,10 +830,7 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
 
   if (isMask()) {
     if (hasVL()) {
-      if (hasPolicy())
-        OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);\n";
-      else
-        OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
+      OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
     }
@@ -879,24 +867,6 @@ void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
     for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
       OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
   }
-  OS << ")\n";
-}
-
-void RVVIntrinsic::emitIntrinsicMaskMacro(raw_ostream &OS) const {
-  OS << "#define " << getName().drop_back() << "(";
-  if (!InputTypes.empty()) {
-    ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size() - 1; i != e; ++i)
-      OS << LS << "op" << i;
-  }
-  OS << ") \\\n";
-  OS << "__builtin_rvv_" << getName() << "(";
-  ListSeparator LS;
-  if (!InputTypes.empty()) {
-    for (unsigned i = 0, e = InputTypes.size() - 1; i != e; ++i)
-      OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
-  }
-  OS << LS << "(size_t)VE_TAIL_AGNOSTIC";
   OS << ")\n";
 }
 
@@ -944,8 +914,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#ifdef __cplusplus\n";
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
-
-  createRVVHeaders(OS);
 
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
@@ -1012,12 +980,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     Inst.emitIntrinsicMacro(OS);
-  });
-
-  // Use _mt to implement _m intrinsics.
-  emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
-    if (Inst.isMask() && Inst.hasPolicy())
-      Inst.emitIntrinsicMaskMacro(OS);
   });
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
@@ -1122,7 +1084,6 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMask = R->getValueAsBit("HasMask");
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
-    bool HasPolicy = R->getValueAsBit("HasPolicy");
     bool HasNoMaskedOverloaded = R->getValueAsBit("HasNoMaskedOverloaded");
     bool HasSideEffects = R->getValueAsBit("HasSideEffects");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
@@ -1177,14 +1138,10 @@ void RVVEmitter::createRVVIntrinsics(
         ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, "m");
       }
     }
-    // If HasVL, append 'z' to the operand list.
+    // If HasVL, append 'z' to last operand
     if (HasVL) {
       ProtoSeq.push_back("z");
       ProtoMaskSeq.push_back("z");
-    }
-
-    if (HasPolicy) {
-      ProtoMaskSeq.push_back("Kz");
     }
 
     // Create Intrinsics for each type and LMUL.
@@ -1201,7 +1158,7 @@ void RVVEmitter::createRVVIntrinsics(
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
             HasSideEffects, /*IsMask=*/false, /*HasMaskedOffOperand=*/false,
-            HasVL, HasPolicy, HasNoMaskedOverloaded, HasAutoDef, ManualCodegen,
+            HasVL, HasNoMaskedOverloaded, HasAutoDef, ManualCodegen,
             Types.getValue(), IntrinsicTypes, RequiredExtension, NF));
         if (HasMask) {
           // Create a mask intrinsic
@@ -1210,20 +1167,11 @@ void RVVEmitter::createRVVIntrinsics(
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, MangledSuffixStr, IRNameMask,
               HasSideEffects, /*IsMask=*/true, HasMaskedOffOperand, HasVL,
-              HasPolicy, HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
+              HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
               MaskTypes.getValue(), IntrinsicTypes, RequiredExtension, NF));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
-  }
-}
-
-void RVVEmitter::createRVVHeaders(raw_ostream &OS) {
-  std::vector<Record *> RVVHeaders =
-      Records.getAllDerivedDefinitions("RVVHeader");
-  for (auto *R : RVVHeaders) {
-    StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
-    OS << HeaderCodeStr.str();
   }
 }
 
