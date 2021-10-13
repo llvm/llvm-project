@@ -581,6 +581,7 @@ private:
   /// Used as the result type for the variable value dataflow problem.
   using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
+  MachineDominatorTree *DomTree;
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
   const TargetFrameLowering *TFI;
@@ -728,8 +729,19 @@ private:
   /// live-out arrays to the (initialized to zero) multidimensional arrays in
   /// \p MInLocs and \p MOutLocs. The outer dimension is indexed by block
   /// number, the inner by LocIdx.
-  void mlocDataflow(ValueIDNum **MInLocs, ValueIDNum **MOutLocs,
-                    SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+  void buildMLocValueMap(MachineFunction &MF, ValueIDNum **MInLocs,
+                         ValueIDNum **MOutLocs,
+                         SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+
+  /// Calculate the iterated-dominance-frontier for a set of defs, using the
+  /// existing LLVM facilities for this. Works for a single "value" or
+  /// machine/variable location.
+  /// \p AllBlocks Set of blocks where we might consume the value.
+  /// \p DefBlocks Set of blocks where the value/location is defined.
+  /// \p PHIBlocks Output set of blocks where PHIs must be placed.
+  void BlockPHIPlacement(const SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                         const SmallPtrSetImpl<MachineBasicBlock *> &DefBlocks,
+                         SmallVectorImpl<MachineBasicBlock *> &PHIBlocks);
 
   /// Perform a control flow join (lattice value meet) of the values in machine
   /// locations at \p MBB. Follows the algorithm described in the file-comment,
@@ -738,16 +750,15 @@ private:
   /// \p InLocs. \returns two bools -- the first indicates whether a change
   /// was made, the second whether a lattice downgrade occurred. If the latter
   /// is true, revisiting this block is necessary.
-  std::tuple<bool, bool>
-  mlocJoin(MachineBasicBlock &MBB,
-           SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
-           ValueIDNum **OutLocs, ValueIDNum *InLocs);
+  bool mlocJoin(MachineBasicBlock &MBB,
+                SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
+                ValueIDNum **OutLocs, ValueIDNum *InLocs);
 
   /// Solve the variable value dataflow problem, for a single lexical scope.
   /// Uses the algorithm from the file comment to resolve control flow joins,
   /// although there are extra hacks, see vlocJoin. Reads the
   /// locations of values from the \p MInLocs and \p MOutLocs arrays (see
-  /// mlocDataflow) and reads the variable values transfer function from
+  /// buildMLocValueMap) and reads the variable values transfer function from
   /// \p AllTheVlocs. Live-in and Live-out variable values are stored locally,
   /// with the live-ins permanently stored to \p Output once the fixedpoint is
   /// reached.
@@ -824,8 +835,9 @@ private:
   /// RPOT block ordering.
   void initialSetup(MachineFunction &MF);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
-                    unsigned InputBBLimit, unsigned InputDbgValLimit) override;
+  bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
+                    TargetPassConfig *TPC, unsigned InputBBLimit,
+                    unsigned InputDbgValLimit) override;
 
 public:
   /// Default construct and initialize the pass.
