@@ -201,6 +201,8 @@ def UseNegativeImmediates
     : Predicate<"false">, AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
                                              "NegativeImmediates">;
 
+def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
+
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;

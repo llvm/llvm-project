@@ -23,14 +23,14 @@ define <vscale x 32 x i8> @split_insert_32i8_idx(<vscale x 32 x i8> %a, i8 %elt,
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x8, #-1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmp x1, x8
-; CHECK-NEXT:    csel x8, x1, x8, lo
+; CHECK-NEXT:    addvl x8, x8, #2
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x9, #1, mul vl]
+; CHECK-NEXT:    cmp x1, x8
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
+; CHECK-NEXT:    csel x8, x1, x8, lo
 ; CHECK-NEXT:    strb w0, [x9, x8]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x9, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [sp]
@@ -135,14 +135,14 @@ define <vscale x 32 x i16> @split_insert_32i16(<vscale x 32 x i16> %a, i16 %elt)
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x8, #-1
 ; CHECK-NEXT:    mov w10, #128
-; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    csel x8, x8, x10, lo
+; CHECK-NEXT:    addvl x8, x8, #2
+; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    st1h { z3.h }, p0, [x9, #3, mul vl]
+; CHECK-NEXT:    csel x8, x8, x10, lo
 ; CHECK-NEXT:    st1h { z2.h }, p0, [x9, #2, mul vl]
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x9, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]

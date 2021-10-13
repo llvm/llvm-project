@@ -229,12 +229,12 @@ define <16 x i8> @extract_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec) nounwind 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x8, #-16
 ; CHECK-NEXT:    mov w9, #16
-; CHECK-NEXT:    sub x8, x8, #16
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmp x8, #16
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
+; CHECK-NEXT:    addvl x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ldr q0, [x9, x8]

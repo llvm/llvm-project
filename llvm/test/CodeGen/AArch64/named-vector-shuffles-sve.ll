@@ -39,15 +39,15 @@ define <vscale x 16 x i8> @splice_nxv16i8_clamped_idx(<vscale x 16 x i8> %a, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x8, #-1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    mov w10, #256
-; CHECK-NEXT:    cmp x8, #256
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    csel x8, x8, x10, lo
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
+; CHECK-NEXT:    addvl x8, x8, #1
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x9, #1, mul vl]
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    csel x8, x8, x10, lo
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -622,23 +622,23 @@ define <vscale x 16 x float> @splice_nxv16f32_clamped_idx(<vscale x 16 x float> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    mov x8, #-1
 ; CHECK-NEXT:    mov w10, #16
-; CHECK-NEXT:    sub x9, x9, #1
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    cmp x9, #16
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    st1w { z3.s }, p0, [x8, #3, mul vl]
-; CHECK-NEXT:    st1w { z2.s }, p0, [x8, #2, mul vl]
-; CHECK-NEXT:    add x10, x8, x9, lsl #2
-; CHECK-NEXT:    st1w { z1.s }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    addvl x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    st1w { z3.s }, p0, [x9, #3, mul vl]
+; CHECK-NEXT:    csel x8, x8, x10, lo
+; CHECK-NEXT:    st1w { z2.s }, p0, [x9, #2, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x9, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    st1w { z7.s }, p0, [x8, #7, mul vl]
-; CHECK-NEXT:    st1w { z4.s }, p0, [x8, #4, mul vl]
-; CHECK-NEXT:    st1w { z5.s }, p0, [x8, #5, mul vl]
-; CHECK-NEXT:    st1w { z6.s }, p0, [x8, #6, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
+; CHECK-NEXT:    add x10, x9, x8, lsl #2
+; CHECK-NEXT:    st1w { z7.s }, p0, [x9, #7, mul vl]
+; CHECK-NEXT:    st1w { z4.s }, p0, [x9, #4, mul vl]
+; CHECK-NEXT:    st1w { z5.s }, p0, [x9, #5, mul vl]
+; CHECK-NEXT:    st1w { z6.s }, p0, [x9, #6, mul vl]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x10, #1, mul vl]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x10, #2, mul vl]
 ; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x10, #3, mul vl]
