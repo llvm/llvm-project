@@ -19,6 +19,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    BugLifeCycle
    CodingStandards
    GitBisecting
+   GitRepositoryPolicy
 
 :doc:`Contributing`
    An overview on how to contribute to LLVM.
@@ -53,6 +54,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 
 :doc:`GitBisecting`
   Describes how to use ``git bisect`` on LLVM's repository.
+
+:doc:`GitRepositoryPolicy`
+   Collection of policies around the git repositories.
 
 .. _development-process:
 
