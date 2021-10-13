@@ -1950,8 +1950,8 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
     }
   }
 
-  // (X | (X-1)) s<  0 --> X < 1
-  // (X | (X-1)) s> -1 --> X > 0
+  // (X | (X-1)) s<  0 --> X s< 1
+  // (X | (X-1)) s> -1 --> X s> 0
   Value *X;
   bool TrueIfSigned;
   if (isSignBitCheck(Pred, C, TrueIfSigned) &&

@@ -575,6 +575,22 @@ define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32 
   ret i1 %or
 }
 
+define <2 x i1> @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_splat(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
+; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_splat(
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i32> [[K:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[T0]], [[T2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %t0 = shl <2 x i32> %k, %c1
+  %t1 = icmp slt <2 x i32> %t0, zeroinitializer
+  %t2 = shl <2 x i32> %k, %c2
+  %t3 = icmp slt <2 x i32> %t2, zeroinitializer
+  %or = and <2 x i1> %t1, %t3
+  ret <2 x i1> %or
+}
+
 ; %t2 can be poison where as %t0 isn't; merging these two is unsafe.
 define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_logical(
