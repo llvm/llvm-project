@@ -1,0 +1,29 @@
+# Testing configuration for libc++abi on AIX.
+
+import sys
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',''))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem %{install}/include/c++/v1 ' + 
+    '-D__LIBC_NO_CPP_MATH_OVERLOADS__ -DLIBCXXABI_NO_TIMER ' +
+    '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-I %{libcxx}/test/support -I %{libcxx}/src'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{install}/lib -lc++ -lc++abi -Wl,-bbigtoc'
+))
+config.substitutions.append(('%{exec}',
+    '{} %{{libcxx}}/utils/run.py --execdir %T --env LIBPATH=%{{install}}/lib -- '.format(sys.executable)
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

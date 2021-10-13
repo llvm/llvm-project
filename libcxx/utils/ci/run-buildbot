@@ -113,6 +113,13 @@ function generate-cmake-libcxx-win() {
           "${@}"
 }
 
+function generate-cmake-aix() {
+    generate-cmake-base \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+          "${@}"
+}
+
 function check-runtimes() {
     echo "--- Installing libc++, libc++abi and libunwind to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
@@ -563,6 +570,17 @@ windows-static)
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+aix)
+    export CC=ibm-clang
+    export CXX=ibm-clang++_r
+    clean
+    generate-cmake-aix -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
+                   -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in"
+    # TODO: use check-runtimes once libunwind builds cleanly on AIX.
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx check-cxxabi
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.
