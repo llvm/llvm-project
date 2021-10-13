@@ -243,6 +243,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
         T->isObjCQualifiedIdType() || T->isObjCQualifiedClassType();
       break;
 
+    case Type::VariableArray:
     case Type::DependentSizedArray:
       NeedARCStrongQualifier = true;
       LLVM_FALLTHROUGH;
@@ -252,9 +253,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       return canPrefixQualifiers(
           cast<ArrayType>(UnderlyingType)->getElementType().getTypePtr(),
           NeedARCStrongQualifier);
-    case Type::VariableArray:
-      NeedARCStrongQualifier = true;
-      LLVM_FALLTHROUGH;
 
     case Type::Adjusted:
     case Type::Decayed:
