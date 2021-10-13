@@ -33,9 +33,7 @@ struct ChainedOriginDepotNode {
 
   bool eq(hash_type hash, const args_type &args) const;
 
-  static uptr allocated();
-
-  static ChainedOriginDepotNode *allocate(const args_type &args);
+  static uptr allocated() { return 0; }
 
   static hash_type hash(const args_type &args);
 
@@ -62,19 +60,10 @@ struct ChainedOriginDepotNode {
 
 }  // namespace
 
-static PersistentAllocator<ChainedOriginDepotNode> allocator;
-
 static StackDepotBase<ChainedOriginDepotNode, 4, 20> depot;
 
 bool ChainedOriginDepotNode::eq(hash_type hash, const args_type &args) const {
   return here_id == args.here_id && prev_id == args.prev_id;
-}
-
-uptr ChainedOriginDepotNode::allocated() { return allocator.allocated(); }
-
-ChainedOriginDepotNode *ChainedOriginDepotNode::allocate(
-    const args_type &args) {
-  return allocator.alloc();
 }
 
 /* This is murmur2 hash for the 64->32 bit case.

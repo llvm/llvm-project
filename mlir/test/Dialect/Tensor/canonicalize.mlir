@@ -532,3 +532,30 @@ func @insert_tensor_cast_on_insert_slice_src(
     : tensor<?x5x?xf32> into tensor<?x?x?xf32>
   return %r : tensor<?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_extract_insert
+//  CHECK-SAME: %{{.+}}: tensor<?x?x?xf32>, %[[SLICE:.+]]: tensor<4x?x8xf32>
+func @fold_extract_insert(%input : tensor<?x?x?xf32>, %slice: tensor<4x?x8xf32>, %i: index, %size: index) -> (tensor<4x?x8xf32>) {
+  %c0 = constant 0: index
+  %c1 = constant 1: index
+  %0 = tensor.insert_slice %slice into %input[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
+  %1 = tensor.extract_slice %0[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<?x?x?xf32> to tensor<4x?x8xf32>
+  // CHECK: return %[[SLICE]]
+  return %1 : tensor<4x?x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_overlapping_insert
+//  CHECK-SAME: %[[INPUT:.+]]: tensor<?x?x?xf32>, %{{.+}}: tensor<4x?x8xf32>, %[[SLICE2:.+]]: tensor<4x?x8xf32>
+func @fold_overlapping_insert(%input : tensor<?x?x?xf32>, %slice1: tensor<4x?x8xf32>, %slice2: tensor<4x?x8xf32>, %i: index, %size: index) -> (tensor<?x?x?xf32>) {
+  %c0 = constant 0: index
+  %c1 = constant 1: index
+  %0 = tensor.insert_slice %slice1 into %input[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
+  // CHECK: %[[INSERT:.+]] = tensor.insert_slice %[[SLICE2]] into %[[INPUT]]
+  %1 = tensor.insert_slice %slice2 into %0[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
+  // CHECK: return %[[INSERT]]
+  return %1 : tensor<?x?x?xf32>
+}

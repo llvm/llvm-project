@@ -68,8 +68,7 @@ public:
       }
       auto MB = std::move(I->second);
       Blocks.erase(I);
-      auto MBToRelease = MB.getMemoryBlock();
-      if (auto EC = sys::Memory::releaseMappedMemory(MBToRelease))
+      if (auto EC = MB.release())
         Err = joinErrors(std::move(Err), errorCodeToError(EC));
     }
     return Err;
@@ -135,6 +134,8 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
+
+  cantFail(SelfEPC->disconnect());
 }
 
 } // namespace

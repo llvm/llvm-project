@@ -1,5 +1,20 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
+// CHECK-LABEL: func @vector_transfer_ops_0d(
+func @vector_transfer_ops_0d(%arg0: tensor<f32>, %arg1: memref<f32>)
+  -> tensor<f32> {
+    %f0 = constant 0.0 : f32
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, tensor<f32>
+    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->(0)>} :
+      memref<f32>, vector<1xf32>
+    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->(0)>} :
+      vector<1xf32>, memref<f32>
+    return %1: tensor<f32>
+}
+
 // CHECK-LABEL: func @vector_transfer_ops(
 func @vector_transfer_ops(%arg0: memref<?x?xf32>,
                           %arg1 : memref<?x?xvector<4x3xf32>>,
@@ -621,3 +636,11 @@ func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
   return %r, %r2 : vector<32xf32>, vector<16x32xf32>
 }
 
+// CHECK-LABEL: @multi_reduction
+func @multi_reduction(%0: vector<4x8x16x32xf32>) -> f32 {
+  %1 = vector.multi_reduction #vector.kind<add>, %0 [1, 3] :
+    vector<4x8x16x32xf32> to vector<4x16xf32>
+  %2 = vector.multi_reduction #vector.kind<add>, %1 [0, 1] :
+    vector<4x16xf32> to f32
+  return %2 : f32
+}

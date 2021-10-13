@@ -19,7 +19,6 @@
 
 namespace __sanitizer {
 
-static PersistentAllocator<StackDepotNode> allocator;
 static PersistentAllocator<uptr> traceAllocator;
 
 struct StackDepotNode {
@@ -39,12 +38,7 @@ struct StackDepotNode {
   bool eq(hash_type hash, const args_type &args) const {
     return hash == stack_hash;
   }
-  static uptr allocated() {
-    return allocator.allocated() + traceAllocator.allocated();
-  }
-  static StackDepotNode *allocate(const args_type &args) {
-    return allocator.alloc();
-  }
+  static uptr allocated() { return traceAllocator.allocated(); }
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
@@ -75,8 +69,8 @@ struct StackDepotNode {
 
 COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
-u32 StackDepotHandle::id() { return node_->id; }
-int StackDepotHandle::use_count() {
+u32 StackDepotHandle::id() const { return node_->id; }
+int StackDepotHandle::use_count() const {
   return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
 }

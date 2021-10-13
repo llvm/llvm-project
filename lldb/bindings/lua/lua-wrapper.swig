@@ -6,6 +6,19 @@ PushSBClass(lua_State* L, T* obj);
 
 %}
 
+%runtime %{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton);
+int LLDBSwigLuaCloseFileHandle(lua_State *L);
+
+#ifdef __cplusplus
+}
+#endif
+%}
+
 %wrapper %{
 
 // This function is called from Lua::CallBreakpointCallback
@@ -88,5 +101,20 @@ LLDBSwigLuaWatchpointCallbackFunction
    return stop;
 }
 
+SWIGEXPORT void
+LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton) {
+   lua_State *L = (lua_State *)baton;
+
+   lua_pushlightuserdata(L, (void *)&LLDBSwigLuaCallLuaLogOutputCallback);
+   lua_gettable(L, LUA_REGISTRYINDEX);
+
+   // FIXME: There's no way to report errors back to the user
+   lua_pushstring(L, str);
+   lua_pcall(L, 1, 0, 0);
+}
+
+int LLDBSwigLuaCloseFileHandle(lua_State *L) {
+   return luaL_error(L, "You cannot close a file handle used by lldb.");
+}
 
 %}

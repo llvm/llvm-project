@@ -27,8 +27,9 @@ struct NoOpMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const {}
 };
 
-// Maps integers in rage [0, kSize) to u8 values.
-template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
+// Maps integers in rage [0, kSize) to values.
+template <typename T, u64 kSize,
+          typename AddressSpaceViewTy = LocalAddressSpaceView>
 class FlatMap {
  public:
   using AddressSpaceView = AddressSpaceViewTy;
@@ -36,101 +37,127 @@ class FlatMap {
 
   constexpr uptr size() const { return kSize; }
 
-  void set(uptr idx, u8 val) {
+  bool contains(uptr idx) const {
     CHECK_LT(idx, kSize);
-    CHECK_EQ(0U, map_[idx]);
-    map_[idx] = val;
+    return true;
   }
-  u8 operator[](uptr idx) const {
+
+  T &operator[](uptr idx) {
+    CHECK_LT(idx, kSize);
+    // FIXME: CHECK may be too expensive here.
+    return map_[idx];
+  }
+
+  const T &operator[](uptr idx) const {
     CHECK_LT(idx, kSize);
     // FIXME: CHECK may be too expensive here.
     return map_[idx];
   }
 
  private:
-  u8 map_[kSize];
+  T map_[kSize];
 };
 
-// TwoLevelByteMap maps integers in range [0, kSize1*kSize2) to u8 values.
+// TwoLevelMap maps integers in range [0, kSize1*kSize2) to values.
 // It is implemented as a two-dimensional array: array of kSize1 pointers
 // to kSize2-byte arrays. The secondary arrays are mmaped on demand.
 // Each value is initially zero and can be set to something else only once.
 // Setting and getting values from multiple threads is safe w/o extra locking.
-template <u64 kSize1, u64 kSize2,
+template <typename T, u64 kSize1, u64 kSize2,
           typename AddressSpaceViewTy = LocalAddressSpaceView,
           class MapUnmapCallback = NoOpMapUnmapCallback>
 class TwoLevelMap {
  public:
   using AddressSpaceView = AddressSpaceViewTy;
   void Init() {
-    internal_memset(map1_, 0, sizeof(map1_));
     mu_.Init();
+    internal_memset(map1_, 0, sizeof(map1_));
   }
 
   void TestOnlyUnmap() {
     for (uptr i = 0; i < kSize1; i++) {
-      u8 *p = Get(i);
+      T *p = Get(i);
       if (!p)
         continue;
-      MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), kSize2);
+      MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), MmapSize());
       UnmapOrDie(p, kSize2);
     }
+  }
+
+  uptr MemoryUsage() const {
+    uptr res = 0;
+    for (uptr i = 0; i < kSize1; i++) {
+      T *p = Get(i);
+      if (!p)
+        continue;
+      res += MmapSize();
+    }
+    return res;
   }
 
   constexpr uptr size() const { return kSize1 * kSize2; }
   constexpr uptr size1() const { return kSize1; }
   constexpr uptr size2() const { return kSize2; }
 
-  void set(uptr idx, u8 val) {
+  bool contains(uptr idx) const {
     CHECK_LT(idx, kSize1 * kSize2);
-    u8 *map2 = GetOrCreate(idx / kSize2);
-    CHECK_EQ(0U, map2[idx % kSize2]);
-    map2[idx % kSize2] = val;
+    return Get(idx / kSize2);
   }
 
-  u8 operator[](uptr idx) const {
+  const T &operator[](uptr idx) const {
     CHECK_LT(idx, kSize1 * kSize2);
-    u8 *map2 = Get(idx / kSize2);
-    if (!map2)
-      return 0;
-    auto value_ptr = AddressSpaceView::Load(&map2[idx % kSize2]);
-    return *value_ptr;
+    T *map2 = GetOrCreate(idx / kSize2);
+    return *AddressSpaceView::Load(&map2[idx % kSize2]);
+  }
+
+  T &operator[](uptr idx) {
+    CHECK_LT(idx, kSize1 * kSize2);
+    T *map2 = GetOrCreate(idx / kSize2);
+    return *AddressSpaceView::LoadWritable(&map2[idx % kSize2]);
   }
 
  private:
-  u8 *Get(uptr idx) const {
+  constexpr uptr MmapSize() const {
+    return RoundUpTo(kSize2 * sizeof(T), GetPageSizeCached());
+  }
+
+  T *Get(uptr idx) const {
     CHECK_LT(idx, kSize1);
-    return reinterpret_cast<u8 *>(
+    return reinterpret_cast<T *>(
         atomic_load(&map1_[idx], memory_order_acquire));
   }
 
-  u8 *GetOrCreate(uptr idx) {
-    u8 *res = Get(idx);
+  T *GetOrCreate(uptr idx) const {
+    T *res = Get(idx);
+    if (LIKELY(res))
+      return res;
+    return Create(idx);
+  }
+
+  NOINLINE T *Create(uptr idx) const {
+    SpinMutexLock l(&mu_);
+    T *res = Get(idx);
     if (!res) {
-      SpinMutexLock l(&mu_);
-      if (!(res = Get(idx))) {
-        res = (u8 *)MmapOrDie(kSize2, "TwoLevelMap");
-        MapUnmapCallback().OnMap(reinterpret_cast<uptr>(res), kSize2);
-        atomic_store(&map1_[idx], reinterpret_cast<uptr>(res),
-                     memory_order_release);
-      }
+      res = reinterpret_cast<T *>(MmapOrDie(MmapSize(), "TwoLevelMap"));
+      MapUnmapCallback().OnMap(reinterpret_cast<uptr>(res), kSize2);
+      atomic_store(&map1_[idx], reinterpret_cast<uptr>(res),
+                   memory_order_release);
     }
     return res;
   }
 
-  atomic_uintptr_t map1_[kSize1];
-  StaticSpinMutex mu_;
+  mutable StaticSpinMutex mu_;
+  mutable atomic_uintptr_t map1_[kSize1];
 };
 
 template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
-using FlatByteMap = FlatMap<kSize, AddressSpaceViewTy>;
+using FlatByteMap = FlatMap<u8, kSize, AddressSpaceViewTy>;
 
 template <u64 kSize1, u64 kSize2,
           typename AddressSpaceViewTy = LocalAddressSpaceView,
           class MapUnmapCallback = NoOpMapUnmapCallback>
 using TwoLevelByteMap =
-    TwoLevelMap<kSize1, kSize2, AddressSpaceViewTy, MapUnmapCallback>;
-
+    TwoLevelMap<u8, kSize1, kSize2, AddressSpaceViewTy, MapUnmapCallback>;
 }  // namespace __sanitizer
 
 #endif

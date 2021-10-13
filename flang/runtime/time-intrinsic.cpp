@@ -11,6 +11,7 @@
 #include "flang/Runtime/time-intrinsic.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstdint>
@@ -51,127 +52,132 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   if (timestamp != static_cast<std::clock_t>(-1)) {
     return static_cast<double>(timestamp) / CLOCKS_PER_SEC;
   }
-
   // Return some negative value to represent failure.
   return -1.0;
 }
 
-// POSIX implementation using clock_gettime. This is only enabled if
+#if defined CLOCK_THREAD_CPUTIME_ID
+#define CLOCKID CLOCK_THREAD_CPUTIME_ID
+#elif defined CLOCK_PROCESS_CPUTIME_ID
+#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
+#elif defined CLOCK_MONOTONIC
+#define CLOCKID CLOCK_MONOTONIC
+#else
+#define CLOCKID CLOCK_REALTIME
+#endif
+
+// POSIX implementation using clock_gettime. This is only enabled where
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
 double GetCpuTime(preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-#if defined CLOCK_THREAD_CPUTIME_ID
-#define CLOCKID CLOCK_THREAD_CPUTIME_ID
-#elif defined CLOCK_PROCESS_CPUTIME_ID
-#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
-#elif defined CLOCK_MONOTONIC
-#define CLOCKID CLOCK_MONOTONIC
-#else
-#define CLOCKID CLOCK_REALTIME
-#endif
   struct timespec tspec;
   if (clock_gettime(CLOCKID, &tspec) == 0) {
     return tspec.tv_nsec * 1.0e-9 + tspec.tv_sec;
   }
-
   // Return some negative value to represent failure.
   return -1.0;
 }
 
-using count_t =
-    Fortran::runtime::CppTypeFor<Fortran::common::TypeCategory::Integer, 8>;
+using count_t = std::int64_t;
+using unsigned_count_t = std::uint64_t;
+
+// Computes HUGE(INT(0,kind)) as an unsigned integer value.
+static constexpr inline unsigned_count_t GetHUGE(int kind) {
+  if (kind > 8) {
+    kind = 8;
+  }
+  return (unsigned_count_t{1} << ((8 * kind) - 1)) - 1;
+}
 
 // This is the fallback implementation, which should work everywhere. Note that
 // in general we can't recover after std::clock has reached its maximum value.
 template <typename Unused = void>
-count_t GetSystemClockCount(fallback_implementation) {
+count_t GetSystemClockCount(int kind, fallback_implementation) {
   std::clock_t timestamp{std::clock()};
   if (timestamp == static_cast<std::clock_t>(-1)) {
-    // Return -HUGE() to represent failure.
-    return -std::numeric_limits<count_t>::max();
+    // Return -HUGE(COUNT) to represent failure.
+    return -static_cast<count_t>(GetHUGE(kind));
   }
-
-  // If our return type is large enough to hold any value returned by
-  // std::clock, our work is done. Otherwise, we have to wrap around.
-  static constexpr auto max{std::numeric_limits<count_t>::max()};
-  if constexpr (std::numeric_limits<std::clock_t>::max() <= max) {
-    return static_cast<count_t>(timestamp);
-  } else {
-    // Since std::clock_t could be a floating point type, we can't just use the
-    // % operator, so we have to wrap around manually.
-    return static_cast<count_t>(timestamp - max * std::floor(timestamp / max));
+  // Convert the timestamp to std::uint64_t with wrap-around. The timestamp is
+  // most likely a floating-point value (since C'11), so compute the modulus
+  // carefully when one is required.
+  constexpr auto maxUnsignedCount{std::numeric_limits<unsigned_count_t>::max()};
+  if constexpr (std::numeric_limits<std::clock_t>::max() > maxUnsignedCount) {
+    timestamp -= maxUnsignedCount * std::floor(timestamp / maxUnsignedCount);
   }
+  unsigned_count_t unsignedCount{static_cast<unsigned_count_t>(timestamp)};
+  // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
+  // The result is a signed integer but never negative.
+  return static_cast<count_t>(unsignedCount % (GetHUGE(kind) + 1));
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCountRate(fallback_implementation) {
+count_t GetSystemClockCountRate(int kind, fallback_implementation) {
   return CLOCKS_PER_SEC;
 }
 
 template <typename Unused = void>
-count_t GetSystemClockCountMax(fallback_implementation) {
-  static constexpr auto max_clock_t = std::numeric_limits<std::clock_t>::max();
-  static constexpr auto max_count_t = std::numeric_limits<count_t>::max();
-  if constexpr (max_clock_t < max_count_t) {
-    return static_cast<count_t>(max_clock_t);
-  } else {
-    return max_count_t;
-  }
+count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+  constexpr auto max_clock_t{std::numeric_limits<std::clock_t>::max()};
+  unsigned_count_t maxCount{GetHUGE(kind)};
+  return max_clock_t <= maxCount ? static_cast<count_t>(max_clock_t)
+                                 : static_cast<count_t>(maxCount);
 }
 
-constexpr count_t NSECS_PER_SEC{1'000'000'000};
+// POSIX implementation using clock_gettime. This is only enabled where
+// clock_gettime is available.  Use a millisecond CLOCK_RATE for kinds
+// of COUNT/COUNT_MAX less than 64 bits, and nanoseconds otherwise.
+constexpr unsigned_count_t MILLIS_PER_SEC{1'000u};
+constexpr unsigned_count_t NSECS_PER_SEC{1'000'000'000u};
+constexpr unsigned_count_t maxSecs{
+    std::numeric_limits<unsigned_count_t>::max() / NSECS_PER_SEC};
 
-// POSIX implementation using clock_gettime. This is only enabled if
-// clock_gettime is available.
+// Use a millisecond clock rate for smaller COUNT= kinds.
+static inline unsigned_count_t ScaleResult(unsigned_count_t nsecs, int kind) {
+  return kind >= 8 ? nsecs : nsecs / (NSECS_PER_SEC / MILLIS_PER_SEC);
+}
+
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCount(preferred_implementation,
+count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-#if defined CLOCK_THREAD_CPUTIME_ID
-#define CLOCKID CLOCK_THREAD_CPUTIME_ID
-#elif defined CLOCK_PROCESS_CPUTIME_ID
-#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
-#elif defined CLOCK_MONOTONIC
-#define CLOCKID CLOCK_MONOTONIC
-#else
-#define CLOCKID CLOCK_REALTIME
-#endif
   struct timespec tspec;
   if (clock_gettime(CLOCKID, &tspec) != 0) {
     // Return -HUGE() to represent failure.
-    return -std::numeric_limits<count_t>::max();
+    return -GetHUGE(kind);
   }
-
   // Wrap around to avoid overflows.
-  constexpr count_t max_secs{
-      std::numeric_limits<count_t>::max() / NSECS_PER_SEC};
-  count_t wrapped_secs{tspec.tv_sec % max_secs};
-
-  // At this point, wrapped_secs < max_secs, and max_secs has already been
-  // truncated by the division. Therefore, we should still have enough room to
-  // add tv_nsec, since it is < NSECS_PER_SEC.
-  return tspec.tv_nsec + wrapped_secs * NSECS_PER_SEC;
+  unsigned_count_t wrappedSecs{
+      static_cast<unsigned_count_t>(tspec.tv_sec) % maxSecs};
+  unsigned_count_t unsignedNsecs{static_cast<unsigned_count_t>(tspec.tv_nsec) +
+      wrappedSecs * NSECS_PER_SEC};
+  unsigned_count_t unsignedCount{ScaleResult(unsignedNsecs, kind)};
+  // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
+  // The result is a signed integer but never negative.
+  return static_cast<count_t>(unsignedCount % (GetHUGE(kind) + 1));
 }
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountRate(preferred_implementation,
+count_t GetSystemClockCountRate(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-  return NSECS_PER_SEC;
+  return kind >= 8 ? static_cast<count_t>(NSECS_PER_SEC) : MILLIS_PER_SEC;
 }
 
 template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCountMax(preferred_implementation,
+count_t GetSystemClockCountMax(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-  count_t max_secs{std::numeric_limits<count_t>::max() / NSECS_PER_SEC};
-  return max_secs * NSECS_PER_SEC - 1;
+  unsigned_count_t maxClockNsec{maxSecs * NSECS_PER_SEC + NSECS_PER_SEC - 1};
+  unsigned_count_t maxClock{ScaleResult(maxClockNsec, kind)};
+  unsigned_count_t maxCount{GetHUGE(kind)};
+  return static_cast<count_t>(maxClock <= maxCount ? maxClock : maxCount);
 }
 
 // DATE_AND_TIME (Fortran 2018 16.9.59)
@@ -198,7 +204,7 @@ template <int KIND> struct StoreNegativeHugeAt {
 
 // Default implementation when date and time information is not available (set
 // strings to blanks and values to -HUGE as defined by the standard).
-void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
+static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
     char *date, std::size_t dateChars, char *time, std::size_t timeChars,
     char *zone, std::size_t zoneChars,
     const Fortran::runtime::Descriptor *values) {
@@ -259,9 +265,9 @@ template <typename TM = struct tm> struct GmtOffsetHelper {
   };
 };
 
-// Dispatch to posix implemetation when gettimeofday and localtime_r are
+// Dispatch to posix implementation where gettimeofday and localtime_r are
 // available.
-void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
+static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     std::size_t dateChars, char *time, std::size_t timeChars, char *zone,
     std::size_t zoneChars, const Fortran::runtime::Descriptor *values) {
 
@@ -330,9 +336,9 @@ void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
 }
 
 #else
-// Fallback implementation when gettimeofday or localtime_r is not available
-// (e.g. windows).
-void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
+// Fallback implementation where gettimeofday or localtime_r are not both
+// available (e.g. windows).
+static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     std::size_t dateChars, char *time, std::size_t timeChars, char *zone,
     std::size_t zoneChars, const Fortran::runtime::Descriptor *values) {
   // TODO: An actual implementation for non Posix system should be added.
@@ -342,26 +348,23 @@ void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
       terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
 }
 #endif
-} // anonymous namespace
+} // namespace
 
 namespace Fortran::runtime {
 extern "C" {
 
 double RTNAME(CpuTime)() { return GetCpuTime(0); }
 
-CppTypeFor<Fortran::common::TypeCategory::Integer, 8> RTNAME(
-    SystemClockCount)() {
-  return GetSystemClockCount(0);
+std::int64_t RTNAME(SystemClockCount)(int kind) {
+  return GetSystemClockCount(kind, 0);
 }
 
-CppTypeFor<Fortran::common::TypeCategory::Integer, 8> RTNAME(
-    SystemClockCountRate)() {
-  return GetSystemClockCountRate(0);
+std::int64_t RTNAME(SystemClockCountRate)(int kind) {
+  return GetSystemClockCountRate(kind, 0);
 }
 
-CppTypeFor<Fortran::common::TypeCategory::Integer, 8> RTNAME(
-    SystemClockCountMax)() {
-  return GetSystemClockCountMax(0);
+std::int64_t RTNAME(SystemClockCountMax)(int kind) {
+  return GetSystemClockCountMax(kind, 0);
 }
 
 void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,

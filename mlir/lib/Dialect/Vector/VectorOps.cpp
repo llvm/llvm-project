@@ -260,11 +260,10 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         CombiningKind kind) {
   result.addOperands(source);
   auto sourceVectorType = source.getType().cast<VectorType>();
-  auto targetShape = MultiDimReductionOp::inferDestShape(
-      sourceVectorType.getShape(), reductionMask);
-  auto targetVectorType =
-      VectorType::get(targetShape, sourceVectorType.getElementType());
-  result.addTypes(targetVectorType);
+  auto targetType = MultiDimReductionOp::inferDestType(
+      sourceVectorType.getShape(), reductionMask,
+      sourceVectorType.getElementType());
+  result.addTypes(targetType);
 
   SmallVector<int64_t> reductionDims;
   for (auto en : llvm::enumerate(reductionMask))
@@ -278,15 +277,21 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 
 static LogicalResult verify(MultiDimReductionOp op) {
   auto reductionMask = op.getReductionMask();
-  auto targetShape = MultiDimReductionOp::inferDestShape(
-      op.getSourceVectorType().getShape(), reductionMask);
-  auto targetVectorType =
-      VectorType::get(targetShape, op.getSourceVectorType().getElementType());
-  if (targetVectorType != op.getDestVectorType())
+  auto targetType = MultiDimReductionOp::inferDestType(
+      op.getSourceVectorType().getShape(), reductionMask,
+      op.getSourceVectorType().getElementType());
+  // TODO: update to support 0-d vectors when available.
+  if (targetType != op.getDestType())
     return op.emitError("invalid output vector type: ")
-           << op.getDestVectorType() << " (expected: " << targetVectorType
-           << ")";
+           << op.getDestType() << " (expected: " << targetType << ")";
   return success();
+}
+
+OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
+  // Single parallel dim, this is a noop.
+  if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
+    return source();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1316,31 +1321,59 @@ Optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(BroadcastOp op) {
-  VectorType srcVectorType = op.getSourceType().dyn_cast<VectorType>();
-  VectorType dstVectorType = op.getVectorType();
-  // Scalar to vector broadcast is always valid. A vector
-  // to vector broadcast needs some additional checking.
-  if (srcVectorType) {
-    int64_t srcRank = srcVectorType.getRank();
-    int64_t dstRank = dstVectorType.getRank();
-    if (srcRank > dstRank)
-      return op.emitOpError("source rank higher than destination rank");
-    // Source has an exact match or singleton value for all trailing dimensions
-    // (all leading dimensions are simply duplicated).
-    int64_t lead = dstRank - srcRank;
-    for (int64_t r = 0; r < srcRank; ++r) {
-      int64_t srcDim = srcVectorType.getDimSize(r);
-      int64_t dstDim = dstVectorType.getDimSize(lead + r);
-      if (srcDim != 1 && srcDim != dstDim)
-        return op.emitOpError("dimension mismatch (")
-               << srcDim << " vs. " << dstDim << ")";
+BroadcastableToResult
+mlir::vector::isBroadcastableTo(Type srcType, VectorType dstVectorType,
+                                std::pair<int, int> *mismatchingDims) {
+  // Broadcast scalar to vector of the same element type.
+  if (srcType.isIntOrIndexOrFloat() && dstVectorType &&
+      getElementTypeOrSelf(srcType) == getElementTypeOrSelf(dstVectorType))
+    return BroadcastableToResult::Success;
+  // From now on, only vectors broadcast.
+  VectorType srcVectorType = srcType.dyn_cast<VectorType>();
+  if (!srcVectorType)
+    return BroadcastableToResult::SourceTypeNotAVector;
+
+  int64_t srcRank = srcVectorType.getRank();
+  int64_t dstRank = dstVectorType.getRank();
+  if (srcRank > dstRank)
+    return BroadcastableToResult::SourceRankHigher;
+  // Source has an exact match or singleton value for all trailing dimensions
+  // (all leading dimensions are simply duplicated).
+  int64_t lead = dstRank - srcRank;
+  for (int64_t r = 0; r < srcRank; ++r) {
+    int64_t srcDim = srcVectorType.getDimSize(r);
+    int64_t dstDim = dstVectorType.getDimSize(lead + r);
+    if (srcDim != 1 && srcDim != dstDim) {
+      if (mismatchingDims) {
+        mismatchingDims->first = srcDim;
+        mismatchingDims->second = dstDim;
+      }
+      return BroadcastableToResult::DimensionMismatch;
     }
   }
-  return success();
+
+  return BroadcastableToResult::Success;
+}
+
+static LogicalResult verify(BroadcastOp op) {
+  std::pair<int, int> mismatchingDims;
+  BroadcastableToResult res = isBroadcastableTo(
+      op.getSourceType(), op.getVectorType(), &mismatchingDims);
+  if (res == BroadcastableToResult::Success)
+    return success();
+  if (res == BroadcastableToResult::SourceRankHigher)
+    return op.emitOpError("source rank higher than destination rank");
+  if (res == BroadcastableToResult::DimensionMismatch)
+    return op.emitOpError("dimension mismatch (")
+           << mismatchingDims.first << " vs. " << mismatchingDims.second << ")";
+  if (res == BroadcastableToResult::SourceTypeNotAVector)
+    return op.emitOpError("source type is not a vector");
+  llvm_unreachable("unexpected vector.broadcast op error");
 }
 
 OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
+  if (getSourceType() == getVectorType())
+    return source();
   if (!operands[0])
     return {};
   auto vectorType = getVectorType();
@@ -1761,6 +1794,12 @@ static LogicalResult verify(InsertStridedSliceOp op) {
     return failure();
 
   return success();
+}
+
+OpFoldResult InsertStridedSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (getSourceVectorType() == getDestVectorType())
+    return source();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2259,11 +2298,14 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
   return success();
 }
 
-static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
-                                      VectorType vectorType,
-                                      VectorType maskType,
-                                      AffineMap permutationMap,
-                                      ArrayAttr inBounds) {
+static LogicalResult
+verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
+                 VectorType vectorType, VectorType maskType,
+                 AffineMap permutationMap, ArrayAttr inBounds) {
+  if (shapedType.getRank() == 0 && !op.isZeroD())
+    return op->emitOpError("0-d transfer requires vector<1xt> shape and () -> "
+                           "(0) permutation_map");
+
   if (op->hasAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
@@ -2325,7 +2367,8 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
 
   if (permutationMap.getNumSymbols() != 0)
     return op->emitOpError("requires permutation_map without symbols");
-  if (permutationMap.getNumInputs() != shapedType.getRank())
+  // TODO: implement 0-d vector corner cases.
+  if (!op.isZeroD() && permutationMap.getNumInputs() != shapedType.getRank())
     return op->emitOpError("requires a permutation_map with input dims of the "
                            "same rank as the source type");
 
@@ -2400,6 +2443,18 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            ArrayAttr inBounds) {
   build(builder, result, vectorType, source, indices, permutationMap, padding,
         /*mask=*/Value(), inBounds);
+}
+
+Value TransferReadOp::createScalarOp(OpBuilder &builder, Location loc,
+                                     Value source, ValueRange indices,
+                                     ArrayRef<bool> inBounds) {
+  Type elemType = source.getType().cast<ShapedType>().getElementType();
+  auto vectorType = VectorType::get(ArrayRef<int64_t>{1}, elemType);
+  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
+                                 getAffineConstantExpr(0, loc.getContext()));
+  Value read = builder.create<vector::TransferReadOp>(loc, vectorType, source,
+                                                      indices, map, inBounds);
+  return builder.create<vector::ExtractOp>(loc, read, ArrayRef<int64_t>{0});
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
@@ -2501,9 +2556,10 @@ static LogicalResult verify(TransferReadOp op) {
   if (static_cast<int64_t>(op.indices().size()) != shapedType.getRank())
     return op.emitOpError("requires ") << shapedType.getRank() << " indices";
 
-  if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              maskType, permutationMap,
-                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
+  if (failed(
+          verifyTransferOp(cast<VectorTransferOpInterface>(op.getOperation()),
+                           shapedType, vectorType, maskType, permutationMap,
+                           op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   if (auto sourceVectorElementType = sourceElementType.dyn_cast<VectorType>()) {
@@ -2576,6 +2632,9 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
 template <typename TransferOp>
 static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
+  // TODO: Be less conservative once we have 0-d vectors.
+  if (op.isZeroD())
+    return failure();
   AffineMap permutationMap = op.permutation_map();
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
@@ -2728,6 +2787,16 @@ void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
 
+void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
+                            Value vector, Value dest, ValueRange indices,
+                            AffineMap permutationMap, ArrayRef<bool> inBounds) {
+  if (inBounds.empty())
+    return build(builder, result, vector, dest, indices, permutationMap,
+                 /*mask=*/Value(), ArrayAttr());
+  build(builder, result, vector, dest, indices, permutationMap,
+        /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
+}
+
 /// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
@@ -2740,13 +2809,6 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                  ArrayAttr());
   ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
   build(builder, result, vector, source, indices, permMap, inBoundsArrayAttr);
-}
-
-void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
-                            AffineMap permutationMap) {
-  build(builder, result, vector, source, indices, permutationMap,
-        /*inBounds=*/ArrayAttr());
 }
 
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
@@ -2774,6 +2836,20 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   Type resultType = source.getType().dyn_cast<RankedTensorType>();
   build(builder, result, resultType, vector, source, indices, permutationMap,
         mask, inBounds);
+}
+
+Operation *TransferWriteOp::createScalarOp(OpBuilder &builder, Location loc,
+                                           Value value, Value dest,
+                                           ValueRange indices,
+                                           ArrayRef<bool> inBounds) {
+  Value vectorOfAScalar = value;
+  if (!value.getType().isa<VectorType>())
+    vectorOfAScalar = builder.create<vector::BroadcastOp>(
+        loc, VectorType::get({1}, value.getType()), value);
+  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
+                                 getAffineConstantExpr(0, loc.getContext()));
+  return builder.create<vector::TransferWriteOp>(loc, vectorOfAScalar, dest,
+                                                 indices, map, inBounds);
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -2852,9 +2928,10 @@ static LogicalResult verify(TransferWriteOp op) {
   if (op.hasBroadcastDim())
     return op.emitOpError("should not have broadcast dimensions");
 
-  if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              maskType, permutationMap,
-                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
+  if (failed(
+          verifyTransferOp(cast<VectorTransferOpInterface>(op.getOperation()),
+                           shapedType, vectorType, maskType, permutationMap,
+                           op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   return verifyPermutationMap(permutationMap,

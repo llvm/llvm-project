@@ -34,7 +34,7 @@
 "`2980 <https://wg21.link/LWG2980>`__","Cannot compare_exchange empty pointers","Albuquerque","",""
 "`2981 <https://wg21.link/LWG2981>`__","Remove redundant deduction guides from standard library","Albuquerque","",""
 "`2982 <https://wg21.link/LWG2982>`__","Making size_type consistent in associative container deduction guides","Albuquerque","",""
-"`2988 <https://wg21.link/LWG2988>`__","Clause 32 cleanup missed one typename","Albuquerque","",""
+"`2988 <https://wg21.link/LWG2988>`__","Clause 32 cleanup missed one typename","Albuquerque","|Complete|","13.0"
 "`2993 <https://wg21.link/LWG2993>`__","reference_wrapper<T> conversion from T&&","Albuquerque","|Complete|","13.0"
 "`2998 <https://wg21.link/LWG2998>`__","Requirements on function objects passed to {``forward_``,}list-specific algorithms","Albuquerque","|Nothing To Do|",""
 "`3001 <https://wg21.link/LWG3001>`__","weak_ptr::element_type needs remove_extent_t","Albuquerque","",""

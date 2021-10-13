@@ -119,14 +119,12 @@ define i1 @early_freeze_test2(i32* %ptr) {
   ret i1 %cond.fr
 }
 
-; add can overflows, so we cannot move freeze beyond add
-
 define i32 @early_freeze_test3(i32 %v1) {
 ; CHECK-LABEL: @early_freeze_test3(
-; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1:%.*]], 1
-; CHECK-NEXT:    [[V3:%.*]] = add nuw i32 [[V2]], 2
-; CHECK-NEXT:    [[V3_FR:%.*]] = freeze i32 [[V3]]
-; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3_FR]], 1
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1_FR]], 1
+; CHECK-NEXT:    [[V3:%.*]] = add i32 [[V2]], 2
+; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3]], 1
 ; CHECK-NEXT:    ret i32 [[V4]]
 ;
   %v2 = shl i32 %v1, 1
@@ -221,3 +219,158 @@ bb1:
 end:
   ret void
 }
+
+
+define i32 @propagate_drop_flags_add(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_add(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = add nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_flags_add_foldaway(i32 noundef %arg) {
+; CHECK-LABEL: @propagate_drop_flags_add_foldaway(
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[ARG:%.*]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = add nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_flags_sub(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_sub(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[ARG_FR]], -2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = sub nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_flags_mul(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_mul(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = shl i32 [[ARG_FR]], 1
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = mul nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_flags_udiv(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_udiv(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = lshr i32 [[ARG_FR]], 1
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = udiv exact i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_flags_sdiv(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_sdiv(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = ashr i32 [[ARG_FR]], 1
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = sdiv exact i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_shl1(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_shl1(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = shl i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = shl nsw nuw i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_shl2(i32 %arg, i32 %unknown) {
+; CHECK-LABEL: @propagate_drop_shl2(
+; CHECK-NEXT:    [[V1:%.*]] = shl nuw nsw i32 [[ARG:%.*]], [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    ret i32 [[V1_FR]]
+;
+  %v1 = shl nsw nuw i32 %arg, %unknown
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_ashr1(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_ashr1(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = ashr i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = ashr exact i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_ashr2(i32 %arg, i32 %unknown) {
+; CHECK-LABEL: @propagate_drop_ashr2(
+; CHECK-NEXT:    [[V1:%.*]] = ashr exact i32 [[ARG:%.*]], [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    ret i32 [[V1_FR]]
+;
+  %v1 = ashr exact i32 %arg, %unknown
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_lshr1(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_lshr1(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = lshr i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = lshr exact i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i32 @propagate_drop_lshr2(i32 %arg, i32 %unknown) {
+; CHECK-LABEL: @propagate_drop_lshr2(
+; CHECK-NEXT:    [[V1:%.*]] = lshr exact i32 [[ARG:%.*]], [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    ret i32 [[V1_FR]]
+;
+  %v1 = lshr exact i32 %arg, %unknown
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
+define i8* @propagate_drop_gep1(i8* %arg) {
+; CHECK-LABEL: @propagate_drop_gep1(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8* [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG_FR]], i64 16
+; CHECK-NEXT:    ret i8* [[V1]]
+;
+  %v1 = getelementptr i8, i8* %arg, i64 16
+  %v1.fr = freeze i8* %v1
+  ret i8* %v1.fr
+}
+
+define i8* @propagate_drop_gep2(i8* %arg, i64 %unknown) {
+; CHECK-LABEL: @propagate_drop_gep2(
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG:%.*]], i64 [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i8* [[V1]]
+; CHECK-NEXT:    ret i8* [[V1_FR]]
+;
+  %v1 = getelementptr i8, i8* %arg, i64 %unknown
+  %v1.fr = freeze i8* %v1
+  ret i8* %v1.fr
+}
+

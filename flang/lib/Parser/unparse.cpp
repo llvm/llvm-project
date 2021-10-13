@@ -2287,7 +2287,7 @@ public:
     BeginOpenMP();
     Word("!$OMP CRITICAL");
     Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Walk(std::get<std::optional<OmpClause>>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }

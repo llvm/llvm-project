@@ -95,25 +95,26 @@ option(MLIR_INCLUDE_INTEGRATION_TESTS
 # Requires:
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
-#
-# Version locking
-# ---------------
-# By default, python extensions are version locked to specific Python libraries.
-# This linking mode is somewhat more consistent across platforms and surfaces
-# undefined symbols at link time (vs runtime). It is suitable for development
-# workflows but can be disabled for more flexible deployment by
-# setting -DMLIR_BINDINGS_PYTHON_LOCK_VERSION=OFF
 #-------------------------------------------------------------------------------
 
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
-set(MLIR_BINDINGS_PYTHON_LOCK_VERSION 1 CACHE BOOL
-       "Links to specific python libraries, resolving all symbols.")
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
+  # After CMake 3.18, we are able to limit the scope of the search to just
+  # Development.Module. Searching for Development will fail in situations where
+  # the Python libraries are not available. When possible, limit to just
+  # Development.Module.
+  # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
+  if(CMAKE_VERSION VERSION_LESS "3.18.0")
+    set(_python_development_component Development)
+  else()
+    set(_python_development_component Development.Module)
+  endif()
   find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
-    COMPONENTS Interpreter Development NumPy REQUIRED)
+    COMPONENTS Interpreter ${_python_development_component} NumPy REQUIRED)
+  unset(_python_development_component)
   message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")

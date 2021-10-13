@@ -40,6 +40,9 @@ using llvm::dbgs;
 
 #define DEBUG_TYPE "linalg-vectorization"
 
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
 template <typename OpType>
@@ -74,7 +77,8 @@ static OpType getSingleOpOfType(Block &block) {
 /// map is reindexed to `affine_map<(d0, d1, d2) -> (d2, d0, d1)>`, the second
 /// affine map is reindexed to `affine_map<(d0, d1) -> (d0, d1)>`.
 static AffineMap reindexIndexingMap(AffineMap map) {
-  assert(map.isProjectedPermutation() && "expected projected permutation");
+  assert(map.isProjectedPermutation(/*allowZerosInResults=*/true) &&
+         "expected projected permutation");
   auto res = compressUnusedDims(map);
   assert(res.getNumDims() == res.getNumResults() &&
          "expected reindexed map with same number of dims and results");
@@ -106,7 +110,7 @@ struct VectorizationResult {
 /// ShapedType of `v`.
 static VectorType extractVectorTypeFromShapedValue(Value v) {
   auto st = v.getType().cast<ShapedType>();
-  if (st.isa<MemRefType>() && st.getShape().empty())
+  if (st.getShape().empty())
     return VectorType();
   return VectorType::get(st.getShape(), st.getElementType());
 }
@@ -118,10 +122,14 @@ getKindForOp(Operation *reductionOp) {
   return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
              reductionOp)
       .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<AndOp>([&](auto op) { return vector::CombiningKind::AND; })
       .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
       .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
       .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
       .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<MulIOp, MulFOp>([&](auto op) { return vector::CombiningKind::MUL; })
+      .Case<OrOp>([&](auto op) { return vector::CombiningKind::OR; })
+      .Case<XOrOp>([&](auto op) { return vector::CombiningKind::XOR; })
       .Default([&](auto op) { return llvm::None; });
 }
 
@@ -147,36 +155,39 @@ matchLinalgReduction(OpOperand *outputOperand) {
   return getKindForOp(combinerOps[0]);
 }
 
-/// If `value` of assumed VectorType has a shape different than `shape`, try to
-/// build and return a new vector.broadcast to `shape`.
-/// Otherwise, just return `value`.
-// TODO: this is best effort atm and there is currently no guarantee of
-// correctness for the broadcast semantics.
+/// Broadcast `value` to a vector of `shape` if possible. Return value
+/// otherwise.
 static Value broadcastIfNeeded(OpBuilder &b, Value value,
                                ArrayRef<int64_t> shape) {
-  unsigned numDimsGtOne = std::count_if(shape.begin(), shape.end(),
-                                        [](int64_t val) { return val > 1; });
-  auto vecType = value.getType().dyn_cast<VectorType>();
-  if (shape.empty() ||
-      (vecType != nullptr &&
-       (vecType.getShape() == shape || vecType.getRank() > numDimsGtOne)))
+  // If no shape to broadcast to, just return `value`.
+  if (shape.empty())
     return value;
-  auto newVecType = VectorType::get(shape, vecType ? vecType.getElementType()
-                                                   : value.getType());
-  return b.create<vector::BroadcastOp>(b.getInsertionPoint()->getLoc(),
-                                       newVecType, value);
+  VectorType targetVectorType =
+      VectorType::get(shape, getElementTypeOrSelf(value));
+  if (vector::isBroadcastableTo(value.getType(), targetVectorType) !=
+      vector::BroadcastableToResult::Success)
+    return value;
+  Location loc = b.getInsertionPoint()->getLoc();
+  return b.createOrFold<vector::BroadcastOp>(loc, targetVectorType, value);
 }
 
-/// If value of assumed VectorType has a shape different than `shape`, build and
-/// return a new vector.broadcast to `shape`.
-/// Otherwise, just return value.
-static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
-                            Value value, OpOperand *outputOperand) {
+/// Assuming `outputOperand` is an output operand of a LinalgOp, determine
+/// whether a reduction is needed to produce a `targetType` and create that
+/// reduction if it is the case.
+static Value reduceIfNeeded(OpBuilder &b, Type targetType, Value value,
+                            OpOperand *outputOperand) {
+  LDBG("Reduce " << value << " to type " << targetType);
+  LDBG("In LinalgOp operand #" << outputOperand->getOperandNumber() << "\n"
+                               << *(outputOperand->getOwner()));
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   auto vecType = value.getType().dyn_cast<VectorType>();
-  if (!vecType || vecType.getShape() == targetVectorType.getShape())
+  VectorType targetVectorType = targetType.dyn_cast<VectorType>();
+  if (!vecType)
+    return value;
+  if (targetVectorType && vecType.getShape() == targetVectorType.getShape())
     return value;
 
+  // At this point, we know we need to reduce. Detect the reduction operator.
   unsigned pos = 0;
   MLIRContext *ctx = b.getContext();
   SmallVector<AffineExpr> exprs;
@@ -185,7 +196,6 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
       exprs.push_back(getAffineDimExpr(pos++, ctx));
   auto loc = value.getLoc();
 
-  // At this point, we know we need to reduce. Detect the reduction operator.
   auto maybeKind = matchLinalgReduction(outputOperand);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
   unsigned idx = 0;
@@ -200,16 +210,18 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
 }
 
 /// Build a vector.transfer_read from `source` at indices set to all `0`.
-/// If source has rank zero, build an memref.load.
+/// If source has rank zero, build a `vector<1xt> transfer_read + extract`.
 /// Return the produced value.
-static Value buildVectorRead(OpBuilder &b, Value source, VectorType vectorType,
+static Value buildVectorRead(OpBuilder &b, Value source, Type readType,
                              AffineMap map) {
   Location loc = source.getLoc();
   auto shapedType = source.getType().cast<ShapedType>();
   SmallVector<Value> indices(shapedType.getRank(),
                              b.create<ConstantIndexOp>(loc, 0));
-  return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
-                                          map);
+  if (auto vectorType = readType.dyn_cast<VectorType>())
+    return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
+                                            map);
+  return vector::TransferReadOp::createScalarOp(b, loc, source, indices);
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -220,13 +232,14 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
                               OpOperand *outputOperand) {
   Operation *write;
   Location loc = value.getLoc();
+  auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   if (VectorType vectorType =
           extractVectorTypeFromShapedValue(outputOperand->get())) {
-    auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
     AffineMap map =
         reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
     SmallVector<int64_t> transposeShape =
         applyPermutationMap(inversePermutation(map), vectorType.getShape());
+    assert(!transposeShape.empty() && "unexpected empty transpose shape");
     vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                b.create<ConstantIndexOp>(loc, 0));
@@ -235,9 +248,12 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     write = b.create<vector::TransferWriteOp>(loc, value, outputOperand->get(),
                                               indices, map);
   } else {
-    write = b.create<memref::StoreOp>(loc, value, outputOperand->get());
+    value =
+        reduceIfNeeded(b, getElementTypeOrSelf(value), value, outputOperand);
+    write = vector::TransferWriteOp::createScalarOp(
+        b, loc, value, outputOperand->get(), ValueRange{});
   }
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorized op: " << *write);
+  LDBG("vectorized op: " << *write);
   if (!write->getResults().empty())
     return write->getResult(0);
   return Value();
@@ -333,7 +349,7 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
 static VectorizationResult
 vectorizeOneOp(OpBuilder &b, Operation *op, const BlockAndValueMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorize op " << *op);
+  LDBG("vectorize op " << *op);
 
   // 1. Try to apply any CustomVectorizationHook.
   if (!customVectorizationHooks.empty()) {
@@ -470,33 +486,27 @@ LogicalResult vectorizeAsLinalgGeneric(
       continue;
     }
     // TODO: 0-d vectors.
-    if (linalgOp.getShape(opOperand).empty()) {
-      Value loaded =
-          b.create<memref::LoadOp>(linalgOp.getLoc(), opOperand->get());
-      LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
-                        << bbarg.getArgNumber() << "): " << loaded);
-      bvm.map(bbarg, loaded);
-      bvm.map(opOperand->get(), loaded);
-      continue;
-    }
+    Type readType;
     AffineMap map;
-    VectorType vectorType;
-    if (broadcastToMaximalCommonShape) {
-      map = inverseAndBroadcastProjectedPermuation(
-          linalgOp.getTiedIndexingMap(opOperand));
-      vectorType = VectorType::get(commonVectorShape,
-                                   getElementTypeOrSelf(opOperand->get()));
+    if (linalgOp.getShape(opOperand).empty()) {
+      readType = bbarg.getType();
     } else {
-      map = inversePermutation(
-          reindexIndexingMap(linalgOp.getTiedIndexingMap(opOperand)));
-      vectorType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
+      if (broadcastToMaximalCommonShape) {
+        map = inverseAndBroadcastProjectedPermuation(
+            linalgOp.getTiedIndexingMap(opOperand));
+        readType = VectorType::get(commonVectorShape,
                                    getElementTypeOrSelf(opOperand->get()));
+      } else {
+        map = inversePermutation(
+            reindexIndexingMap(linalgOp.getTiedIndexingMap(opOperand)));
+        readType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
+                                   getElementTypeOrSelf(opOperand->get()));
+      }
     }
-    Value vectorRead = buildVectorRead(b, opOperand->get(), vectorType, map);
-    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
-                      << bbarg.getArgNumber() << "): " << vectorRead);
-    bvm.map(bbarg, vectorRead);
-    bvm.map(opOperand->get(), vectorRead);
+    Value readValue = buildVectorRead(b, opOperand->get(), readType, map);
+    LDBG("new vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue);
+    bvm.map(bbarg, readValue);
+    bvm.map(opOperand->get(), readValue);
   }
 
   auto hooks = llvm::to_vector<4>(customVectorizationHooks);
@@ -520,12 +530,11 @@ LogicalResult vectorizeAsLinalgGeneric(
   for (Operation &op : block.getOperations()) {
     VectorizationResult result = vectorizeOneOp(b, &op, bvm, hooks);
     if (result.status == VectorizationStatus::Failure) {
-      LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: failed to vectorize: " << op);
+      LDBG("failed to vectorize: " << op);
       return failure();
     }
     if (result.status == VectorizationStatus::NewOp) {
-      LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vector op: "
-                        << *result.newOp;);
+      LDBG("new vector op: " << *result.newOp;);
       bvm.map(op.getResults(), result.newOp->getResults());
     }
   }
@@ -540,9 +549,9 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
   Location loc = linalgOp.getLoc();
   // Vectorize other ops as vector contraction.
   // TODO: interface.
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                    << "Rewrite linalg op as vector.contract: ";
-             linalgOp.dump());
+  LDBG(""
+           << "Rewrite linalg op as vector.contract: ";
+       linalgOp.dump());
   // Special function that describes how to vectorize the multiplication op in a
   // linalg contraction.
   CustomVectorizationHook vectorizeContraction =
@@ -589,18 +598,23 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
 }
 
 static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(),
-                      [](AffineMap m) { return m.isProjectedPermutation(); });
+  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+    return m.isProjectedPermutation(/*allowZerosInResults=*/true);
+  });
 }
 
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIterator))
+  if (llvm::none_of(op.iterator_types(), isReductionIterator)) {
+    LDBG("reduction precondition failed: no reduction iterator");
     return failure();
+  }
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    if (!matchLinalgReduction(opOperand))
+    if (!matchLinalgReduction(opOperand)) {
+      LDBG("reduction precondition failed: reduction detection failed");
       return failure();
+    }
   }
   return success();
 }
@@ -608,8 +622,10 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   auto linalgOp = cast<linalg::LinalgOp>(op);
   // All types must be static shape to go to vector.
-  if (linalgOp.hasDynamicShape())
+  if (linalgOp.hasDynamicShape()) {
+    LDBG("precondition failed: dynamic shape");
     return failure();
+  }
   if (isElementwise(op))
     return success();
   if (isaContractionOpInterface(linalgOp))
@@ -617,10 +633,15 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   // TODO: the common vector shape is equal to the static loop sizes only when
   // all indexing maps are projected permutations. For convs and stencils the
   // logic will need to evolve.
-  if (allIndexingsAreProjectedPermutation(linalgOp) &&
-      succeeded(reductionPreconditions(linalgOp)))
-    return success();
-  return failure();
+  if (!allIndexingsAreProjectedPermutation(linalgOp)) {
+    LDBG("precondition failed: not projected permutations");
+    return failure();
+  }
+  if (failed(reductionPreconditions(linalgOp))) {
+    LDBG("precondition failed: reduction preconditions");
+    return failure();
+  }
+  return success();
 }
 
 LogicalResult
@@ -633,10 +654,10 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
   if (isaContractionOpInterface(linalgOp))
     return vectorizeContraction(b, linalgOp, newResults);
 
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                    << "Vectorize linalg op as a generic by broadcasting to "
-                       "maximal common shape: "
-                    << *op);
+  LDBG(""
+       << "Vectorize linalg op as a generic by broadcasting to "
+          "maximal common shape: "
+       << *op);
   return vectorizeAsLinalgGeneric(b, linalgOp, newResults,
                                   /*broadcastToMaximalCommonShape=*/true);
 }
@@ -688,7 +709,8 @@ struct GenericPadTensorOpVectorizationPattern
     // by TransferReadOp, but TransferReadOp supports only constant padding.
     auto padValue = padOp.getConstantPaddingValue();
     if (!padValue) {
-      if (!sourceType.hasStaticShape()) return failure();
+      if (!sourceType.hasStaticShape())
+        return failure();
       // Create dummy padding value.
       auto elemType = sourceType.getElementType();
       padValue = rewriter.create<ConstantOp>(padOp.getLoc(), elemType,
@@ -733,14 +755,14 @@ struct GenericPadTensorOpVectorizationPattern
 
     // If `dest` is a FillOp and the TransferWriteOp would overwrite the entire
     // tensor, write directly to the FillOp's operand.
-    if (llvm::equal(vecShape, resultType.getShape())
-        && llvm::all_of(writeInBounds, [](bool b) { return b; }))
+    if (llvm::equal(vecShape, resultType.getShape()) &&
+        llvm::all_of(writeInBounds, [](bool b) { return b; }))
       if (auto fill = dest.getDefiningOp<FillOp>())
         dest = fill.output();
 
     // Generate TransferWriteOp.
-    auto writeIndices = ofrToIndexValues(
-        rewriter, padOp.getLoc(), padOp.getMixedLowPad());
+    auto writeIndices =
+        ofrToIndexValues(rewriter, padOp.getLoc(), padOp.getMixedLowPad());
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         padOp, read, dest, writeIndices, writeInBounds);
 
@@ -764,9 +786,9 @@ struct VectorizePadTensorOpUserPattern : public OpRewritePattern<PadTensorOp> {
     return success(changed);
   }
 
- protected:
-  virtual LogicalResult rewriteUser(
-      PatternRewriter &rewriter, PadTensorOp padOp, OpTy op) const = 0;
+protected:
+  virtual LogicalResult rewriteUser(PatternRewriter &rewriter,
+                                    PadTensorOp padOp, OpTy op) const = 0;
 };
 
 /// Rewrite use of PadTensorOp result in TransferReadOp. E.g.:
@@ -790,18 +812,21 @@ struct VectorizePadTensorOpUserPattern : public OpRewritePattern<PadTensorOp> {
 /// - Single, scalar padding value.
 struct PadTensorOpVectorizationWithTransferReadPattern
     : public VectorizePadTensorOpUserPattern<vector::TransferReadOp> {
-  using VectorizePadTensorOpUserPattern<vector::TransferReadOp>
-      ::VectorizePadTensorOpUserPattern;
+  using VectorizePadTensorOpUserPattern<
+      vector::TransferReadOp>::VectorizePadTensorOpUserPattern;
 
   LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
                             vector::TransferReadOp xferOp) const override {
     // Low padding must be static 0.
-    if (!padOp.hasZeroLowPad()) return failure();
+    if (!padOp.hasZeroLowPad())
+      return failure();
     // Pad value must be a constant.
     auto padValue = padOp.getConstantPaddingValue();
-    if (!padValue) return failure();
+    if (!padValue)
+      return failure();
     // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.mask()) return failure();
+    if (xferOp.hasOutOfBoundsDim() || xferOp.mask())
+      return failure();
 
     rewriter.updateRootInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
@@ -847,24 +872,30 @@ struct PadTensorOpVectorizationWithTransferReadPattern
 /// - Single, scalar padding value.
 struct PadTensorOpVectorizationWithTransferWritePattern
     : public VectorizePadTensorOpUserPattern<vector::TransferWriteOp> {
-  using VectorizePadTensorOpUserPattern<vector::TransferWriteOp>
-      ::VectorizePadTensorOpUserPattern;
+  using VectorizePadTensorOpUserPattern<
+      vector::TransferWriteOp>::VectorizePadTensorOpUserPattern;
 
   LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
                             vector::TransferWriteOp xferOp) const override {
     // Low padding must be static 0.
-    if (!padOp.hasZeroLowPad()) return failure();
+    if (!padOp.hasZeroLowPad())
+      return failure();
     // Pad value must be a constant.
     auto padValue = padOp.getConstantPaddingValue();
-    if (!padValue) return failure();
+    if (!padValue)
+      return failure();
     // TransferWriteOp result must be directly consumed by an ExtractSliceOp.
-    if (!xferOp->hasOneUse()) return failure();
+    if (!xferOp->hasOneUse())
+      return failure();
     auto trimPadding = dyn_cast<tensor::ExtractSliceOp>(*xferOp->user_begin());
-    if (!trimPadding) return failure();
+    if (!trimPadding)
+      return failure();
     // Only static zero offsets supported when trimming padding.
-    if (!trimPadding.hasZeroOffset()) return failure();
+    if (!trimPadding.hasZeroOffset())
+      return failure();
     // trimPadding must remove the amount of padding that was added earlier.
-    if (!hasSameTensorSize(padOp.source(), trimPadding)) return failure();
+    if (!hasSameTensorSize(padOp.source(), trimPadding))
+      return failure();
 
     // Insert the new TransferWriteOp at position of the old TransferWriteOp.
     rewriter.setInsertionPoint(xferOp);
@@ -894,14 +925,17 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     // If the input to PadTensorOp is a CastOp, try with with both CastOp result
     // and CastOp operand.
     if (auto castOp = beforePadding.getDefiningOp<tensor::CastOp>())
-      if (hasSameTensorSize(castOp.source(), afterTrimming)) return true;
+      if (hasSameTensorSize(castOp.source(), afterTrimming))
+        return true;
 
     auto t1 = beforePadding.getType().dyn_cast<RankedTensorType>();
     auto t2 = afterTrimming.getType().dyn_cast<RankedTensorType>();
     // Only RankedTensorType supported.
-    if (!t1 || !t2) return false;
+    if (!t1 || !t2)
+      return false;
     // Rank of both values must be the same.
-    if (t1.getRank() != t2.getRank()) return false;
+    if (t1.getRank() != t2.getRank())
+      return false;
 
     // All static dimensions must be the same. Mixed cases (e.g., dimension
     // static in `t1` but dynamic in `t2`) are not supported.
@@ -913,7 +947,8 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     }
 
     // Nothing more to check if all dimensions are static.
-    if (t1.getNumDynamicDims() == 0) return true;
+    if (t1.getNumDynamicDims() == 0)
+      return true;
 
     // All dynamic sizes must be the same. The only supported case at the moment
     // is when `beforePadding` is an ExtractSliceOp (or a cast thereof).
@@ -925,29 +960,33 @@ struct PadTensorOpVectorizationWithTransferWritePattern
 
     assert(static_cast<size_t>(t1.getRank()) ==
            beforeSlice.getMixedSizes().size());
-    assert(static_cast<size_t>(t2.getRank())
-           == afterTrimming.getMixedSizes().size());
+    assert(static_cast<size_t>(t2.getRank()) ==
+           afterTrimming.getMixedSizes().size());
 
     for (unsigned i = 0; i < t1.getRank(); ++i) {
       // Skip static dimensions.
-      if (!t1.isDynamicDim(i)) continue;
+      if (!t1.isDynamicDim(i))
+        continue;
       auto size1 = beforeSlice.getMixedSizes()[i];
       auto size2 = afterTrimming.getMixedSizes()[i];
 
       // Case 1: Same value or same constant int.
-      if (isEqualConstantIntOrValue(size1, size2)) continue;
+      if (isEqualConstantIntOrValue(size1, size2))
+        continue;
 
       // Other cases: Take a deeper look at defining ops of values.
       auto v1 = size1.dyn_cast<Value>();
       auto v2 = size2.dyn_cast<Value>();
-      if (!v1 || !v2) return false;
+      if (!v1 || !v2)
+        return false;
 
       // Case 2: Both values are identical AffineMinOps. (Should not happen if
       // CSE is run.)
       auto minOp1 = v1.getDefiningOp<AffineMinOp>();
       auto minOp2 = v2.getDefiningOp<AffineMinOp>();
-      if (minOp1 && minOp2 && minOp1.getAffineMap() == minOp2.getAffineMap()
-          && minOp1.operands() == minOp2.operands()) continue;
+      if (minOp1 && minOp2 && minOp1.getAffineMap() == minOp2.getAffineMap() &&
+          minOp1.operands() == minOp2.operands())
+        continue;
 
       // Add additional cases as needed.
     }
@@ -987,9 +1026,11 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
   LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
                             tensor::InsertSliceOp insertOp) const override {
     // Low padding must be static 0.
-    if (!padOp.hasZeroLowPad()) return failure();
+    if (!padOp.hasZeroLowPad())
+      return failure();
     // Only unit stride supported.
-    if (!insertOp.hasUnitStride()) return failure();
+    if (!insertOp.hasUnitStride())
+      return failure();
     // Pad value must be a constant.
     auto padValue = padOp.getConstantPaddingValue();
     if (!padValue)
@@ -1038,8 +1079,8 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
 
 void mlir::linalg::populatePadTensorOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
-  patterns.add<GenericPadTensorOpVectorizationPattern>(
-      patterns.getContext(), baseBenefit);
+  patterns.add<GenericPadTensorOpVectorizationPattern>(patterns.getContext(),
+                                                       baseBenefit);
   // Try these specialized patterns first before resorting to the generic one.
   patterns.add<PadTensorOpVectorizationWithTransferReadPattern,
                PadTensorOpVectorizationWithTransferWritePattern,
@@ -1184,9 +1225,8 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
                                     ValueRange values) {
   if (firstOp->getBlock() != secondOp->getBlock() ||
       !firstOp->isBeforeInBlock(secondOp)) {
-    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                            << "interleavedUses precondition failed, firstOp: "
-                            << *firstOp << ", second op: " << *secondOp);
+    LDBG("interleavedUses precondition failed, firstOp: "
+         << *firstOp << ", second op: " << *secondOp);
     return true;
   }
   for (auto v : values) {
@@ -1198,10 +1238,8 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
       if (owner->getBlock() == firstOp->getBlock() &&
           (owner->isBeforeInBlock(firstOp) || secondOp->isBeforeInBlock(owner)))
         continue;
-      LLVM_DEBUG(llvm::dbgs()
-                 << "\n[" DEBUG_TYPE "]: "
-                 << " found interleaved op " << *owner
-                 << ", firstOp: " << *firstOp << ", second op: " << *secondOp);
+      LDBG(" found interleaved op " << *owner << ", firstOp: " << *firstOp
+                                    << ", second op: " << *secondOp);
       return true;
     }
   }
@@ -1232,15 +1270,14 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
       !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return failure();
 
-  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: " << viewOrAlloc);
+  LDBG(viewOrAlloc);
 
   // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
   memref::SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
   if (!subViewOp)
     return failure();
   Value subView = subViewOp.getResult();
-  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                          << "with subView " << subView);
+  LDBG("with subView " << subView);
 
   // Find the copy into `subView` without interleaved uses.
   CopyOp copyOp;
@@ -1249,8 +1286,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
       assert(newCopyOp.output().getType().isa<MemRefType>());
       if (newCopyOp.output() != subView)
         continue;
-      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                              << "copy candidate " << *newCopyOp);
+      LDBG("copy candidate " << *newCopyOp);
       if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
         continue;
       copyOp = newCopyOp;
@@ -1259,8 +1295,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   }
   if (!copyOp)
     return failure();
-  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                          << "with copy " << *copyOp);
+  LDBG("with copy " << *copyOp);
 
   // Find the fill into `viewOrAlloc` without interleaved uses before the copy.
   FillOp maybeFillOp;
@@ -1269,8 +1304,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
       assert(newFillOp.output().getType().isa<MemRefType>());
       if (newFillOp.output() != viewOrAlloc)
         continue;
-      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                              << "fill candidate " << *newFillOp);
+      LDBG("fill candidate " << *newFillOp);
       if (mayExistInterleavedUses(newFillOp, copyOp, {viewOrAlloc, subView}))
         continue;
       maybeFillOp = newFillOp;
@@ -1281,8 +1315,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   if (maybeFillOp && xferOp.padding() != maybeFillOp.value())
     return failure();
   if (maybeFillOp)
-    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
-                            << "with maybeFillOp " << *maybeFillOp);
+    LDBG("with maybeFillOp " << *maybeFillOp);
 
   // `in` is the subview that linalg.copy reads. Replace it.
   Value in = copyOp.input();

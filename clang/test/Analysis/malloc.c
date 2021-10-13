@@ -261,23 +261,23 @@ void CheckUseZeroAllocatedNoWarn4() {
 
 void CheckUseZeroAllocated1() {
   int *p = malloc(0);
-  *p = 1; // expected-warning {{Use of zero-allocated memory}}
+  *p = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(p);
 }
 
 char CheckUseZeroAllocated2() {
   char *p = alloca(0);
-  return *p; // expected-warning {{Use of zero-allocated memory}}
+  return *p; // expected-warning {{Use of memory allocated with size zero}}
 }
 
 char CheckUseZeroWinAllocated2() {
   char *p = _alloca(0);
-  return *p; // expected-warning {{Use of zero-allocated memory}}
+  return *p; // expected-warning {{Use of memory allocated with size zero}}
 }
 
 void UseZeroAllocated(int *p) {
   if (p)
-    *p = 7; // expected-warning {{Use of zero-allocated memory}}
+    *p = 7; // expected-warning {{Use of memory allocated with size zero}}
 }
 void CheckUseZeroAllocated3() {
   int *p = malloc(0);
@@ -287,39 +287,39 @@ void CheckUseZeroAllocated3() {
 void f(char);
 void CheckUseZeroAllocated4() {
   char *p = valloc(0);
-  f(*p); // expected-warning {{Use of zero-allocated memory}}
+  f(*p); // expected-warning {{Use of memory allocated with size zero}}
   free(p);
 }
 
 void CheckUseZeroAllocated5() {
   int *p = calloc(0, 2);
-  *p = 1; // expected-warning {{Use of zero-allocated memory}}
+  *p = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(p);
 }
 
 void CheckUseZeroAllocated6() {
   int *p = calloc(2, 0);
-  *p = 1; // expected-warning {{Use of zero-allocated memory}}
+  *p = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(p);
 }
 
 void CheckUseZeroAllocated7() {
   int *p = realloc(0, 0);
-  *p = 1; // expected-warning {{Use of zero-allocated memory}}
+  *p = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(p);
 }
 
 void CheckUseZeroAllocated8() {
   int *p = malloc(8);
   int *q = realloc(p, 0);
-  *q = 1; // expected-warning {{Use of zero-allocated memory}}
+  *q = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(q);
 }
 
 void CheckUseZeroAllocated9() {
   int *p = realloc(0, 0);
   int *q = realloc(p, 0);
-  *q = 1; // expected-warning {{Use of zero-allocated memory}}
+  *q = 1; // expected-warning {{Use of memory allocated with size zero}}
   free(q);
 }
 
@@ -344,7 +344,7 @@ void CheckUseZeroAllocatedPathWarn(_Bool b) {
   char *p = malloc(s);
 
   if (b)
-    *p = 1; // expected-warning {{Use of zero-allocated memory}}
+    *p = 1; // expected-warning {{Use of memory allocated with size zero}}
 
   free(p);
 }
@@ -372,7 +372,7 @@ void CheckUseZeroReallocatedPathWarn(_Bool b) {
   char *q = realloc(p, s);
 
   if (b)
-    *q = 1; // expected-warning {{Use of zero-allocated memory}}
+    *q = 1; // expected-warning {{Use of memory allocated with size zero}}
 
   free(q);
 }

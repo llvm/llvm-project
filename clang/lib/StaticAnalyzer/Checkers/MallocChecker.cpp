@@ -2471,7 +2471,8 @@ void MallocChecker::HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
                       categories::MemoryError));
 
     auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT_UseZerroAllocated[*CheckKind], "Use of zero-allocated memory", N);
+        *BT_UseZerroAllocated[*CheckKind],
+        "Use of memory allocated with size zero", N);
 
     R->addRange(Range);
     if (Sym) {

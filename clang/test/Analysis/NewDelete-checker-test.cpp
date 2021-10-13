@@ -105,13 +105,13 @@ void testNewInvalidationPlacement(PtrWrapper *w) {
 
 void testUseZeroAlloc1() {
   int *p = (int *)operator new(0);
-  *p = 1; // newdelete-warning {{Use of zero-allocated memory}}
+  *p = 1; // newdelete-warning {{Use of memory allocated with size zero}}
   delete p;
 }
 
 int testUseZeroAlloc2() {
   int *p = (int *)operator new[](0);
-  return p[0]; // newdelete-warning {{Use of zero-allocated memory}}
+  return p[0]; // newdelete-warning {{Use of memory allocated with size zero}}
   delete[] p;
 }
 
@@ -119,7 +119,7 @@ void f(int);
 
 void testUseZeroAlloc3() {
   int *p = new int[0];
-  f(*p); // newdelete-warning {{Use of zero-allocated memory}}
+  f(*p); // newdelete-warning {{Use of memory allocated with size zero}}
   delete[] p;
 }
 

@@ -148,13 +148,22 @@ namespace sys {
       return *this;
     }
     ~OwningMemoryBlock() {
-      Memory::releaseMappedMemory(M);
+      if (M.base())
+        Memory::releaseMappedMemory(M);
     }
     void *base() const { return M.base(); }
     /// The size as it was allocated. This is always greater or equal to the
     /// size that was originally requested.
     size_t allocatedSize() const { return M.allocatedSize(); }
     MemoryBlock getMemoryBlock() const { return M; }
+    std::error_code release() {
+      std::error_code EC;
+      if (M.base()) {
+        EC = Memory::releaseMappedMemory(M);
+        M = MemoryBlock();
+      }
+      return EC;
+    }
   private:
     MemoryBlock M;
   };

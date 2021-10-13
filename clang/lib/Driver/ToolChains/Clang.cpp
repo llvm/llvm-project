@@ -4612,8 +4612,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (llvm::find(kBitcodeOptionBlacklist, A->getOption().getID()) !=
-          std::end(kBitcodeOptionBlacklist))
+      if (llvm::is_contained(kBitcodeOptionBlacklist, A->getOption().getID()))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
     // Render the CodeGen options that need to be passed.
