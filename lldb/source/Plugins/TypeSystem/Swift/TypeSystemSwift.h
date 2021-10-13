@@ -70,9 +70,16 @@ public:
 ///                        │         │
 ///                        ↓         ↓
 ///    TypeSystemSwiftTypeRef ⟷ SwiftASTContext (deprecated)
-///                                  │
-///                                  ↓
-///                               SwiftASTContextForExpressions
+///                              /    │
+///                              ↓    ↓
+///      SwiftASTContextForModules    SwiftASTContextForExpressions
+///          (deprecated)
+///
+///
+/// Memory management:
+///
+/// A per-module TypeSystemSwiftTypeRef owns a lazily initialized SwiftASTContext.
+/// A SwiftASTContextForExpressions owns a  TypeSystemSwiftTypeRef.
 ///
 /// \endverbatim
 class TypeSystemSwift : public TypeSystem {
@@ -107,9 +114,11 @@ public:
   };
 
   static LanguageSet GetSupportedLanguagesForTypes();
-  virtual SwiftASTContext *GetSwiftASTContext() = 0;
+  virtual SwiftASTContext *GetSwiftASTContext() const = 0;
   virtual TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() = 0;
-  virtual Module *GetModule() const = 0;
+  virtual void SetTriple(const llvm::Triple triple) = 0;
+  virtual void ClearModuleDependentCaches() = 0;
+
   virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
   virtual void SetCachedType(ConstString mangled,
                              const lldb::TypeSP &type_sp) = 0;
@@ -272,6 +281,8 @@ public:
 protected:
   /// Used in the logs.
   std::string m_description;
+  /// The module this typesystem belongs to if any.
+  Module *m_module = nullptr;
 };
 
 } // namespace lldb_private

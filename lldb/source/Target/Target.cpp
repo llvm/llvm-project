@@ -1656,7 +1656,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     auto notify_callback = [&](TypeSystem *type_system) {
 #ifdef LLDB_ENABLE_SWIFT
       auto *swift_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContext>(type_system);
+          llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(type_system);
       if (!swift_ast_ctx)
         return true;
       swift_ast_ctx->ModulesDidLoad(module_list);
@@ -2550,7 +2550,7 @@ llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
 
     bool fallback = true;
     auto typesystem_sp = SwiftASTContext::CreateInstance(
-        lldb::eLanguageTypeSwift, *lldb_module, this, fallback);
+        lldb::eLanguageTypeSwift, *lldb_module, nullptr, this, fallback);
     auto *swift_ast_ctx =
         llvm::cast<SwiftASTContextForExpressions>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});

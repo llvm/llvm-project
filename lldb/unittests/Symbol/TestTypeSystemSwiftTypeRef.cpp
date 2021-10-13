@@ -25,7 +25,7 @@ using namespace llvm;
 struct TestTypeSystemSwiftTypeRef : public testing::Test {
   TypeSystemSwiftTypeRef m_swift_ts;
 
-  TestTypeSystemSwiftTypeRef() : m_swift_ts(nullptr) {}
+  TestTypeSystemSwiftTypeRef() : m_swift_ts() {}
   CompilerType GetCompilerType(std::string mangled_name) {
     ConstString internalized(mangled_name);
     return m_swift_ts.GetTypeFromMangledTypename(internalized);
