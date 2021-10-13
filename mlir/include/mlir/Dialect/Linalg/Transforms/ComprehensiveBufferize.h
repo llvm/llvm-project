@@ -84,9 +84,10 @@ public:
       Operation *opToBufferize, DenseSet<OpOperand *> &usesRead,
       DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo) const;
 
-  /// Return true if bufferizing `opResult` inplace would create a write to a
-  /// non-writable buffer.
-  bool wouldCreateWriteToNonWritableBuffer(OpResult opResult) const;
+  /// Return true if bufferizing `opOperand` inplace with `opResult` would
+  /// create a write to a non-writable buffer.
+  bool wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
+                                           OpResult opResult) const;
 
   /// Assume that result bufferizes in-place with one of the operation's
   /// operands. Return true if it is possible to find an inplace write W (resp.
@@ -109,7 +110,7 @@ public:
   ///  read(%0)
   /// ```
   bool
-  wouldCreateReadAfterWriteInterference(OpResult result,
+  wouldCreateReadAfterWriteInterference(OpOperand &operand, OpResult result,
                                         const DominanceInfo &domInfo) const;
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
@@ -230,7 +231,7 @@ private:
   llvm::EquivalenceClasses<ValueWrapper> equivalentInfo;
 };
 
-/// Analyze the `ops` to determine which OpResults are inplaceable:
+/// Analyze the `ops` to determine which OpResults are inplaceable.
 LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               BufferizationAliasInfo &aliasInfo,
                               const DominanceInfo &domInfo);
