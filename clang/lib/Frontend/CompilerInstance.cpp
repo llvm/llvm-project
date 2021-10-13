@@ -561,6 +561,54 @@ void CompilerInstance::createASTContext() {
 
 // ExternalASTSource
 
+namespace {
+// Helper to recursively read the module names for all modules we're adding.
+// We mark these as known and redirect any attempt to load that module to
+// the files we were handed.
+struct ReadModuleNames : ASTReaderListener {
+  CompilerInstance &CI;
+  llvm::SmallVector<IdentifierInfo*, 8> LoadedModules;
+
+  ReadModuleNames(CompilerInstance &CI) : CI(CI) {}
+
+  void ReadModuleName(StringRef ModuleName) override {
+    LoadedModules.push_back(
+        CI.getPreprocessor().getIdentifierInfo(ModuleName));
+  }
+
+  void registerAll() {
+    ModuleMap &MM = CI.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+    for (auto *II : LoadedModules)
+      MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
+    LoadedModules.clear();
+  }
+
+  void markAllUnavailable() {
+    for (auto *II : LoadedModules) {
+      if (Module *M = CI.getPreprocessor()
+                          .getHeaderSearchInfo()
+                          .getModuleMap()
+                          .findModule(II->getName())) {
+        M->HasIncompatibleModuleFile = true;
+
+        // Mark module as available if the only reason it was unavailable
+        // was missing headers.
+        SmallVector<Module *, 2> Stack;
+        Stack.push_back(M);
+        while (!Stack.empty()) {
+          Module *Current = Stack.pop_back_val();
+          if (Current->IsUnimportable) continue;
+          Current->IsAvailable = true;
+          Stack.insert(Stack.end(),
+                       Current->submodule_begin(), Current->submodule_end());
+        }
+      }
+    }
+    LoadedModules.clear();
+  }
+};
+} // namespace
+
 void CompilerInstance::createPCHExternalASTSource(
     StringRef Path, DisableValidationForModuleKind DisableValidation,
     bool AllowPCHWithCompilerErrors, void *DeserializationListener,
@@ -1668,52 +1716,6 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
                *FrontendTimerGroup);
   llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
-
-  // Helper to recursively read the module names for all modules we're adding.
-  // We mark these as known and redirect any attempt to load that module to
-  // the files we were handed.
-  struct ReadModuleNames : ASTReaderListener {
-    CompilerInstance &CI;
-    llvm::SmallVector<IdentifierInfo*, 8> LoadedModules;
-
-    ReadModuleNames(CompilerInstance &CI) : CI(CI) {}
-
-    void ReadModuleName(StringRef ModuleName) override {
-      LoadedModules.push_back(
-          CI.getPreprocessor().getIdentifierInfo(ModuleName));
-    }
-
-    void registerAll() {
-      ModuleMap &MM = CI.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-      for (auto *II : LoadedModules)
-        MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
-      LoadedModules.clear();
-    }
-
-    void markAllUnavailable() {
-      for (auto *II : LoadedModules) {
-        if (Module *M = CI.getPreprocessor()
-                            .getHeaderSearchInfo()
-                            .getModuleMap()
-                            .findModule(II->getName())) {
-          M->HasIncompatibleModuleFile = true;
-
-          // Mark module as available if the only reason it was unavailable
-          // was missing headers.
-          SmallVector<Module *, 2> Stack;
-          Stack.push_back(M);
-          while (!Stack.empty()) {
-            Module *Current = Stack.pop_back_val();
-            if (Current->IsUnimportable) continue;
-            Current->IsAvailable = true;
-            Stack.insert(Stack.end(),
-                         Current->submodule_begin(), Current->submodule_end());
-          }
-        }
-      }
-      LoadedModules.clear();
-    }
-  };
 
   // If we don't already have an ASTReader, create one now.
   if (!TheASTReader)
