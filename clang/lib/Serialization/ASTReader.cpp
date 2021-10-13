@@ -2916,7 +2916,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // If we've already loaded a module map file covering this module, we may
       // have a better path for it (relative to the current build).
       Module *M = PP.getHeaderSearchInfo().lookupModule(
-          F.ModuleName, F.ImportLoc, /*AllowSearch*/ true,
+          F.ModuleName, SourceLocation(), /*AllowSearch*/ true,
           /*AllowExtraModuleMapSearch*/ true);
       if (M && M->Directory) {
         // If we're implicitly loading a module, the base directory can't
