@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -191,8 +192,8 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(Value dim, Value tensor) {
-  if (auto constantOp = dim.getDefiningOp<ConstantOp>()) {
-    unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
+  if (auto constantOp = dim.getDefiningOp<arith::ConstantOp>()) {
+    unsigned d = constantOp.value().cast<IntegerAttr>().getInt();
     if (d >= tensor.getType().cast<RankedTensorType>().getRank())
       return failure();
   }

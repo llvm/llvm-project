@@ -43,8 +43,8 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
         ins(%arga, %argb: tensor<?x?xf64, #SparseMatrix>, tensor<?xf64>)
         outs(%argx: tensor<?xf64>) {
         ^bb(%a: f64, %b: f64, %x: f64):
-          %0 = mulf %a, %b : f64
-          %1 = addf %x, %0 : f64
+          %0 = arith.mulf %a, %b : f64
+          %1 = arith.addf %x, %0 : f64
           linalg.yield %1 : f64
       } -> tensor<?xf64>
       return %0 : tensor<?xf64>
@@ -54,6 +54,7 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
   let constructor = "mlir::createSparsificationPass()";
   let dependentDialects = [
     "AffineDialect",
+    "arith::ArithmeticDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
@@ -103,6 +104,7 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparseTensorConversionPass()";
   let dependentDialects = [
+    "arith::ArithmeticDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",

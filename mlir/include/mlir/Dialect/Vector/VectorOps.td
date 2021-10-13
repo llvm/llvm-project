@@ -21,6 +21,7 @@ def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "::mlir::vector";
   let hasConstantMaterializer = 1;
+  let dependentDialects = ["arith::ArithmeticDialect"];
 }
 
 // Base class for Vector dialect ops.
@@ -579,7 +580,7 @@ def Vector_ExtractMapOp :
     %idx0 = ... : index
     // dynamic computation producing the value 1 of index type
     %idx1 = ... : index
-    %0 = constant dense<0, 1, 2, 3>: vector<4xi32>
+    %0 = arith.constant dense<0, 1, 2, 3>: vector<4xi32>
     // extracts values [0, 1]
     %1 = vector.extract_map %0[%idx0] : vector<4xi32> to vector<2xi32>
     // extracts values [1, 2]
@@ -767,7 +768,7 @@ def Vector_InsertMapOp :
     %idx0 = ... : index
     // dynamic computation producing the value 1 of index type
     %idx1 = ... : index /
-    %0 = constant dense<0, 1, 2, 3>: vector<4xi32>
+    %0 = arith.constant dense<0, 1, 2, 3>: vector<4xi32>
     // extracts values [0, 1]
     %1 = vector.extract_map %0[%idx0] : vector<4xi32> to vector<2xi32>
     // extracts values [1, 2]

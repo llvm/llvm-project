@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -121,15 +122,17 @@ getKindForOp(Operation *reductionOp) {
     return llvm::None;
   return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
              reductionOp)
-      .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
-      .Case<AndOp>([&](auto op) { return vector::CombiningKind::AND; })
+      .Case<arith::AddIOp, arith::AddFOp>(
+          [&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<arith::AndIOp>([&](auto op) { return vector::CombiningKind::AND; })
       .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
       .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
       .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
       .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
-      .Case<MulIOp, MulFOp>([&](auto op) { return vector::CombiningKind::MUL; })
-      .Case<OrOp>([&](auto op) { return vector::CombiningKind::OR; })
-      .Case<XOrOp>([&](auto op) { return vector::CombiningKind::XOR; })
+      .Case<arith::MulIOp, arith::MulFOp>(
+          [&](auto op) { return vector::CombiningKind::MUL; })
+      .Case<arith::OrIOp>([&](auto op) { return vector::CombiningKind::OR; })
+      .Case<arith::XOrIOp>([&](auto op) { return vector::CombiningKind::XOR; })
       .Default([&](auto op) { return llvm::None; });
 }
 
@@ -178,7 +181,7 @@ static Value buildVectorRead(OpBuilder &b, Value source, Type readType,
   Location loc = source.getLoc();
   auto shapedType = source.getType().cast<ShapedType>();
   SmallVector<Value> indices(shapedType.getRank(),
-                             b.create<ConstantIndexOp>(loc, 0));
+                             b.create<arith::ConstantIndexOp>(loc, 0));
   if (auto vectorType = readType.dyn_cast<VectorType>())
     return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
                                             map);
@@ -291,7 +294,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     assert(!transposeShape.empty() && "unexpected empty transpose shape");
     vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
-                               b.create<ConstantIndexOp>(loc, 0));
+                               b.create<arith::ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(b, value, vectorType.getShape());
     value = reduceIfNeeded(b, vectorType, value, outputOperand, bvm);
     write = b.create<vector::TransferWriteOp>(loc, value, outputOperand->get(),
@@ -355,8 +358,8 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
-  ConstantOp constantOp =
-      b.create<ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
+  auto constantOp =
+      b.create<arith::ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
@@ -412,7 +415,7 @@ vectorizeOneOp(OpBuilder &b, Operation *op, const BlockAndValueMapping &bvm,
 
   // 2. Constant ops don't get vectorized but rather broadcasted at their users.
   // Clone so that the constant is not confined to the linalgOp block .
-  if (isa<ConstantOp>(op))
+  if (isa<arith::ConstantOp, ConstantOp>(op))
     return VectorizationResult{VectorizationStatus::NewOp, b.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
@@ -454,7 +457,8 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
     return false;
   for (Operation &op : r.front()) {
-    if (!(isa<ConstantOp, linalg::YieldOp, linalg::IndexOp>(op) ||
+    if (!(isa<arith::ConstantOp, ConstantOp, linalg::YieldOp, linalg::IndexOp>(
+              op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))
@@ -606,7 +610,7 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
   CustomVectorizationHook vectorizeContraction =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
-    if (!isa<MulIOp, MulFOp>(op))
+    if (!isa<arith::MulIOp, arith::MulFOp>(op))
       return VectorizationResult{VectorizationStatus::Failure, nullptr};
     ArrayRef<int64_t> outShape =
         linalgOp.getShape(linalgOp.getOutputOperand(0));
@@ -620,7 +624,7 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
           outShape);
       vType = VectorType::get(resultShape, op->getResult(0).getType());
     }
-    auto zero = b.create<ConstantOp>(loc, vType, b.getZeroAttr(vType));
+    auto zero = b.create<arith::ConstantOp>(loc, vType, b.getZeroAttr(vType));
     // Indexing maps at the time of vector.transfer_read are adjusted to order
     // vector dimensions in the same order as the canonical linalg op iteration
     // space order.
@@ -730,7 +734,7 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
     if (auto val = o.template dyn_cast<Value>()) {
       result.push_back(val);
     } else {
-      result.push_back(builder.create<ConstantIndexOp>(
+      result.push_back(builder.create<arith::ConstantIndexOp>(
           loc, getIntFromAttr(o.template get<Attribute>())));
     }
   });
@@ -763,8 +767,8 @@ struct GenericPadTensorOpVectorizationPattern
         return failure();
       // Create dummy padding value.
       auto elemType = sourceType.getElementType();
-      padValue = rewriter.create<ConstantOp>(padOp.getLoc(), elemType,
-                                             rewriter.getZeroAttr(elemType));
+      padValue = rewriter.create<arith::ConstantOp>(
+          padOp.getLoc(), elemType, rewriter.getZeroAttr(elemType));
     }
 
     SmallVector<int64_t> vecShape;
@@ -798,7 +802,8 @@ struct GenericPadTensorOpVectorizationPattern
 
     // Generate TransferReadOp.
     SmallVector<Value> readIndices(
-        vecType.getRank(), rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
+        vecType.getRank(),
+        rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
         padOp.getLoc(), vecType, padOp.source(), readIndices, padValue,
         readInBounds);
@@ -1110,7 +1115,7 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
 
     // Generate TransferReadOp: Read entire source tensor and add high padding.
     SmallVector<Value> readIndices(
-        vecRank, rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
+        vecRank, rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
         padOp.getLoc(), vecType, padOp.source(), readIndices, padValue);
 
@@ -1176,7 +1181,8 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   Type elemType = getElementTypeOrSelf(input->get());
 
   auto map = AffineMap::get(rank, 0, mapping, context);
-  SmallVector<Value, 4> zeros(rank, rewriter.create<ConstantIndexOp>(loc, 0));
+  SmallVector<Value, 4> zeros(rank,
+                              rewriter.create<arith::ConstantIndexOp>(loc, 0));
   auto vecType = VectorType::get(vectorDims, elemType);
 
   auto inputVec = rewriter.create<vector::TransferReadOp>(
@@ -1184,8 +1190,8 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   auto kernelVec = rewriter.create<vector::TransferReadOp>(
       loc, vecType, kernel->get(), zeros, map);
 
-  auto acc = rewriter.create<ConstantOp>(loc, elemType,
-                                         rewriter.getZeroAttr(elemType));
+  auto acc = rewriter.create<arith::ConstantOp>(loc, elemType,
+                                                rewriter.getZeroAttr(elemType));
 
   std::array<AffineMap, 3> indexingMaps{
       AffineMap::getMultiDimIdentityMap(numDims, context),

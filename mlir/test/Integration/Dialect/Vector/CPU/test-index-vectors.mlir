@@ -4,16 +4,16 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %c0 = constant dense<[0, 1, 2, 3]>: vector<4xindex>
-  %c1 = constant dense<[0, 1]>: vector<2xindex>
-  %c2 = constant 2 : index
+  %c0 = arith.constant dense<[0, 1, 2, 3]>: vector<4xindex>
+  %c1 = arith.constant dense<[0, 1]>: vector<2xindex>
+  %c2 = arith.constant 2 : index
 
   %v1 = vector.broadcast %c0 : vector<4xindex> to vector<2x4xindex>
   %v2 = vector.broadcast %c1 : vector<2xindex> to vector<4x2xindex>
   %v3 = vector.transpose %v2, [1, 0] : vector<4x2xindex> to vector<2x4xindex>
   %v4 = vector.broadcast %c2 : index to vector<2x4xindex>
 
-  %v5 = addi %v1, %v3 : vector<2x4xindex>
+  %v5 = arith.addi %v1, %v3 : vector<2x4xindex>
 
   vector.print %v1 : vector<2x4xindex>
   vector.print %v3 : vector<2x4xindex>

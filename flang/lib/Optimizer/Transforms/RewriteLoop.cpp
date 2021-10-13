@@ -65,16 +65,16 @@ public:
 
     // Initalization block
     rewriter.setInsertionPointToEnd(initBlock);
-    auto diff = rewriter.create<mlir::SubIOp>(loc, high, low);
-    auto distance = rewriter.create<mlir::AddIOp>(loc, diff, step);
+    auto diff = rewriter.create<mlir::arith::SubIOp>(loc, high, low);
+    auto distance = rewriter.create<mlir::arith::AddIOp>(loc, diff, step);
     mlir::Value iters =
-        rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
+        rewriter.create<mlir::arith::DivSIOp>(loc, distance, step);
 
     if (forceLoopToExecuteOnce) {
-      auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
-      auto cond =
-          rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, iters, zero);
-      auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+      auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+      auto cond = rewriter.create<mlir::arith::CmpIOp>(
+          loc, arith::CmpIPredicate::sle, iters, zero);
+      auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
       iters = rewriter.create<mlir::SelectOp>(loc, cond, one, iters);
     }
 
@@ -90,13 +90,14 @@ public:
     auto *terminator = lastBlock->getTerminator();
     rewriter.setInsertionPointToEnd(lastBlock);
     auto iv = conditionalBlock->getArgument(0);
-    mlir::Value steppedIndex = rewriter.create<mlir::AddIOp>(loc, iv, step);
+    mlir::Value steppedIndex =
+        rewriter.create<mlir::arith::AddIOp>(loc, iv, step);
     assert(steppedIndex && "must be a Value");
     auto lastArg = conditionalBlock->getNumArguments() - 1;
     auto itersLeft = conditionalBlock->getArgument(lastArg);
-    auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+    auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
     mlir::Value itersMinusOne =
-        rewriter.create<mlir::SubIOp>(loc, itersLeft, one);
+        rewriter.create<mlir::arith::SubIOp>(loc, itersLeft, one);
 
     llvm::SmallVector<mlir::Value> loopCarried;
     loopCarried.push_back(steppedIndex);
@@ -109,9 +110,9 @@ public:
 
     // Conditional block
     rewriter.setInsertionPointToEnd(conditionalBlock);
-    auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
-    auto comparison =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, itersLeft, zero);
+    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto comparison = rewriter.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sgt, itersLeft, zero);
 
     rewriter.create<mlir::CondBranchOp>(loc, comparison, firstBlock,
                                         llvm::ArrayRef<mlir::Value>(), endBlock,
@@ -237,7 +238,7 @@ public:
     auto *terminator = lastBodyBlock->getTerminator();
     rewriter.setInsertionPointToEnd(lastBodyBlock);
     auto step = whileOp.step();
-    mlir::Value stepped = rewriter.create<mlir::AddIOp>(loc, iv, step);
+    mlir::Value stepped = rewriter.create<mlir::arith::AddIOp>(loc, iv, step);
     assert(stepped && "must be a Value");
 
     llvm::SmallVector<mlir::Value> loopCarried;
@@ -267,20 +268,21 @@ public:
     // The comparison depends on the sign of the step value. We fully expect
     // this expression to be folded by the optimizer or LLVM. This expression
     // is written this way so that `step == 0` always returns `false`.
-    auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
-    auto compl0 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, zero, step);
-    auto compl1 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, iv, upperBound);
-    auto compl2 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, step, zero);
-    auto compl3 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, upperBound, iv);
-    auto cmp0 = rewriter.create<mlir::AndOp>(loc, compl0, compl1);
-    auto cmp1 = rewriter.create<mlir::AndOp>(loc, compl2, compl3);
-    auto cmp2 = rewriter.create<mlir::OrOp>(loc, cmp0, cmp1);
+    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto compl0 = rewriter.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, zero, step);
+    auto compl1 = rewriter.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sle, iv, upperBound);
+    auto compl2 = rewriter.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, step, zero);
+    auto compl3 = rewriter.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sle, upperBound, iv);
+    auto cmp0 = rewriter.create<mlir::arith::AndIOp>(loc, compl0, compl1);
+    auto cmp1 = rewriter.create<mlir::arith::AndIOp>(loc, compl2, compl3);
+    auto cmp2 = rewriter.create<mlir::arith::OrIOp>(loc, cmp0, cmp1);
     // Remember to AND in the early-exit bool.
-    auto comparison = rewriter.create<mlir::AndOp>(loc, iterateVar, cmp2);
+    auto comparison =
+        rewriter.create<mlir::arith::AndIOp>(loc, iterateVar, cmp2);
     rewriter.create<mlir::CondBranchOp>(loc, comparison, firstBodyBlock,
                                         llvm::ArrayRef<mlir::Value>(), endBlock,
                                         llvm::ArrayRef<mlir::Value>());

@@ -88,7 +88,7 @@ func @load_i1(%src: memref<4xi1>, %i : index) -> i1 {
 //  CHECK-SAME: %[[DST:.+]]: memref<4xi1>,
 //  CHECK-SAME: %[[IDX:.+]]: index
 func @store_i1(%dst: memref<4xi1>, %i: index) {
-  %true = constant true
+  %true = arith.constant true
   // CHECK: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1> to !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>
   // CHECK: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
   // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32

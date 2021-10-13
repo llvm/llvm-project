@@ -676,7 +676,7 @@
          id="tspan9336"
          x="137.07773"
          y="78.674141"
-         style="font-size:5.64444px;fill:#999999;stroke-width:0.264583">%1 = alloc(%0)</tspan><tspan
+         style="font-size:5.64444px;fill:#999999;stroke-width:0.264583">%1 = memref.alloc(%0)</tspan><tspan
          sodipodi:role="line"
          x="137.07773"
          y="85.729691"
@@ -728,7 +728,7 @@
          id="tspan9336-0"
          x="-45.424786"
          y="77.928955"
-         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%5 = alloc(%d0)</tspan><tspan
+         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%5 = memref.alloc(%d0)</tspan><tspan
          sodipodi:role="line"
          x="-45.424786"
          y="84.984505"
@@ -744,7 +744,7 @@
          id="tspan9336-2"
          x="135.37999"
          y="198.54033"
-         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%6 = alloc(%d1)</tspan><tspan
+         style="font-size:5.64444px;fill:#008000;stroke-width:0.264583">%6 = memref.alloc(%d1)</tspan><tspan
          sodipodi:role="line"
          x="135.37999"
          y="205.59589"

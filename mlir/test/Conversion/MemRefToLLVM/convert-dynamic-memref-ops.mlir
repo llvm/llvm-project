@@ -354,19 +354,19 @@ func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
 // CHECK-LABEL: func @mixed_memref_dim
 func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
 // CHECK: llvm.mlir.constant(42 : index) : i64
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.dim %mixed, %c0 : memref<42x?x?x13x?xf32>
 // CHECK: llvm.extractvalue %{{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
   %1 = memref.dim %mixed, %c1 : memref<42x?x?x13x?xf32>
 // CHECK: llvm.extractvalue %{{.*}}[3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
   %2 = memref.dim %mixed, %c2 : memref<42x?x?x13x?xf32>
 // CHECK: llvm.mlir.constant(13 : index) : i64
-  %c3 = constant 3 : index
+  %c3 = arith.constant 3 : index
   %3 = memref.dim %mixed, %c3 : memref<42x?x?x13x?xf32>
 // CHECK: llvm.extractvalue %{{.*}}[3, 4] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
-  %c4 = constant 4 : index
+  %c4 = arith.constant 4 : index
   %4 = memref.dim %mixed, %c4 : memref<42x?x?x13x?xf32>
   return
 }

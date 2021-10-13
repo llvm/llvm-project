@@ -2,24 +2,24 @@
 
 // CHECK-LABEL: func @test_subi_zero
 func @test_subi_zero(%arg0: i32) -> i32 {
-  // CHECK-NEXT: %c0_i32 = constant 0 : i32
+  // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
   // CHECK-NEXT: return %c0
-  %y = subi %arg0, %arg0 : i32
+  %y = arith.subi %arg0, %arg0 : i32
   return %y: i32
 }
 
 // CHECK-LABEL: func @test_subi_zero_vector
 func @test_subi_zero_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
-  //CHECK-NEXT: %cst = constant dense<0> : vector<4xi32>
-  %y = subi %arg0, %arg0 : vector<4xi32>
+  //CHECK-NEXT: %cst = arith.constant dense<0> : vector<4xi32>
+  %y = arith.subi %arg0, %arg0 : vector<4xi32>
   // CHECK-NEXT: return %cst
   return %y: vector<4xi32>
 }
 
 // CHECK-LABEL: func @test_subi_zero_tensor
 func @test_subi_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  //CHECK-NEXT: %cst = constant dense<0> : tensor<4x5xi32>
-  %y = subi %arg0, %arg0 : tensor<4x5xi32>
+  //CHECK-NEXT: %cst = arith.constant dense<0> : tensor<4x5xi32>
+  %y = arith.subi %arg0, %arg0 : tensor<4x5xi32>
   // CHECK-NEXT: return %cst
   return %y: tensor<4x5xi32>
 }
@@ -27,8 +27,8 @@ func @test_subi_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 // CHECK-LABEL: func @dim
 func @dim(%arg0: tensor<8x4xf32>) -> index {
 
-  // CHECK: %c4 = constant 4 : index
-  %c1 = constant 1 : index
+  // CHECK: %c4 = arith.constant 4 : index
+  %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return %c4
@@ -37,14 +37,14 @@ func @dim(%arg0: tensor<8x4xf32>) -> index {
 
 // CHECK-LABEL: func @test_commutative
 func @test_commutative(%arg0: i32) -> (i32, i32) {
-  // CHECK: %c42_i32 = constant 42 : i32
-  %c42_i32 = constant 42 : i32
-  // CHECK-NEXT: %0 = addi %arg0, %c42_i32 : i32
-  %y = addi %c42_i32, %arg0 : i32
+  // CHECK: %c42_i32 = arith.constant 42 : i32
+  %c42_i32 = arith.constant 42 : i32
+  // CHECK-NEXT: %0 = arith.addi %arg0, %c42_i32 : i32
+  %y = arith.addi %c42_i32, %arg0 : i32
 
   // This should not be swapped.
-  // CHECK-NEXT: %1 = subi %c42_i32, %arg0 : i32
-  %z = subi %c42_i32, %arg0 : i32
+  // CHECK-NEXT: %1 = arith.subi %c42_i32, %arg0 : i32
+  %z = arith.subi %c42_i32, %arg0 : i32
 
   // CHECK-NEXT: return %0, %1
   return %y, %z: i32, i32
@@ -52,7 +52,7 @@ func @test_commutative(%arg0: i32) -> (i32, i32) {
 
 // CHECK-LABEL: func @trivial_dce
 func @trivial_dce(%arg0: tensor<8x4xf32>) {
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c1 : tensor<8x4xf32>
   // CHECK-NEXT: return
   return
@@ -60,7 +60,7 @@ func @trivial_dce(%arg0: tensor<8x4xf32>) {
 
 // CHECK-LABEL: func @load_dce
 func @load_dce(%arg0: index) {
-  %c4 = constant 4 : index
+  %c4 = arith.constant 4 : index
   %a = memref.alloc(%c4) : memref<?xf32>
   %2 = memref.load %a[%arg0] : memref<?xf32>
   memref.dealloc %a: memref<?xf32>
@@ -71,16 +71,16 @@ func @load_dce(%arg0: index) {
 // CHECK-LABEL: func @addi_zero
 func @addi_zero(%arg0: i32) -> i32 {
   // CHECK-NEXT: return %arg0
-  %c0_i32 = constant 0 : i32
-  %y = addi %c0_i32, %arg0 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %y = arith.addi %c0_i32, %arg0 : i32
   return %y: i32
 }
 
 // CHECK-LABEL: func @addi_zero_index
 func @addi_zero_index(%arg0: index) -> index {
   // CHECK-NEXT: return %arg0
-  %c0_index = constant 0 : index
-  %y = addi %c0_index, %arg0 : index
+  %c0_index = arith.constant 0 : index
+  %y = arith.addi %c0_index, %arg0 : index
   return %y: index
 }
 
@@ -88,25 +88,25 @@ func @addi_zero_index(%arg0: index) -> index {
 // CHECK-LABEL: func @addi_zero_vector
 func @addi_zero_vector(%arg0: vector<4 x i32>) -> vector<4 x i32> {
   // CHECK-NEXT: return %arg0
-  %c0_v4i32 = constant dense<0> : vector<4 x i32>
-  %y = addi %c0_v4i32, %arg0 : vector<4 x i32>
+  %c0_v4i32 = arith.constant dense<0> : vector<4 x i32>
+  %y = arith.addi %c0_v4i32, %arg0 : vector<4 x i32>
   return %y: vector<4 x i32>
 }
 
 // CHECK-LABEL: func @addi_zero_tensor
 func @addi_zero_tensor(%arg0: tensor<4 x 5 x i32>) -> tensor<4 x 5 x i32> {
   // CHECK-NEXT: return %arg0
-  %c0_t45i32 = constant dense<0> : tensor<4 x 5 x i32>
-  %y = addi %arg0, %c0_t45i32 : tensor<4 x 5 x i32>
+  %c0_t45i32 = arith.constant dense<0> : tensor<4 x 5 x i32>
+  %y = arith.addi %arg0, %c0_t45i32 : tensor<4 x 5 x i32>
   return %y: tensor<4 x 5 x i32>
 }
 
 // CHECK-LABEL: func @muli_zero
 func @muli_zero(%arg0: i32) -> i32 {
-  // CHECK-NEXT: %c0_i32 = constant 0 : i32
-  %c0_i32 = constant 0 : i32
+  // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
+  %c0_i32 = arith.constant 0 : i32
 
-  %y = muli %c0_i32, %arg0 : i32
+  %y = arith.muli %c0_i32, %arg0 : i32
 
   // CHECK-NEXT: return %c0_i32
   return %y: i32
@@ -114,10 +114,10 @@ func @muli_zero(%arg0: i32) -> i32 {
 
 // CHECK-LABEL: func @muli_zero_index
 func @muli_zero_index(%arg0: index) -> index {
-  // CHECK-NEXT: %[[CST:.*]] = constant 0 : index
-  %c0_index = constant 0 : index
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 0 : index
+  %c0_index = arith.constant 0 : index
 
-  %y = muli %c0_index, %arg0 : index
+  %y = arith.muli %c0_index, %arg0 : index
 
   // CHECK-NEXT: return %[[CST]]
   return %y: index
@@ -125,10 +125,10 @@ func @muli_zero_index(%arg0: index) -> index {
 
 // CHECK-LABEL: func @muli_zero_vector
 func @muli_zero_vector(%arg0: vector<4 x i32>) -> vector<4 x i32> {
-  // CHECK-NEXT: %cst = constant dense<0> : vector<4xi32>
-  %cst = constant dense<0> : vector<4 x i32>
+  // CHECK-NEXT: %cst = arith.constant dense<0> : vector<4xi32>
+  %cst = arith.constant dense<0> : vector<4 x i32>
 
-  %y = muli %cst, %arg0 : vector<4 x i32>
+  %y = arith.muli %cst, %arg0 : vector<4 x i32>
 
   // CHECK-NEXT: return %cst
   return %y: vector<4 x i32>
@@ -136,10 +136,10 @@ func @muli_zero_vector(%arg0: vector<4 x i32>) -> vector<4 x i32> {
 
 // CHECK-LABEL: func @muli_zero_tensor
 func @muli_zero_tensor(%arg0: tensor<4 x 5 x i32>) -> tensor<4 x 5 x i32> {
-  // CHECK-NEXT: %cst = constant dense<0> : tensor<4x5xi32>
-  %cst = constant dense<0> : tensor<4 x 5 x i32>
+  // CHECK-NEXT: %cst = arith.constant dense<0> : tensor<4x5xi32>
+  %cst = arith.constant dense<0> : tensor<4 x 5 x i32>
 
-  %y = muli %arg0, %cst : tensor<4 x 5 x i32>
+  %y = arith.muli %arg0, %cst : tensor<4 x 5 x i32>
 
   // CHECK-NEXT: return %cst
   return %y: tensor<4 x 5 x i32>
@@ -148,177 +148,177 @@ func @muli_zero_tensor(%arg0: tensor<4 x 5 x i32>) -> tensor<4 x 5 x i32> {
 // CHECK-LABEL: func @muli_one
 func @muli_one(%arg0: i32) -> i32 {
   // CHECK-NEXT: return %arg0
-  %c0_i32 = constant 1 : i32
-  %y = muli %c0_i32, %arg0 : i32
+  %c0_i32 = arith.constant 1 : i32
+  %y = arith.muli %c0_i32, %arg0 : i32
   return %y: i32
 }
 
 // CHECK-LABEL: func @muli_one_index
 func @muli_one_index(%arg0: index) -> index {
   // CHECK-NEXT: return %arg0
-  %c0_index = constant 1 : index
-  %y = muli %c0_index, %arg0 : index
+  %c0_index = arith.constant 1 : index
+  %y = arith.muli %c0_index, %arg0 : index
   return %y: index
 }
 
 // CHECK-LABEL: func @muli_one_vector
 func @muli_one_vector(%arg0: vector<4 x i32>) -> vector<4 x i32> {
   // CHECK-NEXT: return %arg0
-  %c1_v4i32 = constant dense<1> : vector<4 x i32>
-  %y = muli %c1_v4i32, %arg0 : vector<4 x i32>
+  %c1_v4i32 = arith.constant dense<1> : vector<4 x i32>
+  %y = arith.muli %c1_v4i32, %arg0 : vector<4 x i32>
   return %y: vector<4 x i32>
 }
 
 // CHECK-LABEL: func @muli_one_tensor
 func @muli_one_tensor(%arg0: tensor<4 x 5 x i32>) -> tensor<4 x 5 x i32> {
   // CHECK-NEXT: return %arg0
-  %c1_t45i32 = constant dense<1> : tensor<4 x 5 x i32>
-  %y = muli %arg0, %c1_t45i32 : tensor<4 x 5 x i32>
+  %c1_t45i32 = arith.constant dense<1> : tensor<4 x 5 x i32>
+  %y = arith.muli %arg0, %c1_t45i32 : tensor<4 x 5 x i32>
   return %y: tensor<4 x 5 x i32>
 }
 
 //CHECK-LABEL: func @and_self
 func @and_self(%arg0: i32) -> i32 {
   //CHECK-NEXT: return %arg0
-  %1 = and %arg0, %arg0 : i32
+  %1 = arith.andi %arg0, %arg0 : i32
   return %1 : i32
 }
 
 //CHECK-LABEL: func @and_self_vector
 func @and_self_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
   //CHECK-NEXT: return %arg0
-  %1 = and %arg0, %arg0 : vector<4xi32>
+  %1 = arith.andi %arg0, %arg0 : vector<4xi32>
   return %1 : vector<4xi32>
 }
 
 //CHECK-LABEL: func @and_self_tensor
 func @and_self_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
   //CHECK-NEXT: return %arg0
-  %1 = and %arg0, %arg0 : tensor<4x5xi32>
+  %1 = arith.andi %arg0, %arg0 : tensor<4x5xi32>
   return %1 : tensor<4x5xi32>
 }
 
 //CHECK-LABEL: func @and_zero
 func @and_zero(%arg0: i32) -> i32 {
-  // CHECK-NEXT: %c0_i32 = constant 0 : i32
-  %c0_i32 = constant 0 : i32
+  // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
+  %c0_i32 = arith.constant 0 : i32
   // CHECK-NEXT: return %c0_i32
-  %1 = and %arg0, %c0_i32 : i32
+  %1 = arith.andi %arg0, %c0_i32 : i32
   return %1 : i32
 }
 
 //CHECK-LABEL: func @and_zero_index
 func @and_zero_index(%arg0: index) -> index {
-  // CHECK-NEXT: %[[CST:.*]] = constant 0 : index
-  %c0_index = constant 0 : index
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 0 : index
+  %c0_index = arith.constant 0 : index
   // CHECK-NEXT: return %[[CST]]
-  %1 = and %arg0, %c0_index : index
+  %1 = arith.andi %arg0, %c0_index : index
   return %1 : index
 }
 
 //CHECK-LABEL: func @and_zero_vector
 func @and_zero_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
-  // CHECK-NEXT: %cst = constant dense<0> : vector<4xi32>
-  %cst = constant dense<0> : vector<4xi32>
+  // CHECK-NEXT: %cst = arith.constant dense<0> : vector<4xi32>
+  %cst = arith.constant dense<0> : vector<4xi32>
   // CHECK-NEXT: return %cst
-  %1 = and %arg0, %cst : vector<4xi32>
+  %1 = arith.andi %arg0, %cst : vector<4xi32>
   return %1 : vector<4xi32>
 }
 
 //CHECK-LABEL: func @and_zero_tensor
 func @and_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  // CHECK-NEXT: %cst = constant dense<0> : tensor<4x5xi32>
-  %cst = constant dense<0> : tensor<4x5xi32>
+  // CHECK-NEXT: %cst = arith.constant dense<0> : tensor<4x5xi32>
+  %cst = arith.constant dense<0> : tensor<4x5xi32>
   // CHECK-NEXT: return %cst
-  %1 = and %arg0, %cst : tensor<4x5xi32>
+  %1 = arith.andi %arg0, %cst : tensor<4x5xi32>
   return %1 : tensor<4x5xi32>
 }
 
 //CHECK-LABEL: func @or_self
 func @or_self(%arg0: i32) -> i32 {
   //CHECK-NEXT: return %arg0
-  %1 = or %arg0, %arg0 : i32
+  %1 = arith.ori %arg0, %arg0 : i32
   return %1 : i32
 }
 
 //CHECK-LABEL: func @or_self_vector
 func @or_self_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
   //CHECK-NEXT: return %arg0
-  %1 = or %arg0, %arg0 : vector<4xi32>
+  %1 = arith.ori %arg0, %arg0 : vector<4xi32>
   return %1 : vector<4xi32>
 }
 
 //CHECK-LABEL: func @or_self_tensor
 func @or_self_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
   //CHECK-NEXT: return %arg0
-  %1 = or %arg0, %arg0 : tensor<4x5xi32>
+  %1 = arith.ori %arg0, %arg0 : tensor<4x5xi32>
   return %1 : tensor<4x5xi32>
 }
 
 //CHECK-LABEL: func @or_zero
 func @or_zero(%arg0: i32) -> i32 {
-  %c0_i32 = constant 0 : i32
+  %c0_i32 = arith.constant 0 : i32
   // CHECK-NEXT: return %arg0
-  %1 = or %arg0, %c0_i32 : i32
+  %1 = arith.ori %arg0, %c0_i32 : i32
   return %1 : i32
 }
 
 //CHECK-LABEL: func @or_zero_index
 func @or_zero_index(%arg0: index) -> index {
-  %c0_index = constant 0 : index
+  %c0_index = arith.constant 0 : index
   // CHECK-NEXT: return %arg0
-  %1 = or %arg0, %c0_index : index
+  %1 = arith.ori %arg0, %c0_index : index
   return %1 : index
 }
 
 //CHECK-LABEL: func @or_zero_vector
 func @or_zero_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
   // CHECK-NEXT: return %arg0
-  %cst = constant dense<0> : vector<4xi32>
-  %1 = or %arg0, %cst : vector<4xi32>
+  %cst = arith.constant dense<0> : vector<4xi32>
+  %1 = arith.ori %arg0, %cst : vector<4xi32>
   return %1 : vector<4xi32>
 }
 
 //CHECK-LABEL: func @or_zero_tensor
 func @or_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
   // CHECK-NEXT: return %arg0
-  %cst = constant dense<0> : tensor<4x5xi32>
-  %1 = or %arg0, %cst : tensor<4x5xi32>
+  %cst = arith.constant dense<0> : tensor<4x5xi32>
+  %1 = arith.ori %arg0, %cst : tensor<4x5xi32>
   return %1 : tensor<4x5xi32>
 }
 
 // CHECK-LABEL: func @or_all_ones
 func @or_all_ones(%arg0: i1, %arg1: i4) -> (i1, i4) {
-  // CHECK-DAG: %c-1_i4 = constant -1 : i4
-  // CHECK-DAG: %true = constant true
-  %c1_i1 = constant 1 : i1
-  %c15 = constant 15 : i4
+  // CHECK-DAG: %c-1_i4 = arith.constant -1 : i4
+  // CHECK-DAG: %true = arith.constant true
+  %c1_i1 = arith.constant 1 : i1
+  %c15 = arith.constant 15 : i4
   // CHECK-NEXT: return %true
-  %1 = or %arg0, %c1_i1 : i1
-  %2 = or %arg1, %c15 : i4
+  %1 = arith.ori %arg0, %c1_i1 : i1
+  %2 = arith.ori %arg1, %c15 : i4
   return %1, %2 : i1, i4
 }
 
 //CHECK-LABEL: func @xor_self
 func @xor_self(%arg0: i32) -> i32 {
-  //CHECK-NEXT: %c0_i32 = constant 0
-  %1 = xor %arg0, %arg0 : i32
+  //CHECK-NEXT: %c0_i32 = arith.constant 0
+  %1 = arith.xori %arg0, %arg0 : i32
   //CHECK-NEXT: return %c0_i32
   return %1 : i32
 }
 
 //CHECK-LABEL: func @xor_self_vector
 func @xor_self_vector(%arg0: vector<4xi32>) -> vector<4xi32> {
-  //CHECK-NEXT: %cst = constant dense<0> : vector<4xi32>
-  %1 = xor %arg0, %arg0 : vector<4xi32>
+  //CHECK-NEXT: %cst = arith.constant dense<0> : vector<4xi32>
+  %1 = arith.xori %arg0, %arg0 : vector<4xi32>
   //CHECK-NEXT: return %cst
   return %1 : vector<4xi32>
 }
 
 //CHECK-LABEL: func @xor_self_tensor
 func @xor_self_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  //CHECK-NEXT: %cst = constant dense<0> : tensor<4x5xi32>
-  %1 = xor %arg0, %arg0 : tensor<4x5xi32>
+  //CHECK-NEXT: %cst = arith.constant dense<0> : tensor<4x5xi32>
+  %1 = arith.xori %arg0, %arg0 : tensor<4x5xi32>
   //CHECK-NEXT: return %cst
   return %1 : tensor<4x5xi32>
 }
@@ -326,8 +326,8 @@ func @xor_self_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 // CHECK-LABEL: func @memref_cast_folding
 func @memref_cast_folding(%arg0: memref<4 x f32>, %arg1: f32) -> (f32, f32) {
   %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: %c0 = constant 0 : index
-  %c0 = constant 0 : index
+  // CHECK-NEXT: %c0 = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
   %dim = memref.dim %0, %c0 : memref<? x f32>
 
   // CHECK-NEXT: affine.load %arg0[3]
@@ -372,7 +372,7 @@ func @fold_memref_cast_chain(%0: memref<42x42xf64>) {
 // CHECK-LABEL: func @dead_alloc_fold
 func @dead_alloc_fold() {
   // CHECK-NEXT: return
-  %c4 = constant 4 : index
+  %c4 = arith.constant 4 : index
   %a = memref.alloc(%c4) : memref<?xf32>
   return
 }
@@ -403,8 +403,8 @@ func @dead_dealloc_fold_multi_use(%cond : i1) {
 // CHECK-LABEL: func @write_only_alloc_fold
 func @write_only_alloc_fold(%v: f32) {
   // CHECK-NEXT: return
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
   %a = memref.alloc(%c4) : memref<?xf32>
   memref.store %v, %a[%c0] : memref<?xf32>
   memref.dealloc %a: memref<?xf32>
@@ -414,8 +414,8 @@ func @write_only_alloc_fold(%v: f32) {
 // CHECK-LABEL: func @write_only_alloca_fold
 func @write_only_alloca_fold(%v: f32) {
   // CHECK-NEXT: return
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
   %a = memref.alloca(%c4) : memref<?xf32>
   memref.store %v, %a[%c0] : memref<?xf32>
   return
@@ -438,12 +438,12 @@ func @dead_block_elim() {
 
 // CHECK-LABEL: func @dyn_shape_fold(%arg0: index, %arg1: index)
 func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x f32>, memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>) {
-  // CHECK: %c0 = constant 0 : index
-  %zero = constant 0 : index
+  // CHECK: %c0 = arith.constant 0 : index
+  %zero = arith.constant 0 : index
   // The constants below disappear after they propagate into shapes.
-  %nine = constant 9 : index
-  %N = constant 1024 : index
-  %K = constant 512 : index
+  %nine = arith.constant 9 : index
+  %N = arith.constant 1024 : index
+  %K = arith.constant 512 : index
 
   // CHECK: memref.alloc(%arg0) : memref<?x1024xf32>
   %a = memref.alloc(%L, %N) : memref<? x ? x f32>
@@ -487,9 +487,9 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
 // CHECK-SAME: [[M:arg[0-9]+]]: index
 // CHECK-SAME: [[N:arg[0-9]+]]: index
 // CHECK-SAME: [[K:arg[0-9]+]]: index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %1 = memref.alloc(%arg1, %arg2) : memref<?x8x?xf32>
   %2 = memref.dim %1, %c2 : memref<?x8x?xf32>
@@ -543,20 +543,20 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
 
 // CHECK-LABEL: func @merge_constants
 func @merge_constants() -> (index, index) {
-  // CHECK-NEXT: %c42 = constant 42 : index
-  %0 = constant 42 : index
-  %1 = constant 42 : index
+  // CHECK-NEXT: %c42 = arith.constant 42 : index
+  %0 = arith.constant 42 : index
+  %1 = arith.constant 42 : index
   // CHECK-NEXT: return %c42, %c42
   return %0, %1: index, index
 }
 
 // CHECK-LABEL: func @hoist_constant
 func @hoist_constant(%arg0: memref<8xi32>) {
-  // CHECK-NEXT: %c42_i32 = constant 42 : i32
+  // CHECK-NEXT: %c42_i32 = arith.constant 42 : i32
   // CHECK-NEXT: affine.for %arg1 = 0 to 8 {
   affine.for %arg1 = 0 to 8 {
     // CHECK-NEXT: memref.store %c42_i32, %arg0[%arg1]
-    %c42_i32 = constant 42 : i32
+    %c42_i32 = arith.constant 42 : i32
     memref.store %c42_i32, %arg0[%arg1] : memref<8xi32>
   }
   return
@@ -564,7 +564,7 @@ func @hoist_constant(%arg0: memref<8xi32>) {
 
 // CHECK-LABEL: func @const_fold_propagate
 func @const_fold_propagate() -> memref<?x?xf32> {
-  %VT_i = constant 512 : index
+  %VT_i = arith.constant 512 : index
 
   %VT_i_s = affine.apply affine_map<(d0) -> (d0 floordiv  8)> (%VT_i)
   %VT_k_l = affine.apply affine_map<(d0) -> (d0 floordiv  16)> (%VT_i)
@@ -594,21 +594,21 @@ func @indirect_call_folding() {
 //
 // CHECK-LABEL: @lowered_affine_mod
 func @lowered_affine_mod() -> (index, index) {
-// CHECK-DAG: {{.*}} = constant 1 : index
-// CHECK-DAG: {{.*}} = constant 41 : index
-  %c-43 = constant -43 : index
-  %c42 = constant 42 : index
-  %0 = remi_signed %c-43, %c42 : index
-  %c0 = constant 0 : index
-  %1 = cmpi slt, %0, %c0 : index
-  %2 = addi %0, %c42 : index
+// CHECK-DAG: {{.*}} = arith.constant 1 : index
+// CHECK-DAG: {{.*}} = arith.constant 41 : index
+  %c-43 = arith.constant -43 : index
+  %c42 = arith.constant 42 : index
+  %0 = arith.remsi %c-43, %c42 : index
+  %c0 = arith.constant 0 : index
+  %1 = arith.cmpi slt, %0, %c0 : index
+  %2 = arith.addi %0, %c42 : index
   %3 = select %1, %2, %0 : index
-  %c43 = constant 43 : index
-  %c42_0 = constant 42 : index
-  %4 = remi_signed %c43, %c42_0 : index
-  %c0_1 = constant 0 : index
-  %5 = cmpi slt, %4, %c0_1 : index
-  %6 = addi %4, %c42_0 : index
+  %c43 = arith.constant 43 : index
+  %c42_0 = arith.constant 42 : index
+  %4 = arith.remsi %c43, %c42_0 : index
+  %c0_1 = arith.constant 0 : index
+  %5 = arith.cmpi slt, %4, %c0_1 : index
+  %6 = arith.addi %4, %c42_0 : index
   %7 = select %5, %6, %4 : index
   return %3, %7 : index, index
 }
@@ -620,27 +620,27 @@ func @lowered_affine_mod() -> (index, index) {
 //
 // CHECK-LABEL: func @lowered_affine_floordiv
 func @lowered_affine_floordiv() -> (index, index) {
-// CHECK-DAG: %c1 = constant 1 : index
-// CHECK-DAG: %c-2 = constant -2 : index
-  %c-43 = constant -43 : index
-  %c42 = constant 42 : index
-  %c0 = constant 0 : index
-  %c-1 = constant -1 : index
-  %0 = cmpi slt, %c-43, %c0 : index
-  %1 = subi %c-1, %c-43 : index
+// CHECK-DAG: %c1 = arith.constant 1 : index
+// CHECK-DAG: %c-2 = arith.constant -2 : index
+  %c-43 = arith.constant -43 : index
+  %c42 = arith.constant 42 : index
+  %c0 = arith.constant 0 : index
+  %c-1 = arith.constant -1 : index
+  %0 = arith.cmpi slt, %c-43, %c0 : index
+  %1 = arith.subi %c-1, %c-43 : index
   %2 = select %0, %1, %c-43 : index
-  %3 = divi_signed %2, %c42 : index
-  %4 = subi %c-1, %3 : index
+  %3 = arith.divsi %2, %c42 : index
+  %4 = arith.subi %c-1, %3 : index
   %5 = select %0, %4, %3 : index
-  %c43 = constant 43 : index
-  %c42_0 = constant 42 : index
-  %c0_1 = constant 0 : index
-  %c-1_2 = constant -1 : index
-  %6 = cmpi slt, %c43, %c0_1 : index
-  %7 = subi %c-1_2, %c43 : index
+  %c43 = arith.constant 43 : index
+  %c42_0 = arith.constant 42 : index
+  %c0_1 = arith.constant 0 : index
+  %c-1_2 = arith.constant -1 : index
+  %6 = arith.cmpi slt, %c43, %c0_1 : index
+  %7 = arith.subi %c-1_2, %c43 : index
   %8 = select %6, %7, %c43 : index
-  %9 = divi_signed %8, %c42_0 : index
-  %10 = subi %c-1_2, %9 : index
+  %9 = arith.divsi %8, %c42_0 : index
+  %10 = arith.subi %c-1_2, %9 : index
   %11 = select %6, %10, %9 : index
   return %5, %11 : index, index
 }
@@ -652,31 +652,31 @@ func @lowered_affine_floordiv() -> (index, index) {
 //
 // CHECK-LABEL: func @lowered_affine_ceildiv
 func @lowered_affine_ceildiv() -> (index, index) {
-// CHECK-DAG:  %c-1 = constant -1 : index
-  %c-43 = constant -43 : index
-  %c42 = constant 42 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %0 = cmpi sle, %c-43, %c0 : index
-  %1 = subi %c0, %c-43 : index
-  %2 = subi %c-43, %c1 : index
+// CHECK-DAG:  %c-1 = arith.constant -1 : index
+  %c-43 = arith.constant -43 : index
+  %c42 = arith.constant 42 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = arith.cmpi sle, %c-43, %c0 : index
+  %1 = arith.subi %c0, %c-43 : index
+  %2 = arith.subi %c-43, %c1 : index
   %3 = select %0, %1, %2 : index
-  %4 = divi_signed %3, %c42 : index
-  %5 = subi %c0, %4 : index
-  %6 = addi %4, %c1 : index
+  %4 = arith.divsi %3, %c42 : index
+  %5 = arith.subi %c0, %4 : index
+  %6 = arith.addi %4, %c1 : index
   %7 = select %0, %5, %6 : index
-// CHECK-DAG:  %c2 = constant 2 : index
-  %c43 = constant 43 : index
-  %c42_0 = constant 42 : index
-  %c0_1 = constant 0 : index
-  %c1_2 = constant 1 : index
-  %8 = cmpi sle, %c43, %c0_1 : index
-  %9 = subi %c0_1, %c43 : index
-  %10 = subi %c43, %c1_2 : index
+// CHECK-DAG:  %c2 = arith.constant 2 : index
+  %c43 = arith.constant 43 : index
+  %c42_0 = arith.constant 42 : index
+  %c0_1 = arith.constant 0 : index
+  %c1_2 = arith.constant 1 : index
+  %8 = arith.cmpi sle, %c43, %c0_1 : index
+  %9 = arith.subi %c0_1, %c43 : index
+  %10 = arith.subi %c43, %c1_2 : index
   %11 = select %8, %9, %10 : index
-  %12 = divi_signed %11, %c42_0 : index
-  %13 = subi %c0_1, %12 : index
-  %14 = addi %12, %c1_2 : index
+  %12 = arith.divsi %11, %c42_0 : index
+  %13 = arith.subi %c0_1, %12 : index
+  %14 = arith.addi %12, %c1_2 : index
   %15 = select %8, %13, %14 : index
 
   // CHECK-NEXT: return %c-1, %c2
@@ -700,13 +700,13 @@ func @cast_values(%arg0: memref<?xi32>) -> memref<2xi32> {
 
 // CHECK-LABEL: func @view
 func @view(%arg0 : index) -> (f32, f32, f32, f32) {
-  // CHECK: %[[C15:.*]] = constant 15 : index
+  // CHECK: %[[C15:.*]] = arith.constant 15 : index
   // CHECK: %[[ALLOC_MEM:.*]] = memref.alloc() : memref<2048xi8>
   %0 = memref.alloc() : memref<2048xi8>
-  %c0 = constant 0 : index
-  %c7 = constant 7 : index
-  %c11 = constant 11 : index
-  %c15 = constant 15 : index
+  %c0 = arith.constant 0 : index
+  %c7 = arith.constant 7 : index
+  %c11 = arith.constant 11 : index
+  %c15 = arith.constant 15 : index
 
   // Test: fold constant sizes.
   // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<7x11xf32>
@@ -749,19 +749,19 @@ func @view(%arg0 : index) -> (f32, f32, f32, f32) {
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
 func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   // Folded but reappears after subview folding into dim.
-  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
-  // CHECK-DAG: %[[C7:.*]] = constant 7 : index
-  // CHECK-DAG: %[[C11:.*]] = constant 11 : index
-  %c0 = constant 0 : index
-  // CHECK-NOT: constant 1 : index
-  %c1 = constant 1 : index
-  // CHECK-NOT: constant 2 : index
-  %c2 = constant 2 : index
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C7:.*]] = arith.constant 7 : index
+  // CHECK-DAG: %[[C11:.*]] = arith.constant 11 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT: arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT: arith.constant 2 : index
+  %c2 = arith.constant 2 : index
   // Folded but reappears after subview folding into dim.
-  %c7 = constant 7 : index
-  %c11 = constant 11 : index
-  // CHECK-NOT: constant 15 : index
-  %c15 = constant 15 : index
+  %c7 = arith.constant 7 : index
+  %c11 = arith.constant 11 : index
+  // CHECK-NOT: arith.constant 15 : index
+  %c15 = arith.constant 15 : index
 
   // CHECK: %[[ALLOC0:.*]] = memref.alloc()
   %0 = memref.alloc() : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]>
@@ -876,7 +876,7 @@ func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
 
   // CHECK: %[[ALLOC3:.*]] = memref.alloc() : memref<12x4xf32>
   %18 = memref.alloc() : memref<12x4xf32>
-  %c4 = constant 4 : index
+  %c4 = arith.constant 4 : index
 
   // TEST: subview strides are maintained when sizes are folded
   // CHECK: memref.subview %[[ALLOC3]][%arg1, %arg1] [2, 4] [1, 1] :
@@ -907,20 +907,20 @@ func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
 // CHECK-LABEL: func @index_cast
 // CHECK-SAME: %[[ARG_0:arg[0-9]+]]: i16
 func @index_cast(%arg0: i16) -> (i16) {
-  %11 = index_cast %arg0 : i16 to index
-  %12 = index_cast %11 : index to i16
+  %11 = arith.index_cast %arg0 : i16 to index
+  %12 = arith.index_cast %11 : index to i16
   // CHECK: return %[[ARG_0]] : i16
   return %12 : i16
 }
 
 // CHECK-LABEL: func @index_cast_fold
 func @index_cast_fold() -> (i16, index) {
-  %c4 = constant 4 : index
-  %1 = index_cast %c4 : index to i16
-  %c4_i16 = constant 4 : i16
-  %2 = index_cast %c4_i16 : i16 to index
-  // CHECK-DAG: %[[C4:.*]] = constant 4 : index
-  // CHECK-DAG: %[[C4_I16:.*]] = constant 4 : i16
+  %c4 = arith.constant 4 : index
+  %1 = arith.index_cast %c4 : index to i16
+  %c4_i16 = arith.constant 4 : i16
+  %2 = arith.index_cast %c4_i16 : i16 to index
+  // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+  // CHECK-DAG: %[[C4_I16:.*]] = arith.constant 4 : i16
   // CHECK: return %[[C4_I16]], %[[C4]] : i16, index
   return %1, %2 : i16, index
 }
@@ -953,8 +953,8 @@ func @remove_dead_else(%M : memref<100 x i32>) {
 // CHECK-LABEL: func @divi_signed_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
 func @divi_signed_by_one(%arg0: i32) -> (i32) {
-  %c1 = constant 1 : i32
-  %res = divi_signed %arg0, %c1 : i32
+  %c1 = arith.constant 1 : i32
+  %res = arith.divsi %arg0, %c1 : i32
   // CHECK: return %[[ARG]]
   return %res : i32
 }
@@ -962,8 +962,8 @@ func @divi_signed_by_one(%arg0: i32) -> (i32) {
 // CHECK-LABEL: func @divi_unsigned_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
 func @divi_unsigned_by_one(%arg0: i32) -> (i32) {
-  %c1 = constant 1 : i32
-  %res = divi_unsigned %arg0, %c1 : i32
+  %c1 = arith.constant 1 : i32
+  %res = arith.divui %arg0, %c1 : i32
   // CHECK: return %[[ARG]]
   return %res : i32
 }
@@ -971,8 +971,8 @@ func @divi_unsigned_by_one(%arg0: i32) -> (i32) {
 // CHECK-LABEL: func @tensor_divi_signed_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
 func @tensor_divi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  %c1 = constant dense<1> : tensor<4x5xi32>
-  %res = divi_signed %arg0, %c1 : tensor<4x5xi32>
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.divsi %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
 }
@@ -980,48 +980,48 @@ func @tensor_divi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 // CHECK-LABEL: func @tensor_divi_unsigned_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
 func @tensor_divi_unsigned_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  %c1 = constant dense<1> : tensor<4x5xi32>
-  %res = divi_unsigned %arg0, %c1 : tensor<4x5xi32>
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.divui %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
 }
 
 // -----
 
-// CHECK-LABEL: func @floordivi_signed_by_one
+// CHECK-LABEL: func @arith.floordivsi_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
-func @floordivi_signed_by_one(%arg0: i32) -> (i32) {
-  %c1 = constant 1 : i32
-  %res = floordivi_signed %arg0, %c1 : i32
+func @arith.floordivsi_by_one(%arg0: i32) -> (i32) {
+  %c1 = arith.constant 1 : i32
+  %res = arith.floordivsi %arg0, %c1 : i32
   // CHECK: return %[[ARG]]
   return %res : i32
 }
 
-// CHECK-LABEL: func @tensor_floordivi_signed_by_one
+// CHECK-LABEL: func @tensor_arith.floordivsi_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
-func @tensor_floordivi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  %c1 = constant dense<1> : tensor<4x5xi32>
-  %res = floordivi_signed %arg0, %c1 : tensor<4x5xi32>
+func @tensor_arith.floordivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.floordivsi %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
 }
 
 // -----
 
-// CHECK-LABEL: func @ceildivi_signed_by_one
+// CHECK-LABEL: func @arith.ceildivsi_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
-func @ceildivi_signed_by_one(%arg0: i32) -> (i32) {
-  %c1 = constant 1 : i32
-  %res = ceildivi_signed %arg0, %c1 : i32
+func @arith.ceildivsi_by_one(%arg0: i32) -> (i32) {
+  %c1 = arith.constant 1 : i32
+  %res = arith.ceildivsi %arg0, %c1 : i32
   // CHECK: return %[[ARG]]
   return %res : i32
 }
 
-// CHECK-LABEL: func @tensor_ceildivi_signed_by_one
+// CHECK-LABEL: func @tensor_arith.ceildivsi_by_one
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
-func @tensor_ceildivi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
-  %c1 = constant dense<1> : tensor<4x5xi32>
-  %res = ceildivi_signed %arg0, %c1 : tensor<4x5xi32>
+func @tensor_arith.ceildivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.ceildivsi %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
 }
@@ -1060,11 +1060,11 @@ func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: i
 func @slice(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
   -> tensor<?x?x?xf32>
 {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c7 = constant 7 : index
-  %c11 = constant 11 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c7 = arith.constant 7 : index
+  %c11 = arith.constant 11 : index
 
   // CHECK: tensor.extract_slice %{{.*}}[0, 0, 0] [7, 11, 2] [1, 1, 1] :
   // CHECK-SAME: tensor<8x16x4xf32> to tensor<7x11x2xf32>
@@ -1089,8 +1089,8 @@ func @slice(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
 // CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
 func @fold_trunci(%arg0: i1) -> i1 attributes {} {
   // CHECK-NEXT: return %[[ARG0]] : i1
-  %0 = zexti %arg0 : i1 to i8
-  %1 = trunci %0 : i8 to i1
+  %0 = arith.extui %arg0 : i1 to i8
+  %1 = arith.trunci %0 : i8 to i1
   return %1 : i1
 }
 
@@ -1100,24 +1100,24 @@ func @fold_trunci(%arg0: i1) -> i1 attributes {} {
 // CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
 func @fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi1> attributes {} {
   // CHECK-NEXT: return %[[ARG0]] : vector<4xi1>
-  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
-  %1 = trunci %0 : vector<4xi8> to vector<4xi1>
+  %0 = arith.extui %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = arith.trunci %0 : vector<4xi8> to vector<4xi1>
   return %1 : vector<4xi1>
 }
 
 // -----
 
 // TODO Canonicalize this into:
-//   zexti %arg0 : i1 to i2
+//   arith.extui %arg0 : i1 to i2
 
 // CHECK-LABEL: func @do_not_fold_trunci
 // CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
 func @do_not_fold_trunci(%arg0: i1) -> i2 attributes {} {
-  // CHECK-NEXT: zexti %[[ARG0]] : i1 to i8
-  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : i8 to i2
+  // CHECK-NEXT: arith.extui %[[ARG0]] : i1 to i8
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = arith.trunci %{{.*}} : i8 to i2
   // CHECK-NEXT: return %[[RES]] : i2
-  %0 = zexti %arg0 : i1 to i8
-  %1 = trunci %0 : i8 to i2
+  %0 = arith.extui %arg0 : i1 to i8
+  %1 = arith.trunci %0 : i8 to i2
   return %1 : i2
 }
 
@@ -1126,11 +1126,11 @@ func @do_not_fold_trunci(%arg0: i1) -> i2 attributes {} {
 // CHECK-LABEL: func @do_not_fold_trunci_vector
 // CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
 func @do_not_fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi2> attributes {} {
-  // CHECK-NEXT: zexti %[[ARG0]] : vector<4xi1> to vector<4xi8>
-  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : vector<4xi8> to vector<4xi2>
+  // CHECK-NEXT: arith.extui %[[ARG0]] : vector<4xi1> to vector<4xi8>
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = arith.trunci %{{.*}} : vector<4xi8> to vector<4xi2>
   // CHECK-NEXT: return %[[RES]] : vector<4xi2>
-  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
-  %1 = trunci %0 : vector<4xi8> to vector<4xi2>
+  %0 = arith.extui %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = arith.trunci %0 : vector<4xi8> to vector<4xi2>
   return %1 : vector<4xi2>
 }
 
@@ -1140,8 +1140,8 @@ func @do_not_fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi2> attributes 
 // CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
 func @fold_trunci_sexti(%arg0: i1) -> i1 attributes {} {
   // CHECK-NEXT: return %[[ARG0]] : i1
-  %0 = sexti %arg0 : i1 to i8
-  %1 = trunci %0 : i8 to i1
+  %0 = arith.extsi %arg0 : i1 to i8
+  %1 = arith.trunci %0 : i8 to i1
   return %1 : i1
 }
 
@@ -1165,7 +1165,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
   memref.dealloc %0 : memref<2xf32>
   %1 = memref.clone %arg3 : memref<2xf32> to memref<2xf32>
   %2 = scf.for %arg5 = %arg0 to %arg1 step %arg2 iter_args(%arg6 = %1) -> (memref<2xf32>) {
-    %3 = cmpi eq, %arg5, %arg1 : index
+    %3 = arith.cmpi eq, %arg5, %arg1 : index
     memref.dealloc %arg6 : memref<2xf32>
     %4 = memref.alloc() : memref<2xf32>
     %5 = memref.clone %4 : memref<2xf32> to memref<2xf32>
@@ -1191,8 +1191,8 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
 
 // CHECK-LABEL: func @clone_nested_region
 func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memref<?x?xf32> {
-  %cmp = cmpi eq, %arg0, %arg1 : index
-  %0 = cmpi eq, %arg0, %arg1 : index
+  %cmp = arith.cmpi eq, %arg0, %arg1 : index
+  %0 = arith.cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     %3 = scf.if %cmp -> (memref<?x?xf32>) {

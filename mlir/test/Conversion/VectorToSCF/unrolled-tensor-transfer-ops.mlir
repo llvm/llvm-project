@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-vector-to-scf='full-unroll=true lower-tensors=true' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read_2d(
-//       CHECK: %[[V_INIT:.*]] = constant dense<-4.200000e+01> : vector<4x9xf32>
+//       CHECK: %[[V_INIT:.*]] = arith.constant dense<-4.200000e+01> : vector<4x9xf32>
 //       CHECK: %[[V0:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<9xf32>
 //       CHECK: %[[I0:.*]] = vector.insert %[[V0]], %[[V_INIT]] [0] : vector<9xf32> into vector<4x9xf32>
 //       CHECK: %[[V1:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<9xf32>
@@ -13,7 +13,7 @@
 //       CHECK: return %[[I3]] : vector<4x9xf32>
 func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
     -> (vector<4x9xf32>){
-  %p = constant -42.0: f32
+  %p = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %p {in_bounds = [true, true]}
       : tensor<?x?xf32>, vector<4x9xf32>
   return %f : vector<4x9xf32>

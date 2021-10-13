@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -566,7 +567,8 @@ struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
         // Create a zero value the first time.
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(&op.body().front());
-        zero = rewriter.create<ConstantIndexOp>(op.getLoc(), /*value=*/0);
+        zero =
+            rewriter.create<arith::ConstantIndexOp>(op.getLoc(), /*value=*/0);
       }
       id.replaceAllUsesWith(zero);
       simplified = true;
@@ -1159,12 +1161,12 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto index = dimOp.index().getDefiningOp<ConstantIndexOp>();
+    auto index = dimOp.index().getDefiningOp<arith::ConstantIndexOp>();
     if (!index)
       return failure();
 
     auto memrefType = dimOp.source().getType().dyn_cast<MemRefType>();
-    if (!memrefType || !memrefType.isDynamicDim(index.getValue()))
+    if (!memrefType || !memrefType.isDynamicDim(index.value()))
       return failure();
 
     auto alloc = dimOp.source().getDefiningOp<AllocOp>();
@@ -1172,7 +1174,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     Value substituteOp = *(alloc.dynamicSizes().begin() +
-                           memrefType.getDynamicDimIndex(index.getValue()));
+                           memrefType.getDynamicDimIndex(index.value()));
     rewriter.replaceOp(dimOp, substituteOp);
     return success();
   }

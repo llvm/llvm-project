@@ -4,8 +4,8 @@
 // before lowering the vector.transfer_read.
 
 // CHECK-LABEL: func @transfer_read_2d_mask_transposed(
-//   CHECK-DAG:   %[[PADDING:.*]] = constant dense<-4.200000e+01> : vector<9xf32>
-//   CHECK-DAG:   %[[MASK:.*]] = constant dense<{{.*}}> : vector<9x4xi1>
+//   CHECK-DAG:   %[[PADDING:.*]] = arith.constant dense<-4.200000e+01> : vector<9xf32>
+//   CHECK-DAG:   %[[MASK:.*]] = arith.constant dense<{{.*}}> : vector<9x4xi1>
 //       CHECK:   %[[MASK_MEM:.*]] = memref.alloca() : memref<vector<4x9xi1>>
 //       CHECK:   %[[MASK_T:.*]] = vector.transpose %[[MASK]], [1, 0] : vector<9x4xi1> to vector<4x9xi1>
 //       CHECK:   memref.store %[[MASK_T]], %[[MASK_MEM]][] : memref<vector<4x9xi1>>
@@ -24,8 +24,8 @@
 // Vector load with mask + transpose.
 func @transfer_read_2d_mask_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) -> (vector<9x4xf32>) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
                           [1, 1, 1, 1], [0, 1, 1, 0],
                           [1, 1, 1, 1], [1, 1, 1, 1],
                           [1, 1, 1, 1], [0, 0, 0, 0],

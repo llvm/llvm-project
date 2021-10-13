@@ -39,7 +39,7 @@ module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.v
 
   func @main() {
     %buffer = memref.alloc() : memref<6xi32>
-    %one = constant 1 : index
+    %one = arith.constant 1 : index
     gpu.launch_func @foo::@bar blocks in (%one, %one, %one)
         threads in (%one, %one, %one) args(%buffer : memref<6xi32>)
     return

@@ -51,11 +51,11 @@ func @func_condBranch(%cond : i1) {
 func @func_loop(%arg0 : i32, %arg1 : i32) {
   br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi slt, %counter, %arg1 : i32
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
   cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
   br ^loopHeader(%inc : i32)
 ^exit:
   return
@@ -155,11 +155,11 @@ func @func_loop_nested_region(
   %arg4 : index) {
   br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi slt, %counter, %arg1 : i32
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
   cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
   scf.for %arg5 = %arg2 to %arg3 step %arg4 {
     scf.for %arg6 = %arg2 to %arg3 step %arg4 { }
   }

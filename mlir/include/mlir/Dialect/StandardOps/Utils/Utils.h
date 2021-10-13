@@ -16,6 +16,7 @@
 #ifndef MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H
 #define MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -24,7 +25,7 @@
 namespace mlir {
 
 /// Matches a ConstantIndexOp.
-detail::op_matcher<ConstantIndexOp> matchConstantIndex();
+detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 
 /// Detects the `values` produced by a ConstantIndexOp and places the new
 /// constant in place of the corresponding sentinel value.

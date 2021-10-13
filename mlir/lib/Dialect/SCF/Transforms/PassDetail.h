@@ -18,6 +18,10 @@ void registerDialect(DialectRegistry &registry);
 
 class AffineDialect;
 
+namespace arith {
+class ArithmeticDialect;
+} // end namespace arith
+
 namespace memref {
 class MemRefDialect;
 } // end namespace memref

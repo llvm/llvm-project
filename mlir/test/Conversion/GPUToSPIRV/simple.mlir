@@ -17,7 +17,7 @@ module attributes {gpu.container_module} {
   func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
-    %cst = constant 1 : index
+    %cst = arith.constant 1 : index
     gpu.launch_func @kernels::@basic_module_structure
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
         args(%0 : f32, %1 : memref<12xf32>)
@@ -63,7 +63,7 @@ module attributes {gpu.container_module} {
   func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
-    %cst = constant 1 : index
+    %cst = arith.constant 1 : index
     gpu.launch_func @kernels::@missing_entry_point_abi
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
         args(%0 : f32, %1 : memref<12xf32>)

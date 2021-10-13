@@ -4,9 +4,9 @@
 
 // CHECK-TILE-2-LABEL: func @tiled_loop_3d_tensor(
 //  CHECK-TILE-2-SAME:     %[[input:.*]]: tensor<?x?x?xf32>, %[[s0:.*]]: index, %[[s1:.*]]: index, %[[s2:.*]]: index
-//   CHECK-TILE-2-DAG:   %[[c0:.*]] = constant 0 : index
-//   CHECK-TILE-2-DAG:   %[[c1:.*]] = constant 1 : index
-//   CHECK-TILE-2-DAG:   %[[c2:.*]] = constant 2 : index
+//   CHECK-TILE-2-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-TILE-2-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-TILE-2-DAG:   %[[c2:.*]] = arith.constant 2 : index
 //       CHECK-TILE-2:   %[[dim0:.*]] = tensor.dim %[[input]], %[[c0]]
 //       CHECK-TILE-2:   %[[dim1:.*]] = tensor.dim %[[input]], %[[c1]]
 //       CHECK-TILE-2:   %[[dim2:.*]] = tensor.dim %[[input]], %[[c2]]
@@ -66,9 +66,9 @@
 
 //      CHECK-TILE-012-SKIP-PARTIAL: func @tiled_loop_3d_tensor(
 // CHECK-TILE-012-SKIP-PARTIAL-SAME:     %[[input:.*]]: tensor<?x?x?xf32>
-//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c0:.*]] = constant 0 : index
-//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c1:.*]] = constant 1 : index
-//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c2:.*]] = constant 2 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c2:.*]] = arith.constant 2 : index
 //  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim0:.*]] = tensor.dim %[[input]], %[[c0]]
 //  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim1:.*]] = tensor.dim %[[input]], %[[c1]]
 //  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim2:.*]] = tensor.dim %[[input]], %[[c2]]
@@ -81,11 +81,11 @@
 //      CHECK-TILE-012-SKIP-PARTIAL:   linalg.tiled_loop {{.*}} = (%[[p0]], %[[c0]], %[[c0]]) to (%[[dim0]], %[[dim1]], %[[dim2]])
 func @tiled_loop_3d_tensor(%arg0: tensor<?x?x?xf32>, %s0: index, %s1: index,
                            %s2: index) -> tensor<?x?x?xf32> {
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c8 = arith.constant 8 : index
   %dim0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %dim1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %dim2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
@@ -110,9 +110,9 @@ func @tiled_loop_3d_tensor(%arg0: tensor<?x?x?xf32>, %s0: index, %s1: index,
 
 // CHECK-TILE-2-LABEL: func @tiled_loop_3d_memref(
 //  CHECK-TILE-2-SAME:     %[[input:.*]]: memref<?x?x?xf32>, %[[output:.*]]: memref<?x?x?xf32>, %[[s0:.*]]: index, %[[s1:.*]]: index, %[[s2:.*]]: index
-//   CHECK-TILE-2-DAG:   %[[c0:.*]] = constant 0 : index
-//   CHECK-TILE-2-DAG:   %[[c1:.*]] = constant 1 : index
-//   CHECK-TILE-2-DAG:   %[[c2:.*]] = constant 2 : index
+//   CHECK-TILE-2-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-TILE-2-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-TILE-2-DAG:   %[[c2:.*]] = arith.constant 2 : index
 //       CHECK-TILE-2:   %[[dim0:.*]] = memref.dim %[[input]], %[[c0]]
 //       CHECK-TILE-2:   %[[dim1:.*]] = memref.dim %[[input]], %[[c1]]
 //       CHECK-TILE-2:   %[[dim2:.*]] = memref.dim %[[input]], %[[c2]]
@@ -144,11 +144,11 @@ func @tiled_loop_3d_tensor(%arg0: tensor<?x?x?xf32>, %s0: index, %s1: index,
 
 func @tiled_loop_3d_memref(%arg0: memref<?x?x?xf32>, %output: memref<?x?x?xf32>,
                            %s0: index, %s1: index, %s2: index) {
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c8 = arith.constant 8 : index
   %dim0 = memref.dim %arg0, %c0 : memref<?x?x?xf32>
   %dim1 = memref.dim %arg0, %c1 : memref<?x?x?xf32>
   %dim2 = memref.dim %arg0, %c2 : memref<?x?x?xf32>
@@ -175,11 +175,11 @@ func @tiled_loop_3d_memref(%arg0: memref<?x?x?xf32>, %output: memref<?x?x?xf32>,
 // CHECK-TILE-012-LABEL: func @step_1_do_not_peel
 
 func @step_1_do_not_peel(%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c8 = arith.constant 8 : index
   %dim0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %dim1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %dim2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
@@ -207,12 +207,12 @@ func @step_1_do_not_peel(%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
 
 func @divides_evenly_do_not_peel(%arg0: tensor<?x?x?xf32>, %s: index)
     -> tensor<?x?x?xf32> {
-  %cst = constant 0.000000e+00 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
-  %c64 = constant 64 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c8 = arith.constant 8 : index
+  %c64 = arith.constant 64 : index
   %dim0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %dim1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %dim2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
