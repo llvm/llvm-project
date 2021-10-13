@@ -492,13 +492,13 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     if (IsExternal) {
       if (PrevTrDst)
         continue;
-      else if (!LBRStack.empty()) {
+      if (!LBRStack.empty()) {
         WithColor::warning()
             << "Invalid transfer to external code in LBR record at line "
             << TraceIt.getLineNumber() << ": " << TraceIt.getCurrentLine()
             << "\n";
-        break;
       }
+      break;
     }
 
     if (IsOutgoing) {
