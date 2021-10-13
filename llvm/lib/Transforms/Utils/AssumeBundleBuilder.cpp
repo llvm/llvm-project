@@ -104,7 +104,7 @@ struct AssumeBuilderState {
   Module *M;
 
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
-  SmallMapVector<MapKey, unsigned, 8> AssumedKnowledgeMap;
+  SmallMapVector<MapKey, uint64_t, 8> AssumedKnowledgeMap;
   Instruction *InstBeingModified = nullptr;
   AssumptionCache* AC = nullptr;
   DominatorTree* DT = nullptr;
@@ -197,7 +197,7 @@ struct AssumeBuilderState {
         (!ShouldPreserveAllAttributes &&
          !isUsefullToPreserve(Attr.getKindAsEnum())))
       return;
-    unsigned AttrArg = 0;
+    uint64_t AttrArg = 0;
     if (Attr.isIntAttribute())
       AttrArg = Attr.getValueAsInt();
     addKnowledge({Attr.getKindAsEnum(), AttrArg, WasOn});
@@ -261,8 +261,7 @@ struct AssumeBuilderState {
         addKnowledge({Attribute::NonNull, 0u, Pointer});
     }
     if (MA.valueOrOne() > 1)
-      addKnowledge(
-          {Attribute::Alignment, unsigned(MA.valueOrOne().value()), Pointer});
+      addKnowledge({Attribute::Alignment, MA.valueOrOne().value(), Pointer});
   }
 
   void addInstruction(Instruction *I) {
@@ -392,7 +391,7 @@ struct AssumeSimplify {
   void dropRedundantKnowledge() {
     struct MapValue {
       IntrinsicInst *Assume;
-      unsigned ArgValue;
+      uint64_t ArgValue;
       CallInst::BundleOpInfo *BOI;
     };
     buildMapping(false);

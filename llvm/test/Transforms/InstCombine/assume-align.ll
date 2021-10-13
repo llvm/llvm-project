@@ -88,3 +88,20 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
+define void @f3(i64 %a, i8* %b) {
+; CHECK-LABEL: @f3(
+; CHECK-NEXT:    [[C:%.*]] = ptrtoint i8* [[B:%.*]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[B]], i64 4294967296) ]
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[C]], [[A:%.*]]
+; CHECK-NEXT:    call void @g(i64 [[D]])
+; CHECK-NEXT:    ret void
+;
+  %c = ptrtoint i8* %b to i64
+  call void @llvm.assume(i1 true) [ "align"(i8* %b, i64 4294967296) ]
+  %d = add i64 %a, %c
+  call void @g(i64 %d)
+  ret void
+}
+
+declare void @g(i64)
+

@@ -70,8 +70,8 @@ template<> struct DenseMapInfo<Attribute::AttrKind> {
 using RetainedKnowledgeKey = std::pair<Value *, Attribute::AttrKind>;
 
 struct MinMax {
-  unsigned Min;
-  unsigned Max;
+  uint64_t Min;
+  uint64_t Max;
 };
 
 /// A mapping from intrinsics (=`llvm.assume` calls) to a value range
@@ -100,7 +100,7 @@ void fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result);
 ///  - ArgValue will be 4.
 struct RetainedKnowledge {
   Attribute::AttrKind AttrKind = Attribute::None;
-  unsigned ArgValue = 0;
+  uint64_t ArgValue = 0;
   Value *WasOn = nullptr;
   bool operator==(RetainedKnowledge Other) const {
     return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
