@@ -311,6 +311,11 @@ public:
   /// Inverse map of LocIDToLocIdx.
   IndexedMap<unsigned, LocIdxToIndexFunctor> LocIdxToLocID;
 
+  /// When clobbering register masks, we chose to not believe the machine model
+  /// and don't clobber SP. Do the same for SP aliases, and for efficiency,
+  /// keep a set of them here.
+  SmallSet<Register, 8> SPAliases;
+
   /// Unique-ification of spill slots. Used to number them -- their LocID
   /// number is the index in SpillLocs minus one plus NumRegs.
   UniqueVector<SpillLoc> SpillLocs;
@@ -434,6 +439,12 @@ public:
     if (Index.isIllegal())
       Index = trackRegister(ID);
     return Index;
+  }
+
+  /// Is register R currently tracked by MLocTracker?
+  bool isRegisterTracked(Register R) {
+    LocIdx &Index = LocIDToLocIdx[R];
+    return !Index.isIllegal();
   }
 
   /// Record a definition of the specified register at the given block / inst.
@@ -732,6 +743,13 @@ private:
   void buildMLocValueMap(MachineFunction &MF, ValueIDNum **MInLocs,
                          ValueIDNum **MOutLocs,
                          SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+
+  /// Install PHI values into the live-in array for each block, according to
+  /// the IDF of each register.
+  void placeMLocPHIs(MachineFunction &MF,
+                     SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                     ValueIDNum **MInLocs,
+                     SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
   /// Calculate the iterated-dominance-frontier for a set of defs, using the
   /// existing LLVM facilities for this. Works for a single "value" or

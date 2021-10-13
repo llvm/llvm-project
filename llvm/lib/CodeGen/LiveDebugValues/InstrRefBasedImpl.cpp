@@ -725,6 +725,9 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
   if (SP) {
     unsigned ID = getLocID(SP, false);
     (void)lookupOrTrackRegister(ID);
+
+    for (MCRegAliasIterator RAI(SP, &TRI, true); RAI.isValid(); ++RAI)
+      SPAliases.insert(*RAI);
   }
 }
 
@@ -752,16 +755,13 @@ LocIdx MLocTracker::trackRegister(unsigned ID) {
 
 void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
                                unsigned InstID) {
-  // Ensure SP exists, so that we don't override it later.
-  Register SP = TLI.getStackPointerRegisterToSaveRestore();
-
   // Def any register we track have that isn't preserved. The regmask
   // terminates the liveness of a register, meaning its value can't be
   // relied upon -- we represent this by giving it a new value.
   for (auto Location : locations()) {
     unsigned ID = LocIdxToLocID[Location.Idx];
     // Don't clobber SP, even if the mask says it's clobbered.
-    if (ID < NumRegs && ID != SP && MO->clobbersPhysReg(ID))
+    if (ID < NumRegs && !SPAliases.count(ID) && MO->clobbersPhysReg(ID))
       defReg(ID, CurBB, InstID);
   }
   Masks.push_back(std::make_pair(MO, InstID));
@@ -1677,12 +1677,11 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
   }
 
   // Compute a bitvector of all the registers that are tracked in this block.
-  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   BitVector UsedRegs(TRI->getNumRegs());
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
-    if (ID >= TRI->getNumRegs() || ID == SP)
+    // Ignore stack slots, and aliases of the stack pointer.
+    if (ID >= TRI->getNumRegs() || MTracker->SPAliases.count(ID))
       continue;
     UsedRegs.set(ID);
   }
@@ -1795,6 +1794,106 @@ bool InstrRefBasedLDV::mlocJoin(
   return Changed;
 }
 
+void InstrRefBasedLDV::placeMLocPHIs(MachineFunction &MF,
+                              SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                              ValueIDNum **MInLocs,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
+  // To avoid repeatedly running the PHI placement algorithm, leverage the
+  // fact that a def of register MUST also def its register units. Find the
+  // units for registers, place PHIs for them, and then replicate them for 
+  // aliasing registers. Some inputs that are never def'd (DBG_PHIs of
+  // arguments) don't lead to register units being tracked, just place PHIs for
+  // those registers directly. Do the same for stack slots.
+  SmallSet<Register, 32> RegUnitsToPHIUp;
+  SmallSet<LocIdx, 32> LocsToPHI;
+  for (auto Location : MTracker->locations()) {
+    LocIdx L = Location.Idx;
+    if (MTracker->isSpill(L)) {
+      LocsToPHI.insert(L);
+      continue;
+    }
+
+    Register R = MTracker->LocIdxToLocID[L];
+    SmallSet<Register, 8> FoundRegUnits;
+    bool AnyIllegal = false;
+    for (MCRegUnitIterator RUI(R.asMCReg(), TRI); RUI.isValid(); ++RUI) {
+      for (MCRegUnitRootIterator URoot(*RUI, TRI); URoot.isValid(); ++URoot){
+        if (!MTracker->isRegisterTracked(*URoot)) {
+          // Not all roots were loaded into the tracking map: this register
+          // isn't actually def'd anywhere, we only read from it. Generate PHIs
+          // for this reg, but don't iterate units.
+          AnyIllegal = true;
+        } else {
+          FoundRegUnits.insert(*URoot);
+        }
+      }
+    }
+
+    if (AnyIllegal) {
+      LocsToPHI.insert(L);
+      continue;
+    }
+
+    RegUnitsToPHIUp.insert(FoundRegUnits.begin(), FoundRegUnits.end());
+  }
+
+  // Lambda to fetch PHIs for a given location, and write into the PHIBlocks
+  // collection.
+  SmallVector<MachineBasicBlock *, 32> PHIBlocks;
+  auto CollectPHIsForLoc = [&](LocIdx L) {
+    // Collect the set of defs.
+    SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
+    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
+      MachineBasicBlock *MBB = OrderToBB[I];
+      const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
+      if (TransferFunc.find(L) != TransferFunc.end())
+        DefBlocks.insert(MBB);
+    }
+
+    // The entry block defs the location too: it's the live-in / argument value.
+    // Only insert if there are other defs though; everything is trivially live
+    // through otherwise.
+    if (!DefBlocks.empty())
+      DefBlocks.insert(&*MF.begin());
+
+    // Ask the SSA construction algorithm where we should put PHIs. Clear
+    // anything that might have been hanging around from earlier.
+    PHIBlocks.clear();
+    BlockPHIPlacement(AllBlocks, DefBlocks, PHIBlocks);
+  };
+
+  // For spill slots, and locations with no reg units, just place PHIs.
+  for (LocIdx L : LocsToPHI) {
+    CollectPHIsForLoc(L);
+    // Install those PHI values into the live-in value array.
+    for (const MachineBasicBlock *MBB : PHIBlocks)
+      MInLocs[MBB->getNumber()][L.asU64()] = ValueIDNum(MBB->getNumber(), 0, L);
+  }
+
+  // For reg units, place PHIs, and then place them for any aliasing registers.
+  for (Register R : RegUnitsToPHIUp) {
+    LocIdx L = MTracker->lookupOrTrackRegister(R);
+    CollectPHIsForLoc(L);
+
+    // Install those PHI values into the live-in value array.
+    for (const MachineBasicBlock *MBB : PHIBlocks)
+      MInLocs[MBB->getNumber()][L.asU64()] = ValueIDNum(MBB->getNumber(), 0, L);
+
+    // Now find aliases and install PHIs for those.
+    for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI) {
+      // Super-registers that are "above" the largest register read/written by
+      // the function will alias, but will not be tracked.
+      if (!MTracker->isRegisterTracked(*RAI))
+        continue;
+
+      LocIdx AliasLoc = MTracker->lookupOrTrackRegister(*RAI);
+      for (const MachineBasicBlock *MBB : PHIBlocks)
+        MInLocs[MBB->getNumber()][AliasLoc.asU64()] =
+            ValueIDNum(MBB->getNumber(), 0, AliasLoc);
+    }
+  }
+}
+
 void InstrRefBasedLDV::buildMLocValueMap(
     MachineFunction &MF, ValueIDNum **MInLocs, ValueIDNum **MOutLocs,
     SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
@@ -1825,32 +1924,7 @@ void InstrRefBasedLDV::buildMLocValueMap(
   // Start by placing PHIs, using the usual SSA constructor algorithm. Consider
   // any machine-location that isn't live-through a block to be def'd in that
   // block.
-  for (auto Location : MTracker->locations()) {
-    // Collect the set of defs.
-    SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
-    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-      MachineBasicBlock *MBB = OrderToBB[I];
-      const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
-      if (TransferFunc.find(Location.Idx) != TransferFunc.end())
-        DefBlocks.insert(MBB);
-    }
-
-    // The entry block defs the location too: it's the live-in / argument value.
-    // Only insert if there are other defs though; everything is trivially live
-    // through otherwise.
-    if (!DefBlocks.empty())
-      DefBlocks.insert(&*MF.begin());
-
-    // Ask the SSA construction algorithm where we should put PHIs.
-    SmallVector<MachineBasicBlock *, 32> PHIBlocks;
-    BlockPHIPlacement(AllBlocks, DefBlocks, PHIBlocks);
-
-    // Install those PHI values into the live-in value array.
-    for (const MachineBasicBlock *MBB : PHIBlocks) {
-      MInLocs[MBB->getNumber()][Location.Idx.asU64()] =
-          ValueIDNum(MBB->getNumber(), 0, Location.Idx);
-    }
-  }
+  placeMLocPHIs(MF, AllBlocks, MInLocs, MLocTransfer);
 
   // Propagate values to eliminate redundant PHIs. At the same time, this
   // produces the table of Block x Location => Value for the entry to each
