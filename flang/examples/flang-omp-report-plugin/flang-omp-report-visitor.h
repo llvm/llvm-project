@@ -13,10 +13,11 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/parsing.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <deque>
 #include <map>
 #include <string>
-#include <vector>
 
 namespace Fortran {
 namespace parser {
@@ -37,7 +38,7 @@ struct LogRecord {
   std::string file;
   int line;
   std::string construct;
-  std::vector<ClauseInfo> clauses;
+  llvm::SmallVector<ClauseInfo> clauses;
 };
 bool operator==(const LogRecord &a, const LogRecord &b);
 bool operator!=(const LogRecord &a, const LogRecord &b);
@@ -95,9 +96,9 @@ struct OpenMPCounterVisitor {
   std::deque<LogRecord> constructClauses;
 
   LogRecord *curLoopLogRecord{nullptr};
-  std::vector<LogRecord *> loopLogRecordStack;
-  std::vector<OmpWrapperType *> ompWrapperStack;
-  std::map<OmpWrapperType *, std::vector<ClauseInfo>> clauseStrings;
+  llvm::SmallVector<LogRecord *> loopLogRecordStack;
+  llvm::SmallVector<OmpWrapperType *> ompWrapperStack;
+  std::map<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;
   Parsing *parsing{nullptr};
 };
 } // namespace parser
