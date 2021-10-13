@@ -225,9 +225,9 @@ static LogicalResult verify(InitOp op) {
   for (unsigned i = 0; i < rank; i++) {
     if (shape[i] == ShapedType::kDynamicSize)
       continue;
-    auto constantOp = op.sizes()[i].getDefiningOp<ConstantOp>();
+    auto constantOp = op.sizes()[i].getDefiningOp<arith::ConstantOp>();
     if (!constantOp ||
-        constantOp.getValue().cast<IntegerAttr>().getInt() != shape[i])
+        constantOp.value().cast<IntegerAttr>().getInt() != shape[i])
       return op.emitError("unexpected mismatch with static dimension size ")
              << shape[i];
   }
