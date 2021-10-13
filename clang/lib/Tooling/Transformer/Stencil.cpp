@@ -27,14 +27,15 @@
 using namespace clang;
 using namespace transformer;
 
+using ast_matchers::BoundNodes;
 using ast_matchers::MatchFinder;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
 using llvm::StringError;
 
-static llvm::Expected<DynTypedNode>
-getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
+static llvm::Expected<DynTypedNode> getNode(const BoundNodes &Nodes,
+                                            StringRef Id) {
   auto &NodesMap = Nodes.getMap();
   auto It = NodesMap.find(Id);
   if (It == NodesMap.end())
@@ -366,6 +367,73 @@ public:
   }
 };
 
+class SelectBoundStencil : public clang::transformer::StencilInterface {
+  static bool containsNoNullStencils(
+      const std::vector<std::pair<std::string, Stencil>> &Cases) {
+    for (const auto &S : Cases)
+      if (S.second == nullptr)
+        return false;
+    return true;
+  }
+
+public:
+  SelectBoundStencil(std::vector<std::pair<std::string, Stencil>> Cases,
+                     Stencil Default)
+      : CaseStencils(std::move(Cases)), DefaultStencil(std::move(Default)) {
+    assert(containsNoNullStencils(CaseStencils) &&
+           "cases of selectBound may not be null");
+  }
+  ~SelectBoundStencil() override{};
+
+  llvm::Error eval(const MatchFinder::MatchResult &match,
+                   std::string *result) const override {
+    const BoundNodes::IDToNodeMap &NodeMap = match.Nodes.getMap();
+    for (const auto &S : CaseStencils) {
+      if (NodeMap.count(S.first) > 0) {
+        return S.second->eval(match, result);
+      }
+    }
+
+    if (DefaultStencil != nullptr) {
+      return DefaultStencil->eval(match, result);
+    }
+
+    llvm::SmallVector<llvm::StringRef, 2> CaseIDs;
+    CaseIDs.reserve(CaseStencils.size());
+    for (const auto &S : CaseStencils)
+      CaseIDs.emplace_back(S.first);
+
+    return llvm::createStringError(
+        errc::result_out_of_range,
+        llvm::Twine("selectBound failed: no cases bound and no default: {") +
+            llvm::join(CaseIDs, ", ") + "}");
+  }
+
+  std::string toString() const override {
+    std::string Buffer;
+    llvm::raw_string_ostream Stream(Buffer);
+    Stream << "selectBound({";
+    bool First = true;
+    for (const auto &S : CaseStencils) {
+      if (First)
+        First = false;
+      else
+        Stream << "}, ";
+      Stream << "{\"" << S.first << "\", " << S.second->toString();
+    }
+    Stream << "}}";
+    if (DefaultStencil != nullptr) {
+      Stream << ", " << DefaultStencil->toString();
+    }
+    Stream << ")";
+    return Stream.str();
+  }
+
+private:
+  std::vector<std::pair<std::string, Stencil>> CaseStencils;
+  Stencil DefaultStencil;
+};
+
 class SequenceStencil : public StencilInterface {
   std::vector<Stencil> Stencils;
 
@@ -460,6 +528,13 @@ Stencil transformer::ifBound(StringRef Id, Stencil TrueStencil,
                              Stencil FalseStencil) {
   return std::make_shared<IfBoundStencil>(Id, std::move(TrueStencil),
                                           std::move(FalseStencil));
+}
+
+Stencil transformer::selectBound(
+    std::vector<std::pair<std::string, Stencil>> CaseStencils,
+    Stencil DefaultStencil) {
+  return std::make_shared<SelectBoundStencil>(std::move(CaseStencils),
+                                              std::move(DefaultStencil));
 }
 
 Stencil transformer::run(MatchConsumer<std::string> Fn) {
