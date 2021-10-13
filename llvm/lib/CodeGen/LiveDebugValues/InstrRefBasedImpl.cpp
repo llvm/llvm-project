@@ -1972,11 +1972,13 @@ using MachineDomTreeBase = DomTreeBase<MachineBasicBlock>::NodeType;
 using MachineDomTreeChildGetter =
     typename IDFCalculatorDetail::ChildrenGetterTy<MachineDomTreeBase, false>;
 
+namespace IDFCalculatorDetail {
 template <>
 typename MachineDomTreeChildGetter::ChildrenTy
 MachineDomTreeChildGetter::get(const NodeRef &N) {
   return {N->succ_begin(), N->succ_end()};
 }
+} // namespace IDFCalculatorDetail
 } // namespace llvm
 
 void InstrRefBasedLDV::BlockPHIPlacement(

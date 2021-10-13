@@ -11,10 +11,12 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # Verify iterator based traversal of the op/region/block hierarchy.
 # CHECK-LABEL: TEST: testTraverseOpRegionBlockIterators
+@run
 def testTraverseOpRegionBlockIterators():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -69,11 +71,9 @@ def testTraverseOpRegionBlockIterators():
   walk_operations("", op)
 
 
-run(testTraverseOpRegionBlockIterators)
-
-
 # Verify index based traversal of the op/region/block hierarchy.
 # CHECK-LABEL: TEST: testTraverseOpRegionBlockIndices
+@run
 def testTraverseOpRegionBlockIndices():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -111,10 +111,30 @@ def testTraverseOpRegionBlockIndices():
   walk_operations("", module.operation)
 
 
-run(testTraverseOpRegionBlockIndices)
+# CHECK-LABEL: TEST: testBlockAndRegionOwners
+@run
+def testBlockAndRegionOwners():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(
+      r"""
+    builtin.module {
+      builtin.func @f() {
+        std.return
+      }
+    }
+  """, ctx)
+
+  assert module.operation.regions[0].owner == module.operation
+  assert module.operation.regions[0].blocks[0].owner == module.operation
+
+  func = module.body.operations[0]
+  assert func.operation.regions[0].owner == func
+  assert func.operation.regions[0].blocks[0].owner == func
 
 
 # CHECK-LABEL: TEST: testBlockArgumentList
+@run
 def testBlockArgumentList():
   with Context() as ctx:
     module = Module.parse(
@@ -158,10 +178,8 @@ def testBlockArgumentList():
       print("Type: ", t)
 
 
-run(testBlockArgumentList)
-
-
 # CHECK-LABEL: TEST: testOperationOperands
+@run
 def testOperationOperands():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -181,10 +199,10 @@ def testOperationOperands():
       print(f"Operand {i}, type {operand.type}")
 
 
-run(testOperationOperands)
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSlice
+@run
 def testOperationOperandsSlice():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -239,10 +257,10 @@ def testOperationOperandsSlice():
       print(operand)
 
 
-run(testOperationOperandsSlice)
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSet
+@run
 def testOperationOperandsSet():
   with Context() as ctx, Location.unknown(ctx):
     ctx.allow_unregistered_dialects = True
@@ -271,10 +289,10 @@ def testOperationOperandsSet():
     print(consumer.operands[0])
 
 
-run(testOperationOperandsSet)
 
 
 # CHECK-LABEL: TEST: testDetachedOperation
+@run
 def testDetachedOperation():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -295,10 +313,8 @@ def testDetachedOperation():
   # TODO: Check successors once enough infra exists to do it properly.
 
 
-run(testDetachedOperation)
-
-
 # CHECK-LABEL: TEST: testOperationInsertionPoint
+@run
 def testOperationInsertionPoint():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -335,10 +351,8 @@ def testOperationInsertionPoint():
     assert False, "expected insert of attached op to raise"
 
 
-run(testOperationInsertionPoint)
-
-
 # CHECK-LABEL: TEST: testOperationWithRegion
+@run
 def testOperationWithRegion():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -377,10 +391,8 @@ def testOperationWithRegion():
     print(module)
 
 
-run(testOperationWithRegion)
-
-
 # CHECK-LABEL: TEST: testOperationResultList
+@run
 def testOperationResultList():
   ctx = Context()
   module = Module.parse(
@@ -407,10 +419,10 @@ def testOperationResultList():
     print(f"Result type {t}")
 
 
-run(testOperationResultList)
 
 
 # CHECK-LABEL: TEST: testOperationResultListSlice
+@run
 def testOperationResultListSlice():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -458,10 +470,10 @@ def testOperationResultListSlice():
       print(f"Result {res.result_number}, type {res.type}")
 
 
-run(testOperationResultListSlice)
 
 
 # CHECK-LABEL: TEST: testOperationAttributes
+@run
 def testOperationAttributes():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -506,10 +518,10 @@ def testOperationAttributes():
     assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
 
-run(testOperationAttributes)
 
 
 # CHECK-LABEL: TEST: testOperationPrint
+@run
 def testOperationPrint():
   ctx = Context()
   module = Module.parse(
@@ -553,10 +565,10 @@ def testOperationPrint():
       use_local_scope=True)
 
 
-run(testOperationPrint)
 
 
 # CHECK-LABEL: TEST: testKnownOpView
+@run
 def testKnownOpView():
   with Context(), Location.unknown():
     Context.current.allow_unregistered_dialects = True
@@ -586,10 +598,8 @@ def testKnownOpView():
     print(repr(custom))
 
 
-run(testKnownOpView)
-
-
 # CHECK-LABEL: TEST: testSingleResultProperty
+@run
 def testSingleResultProperty():
   with Context(), Location.unknown():
     Context.current.allow_unregistered_dialects = True
@@ -620,10 +630,8 @@ def testSingleResultProperty():
   print(module.body.operations[2])
 
 
-run(testSingleResultProperty)
-
-
 # CHECK-LABEL: TEST: testPrintInvalidOperation
+@run
 def testPrintInvalidOperation():
   ctx = Context()
   with Location.unknown(ctx):
@@ -639,10 +647,8 @@ def testPrintInvalidOperation():
     print(f".verify = {module.operation.verify()}")
 
 
-run(testPrintInvalidOperation)
-
-
 # CHECK-LABEL: TEST: testCreateWithInvalidAttributes
+@run
 def testCreateWithInvalidAttributes():
   ctx = Context()
   with Location.unknown(ctx):
@@ -670,10 +676,8 @@ def testCreateWithInvalidAttributes():
       print(e)
 
 
-run(testCreateWithInvalidAttributes)
-
-
 # CHECK-LABEL: TEST: testOperationName
+@run
 def testOperationName():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -691,10 +695,8 @@ def testOperationName():
     print(op.operation.name)
 
 
-run(testOperationName)
-
-
 # CHECK-LABEL: TEST: testCapsuleConversions
+@run
 def testCapsuleConversions():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -706,10 +708,8 @@ def testCapsuleConversions():
     assert m2 is m
 
 
-run(testCapsuleConversions)
-
-
 # CHECK-LABEL: TEST: testOperationErase
+@run
 def testOperationErase():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -728,6 +728,3 @@ def testOperationErase():
 
       # Ensure we can create another operation
       Operation.create("custom.op2")
-
-
-run(testOperationErase)
