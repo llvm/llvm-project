@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZREGISTERINFO_H
 
 #include "SystemZ.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -44,9 +45,9 @@ inline bool isHighReg(unsigned int Reg) {
 /// It is abstract, all calling conventions must override and
 /// define the pure virtual member function defined in this class.
 class SystemZCallingConventionRegisters {
+
 public:
-  /// \returns the register that keeps the
-  /// return function address.
+  /// \returns the register that keeps the return function address.
   virtual int getReturnFunctionAddressRegister() = 0;
 
   /// \returns the register that keeps the
@@ -81,6 +82,8 @@ public:
   int getStackPointerRegister() override final { return SystemZ::R4D; };
 
   int getFramePointerRegister() override final { return SystemZ::R8D; };
+
+  int getAddressOfCalleeRegister() { return SystemZ::R6D; };
 
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction *MF) const override final;

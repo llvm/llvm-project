@@ -96,6 +96,10 @@ public:
     return SpecialRegisters.get();
   }
 
+  template <class SR> SR &getSpecialRegisters() const {
+    return *static_cast<SR *>(getSpecialRegisters());
+  }
+
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
   }
