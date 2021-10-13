@@ -990,7 +990,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
   addTranslationUnitDecl();
 }
 
-ASTContext::~ASTContext() {
+void ASTContext::cleanup() {
   // Release the DenseMaps associated with DeclContext objects.
   // FIXME: Is this the ideal solution?
   ReleaseDeclContextMaps();
@@ -998,6 +998,7 @@ ASTContext::~ASTContext() {
   // Call all of the deallocation functions on all of their targets.
   for (auto &Pair : Deallocations)
     (Pair.first)(Pair.second);
+  Deallocations.clear();
 
   // ASTRecordLayout objects in ASTRecordLayouts must always be destroyed
   // because they can contain DenseMaps.
@@ -1007,6 +1008,7 @@ ASTContext::~ASTContext() {
     // Increment in loop to prevent using deallocated memory.
     if (auto *R = const_cast<ASTRecordLayout *>((I++)->second))
       R->Destroy(*this);
+  ObjCLayouts.clear();
 
   for (llvm::DenseMap<const RecordDecl*, const ASTRecordLayout*>::iterator
        I = ASTRecordLayouts.begin(), E = ASTRecordLayouts.end(); I != E; ) {
@@ -1014,15 +1016,20 @@ ASTContext::~ASTContext() {
     if (auto *R = const_cast<ASTRecordLayout *>((I++)->second))
       R->Destroy(*this);
   }
+  ASTRecordLayouts.clear();
 
   for (llvm::DenseMap<const Decl*, AttrVec*>::iterator A = DeclAttrs.begin(),
                                                     AEnd = DeclAttrs.end();
        A != AEnd; ++A)
     A->second->~AttrVec();
+  DeclAttrs.clear();
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
+  ModuleInitializers.clear();
 }
+
+ASTContext::~ASTContext() { cleanup(); }
 
 void ASTContext::setTraversalScope(const std::vector<Decl *> &TopLevelDecls) {
   TraversalScope = TopLevelDecls;

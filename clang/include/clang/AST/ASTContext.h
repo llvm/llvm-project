@@ -695,6 +695,12 @@ public:
   SourceManager& getSourceManager() { return SourceMgr; }
   const SourceManager& getSourceManager() const { return SourceMgr; }
 
+  // Cleans up some of the data structures. This allows us to do cleanup
+  // normally done in the destructor earlier. Renders much of the ASTContext
+  // unusable, mostly the actual AST nodes, so should be called when we no
+  // longer need access to the AST.
+  void cleanup();
+
   llvm::BumpPtrAllocator &getAllocator() const {
     return BumpAlloc;
   }

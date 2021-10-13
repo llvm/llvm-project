@@ -351,10 +351,16 @@ namespace clang {
         }
       }
 
-      // FIXME: Fix cleanup issues with clearing the AST when we properly free
-      // things.
-      if (CodeGenOpts.DisableFree && CodeGenOpts.ClearASTBeforeBackend)
+      if (CodeGenOpts.ClearASTBeforeBackend) {
+        // Access to the AST is no longer available after this.
+        // Other things that the ASTContext manages are still available, e.g.
+        // the SourceManager. It'd be nice if we could separate out all the
+        // things in ASTContext used after this point and null out the
+        // ASTContext, but too many various parts of the ASTContext are still
+        // used in various parts.
+        C.cleanup();
         C.getAllocator().Reset();
+      }
 
       EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
