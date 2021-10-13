@@ -354,34 +354,104 @@ define i32 @propagate_drop_lshr2(i32 %arg, i32 %unknown) {
 
 define i8* @propagate_drop_gep1(i8* %arg) {
 ; CHECK-LABEL: @propagate_drop_gep1(
-; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8* [[ARG:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG_FR]], i64 16
-; CHECK-NEXT:    ret i8* [[V1]]
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr inbounds i8, i8* [[ARG:%.*]], i64 16
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i8* [[V1]]
+; CHECK-NEXT:    ret i8* [[V1_FR]]
 ;
-  %v1 = getelementptr i8, i8* %arg, i64 16
+  %v1 = getelementptr inbounds i8, i8* %arg, i64 16
   %v1.fr = freeze i8* %v1
   ret i8* %v1.fr
 }
 
-define i8* @propagate_drop_gep2(i8* %arg, i64 %unknown) {
-; CHECK-LABEL: @propagate_drop_gep2(
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG:%.*]], i64 [[UNKNOWN:%.*]]
-; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i8* [[V1]]
-; CHECK-NEXT:    ret i8* [[V1_FR]]
+define float @propagate_drop_fneg(float %arg) {
+; CHECK-LABEL: @propagate_drop_fneg(
+; CHECK-NEXT:    [[V1:%.*]] = fneg nnan ninf float [[ARG:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
 ;
-  %v1 = getelementptr i8, i8* %arg, i64 %unknown
-  %v1.fr = freeze i8* %v1
-  ret i8* %v1.fr
+  %v1 = fneg ninf nnan float %arg
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
 }
 
 
 define float @propagate_drop_fadd(float %arg) {
 ; CHECK-LABEL: @propagate_drop_fadd(
-; CHECK-NEXT:    [[V1:%.*]] = fadd ninf float [[ARG:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fadd nnan ninf float [[ARG:%.*]], 2.000000e+00
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
 ; CHECK-NEXT:    ret float [[V1_FR]]
 ;
-  %v1 = fadd ninf float %arg, 2.0
+  %v1 = fadd ninf nnan float %arg, 2.0
   %v1.fr = freeze float %v1
   ret float %v1.fr
 }
+
+define float @propagate_drop_fsub(float %arg) {
+; CHECK-LABEL: @propagate_drop_fsub(
+; CHECK-NEXT:    [[V1:%.*]] = fadd nnan ninf float [[ARG:%.*]], -2.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = fsub ninf nnan float %arg, 2.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
+
+define float @propagate_drop_fmul(float %arg) {
+; CHECK-LABEL: @propagate_drop_fmul(
+; CHECK-NEXT:    [[V1:%.*]] = fmul nnan ninf float [[ARG:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = fmul ninf nnan float %arg, 2.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
+
+define float @propagate_drop_fdiv(float %arg) {
+; CHECK-LABEL: @propagate_drop_fdiv(
+; CHECK-NEXT:    [[V1:%.*]] = fmul nnan ninf float [[ARG:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = fdiv ninf nnan float %arg, 2.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
+
+define float @propagate_drop_frem(float %arg) {
+; CHECK-LABEL: @propagate_drop_frem(
+; CHECK-NEXT:    [[V1:%.*]] = frem nnan ninf float [[ARG:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = frem ninf nnan float %arg, 2.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
+
+define i1 @propagate_drop_fcmp(float %arg) {
+; CHECK-LABEL: @propagate_drop_fcmp(
+; CHECK-NEXT:    [[V1:%.*]] = fcmp nnan ninf une float [[ARG:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i1 [[V1]]
+; CHECK-NEXT:    ret i1 [[V1_FR]]
+;
+  %v1 = fcmp ninf nnan une float %arg, 2.0
+  %v1.fr = freeze i1 %v1
+  ret i1 %v1.fr
+}
+
+define float @propagate_drop_fmath_select(i1 %arg) {
+; CHECK-LABEL: @propagate_drop_fmath_select(
+; CHECK-NEXT:    [[V1:%.*]] = select nnan ninf i1 [[ARG:%.*]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = select ninf nnan i1 %arg, float 1.0, float -1.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
+
+
+
+
