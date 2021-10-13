@@ -405,14 +405,34 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm FRECPE_ZZ  : sve_fp_2op_u_zd<0b110, "frecpe",  int_aarch64_sve_frecpe_x>;
   defm FRSQRTE_ZZ : sve_fp_2op_u_zd<0b111, "frsqrte", int_aarch64_sve_frsqrte_x>;
 
-  defm FADD_ZPmI    : sve_fp_2op_i_p_zds<0b000, "fadd", sve_fpimm_half_one>;
-  defm FSUB_ZPmI    : sve_fp_2op_i_p_zds<0b001, "fsub", sve_fpimm_half_one>;
-  defm FMUL_ZPmI    : sve_fp_2op_i_p_zds<0b010, "fmul", sve_fpimm_half_two>;
-  defm FSUBR_ZPmI   : sve_fp_2op_i_p_zds<0b011, "fsubr", sve_fpimm_half_one>;
-  defm FMAXNM_ZPmI  : sve_fp_2op_i_p_zds<0b100, "fmaxnm", sve_fpimm_zero_one>;
-  defm FMINNM_ZPmI  : sve_fp_2op_i_p_zds<0b101, "fminnm", sve_fpimm_zero_one>;
-  defm FMAX_ZPmI    : sve_fp_2op_i_p_zds<0b110, "fmax", sve_fpimm_zero_one>;
-  defm FMIN_ZPmI    : sve_fp_2op_i_p_zds<0b111, "fmin", sve_fpimm_zero_one>;
+  defm FADD_ZPmI    : sve_fp_2op_i_p_zds<0b000, "fadd", "FADD_ZPZI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
+  defm FSUB_ZPmI    : sve_fp_2op_i_p_zds<0b001, "fsub", "FSUB_ZPZI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
+  defm FMUL_ZPmI    : sve_fp_2op_i_p_zds<0b010, "fmul", "FMUL_ZPZI", sve_fpimm_half_two, fpimm_half, fpimm_two, int_aarch64_sve_fmul>;
+  defm FSUBR_ZPmI   : sve_fp_2op_i_p_zds<0b011, "fsubr", "FSUBR_ZPZI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsubr>;
+  defm FMAXNM_ZPmI  : sve_fp_2op_i_p_zds<0b100, "fmaxnm", "FMAXNM_ZPZI", sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmaxnm>;
+  defm FMINNM_ZPmI  : sve_fp_2op_i_p_zds<0b101, "fminnm", "FMINNM_ZPZI", sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fminnm>;
+  defm FMAX_ZPmI    : sve_fp_2op_i_p_zds<0b110, "fmax", "FMAX_ZPZI", sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmax>;
+  defm FMIN_ZPmI    : sve_fp_2op_i_p_zds<0b111, "fmin", "FMIN_ZPZI", sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmin>;
+   
+  defm FADD_ZPZI    : sve_fp_2op_i_p_zds_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one, AArch64fadd_p>;
+  defm FSUB_ZPZI    : sve_fp_2op_i_p_zds_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one, AArch64fsub_p>;
+  defm FMUL_ZPZI    : sve_fp_2op_i_p_zds_hfd<sve_fpimm_half_two, fpimm_half, fpimm_two, AArch64fmul_p>;
+  defm FSUBR_ZPZI   : sve_fp_2op_i_p_zds_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one>;
+  defm FMAXNM_ZPZI  : sve_fp_2op_i_p_zds_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmaxnm_p>;
+  defm FMINNM_ZPZI  : sve_fp_2op_i_p_zds_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fminnm_p>;
+  defm FMAX_ZPZI    : sve_fp_2op_i_p_zds_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmax_p>;
+  defm FMIN_ZPZI    : sve_fp_2op_i_p_zds_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmin_p>;
+
+  let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
+    defm FADD_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
+    defm FSUB_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
+    defm FMUL_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_half_two, fpimm_half, fpimm_two, int_aarch64_sve_fmul>;
+    defm FSUBR_ZPZI   : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsubr>;
+    defm FMAXNM_ZPZI  : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmaxnm>;
+    defm FMINNM_ZPZI  : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fminnm>;
+    defm FMAX_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmax>;
+    defm FMIN_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<sve_fpimm_zero_one, fpimm0, fpimm_one, int_aarch64_sve_fmin>;
+  }
 
   defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd", "FADD_ZPZZ", int_aarch64_sve_fadd, DestructiveBinaryComm>;
   defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub", "FSUB_ZPZZ", int_aarch64_sve_fsub, DestructiveBinaryCommWithRev, "FSUBR_ZPmZ">;
