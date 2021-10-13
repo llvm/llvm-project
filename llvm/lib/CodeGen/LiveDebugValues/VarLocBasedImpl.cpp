@@ -1015,8 +1015,9 @@ private:
   /// had their instruction creation deferred.
   void flushPendingLocs(VarLocInMBB &PendingInLocs, VarLocMap &VarLocIDs);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
-                    unsigned InputBBLimit, unsigned InputDbgValLimit) override;
+  bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
+                    TargetPassConfig *TPC, unsigned InputBBLimit,
+                    unsigned InputDbgValLimit) override;
 
 public:
   /// Default construct and initialize the pass.
@@ -2135,9 +2136,11 @@ static bool isSwiftAsyncContext(const MachineInstr &MI) {
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
-bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
-                                  unsigned InputBBLimit,
+bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
+                                  MachineDominatorTree *DomTree,
+                                  TargetPassConfig *TPC, unsigned InputBBLimit,
                                   unsigned InputDbgValLimit) {
+  (void)DomTree;
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
 
   if (!MF.getFunction().getSubprogram())
