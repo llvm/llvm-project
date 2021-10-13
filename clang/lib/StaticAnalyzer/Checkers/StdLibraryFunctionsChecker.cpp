@@ -568,6 +568,7 @@ public:
 
   bool DisplayLoadedSummaries = false;
   bool ModelPOSIX = false;
+  bool ShouldAssumeControlledEnvironment = false;
 
 private:
   Optional<Summary> findFunctionSummary(const FunctionDecl *FD,
@@ -1433,13 +1434,19 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 RetType{Ssize_tTy}),
       GetLineSummary);
 
-  // char *getenv(const char *name);
-  addToFunctionSummaryMap(
-      "getenv", Signature(ArgTypes{ConstCharPtrTy}, RetType{CharPtrTy}),
-      Summary(NoEvalCall)
-          .Case({NotNull(Ret)})
-          .Case({NotNull(Ret)->negate()})
-          .ArgConstraint(NotNull(ArgNo(0))));
+  {
+    Summary GetenvSummary = Summary(NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .Case({NotNull(Ret)});
+    // In untrusted environments the envvar might not exist.
+    if (!ShouldAssumeControlledEnvironment)
+      GetenvSummary.Case({NotNull(Ret)->negate()});
+
+    // char *getenv(const char *name);
+    addToFunctionSummaryMap(
+        "getenv", Signature(ArgTypes{ConstCharPtrTy}, RetType{CharPtrTy}),
+        std::move(GetenvSummary));
+  }
 
   if (ModelPOSIX) {
 
@@ -2653,11 +2660,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
 void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
   auto *Checker = mgr.registerChecker<StdLibraryFunctionsChecker>();
+  const AnalyzerOptions &Opts = mgr.getAnalyzerOptions();
   Checker->DisplayLoadedSummaries =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          Checker, "DisplayLoadedSummaries");
-  Checker->ModelPOSIX =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker, "ModelPOSIX");
+      Opts.getCheckerBooleanOption(Checker, "DisplayLoadedSummaries");
+  Checker->ModelPOSIX = Opts.getCheckerBooleanOption(Checker, "ModelPOSIX");
+  Checker->ShouldAssumeControlledEnvironment =
+      Opts.ShouldAssumeControlledEnvironment;
 }
 
 bool ento::shouldRegisterStdCLibraryFunctionsChecker(
