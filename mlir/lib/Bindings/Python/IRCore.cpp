@@ -1548,6 +1548,9 @@ public:
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
     cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
+    cls.def_static("isinstance", [](PyValue &otherValue) -> bool {
+      return DerivedTy::isaFunction(otherValue);
+    });
     DerivedTy::bindDerived(cls);
   }
 
@@ -2248,6 +2251,12 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyBlockList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of blocks.")
+      .def_property_readonly(
+          "owner",
+          [](PyRegion &self) {
+            return self.getParentOperation()->createOpView();
+          },
+          "Returns the operation owning this region.")
       .def(
           "__iter__",
           [](PyRegion &self) {
@@ -2291,6 +2300,23 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyOperationList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of operations.")
+      .def_static(
+          "create_at_start",
+          [](PyRegion &parent, py::list pyArgTypes) {
+            parent.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            mlirRegionInsertOwnedBlock(parent, 0, block);
+            return PyBlock(parent.getParentOperation(), block);
+          },
+          py::arg("parent"), py::arg("pyArgTypes") = py::list(),
+          "Creates and returns a new Block at the beginning of the given "
+          "region (with given argument types).")
       .def(
           "create_before",
           [](PyBlock &self, py::args pyArgTypes) {

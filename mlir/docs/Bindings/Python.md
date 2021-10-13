@@ -612,8 +612,22 @@ operations (unlike in C++ that supports detached regions).
 
 Blocks can be created within a given region and inserted before or after another
 block of the same region using `create_before()`, `create_after()` methods of
-the `Block` class. They are not expected to exist outside of regions (unlike in
-C++ that supports detached blocks).
+the `Block` class, or the `create_at_start()` static method of the same class.
+They are not expected to exist outside of regions (unlike in C++ that supports
+detached blocks).
+
+```python
+from mlir.ir import Block, Context, Operation
+
+with Context():
+  op = Operation.create("generic.op", regions=1)
+
+  # Create the first block in the region.
+  entry_block = Block.create_at_start(op.regions[0])
+
+  # Create further blocks.
+  other_block = entry_block.create_after()
+```
 
 Blocks can be used to create `InsertionPoint`s, which can point to the beginning
 or the end of the block, or just before its terminator. It is common for
