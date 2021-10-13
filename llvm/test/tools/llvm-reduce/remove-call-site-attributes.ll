@@ -1,6 +1,6 @@
 ; Test that llvm-reduce can remove uninteresting operand bundles from calls.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=operand-bundles,attributes --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
 
 ; CHECK-ALL: declare i32 @f1(i32, i32)
