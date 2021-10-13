@@ -63,7 +63,7 @@ public:
     friend class SimpleRemoteEPCServer;
 
   public:
-    SimpleRemoteEPCServer &server();
+    SimpleRemoteEPCServer &server() { return S; }
     StringMap<ExecutorAddr> &bootstrapSymbols() { return BootstrapSymbols; }
     std::vector<std::unique_ptr<ExecutorBootstrapService>> &services() {
       return Services;
