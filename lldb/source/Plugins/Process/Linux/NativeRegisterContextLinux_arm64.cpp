@@ -62,7 +62,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   case llvm::Triple::aarch64: {
     // Configure register sets supported by this AArch64 target.
     // Read SVE header to check for SVE support.
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
     struct user_sve_header sve_header;
 #else
     struct user_sve_header sve_header {};
@@ -211,7 +211,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       if (reg == GetRegisterInfo().GetRegNumFPSR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
           offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_header.vl));
 #else
           offset = 0;
@@ -221,7 +221,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
           offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_header.vl));
 #else
           offset = 0;
@@ -353,7 +353,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       if (reg == GetRegisterInfo().GetRegNumFPSR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
           offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_header.vl));
 #else
           offset = 0;
@@ -363,7 +363,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
           offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_header.vl));
 #else
           offset = 0;
@@ -844,7 +844,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
     if (error.Success()) {
       // If SVE is enabled thread can switch between SVEState::FPSIMD and
       // SVEState::Full on every stop.
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
       if ((m_sve_header.flags & sve::ptrace_regs_mask) ==
           sve::ptrace_regs_fpsimd)
         m_sve_state = SVEState::FPSIMD;
@@ -856,7 +856,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
       // On every stop we configure SVE vector length by calling
       // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
-#ifdef LLDB_HAVE_USER_SVE_HEADER
+#if LLDB_HAVE_USER_SVE_HEADER
       if (sve_vl_valid(m_sve_header.vl))
         vq = sve::vq_from_vl(m_sve_header.vl);
 #endif
