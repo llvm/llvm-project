@@ -50,6 +50,20 @@ def build_invocation(compile_flags, with_lto = False):
     lto_prefix += config.lto_launch
   return " " + " ".join(lto_prefix + [config.clang] + lto_flags + compile_flags) + " "
 
+def exclude_unsupported_files_for_aix(dirname):
+   for filename in os.listdir(dirname):
+       source_path = os.path.join( dirname, filename)
+       if os.path.isdir(source_path):
+           continue
+       f = open(source_path, 'r')
+       try:
+          data = f.read()
+          # -fprofile-instr-generate and rpath are not supported on AIX, exclude all tests with them.
+          if ("%clang_profgen" in data or "%clangxx_profgen" in data or "-rpath" in data):
+            config.excludes += [ filename ]
+       finally:
+          f.close()
+
 # Add clang substitutions.
 config.substitutions.append( ("%clang ", build_invocation(clang_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(clang_cxxflags)) )
@@ -71,8 +85,13 @@ config.substitutions.append( ("%clangxx_profuse=", build_invocation(clang_cxxfla
 
 config.substitutions.append( ("%clang_lto_profgen=", build_invocation(clang_cflags, True) + " -fprofile-instr-generate=") )
 
-if config.host_os not in ['Windows', 'Darwin', 'FreeBSD', 'Linux', 'NetBSD', 'SunOS']:
+if config.host_os not in ['Windows', 'Darwin', 'FreeBSD', 'Linux', 'NetBSD', 'SunOS', 'AIX']:
   config.unsupported = True
+
+if config.host_os in ['AIX']:
+  config.available_features.add('system-aix')
+  exclude_unsupported_files_for_aix(config.test_source_root)
+  exclude_unsupported_files_for_aix(config.test_source_root + "/Posix")
 
 if config.target_arch in ['armv7l']:
   config.unsupported = True

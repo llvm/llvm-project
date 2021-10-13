@@ -1,5 +1,5 @@
 // Test that the specified output has profiling data.
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t %s
+// RUN: %clang_profgen -fcoverage-mapping -o %t %s
 // RUN: %run %t %t.file.profraw
 // RUN: test -f %t.file.profraw
 // RUN: llvm-profdata merge -o %t.file.profdata %t.file.profraw
