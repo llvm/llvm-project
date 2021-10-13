@@ -127,13 +127,16 @@ static struct SanitizerCommonBenchmarkparams {
     {3000000, 10, 4},
     {3000000, 10, 16},
     // Update use count as msan/dfsan.
+    {3000000, 10, 1, false, true},
+    {3000000, 10, 4, false, true},
     {3000000, 10, 16, false, true},
-    // As above, but traces are unique inside of thread.
+    // Unrealistic, as above, but traces are unique inside of thread.
     {4000000, 1, 4, true},
     {2000000, 1, 16, true},
     {2000000, 10, 4, true},
     {500000, 10, 16, true},
-    {3000000, 10, 16, true, true},
+    {1500000, 10, 4, true, true},
+    {800000, 10, 16, true, true},
 };
 
 std::string PrintSanitizerCommonBenchmarkparams(
@@ -180,7 +183,8 @@ class SanitizerCommonBenchmark
 // down check-sanitizer.
 // Usage: Sanitizer-<ARCH>-Test --gtest_also_run_disabled_tests \
 //   '--gtest_filter=*Benchmark*'
-TEST_P(SanitizerCommonBenchmark, DISABLED_BenchmarkInsertUniqueThreaded) {
+TEST_P(SanitizerCommonBenchmark, DISABLED_Benchmark) {
+  // Call in subprocess to avoid reuse of the depot.
   EXPECT_EXIT((Run(), exit(0)), ::testing::ExitedWithCode(0), "");
 }
 
