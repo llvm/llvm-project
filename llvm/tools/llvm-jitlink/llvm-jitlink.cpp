@@ -736,6 +736,13 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return make_error<StringError>(
+      "-" + OutOfProcessExecutor.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
 #else
 
   constexpr int ReadEnd = 0;
@@ -795,7 +802,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
 #endif
 }
 
-#ifdef LLVM_ON_UNIX
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 static Error createTCPSocketError(Twine Details) {
   return make_error<StringError>(
       formatv("Failed to connect TCP socket '{0}': {1}",
@@ -847,6 +854,13 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return make_error<StringError>(
+      "-" + OutOfProcessExecutorConnect.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
 #else
 
   StringRef Host, PortStr;
@@ -907,8 +921,8 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
       return PageSize.takeError();
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(),
-        std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-        std::move(TT), *PageSize, createMemoryManager());
+        std::make_unique<InPlaceTaskDispatcher>(), std::move(TT), *PageSize,
+        createMemoryManager());
   }
 
   Error Err = Error::success();
