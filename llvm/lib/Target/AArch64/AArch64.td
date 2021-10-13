@@ -129,8 +129,12 @@ def FeatureExperimentalZeroingPseudos
                        "merged with destructive operations",
                        []>;
 
+def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
+  "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
+
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
-  "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
+  "Enable Scalable Vector Extension 2 (SVE2) instructions",
+  [FeatureSVE, FeatureUseScalarIncVL]>;
 
 def FeatureSVE2AES : SubtargetFeature<"sve2-aes", "HasSVE2AES", "true",
   "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
