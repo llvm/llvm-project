@@ -123,9 +123,7 @@ module m
   character(len(c3)), parameter :: exp_min = c1
   character(len(c3)), parameter :: exp_max = c4
   logical, parameter :: test_max_c_1 = res_max_c.EQ.exp_max
-  logical, parameter :: test_max_c_2 = res_max_c.NE.c4
   logical, parameter :: test_max_c_3 = len(res_max_c).EQ.len(c3)
-  logical, parameter :: test_min_c_1 = res_min_c.NE.c1
   logical, parameter :: test_min_c_2 = res_min_c.EQ.exp_min
   logical, parameter :: test_min_c_3 = len(res_min_c).EQ.len(c3)
 
@@ -137,5 +135,5 @@ module m
   logical, parameter :: test_not_zero = not(0).EQ.-1
   logical, parameter :: test_not_neg_one = not(-1).EQ.0
   logical, parameter :: test_not_array = all(not([5, 6, 7]).EQ.[-6, -7, -8])
- 
+
 end module

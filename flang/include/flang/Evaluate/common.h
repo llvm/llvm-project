@@ -19,6 +19,7 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <string>
 
 namespace Fortran::semantics {
 class DerivedTypeSpec;
@@ -37,6 +38,26 @@ ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)
 template <typename A>
 static constexpr Ordering Compare(const A &x, const A &y) {
   if (x < y) {
+    return Ordering::Less;
+  } else if (x > y) {
+    return Ordering::Greater;
+  } else {
+    return Ordering::Equal;
+  }
+}
+
+template <typename CH>
+static constexpr Ordering Compare(
+    const std::basic_string<CH> &x, const std::basic_string<CH> &y) {
+  std::size_t xLen{x.size()}, yLen{y.size()};
+  using String = std::basic_string<CH>;
+  // Fortran CHARACTER comparison is defined with blank padding
+  // to extend a shorter operand.
+  if (xLen < yLen) {
+    return Compare(String{x}.append(yLen - xLen, CH{' '}), y);
+  } else if (xLen > yLen) {
+    return Compare(x, String{y}.append(xLen - yLen, CH{' '}));
+  } else if (x < y) {
     return Ordering::Less;
   } else if (x > y) {
     return Ordering::Greater;
