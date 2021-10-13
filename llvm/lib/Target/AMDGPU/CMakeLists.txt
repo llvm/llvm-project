@@ -84,6 +84,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPrintfRuntimeBinding.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPUPropagateAttributes.cpp
+  AMDGPUPromoteKernelArguments.cpp
   AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPUReplaceLDSUseWithPointer.cpp

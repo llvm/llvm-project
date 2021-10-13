@@ -326,7 +326,7 @@ func @complex_loops() {
 
 // CHECK: func @triang_loop(%{{.*}}: index, %{{.*}}: memref<?x?xi32>) {
 func @triang_loop(%arg0: index, %arg1: memref<?x?xi32>) {
-  %c = constant 0 : i32       // CHECK: %{{.*}} = constant 0 : i32
+  %c = arith.constant 0 : i32       // CHECK: %{{.*}} = arith.constant 0 : i32
   affine.for %i0 = 1 to %arg0 {      // CHECK: affine.for %{{.*}} = 1 to %{{.*}} {
     affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to %{{.*}} {
       memref.store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
@@ -361,8 +361,8 @@ func @loop_bounds(%N : index) {
        affine.for %k = #bound_map1 (%w1, %i)[%N] to affine_map<(i, j)[s] -> (i + j + s)> (%w2, %j)[%s] {
           // CHECK: "foo"(%{{.*}}, %{{.*}}, %{{.*}}) : (index, index, index) -> ()
           "foo"(%i, %j, %k) : (index, index, index)->()
-          // CHECK: %{{.*}} = constant 30 : index
-          %c = constant 30 : index
+          // CHECK: %{{.*}} = arith.constant 30 : index
+          %c = arith.constant 30 : index
           // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})
           %u = affine.apply affine_map<(d0, d1)->(d0+d1)> (%N, %c)
           // CHECK: affine.for %{{.*}} = max #map{{.*}}(%{{.*}})[%{{.*}}] to min #map{{.*}}(%{{.*}})[%{{.*}}] {
@@ -378,21 +378,21 @@ func @loop_bounds(%N : index) {
 
 // CHECK-LABEL: func @ifinst(%{{.*}}: index) {
 func @ifinst(%N: index) {
-  %c = constant 200 : index // CHECK   %{{.*}} = constant 200
+  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
   affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
     affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
-      %x = constant 1 : i32
-       // CHECK: %{{.*}} = constant 1 : i32
+      %x = arith.constant 1 : i32
+       // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     } else { // CHECK } else {
       affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK  affine.if (#set1(%{{.*}})[%{{.*}}]) {
-        // CHECK: %{{.*}} = constant 1 : index
-        %u = constant 1 : index
+        // CHECK: %{{.*}} = arith.constant 1 : index
+        %u = arith.constant 1 : index
         // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
         %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%u]
       } else {            // CHECK     } else {
-        %v = constant 3 : i32 // %c3_i32 = constant 3 : i32
+        %v = arith.constant 3 : i32 // %c3_i32 = arith.constant 3 : i32
       }
     }       // CHECK     }
   }         // CHECK   }
@@ -401,11 +401,11 @@ func @ifinst(%N: index) {
 
 // CHECK-LABEL: func @simple_ifinst(%{{.*}}: index) {
 func @simple_ifinst(%N: index) {
-  %c = constant 200 : index // CHECK   %{{.*}} = constant 200
+  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
   affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
     affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
-      %x = constant 1 : i32
-       // CHECK: %{{.*}} = constant 1 : i32
+      %x = arith.constant 1 : i32
+       // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     }       // CHECK     }
@@ -499,7 +499,7 @@ func @verbose_terminators() -> (i1, i17) {
   "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
-  %true = constant true
+  %true = arith.constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
   "std.return"(%true, %a) : (i1, i17) -> ()
 
@@ -546,24 +546,24 @@ func @condbr_moarargs() -> (i32) {
 // Test pretty printing of constant names.
 // CHECK-LABEL: func @constants
 func @constants() -> (i32, i23, i23, i1, i1) {
-  // CHECK: %{{.*}} = constant 42 : i32
-  %x = constant 42 : i32
-  // CHECK: %{{.*}} = constant 17 : i23
-  %y = constant 17 : i23
+  // CHECK: %{{.*}} = arith.constant 42 : i32
+  %x = arith.constant 42 : i32
+  // CHECK: %{{.*}} = arith.constant 17 : i23
+  %y = arith.constant 17 : i23
 
   // This is a redundant definition of 17, the asmprinter gives it a unique name
-  // CHECK: %{{.*}} = constant 17 : i23
-  %z = constant 17 : i23
+  // CHECK: %{{.*}} = arith.constant 17 : i23
+  %z = arith.constant 17 : i23
 
-  // CHECK: %{{.*}} = constant true
-  %t = constant true
-  // CHECK: %{{.*}} = constant false
-  %f = constant false
+  // CHECK: %{{.*}} = arith.constant true
+  %t = arith.constant true
+  // CHECK: %{{.*}} = arith.constant false
+  %f = arith.constant false
 
   // The trick to parse type declarations should not interfere with hex
   // literals.
-  // CHECK: %{{.*}} = constant 3890 : i32
-  %h = constant 0xf32 : i32
+  // CHECK: %{{.*}} = arith.constant 3890 : i32
+  %h = arith.constant 0xf32 : i32
 
   // CHECK: return %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
   return %x, %y, %z, %t, %f : i32, i23, i23, i1, i1
@@ -653,7 +653,7 @@ func @funcsimplemap(%arg0: index, %arg1: index) -> () {
           // CHECK: affine.for %{{.*}} = 0 to #map{{[a-z_0-9]*}}()[%{{.*}}, %{{.*}}] {
             affine.for %i5 = 0 to #map_non_simple3()[%arg0] {
             // CHECK: affine.for %{{.*}} = 0 to #map{{[a-z_0-9]*}}()[%{{.*}}] {
-              %c42_i32 = constant 42 : i32
+              %c42_i32 = arith.constant 42 : i32
             }
           }
         }
@@ -889,7 +889,7 @@ func @no_integer_set_constraints() {
 
 // CHECK-LABEL: func @verbose_if(
 func @verbose_if(%N: index) {
-  %c = constant 200 : index
+  %c = arith.constant 200 : index
 
   // CHECK: affine.if #set{{.*}}(%{{.*}})[%{{.*}}, %{{.*}}] {
   "affine.if"(%c, %N, %c) ({
@@ -1055,19 +1055,19 @@ func @dialect_attribute_with_type() {
 // CHECK-LABEL: @f16_special_values
 func @f16_special_values() {
   // F16 NaNs.
-  // CHECK: constant 0x7C01 : f16
-  %0 = constant 0x7C01 : f16
-  // CHECK: constant 0x7FFF : f16
-  %1 = constant 0x7FFF : f16
-  // CHECK: constant 0xFFFF : f16
-  %2 = constant 0xFFFF : f16
+  // CHECK: arith.constant 0x7C01 : f16
+  %0 = arith.constant 0x7C01 : f16
+  // CHECK: arith.constant 0x7FFF : f16
+  %1 = arith.constant 0x7FFF : f16
+  // CHECK: arith.constant 0xFFFF : f16
+  %2 = arith.constant 0xFFFF : f16
 
   // F16 positive infinity.
-  // CHECK: constant 0x7C00 : f16
-  %3 = constant 0x7C00 : f16
+  // CHECK: arith.constant 0x7C00 : f16
+  %3 = arith.constant 0x7C00 : f16
   // F16 negative infinity.
-  // CHECK: constant 0xFC00 : f16
-  %4 = constant 0xFC00 : f16
+  // CHECK: arith.constant 0xFC00 : f16
+  %4 = arith.constant 0xFC00 : f16
 
   return
 }
@@ -1075,23 +1075,23 @@ func @f16_special_values() {
 // CHECK-LABEL: @f32_special_values
 func @f32_special_values() {
   // F32 signaling NaNs.
-  // CHECK: constant 0x7F800001 : f32
-  %0 = constant 0x7F800001 : f32
-  // CHECK: constant 0x7FBFFFFF : f32
-  %1 = constant 0x7FBFFFFF : f32
+  // CHECK: arith.constant 0x7F800001 : f32
+  %0 = arith.constant 0x7F800001 : f32
+  // CHECK: arith.constant 0x7FBFFFFF : f32
+  %1 = arith.constant 0x7FBFFFFF : f32
 
   // F32 quiet NaNs.
-  // CHECK: constant 0x7FC00000 : f32
-  %2 = constant 0x7FC00000 : f32
-  // CHECK: constant 0xFFFFFFFF : f32
-  %3 = constant 0xFFFFFFFF : f32
+  // CHECK: arith.constant 0x7FC00000 : f32
+  %2 = arith.constant 0x7FC00000 : f32
+  // CHECK: arith.constant 0xFFFFFFFF : f32
+  %3 = arith.constant 0xFFFFFFFF : f32
 
   // F32 positive infinity.
-  // CHECK: constant 0x7F800000 : f32
-  %4 = constant 0x7F800000 : f32
+  // CHECK: arith.constant 0x7F800000 : f32
+  %4 = arith.constant 0x7F800000 : f32
   // F32 negative infinity.
-  // CHECK: constant 0xFF800000 : f32
-  %5 = constant 0xFF800000 : f32
+  // CHECK: arith.constant 0xFF800000 : f32
+  %5 = arith.constant 0xFF800000 : f32
 
   return
 }
@@ -1099,28 +1099,28 @@ func @f32_special_values() {
 // CHECK-LABEL: @f64_special_values
 func @f64_special_values() {
   // F64 signaling NaNs.
-  // CHECK: constant 0x7FF0000000000001 : f64
-  %0 = constant 0x7FF0000000000001 : f64
-  // CHECK: constant 0x7FF8000000000000 : f64
-  %1 = constant 0x7FF8000000000000 : f64
+  // CHECK: arith.constant 0x7FF0000000000001 : f64
+  %0 = arith.constant 0x7FF0000000000001 : f64
+  // CHECK: arith.constant 0x7FF8000000000000 : f64
+  %1 = arith.constant 0x7FF8000000000000 : f64
 
   // F64 quiet NaNs.
-  // CHECK: constant 0x7FF0000001000000 : f64
-  %2 = constant 0x7FF0000001000000 : f64
-  // CHECK: constant 0xFFF0000001000000 : f64
-  %3 = constant 0xFFF0000001000000 : f64
+  // CHECK: arith.constant 0x7FF0000001000000 : f64
+  %2 = arith.constant 0x7FF0000001000000 : f64
+  // CHECK: arith.constant 0xFFF0000001000000 : f64
+  %3 = arith.constant 0xFFF0000001000000 : f64
 
   // F64 positive infinity.
-  // CHECK: constant 0x7FF0000000000000 : f64
-  %4 = constant 0x7FF0000000000000 : f64
+  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  %4 = arith.constant 0x7FF0000000000000 : f64
   // F64 negative infinity.
-  // CHECK: constant 0xFFF0000000000000 : f64
-  %5 = constant 0xFFF0000000000000 : f64
+  // CHECK: arith.constant 0xFFF0000000000000 : f64
+  %5 = arith.constant 0xFFF0000000000000 : f64
 
   // Check that values that can't be represented with the default format, use
   // hex instead.
-  // CHECK: constant 0xC1CDC00000000000 : f64
-  %6 = constant 0xC1CDC00000000000 : f64
+  // CHECK: arith.constant 0xC1CDC00000000000 : f64
+  %6 = arith.constant 0xC1CDC00000000000 : f64
 
   return
 }
@@ -1128,23 +1128,23 @@ func @f64_special_values() {
 // CHECK-LABEL: @bfloat16_special_values
 func @bfloat16_special_values() {
   // bfloat16 signaling NaNs.
-  // CHECK: constant 0x7F81 : bf16
-  %0 = constant 0x7F81 : bf16
-  // CHECK: constant 0xFF81 : bf16
-  %1 = constant 0xFF81 : bf16
+  // CHECK: arith.constant 0x7F81 : bf16
+  %0 = arith.constant 0x7F81 : bf16
+  // CHECK: arith.constant 0xFF81 : bf16
+  %1 = arith.constant 0xFF81 : bf16
 
   // bfloat16 quiet NaNs.
-  // CHECK: constant 0x7FC0 : bf16
-  %2 = constant 0x7FC0 : bf16
-  // CHECK: constant 0xFFC0 : bf16
-  %3 = constant 0xFFC0 : bf16
+  // CHECK: arith.constant 0x7FC0 : bf16
+  %2 = arith.constant 0x7FC0 : bf16
+  // CHECK: arith.constant 0xFFC0 : bf16
+  %3 = arith.constant 0xFFC0 : bf16
 
   // bfloat16 positive infinity.
-  // CHECK: constant 0x7F80 : bf16
-  %4 = constant 0x7F80 : bf16
+  // CHECK: arith.constant 0x7F80 : bf16
+  %4 = arith.constant 0x7F80 : bf16
   // bfloat16 negative infinity.
-  // CHECK: constant 0xFF80 : bf16
-  %5 = constant 0xFF80 : bf16
+  // CHECK: arith.constant 0xFF80 : bf16
+  %5 = arith.constant 0xFF80 : bf16
 
   return
 }
@@ -1154,8 +1154,8 @@ func @bfloat16_special_values() {
 // the decimal form instead.
 // CHECK-LABEL: @f32_potential_precision_loss()
 func @f32_potential_precision_loss() {
-  // CHECK: constant -1.23697901 : f32
-  %0 = constant -1.23697901 : f32
+  // CHECK: arith.constant -1.23697901 : f32
+  %0 = arith.constant -1.23697901 : f32
   return
 }
 
@@ -1189,8 +1189,8 @@ func @op_with_region_args() {
 
 // CHECK-LABEL: func @op_with_passthrough_region_args
 func @op_with_passthrough_region_args() {
-  // CHECK: [[VAL:%.*]] = constant
-  %0 = constant 10 : index
+  // CHECK: [[VAL:%.*]] = arith.constant
+  %0 = arith.constant 10 : index
 
   // CHECK: test.isolated_region [[VAL]] {
   // CHECK-NEXT: "foo.consumer"([[VAL]]) : (index)
@@ -1340,7 +1340,7 @@ func @default_dialect(%bool : i1) {
 
 // CHECK-LABEL: func @unreachable_dominance_violation_ok
 func @unreachable_dominance_violation_ok() -> i1 {
-// CHECK:   [[VAL:%.*]] = constant false
+// CHECK:   [[VAL:%.*]] = arith.constant false
 // CHECK:   return [[VAL]] : i1
 // CHECK: ^bb1:   // no predecessors
 // CHECK:   [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
@@ -1351,7 +1351,7 @@ func @unreachable_dominance_violation_ok() -> i1 {
 // CHECK:   [[VAL3]] = "foo"() : () -> i64
 // CHECK:   return [[VAL2]]#1 : i1
 // CHECK: }
-  %c = constant false
+  %c = arith.constant false
   return %c : i1
 ^bb1:
   // %1 is not dominated by it's definition, but block is not reachable.

@@ -26,7 +26,7 @@ func @loop_for_step(%arg0: f32, %arg1: index) {
 
 func @loop_for_step_positive(%arg0: index) {
   // expected-error@+2 {{constant step operand must be positive}}
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   "scf.for"(%arg0, %arg0, %c0) ({
     ^bb0(%arg1: index):
       scf.yield
@@ -161,8 +161,8 @@ func @parallel_no_tuple_elements() {
 func @parallel_step_not_positive(
     %arg0: index, %arg1: index, %arg2: index, %arg3: index) {
   // expected-error@+3 {{constant step operand must be positive}}
-  %c0 = constant 1 : index
-  %c1 = constant 0 : index
+  %c0 = arith.constant 1 : index
+  %c1 = arith.constant 0 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3) step (%c0, %c1) {
   }
   return
@@ -174,7 +174,7 @@ func @parallel_fewer_results_than_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{expects number of results: 0 to be the same as number of reductions: 1}}
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
-    %c0 = constant 1.0 : f32
+    %c0 = arith.constant 1.0 : f32
     scf.reduce(%c0) : f32 {
       ^bb0(%lhs: f32, %rhs: f32):
         scf.reduce.return %lhs : f32
@@ -188,7 +188,7 @@ func @parallel_fewer_results_than_reduces(
 func @parallel_more_results_than_reduces(
     %arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+2 {{expects number of results: 1 to be the same as number of reductions: 0}}
-  %zero = constant 1.0 : f32
+  %zero = arith.constant 1.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) -> f32 {
   }
 
@@ -212,7 +212,7 @@ func @parallel_more_results_than_initial_values(
 
 func @parallel_different_types_of_results_and_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg1)
                                        step (%arg2) init (%zero) -> f32 {
     // expected-error@+1 {{expects type of reduce: 'index' to be the same as result type: 'f32'}}
@@ -238,7 +238,7 @@ func @top_level_reduce(%arg0 : f32) {
 // -----
 
 func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{the block inside reduce should not be empty}}
@@ -252,7 +252,7 @@ func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
@@ -267,7 +267,7 @@ func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
@@ -283,7 +283,7 @@ func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'scf.reduce.return' op}}
@@ -298,12 +298,12 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     scf.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
-        %c0 = constant 1 : index
+        %c0 = arith.constant 1 : index
         // expected-error@+1 {{needs to have type 'f32' (the type of the enclosing ReduceOp)}}
         scf.reduce.return %c0 : index
     }
@@ -327,10 +327,10 @@ func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
   // expected-error@+1 {{region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 2}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
-    %0 = addf %arg1, %arg1 : f32
+    %0 = arith.addf %arg1, %arg1 : f32
     scf.yield %0 : f32
   } else {
-    %0 = subf %arg1, %arg1 : f32
+    %0 = arith.subf %arg1, %arg1 : f32
     scf.yield %0, %0 : f32, f32
   }
   return
@@ -342,7 +342,7 @@ func @std_if_missing_else(%arg0: i1, %arg1: f32)
 {
   // expected-error@+1 {{must have an else block if defining values}}
   %x = scf.if %arg0 -> (f32) {
-    %0 = addf %arg1, %arg1 : f32
+    %0 = arith.addf %arg1, %arg1 : f32
     scf.yield %0 : f32
   }
   return
@@ -351,13 +351,13 @@ func @std_if_missing_else(%arg0: i1, %arg1: f32)
 // -----
 
 func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %s0 = constant 0.0 : f32
-  %t0 = constant 1 : i32
+  %s0 = arith.constant 0.0 : f32
+  %t0 = arith.constant 1 : i32
   // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
   %result1:3 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
-    %sn = addf %si, %si : f32
-    %tn = addi %ti, %ti : i32
+    %sn = arith.addf %si, %si : f32
+    %tn = arith.addi %ti, %ti : i32
     scf.yield %sn, %tn, %sn : f32, i32, f32
   }
   return
@@ -366,15 +366,15 @@ func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %s0 = constant 0.0 : f32
-  %t0 = constant 1 : i32
-  %u0 = constant 1.0 : f32
+  %s0 = arith.constant 0.0 : f32
+  %t0 = arith.constant 1 : i32
+  %u0 = arith.constant 1.0 : f32
   // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
-    %sn = addf %si, %si : f32
-    %tn = addi %ti, %ti : i32
-    %un = subf %ui, %ui : f32
+    %sn = arith.addf %si, %si : f32
+    %tn = arith.addi %ti, %ti : i32
+    %un = arith.subf %ui, %ui : f32
     scf.yield %sn, %tn, %un : f32, i32, f32
   }
   return
@@ -384,13 +384,13 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-note@+1 {{prior use here}}
-  %s0 = constant 0.0 : f32
-  %t0 = constant 1.0 : f32
+  %s0 = arith.constant 0.0 : f32
+  %t0 = arith.constant 1.0 : f32
   // expected-error@+2 {{expects different type than prior uses: 'i32' vs 'f32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (i32, i32) {
-    %sn = addf %si, %si : i32
-    %tn = addf %ti, %ti : i32
+    %sn = arith.addf %si, %si : i32
+    %tn = arith.addf %ti, %ti : i32
     scf.yield %sn, %tn : i32, i32
   }
   return
@@ -399,13 +399,13 @@ func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %s0 = constant 0.0 : f32
-  %t0 = constant 1.0 : f32
+  %s0 = arith.constant 0.0 : f32
+  %t0 = arith.constant 1.0 : f32
   // expected-error @+1 {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
-    %sn = addf %si, %si : f32
-    %ic = constant 1 : i32
+    %sn = arith.addf %si, %si : f32
+    %ic = arith.constant 1 : i32
     scf.yield %sn, %ic : f32, i32
   }
   return
@@ -417,7 +417,7 @@ func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @parallel_invalid_yield(
     %arg0: index, %arg1: index, %arg2: index) {
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
-    %c0 = constant 1.0 : f32
+    %c0 = arith.constant 1.0 : f32
     // expected-error@+1 {{'scf.yield' op not allowed to have operands inside 'scf.parallel'}}
     scf.yield %c0 : f32
   }
@@ -437,7 +437,7 @@ func @yield_invalid_parent_op() {
 // -----
 
 func @while_parser_type_mismatch() {
-  %true = constant true
+  %true = arith.constant true
   // expected-error@+1 {{expected as many input types as operands (expected 0 got 1)}}
   scf.while : (i32) -> () {
     scf.condition(%true)
@@ -461,7 +461,7 @@ func @while_bad_terminator() {
 // -----
 
 func @while_cross_region_type_mismatch() {
-  %true = constant true
+  %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
   scf.while : () -> () {
     scf.condition(%true)
@@ -474,7 +474,7 @@ func @while_cross_region_type_mismatch() {
 // -----
 
 func @while_cross_region_type_mismatch() {
-  %true = constant true
+  %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
   scf.while : () -> () {
     scf.condition(%true) %true : i1
@@ -487,7 +487,7 @@ func @while_cross_region_type_mismatch() {
 // -----
 
 func @while_result_type_mismatch() {
-  %true = constant true
+  %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   scf.while : () -> () {
     scf.condition(%true) %true : i1
@@ -500,7 +500,7 @@ func @while_result_type_mismatch() {
 // -----
 
 func @while_bad_terminator() {
-  %true = constant true
+  %true = arith.constant true
   // expected-error@+1 {{expects the 'after' region to terminate with 'scf.yield'}}
   scf.while : () -> () {
     scf.condition(%true)

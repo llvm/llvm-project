@@ -4,10 +4,10 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %f1 = constant 1.0: f32
-  %f2 = constant 2.0: f32
-  %f3 = constant 3.0: f32
-  %f4 = constant 4.0: f32
+  %f1 = arith.constant 1.0: f32
+  %f2 = arith.constant 2.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f4 = arith.constant 4.0: f32
   %v1 = vector.broadcast %f1 : f32 to vector<4xf32>
   %v2 = vector.broadcast %f2 : f32 to vector<3xf32>
   %v3 = vector.broadcast %f3 : f32 to vector<4x4xf32>

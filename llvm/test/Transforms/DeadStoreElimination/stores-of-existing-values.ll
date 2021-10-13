@@ -3,6 +3,10 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
+@a = external global [32 x i8], align 16
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+
 ; Test case for PR16520. The store in %if.then is dead, because the same value
 ; has been stored earlier to the same location.
 define void @test1_pr16520(i1 %b, i8* nocapture %r) {
@@ -280,5 +284,32 @@ bb2:
   ret void
 bb3:
   store i32 0, i32* %P
+  ret void
+}
+
+define void @pr49927(i32* %q, i32* %p) {
+; CHECK-LABEL: @pr49927(
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, i32* %p, align 4
+  store i32 %v, i32* %q, align 4
+  ; FIXME: this store can be eliminated
+  store i32 %v, i32* %p, align 4
+  ret void
+}
+
+
+define void @pr50339(i8* nocapture readonly %0) {
+; CHECK-LABEL: @pr50339(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) [[TMP0:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) [[TMP0]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) %0, i64 16, i1 false)
+  ; FIXME: Eliminate the second memcpy as a "store of existing value" for this particular case, where both memcpy's are identical (same source, not just same dest).
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) %0, i64 16, i1 false)
   ret void
 }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
@@ -52,7 +53,7 @@ enum class MaskFormat {
 /// and a constant mask operation (since the client may be called at
 /// various stages during progressive lowering).
 static MaskFormat get1DMaskFormat(Value mask) {
-  if (auto c = mask.getDefiningOp<ConstantOp>()) {
+  if (auto c = mask.getDefiningOp<arith::ConstantOp>()) {
     // Inspect constant dense values. We count up for bits that
     // are set, count down for bits that are cleared, and bail
     // when a mix is detected.
@@ -238,7 +239,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  return builder.create<ConstantOp>(loc, type, value);
+  return builder.create<arith::ConstantOp>(loc, type, value);
 }
 
 IntegerType vector::getVectorSubscriptType(Builder &builder) {
@@ -787,7 +788,7 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
               maybeContraction.getDefiningOp());
       if (!contractionOp)
         return vector::ContractionOp();
-      if (auto maybeZero = dyn_cast_or_null<ConstantOp>(
+      if (auto maybeZero = dyn_cast_or_null<arith::ConstantOp>(
               contractionOp.acc().getDefiningOp())) {
         if (maybeZero.value() ==
             rewriter.getZeroAttr(contractionOp.acc().getType())) {
@@ -811,8 +812,8 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
 
 void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<CanonicalizeContractAdd<AddIOp>, CanonicalizeContractAdd<AddFOp>>(
-      context);
+  results.add<CanonicalizeContractAdd<arith::AddIOp>,
+              CanonicalizeContractAdd<arith::AddFOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -827,7 +828,8 @@ void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
 
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source, int64_t position) {
-  Value pos = builder.create<ConstantIntOp>(result.location, position, 32);
+  Value pos =
+      builder.create<arith::ConstantIntOp>(result.location, position, 32);
   build(builder, result, source, pos);
 }
 
@@ -864,7 +866,7 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, ValueRange position) {
   SmallVector<int64_t, 4> positionConstants =
       llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
-        return pos.getDefiningOp<ConstantIndexOp>().getValue();
+        return pos.getDefiningOp<arith::ConstantIndexOp>().value();
       }));
   build(builder, result, source, positionConstants);
 }
@@ -1525,7 +1527,8 @@ void InsertElementOp::build(OpBuilder &builder, OperationState &result,
 
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest, int64_t position) {
-  Value pos = builder.create<ConstantIntOp>(result.location, position, 32);
+  Value pos =
+      builder.create<arith::ConstantIntOp>(result.location, position, 32);
   build(builder, result, source, dest, pos);
 }
 
@@ -1553,7 +1556,7 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
                      Value dest, ValueRange position) {
   SmallVector<int64_t, 4> positionConstants =
       llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
-        return pos.getDefiningOp<ConstantIndexOp>().getValue();
+        return pos.getDefiningOp<arith::ConstantIndexOp>().value();
       }));
   build(builder, result, source, dest, positionConstants);
 }
@@ -1796,6 +1799,12 @@ static LogicalResult verify(InsertStridedSliceOp op) {
   return success();
 }
 
+OpFoldResult InsertStridedSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (getSourceVectorType() == getDestVectorType())
+    return source();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // OuterProductOp
 //===----------------------------------------------------------------------===//
@@ -1933,18 +1942,18 @@ static LogicalResult verify(ReshapeOp op) {
   // If all shape operands are produced by constant ops, verify that product
   // of dimensions for input/output shape match.
   auto isDefByConstant = [](Value operand) {
-    return isa_and_nonnull<ConstantIndexOp>(operand.getDefiningOp());
+    return isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
   };
   if (llvm::all_of(op.input_shape(), isDefByConstant) &&
       llvm::all_of(op.output_shape(), isDefByConstant)) {
     int64_t numInputElements = 1;
     for (auto operand : op.input_shape())
       numInputElements *=
-          cast<ConstantIndexOp>(operand.getDefiningOp()).getValue();
+          cast<arith::ConstantIndexOp>(operand.getDefiningOp()).value();
     int64_t numOutputElements = 1;
     for (auto operand : op.output_shape())
       numOutputElements *=
-          cast<ConstantIndexOp>(operand.getDefiningOp()).getValue();
+          cast<arith::ConstantIndexOp>(operand.getDefiningOp()).value();
     if (numInputElements != numOutputElements)
       return op.emitError("product of input and output shape sizes must match");
   }
@@ -2180,7 +2189,7 @@ public:
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // ConstantOp.
     auto constantOp =
-        extractStridedSliceOp.vector().getDefiningOp<ConstantOp>();
+        extractStridedSliceOp.vector().getDefiningOp<arith::ConstantOp>();
     if (!constantOp)
       return failure();
     auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
@@ -2188,7 +2197,8 @@ public:
       return failure();
     auto newAttr = DenseElementsAttr::get(extractStridedSliceOp.getType(),
                                           dense.getSplatValue());
-    rewriter.replaceOpWithNewOp<ConstantOp>(extractStridedSliceOp, newAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
+                                                   newAttr);
     return success();
   }
 };
@@ -2386,8 +2396,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            ValueRange indices, AffineMap permutationMap,
                            ArrayRef<bool> inBounds) {
   Type elemType = source.getType().cast<ShapedType>().getElementType();
-  Value padding = builder.create<ConstantOp>(result.location, elemType,
-                                             builder.getZeroAttr(elemType));
+  Value padding = builder.create<arith::ConstantOp>(
+      result.location, elemType, builder.getZeroAttr(elemType));
   if (inBounds.empty())
     return build(builder, result, vectorType, source, indices, permutationMap,
                  padding, ArrayAttr());
@@ -2437,6 +2447,18 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            ArrayAttr inBounds) {
   build(builder, result, vectorType, source, indices, permutationMap, padding,
         /*mask=*/Value(), inBounds);
+}
+
+Value TransferReadOp::createScalarOp(OpBuilder &builder, Location loc,
+                                     Value source, ValueRange indices,
+                                     ArrayRef<bool> inBounds) {
+  Type elemType = source.getType().cast<ShapedType>().getElementType();
+  auto vectorType = VectorType::get(ArrayRef<int64_t>{1}, elemType);
+  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
+                                 getAffineConstantExpr(0, loc.getContext()));
+  Value read = builder.create<vector::TransferReadOp>(loc, vectorType, source,
+                                                      indices, map, inBounds);
+  return builder.create<vector::ExtractOp>(loc, read, ArrayRef<int64_t>{0});
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
@@ -2602,14 +2624,14 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
   Value index = op.indices()[indicesIdx];
-  auto cstOp = index.getDefiningOp<ConstantIndexOp>();
+  auto cstOp = index.getDefiningOp<arith::ConstantIndexOp>();
   if (!cstOp)
     return false;
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
 
-  return cstOp.getValue() + vectorSize <= sourceSize;
+  return cstOp.value() + vectorSize <= sourceSize;
 }
 
 template <typename TransferOp>
@@ -2708,8 +2730,8 @@ namespace {
 /// ```
 /// is rewritten to:
 /// ```
-/// %p0 = addi %a, %e : index
-/// %p1 = addi %b, %f : index
+/// %p0 = arith.addi %a, %e : index
+/// %p1 = arith.addi %b, %f : index
 /// %1 = vector.transfer_read %t[%p0, %p1], %cst {in_bounds = [true, true]}
 ///     : tensor<?x?xf32>, vector<4x5xf32>
 /// ```
@@ -2745,10 +2767,10 @@ public:
     for (auto it : llvm::enumerate(xferOp.indices())) {
       OpFoldResult offset =
           extractOp.getMixedOffsets()[it.index() + rankReduced];
-      newIndices.push_back(
-          rewriter.create<AddIOp>(xferOp->getLoc(), it.value(),
-                                  getValueOrCreateConstantIndexOp(
-                                      rewriter, extractOp.getLoc(), offset)));
+      newIndices.push_back(rewriter.create<arith::AddIOp>(
+          xferOp->getLoc(), it.value(),
+          getValueOrCreateConstantIndexOp(rewriter, extractOp.getLoc(),
+                                          offset)));
     }
     SmallVector<bool> inBounds(xferOp.getTransferRank(), true);
     rewriter.replaceOpWithNewOp<TransferReadOp>(xferOp, xferOp.getVectorType(),
@@ -2769,6 +2791,16 @@ void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
 
+void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
+                            Value vector, Value dest, ValueRange indices,
+                            AffineMap permutationMap, ArrayRef<bool> inBounds) {
+  if (inBounds.empty())
+    return build(builder, result, vector, dest, indices, permutationMap,
+                 /*mask=*/Value(), ArrayAttr());
+  build(builder, result, vector, dest, indices, permutationMap,
+        /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
+}
+
 /// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
@@ -2781,13 +2813,6 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                  ArrayAttr());
   ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
   build(builder, result, vector, source, indices, permMap, inBoundsArrayAttr);
-}
-
-void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
-                            AffineMap permutationMap) {
-  build(builder, result, vector, source, indices, permutationMap,
-        /*inBounds=*/ArrayAttr());
 }
 
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
@@ -2815,6 +2840,20 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   Type resultType = source.getType().dyn_cast<RankedTensorType>();
   build(builder, result, resultType, vector, source, indices, permutationMap,
         mask, inBounds);
+}
+
+Operation *TransferWriteOp::createScalarOp(OpBuilder &builder, Location loc,
+                                           Value value, Value dest,
+                                           ValueRange indices,
+                                           ArrayRef<bool> inBounds) {
+  Value vectorOfAScalar = value;
+  if (!value.getType().isa<VectorType>())
+    vectorOfAScalar = builder.create<vector::BroadcastOp>(
+        loc, VectorType::get({1}, value.getType()), value);
+  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
+                                 getAffineConstantExpr(0, loc.getContext()));
+  return builder.create<vector::TransferWriteOp>(loc, vectorOfAScalar, dest,
+                                                 indices, map, inBounds);
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -2952,8 +2991,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
     return failure();
   // If any index is nonzero.
   auto isNotConstantZero = [](Value v) {
-    auto cstOp = v.getDefiningOp<ConstantIndexOp>();
-    return !cstOp || cstOp.getValue() != 0;
+    auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>();
+    return !cstOp || cstOp.value() != 0;
   };
   if (llvm::any_of(read.indices(), isNotConstantZero) ||
       llvm::any_of(write.indices(), isNotConstantZero))
@@ -3593,7 +3632,7 @@ public:
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto constantOp = shapeCastOp.source().getDefiningOp<ConstantOp>();
+    auto constantOp = shapeCastOp.source().getDefiningOp<arith::ConstantOp>();
     if (!constantOp)
       return failure();
     // Only handle splat for now.
@@ -3602,7 +3641,7 @@ public:
       return failure();
     auto newAttr = DenseElementsAttr::get(
         shapeCastOp.getType().cast<VectorType>(), dense.getSplatValue());
-    rewriter.replaceOpWithNewOp<ConstantOp>(shapeCastOp, newAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(shapeCastOp, newAttr);
     return success();
   }
 };
@@ -3892,7 +3931,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
     auto is_not_def_by_constant = [](Value operand) {
-      return !isa_and_nonnull<ConstantIndexOp>(operand.getDefiningOp());
+      return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
     };
     if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
       return failure();
@@ -3900,7 +3939,7 @@ public:
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
       auto defOp = operand.getDefiningOp();
-      maskDimSizes.push_back(cast<ConstantIndexOp>(defOp).getValue());
+      maskDimSizes.push_back(cast<arith::ConstantIndexOp>(defOp).value());
     }
     // Replace 'createMaskOp' with ConstantMaskOp.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(

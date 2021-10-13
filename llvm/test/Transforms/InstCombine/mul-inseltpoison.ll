@@ -718,6 +718,50 @@ define i32 @negate_if_false(i32 %x, i1 %cond) {
   ret i32 %r
 }
 
+define i32 @negate_if_true_nsw(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_true_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sel = select i1 %cond, i32 -1, i32 1
+  %r = mul nsw i32 %sel, %x
+  ret i32 %r
+}
+
+define i32 @negate_if_true_nuw(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_true_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sel = select i1 %cond, i32 -1, i32 1
+  %r = mul nuw i32 %sel, %x
+  ret i32 %r
+}
+
+define i32 @negate_if_false_nsw(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_false_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sel = select i1 %cond, i32 1, i32 -1
+  %r = mul nsw i32 %sel, %x
+  ret i32 %r
+}
+
+define i32 @negate_if_false_nuw(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_false_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sel = select i1 %cond, i32 1, i32 -1
+  %r = mul nuw i32 %sel, %x
+  ret i32 %r
+}
+
 define <2 x i8> @negate_if_true_commute(<2 x i8> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_commute(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 42>, [[PX:%.*]]

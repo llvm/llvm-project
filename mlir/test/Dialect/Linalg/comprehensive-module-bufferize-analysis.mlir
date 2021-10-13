@@ -334,7 +334,7 @@ func @nested_extract_slice_and_insert(
     %idx : index)
   ->  (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
 {
-  %f0 = constant 0.0 : f32
+  %f0 = arith.constant 0.0 : f32
 
   // 2-level matching tensor.extract_slice / tensor.insert_slice into non
   // inplaceable %A.
@@ -541,8 +541,8 @@ func private @foo(tensor<64xf32>)
 
 // CHECK-LABEL: dependence_through_call
 func @dependence_through_call(%I : tensor<64xf32> {linalg.inplaceable = true}) {
-  %f1 = constant 1.000000e+00 : f32
-  %f2 = constant 2.000000e+00 : f32
+  %f1 = arith.constant 1.000000e+00 : f32
+  %f2 = arith.constant 2.000000e+00 : f32
 
   // 2. %B already bufferizes inplace, %A would alias and have a different
   // value. The calls to `foo` are determined to read conservatively, so %A
@@ -574,11 +574,11 @@ func private @bar(%A : tensor<64xf32>) {
 func @read_dependence_through_scf_and_call(
     %I : tensor<64xf32> {linalg.inplaceable = true},
     %I2 : tensor<64xf32> {linalg.inplaceable = true}) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
-  %f1 = constant 1.000000e+00 : f32
-  %f2 = constant 2.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %f1 = arith.constant 1.000000e+00 : f32
+  %f2 = arith.constant 2.000000e+00 : f32
 
   // 5. %B bufferizes inplace, %A would alias and have a different value.
   // The calls to `foo` are determined to read conservatively, so %A cannot
@@ -630,7 +630,7 @@ func @read_dependence_through_scf_and_call(
 func @write_into_constant_via_alias(%v : vector<5xi32>,
                                     %s1 : index, %s2 : index,
                                     %s3 : index) -> tensor<?xi32> {
-  %A = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+  %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   %b = tensor.extract_slice %A[%s1][%s2][1] : tensor<4xi32> to tensor<?xi32>
@@ -648,9 +648,9 @@ builtin.func @matmul_on_tensors(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
     -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst_0 = constant 0.000000e+00 : f32
-  %cst_1 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
 
   %7 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
@@ -684,9 +684,9 @@ builtin.func @matmul_on_tensors(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
     -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst_0 = constant 0.000000e+00 : f32
-  %cst_1 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
 
   %7 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
@@ -736,8 +736,8 @@ func @insert_slice_chain(
     %arg2: tensor<62x90xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<62x90xf32> attributes {passthrough = [["target-cpu", "skylake-avx512"], ["prefer-vector-width", "512"]]}
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]
@@ -780,9 +780,9 @@ func @ip(%t: tensor<10x20xf32> {linalg.inplaceable = true},
          %x: index, %y: index, %v: vector<5x6xf32>)
   -> tensor<10x20xf32>
 {
-  %c0 = constant 0 : index
-  %c256 = constant 256 : index
-  %c257 = constant 257 : index
+  %c0 = arith.constant 0 : index
+  %c256 = arith.constant 256 : index
+  %c257 = arith.constant 257 : index
   %r = scf.for %arg0 = %c0 to %c257 step %c256 iter_args(%arg1 = %t) -> (tensor<10x20xf32>) {
     %t1 = tensor.extract_slice %arg1[%x, 0] [5, %y] [1, 1] : tensor<10x20xf32> to tensor<5x?xf32>
     %t11 = tensor.extract_slice %t1[0, 0] [5, %y] [1, 1] : tensor<5x?xf32> to tensor<5x?xf32>

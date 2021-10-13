@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -275,8 +276,8 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 static LogicalResult verify(ForOp op) {
-  if (auto cst = op.step().getDefiningOp<ConstantIndexOp>())
-    if (cst.getValue() <= 0)
+  if (auto cst = op.step().getDefiningOp<arith::ConstantIndexOp>())
+    if (cst.value() <= 0)
       return op.emitOpError("constant step operand must be positive");
 
   // Check that the body defines as single block argument for the induction
@@ -707,26 +708,26 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    auto lb = op.lowerBound().getDefiningOp<ConstantOp>();
-    auto ub = op.upperBound().getDefiningOp<ConstantOp>();
+    auto lb = op.lowerBound().getDefiningOp<arith::ConstantOp>();
+    auto ub = op.upperBound().getDefiningOp<arith::ConstantOp>();
     if (!lb || !ub)
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    llvm::APInt lbValue = lb.getValue().cast<IntegerAttr>().getValue();
-    llvm::APInt ubValue = ub.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt lbValue = lb.value().cast<IntegerAttr>().getValue();
+    llvm::APInt ubValue = ub.value().cast<IntegerAttr>().getValue();
     if (lbValue.sge(ubValue)) {
       rewriter.replaceOp(op, op.getIterOperands());
       return success();
     }
 
-    auto step = op.step().getDefiningOp<ConstantOp>();
+    auto step = op.step().getDefiningOp<arith::ConstantOp>();
     if (!step)
       return failure();
 
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
-    llvm::APInt stepValue = step.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt stepValue = step.value().cast<IntegerAttr>().getValue();
     if ((lbValue + stepValue).sge(ubValue)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
@@ -1216,11 +1217,11 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
 
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
-    auto constant = op.condition().getDefiningOp<ConstantOp>();
+    auto constant = op.condition().getDefiningOp<arith::ConstantOp>();
     if (!constant)
       return failure();
 
-    if (constant.getValue().cast<BoolAttr>().getValue())
+    if (constant.value().cast<BoolAttr>().getValue())
       replaceOpWithRegion(rewriter, op, op.thenRegion());
     else if (!op.elseRegion().empty())
       replaceOpWithRegion(rewriter, op, op.elseRegion());
@@ -1288,7 +1289,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                 PatternRewriter &rewriter) const override {
     // Early exit if the condition is constant since replacing a constant
     // in the body with another constant isn't a simplification.
-    if (op.condition().getDefiningOp<ConstantOp>())
+    if (op.condition().getDefiningOp<arith::ConstantOp>())
       return failure();
 
     bool changed = false;
@@ -1305,7 +1306,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantTrue)
-          constantTrue = rewriter.create<mlir::ConstantOp>(
+          constantTrue = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
 
         rewriter.updateRootInPlace(use.getOwner(),
@@ -1315,7 +1316,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantFalse)
-          constantFalse = rewriter.create<mlir::ConstantOp>(
+          constantFalse = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
 
         rewriter.updateRootInPlace(use.getOwner(),
@@ -1393,24 +1394,24 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
         continue;
       }
 
-      auto trueYield = trueResult.getDefiningOp<ConstantOp>();
+      auto trueYield = trueResult.getDefiningOp<arith::ConstantOp>();
       if (!trueYield)
         continue;
 
       if (!trueYield.getType().isInteger(1))
         continue;
 
-      auto falseYield = falseResult.getDefiningOp<ConstantOp>();
+      auto falseYield = falseResult.getDefiningOp<arith::ConstantOp>();
       if (!falseYield)
         continue;
 
-      bool trueVal = trueYield.getValue().cast<BoolAttr>().getValue();
-      bool falseVal = falseYield.getValue().cast<BoolAttr>().getValue();
+      bool trueVal = trueYield.value().cast<BoolAttr>().getValue();
+      bool falseVal = falseYield.value().cast<BoolAttr>().getValue();
       if (!trueVal && falseVal) {
         if (!opResult.use_empty()) {
-          Value notCond = rewriter.create<XOrOp>(
+          Value notCond = rewriter.create<arith::XOrIOp>(
               op.getLoc(), op.condition(),
-              rewriter.create<mlir::ConstantOp>(
+              rewriter.create<arith::ConstantOp>(
                   op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1)));
           opResult.replaceAllUsesWith(notCond);
           changed = true;
@@ -1639,8 +1640,8 @@ static LogicalResult verify(ParallelOp op) {
 
   // Check whether all constant step values are positive.
   for (Value stepValue : stepValues)
-    if (auto cst = stepValue.getDefiningOp<ConstantIndexOp>())
-      if (cst.getValue() <= 0)
+    if (auto cst = stepValue.getDefiningOp<arith::ConstantIndexOp>())
+      if (cst.value() <= 0)
         return op.emitOpError("constant step operand must be positive");
 
   // Check that the body defines the same number of block arguments as the
@@ -1813,17 +1814,17 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
       std::tie(lowerBound, upperBound, step, iv) = dim;
       // Collect the statically known loop bounds.
       auto lowerBoundConstant =
-          dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp());
+          dyn_cast_or_null<arith::ConstantIndexOp>(lowerBound.getDefiningOp());
       auto upperBoundConstant =
-          dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp());
+          dyn_cast_or_null<arith::ConstantIndexOp>(upperBound.getDefiningOp());
       auto stepConstant =
-          dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp());
+          dyn_cast_or_null<arith::ConstantIndexOp>(step.getDefiningOp());
       // Replace the loop induction variable by the lower bound if the loop
       // performs a single iteration. Otherwise, copy the loop bounds.
       if (lowerBoundConstant && upperBoundConstant && stepConstant &&
-          (upperBoundConstant.getValue() - lowerBoundConstant.getValue()) > 0 &&
-          (upperBoundConstant.getValue() - lowerBoundConstant.getValue()) <=
-              stepConstant.getValue()) {
+          (upperBoundConstant.value() - lowerBoundConstant.value()) > 0 &&
+          (upperBoundConstant.value() - lowerBoundConstant.value()) <=
+              stepConstant.value()) {
         mapping.map(iv, lowerBound);
       } else {
         newLowerBounds.push_back(lowerBound);
@@ -2222,7 +2223,7 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
       if (std::get<0>(yieldedAndBlockArgs) == term.condition()) {
         if (!std::get<1>(yieldedAndBlockArgs).use_empty()) {
           if (!constantTrue)
-            constantTrue = rewriter.create<mlir::ConstantOp>(
+            constantTrue = rewriter.create<arith::ConstantOp>(
                 op.getLoc(), term.condition().getType(),
                 rewriter.getBoolAttr(true));
 

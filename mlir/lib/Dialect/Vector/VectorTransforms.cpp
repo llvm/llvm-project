@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -123,8 +124,8 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
   // Unroll leading dimensions.
   VectorType vType = lowType.cast<VectorType>();
   VectorType resType = adjustType(type, index).cast<VectorType>();
-  Value result =
-      rewriter.create<ConstantOp>(loc, resType, rewriter.getZeroAttr(resType));
+  Value result = rewriter.create<arith::ConstantOp>(
+      loc, resType, rewriter.getZeroAttr(resType));
   for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
     auto posAttr = rewriter.getI64ArrayAttr(d);
     Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, posAttr);
@@ -263,7 +264,7 @@ struct UnrollTransferReadPattern
     // Compute shape ratio of 'shape' and 'sizes'.
     int64_t sliceCount = computeMaxLinearIndex(ratio);
     // Prepare the result vector;
-    Value result = rewriter.create<ConstantOp>(
+    Value result = rewriter.create<arith::ConstantOp>(
         loc, sourceVectorType, rewriter.getZeroAttr(sourceVectorType));
     auto targetType =
         VectorType::get(*targetShape, sourceVectorType.getElementType());
@@ -440,7 +441,7 @@ struct UnrollContractionPattern
       accCache[dstOffets] = newOp->getResult(0);
     }
     // Assemble back the accumulator into a single vector.
-    Value result = rewriter.create<ConstantOp>(
+    Value result = rewriter.create<arith::ConstantOp>(
         loc, dstVecType, rewriter.getZeroAttr(dstVecType));
     for (const auto &it : accCache) {
       SmallVector<int64_t> dstStrides(it.first.size(), 1);
@@ -474,7 +475,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     int64_t sliceCount = computeMaxLinearIndex(ratio);
     Location loc = op->getLoc();
     // Prepare the result vector.
-    Value result = rewriter.create<ConstantOp>(
+    Value result = rewriter.create<arith::ConstantOp>(
         loc, dstVecType, rewriter.getZeroAttr(dstVecType));
     SmallVector<int64_t, 4> strides(targetShape->size(), 1);
     VectorType newVecType =
@@ -590,8 +591,8 @@ public:
           VectorType::get(dstType.getShape().drop_front(), eltType);
       Value bcst =
           rewriter.create<vector::BroadcastOp>(loc, resType, op.source());
-      Value result = rewriter.create<ConstantOp>(loc, dstType,
-                                                 rewriter.getZeroAttr(dstType));
+      Value result = rewriter.create<arith::ConstantOp>(
+          loc, dstType, rewriter.getZeroAttr(dstType));
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
         result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
       rewriter.replaceOp(op, result);
@@ -638,8 +639,8 @@ public:
     //   %x = [%a,%b,%c,%d]
     VectorType resType =
         VectorType::get(dstType.getShape().drop_front(), eltType);
-    Value result = rewriter.create<ConstantOp>(loc, dstType,
-                                               rewriter.getZeroAttr(dstType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, dstType, rewriter.getZeroAttr(dstType));
     if (m == 0) {
       // Stetch at start.
       Value ext = rewriter.create<vector::ExtractOp>(loc, op.source(), 0);
@@ -663,7 +664,7 @@ public:
 /// One:
 ///   %x = vector.transpose %y, [1, 0]
 /// is replaced by:
-///   %z = constant dense<0.000000e+00>
+///   %z = arith.constant dense<0.000000e+00>
 ///   %0 = vector.extract %y[0, 0]
 ///   %1 = vector.insert %0, %z [0, 0]
 ///   ..
@@ -705,8 +706,8 @@ public:
     }
 
     // Generate fully unrolled extract/insert ops.
-    Value result = rewriter.create<ConstantOp>(loc, resType,
-                                               rewriter.getZeroAttr(resType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resType, rewriter.getZeroAttr(resType));
     SmallVector<int64_t, 4> lhs(transp.size(), 0);
     SmallVector<int64_t, 4> rhs(transp.size(), 0);
     rewriter.replaceOp(op, expandIndices(loc, resType, 0, transp, lhs, rhs,
@@ -783,8 +784,8 @@ public:
       return success();
     }
 
-    Value result = rewriter.create<ConstantOp>(loc, resType,
-                                               rewriter.getZeroAttr(resType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resType, rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
       Value x = rewriter.create<vector::ExtractOp>(loc, eltType, op.lhs(), pos);
@@ -809,17 +810,17 @@ private:
                                   PatternRewriter &rewriter) {
     using vector::CombiningKind;
 
-    MulIOp mul = rewriter.create<MulIOp>(loc, x, y);
+    auto mul = rewriter.create<arith::MulIOp>(loc, x, y);
     if (!acc)
       return Optional<Value>(mul);
 
     Value combinedResult;
     switch (kind) {
     case CombiningKind::ADD:
-      combinedResult = rewriter.create<AddIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::AddIOp>(loc, mul, acc);
       break;
     case CombiningKind::MUL:
-      combinedResult = rewriter.create<MulIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MulIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINUI:
       combinedResult = rewriter.create<MinUIOp>(loc, mul, acc);
@@ -834,13 +835,13 @@ private:
       combinedResult = rewriter.create<MaxSIOp>(loc, mul, acc);
       break;
     case CombiningKind::AND:
-      combinedResult = rewriter.create<AndOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::AndIOp>(loc, mul, acc);
       break;
     case CombiningKind::OR:
-      combinedResult = rewriter.create<OrOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::OrIOp>(loc, mul, acc);
       break;
     case CombiningKind::XOR:
-      combinedResult = rewriter.create<XOrOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::XOrIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINF: // Only valid for floating point types.
     case CombiningKind::MAXF: // Only valid for floating point types.
@@ -859,7 +860,7 @@ private:
       return Optional<Value>(rewriter.create<vector::FMAOp>(loc, x, y, acc));
     }
 
-    MulFOp mul = rewriter.create<MulFOp>(loc, x, y);
+    auto mul = rewriter.create<arith::MulFOp>(loc, x, y);
 
     if (!acc)
       return Optional<Value>(mul);
@@ -867,7 +868,7 @@ private:
     Value combinedResult;
     switch (kind) {
     case CombiningKind::MUL:
-      combinedResult = rewriter.create<MulFOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MulFOp>(loc, mul, acc);
       break;
     case CombiningKind::MINF:
       combinedResult = rewriter.create<MinFOp>(loc, mul, acc);
@@ -920,7 +921,7 @@ public:
       SmallVector<bool, 4> values(dstType.getDimSize(0));
       for (int64_t d = 0; d < trueDim; d++)
         values[d] = true;
-      rewriter.replaceOpWithNewOp<ConstantOp>(
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
           op, dstType, rewriter.getBoolVectorAttr(values));
       return success();
     }
@@ -932,8 +933,8 @@ public:
       newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
     Value trueVal = rewriter.create<vector::ConstantMaskOp>(
         loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
-    Value result = rewriter.create<ConstantOp>(loc, dstType,
-                                               rewriter.getZeroAttr(dstType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, dstType, rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDim; d++) {
       auto pos = rewriter.getI64ArrayAttr(d);
       result =
@@ -949,7 +950,7 @@ public:
 ///   %x = vector.create_mask %a, ... : vector<dx...>
 /// is replaced by:
 ///   %l = vector.create_mask ... : vector<...>  ; one lower rank
-///   %0 = cmpi "slt", %ci, %a       |
+///   %0 = arith.cmpi "slt", %ci, %a       |
 ///   %1 = select %0, %l, %zeroes    |
 ///   %r = vector.insert %1, %pr [i] | d-times
 ///   %x = ....
@@ -974,13 +975,15 @@ public:
         VectorType::get(dstType.getShape().drop_front(), eltType);
     Value trueVal = rewriter.create<vector::CreateMaskOp>(
         loc, lowType, op.getOperands().drop_front());
-    Value falseVal = rewriter.create<ConstantOp>(loc, lowType,
-                                                 rewriter.getZeroAttr(lowType));
-    Value result = rewriter.create<ConstantOp>(loc, dstType,
-                                               rewriter.getZeroAttr(dstType));
+    Value falseVal = rewriter.create<arith::ConstantOp>(
+        loc, lowType, rewriter.getZeroAttr(lowType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, dstType, rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < dim; d++) {
-      Value bnd = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(d));
-      Value val = rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, bnd, idx);
+      Value bnd =
+          rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
+      Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                                                 bnd, idx);
       Value sel = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
       auto pos = rewriter.getI64ArrayAttr(d);
       result =
@@ -1009,7 +1012,7 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value desc = rewriter.create<ConstantOp>(
+    Value desc = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
     unsigned mostMinorVectorSize = sourceVectorType.getShape()[1];
     for (int64_t i = 0, e = sourceVectorType.getShape().front(); i != e; ++i) {
@@ -1041,7 +1044,7 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value desc = rewriter.create<ConstantOp>(
+    Value desc = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
     unsigned mostMinorVectorSize = resultVectorType.getShape()[1];
     for (int64_t i = 0, e = resultVectorType.getShape().front(); i != e; ++i) {
@@ -1087,7 +1090,7 @@ public:
     // within the source and result shape.
     SmallVector<int64_t, 4> srcIdx(srcRank);
     SmallVector<int64_t, 4> resIdx(resRank);
-    Value result = rewriter.create<ConstantOp>(
+    Value result = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
     for (int64_t i = 0; i < numElts; i++) {
       if (i != 0) {
@@ -1113,13 +1116,13 @@ private:
 
 } // namespace
 
-/// Creates an AddIOp if `isInt` is true otherwise create an AddFOp using
+/// Creates an AddIOp if `isInt` is true otherwise create an arith::AddFOp using
 /// operands `x` and `y`.
 static Value createAdd(Location loc, Value x, Value y, bool isInt,
                        PatternRewriter &rewriter) {
   if (isInt)
-    return rewriter.create<AddIOp>(loc, x, y);
-  return rewriter.create<AddFOp>(loc, x, y);
+    return rewriter.create<arith::AddIOp>(loc, x, y);
+  return rewriter.create<arith::AddFOp>(loc, x, y);
 }
 
 /// Creates a MulIOp if `isInt` is true otherwise create an MulFOp using
@@ -1127,8 +1130,8 @@ static Value createAdd(Location loc, Value x, Value y, bool isInt,
 static Value createMul(Location loc, Value x, Value y, bool isInt,
                        PatternRewriter &rewriter) {
   if (isInt)
-    return rewriter.create<MulIOp>(loc, x, y);
-  return rewriter.create<MulFOp>(loc, x, y);
+    return rewriter.create<arith::MulIOp>(loc, x, y);
+  return rewriter.create<arith::MulFOp>(loc, x, y);
 }
 
 namespace mlir {
@@ -1224,9 +1227,10 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   else if (accMap != AffineMap::get(3, 0, {m, n}, ctx))
     llvm_unreachable("invalid contraction semantics");
 
-  Value res = elementType.isa<IntegerType>()
-                  ? static_cast<Value>(rew.create<AddIOp>(loc, op.acc(), mul))
-                  : static_cast<Value>(rew.create<AddFOp>(loc, op.acc(), mul));
+  Value res =
+      elementType.isa<IntegerType>()
+          ? static_cast<Value>(rew.create<arith::AddIOp>(loc, op.acc(), mul))
+          : static_cast<Value>(rew.create<arith::AddFOp>(loc, op.acc(), mul));
 
   rew.replaceOp(op, res);
   return success();
@@ -1505,8 +1509,8 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   unsigned dstColumns = rank == 1 ? 1 : dstType.getShape()[1];
 
   // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
-  Value res =
-      rewriter.create<ConstantOp>(loc, dstType, rewriter.getZeroAttr(dstType));
+  Value res = rewriter.create<arith::ConstantOp>(loc, dstType,
+                                                 rewriter.getZeroAttr(dstType));
   bool isInt = dstType.getElementType().isa<IntegerType>();
   for (unsigned r = 0; r < dstRows; ++r) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
@@ -1659,8 +1663,8 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
       rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
   // Unroll into a series of lower dimensional vector.contract ops.
   Location loc = op.getLoc();
-  Value result =
-      rewriter.create<ConstantOp>(loc, resType, rewriter.getZeroAttr(resType));
+  Value result = rewriter.create<arith::ConstantOp>(
+      loc, resType, rewriter.getZeroAttr(resType));
   for (int64_t d = 0; d < dimSize; ++d) {
     auto lhs = reshapeLoad(loc, op.lhs(), lhsType, lhsIndex, d, rewriter);
     auto rhs = reshapeLoad(loc, op.rhs(), rhsType, rhsIndex, d, rewriter);
@@ -1729,8 +1733,8 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
 } // namespace mlir
 
 static Optional<int64_t> extractConstantIndex(Value v) {
-  if (auto cstOp = v.getDefiningOp<ConstantIndexOp>())
-    return cstOp.getValue();
+  if (auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cstOp.value();
   if (auto affineApplyOp = v.getDefiningOp<AffineApplyOp>())
     if (affineApplyOp.getAffineMap().isSingleConstant())
       return affineApplyOp.getAffineMap().getSingleConstantResult();
@@ -1745,7 +1749,7 @@ static Value createFoldedSLE(OpBuilder &b, Value v, Value ub) {
   auto maybeCstUb = extractConstantIndex(ub);
   if (maybeCstV && maybeCstUb && *maybeCstV < *maybeCstUb)
     return Value();
-  return b.create<CmpIOp>(v.getLoc(), CmpIPredicate::sle, v, ub);
+  return b.create<arith::CmpIOp>(v.getLoc(), arith::CmpIPredicate::sle, v, ub);
 }
 
 // Operates under a scoped context to build the condition to ensure that a
@@ -1775,7 +1779,7 @@ static Value createInBoundsCond(OpBuilder &b,
       return;
     // Conjunction over all dims for which we are in-bounds.
     if (inBoundsCond)
-      inBoundsCond = lb.create<AndOp>(inBoundsCond, cond);
+      inBoundsCond = lb.create<arith::AndIOp>(inBoundsCond, cond);
     else
       inBoundsCond = cond;
   });
@@ -1903,7 +1907,7 @@ createFullPartialLinalgCopy(OpBuilder &b, vector::TransferReadOp xferOp,
                             TypeRange returnTypes, Value inBoundsCond,
                             MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
-  Value zero = b.create<ConstantIndexOp>(loc, 0);
+  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
   Value memref = xferOp.source();
   return b.create<scf::IfOp>(
       loc, returnTypes, inBoundsCond,
@@ -1955,7 +1959,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
     Value inBoundsCond, MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
   scf::IfOp fullPartialIfOp;
-  Value zero = b.create<ConstantIndexOp>(loc, 0);
+  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
   Value memref = xferOp.source();
   return b.create<scf::IfOp>(
       loc, returnTypes, inBoundsCond,
@@ -2005,7 +2009,7 @@ getLocationToWriteFullVec(OpBuilder &b, vector::TransferWriteOp xferOp,
                           TypeRange returnTypes, Value inBoundsCond,
                           MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
-  Value zero = b.create<ConstantIndexOp>(loc, 0);
+  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
   Value memref = xferOp.source();
   return b
       .create<scf::IfOp>(
@@ -2037,7 +2041,7 @@ getLocationToWriteFullVec(OpBuilder &b, vector::TransferWriteOp xferOp,
 ///   3. it originally wrote to %view
 /// Produce IR resembling:
 /// ```
-///    %notInBounds = xor %inBounds, %true
+///    %notInBounds = arith.xori %inBounds, %true
 ///    scf.if (%notInBounds) {
 ///      %3 = subview %alloc [...][...][...]
 ///      %4 = subview %view [0, 0][...][...]
@@ -2048,8 +2052,8 @@ static void createFullPartialLinalgCopy(OpBuilder &b,
                                         vector::TransferWriteOp xferOp,
                                         Value inBoundsCond, Value alloc) {
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
-  auto notInBounds =
-      lb.create<XOrOp>(inBoundsCond, lb.create<ConstantIntOp>(true, 1));
+  auto notInBounds = lb.create<arith::XOrIOp>(
+      inBoundsCond, lb.create<arith::ConstantIntOp>(true, 1));
   lb.create<scf::IfOp>(notInBounds, [&](OpBuilder &b, Location loc) {
     std::pair<Value, Value> copyArgs = createSubViewIntersection(
         b, cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
@@ -2064,7 +2068,7 @@ static void createFullPartialLinalgCopy(OpBuilder &b,
 ///   3. it originally wrote to %view
 /// Produce IR resembling:
 /// ```
-///    %notInBounds = xor %inBounds, %true
+///    %notInBounds = arith.xori %inBounds, %true
 ///    scf.if (%notInBounds) {
 ///      %2 = load %alloc : memref<vector<...>>
 ///      vector.transfer_write %2, %view[...] : memref<A...>, vector<...>
@@ -2075,8 +2079,8 @@ static void createFullPartialVectorTransferWrite(OpBuilder &b,
                                                  Value inBoundsCond,
                                                  Value alloc) {
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
-  auto notInBounds =
-      lb.create<XOrOp>(inBoundsCond, lb.create<ConstantIntOp>(true, 1));
+  auto notInBounds = lb.create<arith::XOrIOp>(
+      inBoundsCond, lb.create<arith::ConstantIntOp>(true, 1));
   lb.create<scf::IfOp>(notInBounds, [&](OpBuilder &b, Location loc) {
     BlockAndValueMapping mapping;
     Value load = b.create<memref::LoadOp>(
@@ -2306,12 +2310,12 @@ Optional<mlir::vector::DistributeOps> mlir::vector::distributPointwiseVectorOp(
 
 /// Canonicalize an extract_map using the result of a pointwise operation.
 /// Transforms:
-/// %v = addf %a, %b : vector32xf32>
+/// %v = arith.addf %a, %b : vector32xf32>
 /// %dv = vector.extract_map %v[%id] : vector<32xf32> to vector<1xf32>
 /// to:
 /// %da = vector.extract_map %a[%id] : vector<32xf32> to vector<1xf32>
 /// %db = vector.extract_map %a[%id] : vector<32xf32> to vector<1xf32>
-/// %dv = addf %da, %db : vector<1xf32>
+/// %dv = arith.addf %da, %db : vector<1xf32>
 struct PointwiseExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
   using OpRewritePattern<vector::ExtractMapOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(vector::ExtractMapOp extract,
@@ -2440,8 +2444,8 @@ struct TransferReadExtractPattern
     Value newRead = lb.create<vector::TransferReadOp>(
         extract.getType(), read.source(), indices, read.permutation_map(),
         read.padding(), read.in_boundsAttr());
-    Value dest = lb.create<ConstantOp>(read.getType(),
-                                       rewriter.getZeroAttr(read.getType()));
+    Value dest = lb.create<arith::ConstantOp>(
+        read.getType(), rewriter.getZeroAttr(read.getType()));
     newRead = lb.create<vector::InsertMapOp>(newRead, dest, extract.ids());
     rewriter.replaceOp(read, newRead);
     return success();
@@ -2590,6 +2594,25 @@ struct VectorLoadToMemrefLoadLowering
   }
 };
 
+/// Replace a scalar vector.store with a memref.store.
+struct VectorStoreToMemrefStoreLowering
+    : public OpRewritePattern<vector::StoreOp> {
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    auto vecType = storeOp.getVectorType();
+    if (vecType.getNumElements() != 1)
+      return failure();
+    SmallVector<int64_t> indices(vecType.getRank(), 0);
+    Value extracted = rewriter.create<vector::ExtractOp>(
+        storeOp.getLoc(), storeOp.valueToStore(), indices);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        storeOp, extracted, storeOp.base(), storeOp.indices());
+    return success();
+  }
+};
+
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store` if all of the following hold:
 /// - Stride of most minor memref dimension must be 1.
@@ -2611,7 +2634,7 @@ struct TransferWriteToVectorStoreLowering
       return failure();
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
-    if (!write.permutation_map().isMinorIdentity())
+    if (!write.isZeroD() && !write.permutation_map().isMinorIdentity())
       return failure();
     auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
@@ -2766,6 +2789,9 @@ struct TransferWritePermutationLowering
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.isZeroD())
+      return failure();
+
     SmallVector<unsigned> permutation;
     AffineMap map = op.permutation_map();
     if (map.isMinorIdentity())
@@ -3374,7 +3400,7 @@ static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
   bool targetIsIndex = targetType.isIndex();
   bool valueIsIndex = value.getType().isIndex();
   if (targetIsIndex ^ valueIsIndex)
-    return rewriter.create<IndexCastOp>(loc, targetType, value);
+    return rewriter.create<arith::IndexCastOp>(loc, targetType, value);
 
   auto targetIntegerType = targetType.dyn_cast<IntegerType>();
   auto valueIntegerType = value.getType().dyn_cast<IntegerType>();
@@ -3383,8 +3409,8 @@ static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
   assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
 
   if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
-    return rewriter.create<SignExtendIOp>(loc, targetIntegerType, value);
-  return rewriter.create<TruncateIOp>(loc, targetIntegerType, value);
+    return rewriter.create<arith::ExtSIOp>(loc, targetIntegerType, value);
+  return rewriter.create<arith::TruncIOp>(loc, targetIntegerType, value);
 }
 
 // Helper that returns a vector comparison that constructs a mask:
@@ -3404,12 +3430,12 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   Value indices;
   Type idxType;
   if (enableIndexOptimizations) {
-    indices = rewriter.create<ConstantOp>(
+    indices = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32VectorAttr(
                  llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
     idxType = rewriter.getI32Type();
   } else {
-    indices = rewriter.create<ConstantOp>(
+    indices = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI64VectorAttr(
                  llvm::to_vector<4>(llvm::seq<int64_t>(0, dim))));
     idxType = rewriter.getI64Type();
@@ -3418,12 +3444,13 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   if (off) {
     Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
     Value ov = rewriter.create<SplatOp>(loc, indices.getType(), o);
-    indices = rewriter.create<AddIOp>(loc, ov, indices);
+    indices = rewriter.create<arith::AddIOp>(loc, ov, indices);
   }
   // Construct the vector comparison.
   Value bound = createCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
-  return rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, indices, bounds);
+  return rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, indices,
+                                        bounds);
 }
 
 template <typename ConcreteOp>
@@ -3463,7 +3490,7 @@ public:
 
     if (xferOp.mask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
-      mask = rewriter.create<AndOp>(loc, mask, xferOp.mask());
+      mask = rewriter.create<arith::AndIOp>(loc, mask, xferOp.mask());
     }
 
     rewriter.updateRootInPlace(xferOp, [&]() {
@@ -3581,7 +3608,9 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),
                                                    maxTransferRank);
-  patterns.add<VectorLoadToMemrefLoadLowering>(patterns.getContext());
+  patterns
+      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
+          patterns.getContext());
 }
 
 void mlir::vector::populateVectorUnrollPatterns(

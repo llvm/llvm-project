@@ -1265,6 +1265,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    // Skip pseudoprobe intrinsics, for the same reason as assume intrinsics.
+    if (match(&Inst, m_Intrinsic<Intrinsic::pseudoprobe>())) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping pseudoprobe: " << Inst << '\n');
+      continue;
+    }
+
     // We can skip all invariant.start intrinsics since they only read memory,
     // and we can forward values across it. For invariant starts without
     // invariant ends, we can use the fact that the invariantness never ends to

@@ -122,7 +122,7 @@ func @arm_sve_mask_geni(%a: !arm_sve.vector<4xi32>,
 func @arm_sve_memory(%v: !arm_sve.vector<4xi32>,
                      %m: memref<?xi32>)
                      -> !arm_sve.vector<4xi32> {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // CHECK: arm_sve.load {{.*}}: !arm_sve.vector<4xi32> from memref<?xi32>
   %0 = arm_sve.load %m[%c0] : !arm_sve.vector<4xi32> from memref<?xi32>
   // CHECK: arm_sve.store {{.*}}: !arm_sve.vector<4xi32> to memref<?xi32>

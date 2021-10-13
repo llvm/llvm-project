@@ -63,6 +63,13 @@ end
   not the bounds of the implied DO loop.  It is not advisable to use
   an object of the same name as the index variable in a bounds
   expression, but it will work, instead of being needlessly undefined.
+* If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
+  present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
+  we require that their types have the same integer kind, since the
+  kind of these arguments is used to select the clock rate.
+  In common with some other compilers, the clock is in milliseconds
+  for kinds <= 4 and nanoseconds otherwise where the target system
+  supports these rates.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -168,6 +175,10 @@ end
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
+* The definition of simple contiguity in 9.5.4 applies only to arrays;
+  we also treat scalars as being trivially contiguous, so that they
+  can be used in contexts like data targets in pointer assignments
+  with bounds remapping.
 
 ### Extensions supported when enabled by options
 

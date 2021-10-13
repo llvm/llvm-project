@@ -4,7 +4,7 @@
 
 // CHECK-LABEL:    func @reduce_window_max() {
 func @reduce_window_max() {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc() : memref<1x8x8x64xf32>
   %1 = memref.alloc() : memref<1x18x18x64xf32>
   affine.for %arg0 = 0 to 1 {
@@ -26,7 +26,7 @@ func @reduce_window_max() {
                 affine.for %arg7 = 0 to 1 {
                   %2 = affine.load %0[%arg0, %arg1, %arg2, %arg3] : memref<1x8x8x64xf32>
                   %3 = affine.load %1[%arg0 + %arg4, %arg1 * 2 + %arg5, %arg2 * 2 + %arg6, %arg3 + %arg7] : memref<1x18x18x64xf32>
-                  %4 = cmpf ogt, %2, %3 : f32
+                  %4 = arith.cmpf ogt, %2, %3 : f32
                   %5 = select %4, %2, %3 : f32
                   affine.store %5, %0[%arg0, %arg1, %arg2, %arg3] : memref<1x8x8x64xf32>
                 }
@@ -40,7 +40,7 @@ func @reduce_window_max() {
   return
 }
 
-// CHECK:        %[[cst:.*]] = constant 0.000000e+00 : f32
+// CHECK:        %[[cst:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:        %[[v0:.*]] = memref.alloc() : memref<1x8x8x64xf32>
 // CHECK:        %[[v1:.*]] = memref.alloc() : memref<1x18x18x64xf32>
 // CHECK:        affine.parallel (%[[arg0:.*]]) = (0) to (1) {
@@ -62,7 +62,7 @@ func @reduce_window_max() {
 // CHECK:                      affine.parallel (%[[a7:.*]]) = (0) to (1) {
 // CHECK:                        %[[lhs:.*]] = affine.load %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
 // CHECK:                        %[[rhs:.*]] = affine.load %[[v1]][%[[a0]] + %[[a4]], %[[a1]] * 2 + %[[a5]], %[[a2]] * 2 + %[[a6]], %[[a3]] + %[[a7]]] : memref<1x18x18x64xf32>
-// CHECK:                        %[[res:.*]] = cmpf ogt, %[[lhs]], %[[rhs]] : f32
+// CHECK:                        %[[res:.*]] = arith.cmpf ogt, %[[lhs]], %[[rhs]] : f32
 // CHECK:                        %[[sel:.*]] = select %[[res]], %[[lhs]], %[[rhs]] : f32
 // CHECK:                        affine.store %[[sel]], %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
 // CHECK:                      }
@@ -85,8 +85,8 @@ func @loop_nest_3d_outer_two_parallel(%N : index) {
       affine.for %k = 0 to %N {
         %5 = affine.load %0[%i, %k] : memref<1024x1024xvector<64xf32>>
         %6 = affine.load %1[%k, %j] : memref<1024x1024xvector<64xf32>>
-        %8 = mulf %5, %6 : vector<64xf32>
-        %9 = addf %7, %8 : vector<64xf32>
+        %8 = arith.mulf %5, %6 : vector<64xf32>
+        %9 = arith.addf %7, %8 : vector<64xf32>
         affine.store %9, %2[%i, %j] : memref<1024x1024xvector<64xf32>>
       }
     }
@@ -167,8 +167,8 @@ func @max_nested_1(%arg0: memref<4096x4096xf32>, %arg1: memref<4096x4096xf32>, %
         %1 = affine.load %arg0[%arg3, %arg5] : memref<4096x4096xf32>
         %2 = affine.load %arg1[%arg5, %arg4] : memref<4096x4096xf32>
         %3 = affine.load %0[%arg3, %arg4] : memref<4096x4096xf32>
-        %4 = mulf %1, %2 : f32
-        %5 = addf %3, %4 : f32
+        %4 = arith.mulf %1, %2 : f32
+        %5 = arith.addf %3, %4 : f32
         affine.store %5, %0[%arg3, %arg4] : memref<4096x4096xf32>
       }
     }
@@ -179,26 +179,26 @@ func @max_nested_1(%arg0: memref<4096x4096xf32>, %arg1: memref<4096x4096xf32>, %
 // CHECK-LABEL: @iter_args
 // REDUCE-LABEL: @iter_args
 func @iter_args(%in: memref<10xf32>) {
-  // REDUCE: %[[init:.*]] = constant
-  %cst = constant 0.000000e+00 : f32
+  // REDUCE: %[[init:.*]] = arith.constant
+  %cst = arith.constant 0.000000e+00 : f32
   // CHECK-NOT: affine.parallel
   // REDUCE: %[[reduced:.*]] = affine.parallel (%{{.*}}) = (0) to (10) reduce ("addf")
   %final_red = affine.for %i = 0 to 10 iter_args(%red_iter = %cst) -> (f32) {
     // REDUCE: %[[red_value:.*]] = affine.load
     %ld = affine.load %in[%i] : memref<10xf32>
-    // REDUCE-NOT: addf
-    %add = addf %red_iter, %ld : f32
+    // REDUCE-NOT: arith.addf
+    %add = arith.addf %red_iter, %ld : f32
     // REDUCE: affine.yield %[[red_value]]
     affine.yield %add : f32
   }
-  // REDUCE: addf %[[init]], %[[reduced]]
+  // REDUCE: arith.addf %[[init]], %[[reduced]]
   return
 }
 
 // CHECK-LABEL: @nested_iter_args
 // REDUCE-LABEL: @nested_iter_args
 func @nested_iter_args(%in: memref<20x10xf32>) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   // CHECK: affine.parallel
   affine.for %i = 0 to 20 {
     // CHECK-NOT: affine.parallel
@@ -206,7 +206,7 @@ func @nested_iter_args(%in: memref<20x10xf32>) {
     // REDUCE: reduce ("addf")
     %final_red = affine.for %j = 0 to 10 iter_args(%red_iter = %cst) -> (f32) {
       %ld = affine.load %in[%i, %j] : memref<20x10xf32>
-      %add = addf %red_iter, %ld : f32
+      %add = arith.addf %red_iter, %ld : f32
       affine.yield %add : f32
     }
   }
@@ -215,11 +215,11 @@ func @nested_iter_args(%in: memref<20x10xf32>) {
 
 // REDUCE-LABEL: @strange_butterfly
 func @strange_butterfly() {
-  %cst1 = constant 0.0 : f32
-  %cst2 = constant 1.0 : f32
+  %cst1 = arith.constant 0.0 : f32
+  %cst2 = arith.constant 1.0 : f32
   // REDUCE-NOT: affine.parallel
   affine.for %i = 0 to 10 iter_args(%it1 = %cst1, %it2 = %cst2) -> (f32, f32) {
-    %0 = addf %it1, %it2 : f32
+    %0 = arith.addf %it1, %it2 : f32
     affine.yield %0, %0 : f32, f32
   }
   return
@@ -229,10 +229,10 @@ func @strange_butterfly() {
 // should not be parallelized.
 // REDUCE-LABEL: @repeated_use
 func @repeated_use() {
-  %cst1 = constant 0.0 : f32
+  %cst1 = arith.constant 0.0 : f32
   // REDUCE-NOT: affine.parallel
   affine.for %i = 0 to 10 iter_args(%it1 = %cst1) -> (f32) {
-    %0 = addf %it1, %it1 : f32
+    %0 = arith.addf %it1, %it1 : f32
     affine.yield %0 : f32
   }
   return
@@ -242,12 +242,12 @@ func @repeated_use() {
 // reduced, this is not a simple reduction and should not be parallelized.
 // REDUCE-LABEL: @use_in_backward_slice
 func @use_in_backward_slice() {
-  %cst1 = constant 0.0 : f32
-  %cst2 = constant 1.0 : f32
+  %cst1 = arith.constant 0.0 : f32
+  %cst2 = arith.constant 1.0 : f32
   // REDUCE-NOT: affine.parallel
   affine.for %i = 0 to 10 iter_args(%it1 = %cst1, %it2 = %cst2) -> (f32, f32) {
     %0 = "test.some_modification"(%it2) : (f32) -> f32
-    %1 = addf %it1, %0 : f32
+    %1 = arith.addf %it1, %0 : f32
     affine.yield %1, %1 : f32, f32
   }
   return

@@ -174,19 +174,19 @@ func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f
 // CHECK-LABEL: func @static_memref_dim
 func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // CHECK:  llvm.mlir.constant(42 : index) : i64
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.dim %static, %c0 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(32 : index) : i64
-  %c1 = constant 1 : index
+  %c1 = arith.constant 1 : index
   %1 = memref.dim %static, %c1 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(15 : index) : i64
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
   %2 = memref.dim %static, %c2 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(13 : index) : i64
-  %c3 = constant 3 : index
+  %c3 = arith.constant 3 : index
   %3 = memref.dim %static, %c3 : memref<42x32x15x13x27xf32>
 // CHECK:  llvm.mlir.constant(27 : index) : i64
-  %c4 = constant 4 : index
+  %c4 = arith.constant 4 : index
   %4 = memref.dim %static, %c4 : memref<42x32x15x13x27xf32>
   return
 }
@@ -197,9 +197,9 @@ func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // a data layout specification.
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
   func @address() {
-    %c1 = constant 1 : index
+    %c1 = arith.constant 1 : index
     %0 = memref.alloc(%c1) : memref<? x vector<2xf32>>
-    // CHECK: %[[CST_S:.*]] = constant 1 : index
+    // CHECK: %[[CST_S:.*]] = arith.constant 1 : index
     // CHECK: %[[CST:.*]] = builtin.unrealized_conversion_cast
     // CHECK: llvm.mlir.null
     // CHECK: llvm.getelementptr %{{.*}}[[CST]]

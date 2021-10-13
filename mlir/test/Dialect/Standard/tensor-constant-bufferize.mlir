@@ -16,7 +16,7 @@
 func @basic() -> tensor<3x4xf32> {
   // CHECK: %[[MEMREF:.*]] = memref.get_global @__constant_3x4xf32 : memref<3x4xf32>
   // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF]]
-  %0 = constant dense<7.0> : tensor<3x4xf32>
+  %0 = arith.constant dense<7.0> : tensor<3x4xf32>
   // CHECK: return %[[TENSOR]]
   return %0 : tensor<3x4xf32>
 }
@@ -31,8 +31,8 @@ func @basic() -> tensor<3x4xf32> {
 // CHECK: memref.global
 // CHECK-NOT: memref.global
 func @duplicate_constants() -> (tensor<3x4xf32>, tensor<3x4xf32>) {
-  %0 = constant dense<7.0> : tensor<3x4xf32>
-  %1 = constant dense<7.0> : tensor<3x4xf32>
+  %0 = arith.constant dense<7.0> : tensor<3x4xf32>
+  %1 = arith.constant dense<7.0> : tensor<3x4xf32>
   return %0, %1 : tensor<3x4xf32>, tensor<3x4xf32>
 }
 
@@ -47,8 +47,8 @@ func @duplicate_constants() -> (tensor<3x4xf32>, tensor<3x4xf32>) {
 // CHECK: memref.global
 // CHECK-NOT: memref.global
 func @multiple_constants() -> (tensor<3x4xf32>, tensor<3x4xf32>) {
-  %0 = constant dense<7.0> : tensor<3x4xf32>
-  %1 = constant dense<8.0> : tensor<3x4xf32>
+  %0 = arith.constant dense<7.0> : tensor<3x4xf32>
+  %1 = arith.constant dense<8.0> : tensor<3x4xf32>
   return %0, %1 : tensor<3x4xf32>, tensor<3x4xf32>
 }
 
@@ -60,7 +60,7 @@ func @multiple_constants() -> (tensor<3x4xf32>, tensor<3x4xf32>) {
 // We don't convert non-tensor globals.
 // CHECK-NOT: memref.global
 func @non_tensor() {
-    %0 = constant 7 : i32
+    %0 = arith.constant 7 : i32
     return
 }
 

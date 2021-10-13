@@ -342,6 +342,26 @@ static LogicalResult verifyConvOp(T op) {
   return success();
 }
 
+static LogicalResult verifyAveragePoolOp(tosa::AvgPool2dOp op) {
+  auto inputETy = op.input().getType().cast<ShapedType>().getElementType();
+  auto resultETy = op.getType().cast<ShapedType>().getElementType();
+
+  if (auto quantType = inputETy.dyn_cast<mlir::quant::UniformQuantizedType>())
+    inputETy = quantType.getStorageType();
+
+  if (auto quantType = resultETy.dyn_cast<mlir::quant::UniformQuantizedType>())
+    resultETy = quantType.getStorageType();
+
+  if (inputETy.isF32() && resultETy.isF32())
+    return success();
+  if (inputETy.isInteger(8) && resultETy.isInteger(32))
+    return success();
+  if (inputETy.isInteger(16) && resultETy.isInteger(32))
+    return success();
+
+  return op.emitOpError("input/output element types are incompatible.");
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Quantization Builders.
 //===----------------------------------------------------------------------===//

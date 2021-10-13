@@ -976,21 +976,12 @@ define i64 @v_udiv_i64_pow2k_denom(i64 %num) {
 }
 
 define <2 x i64> @v_udiv_v2i64_pow2k_denom(<2 x i64> %num) {
-; GISEL-LABEL: v_udiv_v2i64_pow2k_denom:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_sub_u32 s4, 63, 11
-; GISEL-NEXT:    s_sub_u32 s4, 64, s4
-; GISEL-NEXT:    v_lshr_b64 v[0:1], v[0:1], s4
-; GISEL-NEXT:    v_lshr_b64 v[2:3], v[2:3], s4
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; CGP-LABEL: v_udiv_v2i64_pow2k_denom:
-; CGP:       ; %bb.0:
-; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CGP-NEXT:    v_lshr_b64 v[0:1], v[0:1], 12
-; CGP-NEXT:    v_lshr_b64 v[2:3], v[2:3], 12
-; CGP-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: v_udiv_v2i64_pow2k_denom:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_lshr_b64 v[0:1], v[0:1], 12
+; CHECK-NEXT:    v_lshr_b64 v[2:3], v[2:3], 12
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv <2 x i64> %num, <i64 4096, i64 4096>
   ret <2 x i64> %result
 }

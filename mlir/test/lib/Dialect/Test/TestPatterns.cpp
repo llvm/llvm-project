@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -114,8 +115,8 @@ public:
       return failure();
     rewriter.setInsertionPointToStart(op->getBlock());
 
-    auto constOp =
-        rewriter.create<ConstantOp>(op.getLoc(), rewriter.getBoolAttr(true));
+    auto constOp = rewriter.create<arith::ConstantOp>(
+        op.getLoc(), rewriter.getBoolAttr(true));
     rewriter.replaceOpWithNewOp<TestCastOp>(op, rewriter.getI32Type(),
                                             Value(constOp));
     return success();
@@ -684,7 +685,7 @@ struct TestLegalizePatternDriver
              converter.isLegal(&op.getBody());
     });
 
-    // TestCreateUnregisteredOp creates `std.constant` operation,
+    // TestCreateUnregisteredOp creates `arith.constant` operation,
     // which was not added to target intentionally to test
     // correct error code from conversion driver.
     target.addDynamicallyLegalOp<ILLegalOpG>([](ILLegalOpG) { return false; });

@@ -94,7 +94,8 @@ spv.module Logical OpenCL {
 // CHECK-NEXT:     %[[RET:.*]] = llvm.insertvalue %[[C2]], %[[T2]][1 : i32, 2 : i32] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:   }
-// CHECK-NEXT:   llvm.func @bar
+// CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32)> {
+//      CHECK:   llvm.func @bar
 // CHECK-NEXT:     llvm.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
@@ -103,6 +104,7 @@ spv.module Logical OpenCL {
     spv.Return
   }
   spv.EntryPoint "Kernel" @bar
+  spv.ExecutionMode @bar "ContractionOff"
   spv.ExecutionMode @bar "LocalSizeHint", 32, 1, 1
 }
 

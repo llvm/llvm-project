@@ -4,9 +4,9 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %f1 = constant 1.0: f32
-  %f3 = constant 3.0: f32
-  %f7 = constant 7.0: f32
+  %f1 = arith.constant 1.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f7 = arith.constant 7.0: f32
   %v1 = vector.broadcast %f1 : f32 to vector<8xf32>
   %v3 = vector.broadcast %f3 : f32 to vector<8xf32>
   %v7 = vector.broadcast %f7 : f32 to vector<8xf32>

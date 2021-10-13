@@ -3718,12 +3718,6 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
            HasAVX    ? X86::VMOVUPSmr :
                        X86::MOVUPSmr);
     }
-    if (X86::BNDRRegClass.hasSubClassEq(RC)) {
-      if (STI.is64Bit())
-        return load ? X86::BNDMOV64rm : X86::BNDMOV64mr;
-      else
-        return load ? X86::BNDMOV32rm : X86::BNDMOV32mr;
-    }
     llvm_unreachable("Unknown 16-byte regclass");
   }
   case 32:

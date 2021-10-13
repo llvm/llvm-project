@@ -353,7 +353,7 @@
        transform="translate(8.4353227,-0.28369449)"><tspan
          x="73.476562"
          y="74.182797"><tspan
-           style="fill:#d40000;fill-opacity:1">%0 = alloc()</tspan><tspan
+           style="fill:#d40000;fill-opacity:1">%0 = memref.alloc()</tspan><tspan
            style="font-size:5.64444px">
 </tspan></tspan><tspan
          x="73.476562"

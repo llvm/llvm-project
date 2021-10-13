@@ -38,14 +38,14 @@ func @conv_2d_nhwc_hwcf(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>, 
 }
 
 func @main() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c8 = constant 8 : index
-  %f10 = constant 10.00000e+00 : f32
-  %val = constant 2.00000e+00 : f32
-  %zero = constant 0.00000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c8 = arith.constant 8 : index
+  %f10 = arith.constant 10.00000e+00 : f32
+  %val = arith.constant 2.00000e+00 : f32
+  %zero = arith.constant 0.00000e+00 : f32
 
   %filter2D_nhwc = call @alloc_4d_filled_f32(%c3, %c3, %c3, %c1, %val) :(index, index, index, index, f32) -> (memref<?x?x?x?xf32>)
   %in2D_nhwc = call @alloc_4d_filled_f32(%c3, %c8, %c8, %c3, %val) : (index, index, index, index, f32) -> (memref<?x?x?x?xf32>)

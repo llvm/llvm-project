@@ -14,9 +14,9 @@ func @interchange_generic_op(%arg0 : memref<1x2x3x4x5xindex>, %arg1 : memref<1x2
         %0 = linalg.index 0 : index
         %1 = linalg.index 1 : index
         %2 = linalg.index 4 : index
-        %3 = subi %0, %1 : index
-        %4 = addi %3, %2 : index
-        %5 = addi %4, %arg2 : index
+        %3 = arith.subi %0, %1 : index
+        %4 = arith.addi %3, %2 : index
+        %5 = arith.addi %4, %arg2 : index
         linalg.yield %5 : index
       }
   return
@@ -31,9 +31,9 @@ func @interchange_generic_op(%arg0 : memref<1x2x3x4x5xindex>, %arg1 : memref<1x2
 //    CHECK-DAG:     %[[IDX0:.+]] = linalg.index 1 : index
 //    CHECK-DAG:     %[[IDX1:.+]] = linalg.index 3 : index
 //    CHECK-DAG:     %[[IDX4:.+]] = linalg.index 0 : index
-//        CHECK:     %[[T0:.+]] = subi %[[IDX0]], %[[IDX1]] : index
-//        CHECK:     %[[T1:.+]] = addi %[[T0]], %[[IDX4]] : index
-//        CHECK:     %[[T2:.+]] = addi %[[T1]], %{{.*}} : index
+//        CHECK:     %[[T0:.+]] = arith.subi %[[IDX0]], %[[IDX1]] : index
+//        CHECK:     %[[T1:.+]] = arith.addi %[[T0]], %[[IDX4]] : index
+//        CHECK:     %[[T2:.+]] = arith.addi %[[T1]], %{{.*}} : index
 
 //  CANCEL-OUT-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
 //  CANCEL-OUT-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3)>
@@ -44,8 +44,8 @@ func @interchange_generic_op(%arg0 : memref<1x2x3x4x5xindex>, %arg1 : memref<1x2
 //  CANCEL-OUT-DAG:     %[[IDX0:.+]] = linalg.index 0 : index
 //  CANCEL-OUT-DAG:     %[[IDX1:.+]] = linalg.index 1 : index
 //  CANCEL-OUT-DAG:     %[[IDX4:.+]] = linalg.index 4 : index
-//      CANCEL-OUT:     %[[T0:.+]] = subi %[[IDX0]], %[[IDX1]] : index
-//      CANCEL-OUT:     %[[T1:.+]] = addi %[[T0]], %[[IDX4]] : index
-//      CANCEL-OUT:     %[[T2:.+]] = addi %[[T1]], %{{.*}} : index
+//      CANCEL-OUT:     %[[T0:.+]] = arith.subi %[[IDX0]], %[[IDX1]] : index
+//      CANCEL-OUT:     %[[T1:.+]] = arith.addi %[[T0]], %[[IDX4]] : index
+//      CANCEL-OUT:     %[[T2:.+]] = arith.addi %[[T1]], %{{.*}} : index
 
 

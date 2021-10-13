@@ -18,7 +18,7 @@ func @emitc_call() {
 
 
 func @emitc_call_two_results() {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1:2 = emitc.call "two_results" () : () -> (i32, i32)
   return
 }

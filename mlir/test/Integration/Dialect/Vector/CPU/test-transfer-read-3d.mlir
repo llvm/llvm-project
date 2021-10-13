@@ -20,7 +20,7 @@
 
 func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
                        %o: index, %a: index, %b: index, %c: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
@@ -29,7 +29,7 @@ func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
 
 func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
                                    %o: index, %a: index, %b: index, %c: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       {in_bounds = [true, true, true]}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
@@ -40,7 +40,7 @@ func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
 
 func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
                                  %o: index, %a: index, %b: index, %c: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
@@ -50,8 +50,8 @@ func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
 
 func @transfer_read_3d_mask_broadcast(
     %A : memref<?x?x?x?xf32>, %o: index, %a: index, %b: index, %c: index) {
-  %fm42 = constant -42.0: f32
-  %mask = constant dense<[0, 1]> : vector<2xi1>
+  %fm42 = arith.constant -42.0: f32
+  %mask = arith.constant dense<[0, 1]> : vector<2xi1>
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42, %mask
       {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, 0)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
@@ -61,7 +61,7 @@ func @transfer_read_3d_mask_broadcast(
 
 func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
                                   %o: index, %a: index, %b: index, %c: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1)>}
       : memref<?x?x?x?xf32>, vector<3x5x3xf32>
@@ -71,7 +71,7 @@ func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
 
 func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
                         %o: index, %a: index, %b: index, %c: index) {
-  %fn1 = constant -1.0 : f32
+  %fn1 = arith.constant -1.0 : f32
   %vf0 = splat %fn1 : vector<2x9x3xf32>
   vector.transfer_write %vf0, %A[%o, %a, %b, %c]
       : vector<2x9x3xf32>, memref<?x?x?x?xf32>
@@ -79,31 +79,31 @@ func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
 }
 
 func @entry() {
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c2 = constant 2: index
-  %c3 = constant 3: index
-  %f2 = constant 2.0: f32
-  %f10 = constant 10.0: f32
-  %first = constant 5: index
-  %second = constant 4: index
-  %third = constant 2 : index
-  %outer = constant 10 : index
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c2 = arith.constant 2: index
+  %c3 = arith.constant 3: index
+  %f2 = arith.constant 2.0: f32
+  %f10 = arith.constant 10.0: f32
+  %first = arith.constant 5: index
+  %second = arith.constant 4: index
+  %third = arith.constant 2 : index
+  %outer = arith.constant 10 : index
   %A = memref.alloc(%outer, %first, %second, %third) : memref<?x?x?x?xf32>
   scf.for %o = %c0 to %outer step %c1 {
     scf.for %i = %c0 to %first step %c1 {
-      %i32 = index_cast %i : index to i32
-      %fi = sitofp %i32 : i32 to f32
-      %fi10 = mulf %fi, %f10 : f32
+      %i32 = arith.index_cast %i : index to i32
+      %fi = arith.sitofp %i32 : i32 to f32
+      %fi10 = arith.mulf %fi, %f10 : f32
       scf.for %j = %c0 to %second step %c1 {
-        %j32 = index_cast %j : index to i32
-        %fj = sitofp %j32 : i32 to f32
-        %fadded = addf %fi10, %fj : f32
+        %j32 = arith.index_cast %j : index to i32
+        %fj = arith.sitofp %j32 : i32 to f32
+        %fadded = arith.addf %fi10, %fj : f32
         scf.for %k = %c0 to %third step %c1 {
-          %k32 = index_cast %k : index to i32
-          %fk = sitofp %k32 : i32 to f32
-          %fk1 = addf %f2, %fk : f32
-          %fmul = mulf %fadded, %fk1 : f32
+          %k32 = arith.index_cast %k : index to i32
+          %fk = arith.sitofp %k32 : i32 to f32
+          %fk1 = arith.addf %f2, %fk : f32
+          %fmul = arith.mulf %fadded, %fk1 : f32
           memref.store %fmul, %A[%o, %i, %j, %k] : memref<?x?x?x?xf32>
         }
       }

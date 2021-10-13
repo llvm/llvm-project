@@ -43,8 +43,8 @@ module {
       ins(%arga, %argb: tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>)
       outs(%argx: tensor<?x?xf64>) {
       ^bb(%a: f64, %b: f64, %x: f64):
-        %0 = mulf %a, %b : f64
-        %1 = addf %x, %0 : f64
+        %0 = arith.mulf %a, %b : f64
+        %1 = arith.addf %x, %0 : f64
         linalg.yield %1 : f64
     } -> tensor<?x?xf64>
     return %0 : tensor<?x?xf64>
@@ -56,11 +56,11 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %i0 = constant 0.0 : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c4 = constant 4 : index
-    %c256 = constant 256 : index
+    %i0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %c256 = arith.constant 256 : index
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -71,10 +71,10 @@ module {
     %xdata = memref.alloc(%c4, %c4) : memref<?x?xf64>
     scf.for %i = %c0 to %c256 step %c1 {
       scf.for %j = %c0 to %c4 step %c1 {
-        %k0 = muli %i, %c4 : index
-        %k1 = addi %j, %k0 : index
-        %k2 = index_cast %k1 : index to i32
-        %k = sitofp %k2 : i32 to f64
+        %k0 = arith.muli %i, %c4 : index
+        %k1 = arith.addi %j, %k0 : index
+        %k2 = arith.index_cast %k1 : index to i32
+        %k = arith.sitofp %k2 : i32 to f64
         memref.store %k, %bdata[%i, %j] : memref<?x?xf64>
       }
     }
