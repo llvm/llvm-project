@@ -3,7 +3,7 @@
 module {
   func @basic_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                      %arg2: memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
+    %cst = arith.constant 0.000000e+00 : f32
     linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "basic_fusion"}
       ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
@@ -22,12 +22,12 @@ module {
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
-//  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
-//  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
-//  CHECK-DAG:   %[[CST:.+]] = constant 0.0{{.*}} : f32
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C32:.+]] = arith.constant 32 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
+//  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0{{.*}} : f32
 //  CHECK-DAG:   linalg.fill(%[[CST]], %[[ARG2]])
 // CHECK-SAME:   __internal_linalg_transform__ = "after_basic_fusion_original"
 //  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
@@ -74,7 +74,7 @@ module {
 module {
   func @rhs_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                               %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
+    %cst = arith.constant 0.000000e+00 : f32
     linalg.copy(%arg1, %arg2) : memref<?x?xf32>, memref<?x?xf32>
     linalg.fill(%cst, %arg3) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "rhs_fusion"}
@@ -93,12 +93,12 @@ module {
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
-//  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
-//  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
-//  CHECK-DAG:   %[[CST:.+]] = constant 0.0{{.*}} : f32
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C32:.+]] = arith.constant 32 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
+//  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0{{.*}} : f32
 //  CHECK-DAG:   linalg.copy(%[[ARG1]], %[[ARG2]])
 // CHECK-SAME:   __internal_linalg_transform__ = "after_rhs_fusion_original"
 //  CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG2]], %[[C1]]
@@ -151,7 +151,7 @@ module {
 module {
   func @two_operand_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                               %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
+    %cst = arith.constant 0.000000e+00 : f32
     linalg.copy(%arg0, %arg1) : memref<?x?xf32>, memref<?x?xf32>
     linalg.fill(%cst, %arg3) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "two_operand_fusion"}
@@ -170,12 +170,12 @@ module {
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
-//  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
-//  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
-//  CHECK-DAG:   %[[CST:.+]] = constant 0.0{{.*}} : f32
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C32:.+]] = arith.constant 32 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
+//  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0{{.*}} : f32
 //      CHECK:   linalg.copy(%[[ARG0]], %[[ARG1]])
 // CHECK-SAME:     __internal_linalg_transform__ = "after_two_operand_fusion_original"
 //      CHECK:   linalg.fill(%[[CST]], %[[ARG3]])
@@ -253,11 +253,11 @@ module {
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C32:.+]] = constant 32 : index
-//  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
-//  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C32:.+]] = arith.constant 32 : index
+//  CHECK-DAG:   %[[C64:.+]] = arith.constant 64 : index
+//  CHECK-DAG:   %[[C16:.+]] = arith.constant 16 : index
 //      CHECK:   linalg.matmul
 // CHECK-SAME:     __internal_linalg_transform__ = "after_lhs_fusion_original"
 //  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG2]], %[[C0]]
@@ -310,8 +310,8 @@ module {
 module {
   func @matmul_plus_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                            %arg2: memref<?x?xf32>) {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %0 = memref.dim %arg2, %c0 : memref<?x?xf32>
     %1 = memref.dim %arg2, %c1 : memref<?x?xf32>
     %2 = memref.alloc(%0, %1) : memref<?x?xf32>
@@ -326,7 +326,7 @@ module {
       ins(%2, %2 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg2 : memref<?x?xf32>) {
       ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
-        %3 = addf %arg3, %arg4 : f32
+        %3 = arith.addf %arg3, %arg4 : f32
         linalg.yield %3 : f32
       }
     return
@@ -361,8 +361,8 @@ module {
   func @matmul_plus_transpose_matmul(%arg0: memref<?x?xf32>,
                                      %arg1: memref<?x?xf32>,
                                      %arg2: memref<?x?xf32>) {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     %0 = memref.dim %arg2, %c0 : memref<?x?xf32>
     %1 = memref.dim %arg2, %c1 : memref<?x?xf32>
     %2 = memref.alloc(%0, %1) : memref<?x?xf32>
@@ -377,7 +377,7 @@ module {
       ins(%2, %2 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg2 : memref<?x?xf32>) {
       ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
-        %3 = addf %arg3, %arg4 : f32
+        %3 = arith.addf %arg3, %arg4 : f32
         linalg.yield %3 : f32
       }
     return
@@ -402,13 +402,13 @@ module {
 module {
   func @basic_no_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                         %arg2: memref<?x?xf32>) {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c2 = constant 2 : index
-    %c32 = constant 32 : index
-    %c64 = constant 64 : index
-    %c16 = constant 16 : index
-    %cst = constant 0.000000e+00 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %c32 = arith.constant 32 : index
+    %c64 = arith.constant 64 : index
+    %c16 = arith.constant 16 : index
+    %cst = arith.constant 0.000000e+00 : f32
     linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
     %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
     %1 = memref.dim %arg1, %c1 : memref<?x?xf32>
@@ -443,7 +443,7 @@ module {
 module {
   func @basic_conv_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                           %arg2: memref<?x?xf32>) {
-    %cst = constant 0.000000e+00 : f32
+    %cst = arith.constant 0.000000e+00 : f32
     linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
     linalg.conv_2d {__internal_linalg_transform__ = "basic_fusion"}
       ins(%arg1, %arg0 : memref<?x?xf32>, memref<?x?xf32>) outs(%arg2 : memref<?x?xf32>)

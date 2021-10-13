@@ -8,11 +8,11 @@
 
 
 func @main() {
-  %const = constant dense<[[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]]]> : tensor<1x2x3xf32>
+  %const = arith.constant dense<[[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]]]> : tensor<1x2x3xf32>
   %dynamic = tensor.cast %const: tensor<1x2x3xf32> to tensor<1x?x3xf32>
-  %offset = constant 2 : index
-  %cst = constant 2.3 : f32
-  %c0 = constant 0 : index
+  %offset = arith.constant 2 : index
+  %cst = arith.constant 2.3 : f32
+  %c0 = arith.constant 0 : index
   %out = linalg.pad_tensor %dynamic low[%c0, %offset, %c0] high[%c0, %c0, %offset]  {
   ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index):  // no predecessors
     linalg.yield %cst : f32

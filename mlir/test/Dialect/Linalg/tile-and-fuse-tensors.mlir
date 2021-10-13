@@ -5,11 +5,11 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
                      outs(%arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32>
 
-  %c4 = constant 4 : index
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c3 = constant 3 : index
-  %c1 = constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c1 = arith.constant 1 : index
   %0 = tensor.dim %t0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %t0, %c1 : tensor<?x?xf32>
   %2 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
@@ -38,8 +38,8 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 //  CHECK-SAME: %[[B:[0-9a-z]*]]: tensor<?x?xf32>
 //  CHECK-SAME: %[[C:[0-9a-z]*]]: tensor<?x?xf32>
 
-//   CHECK-DAG: %[[C0:.*]] = constant 0 : index
-//   CHECK-DAG: %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[dA0:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?x?xf32>
 //   CHECK-DAG: %[[dA1:.*]] = tensor.dim %[[A]], %[[C1]] : tensor<?x?xf32>
 //   CHECK-DAG: %[[dB0:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?x?xf32>
@@ -64,13 +64,13 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 // -----
 
 func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3x32xf32>, %elementwise: tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32> {
-  %c112 = constant 112 : index
-  %c32 = constant 32 : index
-  %c16 = constant 16 : index
-  %c8 = constant 8 : index
-  %c4 = constant 4 : index
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c112 = arith.constant 112 : index
+  %c32 = arith.constant 32 : index
+  %c16 = arith.constant 16 : index
+  %c8 = arith.constant 8 : index
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
 
   %init = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
   %fill = linalg.fill(%cst, %init) : f32, tensor<1x112x112x32xf32> -> tensor<1x112x112x32xf32>
@@ -96,7 +96,7 @@ func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3
           }
           ins(%0, %1 : tensor<1x8x16x4xf32>, tensor<1x8x16x4xf32>) outs(%2 : tensor<1x8x16x4xf32>) {
         ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):
-          %result = addf %arg3, %arg4 : f32
+          %result = arith.addf %arg3, %arg4 : f32
           linalg.yield %result : f32
         } -> tensor<1x8x16x4xf32>
 
@@ -140,14 +140,14 @@ func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3
 // -----
 
 func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %elementwise: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
-  %cst = constant 0.0 : f32
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %c8 = constant 8 : index
-  %c16 = constant 16 : index
+  %cst = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
 
   %n = tensor.dim %elementwise, %c0 : tensor<?x?x?x?xf32>
   %oh = tensor.dim %elementwise, %c1 : tensor<?x?x?x?xf32>
@@ -183,7 +183,7 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
             }
             ins(%0, %1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) outs(%2 : tensor<?x?x?x?xf32>) {
           ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):
-            %result = addf %arg4, %arg5 : f32
+            %result = arith.addf %arg4, %arg5 : f32
             linalg.yield %result : f32
           } -> tensor<?x?x?x?xf32>
 
@@ -213,10 +213,10 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //      CHECK: func @conv_tensors_dynamic
 // CHECK-SAME: (%[[INPUT]]: tensor<?x?x?x?xf32>, %[[FILTER]]: tensor<?x?x?x?xf32>, %[[ELEM]]: tensor<?x?x?x?xf32>)
 
-//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
-//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//  CHECK-DAG:   %[[C2:.+]] = constant 2 : index
-//  CHECK-DAG:   %[[C3:.+]] = constant 3 : index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : index
 
 //  CHECK-DAG:   %[[ELEM_N:.+]] = tensor.dim %[[ELEM]], %[[C0]] : tensor<?x?x?x?xf32>
 //  CHECK-DAG:   %[[ELEM_OH:.+]] = tensor.dim %[[ELEM]], %[[C1]] : tensor<?x?x?x?xf32>
@@ -274,16 +274,16 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 //     CHECK: func @pad_generic_static
-// CHECK-DAG:   %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:   %[[C16:.*]] = constant 16 : index
-// CHECK-DAG:   %[[C32:.*]] = constant 32 : index
-// CHECK-DAG:   %[[C64:.*]] = constant 64 : index
-// CHECK-DAG:   %[[C128:.*]] = constant 128 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG:   %[[C32:.*]] = arith.constant 32 : index
+// CHECK-DAG:   %[[C64:.*]] = arith.constant 64 : index
+// CHECK-DAG:   %[[C128:.*]] = arith.constant 128 : index
 //     CHECK:   scf.for %{{.*}} = %[[C0]] to %[[C64]] step %[[C16]]
-//     CHECK:     %[[CMPI1:.*]] = cmpi eq
+//     CHECK:     %[[CMPI1:.*]] = arith.cmpi eq
 //     CHECK:     scf.for %{{.*}} = %[[C0]] to %[[C128]] step %[[C32]]
-//     CHECK:       %[[CMPI2:.*]] = cmpi eq
-//     CHECK:       %[[HASZERO:.*]] = or %[[CMPI2]], %[[CMPI1]] : i1
+//     CHECK:       %[[CMPI2:.*]] = arith.cmpi eq
+//     CHECK:       %[[HASZERO:.*]] = arith.ori %[[CMPI2]], %[[CMPI1]] : i1
 //     CHECK:       scf.if %[[HASZERO]]
 //     CHECK:         tensor.generate
 //     CHECK:       else
@@ -294,11 +294,11 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //     CHECK:       linalg.generic
 //     CHECK:       tensor.insert_slice
 func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tensor<64x128xf32>) -> tensor<64x128xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c16 = constant 16 : index
-  %c32 = constant 32 : index
-  %zero = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %zero = arith.constant 0.0 : f32
 
   %d0 = tensor.dim %large_input, %c0 : tensor<64x128xf32>
   %d1 = tensor.dim %large_input, %c1 : tensor<64x128xf32>
@@ -320,7 +320,7 @@ func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tensor<64
         {indexing_maps = [#map, #map, #map], iterator_types = ["parallel", "parallel"]}
         ins(%0, %1 : tensor<16x32xf32>, tensor<16x32xf32>) outs(%2 : tensor<16x32xf32>) {
       ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):
-        %result = addf %arg4, %arg5 : f32
+        %result = arith.addf %arg4, %arg5 : f32
         linalg.yield %result : f32
       } -> tensor<16x32xf32>
 

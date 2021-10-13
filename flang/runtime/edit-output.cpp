@@ -25,14 +25,14 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   case 'G':
   case 'I':
     if (isNegative) {
-      un = -n;
+      un = -un;
     }
     if (isNegative || (edit.modes.editingFlags & signPlus)) {
       signChars = 1; // '-' or '+'
     }
     while (un > 0) {
       auto quotient{un / 10u};
-      *--p = '0' + static_cast<int>(un - 10u * quotient);
+      *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
       un = quotient;
     }
     break;
@@ -398,7 +398,8 @@ template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
   case 'O':
   case 'Z':
     return EditIntegerOutput<KIND>(io_, edit,
-        decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw());
+        static_cast<common::HostSignedIntType<8 * KIND>>(
+            decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw()));
   case 'G':
     return Edit(EditForGOutput(edit));
   default:

@@ -13,11 +13,13 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -169,6 +171,8 @@ struct LowerGpuOpsToNVVMOpsPass
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
+    mlir::arith::populateArithmeticToLLVMConversionPatterns(converter,
+                                                            llvmPatterns);
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
@@ -217,14 +221,14 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
                       &converter.getContext()));
 
-  patterns.add<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
-                                             "__nv_fabs");
+  patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__nv_fabsf",
+                                                  "__nv_fabs");
   patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
                                                    "__nv_atan");
   patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
                                                     "__nv_atan2");
-  patterns.add<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
-                                              "__nv_ceil");
+  patterns.add<OpToFuncCallLowering<math::CeilOp>>(converter, "__nv_ceilf",
+                                                   "__nv_ceil");
   patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
                                                   "__nv_cos");
   patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
@@ -233,8 +237,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                    "__nv_exp2");
   patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
                                                     "__nv_expm1");
-  patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",
-                                               "__nv_floor");
+  patterns.add<OpToFuncCallLowering<math::FloorOp>>(converter, "__nv_floorf",
+                                                    "__nv_floor");
   patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
                                                   "__nv_log");
   patterns.add<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",

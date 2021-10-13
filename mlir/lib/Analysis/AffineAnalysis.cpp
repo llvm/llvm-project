@@ -17,6 +17,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -53,10 +54,10 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
   Operation *combinerOp = combinerOps.back();
   Optional<AtomicRMWKind> maybeKind =
       TypeSwitch<Operation *, Optional<AtomicRMWKind>>(combinerOp)
-          .Case<AddFOp>([](Operation *) { return AtomicRMWKind::addf; })
-          .Case<MulFOp>([](Operation *) { return AtomicRMWKind::mulf; })
-          .Case<AddIOp>([](Operation *) { return AtomicRMWKind::addi; })
-          .Case<MulIOp>([](Operation *) { return AtomicRMWKind::muli; })
+          .Case([](arith::AddFOp) { return AtomicRMWKind::addf; })
+          .Case([](arith::MulFOp) { return AtomicRMWKind::mulf; })
+          .Case([](arith::AddIOp) { return AtomicRMWKind::addi; })
+          .Case([](arith::MulIOp) { return AtomicRMWKind::muli; })
           .Default([](Operation *) -> Optional<AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
@@ -640,10 +641,9 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
       auto symbol = operands[i];
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
-      if (auto cOp = symbol.getDefiningOp<ConstantIndexOp>())
+      if (auto cOp = symbol.getDefiningOp<arith::ConstantIndexOp>())
         dependenceDomain->addBound(FlatAffineConstraints::EQ,
-                                   valuePosMap.getSymPos(symbol),
-                                   cOp.getValue());
+                                   valuePosMap.getSymPos(symbol), cOp.value());
     }
   };
 

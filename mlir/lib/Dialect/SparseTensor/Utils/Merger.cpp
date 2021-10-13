@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
@@ -514,10 +515,10 @@ Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
 /// Only returns false if we are certain this is a nonzero.
 bool Merger::maybeZero(unsigned e) const {
   if (tensorExps[e].kind == kInvariant) {
-    if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())
-      return c.getValue() == 0;
-    if (auto c = tensorExps[e].val.getDefiningOp<ConstantFloatOp>())
-      return c.getValue().isZero();
+    if (auto c = tensorExps[e].val.getDefiningOp<arith::ConstantIntOp>())
+      return c.value() == 0;
+    if (auto c = tensorExps[e].val.getDefiningOp<arith::ConstantFloatOp>())
+      return c.value().isZero();
   }
   return true;
 }
@@ -561,33 +562,33 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto x = buildTensorExp(op, def->getOperand(0));
     if (x.hasValue()) {
       unsigned e = x.getValue();
-      if (isa<AbsFOp>(def))
+      if (isa<math::AbsOp>(def))
         return addExp(kAbsF, e);
-      if (isa<CeilFOp>(def))
+      if (isa<math::CeilOp>(def))
         return addExp(kCeilF, e);
-      if (isa<FloorFOp>(def))
+      if (isa<math::FloorOp>(def))
         return addExp(kFloorF, e);
-      if (isa<NegFOp>(def))
+      if (isa<arith::NegFOp>(def))
         return addExp(kNegF, e); // no negi in std
-      if (isa<FPTruncOp>(def))
+      if (isa<arith::TruncFOp>(def))
         return addExp(kTruncF, e, v);
-      if (isa<FPExtOp>(def))
+      if (isa<arith::ExtFOp>(def))
         return addExp(kExtF, e, v);
-      if (isa<FPToSIOp>(def))
+      if (isa<arith::FPToSIOp>(def))
         return addExp(kCastFS, e, v);
-      if (isa<FPToUIOp>(def))
+      if (isa<arith::FPToUIOp>(def))
         return addExp(kCastFU, e, v);
-      if (isa<SIToFPOp>(def))
+      if (isa<arith::SIToFPOp>(def))
         return addExp(kCastSF, e, v);
-      if (isa<UIToFPOp>(def))
+      if (isa<arith::UIToFPOp>(def))
         return addExp(kCastUF, e, v);
-      if (isa<SignExtendIOp>(def))
+      if (isa<arith::ExtSIOp>(def))
         return addExp(kCastS, e, v);
-      if (isa<ZeroExtendIOp>(def))
+      if (isa<arith::ExtUIOp>(def))
         return addExp(kCastU, e, v);
-      if (isa<TruncateIOp>(def))
+      if (isa<arith::TruncIOp>(def))
         return addExp(kTruncI, e, v);
-      if (isa<BitcastOp>(def))
+      if (isa<arith::BitcastOp>(def))
         return addExp(kBitCast, e, v);
     }
   }
@@ -600,35 +601,35 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     if (x.hasValue() && y.hasValue()) {
       unsigned e0 = x.getValue();
       unsigned e1 = y.getValue();
-      if (isa<MulFOp>(def))
+      if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
-      if (isa<MulIOp>(def))
+      if (isa<arith::MulIOp>(def))
         return addExp(kMulI, e0, e1);
-      if (isa<DivFOp>(def) && !maybeZero(e1))
+      if (isa<arith::DivFOp>(def) && !maybeZero(e1))
         return addExp(kDivF, e0, e1);
-      if (isa<SignedDivIOp>(def) && !maybeZero(e1))
+      if (isa<arith::DivSIOp>(def) && !maybeZero(e1))
         return addExp(kDivS, e0, e1);
-      if (isa<UnsignedDivIOp>(def) && !maybeZero(e1))
+      if (isa<arith::DivUIOp>(def) && !maybeZero(e1))
         return addExp(kDivU, e0, e1);
-      if (isa<AddFOp>(def))
+      if (isa<arith::AddFOp>(def))
         return addExp(kAddF, e0, e1);
-      if (isa<AddIOp>(def))
+      if (isa<arith::AddIOp>(def))
         return addExp(kAddI, e0, e1);
-      if (isa<SubFOp>(def))
+      if (isa<arith::SubFOp>(def))
         return addExp(kSubF, e0, e1);
-      if (isa<SubIOp>(def))
+      if (isa<arith::SubIOp>(def))
         return addExp(kSubI, e0, e1);
-      if (isa<AndOp>(def))
+      if (isa<arith::AndIOp>(def))
         return addExp(kAndI, e0, e1);
-      if (isa<OrOp>(def))
+      if (isa<arith::OrIOp>(def))
         return addExp(kOrI, e0, e1);
-      if (isa<XOrOp>(def))
+      if (isa<arith::XOrIOp>(def))
         return addExp(kXorI, e0, e1);
-      if (isa<SignedShiftRightOp>(def) && isInvariant(e1))
+      if (isa<arith::ShRSIOp>(def) && isInvariant(e1))
         return addExp(kShrS, e0, e1);
-      if (isa<UnsignedShiftRightOp>(def) && isInvariant(e1))
+      if (isa<arith::ShRUIOp>(def) && isInvariant(e1))
         return addExp(kShrU, e0, e1);
-      if (isa<ShiftLeftOp>(def) && isInvariant(e1))
+      if (isa<arith::ShLIOp>(def) && isInvariant(e1))
         return addExp(kShlI, e0, e1);
     }
   }
@@ -644,70 +645,70 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     llvm_unreachable("unexpected non-op");
   // Unary ops.
   case kAbsF:
-    return rewriter.create<AbsFOp>(loc, v0);
+    return rewriter.create<math::AbsOp>(loc, v0);
   case kCeilF:
-    return rewriter.create<CeilFOp>(loc, v0);
+    return rewriter.create<math::CeilOp>(loc, v0);
   case kFloorF:
-    return rewriter.create<FloorFOp>(loc, v0);
+    return rewriter.create<math::FloorOp>(loc, v0);
   case kNegF:
-    return rewriter.create<NegFOp>(loc, v0);
+    return rewriter.create<arith::NegFOp>(loc, v0);
   case kNegI: // no negi in std
-    return rewriter.create<SubIOp>(
+    return rewriter.create<arith::SubIOp>(
         loc,
-        rewriter.create<ConstantOp>(loc, v0.getType(),
-                                    rewriter.getZeroAttr(v0.getType())),
+        rewriter.create<arith::ConstantOp>(loc, v0.getType(),
+                                           rewriter.getZeroAttr(v0.getType())),
         v0);
   case kTruncF:
-    return rewriter.create<FPTruncOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncFOp>(loc, v0, inferType(e, v0));
   case kExtF:
-    return rewriter.create<FPExtOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtFOp>(loc, v0, inferType(e, v0));
   case kCastFS:
-    return rewriter.create<FPToSIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToSIOp>(loc, v0, inferType(e, v0));
   case kCastFU:
-    return rewriter.create<FPToUIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToUIOp>(loc, v0, inferType(e, v0));
   case kCastSF:
-    return rewriter.create<SIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::SIToFPOp>(loc, v0, inferType(e, v0));
   case kCastUF:
-    return rewriter.create<UIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::UIToFPOp>(loc, v0, inferType(e, v0));
   case kCastS:
-    return rewriter.create<SignExtendIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtSIOp>(loc, v0, inferType(e, v0));
   case kCastU:
-    return rewriter.create<ZeroExtendIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtUIOp>(loc, v0, inferType(e, v0));
   case kTruncI:
-    return rewriter.create<TruncateIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncIOp>(loc, v0, inferType(e, v0));
   case kBitCast:
-    return rewriter.create<BitcastOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::BitcastOp>(loc, v0, inferType(e, v0));
   // Binary ops.
   case kMulF:
-    return rewriter.create<MulFOp>(loc, v0, v1);
+    return rewriter.create<arith::MulFOp>(loc, v0, v1);
   case kMulI:
-    return rewriter.create<MulIOp>(loc, v0, v1);
+    return rewriter.create<arith::MulIOp>(loc, v0, v1);
   case kDivF:
-    return rewriter.create<DivFOp>(loc, v0, v1);
+    return rewriter.create<arith::DivFOp>(loc, v0, v1);
   case kDivS:
-    return rewriter.create<SignedDivIOp>(loc, v0, v1);
+    return rewriter.create<arith::DivSIOp>(loc, v0, v1);
   case kDivU:
-    return rewriter.create<UnsignedDivIOp>(loc, v0, v1);
+    return rewriter.create<arith::DivUIOp>(loc, v0, v1);
   case kAddF:
-    return rewriter.create<AddFOp>(loc, v0, v1);
+    return rewriter.create<arith::AddFOp>(loc, v0, v1);
   case kAddI:
-    return rewriter.create<AddIOp>(loc, v0, v1);
+    return rewriter.create<arith::AddIOp>(loc, v0, v1);
   case kSubF:
-    return rewriter.create<SubFOp>(loc, v0, v1);
+    return rewriter.create<arith::SubFOp>(loc, v0, v1);
   case kSubI:
-    return rewriter.create<SubIOp>(loc, v0, v1);
+    return rewriter.create<arith::SubIOp>(loc, v0, v1);
   case kAndI:
-    return rewriter.create<AndOp>(loc, v0, v1);
+    return rewriter.create<arith::AndIOp>(loc, v0, v1);
   case kOrI:
-    return rewriter.create<OrOp>(loc, v0, v1);
+    return rewriter.create<arith::OrIOp>(loc, v0, v1);
   case kXorI:
-    return rewriter.create<XOrOp>(loc, v0, v1);
+    return rewriter.create<arith::XOrIOp>(loc, v0, v1);
   case kShrS:
-    return rewriter.create<SignedShiftRightOp>(loc, v0, v1);
+    return rewriter.create<arith::ShRSIOp>(loc, v0, v1);
   case kShrU:
-    return rewriter.create<UnsignedShiftRightOp>(loc, v0, v1);
+    return rewriter.create<arith::ShRUIOp>(loc, v0, v1);
   case kShlI:
-    return rewriter.create<ShiftLeftOp>(loc, v0, v1);
+    return rewriter.create<arith::ShLIOp>(loc, v0, v1);
   }
   llvm_unreachable("unexpected expression kind in build");
 }

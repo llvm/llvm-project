@@ -18,6 +18,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -81,7 +82,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
   } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO: Support DMA ops.
     return false;
-  } else if (!isa<ConstantOp>(op)) {
+  } else if (!isa<arith::ConstantOp, ConstantOp>(op)) {
     // Register op in the set of ops that have users.
     opsWithUsers.insert(&op);
     if (isa<AffineMapAccessInterface>(op)) {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -349,7 +350,7 @@ struct FoldAffineOp : public RewritePattern {
     AffineExpr expr = map.getResult(0);
     if (map.getNumInputs() == 0) {
       if (auto val = expr.dyn_cast<AffineConstantExpr>()) {
-        rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, val.getValue());
+        rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, val.getValue());
         return success();
       }
       return failure();

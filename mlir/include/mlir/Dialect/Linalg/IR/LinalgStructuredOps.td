@@ -283,8 +283,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
         outs(%C : memref<?x?xf32, stride_specification>)
         {other-optional-attributes} {
         ^bb0(%a: f32, %b: f32, %c: f32) :
-          %d = mulf %a, %b: f32
-          %e = addf %c, %d: f32
+          %d = arith.mulf %a, %b: f32
+          %e = arith.addf %c, %d: f32
           linalg.yield %e : f32
       }
       ```
@@ -306,8 +306,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
           %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
           %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
           %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
-          %d = mulf %a, %b: f32
-          %e = addf %c, %d: f32
+          %d = arith.mulf %a, %b: f32
+          %e = arith.addf %c, %d: f32
           store %e, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
         }
       }

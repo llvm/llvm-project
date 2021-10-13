@@ -1,14 +1,14 @@
 // RUN: mlir-opt %s -test-linalg-greedy-fusion | FileCheck %s
 
 func @f1(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>, %B: memref<?x?xf32, offset: ?, strides: [?, 1]>, %C: memref<?x?xf32, offset: ?, strides: [?, 1]>, %D: memref<?x?xf32, offset: ?, strides: [?, 1]>, %E: memref<?x?xf32, offset: ?, strides: [?, 1]>) -> memref<?x?xf32, offset: ?, strides: [?, 1]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
-  %c40 = constant 40 : index
-  %c30 = constant 30 : index
-  %c20 = constant 20 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c40 = arith.constant 40 : index
+  %c30 = arith.constant 30 : index
+  %c20 = arith.constant 20 : index
   %0 = memref.dim %C, %c0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %1 = memref.dim %C, %c1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %2 = memref.dim %D, %c1 : memref<?x?xf32, offset: ?, strides: [?, 1]>

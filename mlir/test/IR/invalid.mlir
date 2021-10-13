@@ -11,7 +11,7 @@ func @illegaltype(i) // expected-error {{expected non-function type}}
 // -----
 
 func @illegaltype() {
-  %0 = constant dense<0> : <vector 4 x f32> : vector<4 x f32> // expected-error {{expected non-function type}}
+  %0 = arith.constant dense<0> : <vector 4 x f32> : vector<4 x f32> // expected-error {{expected non-function type}}
 }
 
 // -----
@@ -176,8 +176,8 @@ func @block_first_has_predecessor() {
 // -----
 
 func @no_return() {
-  %x = constant 0 : i32
-  %y = constant 1 : i32  // expected-error {{block with no terminator}}
+  %x = arith.constant 0 : i32
+  %y = arith.constant 1 : i32  // expected-error {{block with no terminator}}
 }
 
 // -----
@@ -185,8 +185,8 @@ func @no_return() {
 func @no_terminator() {
   br ^bb1
 ^bb1:
-  %x = constant 0 : i32
-  %y = constant 1 : i32  // expected-error {{block with no terminator}}
+  %x = arith.constant 0 : i32
+  %y = arith.constant 1 : i32  // expected-error {{block with no terminator}}
 }
 
 
@@ -434,7 +434,7 @@ func @condbr_a_bb_is_not_a_type() {
 // -----
 
 func @successors_in_non_terminator(%a : i32, %b : i32) {
-  %c = "std.addi"(%a, %b)[^bb1] : () -> () // expected-error {{successors in non-terminator}}
+  %c = "arith.addi"(%a, %b)[^bb1] : () -> () // expected-error {{successors in non-terminator}}
 ^bb1:
   return
 }
@@ -821,7 +821,7 @@ func @mixed_named_arguments(f32,
 // `tensor` as operator rather than as a type.
 func @f(f32) {
 ^bb0(%a : f32):
-  %18 = cmpi slt, %idx, %idx : index
+  %18 = arith.cmpi slt, %idx, %idx : index
   tensor<42 x index  // expected-error {{custom op 'tensor' is unknown}}
   return
 }
@@ -920,7 +920,7 @@ func @invalid_tensor_literal() {
 // -----
 
 func @invalid_affine_structure() {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %idx = affine.apply affine_map<(d0, d1)> (%c0, %c0) // expected-error {{expected '->' or ':'}}
   return
 }
@@ -993,7 +993,7 @@ func @invalid_nested_dominance() {
 
   ^bb2:
     // expected-note @+1 {{operand defined here}}
-    %1 = constant 0 : i32
+    %1 = arith.constant 0 : i32
     "foo.yield" () : () -> ()
   }) : () -> ()
   return
@@ -1035,11 +1035,11 @@ func @invalid_tuple_missing_greater(tuple<i32)
 func @invalid_region_dominance() {
   "foo.use" (%1) : (i32) -> ()
   "foo.region"() ({
-    %1 = constant 0 : i32  // This value is used outside of the region.
+    %1 = arith.constant 0 : i32  // This value is used outside of the region.
     "foo.yield" () : () -> ()
   }, {
     // expected-error @+1 {{expected operation name in quotes}}
-    %2 = constant 1 i32  // Syntax error causes region deletion.
+    %2 = arith.constant 1 i32  // Syntax error causes region deletion.
   }) : () -> ()
   return
 }
@@ -1056,7 +1056,7 @@ func @invalid_region_block() {
       "foo.yield"() : () -> ()
   }, {
     // expected-error @+1 {{expected operation name in quotes}}
-    %2 = constant 1 i32  // Syntax error causes region deletion.
+    %2 = arith.constant 1 i32  // Syntax error causes region deletion.
   }) : () -> ()
 }
 
@@ -1067,12 +1067,12 @@ func @invalid_region_dominance() {
   "foo.use" (%1) : (i32) -> ()
   "foo.region"() ({
     "foo.region"() ({
-      %1 = constant 0 : i32  // This value is used outside of the region.
+      %1 = arith.constant 0 : i32  // This value is used outside of the region.
       "foo.yield" () : () -> ()
     }) : () -> ()
   }, {
     // expected-error @+1 {{expected operation name in quotes}}
-    %2 = constant 1 i32  // Syntax error causes region deletion.
+    %2 = arith.constant 1 i32  // Syntax error causes region deletion.
   }) : () -> ()
   return
 }
@@ -1604,7 +1604,7 @@ func @forward_reference_type_check() -> (i8) {
 // -----
 
 func @dominance_error_in_unreachable_op() -> i1 {
-  %c = constant false
+  %c = arith.constant false
   return %c : i1
 ^bb0:
   "test.ssacfg_region" () ({ // unreachable
@@ -1626,11 +1626,11 @@ func @invalid_region_dominance_with_dominance_free_regions() {
   test.graph_region {
     "foo.use" (%1) : (i32) -> ()
     "foo.region"() ({
-      %1 = constant 0 : i32  // This value is used outside of the region.
+      %1 = arith.constant 0 : i32  // This value is used outside of the region.
       "foo.yield" () : () -> ()
     }, {
       // expected-error @+1 {{expected operation name in quotes}}
-      %2 = constant 1 i32  // Syntax error causes region deletion.
+      %2 = arith.constant 1 i32  // Syntax error causes region deletion.
     }) : () -> ()
   }
   return

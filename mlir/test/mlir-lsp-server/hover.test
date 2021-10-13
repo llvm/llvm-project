@@ -5,7 +5,7 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"func @foo(%arg: i1) {\n%value = constant true\nbr ^bb2\n^bb2:\nreturn\n}"
+  "text":"func @foo(%arg: i1) {\n%value = arith.constant true\nbr ^bb2\n^bb2:\nreturn\n}"
 }}}
 // -----
 // Hover on an operation.
@@ -18,11 +18,11 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"std.constant\"\n\nGeneric Form:\n\n```mlir\n%0 = \"std.constant\"() {value = true} : () -> i1\n```\n"
+// CHECK-NEXT:      "value": "\"arith.constant\"\n\nGeneric Form:\n\n```mlir\n%0 = \"arith.constant\"() {value = true} : () -> i1\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
-// CHECK-NEXT:        "character": 17,
+// CHECK-NEXT:        "character": 23,
 // CHECK-NEXT:        "line": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "start": {
@@ -42,7 +42,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "Operation: \"std.constant\"\n\nResult #0\n\nType: `i1`\n\n"
+// CHECK-NEXT:      "value": "Operation: \"arith.constant\"\n\nResult #0\n\nType: `i1`\n\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {

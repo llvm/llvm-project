@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRSCFToStandard
   Core
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRSCF
   MLIRTransforms
   )

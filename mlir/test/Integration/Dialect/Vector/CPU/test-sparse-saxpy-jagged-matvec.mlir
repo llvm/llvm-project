@@ -47,10 +47,10 @@
 func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
               %AIDX: memref<4xvector<8xi32>>,
 	      %X: memref<?xf32>, %B: memref<1xvector<8xf32>>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cn = constant 4 : index
-  %f0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cn = arith.constant 4 : index
+  %f0 = arith.constant 0.0 : f32
   %mask = vector.constant_mask [8] : vector<8xi1>
   %pass = vector.broadcast %f0 : f32 to vector<8xf32>
   %b = memref.load %B[%c0] : memref<1xvector<8xf32>>
@@ -67,34 +67,34 @@ func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
 }
 
 func @entry() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %c5 = constant 5 : index
-  %c6 = constant 6 : index
-  %c7 = constant 7 : index
-  %c8 = constant 8 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
+  %c7 = arith.constant 7 : index
+  %c8 = arith.constant 8 : index
 
-  %f0 = constant 0.0 : f32
-  %f1 = constant 1.0 : f32
-  %f2 = constant 2.0 : f32
-  %f3 = constant 3.0 : f32
-  %f4 = constant 4.0 : f32
-  %f5 = constant 5.0 : f32
-  %f6 = constant 6.0 : f32
-  %f7 = constant 7.0 : f32
-  %f8 = constant 8.0 : f32
+  %f0 = arith.constant 0.0 : f32
+  %f1 = arith.constant 1.0 : f32
+  %f2 = arith.constant 2.0 : f32
+  %f3 = arith.constant 3.0 : f32
+  %f4 = arith.constant 4.0 : f32
+  %f5 = arith.constant 5.0 : f32
+  %f6 = arith.constant 6.0 : f32
+  %f7 = arith.constant 7.0 : f32
+  %f8 = arith.constant 8.0 : f32
 
-  %i0 = constant 0 : i32
-  %i1 = constant 1 : i32
-  %i2 = constant 2 : i32
-  %i3 = constant 3 : i32
-  %i4 = constant 4 : i32
-  %i5 = constant 5 : i32
-  %i6 = constant 6 : i32
-  %i7 = constant 7 : i32
+  %i0 = arith.constant 0 : i32
+  %i1 = arith.constant 1 : i32
+  %i2 = arith.constant 2 : i32
+  %i3 = arith.constant 3 : i32
+  %i4 = arith.constant 4 : i32
+  %i5 = arith.constant 5 : i32
+  %i6 = arith.constant 6 : i32
+  %i7 = arith.constant 7 : i32
 
   //
   // Allocate.
@@ -176,9 +176,9 @@ func @entry() {
   memref.store %vf0, %B[%c0] : memref<1xvector<8xf32>>
 
   scf.for %i = %c0 to %c8 step %c1 {
-    %ix = addi %i, %c1 : index
-    %kx = index_cast %ix : index to i32
-    %fx = sitofp %kx : i32 to f32
+    %ix = arith.addi %i, %c1 : index
+    %kx = arith.index_cast %ix : index to i32
+    %fx = arith.sitofp %kx : i32 to f32
     memref.store %fx, %X[%i] : memref<?xf32>
   }
 

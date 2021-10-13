@@ -42,9 +42,9 @@ func @gemm2(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //  CHECK-DAG: %[[BIDX:.*]] = "gpu.block_id"() {dimension = "x"}
 //      CHECK: %[[ITERY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
 //      CHECK: %[[ITERX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
-//      CHECK: %[[INBOUNDSY:.*]] = cmpi slt, %[[ITERY]], %{{.*}}
-//      CHECK: %[[INBOUNDSX:.*]] = cmpi slt, %[[ITERX]], %{{.*}}
-//      CHECK: %[[INBOUNDS:.*]] = and %[[INBOUNDSY]], %[[INBOUNDSX]]
+//      CHECK: %[[INBOUNDSY:.*]] = arith.cmpi slt, %[[ITERY]], %{{.*}}
+//      CHECK: %[[INBOUNDSX:.*]] = arith.cmpi slt, %[[ITERX]], %{{.*}}
+//      CHECK: %[[INBOUNDS:.*]] = arith.andi %[[INBOUNDSY]], %[[INBOUNDSX]]
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.for %[[ARG3:.*]] =
 //      CHECK:     %[[OFFSETY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
@@ -102,7 +102,7 @@ func @gemm4(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //  CHECK-DAG: %[[BIDY:.*]] = "gpu.block_id"() {dimension = "y"}
 //  CHECK-DAG: %[[BIDX:.*]] = "gpu.block_id"() {dimension = "x"}
 //      CHECK: %[[LBX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
-//      CHECK: %[[INBOUNDS:.*]] = cmpi slt, %[[LBX]], %{{.*}}
+//      CHECK: %[[INBOUNDS:.*]] = arith.cmpi slt, %[[LBX]], %{{.*}}
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.for %[[ARG3:.*]] =
 //      CHECK:     %[[OFFSETY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
@@ -134,7 +134,7 @@ func @gemm5(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK: %[[LBY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
 //      CHECK: %[[LBX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
 //      CHECK: %[[STEPX:.*]] = affine.apply #[[MAP0]]()[%[[NBLOCKSX]]]
-//      CHECK: %[[INBOUNDS:.*]] = cmpi slt, %[[LBY]], %{{.*}}
+//      CHECK: %[[INBOUNDS:.*]] = arith.cmpi slt, %[[LBY]], %{{.*}}
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.parallel (%[[ARG3:.*]]) = (%[[LBX]]) to (%{{.*}}) step (%[[STEPX]])
 //      CHECK:     scf.for %[[ARG4:.*]] =
@@ -184,8 +184,8 @@ func @gemm6(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 func @matmul_tensors(
   %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
-//  CHECK-DAG: %[[C8:.*]] = constant 8 : index
-//  CHECK-DAG: %[[C0:.*]] = constant 0 : index
+//  CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG: %[[BIDY:.*]] = "gpu.block_id"() {dimension = "y"}
 //  CHECK-DAG: %[[NBLOCKSY:.*]] = "gpu.grid_dim"() {dimension = "y"}
 //  CHECK-DAG: %[[BIDX:.*]] = "gpu.block_id"() {dimension = "x"}

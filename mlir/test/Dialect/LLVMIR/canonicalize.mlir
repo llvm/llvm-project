@@ -2,10 +2,10 @@
 
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
-  //  CHECK-DAG: %[[C0:.*]] = constant 0 : i32
-  %c0 = constant 0 : i32
-  //  CHECK-DAG: %[[C1:.*]] = constant 1 : i32
-  %c1 = constant 1 : i32
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
+  %c0 = arith.constant 0 : i32
+  //  CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+  %c1 = arith.constant 1 : i32
 
   %0 = llvm.mlir.undef : !llvm.struct<(i32, i32)>
 

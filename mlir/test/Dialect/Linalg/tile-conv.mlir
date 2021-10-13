@@ -14,10 +14,10 @@ func @conv(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref<?x?x
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]*]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]*]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]*]]: memref<?x?xf32>
-//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
-//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
-//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
-//   CHECK-DAG:   %[[C3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[T0:.*]] = memref.dim %[[ARG1]], %[[C0]]
 //   CHECK-DAG:   %[[T1:.*]] = memref.dim %[[ARG1]], %[[C1]]
 //   CHECK-DAG:   %[[T2:.*]] = memref.dim %[[ARG2]], %[[C0]]

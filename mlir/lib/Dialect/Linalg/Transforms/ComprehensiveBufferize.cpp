@@ -580,7 +580,8 @@ static SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) {
       .Case([&](vector::TransferWriteOp op) {
         r.push_back(&op->getOpOperand(1));
       })
-      .Case<ConstantOp, CallOpInterface, InitTensorOp>([&](auto op) {})
+      .Case<arith::ConstantOp, ConstantOp, CallOpInterface, InitTensorOp>(
+          [&](auto op) {})
       .Default([&](Operation *op) {
         op->dump();
         llvm_unreachable("unexpected defining op");
@@ -759,7 +760,8 @@ bool BufferizationAliasInfo::aliasesNonWritableBuffer(Value value) const {
     }
 
     if (Operation *op = v.getDefiningOp()) {
-      if (isa<ConstantOp>(op) || !hasKnownBufferizationAliasingBehavior(op)) {
+      if (isa<arith::ConstantOp>(op) ||
+          !hasKnownBufferizationAliasingBehavior(op)) {
         LDBG("-----------notWritable op\n");
         return true;
       }
@@ -1687,7 +1689,7 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
   return success();
 }
 
-static LogicalResult bufferize(OpBuilder &b, ConstantOp constantOp,
+static LogicalResult bufferize(OpBuilder &b, arith::ConstantOp constantOp,
                                BlockAndValueMapping &bvm,
                                BufferizationAliasInfo &aliasInfo,
                                GlobalCreator &globalCreator) {
@@ -2319,7 +2321,7 @@ LogicalResult mlir::linalg::bufferizeOp(
               "null bufferizedFunctionTypes when bufferizing CallOpInterface");
         return bufferize(b, op, bvm, aliasInfo, *bufferizedFunctionTypes);
       })
-      .Case([&](ConstantOp op) {
+      .Case([&](arith::ConstantOp op) {
         if (!isaTensor(op.getResult().getType()))
           return success();
         LDBG("Begin bufferize:\n" << op << '\n');

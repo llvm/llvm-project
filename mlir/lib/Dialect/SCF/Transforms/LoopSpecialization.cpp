@@ -14,6 +14,7 @@
 #include "PassDetail.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -54,10 +55,11 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   BlockAndValueMapping map;
   Value cond;
   for (auto bound : llvm::zip(op.upperBound(), constantIndices)) {
-    Value constant = b.create<ConstantIndexOp>(op.getLoc(), std::get<1>(bound));
-    Value cmp = b.create<CmpIOp>(op.getLoc(), CmpIPredicate::eq,
-                                 std::get<0>(bound), constant);
-    cond = cond ? b.create<AndOp>(op.getLoc(), cond, cmp) : cmp;
+    Value constant =
+        b.create<arith::ConstantIndexOp>(op.getLoc(), std::get<1>(bound));
+    Value cmp = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
+                                        std::get<0>(bound), constant);
+    cond = cond ? b.create<arith::AndIOp>(op.getLoc(), cond, cmp) : cmp;
     map.map(std::get<0>(bound), constant);
   }
   auto ifOp = b.create<scf::IfOp>(op.getLoc(), cond, /*withElseRegion=*/true);
@@ -85,9 +87,9 @@ static void specializeForLoopForUnrolling(ForOp op) {
 
   OpBuilder b(op);
   BlockAndValueMapping map;
-  Value constant = b.create<ConstantIndexOp>(op.getLoc(), minConstant);
-  Value cond =
-      b.create<CmpIOp>(op.getLoc(), CmpIPredicate::eq, bound, constant);
+  Value constant = b.create<arith::ConstantIndexOp>(op.getLoc(), minConstant);
+  Value cond = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
+                                       bound, constant);
   map.map(bound, constant);
   auto ifOp = b.create<scf::IfOp>(op.getLoc(), cond, /*withElseRegion=*/true);
   ifOp.getThenBodyBuilder().clone(*op.getOperation(), map);

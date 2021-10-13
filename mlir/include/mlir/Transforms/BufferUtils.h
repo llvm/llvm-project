@@ -16,6 +16,7 @@
 
 #include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -127,7 +128,7 @@ class GlobalCreator {
 public:
   GlobalCreator(ModuleOp module, unsigned alignment = 0)
       : moduleOp(module), alignment(alignment) {}
-  memref::GlobalOp getGlobalFor(ConstantOp constantOp);
+  memref::GlobalOp getGlobalFor(arith::ConstantOp constantOp);
 
 private:
   ModuleOp moduleOp;

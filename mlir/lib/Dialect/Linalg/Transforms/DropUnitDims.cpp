@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -59,7 +60,7 @@ using namespace mlir::linalg;
 ///        tensor<5xf32> into tensor<5x1xf32>
 ///   %2 = linalg.generic #trait %0, %1 {
 ///        ^bb0(%arg2: f32, %arg3: f32):
-///          %3 = addf %arg2, %arg3 : f32
+///          %3 = arith.addf %arg2, %arg3 : f32
 ///          linalg.yield %3 : f32
 ///        } : tensor<1x5xf32>, tensor<5x1xf32> -> tensor<5x5xf32>
 ///   return %2 : tensor<5x5xf32>
@@ -87,7 +88,7 @@ using namespace mlir::linalg;
 /// {
 ///   %0 = linalg.generic #trait %arg0, %arg1 {
 ///        ^bb0(%arg2: f32, %arg3: f32):
-///          %3 = addf %arg2, %arg3 : f32
+///          %3 = arith.addf %arg2, %arg3 : f32
 ///          linalg.yield %3 : f32
 ///        } : tensor<5xf32>, tensor<5xf32> -> tensor<5x5xf32>
 ///   return %0 : tensor<5x5xf32>
@@ -157,7 +158,7 @@ static void replaceUnitDimIndexOps(GenericOp genericOp,
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(indexOp);
     if (unitDims.count(indexOp.dim()) != 0) {
-      rewriter.replaceOpWithNewOp<ConstantIndexOp>(indexOp, 0);
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(indexOp, 0);
     } else {
       // Update the dimension of the index operation if needed.
       unsigned droppedDims = llvm::count_if(

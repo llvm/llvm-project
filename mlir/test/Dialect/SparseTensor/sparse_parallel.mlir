@@ -63,7 +63,7 @@ func @scale_dd(%scale: f32,
      ins(%arga: tensor<?x?xf32, #DenseMatrix>)
     outs(%argx: tensor<?x?xf32>) {
       ^bb(%a: f32, %x: f32):
-        %0 = mulf %a, %scale : f32
+        %0 = arith.mulf %a, %scale : f32
         linalg.yield %0 : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -111,7 +111,7 @@ func @scale_ss(%scale: f32,
      ins(%arga: tensor<?x?xf32, #SparseMatrix>)
     outs(%argx: tensor<?x?xf32>) {
       ^bb(%a: f32, %x: f32):
-        %0 = mulf %a, %scale : f32
+        %0 = arith.mulf %a, %scale : f32
         linalg.yield %0 : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -160,8 +160,8 @@ func @matvec(%arga: tensor<16x32xf32, #CSR>,
       ins(%arga, %argb : tensor<16x32xf32, #CSR>, tensor<32xf32>)
      outs(%argx: tensor<16xf32>) {
     ^bb(%A: f32, %b: f32, %x: f32):
-      %0 = mulf %A, %b : f32
-      %1 = addf %0, %x : f32
+      %0 = arith.mulf %A, %b : f32
+      %1 = arith.addf %0, %x : f32
       linalg.yield %1 : f32
   } -> tensor<16xf32>
   return %0 : tensor<16xf32>
