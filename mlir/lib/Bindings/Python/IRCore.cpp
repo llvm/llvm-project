@@ -17,6 +17,7 @@
 #include "mlir-c/Debug.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
@@ -39,6 +40,9 @@ Returns a Type object or raises a ValueError if the type cannot be parsed.
 
 See also: https://mlir.llvm.org/docs/LangRef/#type-system
 )";
+
+static const char kContextGetCallSiteLocationDocstring[] =
+    R"(Gets a Location representing a caller and callsite)";
 
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
@@ -1962,6 +1966,21 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           py::arg("context") = py::none(),
           "Gets a Location representing an unknown location")
+      .def_static(
+          "callsite",
+          [](PyLocation callee, const std::vector<PyLocation> &frames,
+             DefaultingPyMlirContext context) {
+            if (frames.empty())
+              throw py::value_error("No caller frames provided");
+            MlirLocation caller = frames.back().get();
+            for (PyLocation frame :
+                 llvm::reverse(llvm::makeArrayRef(frames).drop_back()))
+              caller = mlirLocationCallSiteGet(frame.get(), caller);
+            return PyLocation(context->getRef(),
+                              mlirLocationCallSiteGet(callee.get(), caller));
+          },
+          py::arg("callee"), py::arg("frames"), py::arg("context") = py::none(),
+          kContextGetCallSiteLocationDocstring)
       .def_static(
           "file",
           [](std::string filename, int line, int col,

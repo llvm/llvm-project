@@ -137,8 +137,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
 
   CfgIfConv(mlir::MLIRContext *ctx, bool forceLoopToExecuteOnce)
-      : mlir::OpRewritePattern<fir::IfOp>(ctx),
-        forceLoopToExecuteOnce(forceLoopToExecuteOnce) {}
+      : mlir::OpRewritePattern<fir::IfOp>(ctx) {}
 
   mlir::LogicalResult
   matchAndRewrite(IfOp ifOp, mlir::PatternRewriter &rewriter) const override {
@@ -193,9 +192,6 @@ public:
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
     return success();
   }
-
-private:
-  bool forceLoopToExecuteOnce;
 };
 
 /// Convert `fir.iter_while` to control-flow.
@@ -204,8 +200,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
 
   CfgIterWhileConv(mlir::MLIRContext *ctx, bool forceLoopToExecuteOnce)
-      : mlir::OpRewritePattern<fir::IterWhileOp>(ctx),
-        forceLoopToExecuteOnce(forceLoopToExecuteOnce) {}
+      : mlir::OpRewritePattern<fir::IterWhileOp>(ctx) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::IterWhileOp whileOp,
@@ -294,9 +289,6 @@ public:
     rewriter.replaceOp(whileOp, args);
     return success();
   }
-
-private:
-  bool forceLoopToExecuteOnce;
 };
 
 /// Convert FIR structured control flow ops to CFG ops.
