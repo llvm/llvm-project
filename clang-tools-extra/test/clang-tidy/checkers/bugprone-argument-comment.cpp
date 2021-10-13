@@ -151,3 +151,8 @@ void test() {
   my_system_header_function(/*not_arg=*/1);
 }
 } // namespace system_header
+
+void testInvalidSlocCxxConstructExpr() {
+  __builtin_va_list __args;
+  // __builtin_va_list has no defination in any source file
+} 
