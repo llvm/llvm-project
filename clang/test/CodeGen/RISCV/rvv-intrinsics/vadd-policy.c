@@ -42,30 +42,3 @@ vint8m1_t test_vadd_tu(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vint8m
 vint8m1_t test_vadd_ta(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vint8m1_t op2, size_t vl) {
   return vadd_vv_i8m1_mt(mask, maskedoff, op1, op2, vl, VE_TAIL_AGNOSTIC);
 }
-
-// CHECK-RV64-LABEL: @test_generic_vadd(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vadd.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[OP2:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
-//
-vint8m1_t test_generic_vadd(vint8m1_t op1, vint8m1_t op2, size_t vl) {
-  return vadd(op1, op2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_generic_vadd_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vadd.mask.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
-//
-vint8m1_t test_generic_vadd_m(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vint8m1_t op2, size_t vl) {
-  return vadd(mask, maskedoff, op1, op2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_generic_vadd_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vadd.mask.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
-//
-vint8m1_t test_generic_vadd_mt(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vint8m1_t op2, size_t vl) {
-  return vadd(mask, maskedoff, op1, op2, vl, VE_TAIL_UNDISTURBED);
-}

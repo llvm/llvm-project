@@ -135,7 +135,8 @@ vint8m8_t test_vssra_vx_i8m8(vint8m8_t op1, size_t shift, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vssra.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[SHIFT:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
-vint16mf4_t test_vssra_vv_i16mf4(vint16mf4_t op1, vuint16mf4_t shift, size_t vl) {
+vint16mf4_t test_vssra_vv_i16mf4(vint16mf4_t op1, vuint16mf4_t shift,
+                                 size_t vl) {
   return vssra(op1, shift, vl);
 }
 
@@ -153,7 +154,8 @@ vint16mf4_t test_vssra_vx_i16mf4(vint16mf4_t op1, size_t shift, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vssra.nxv2i16.nxv2i16.i64(<vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[SHIFT:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
-vint16mf2_t test_vssra_vv_i16mf2(vint16mf2_t op1, vuint16mf2_t shift, size_t vl) {
+vint16mf2_t test_vssra_vv_i16mf2(vint16mf2_t op1, vuint16mf2_t shift,
+                                 size_t vl) {
   return vssra(op1, shift, vl);
 }
 
@@ -243,7 +245,8 @@ vint16m8_t test_vssra_vx_i16m8(vint16m8_t op1, size_t shift, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vssra.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[SHIFT:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
-vint32mf2_t test_vssra_vv_i32mf2(vint32mf2_t op1, vuint32mf2_t shift, size_t vl) {
+vint32mf2_t test_vssra_vv_i32mf2(vint32mf2_t op1, vuint32mf2_t shift,
+                                 size_t vl) {
   return vssra(op1, shift, vl);
 }
 
@@ -405,8 +408,9 @@ vint64m8_t test_vssra_vx_i64m8(vint64m8_t op1, size_t shift, size_t vl) {
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vssra.mask.nxv1i8.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF:%.*]], <vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i8> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
-vint8mf8_t test_vssra_vv_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_t op1, vuint8mf8_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf8_t test_vssra_vv_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff,
+                                 vint8mf8_t op1, vuint8mf8_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8mf8_m(
@@ -414,8 +418,9 @@ vint8mf8_t test_vssra_vv_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vssra.mask.nxv1i8.i64.i64(<vscale x 1 x i8> [[MASKEDOFF:%.*]], <vscale x 1 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
-vint8mf8_t test_vssra_vx_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf8_t test_vssra_vx_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff,
+                                 vint8mf8_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8mf4_m(
@@ -423,8 +428,9 @@ vint8mf8_t test_vssra_vx_i8mf8_m(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vssra.mask.nxv2i8.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF:%.*]], <vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i8> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
-vint8mf4_t test_vssra_vv_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_t op1, vuint8mf4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf4_t test_vssra_vv_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff,
+                                 vint8mf4_t op1, vuint8mf4_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8mf4_m(
@@ -432,8 +438,9 @@ vint8mf4_t test_vssra_vv_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vssra.mask.nxv2i8.i64.i64(<vscale x 2 x i8> [[MASKEDOFF:%.*]], <vscale x 2 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
-vint8mf4_t test_vssra_vx_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf4_t test_vssra_vx_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff,
+                                 vint8mf4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8mf2_m(
@@ -441,8 +448,9 @@ vint8mf4_t test_vssra_vx_i8mf4_m(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vssra.mask.nxv4i8.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF:%.*]], <vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i8> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
-vint8mf2_t test_vssra_vv_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_t op1, vuint8mf2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf2_t test_vssra_vv_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff,
+                                 vint8mf2_t op1, vuint8mf2_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8mf2_m(
@@ -450,8 +458,9 @@ vint8mf2_t test_vssra_vv_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vssra.mask.nxv4i8.i64.i64(<vscale x 4 x i8> [[MASKEDOFF:%.*]], <vscale x 4 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
-vint8mf2_t test_vssra_vx_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8mf2_t test_vssra_vx_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff,
+                                 vint8mf2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8m1_m(
@@ -459,8 +468,9 @@ vint8mf2_t test_vssra_vx_i8mf2_m(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vssra.mask.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
-vint8m1_t test_vssra_vv_i8m1_m(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vuint8m1_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m1_t test_vssra_vv_i8m1_m(vbool8_t mask, vint8m1_t maskedoff,
+                               vint8m1_t op1, vuint8m1_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8m1_m(
@@ -468,8 +478,9 @@ vint8m1_t test_vssra_vv_i8m1_m(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vssra.mask.nxv8i8.i64.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
-vint8m1_t test_vssra_vx_i8m1_m(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m1_t test_vssra_vx_i8m1_m(vbool8_t mask, vint8m1_t maskedoff,
+                               vint8m1_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8m2_m(
@@ -477,8 +488,9 @@ vint8m1_t test_vssra_vx_i8m1_m(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vssra.mask.nxv16i8.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF:%.*]], <vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-vint8m2_t test_vssra_vv_i8m2_m(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1, vuint8m2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m2_t test_vssra_vv_i8m2_m(vbool4_t mask, vint8m2_t maskedoff,
+                               vint8m2_t op1, vuint8m2_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8m2_m(
@@ -486,8 +498,9 @@ vint8m2_t test_vssra_vv_i8m2_m(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vssra.mask.nxv16i8.i64.i64(<vscale x 16 x i8> [[MASKEDOFF:%.*]], <vscale x 16 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-vint8m2_t test_vssra_vx_i8m2_m(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m2_t test_vssra_vx_i8m2_m(vbool4_t mask, vint8m2_t maskedoff,
+                               vint8m2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8m4_m(
@@ -495,8 +508,9 @@ vint8m2_t test_vssra_vx_i8m2_m(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vssra.mask.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF:%.*]], <vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i8> [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
-vint8m4_t test_vssra_vv_i8m4_m(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1, vuint8m4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m4_t test_vssra_vv_i8m4_m(vbool2_t mask, vint8m4_t maskedoff,
+                               vint8m4_t op1, vuint8m4_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8m4_m(
@@ -504,8 +518,9 @@ vint8m4_t test_vssra_vv_i8m4_m(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vssra.mask.nxv32i8.i64.i64(<vscale x 32 x i8> [[MASKEDOFF:%.*]], <vscale x 32 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
-vint8m4_t test_vssra_vx_i8m4_m(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m4_t test_vssra_vx_i8m4_m(vbool2_t mask, vint8m4_t maskedoff,
+                               vint8m4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i8m8_m(
@@ -513,8 +528,9 @@ vint8m4_t test_vssra_vx_i8m4_m(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vssra.mask.nxv64i8.nxv64i8.i64(<vscale x 64 x i8> [[MASKEDOFF:%.*]], <vscale x 64 x i8> [[OP1:%.*]], <vscale x 64 x i8> [[SHIFT:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
 //
-vint8m8_t test_vssra_vv_i8m8_m(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1, vuint8m8_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m8_t test_vssra_vv_i8m8_m(vbool1_t mask, vint8m8_t maskedoff,
+                               vint8m8_t op1, vuint8m8_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i8m8_m(
@@ -522,8 +538,9 @@ vint8m8_t test_vssra_vv_i8m8_m(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vssra.mask.nxv64i8.i64.i64(<vscale x 64 x i8> [[MASKEDOFF:%.*]], <vscale x 64 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
 //
-vint8m8_t test_vssra_vx_i8m8_m(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint8m8_t test_vssra_vx_i8m8_m(vbool1_t mask, vint8m8_t maskedoff,
+                               vint8m8_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16mf4_m(
@@ -531,8 +548,10 @@ vint8m8_t test_vssra_vx_i8m8_m(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vssra.mask.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> [[MASKEDOFF:%.*]], <vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
-vint16mf4_t test_vssra_vv_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff, vint16mf4_t op1, vuint16mf4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16mf4_t test_vssra_vv_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff,
+                                   vint16mf4_t op1, vuint16mf4_t shift,
+                                   size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16mf4_m(
@@ -540,8 +559,9 @@ vint16mf4_t test_vssra_vv_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff, vint16
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vssra.mask.nxv1i16.i64.i64(<vscale x 1 x i16> [[MASKEDOFF:%.*]], <vscale x 1 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
-vint16mf4_t test_vssra_vx_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff, vint16mf4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16mf4_t test_vssra_vx_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff,
+                                   vint16mf4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16mf2_m(
@@ -549,8 +569,10 @@ vint16mf4_t test_vssra_vx_i16mf4_m(vbool64_t mask, vint16mf4_t maskedoff, vint16
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vssra.mask.nxv2i16.nxv2i16.i64(<vscale x 2 x i16> [[MASKEDOFF:%.*]], <vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
-vint16mf2_t test_vssra_vv_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff, vint16mf2_t op1, vuint16mf2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16mf2_t test_vssra_vv_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff,
+                                   vint16mf2_t op1, vuint16mf2_t shift,
+                                   size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16mf2_m(
@@ -558,8 +580,9 @@ vint16mf2_t test_vssra_vv_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff, vint16
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vssra.mask.nxv2i16.i64.i64(<vscale x 2 x i16> [[MASKEDOFF:%.*]], <vscale x 2 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
-vint16mf2_t test_vssra_vx_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff, vint16mf2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16mf2_t test_vssra_vx_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff,
+                                   vint16mf2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16m1_m(
@@ -567,8 +590,9 @@ vint16mf2_t test_vssra_vx_i16mf2_m(vbool32_t mask, vint16mf2_t maskedoff, vint16
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vssra.mask.nxv4i16.nxv4i16.i64(<vscale x 4 x i16> [[MASKEDOFF:%.*]], <vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
-vint16m1_t test_vssra_vv_i16m1_m(vbool16_t mask, vint16m1_t maskedoff, vint16m1_t op1, vuint16m1_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m1_t test_vssra_vv_i16m1_m(vbool16_t mask, vint16m1_t maskedoff,
+                                 vint16m1_t op1, vuint16m1_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16m1_m(
@@ -576,8 +600,9 @@ vint16m1_t test_vssra_vv_i16m1_m(vbool16_t mask, vint16m1_t maskedoff, vint16m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vssra.mask.nxv4i16.i64.i64(<vscale x 4 x i16> [[MASKEDOFF:%.*]], <vscale x 4 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
-vint16m1_t test_vssra_vx_i16m1_m(vbool16_t mask, vint16m1_t maskedoff, vint16m1_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m1_t test_vssra_vx_i16m1_m(vbool16_t mask, vint16m1_t maskedoff,
+                                 vint16m1_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16m2_m(
@@ -585,8 +610,9 @@ vint16m1_t test_vssra_vx_i16m1_m(vbool16_t mask, vint16m1_t maskedoff, vint16m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vssra.mask.nxv8i16.nxv8i16.i64(<vscale x 8 x i16> [[MASKEDOFF:%.*]], <vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-vint16m2_t test_vssra_vv_i16m2_m(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t op1, vuint16m2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m2_t test_vssra_vv_i16m2_m(vbool8_t mask, vint16m2_t maskedoff,
+                                 vint16m2_t op1, vuint16m2_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16m2_m(
@@ -594,8 +620,9 @@ vint16m2_t test_vssra_vv_i16m2_m(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vssra.mask.nxv8i16.i64.i64(<vscale x 8 x i16> [[MASKEDOFF:%.*]], <vscale x 8 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-vint16m2_t test_vssra_vx_i16m2_m(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m2_t test_vssra_vx_i16m2_m(vbool8_t mask, vint16m2_t maskedoff,
+                                 vint16m2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16m4_m(
@@ -603,8 +630,9 @@ vint16m2_t test_vssra_vx_i16m2_m(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vssra.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16> [[MASKEDOFF:%.*]], <vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
-vint16m4_t test_vssra_vv_i16m4_m(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t op1, vuint16m4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m4_t test_vssra_vv_i16m4_m(vbool4_t mask, vint16m4_t maskedoff,
+                                 vint16m4_t op1, vuint16m4_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16m4_m(
@@ -612,8 +640,9 @@ vint16m4_t test_vssra_vv_i16m4_m(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vssra.mask.nxv16i16.i64.i64(<vscale x 16 x i16> [[MASKEDOFF:%.*]], <vscale x 16 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
-vint16m4_t test_vssra_vx_i16m4_m(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m4_t test_vssra_vx_i16m4_m(vbool4_t mask, vint16m4_t maskedoff,
+                                 vint16m4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i16m8_m(
@@ -621,8 +650,9 @@ vint16m4_t test_vssra_vx_i16m4_m(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vssra.mask.nxv32i16.nxv32i16.i64(<vscale x 32 x i16> [[MASKEDOFF:%.*]], <vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
 //
-vint16m8_t test_vssra_vv_i16m8_m(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t op1, vuint16m8_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m8_t test_vssra_vv_i16m8_m(vbool2_t mask, vint16m8_t maskedoff,
+                                 vint16m8_t op1, vuint16m8_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i16m8_m(
@@ -630,8 +660,9 @@ vint16m8_t test_vssra_vv_i16m8_m(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vssra.mask.nxv32i16.i64.i64(<vscale x 32 x i16> [[MASKEDOFF:%.*]], <vscale x 32 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
 //
-vint16m8_t test_vssra_vx_i16m8_m(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint16m8_t test_vssra_vx_i16m8_m(vbool2_t mask, vint16m8_t maskedoff,
+                                 vint16m8_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i32mf2_m(
@@ -639,8 +670,10 @@ vint16m8_t test_vssra_vx_i16m8_m(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vssra.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MASKEDOFF:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
-vint32mf2_t test_vssra_vv_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff, vint32mf2_t op1, vuint32mf2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32mf2_t test_vssra_vv_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff,
+                                   vint32mf2_t op1, vuint32mf2_t shift,
+                                   size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i32mf2_m(
@@ -648,8 +681,9 @@ vint32mf2_t test_vssra_vv_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff, vint32
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vssra.mask.nxv1i32.i64.i64(<vscale x 1 x i32> [[MASKEDOFF:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
-vint32mf2_t test_vssra_vx_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff, vint32mf2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32mf2_t test_vssra_vx_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff,
+                                   vint32mf2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i32m1_m(
@@ -657,8 +691,9 @@ vint32mf2_t test_vssra_vx_i32mf2_m(vbool64_t mask, vint32mf2_t maskedoff, vint32
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vssra.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> [[MASKEDOFF:%.*]], <vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i32> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
-vint32m1_t test_vssra_vv_i32m1_m(vbool32_t mask, vint32m1_t maskedoff, vint32m1_t op1, vuint32m1_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m1_t test_vssra_vv_i32m1_m(vbool32_t mask, vint32m1_t maskedoff,
+                                 vint32m1_t op1, vuint32m1_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i32m1_m(
@@ -666,8 +701,9 @@ vint32m1_t test_vssra_vv_i32m1_m(vbool32_t mask, vint32m1_t maskedoff, vint32m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vssra.mask.nxv2i32.i64.i64(<vscale x 2 x i32> [[MASKEDOFF:%.*]], <vscale x 2 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
-vint32m1_t test_vssra_vx_i32m1_m(vbool32_t mask, vint32m1_t maskedoff, vint32m1_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m1_t test_vssra_vx_i32m1_m(vbool32_t mask, vint32m1_t maskedoff,
+                                 vint32m1_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i32m2_m(
@@ -675,8 +711,9 @@ vint32m1_t test_vssra_vx_i32m1_m(vbool32_t mask, vint32m1_t maskedoff, vint32m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vssra.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32> [[MASKEDOFF:%.*]], <vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-vint32m2_t test_vssra_vv_i32m2_m(vbool16_t mask, vint32m2_t maskedoff, vint32m2_t op1, vuint32m2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m2_t test_vssra_vv_i32m2_m(vbool16_t mask, vint32m2_t maskedoff,
+                                 vint32m2_t op1, vuint32m2_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i32m2_m(
@@ -684,8 +721,9 @@ vint32m2_t test_vssra_vv_i32m2_m(vbool16_t mask, vint32m2_t maskedoff, vint32m2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vssra.mask.nxv4i32.i64.i64(<vscale x 4 x i32> [[MASKEDOFF:%.*]], <vscale x 4 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-vint32m2_t test_vssra_vx_i32m2_m(vbool16_t mask, vint32m2_t maskedoff, vint32m2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m2_t test_vssra_vx_i32m2_m(vbool16_t mask, vint32m2_t maskedoff,
+                                 vint32m2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i32m4_m(
@@ -693,8 +731,9 @@ vint32m2_t test_vssra_vx_i32m2_m(vbool16_t mask, vint32m2_t maskedoff, vint32m2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vssra.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32> [[MASKEDOFF:%.*]], <vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i32> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
-vint32m4_t test_vssra_vv_i32m4_m(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t op1, vuint32m4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m4_t test_vssra_vv_i32m4_m(vbool8_t mask, vint32m4_t maskedoff,
+                                 vint32m4_t op1, vuint32m4_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i32m4_m(
@@ -702,8 +741,9 @@ vint32m4_t test_vssra_vv_i32m4_m(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vssra.mask.nxv8i32.i64.i64(<vscale x 8 x i32> [[MASKEDOFF:%.*]], <vscale x 8 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
-vint32m4_t test_vssra_vx_i32m4_m(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m4_t test_vssra_vx_i32m4_m(vbool8_t mask, vint32m4_t maskedoff,
+                                 vint32m4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i32m8_m(
@@ -711,8 +751,9 @@ vint32m4_t test_vssra_vx_i32m4_m(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vssra.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32> [[MASKEDOFF:%.*]], <vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i32> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-vint32m8_t test_vssra_vv_i32m8_m(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t op1, vuint32m8_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m8_t test_vssra_vv_i32m8_m(vbool4_t mask, vint32m8_t maskedoff,
+                                 vint32m8_t op1, vuint32m8_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i32m8_m(
@@ -720,8 +761,9 @@ vint32m8_t test_vssra_vv_i32m8_m(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vssra.mask.nxv16i32.i64.i64(<vscale x 16 x i32> [[MASKEDOFF:%.*]], <vscale x 16 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-vint32m8_t test_vssra_vx_i32m8_m(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint32m8_t test_vssra_vx_i32m8_m(vbool4_t mask, vint32m8_t maskedoff,
+                                 vint32m8_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i64m1_m(
@@ -729,8 +771,9 @@ vint32m8_t test_vssra_vx_i32m8_m(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vssra.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
-vint64m1_t test_vssra_vv_i64m1_m(vbool64_t mask, vint64m1_t maskedoff, vint64m1_t op1, vuint64m1_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m1_t test_vssra_vv_i64m1_m(vbool64_t mask, vint64m1_t maskedoff,
+                                 vint64m1_t op1, vuint64m1_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i64m1_m(
@@ -738,8 +781,9 @@ vint64m1_t test_vssra_vv_i64m1_m(vbool64_t mask, vint64m1_t maskedoff, vint64m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vssra.mask.nxv1i64.i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
-vint64m1_t test_vssra_vx_i64m1_m(vbool64_t mask, vint64m1_t maskedoff, vint64m1_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m1_t test_vssra_vx_i64m1_m(vbool64_t mask, vint64m1_t maskedoff,
+                                 vint64m1_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i64m2_m(
@@ -747,8 +791,9 @@ vint64m1_t test_vssra_vx_i64m1_m(vbool64_t mask, vint64m1_t maskedoff, vint64m1_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vssra.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-vint64m2_t test_vssra_vv_i64m2_m(vbool32_t mask, vint64m2_t maskedoff, vint64m2_t op1, vuint64m2_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m2_t test_vssra_vv_i64m2_m(vbool32_t mask, vint64m2_t maskedoff,
+                                 vint64m2_t op1, vuint64m2_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i64m2_m(
@@ -756,8 +801,9 @@ vint64m2_t test_vssra_vv_i64m2_m(vbool32_t mask, vint64m2_t maskedoff, vint64m2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vssra.mask.nxv2i64.i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-vint64m2_t test_vssra_vx_i64m2_m(vbool32_t mask, vint64m2_t maskedoff, vint64m2_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m2_t test_vssra_vx_i64m2_m(vbool32_t mask, vint64m2_t maskedoff,
+                                 vint64m2_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i64m4_m(
@@ -765,8 +811,9 @@ vint64m2_t test_vssra_vx_i64m2_m(vbool32_t mask, vint64m2_t maskedoff, vint64m2_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vssra.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
-vint64m4_t test_vssra_vv_i64m4_m(vbool16_t mask, vint64m4_t maskedoff, vint64m4_t op1, vuint64m4_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m4_t test_vssra_vv_i64m4_m(vbool16_t mask, vint64m4_t maskedoff,
+                                 vint64m4_t op1, vuint64m4_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i64m4_m(
@@ -774,8 +821,9 @@ vint64m4_t test_vssra_vv_i64m4_m(vbool16_t mask, vint64m4_t maskedoff, vint64m4_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vssra.mask.nxv4i64.i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
-vint64m4_t test_vssra_vx_i64m4_m(vbool16_t mask, vint64m4_t maskedoff, vint64m4_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m4_t test_vssra_vx_i64m4_m(vbool16_t mask, vint64m4_t maskedoff,
+                                 vint64m4_t op1, size_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vv_i64m8_m(
@@ -783,8 +831,9 @@ vint64m4_t test_vssra_vx_i64m4_m(vbool16_t mask, vint64m4_t maskedoff, vint64m4_
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vssra.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-vint64m8_t test_vssra_vv_i64m8_m(vbool8_t mask, vint64m8_t maskedoff, vint64m8_t op1, vuint64m8_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
+vint64m8_t test_vssra_vv_i64m8_m(vbool8_t mask, vint64m8_t maskedoff,
+                                 vint64m8_t op1, vuint64m8_t shift, size_t vl) {
+  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
 
 // CHECK-RV64-LABEL: @test_vssra_vx_i64m8_m(
@@ -792,403 +841,7 @@ vint64m8_t test_vssra_vv_i64m8_m(vbool8_t mask, vint64m8_t maskedoff, vint64m8_t
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vssra.mask.nxv8i64.i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-vint64m8_t test_vssra_vx_i64m8_m(vbool8_t mask, vint64m8_t maskedoff, vint64m8_t op1, size_t shift, size_t vl) {
-  return vssra(mask, maskedoff, op1, shift, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8mf8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vssra.mask.nxv1i8.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF:%.*]], <vscale x 1 x i8> [[OP1:%.*]], <vscale x 1 x i8> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
-//
-vint8mf8_t test_vssra_vv_i8mf8_mt(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_t op1, vuint8mf8_t shift, size_t vl, size_t ta) {
+vint64m8_t test_vssra_vx_i64m8_m(vbool8_t mask, vint64m8_t maskedoff,
+                                 vint64m8_t op1, size_t shift, size_t vl) {
   return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
 }
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8mf8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vssra.mask.nxv1i8.i64.i64(<vscale x 1 x i8> [[MASKEDOFF:%.*]], <vscale x 1 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
-//
-vint8mf8_t test_vssra_vx_i8mf8_mt(vbool64_t mask, vint8mf8_t maskedoff, vint8mf8_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8mf4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vssra.mask.nxv2i8.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF:%.*]], <vscale x 2 x i8> [[OP1:%.*]], <vscale x 2 x i8> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
-//
-vint8mf4_t test_vssra_vv_i8mf4_mt(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_t op1, vuint8mf4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8mf4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vssra.mask.nxv2i8.i64.i64(<vscale x 2 x i8> [[MASKEDOFF:%.*]], <vscale x 2 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
-//
-vint8mf4_t test_vssra_vx_i8mf4_mt(vbool32_t mask, vint8mf4_t maskedoff, vint8mf4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vssra.mask.nxv4i8.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF:%.*]], <vscale x 4 x i8> [[OP1:%.*]], <vscale x 4 x i8> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
-//
-vint8mf2_t test_vssra_vv_i8mf2_mt(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_t op1, vuint8mf2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vssra.mask.nxv4i8.i64.i64(<vscale x 4 x i8> [[MASKEDOFF:%.*]], <vscale x 4 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
-//
-vint8mf2_t test_vssra_vx_i8mf2_mt(vbool16_t mask, vint8mf2_t maskedoff, vint8mf2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vssra.mask.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], <vscale x 8 x i8> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
-//
-vint8m1_t test_vssra_vv_i8m1_mt(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, vuint8m1_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vssra.mask.nxv8i8.i64.i64(<vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
-//
-vint8m1_t test_vssra_vx_i8m1_mt(vbool8_t mask, vint8m1_t maskedoff, vint8m1_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vssra.mask.nxv16i8.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF:%.*]], <vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
-//
-vint8m2_t test_vssra_vv_i8m2_mt(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1, vuint8m2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vssra.mask.nxv16i8.i64.i64(<vscale x 16 x i8> [[MASKEDOFF:%.*]], <vscale x 16 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
-//
-vint8m2_t test_vssra_vx_i8m2_mt(vbool4_t mask, vint8m2_t maskedoff, vint8m2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vssra.mask.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF:%.*]], <vscale x 32 x i8> [[OP1:%.*]], <vscale x 32 x i8> [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
-//
-vint8m4_t test_vssra_vv_i8m4_mt(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1, vuint8m4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vssra.mask.nxv32i8.i64.i64(<vscale x 32 x i8> [[MASKEDOFF:%.*]], <vscale x 32 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
-//
-vint8m4_t test_vssra_vx_i8m4_mt(vbool2_t mask, vint8m4_t maskedoff, vint8m4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i8m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vssra.mask.nxv64i8.nxv64i8.i64(<vscale x 64 x i8> [[MASKEDOFF:%.*]], <vscale x 64 x i8> [[OP1:%.*]], <vscale x 64 x i8> [[SHIFT:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
-//
-vint8m8_t test_vssra_vv_i8m8_mt(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1, vuint8m8_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i8m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.vssra.mask.nxv64i8.i64.i64(<vscale x 64 x i8> [[MASKEDOFF:%.*]], <vscale x 64 x i8> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
-//
-vint8m8_t test_vssra_vx_i8m8_mt(vbool1_t mask, vint8m8_t maskedoff, vint8m8_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16mf4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vssra.mask.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> [[MASKEDOFF:%.*]], <vscale x 1 x i16> [[OP1:%.*]], <vscale x 1 x i16> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
-//
-vint16mf4_t test_vssra_vv_i16mf4_mt(vbool64_t mask, vint16mf4_t maskedoff, vint16mf4_t op1, vuint16mf4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16mf4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vssra.mask.nxv1i16.i64.i64(<vscale x 1 x i16> [[MASKEDOFF:%.*]], <vscale x 1 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
-//
-vint16mf4_t test_vssra_vx_i16mf4_mt(vbool64_t mask, vint16mf4_t maskedoff, vint16mf4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vssra.mask.nxv2i16.nxv2i16.i64(<vscale x 2 x i16> [[MASKEDOFF:%.*]], <vscale x 2 x i16> [[OP1:%.*]], <vscale x 2 x i16> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
-//
-vint16mf2_t test_vssra_vv_i16mf2_mt(vbool32_t mask, vint16mf2_t maskedoff, vint16mf2_t op1, vuint16mf2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vssra.mask.nxv2i16.i64.i64(<vscale x 2 x i16> [[MASKEDOFF:%.*]], <vscale x 2 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
-//
-vint16mf2_t test_vssra_vx_i16mf2_mt(vbool32_t mask, vint16mf2_t maskedoff, vint16mf2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vssra.mask.nxv4i16.nxv4i16.i64(<vscale x 4 x i16> [[MASKEDOFF:%.*]], <vscale x 4 x i16> [[OP1:%.*]], <vscale x 4 x i16> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
-//
-vint16m1_t test_vssra_vv_i16m1_mt(vbool16_t mask, vint16m1_t maskedoff, vint16m1_t op1, vuint16m1_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vssra.mask.nxv4i16.i64.i64(<vscale x 4 x i16> [[MASKEDOFF:%.*]], <vscale x 4 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
-//
-vint16m1_t test_vssra_vx_i16m1_mt(vbool16_t mask, vint16m1_t maskedoff, vint16m1_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vssra.mask.nxv8i16.nxv8i16.i64(<vscale x 8 x i16> [[MASKEDOFF:%.*]], <vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
-//
-vint16m2_t test_vssra_vv_i16m2_mt(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t op1, vuint16m2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vssra.mask.nxv8i16.i64.i64(<vscale x 8 x i16> [[MASKEDOFF:%.*]], <vscale x 8 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
-//
-vint16m2_t test_vssra_vx_i16m2_mt(vbool8_t mask, vint16m2_t maskedoff, vint16m2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vssra.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16> [[MASKEDOFF:%.*]], <vscale x 16 x i16> [[OP1:%.*]], <vscale x 16 x i16> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
-//
-vint16m4_t test_vssra_vv_i16m4_mt(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t op1, vuint16m4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vssra.mask.nxv16i16.i64.i64(<vscale x 16 x i16> [[MASKEDOFF:%.*]], <vscale x 16 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
-//
-vint16m4_t test_vssra_vx_i16m4_mt(vbool4_t mask, vint16m4_t maskedoff, vint16m4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i16m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vssra.mask.nxv32i16.nxv32i16.i64(<vscale x 32 x i16> [[MASKEDOFF:%.*]], <vscale x 32 x i16> [[OP1:%.*]], <vscale x 32 x i16> [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
-//
-vint16m8_t test_vssra_vv_i16m8_mt(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t op1, vuint16m8_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i16m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.vssra.mask.nxv32i16.i64.i64(<vscale x 32 x i16> [[MASKEDOFF:%.*]], <vscale x 32 x i16> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
-//
-vint16m8_t test_vssra_vx_i16m8_mt(vbool2_t mask, vint16m8_t maskedoff, vint16m8_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i32mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vssra.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MASKEDOFF:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
-//
-vint32mf2_t test_vssra_vv_i32mf2_mt(vbool64_t mask, vint32mf2_t maskedoff, vint32mf2_t op1, vuint32mf2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i32mf2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vssra.mask.nxv1i32.i64.i64(<vscale x 1 x i32> [[MASKEDOFF:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
-//
-vint32mf2_t test_vssra_vx_i32mf2_mt(vbool64_t mask, vint32mf2_t maskedoff, vint32mf2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i32m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vssra.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> [[MASKEDOFF:%.*]], <vscale x 2 x i32> [[OP1:%.*]], <vscale x 2 x i32> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
-//
-vint32m1_t test_vssra_vv_i32m1_mt(vbool32_t mask, vint32m1_t maskedoff, vint32m1_t op1, vuint32m1_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i32m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vssra.mask.nxv2i32.i64.i64(<vscale x 2 x i32> [[MASKEDOFF:%.*]], <vscale x 2 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
-//
-vint32m1_t test_vssra_vx_i32m1_mt(vbool32_t mask, vint32m1_t maskedoff, vint32m1_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i32m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vssra.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32> [[MASKEDOFF:%.*]], <vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
-//
-vint32m2_t test_vssra_vv_i32m2_mt(vbool16_t mask, vint32m2_t maskedoff, vint32m2_t op1, vuint32m2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i32m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vssra.mask.nxv4i32.i64.i64(<vscale x 4 x i32> [[MASKEDOFF:%.*]], <vscale x 4 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
-//
-vint32m2_t test_vssra_vx_i32m2_mt(vbool16_t mask, vint32m2_t maskedoff, vint32m2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i32m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vssra.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32> [[MASKEDOFF:%.*]], <vscale x 8 x i32> [[OP1:%.*]], <vscale x 8 x i32> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
-//
-vint32m4_t test_vssra_vv_i32m4_mt(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t op1, vuint32m4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i32m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vssra.mask.nxv8i32.i64.i64(<vscale x 8 x i32> [[MASKEDOFF:%.*]], <vscale x 8 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
-//
-vint32m4_t test_vssra_vx_i32m4_mt(vbool8_t mask, vint32m4_t maskedoff, vint32m4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i32m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vssra.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32> [[MASKEDOFF:%.*]], <vscale x 16 x i32> [[OP1:%.*]], <vscale x 16 x i32> [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
-//
-vint32m8_t test_vssra_vv_i32m8_mt(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t op1, vuint32m8_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i32m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vssra.mask.nxv16i32.i64.i64(<vscale x 16 x i32> [[MASKEDOFF:%.*]], <vscale x 16 x i32> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
-//
-vint32m8_t test_vssra_vx_i32m8_mt(vbool4_t mask, vint32m8_t maskedoff, vint32m8_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i64m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vssra.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
-//
-vint64m1_t test_vssra_vv_i64m1_mt(vbool64_t mask, vint64m1_t maskedoff, vint64m1_t op1, vuint64m1_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i64m1_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vssra.mask.nxv1i64.i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
-//
-vint64m1_t test_vssra_vx_i64m1_mt(vbool64_t mask, vint64m1_t maskedoff, vint64m1_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i64m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vssra.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
-//
-vint64m2_t test_vssra_vv_i64m2_mt(vbool32_t mask, vint64m2_t maskedoff, vint64m2_t op1, vuint64m2_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i64m2_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vssra.mask.nxv2i64.i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
-//
-vint64m2_t test_vssra_vx_i64m2_mt(vbool32_t mask, vint64m2_t maskedoff, vint64m2_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i64m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vssra.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
-//
-vint64m4_t test_vssra_vv_i64m4_mt(vbool16_t mask, vint64m4_t maskedoff, vint64m4_t op1, vuint64m4_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i64m4_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vssra.mask.nxv4i64.i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
-//
-vint64m4_t test_vssra_vx_i64m4_mt(vbool16_t mask, vint64m4_t maskedoff, vint64m4_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vv_i64m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vssra.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
-//
-vint64m8_t test_vssra_vv_i64m8_mt(vbool8_t mask, vint64m8_t maskedoff, vint64m8_t op1, vuint64m8_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
-// CHECK-RV64-LABEL: @test_vssra_vx_i64m8_mt(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vssra.mask.nxv8i64.i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], i64 [[SHIFT:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
-// CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
-//
-vint64m8_t test_vssra_vx_i64m8_mt(vbool8_t mask, vint64m8_t maskedoff, vint64m8_t op1, size_t shift, size_t vl, size_t ta) {
-  return vssra(mask, maskedoff, op1, shift, vl, VE_TAIL_AGNOSTIC);
-}
-
