@@ -492,6 +492,12 @@ public:
       RetT RetVal = detail::ResultDeserializer<SPSRetTagT, RetT>::makeValue();
       detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(RetVal);
 
+      if (auto *ErrMsg = R.getOutOfBandError()) {
+        SDR(make_error<StringError>(ErrMsg, inconvertibleErrorCode()),
+            std::move(RetVal));
+        return;
+      }
+
       SPSInputBuffer IB(R.data(), R.size());
       if (auto Err = detail::ResultDeserializer<SPSRetTagT, RetT>::deserialize(
               RetVal, R.data(), R.size()))
@@ -555,7 +561,7 @@ public:
                         SendDeserializedResultFn &&SendDeserializedResult,
                         const ArgTs &...Args) {
     WrapperFunction<SPSEmpty(SPSTagTs...)>::callAsync(
-        Caller,
+        std::forward<AsyncCallerFn>(Caller),
         [SDR = std::move(SendDeserializedResult)](Error SerializeErr,
                                                   SPSEmpty E) mutable {
           SDR(std::move(SerializeErr));

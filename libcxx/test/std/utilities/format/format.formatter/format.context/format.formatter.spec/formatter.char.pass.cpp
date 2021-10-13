@@ -76,8 +76,10 @@ void test_char_type() {
 
 int main(int, char**) {
   test_char_type<char, char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_char_type<char, wchar_t>();
   test_char_type<wchar_t, wchar_t>();
+#endif
 
   return 0;
 }

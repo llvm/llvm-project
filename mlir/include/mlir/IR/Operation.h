@@ -717,8 +717,8 @@ private:
   size_t numTrailingObjects(OverloadToken<Region>) const { return numRegions; }
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {
-  op.print(os, OpPrintingFlags().useLocalScope());
+inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
+  const_cast<Operation &>(op).print(os, OpPrintingFlags().useLocalScope());
   return os;
 }
 

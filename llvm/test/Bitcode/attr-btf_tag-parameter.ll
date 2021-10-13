@@ -33,14 +33,14 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !12 = !{!13}
 !13 = !DILocalVariable(name: "a", arg: 1, scope: !8, file: !1, line: 1, type: !11, annotations: !14)
 !14 = !{!15, !16}
-!15 = !{!"btf_tag", !"a"}
-!16 = !{!"btf_tag", !"b"}
+!15 = !{!"btf_decl_tag", !"a"}
+!16 = !{!"btf_decl_tag", !"b"}
 
 ; CHECK:        !DILocalVariable(name: "a", arg: 1,
 ; CHECK-SAME:   annotations: ![[ANNOT:[0-9]+]]
 ; CHECK:        ![[ANNOT]] = !{![[TAG1:[0-9]+]], ![[TAG2:[0-9]+]]}
-; CHECK:        ![[TAG1]] = !{!"btf_tag", !"a"}
-; CHECK:        ![[TAG2]] = !{!"btf_tag", !"b"}
+; CHECK:        ![[TAG1]] = !{!"btf_decl_tag", !"a"}
+; CHECK:        ![[TAG2]] = !{!"btf_decl_tag", !"b"}
 
 !17 = !DILocation(line: 0, scope: !8)
 !18 = !DILocation(line: 1, column: 76, scope: !8)

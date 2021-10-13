@@ -70,6 +70,7 @@ int main(int, char**)
         assert(sync_called == 1);
         assert(os.good());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
@@ -78,6 +79,7 @@ int main(int, char**)
         assert(sync_called == 2);
         assert(os.good());
     }
+#endif
 
   return 0;
 }

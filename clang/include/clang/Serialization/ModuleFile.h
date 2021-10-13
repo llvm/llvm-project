@@ -20,6 +20,7 @@
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
@@ -172,6 +173,9 @@ public:
   /// The signature of the AST block of the module file, this can be used to
   /// unique module files based on AST contents.
   ASTFileSignature ASTBlockHash;
+
+  /// The bit vector denoting usage of each header search entry (true = used).
+  llvm::BitVector SearchPathUsage;
 
   /// Whether this module has been directly imported by the
   /// user.

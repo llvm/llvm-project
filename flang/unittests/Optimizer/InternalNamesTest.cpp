@@ -30,10 +30,10 @@ struct DeconstructedName {
   }
 
 private:
-  llvm::SmallVector<std::string, 2> modules;
+  llvm::SmallVector<std::string> modules;
   llvm::Optional<std::string> host;
   std::string name;
-  llvm::SmallVector<std::int64_t, 4> kinds;
+  llvm::SmallVector<std::int64_t> kinds;
 };
 
 void validateDeconstructedName(
@@ -228,6 +228,8 @@ TEST(InternalNamesTest, needExternalNameMangling) {
   ASSERT_FALSE(NameUniquer::needExternalNameMangling(""));
   ASSERT_FALSE(NameUniquer::needExternalNameMangling("_QDTmytypeK2K8K18"));
   ASSERT_FALSE(NameUniquer::needExternalNameMangling("exit_"));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling("_QFfooEx"));
+  ASSERT_FALSE(NameUniquer::needExternalNameMangling("_QFmstartGmpitop"));
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPfoo"));
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPbar"));
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QBa"));

@@ -62,7 +62,9 @@ void doAllocTest()
 int main(int, char**)
 {
   doAllocTest<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   doAllocTest<wchar_t>();
+#endif
   doAllocTest<char16_t>();
   doAllocTest<char32_t>();
 #if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)

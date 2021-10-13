@@ -10,10 +10,11 @@ body:             |
 
     ; GCN-LABEL: name: urem_s32_var_const0
     ; GCN: liveins: $vgpr0
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %const:_(s32) = G_CONSTANT i32 0
-    ; GCN: %rem:_(s32) = G_UREM %var, %const
-    ; GCN: $vgpr0 = COPY %rem(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %const:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: %rem:_(s32) = G_UREM %var, %const
+    ; GCN-NEXT: $vgpr0 = COPY %rem(s32)
     %var:_(s32) = COPY $vgpr0
     %const:_(s32) = G_CONSTANT i32 0
     %rem:_(s32) = G_UREM %var, %const
@@ -29,8 +30,9 @@ body:             |
 
     ; GCN-LABEL: name: urem_s32_var_const1
     ; GCN: liveins: $vgpr0
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: $vgpr0 = COPY [[C]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: $vgpr0 = COPY [[C]](s32)
     %var:_(s32) = COPY $vgpr0
     %const:_(s32) = G_CONSTANT i32 1
     %rem:_(s32) = G_UREM %var, %const
@@ -46,10 +48,11 @@ body:             |
 
     ; GCN-LABEL: name: urem_s32_var_const2
     ; GCN: liveins: $vgpr0
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; GCN: %rem:_(s32) = G_AND %var, [[C]]
-    ; GCN: $vgpr0 = COPY %rem(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GCN-NEXT: %rem:_(s32) = G_AND %var, [[C]]
+    ; GCN-NEXT: $vgpr0 = COPY %rem(s32)
     %var:_(s32) = COPY $vgpr0
     %const:_(s32) = G_CONSTANT i32 2
     %rem:_(s32) = G_UREM %var, %const
@@ -65,14 +68,15 @@ body:             |
 
     ; GCN-LABEL: name: urem_s32_var_shl1
     ; GCN: liveins: $vgpr0, $vgpr1
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %shift_amt:_(s32) = COPY $vgpr1
-    ; GCN: %one:_(s32) = G_CONSTANT i32 1
-    ; GCN: %one_bit:_(s32) = G_SHL %one, %shift_amt(s32)
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN: [[ADD:%[0-9]+]]:_(s32) = G_ADD %one_bit, [[C]]
-    ; GCN: %rem:_(s32) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0 = COPY %rem(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %shift_amt:_(s32) = COPY $vgpr1
+    ; GCN-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; GCN-NEXT: %one_bit:_(s32) = G_SHL %one, %shift_amt(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD %one_bit, [[C]]
+    ; GCN-NEXT: %rem:_(s32) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0 = COPY %rem(s32)
     %var:_(s32) = COPY $vgpr0
     %shift_amt:_(s32) = COPY $vgpr1
     %one:_(s32) = G_CONSTANT i32 1
@@ -90,14 +94,15 @@ body:             |
 
     ; GCN-LABEL: name: urem_s64_var_shl1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GCN: %var:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN: %shiftamt:_(s32) = COPY $vgpr2
-    ; GCN: %one:_(s64) = G_CONSTANT i64 1
-    ; GCN: %one_bit:_(s64) = G_SHL %one, %shiftamt(s32)
-    ; GCN: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; GCN: [[ADD:%[0-9]+]]:_(s64) = G_ADD %one_bit, [[C]]
-    ; GCN: %rem:_(s64) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0_vgpr1 = COPY %rem(s64)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %shiftamt:_(s32) = COPY $vgpr2
+    ; GCN-NEXT: %one:_(s64) = G_CONSTANT i64 1
+    ; GCN-NEXT: %one_bit:_(s64) = G_SHL %one, %shiftamt(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD %one_bit, [[C]]
+    ; GCN-NEXT: %rem:_(s64) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(s64)
     %var:_(s64) = COPY $vgpr0_vgpr1
     %shiftamt:_(s32) = COPY $vgpr2
     %one:_(s64) = G_CONSTANT i64 1
@@ -115,13 +120,14 @@ body:             |
 
     ; GCN-LABEL: name: urem_v2s32_var_shl1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %shift_amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; GCN: %one:_(s32) = G_CONSTANT i32 1
-    ; GCN: %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one(s32), %one(s32)
-    ; GCN: %one_bit:_(<2 x s32>) = G_SHL %one_vec, %shift_amt(<2 x s32>)
-    ; GCN: %rem:_(<2 x s32>) = G_UREM %var, %one_bit
-    ; GCN: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %shift_amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; GCN-NEXT: %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one(s32), %one(s32)
+    ; GCN-NEXT: %one_bit:_(<2 x s32>) = G_SHL %one_vec, %shift_amt(<2 x s32>)
+    ; GCN-NEXT: %rem:_(<2 x s32>) = G_UREM %var, %one_bit
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %shift_amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %one:_(s32) = G_CONSTANT i32 1
@@ -140,14 +146,15 @@ body:             |
 
     ; GCN-LABEL: name: urem_v2s16_var_const4_build_vector_trunc
     ; GCN: liveins: $vgpr0, $vgpr1
-    ; GCN: %var:_(<2 x s16>) = COPY $vgpr0
-    ; GCN: %four:_(s32) = G_CONSTANT i32 4
-    ; GCN: %four_vec:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %four(s32), %four(s32)
-    ; GCN: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
-    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
-    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s16>) = G_ADD %four_vec, [[BUILD_VECTOR]]
-    ; GCN: %rem:_(<2 x s16>) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0 = COPY %rem(<2 x s16>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s16>) = COPY $vgpr0
+    ; GCN-NEXT: %four:_(s32) = G_CONSTANT i32 4
+    ; GCN-NEXT: %four_vec:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %four(s32), %four(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s16>) = G_ADD %four_vec, [[BUILD_VECTOR]]
+    ; GCN-NEXT: %rem:_(<2 x s16>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0 = COPY %rem(<2 x s16>)
     %var:_(<2 x s16>) = COPY $vgpr0
     %shift_amt:_(s32) = COPY $vgpr1
     %four:_(s32) = G_CONSTANT i32 4
@@ -167,14 +174,15 @@ body:             |
 
     ; GCN-LABEL: name: urem_v2s16_var_nonconst_build_vector_trunc
     ; GCN: liveins: $vgpr0, $vgpr1
-    ; GCN: %var:_(<2 x s16>) = COPY $vgpr0
-    ; GCN: %shift_amt:_(<2 x s16>) = COPY $vgpr1
-    ; GCN: %two:_(s32) = G_CONSTANT i32 2
-    ; GCN: %four:_(s32) = G_CONSTANT i32 4
-    ; GCN: %shift:_(s32) = G_SHL %two, %shift_amt(<2 x s16>)
-    ; GCN: %four_vec:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %four(s32), %shift(s32)
-    ; GCN: %rem:_(<2 x s16>) = G_UREM %var, %four_vec
-    ; GCN: $vgpr0 = COPY %rem(<2 x s16>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s16>) = COPY $vgpr0
+    ; GCN-NEXT: %shift_amt:_(<2 x s16>) = COPY $vgpr1
+    ; GCN-NEXT: %two:_(s32) = G_CONSTANT i32 2
+    ; GCN-NEXT: %four:_(s32) = G_CONSTANT i32 4
+    ; GCN-NEXT: %shift:_(s32) = G_SHL %two, %shift_amt(<2 x s16>)
+    ; GCN-NEXT: %four_vec:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %four(s32), %shift(s32)
+    ; GCN-NEXT: %rem:_(<2 x s16>) = G_UREM %var, %four_vec
+    ; GCN-NEXT: $vgpr0 = COPY %rem(<2 x s16>)
     %var:_(<2 x s16>) = COPY $vgpr0
     %shift_amt:_(<2 x s16>) = COPY $vgpr1
     %two:_(s32) = G_CONSTANT i32 2
@@ -194,14 +202,15 @@ body:             |
 
     ; GCN-LABEL: name: v_urem_v2i32_pow2k_denom
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %pow2:_(s32) = G_CONSTANT i32 4096
-    ; GCN: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %pow2:_(s32) = G_CONSTANT i32 4096
+    ; GCN-NEXT: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
+    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %pow2:_(s32) = G_CONSTANT i32 4096
     %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
@@ -218,15 +227,16 @@ body:             |
 
     ; GCN-LABEL: name: v_urem_v2i32_pow2k_not_splat_denom
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %pow2_1:_(s32) = G_CONSTANT i32 4096
-    ; GCN: %pow2_2:_(s32) = G_CONSTANT i32 2048
-    ; GCN: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %pow2_1:_(s32) = G_CONSTANT i32 4096
+    ; GCN-NEXT: %pow2_2:_(s32) = G_CONSTANT i32 2048
+    ; GCN-NEXT: %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
+    ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %pow2_1:_(s32) = G_CONSTANT i32 4096
     %pow2_2:_(s32) = G_CONSTANT i32 2048
@@ -244,14 +254,15 @@ body:             |
 
     ; GCN-LABEL: name: v_urem_v2i64_pow2k_denom
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN: %pow2:_(s64) = G_CONSTANT i64 4096
-    ; GCN: %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
-    ; GCN: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; GCN: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; GCN: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
-    ; GCN: %rem:_(<2 x s64>) = G_AND %var, [[ADD]]
-    ; GCN: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem(<2 x s64>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: %pow2:_(s64) = G_CONSTANT i64 4096
+    ; GCN-NEXT: %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; GCN-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD %pow2_vec, [[BUILD_VECTOR]]
+    ; GCN-NEXT: %rem:_(<2 x s64>) = G_AND %var, [[ADD]]
+    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem(<2 x s64>)
     %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %pow2:_(s64) = G_CONSTANT i64 4096
     %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)

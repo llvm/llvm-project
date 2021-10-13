@@ -26,6 +26,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 
 using namespace llvm;
@@ -262,6 +263,34 @@ static DecodeStatus decodeOperand_VReg_1024(MCInst &Inst,
                                             const void *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   return addOperand(Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW1024, Imm));
+}
+
+static DecodeStatus decodeOperand_f32kimm(MCInst &Inst, unsigned Imm,
+                                          uint64_t Addr, const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
+}
+
+static DecodeStatus decodeOperand_f16kimm(MCInst &Inst, unsigned Imm,
+                                          uint64_t Addr, const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
+}
+
+static DecodeStatus decodeOperand_VS_16_Deferred(MCInst &Inst, unsigned Imm,
+                                                 uint64_t Addr,
+                                                 const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(llvm::AMDGPUDisassembler::OPW16, Imm, true));
+}
+
+static DecodeStatus decodeOperand_VS_32_Deferred(MCInst &Inst, unsigned Imm,
+                                                 uint64_t Addr,
+                                                 const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(llvm::AMDGPUDisassembler::OPW32, Imm, true));
 }
 
 static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
@@ -626,6 +655,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
+  int ImmLitIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
+  if (Res && ImmLitIdx != -1)
+    Res = convertFMAanyK(MI, ImmLitIdx);
+
   // if the opcode was not recognized we'll assume a Size of 4 bytes
   // (unless there are fewer bytes left)
   Size = Res ? (MaxInstBytesNum - Bytes.size())
@@ -807,6 +841,24 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
              MI.begin() + VAddr0Idx + Info->VAddrDwords);
   }
 
+  return MCDisassembler::Success;
+}
+
+DecodeStatus AMDGPUDisassembler::convertFMAanyK(MCInst &MI,
+                                                int ImmLitIdx) const {
+  assert(HasLiteral && "Should have decoded a literal");
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
+  unsigned DescNumOps = Desc.getNumOperands();
+  assert(DescNumOps == MI.getNumOperands());
+  for (unsigned I = 0; I < DescNumOps; ++I) {
+    auto &Op = MI.getOperand(I);
+    auto OpType = Desc.OpInfo[I].OperandType;
+    bool IsDeferredOp = (OpType == AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED ||
+                         OpType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED);
+    if (Op.isImm() && Op.getImm() == AMDGPU::EncValues::LITERAL_CONST &&
+        IsDeferredOp)
+      Op.setImm(Literal);
+  }
   return MCDisassembler::Success;
 }
 
@@ -1017,6 +1069,18 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_256(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_512(unsigned Val) const {
   return decodeDstOp(OPW512, Val);
+}
+
+// Decode Literals for insts which always have a literal in the encoding
+MCOperand
+AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
+  if (HasLiteral) {
+    if (Literal != Val)
+      return errOperand(Val, "More than one unique literal is illegal");
+  }
+  HasLiteral = true;
+  Literal = Val;
+  return MCOperand::createImm(Literal);
 }
 
 MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
@@ -1232,7 +1296,8 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
 
-MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
+                                          bool MandatoryLiteral) const {
   using namespace AMDGPU::EncValues;
 
   assert(Val < 1024); // enum10
@@ -1261,8 +1326,13 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) c
   if (INLINE_FLOATING_C_MIN <= Val && Val <= INLINE_FLOATING_C_MAX)
     return decodeFPImmed(Width, Val);
 
-  if (Val == LITERAL_CONST)
-    return decodeLiteralConstant();
+  if (Val == LITERAL_CONST) {
+    if (MandatoryLiteral)
+      // Keep a sentinel value for deferred setting
+      return MCOperand::createImm(LITERAL_CONST);
+    else
+      return decodeLiteralConstant();
+  }
 
   switch (Width) {
   case OPW32:

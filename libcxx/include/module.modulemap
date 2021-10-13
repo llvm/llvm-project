@@ -372,6 +372,7 @@ module std [system] {
 
     module __compare {
       module common_comparison_category { private header "__compare/common_comparison_category.h" }
+      module compare_three_way          { private header "__compare/compare_three_way.h"          }
       module compare_three_way_result   { private header "__compare/compare_three_way_result.h"   }
       module is_eq                      { private header "__compare/is_eq.h"                      }
       module ordering                   { private header "__compare/ordering.h"                   }
@@ -868,6 +869,7 @@ module std [system] {
   module __function_like     { private header "__function_like.h"   export * }
   module __hash_table        { header "__hash_table"        export * }
   module __locale            { private header "__locale"            export * }
+  module __mbstate           { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __nullptr           { header "__nullptr"           export * }

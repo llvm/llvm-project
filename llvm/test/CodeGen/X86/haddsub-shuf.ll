@@ -1296,10 +1296,10 @@ define <8 x i32> @hadd_8i32_v8i32_shuffle(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSE3-NEXT:    movaps %xmm0, %xmm5
 ; SSE3-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm1[0,2]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm3[1,3]
-; SSE3-NEXT:    paddd %xmm4, %xmm2
+; SSE3-NEXT:    paddd %xmm2, %xmm4
 ; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE3-NEXT:    paddd %xmm5, %xmm0
-; SSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSE3-NEXT:    movdqa %xmm4, %xmm1
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: hadd_8i32_v8i32_shuffle:

@@ -351,6 +351,13 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
+    // All those frame indices which are dead by now should be removed from the
+    // function frame. Othewise, there is a side effect such as re-mapping of
+    // free frame index ids by the later pass(es) like "stack slot coloring"
+    // which in turn could mess-up with the book keeping of "frame index to VGPR
+    // lane".
+    FuncInfo->removeDeadFrameIndices(MF);
+
     MadeChange = true;
   } else if (FuncInfo->VGPRReservedForSGPRSpill) {
     FuncInfo->removeVGPRForSGPRSpill(FuncInfo->VGPRReservedForSGPRSpill, MF);

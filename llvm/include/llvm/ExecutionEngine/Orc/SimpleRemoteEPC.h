@@ -34,9 +34,11 @@ public:
   /// Create a SimpleRemoteEPC using the given transport type and args.
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
-  Create(TransportTCtorArgTs &&...TransportTCtorArgs) {
+  Create(std::unique_ptr<TaskDispatcher> D,
+         TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
-        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>()));
+        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
+                            std::move(D)));
     auto T = TransportT::Create(
         *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
@@ -62,7 +64,7 @@ public:
                               ArrayRef<std::string> Args) override;
 
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        SendResultFunction OnComplete,
+                        IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
@@ -79,8 +81,9 @@ protected:
   virtual Expected<std::unique_ptr<MemoryAccess>> createMemoryAccess();
 
 private:
-  SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP)
-      : ExecutorProcessControl(std::move(SSP)) {}
+  SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
+                  std::unique_ptr<TaskDispatcher> D)
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
 
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
@@ -93,11 +96,13 @@ private:
                      SimpleRemoteEPCArgBytesVector ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
+  Error handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}
 
-  using PendingCallWrapperResultsMap = DenseMap<uint64_t, SendResultFunction>;
+  using PendingCallWrapperResultsMap =
+    DenseMap<uint64_t, IncomingWFRHandler>;
 
   std::mutex SimpleRemoteEPCMutex;
   std::condition_variable DisconnectCV;

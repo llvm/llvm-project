@@ -24,12 +24,14 @@ int main(int, char**)
         SM sm;
         assert(sm.matched == false);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef wchar_t CharT;
         typedef std::sub_match<const CharT*> SM;
         SM sm;
         assert(sm.matched == false);
     }
+#endif
 
   return 0;
 }

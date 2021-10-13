@@ -127,19 +127,6 @@ Address CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
   return CreateTempAlloca(Ty, Align, Name);
 }
 
-void CodeGenFunction::InitTempAlloca(Address Var, llvm::Value *Init) {
-  auto *Alloca = Var.getPointer();
-  assert(isa<llvm::AllocaInst>(Alloca) ||
-         (isa<llvm::AddrSpaceCastInst>(Alloca) &&
-          isa<llvm::AllocaInst>(
-              cast<llvm::AddrSpaceCastInst>(Alloca)->getPointerOperand())));
-
-  auto *Store = new llvm::StoreInst(Init, Alloca, /*volatile*/ false,
-                                    Var.getAlignment().getAsAlign());
-  llvm::BasicBlock *Block = AllocaInsertPt->getParent();
-  Block->getInstList().insertAfter(AllocaInsertPt->getIterator(), Store);
-}
-
 Address CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
   return CreateTempAlloca(ConvertType(Ty), Align, Name);

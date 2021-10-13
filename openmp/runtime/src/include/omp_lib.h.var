@@ -780,6 +780,55 @@
           integer(c_int), value :: device_num
         end function omp_target_is_accessible
 
+        function omp_alloc(size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_alloc
+          integer(c_size_t), value :: size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_alloc
+
+        function omp_aligned_alloc(alignment, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_aligned_alloc
+          integer(c_size_t), value :: alignment, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_aligned_alloc
+
+        function omp_calloc(nmemb, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_calloc
+          integer(c_size_t), value :: nmemb, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_calloc
+
+        function omp_aligned_calloc(alignment, nmemb, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_aligned_calloc
+          integer(c_size_t), value :: alignment, nmemb, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_aligned_calloc
+
+        function omp_realloc(ptr, size, allocator, free_allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_realloc
+          type(c_ptr), value :: ptr
+          integer(c_size_t), value :: size
+          integer(omp_allocator_handle_kind), value :: allocator
+          integer(omp_allocator_handle_kind), value :: free_allocator
+        end function omp_realloc
+
+        subroutine omp_free(ptr, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr
+          type(c_ptr), value :: ptr
+          integer(omp_allocator_handle_kind), value :: allocator
+        end subroutine omp_free
+
 !       ***
 !       *** kmp_* entry points
 !       ***

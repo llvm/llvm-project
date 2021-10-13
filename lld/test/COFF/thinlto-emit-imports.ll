@@ -1,4 +1,5 @@
 ; REQUIRES: x86
+; REQUIRES: jenkins-permissions-issue
 
 ; Generate summary sections and test lld handling.
 ; RUN: opt -module-summary %s -o %t1.obj

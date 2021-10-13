@@ -661,7 +661,7 @@ public:
 
   /// The signature of the callback used to determine if an operation is
   /// dynamically legal on the target.
-  using DynamicLegalityCallbackFn = std::function<bool(Operation *)>;
+  using DynamicLegalityCallbackFn = std::function<Optional<bool>(Operation *)>;
 
   ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
   virtual ~ConversionTarget() = default;
@@ -827,10 +827,10 @@ private:
   /// The set of information that configures the legalization of an operation.
   struct LegalizationInfo {
     /// The legality action this operation was given.
-    LegalizationAction action;
+    LegalizationAction action = LegalizationAction::Illegal;
 
     /// If some legal instances of this operation may also be recursively legal.
-    bool isRecursivelyLegal;
+    bool isRecursivelyLegal = false;
 
     /// The legality callback if this operation is dynamically legal.
     DynamicLegalityCallbackFn legalityFn;

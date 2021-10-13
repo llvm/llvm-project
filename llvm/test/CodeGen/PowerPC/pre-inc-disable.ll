@@ -355,10 +355,15 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-NEXT:    vsplth v3, v3, 3
 ; CHECK-NEXT:    vmrglw v3, v4, v3
 ; CHECK-NEXT:    lxv v4, 0(r3)
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    addis r3, r2, .LCPI3_1@toc@ha
+; CHECK-NEXT:    addi r3, r3, .LCPI3_1@toc@l
 ; CHECK-NEXT:    vperm v2, v2, v3, v4
-; CHECK-NEXT:    xxspltw v3, v2, 2
-; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    vnegw v3, v2
+; CHECK-NEXT:    xxspltw v3, v3, 2
+; CHECK-NEXT:    vsubuwm v2, v3, v2
 ; CHECK-NEXT:    vextuwrx r3, r3, v2
 ; CHECK-NEXT:    cmpw r3, r5
 ; CHECK-NEXT:    bgelr+ cr0
@@ -383,10 +388,15 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; P9BE-NEXT:    vsplth v4, v4, 3
 ; P9BE-NEXT:    vmrghw v3, v4, v3
 ; P9BE-NEXT:    lxv v4, 0(r3)
-; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    addis r3, r2, .LCPI3_2@toc@ha
+; P9BE-NEXT:    addi r3, r3, .LCPI3_2@toc@l
 ; P9BE-NEXT:    vperm v2, v3, v2, v4
-; P9BE-NEXT:    xxspltw v3, v2, 1
-; P9BE-NEXT:    vadduwm v2, v2, v3
+; P9BE-NEXT:    lxv v3, 0(r3)
+; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    vsubuwm v2, v3, v2
+; P9BE-NEXT:    vnegw v3, v2
+; P9BE-NEXT:    xxspltw v3, v3, 1
+; P9BE-NEXT:    vsubuwm v2, v3, v2
 ; P9BE-NEXT:    vextuwlx r3, r3, v2
 ; P9BE-NEXT:    cmpw r3, r5
 ; P9BE-NEXT:    bgelr+ cr0
@@ -405,7 +415,7 @@ for.body:                                         ; preds = %entry
   %2 = insertelement <4 x i16> undef, i16 %0, i32 2
   %3 = insertelement <4 x i16> %2, i16 %1, i32 3
   %4 = zext <4 x i16> %3 to <4 x i32>
-  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %5 = sub nsw <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %4
   %6 = sub nsw <4 x i32> zeroinitializer, %5
   %7 = select <4 x i1> undef, <4 x i32> %6, <4 x i32> %5
   %bin.rdx = add <4 x i32> %7, zeroinitializer
@@ -442,10 +452,15 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; CHECK-NEXT:    vmrglh v3, v3, v4
 ; CHECK-NEXT:    vmrglw v3, v4, v3
 ; CHECK-NEXT:    lxv v4, 0(r3)
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    addis r3, r2, .LCPI4_1@toc@ha
+; CHECK-NEXT:    addi r3, r3, .LCPI4_1@toc@l
 ; CHECK-NEXT:    vperm v2, v3, v2, v4
-; CHECK-NEXT:    xxspltw v3, v2, 2
-; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    vnegw v3, v2
+; CHECK-NEXT:    xxspltw v3, v3, 2
+; CHECK-NEXT:    vsubuwm v2, v3, v2
 ; CHECK-NEXT:    vextuwrx r3, r3, v2
 ; CHECK-NEXT:    cmpw r3, r5
 ; CHECK-NEXT:    bgelr+ cr0
@@ -471,10 +486,15 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; P9BE-NEXT:    xxspltw v4, v4, 0
 ; P9BE-NEXT:    vmrghw v2, v3, v2
 ; P9BE-NEXT:    lxv v3, 0(r3)
-; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    addis r3, r2, .LCPI4_2@toc@ha
+; P9BE-NEXT:    addi r3, r3, .LCPI4_2@toc@l
 ; P9BE-NEXT:    vperm v2, v4, v2, v3
-; P9BE-NEXT:    xxspltw v3, v2, 1
-; P9BE-NEXT:    vadduwm v2, v2, v3
+; P9BE-NEXT:    lxv v3, 0(r3)
+; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    vsubuwm v2, v3, v2
+; P9BE-NEXT:    vnegw v3, v2
+; P9BE-NEXT:    xxspltw v3, v3, 1
+; P9BE-NEXT:    vsubuwm v2, v3, v2
 ; P9BE-NEXT:    vextuwlx r3, r3, v2
 ; P9BE-NEXT:    cmpw r3, r5
 ; P9BE-NEXT:    bgelr+ cr0
@@ -493,7 +513,7 @@ for.body:                                         ; preds = %entry
   %2 = insertelement <4 x i8> undef, i8 %0, i32 2
   %3 = insertelement <4 x i8> %2, i8 %1, i32 3
   %4 = zext <4 x i8> %3 to <4 x i32>
-  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %5 = sub nsw <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %4
   %6 = sub nsw <4 x i32> zeroinitializer, %5
   %7 = select <4 x i1> undef, <4 x i32> %6, <4 x i32> %5
   %bin.rdx = add <4 x i32> %7, zeroinitializer

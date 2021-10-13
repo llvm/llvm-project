@@ -1,4 +1,5 @@
 ; REQUIRES: x86
+; REQUIRES: jenkins-permissions-issue
 
 ; Basic ThinLTO tests.
 ; RUN: opt -module-summary %s -o %t1.o

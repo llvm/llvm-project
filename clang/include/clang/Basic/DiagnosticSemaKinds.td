@@ -3545,6 +3545,9 @@ def warn_availability_swift_unavailable_deprecated_only : Warning<
   InGroup<Availability>;
 def note_protocol_method : Note<
   "protocol method is here">;
+def warn_availability_fuchsia_unavailable_minor : Warning<
+  "Fuchsia API Level prohibits specifying a minor or sub-minor version">,
+  InGroup<Availability>;
 
 def warn_unguarded_availability :
   Warning<"%0 is only available on %1 %2 or newer">,

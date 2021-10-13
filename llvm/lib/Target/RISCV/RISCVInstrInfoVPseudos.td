@@ -3981,14 +3981,14 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVFREDOSUM   : VPseudoReductionV_VS;
-defm PseudoVFREDSUM    : VPseudoReductionV_VS;
+defm PseudoVFREDUSUM   : VPseudoReductionV_VS;
 defm PseudoVFREDMIN    : VPseudoReductionV_VS;
 defm PseudoVFREDMAX    : VPseudoReductionV_VS;
 
 //===----------------------------------------------------------------------===//
 // 15.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVFWREDSUM   : VPseudoReductionV_VS;
+defm PseudoVFWREDUSUM  : VPseudoReductionV_VS;
 defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
@@ -4646,14 +4646,14 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
 defm : VPatReductionV_VS<"int_riscv_vfredosum", "PseudoVFREDOSUM", /*IsFloat=*/1>;
-defm : VPatReductionV_VS<"int_riscv_vfredsum", "PseudoVFREDSUM", /*IsFloat=*/1>;
+defm : VPatReductionV_VS<"int_riscv_vfredusum", "PseudoVFREDUSUM", /*IsFloat=*/1>;
 defm : VPatReductionV_VS<"int_riscv_vfredmin", "PseudoVFREDMIN", /*IsFloat=*/1>;
 defm : VPatReductionV_VS<"int_riscv_vfredmax", "PseudoVFREDMAX", /*IsFloat=*/1>;
 
 //===----------------------------------------------------------------------===//
 // 15.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatReductionW_VS<"int_riscv_vfwredsum", "PseudoVFWREDSUM", /*IsFloat=*/1>;
+defm : VPatReductionW_VS<"int_riscv_vfwredusum", "PseudoVFWREDUSUM", /*IsFloat=*/1>;
 defm : VPatReductionW_VS<"int_riscv_vfwredosum", "PseudoVFWREDOSUM", /*IsFloat=*/1>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]

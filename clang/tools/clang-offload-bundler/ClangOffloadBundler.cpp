@@ -193,11 +193,10 @@ static StringRef getDeviceFileExtension(StringRef Device) {
     return ".bc";
   if (Device.contains("sm_"))
     return ".cubin";
-  else {
-    WithColor::warning() << "Could not determine extension for archive"
-                            "members, using \".o\"\n";
-    return ".o";
-  }
+
+  WithColor::warning() << "Could not determine extension for archive"
+                          "members, using \".o\"\n";
+  return ".o";
 }
 
 static std::string getDeviceLibraryFileName(StringRef BundleFileName,
@@ -1442,7 +1441,7 @@ static Error UnbundleArchive() {
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 
-  assert(!ArchiveErr);
+  assert(!ArchiveErr && "Error occured while reading archive!");
 
   /// Write out an archive for each target
   for (auto &Target : TargetNames) {

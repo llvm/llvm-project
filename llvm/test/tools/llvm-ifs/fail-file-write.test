@@ -1,5 +1,6 @@
 ## Test failing to write output file on non-windows platforms.
 
+# REQUIRES: jenkins-permissions-issue
 # UNSUPPORTED: system-windows
 # RUN: rm -rf %t.TestDir
 # RUN: mkdir %t.TestDir

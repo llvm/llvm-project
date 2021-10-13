@@ -141,12 +141,12 @@ define i64 @test_i64(i64 %a, i64 %b) nounwind {
 define i128 @test_i128(i128 %a, i128 %b) nounwind {
 ; X64-LABEL: test_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    cmpq %rdx, %rdi
-; X64-NEXT:    cmovbq %rdi, %rdx
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    cmovbq %rdi, %rax
 ; X64-NEXT:    cmpq %rcx, %rsi
-; X64-NEXT:    cmovlq %rdi, %rax
-; X64-NEXT:    cmoveq %rdx, %rax
+; X64-NEXT:    cmovlq %rdi, %rdx
+; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    cmovlq %rsi, %rcx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    retq

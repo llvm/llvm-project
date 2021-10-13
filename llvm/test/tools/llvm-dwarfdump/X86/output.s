@@ -1,3 +1,5 @@
+# REQUIRES: jenkins-permissions-issue
+
 # RUN: rm -f %t1.txt %t2.txt %t3.txt
 # RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o %t.o
 

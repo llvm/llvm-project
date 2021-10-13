@@ -36,6 +36,7 @@ public:
         : Fn(refs) {}
 };
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 typedef std::money_put<wchar_t, output_iterator<wchar_t*> > Fw;
 
 class my_facetw
@@ -45,6 +46,7 @@ public:
     explicit my_facetw(std::size_t refs = 0)
         : Fw(refs) {}
 };
+#endif
 
 int main(int, char**)
 {
@@ -54,10 +56,12 @@ int main(int, char**)
                           new std::moneypunct_byname<char, false>(loc_name)));
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<char, true>(loc_name)));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<wchar_t, false>(loc_name)));
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<wchar_t, true>(loc_name)));
+#endif
 {
     const my_facet f(1);
     // char, national
@@ -274,8 +278,8 @@ int main(int, char**)
         assert(ios.width() == 0);
     }
 }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 {
-
     const my_facetw f(1);
     // wchar_t, national
     noshowbase(ios);
@@ -493,6 +497,7 @@ int main(int, char**)
         assert(ios.width() == 0);
     }
 }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

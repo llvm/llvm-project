@@ -929,22 +929,23 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   llvm_unreachable("unexpected parallelization strategy");
 }
 
-/// Checks unit strides for dense tensors. The iteration graph may have ignored
+/// Checks unit stride for dense tensors. The iteration graph may have ignored
 /// dense access patterns in order to avoid cycles (sparse access patterns are
 /// always placed innermost), but that means dense access has become strided.
-/// For now, we reject vectorization of such cases.
-/// TODO: implement strided load/stores on dense arrays
+/// This prevents effective vectorization.
 static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
-                             unsigned ldx) {
+                             unsigned idx) {
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     if (!getSparseTensorEncoding(t->get().getType())) {
       auto map = op.getTiedIndexingMap(t);
       for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
         AffineExpr a = map.getResult(d);
-        if (a.getKind() != AffineExprKind::DimId)
-          return false; // very conservative
-        unsigned idx = a.cast<AffineDimExpr>().getPosition();
-        if (idx == ldx && d != rank - 1)
+        // Report non-unit stride if innermost index appears at an outer
+        // dimension (true non-unit stride) or if the innermost index appears
+        // in a compound subscript in the innermost dimension. Even if the
+        // latter is unit stride, it does not play well with scatter/gather.
+        if (a.isFunctionOfDim(idx) &&
+            ((d != rank - 1) || (a.getKind() != AffineExprKind::DimId)))
           return false;
       }
     }

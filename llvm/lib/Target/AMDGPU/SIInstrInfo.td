@@ -1173,6 +1173,7 @@ class kimmOperand<ValueType vt> : Operand<vt> {
   let OperandType = "OPERAND_KIMM"#vt.Size;
   let PrintMethod = "printU"#vt.Size#"ImmOperand";
   let ParserMatchClass = !cast<AsmOperandClass>("KImmFP"#vt.Size#"MatchClass");
+  let DecoderMethod = "decodeOperand_f"#vt.Size#"kimm";
 }
 
 // 32-bit VALU immediate operand that uses the constant bus.
