@@ -5443,6 +5443,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_O4)) {
       CmdArgs.push_back("-O3");
       D.Diag(diag::warn_O4_is_O3);
+    //  FIXME: This workaround fixes a problem with -O0 with amdgcn openmp
+    //         device code generation. Remove "else if" clause when resolved.
+    } else if (A->getOption().matches(options::OPT_O0) && Triple.isAMDGCN()
+                   && IsOpenMPDevice ) {
+      CmdArgs.push_back("-O1");
     } else {
       A->render(Args, CmdArgs);
     }
