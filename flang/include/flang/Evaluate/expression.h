@@ -882,10 +882,10 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
 #define INSTANTIATE_EXPRESSION_TEMPLATES \
   FOR_EACH_INTRINSIC_KIND(template class Expr, ) \
   FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
-  FOR_EACH_INTEGER_KIND(template struct Relational, ) \
-  FOR_EACH_REAL_KIND(template struct Relational, ) \
-  FOR_EACH_CHARACTER_KIND(template struct Relational, ) \
-  template struct Relational<SomeType>; \
+  FOR_EACH_INTEGER_KIND(template class Relational, ) \
+  FOR_EACH_REAL_KIND(template class Relational, ) \
+  FOR_EACH_CHARACTER_KIND(template class Relational, ) \
+  template class Relational<SomeType>; \
   FOR_EACH_TYPE_AND_KIND(template class ExpressionBase, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructorValues, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, )
