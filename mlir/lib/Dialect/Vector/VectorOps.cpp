@@ -1094,17 +1094,18 @@ static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
   return Value();
 }
 
-/// Fold extractOp with scalar result coming from BroadcastOp.
+/// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
 static Value foldExtractFromBroadcast(ExtractOp extractOp) {
-  auto broadcastOp = extractOp.vector().getDefiningOp<vector::BroadcastOp>();
-  if (!broadcastOp)
+  Operation *defOp = extractOp.vector().getDefiningOp();
+  if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
     return Value();
-  if (extractOp.getType() == broadcastOp.getSourceType())
-    return broadcastOp.source();
+  Value source = defOp->getOperand(0);
+  if (extractOp.getType() == source.getType())
+    return source;
   auto getRank = [](Type type) {
     return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
   };
-  unsigned broadcasrSrcRank = getRank(broadcastOp.getSourceType());
+  unsigned broadcasrSrcRank = getRank(source.getType());
   unsigned extractResultRank = getRank(extractOp.getType());
   if (extractResultRank < broadcasrSrcRank) {
     auto extractPos = extractVector<int64_t>(extractOp.position());
@@ -1112,7 +1113,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     extractPos.erase(
         extractPos.begin(),
         std::next(extractPos.begin(), extractPos.size() - rankDiff));
-    extractOp.setOperand(broadcastOp.source());
+    extractOp.setOperand(source);
     // OpBuilder is only used as a helper to build an I64ArrayAttr.
     OpBuilder b(extractOp.getContext());
     extractOp->setAttr(ExtractOp::getPositionAttrName(),
@@ -2259,6 +2260,21 @@ public:
   }
 };
 
+/// Pattern to rewrite an ExtractStridedSliceOp(SplatOp) to SplatOp.
+class StridedSliceSplat final : public OpRewritePattern<ExtractStridedSliceOp> {
+public:
+  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
+                                PatternRewriter &rewriter) const override {
+    auto splat = op.vector().getDefiningOp<SplatOp>();
+    if (!splat)
+      return failure();
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.input());
+    return success();
+  }
+};
+
 } // end anonymous namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
@@ -2266,7 +2282,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
   results.add<StridedSliceConstantMaskFolder, StridedSliceConstantFolder,
-              StridedSliceBroadcast>(context);
+              StridedSliceBroadcast, StridedSliceSplat>(context);
 }
 
 //===----------------------------------------------------------------------===//
