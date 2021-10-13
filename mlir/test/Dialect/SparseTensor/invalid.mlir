@@ -37,8 +37,8 @@ func @invalid_init_rank(%arg0: index) -> tensor<?xf32, #SparseVector> {
 #SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 
 func @invalid_init_size() -> tensor<?x10xf32, #SparseMatrix> {
-  %c10 = constant 10 : index
-  %c20 = constant 20 : index
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
   // expected-error@+1 {{unexpected mismatch with static dimension size 10}}
   %0 = sparse_tensor.init [%c10, %c20] : tensor<?x10xf32, #SparseMatrix>
   return %0 : tensor<?x10xf32, #SparseMatrix>
