@@ -873,12 +873,10 @@ public:
   bool AnyChange = false;
 
   isl::schedule visitBand(isl::schedule_node_band Band, isl::union_map Deps) {
-    int NumLoops = Band.n_member().release();
-
     // { Domain[] -> Scatter[] }
     isl::union_map PartSched =
         isl::union_map::from(Band.get_partial_schedule());
-    assert(getNumScatterDims(PartSched) == NumLoops);
+    assert(getNumScatterDims(PartSched) == Band.n_member().release());
     isl::space ParamSpace = PartSched.get_space().params();
 
     // { Scatter[] -> Domain[] }
