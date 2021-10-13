@@ -547,8 +547,7 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
     uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U &&
-        (Enc != 255 || Desc.getSize() == 4 || Desc.getSize() == 8))
+    if (Enc != ~0U)
       return Enc;
 
   } else if (MO.isImm())
