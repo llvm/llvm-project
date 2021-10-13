@@ -106,15 +106,28 @@ static void generateInstSeqImpl(int64_t Val,
 
   // If the remaining bits don't fit in 12 bits, we might be able to reduce the
   // shift amount in order to use LUI which will zero the lower 12 bits.
-  if (ShiftAmount > 12 && !isInt<12>(Hi52) && isInt<32>((uint64_t)Hi52 << 12)) {
-    // Reduce the shift amount and add zeros to the LSBs so it will match LUI.
-    ShiftAmount -= 12;
-    Hi52 = (uint64_t)Hi52 << 12;
+  bool Unsigned = false;
+  if (ShiftAmount > 12 && !isInt<12>(Hi52)) {
+    if (isInt<32>((uint64_t)Hi52 << 12)) {
+      // Reduce the shift amount and add zeros to the LSBs so it will match LUI.
+      ShiftAmount -= 12;
+      Hi52 = (uint64_t)Hi52 << 12;
+    } else if (isUInt<32>((uint64_t)Hi52 << 12) &&
+               ActiveFeatures[RISCV::FeatureStdExtZba]) {
+      // Reduce the shift amount and add zeros to the LSBs so it will match
+      // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
+      ShiftAmount -= 12;
+      Hi52 = ((uint64_t)Hi52 << 12) | (0xffffffffull << 32);
+      Unsigned = true;
+    }
   }
 
   generateInstSeqImpl(Hi52, ActiveFeatures, Res);
 
-  Res.push_back(RISCVMatInt::Inst(RISCV::SLLI, ShiftAmount));
+  if (Unsigned)
+    Res.push_back(RISCVMatInt::Inst(RISCV::SLLIUW, ShiftAmount));
+  else
+    Res.push_back(RISCVMatInt::Inst(RISCV::SLLI, ShiftAmount));
   if (Lo12)
     Res.push_back(RISCVMatInt::Inst(RISCV::ADDI, Lo12));
 }
