@@ -1235,6 +1235,10 @@ MIN_MAX_COMPXCHG(float8, max, kmp_real64, 64, <, 8r, 7,
                  KMP_ARCH_X86) // __kmpc_atomic_float8_max
 MIN_MAX_COMPXCHG(float8, min, kmp_real64, 64, >, 8r, 7,
                  KMP_ARCH_X86) // __kmpc_atomic_float8_min
+MIN_MAX_CRITICAL(float10, max, long double, <, 10r,
+                 1) // __kmpc_atomic_float10_max
+MIN_MAX_CRITICAL(float10, min, long double, >, 10r,
+                 1) // __kmpc_atomic_float10_min
 #if KMP_HAVE_QUAD
 MIN_MAX_CRITICAL(float16, max, QUAD_LEGACY, <, 16r,
                  1) // __kmpc_atomic_float16_max
@@ -2717,6 +2721,10 @@ MIN_MAX_COMPXCHG_CPT(float8, max_cpt, kmp_real64, 64, <,
                      KMP_ARCH_X86) // __kmpc_atomic_float8_max_cpt
 MIN_MAX_COMPXCHG_CPT(float8, min_cpt, kmp_real64, 64, >,
                      KMP_ARCH_X86) // __kmpc_atomic_float8_min_cpt
+MIN_MAX_CRITICAL_CPT(float10, max_cpt, long double, <, 10r,
+                     1) // __kmpc_atomic_float10_max_cpt
+MIN_MAX_CRITICAL_CPT(float10, min_cpt, long double, >, 10r,
+                     1) // __kmpc_atomic_float10_min_cpt
 #if KMP_HAVE_QUAD
 MIN_MAX_CRITICAL_CPT(float16, max_cpt, QUAD_LEGACY, <, 16r,
                      1) // __kmpc_atomic_float16_max_cpt
@@ -3685,6 +3693,168 @@ void __kmpc_atomic_end(void) {
   KA_TRACE(20, ("__kmpc_atomic_end: T#%d\n", gtid));
   __kmp_release_atomic_lock(&__kmp_atomic_lock, gtid);
 }
+
+// OpenMP 5.1 compare and swap
+
+/*!
+@param loc Source code location
+@param gtid Global thread id
+@param x Memory location to operate on
+@param e Expected value
+@param d Desired value
+@return Result of comparison
+
+Implements Compare And Swap atomic operation.
+
+Sample code:
+#pragma omp atomic compare update capture
+  { r = x == e; if(r) { x = d; } }
+*/
+bool __kmpc_atomic_bool_1_cas(ident_t *loc, int gtid, char *x, char e, char d) {
+  return KMP_COMPARE_AND_STORE_ACQ8(x, e, d);
+}
+bool __kmpc_atomic_bool_2_cas(ident_t *loc, int gtid, short *x, short e,
+                              short d) {
+  return KMP_COMPARE_AND_STORE_ACQ16(x, e, d);
+}
+bool __kmpc_atomic_bool_4_cas(ident_t *loc, int gtid, kmp_int32 *x, kmp_int32 e,
+                              kmp_int32 d) {
+  return KMP_COMPARE_AND_STORE_ACQ32(x, e, d);
+}
+bool __kmpc_atomic_bool_8_cas(ident_t *loc, int gtid, kmp_int64 *x, kmp_int64 e,
+                              kmp_int64 d) {
+  return KMP_COMPARE_AND_STORE_ACQ64(x, e, d);
+}
+
+/*!
+@param loc Source code location
+@param gtid Global thread id
+@param x Memory location to operate on
+@param e Expected value
+@param d Desired value
+@return Old value of x
+
+Implements Compare And Swap atomic operation.
+
+Sample code:
+#pragma omp atomic compare update capture
+  { v = x; if (x == e) { x = d; } }
+*/
+char __kmpc_atomic_val_1_cas(ident_t *loc, int gtid, char *x, char e, char d) {
+  return KMP_COMPARE_AND_STORE_RET8(x, e, d);
+}
+short __kmpc_atomic_val_2_cas(ident_t *loc, int gtid, short *x, short e,
+                              short d) {
+  return KMP_COMPARE_AND_STORE_RET16(x, e, d);
+}
+kmp_int32 __kmpc_atomic_val_4_cas(ident_t *loc, int gtid, kmp_int32 *x,
+                                  kmp_int32 e, kmp_int32 d) {
+  return KMP_COMPARE_AND_STORE_RET32(x, e, d);
+}
+kmp_int64 __kmpc_atomic_val_8_cas(ident_t *loc, int gtid, kmp_int64 *x,
+                                  kmp_int64 e, kmp_int64 d) {
+  return KMP_COMPARE_AND_STORE_RET64(x, e, d);
+}
+
+/*!
+@param loc Source code location
+@param gtid Global thread id
+@param x Memory location to operate on
+@param e Expected value
+@param d Desired value
+@param pv Captured value location
+@return Result of comparison
+
+Implements Compare And Swap + Capture atomic operation.
+
+v gets old valie of x if comparison failed, untouched otherwise.
+Sample code:
+#pragma omp atomic compare update capture
+  { r = x == e; if(r) { x = d; } else { v = x; } }
+*/
+bool __kmpc_atomic_bool_1_cas_cpt(ident_t *loc, int gtid, char *x, char e,
+                                  char d, char *pv) {
+  char old = KMP_COMPARE_AND_STORE_RET8(x, e, d);
+  if (old == e)
+    return true;
+  KMP_ASSERT(pv != NULL);
+  *pv = old;
+  return false;
+}
+bool __kmpc_atomic_bool_2_cas_cpt(ident_t *loc, int gtid, short *x, short e,
+                                  short d, short *pv) {
+  short old = KMP_COMPARE_AND_STORE_RET16(x, e, d);
+  if (old == e)
+    return true;
+  KMP_ASSERT(pv != NULL);
+  *pv = old;
+  return false;
+}
+bool __kmpc_atomic_bool_4_cas_cpt(ident_t *loc, int gtid, kmp_int32 *x,
+                                  kmp_int32 e, kmp_int32 d, kmp_int32 *pv) {
+  kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(x, e, d);
+  if (old == e)
+    return true;
+  KMP_ASSERT(pv != NULL);
+  *pv = old;
+  return false;
+}
+bool __kmpc_atomic_bool_8_cas_cpt(ident_t *loc, int gtid, kmp_int64 *x,
+                                  kmp_int64 e, kmp_int64 d, kmp_int64 *pv) {
+  kmp_int64 old = KMP_COMPARE_AND_STORE_RET64(x, e, d);
+  if (old == e)
+    return true;
+  KMP_ASSERT(pv != NULL);
+  *pv = old;
+  return false;
+}
+
+/*!
+@param loc Source code location
+@param gtid Global thread id
+@param x Memory location to operate on
+@param e Expected value
+@param d Desired value
+@param pv Captured value location
+@return Old value of x
+
+Implements Compare And Swap + Capture atomic operation.
+
+v gets new valie of x.
+Sample code:
+#pragma omp atomic compare update capture
+  { if (x == e) { x = d; }; v = x; }
+*/
+char __kmpc_atomic_val_1_cas_cpt(ident_t *loc, int gtid, char *x, char e,
+                                 char d, char *pv) {
+  char old = KMP_COMPARE_AND_STORE_RET8(x, e, d);
+  KMP_ASSERT(pv != NULL);
+  *pv = old == e ? d : old;
+  return old;
+}
+short __kmpc_atomic_val_2_cas_cpt(ident_t *loc, int gtid, short *x, short e,
+                                  short d, short *pv) {
+  short old = KMP_COMPARE_AND_STORE_RET16(x, e, d);
+  KMP_ASSERT(pv != NULL);
+  *pv = old == e ? d : old;
+  return old;
+}
+kmp_int32 __kmpc_atomic_val_4_cas_cpt(ident_t *loc, int gtid, kmp_int32 *x,
+                                      kmp_int32 e, kmp_int32 d, kmp_int32 *pv) {
+  kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(x, e, d);
+  KMP_ASSERT(pv != NULL);
+  *pv = old == e ? d : old;
+  return old;
+}
+kmp_int64 __kmpc_atomic_val_8_cas_cpt(ident_t *loc, int gtid, kmp_int64 *x,
+                                      kmp_int64 e, kmp_int64 d, kmp_int64 *pv) {
+  kmp_int64 old = KMP_COMPARE_AND_STORE_RET64(x, e, d);
+  KMP_ASSERT(pv != NULL);
+  *pv = old == e ? d : old;
+  return old;
+}
+
+// End OpenMP 5.1 compare + capture
 
 /*!
 @}
