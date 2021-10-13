@@ -47,16 +47,19 @@ public:
   constexpr Int128 &operator=(const Int128 &) = default;
   constexpr Int128 &operator=(Int128 &&) = default;
 
-  constexpr Int128(const Int128<!IS_SIGNED> &n)
+  explicit constexpr Int128(const Int128<!IS_SIGNED> &n)
       : low_{n.low()}, high_{n.high()} {}
-  constexpr Int128(Int128<!IS_SIGNED> &&n) : low_{n.low()}, high_{n.high()} {}
+  explicit constexpr Int128(Int128<!IS_SIGNED> &&n)
+      : low_{n.low()}, high_{n.high()} {}
   constexpr Int128 &operator=(const Int128<!IS_SIGNED> &n) {
     low_ = n.low();
     high_ = n.high();
+    return *this;
   }
   constexpr Int128 &operator=(Int128<!IS_SIGNED> &&n) {
     low_ = n.low();
     high_ = n.high();
+    return *this;
   }
 
   constexpr Int128 operator+() const { return *this; }
