@@ -95,10 +95,13 @@ static size_t RoundUp(size_t size, size_t align) {
  * have a fixed length.
  */
 static int WriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
-                            const uint8_t *BinaryIdData) {
+                            const uint8_t *BinaryIdData,
+                            uint64_t BinaryIdPadding) {
   ProfDataIOVec BinaryIdIOVec[] = {
       {&BinaryIdLen, sizeof(uint64_t), 1, 0},
-      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0}};
+      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0},
+      {NULL, sizeof(uint8_t), BinaryIdPadding, 1},
+  };
   if (Writer->Write(Writer, BinaryIdIOVec,
                     sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
     return -1;
@@ -130,11 +133,12 @@ static int WriteBinaryIdForNote(ProfDataWriter *Writer,
     uint64_t BinaryIdLen = Note->n_descsz;
     const uint8_t *BinaryIdData =
         (const uint8_t *)(NoteName + RoundUp(Note->n_namesz, 4));
-    if (Writer != NULL &&
-        WriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData) == -1)
+    uint8_t BinaryIdPadding = __llvm_profile_get_num_padding_bytes(BinaryIdLen);
+    if (Writer != NULL && WriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
+                                           BinaryIdPadding) == -1)
       return -1;
 
-    BinaryIdSize = sizeof(BinaryIdLen) + BinaryIdLen;
+    BinaryIdSize = sizeof(BinaryIdLen) + BinaryIdLen + BinaryIdPadding;
   }
 
   return BinaryIdSize;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -49,9 +50,9 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.before(), whileOp.before().begin(), lcvTypes, {});
     rewriter.setInsertionPointToStart(&whileOp.before().front());
-    auto cmpOp = rewriter.create<CmpIOp>(whileOp.getLoc(), CmpIPredicate::slt,
-                                         beforeBlock->getArgument(0),
-                                         forOp.upperBound());
+    auto cmpOp = rewriter.create<arith::CmpIOp>(
+        whileOp.getLoc(), arith::CmpIPredicate::slt,
+        beforeBlock->getArgument(0), forOp.upperBound());
     rewriter.create<scf::ConditionOp>(whileOp.getLoc(), cmpOp.getResult(),
                                       beforeBlock->getArguments());
 
@@ -63,7 +64,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
     // Add induction variable incrementation
     rewriter.setInsertionPointToEnd(afterBlock);
-    auto ivIncOp = rewriter.create<AddIOp>(
+    auto ivIncOp = rewriter.create<arith::AddIOp>(
         whileOp.getLoc(), afterBlock->getArgument(0), forOp.step());
 
     // Rewrite uses of the for-loop block arguments to the new while-loop

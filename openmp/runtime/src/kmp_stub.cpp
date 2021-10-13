@@ -376,25 +376,85 @@ omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
 omp_memspace_handle_t const llvm_omp_target_device_mem_space =
     (omp_memspace_handle_t const)102;
 #endif /* KMP_OS_WINDOWS */
-void *omp_alloc(size_t size, const omp_allocator_handle_t allocator) {
+
+void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   i;
-  return malloc(size);
+  void *res;
+#if KMP_OS_WINDOWS
+  // Returns a pointer to the memory block, or NULL if failed.
+  // Sets errno to ENOMEM or EINVAL if memory allocation failed or parameter
+  // validation failed.
+  res = _aligned_malloc(size, 1);
+#else
+  res = malloc(size);
+#endif
+  return res;
 }
-void *omp_calloc(size_t nmemb, size_t size,
-                 const omp_allocator_handle_t allocator) {
+
+void *omp_aligned_alloc(size_t a, size_t size, omp_allocator_handle_t al) {
   i;
-  return calloc(nmemb, size);
+  int err;
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_malloc(size, a);
+#else
+  if (err = posix_memalign(&res, a, size)) {
+    errno = err; // can be EINVAL or ENOMEM
+    res = NULL;
+  }
+#endif
+  return res;
 }
-void *omp_realloc(void *ptr, size_t size,
-                  const omp_allocator_handle_t allocator,
-                  const omp_allocator_handle_t free_allocator) {
+
+void *omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t al) {
   i;
-  return realloc(ptr, size);
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_recalloc(NULL, nmemb, size, 1);
+#else
+  res = calloc(nmemb, size);
+#endif
+  return res;
 }
-void omp_free(void *ptr, const omp_allocator_handle_t allocator) {
+
+void *omp_aligned_calloc(size_t a, size_t nmemb, size_t size,
+                         omp_allocator_handle_t al) {
   i;
+  int err;
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_recalloc(NULL, nmemb, size, a);
+#else
+  if (err = posix_memalign(&res, a, nmemb * size)) {
+    errno = err; // can be EINVAL or ENOMEM
+    res = NULL;
+  }
+  memset(res, 0x00, size);
+#endif
+  return res;
+}
+
+void *omp_realloc(void *ptr, size_t size, omp_allocator_handle_t al,
+                  omp_allocator_handle_t free_al) {
+  i;
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_realloc(ptr, size, 1);
+#else
+  res = realloc(ptr, size);
+#endif
+  return res;
+}
+
+void omp_free(void *ptr, omp_allocator_handle_t allocator) {
+  i;
+#if KMP_OS_WINDOWS
+  _aligned_free(ptr);
+#else
   free(ptr);
+#endif
 }
+
 /* OpenMP 5.0 Affinity Format */
 void omp_set_affinity_format(char const *format) { i; }
 size_t omp_get_affinity_format(char *buffer, size_t size) {

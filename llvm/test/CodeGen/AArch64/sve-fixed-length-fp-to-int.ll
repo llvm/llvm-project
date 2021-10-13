@@ -156,16 +156,14 @@ define void @fcvtzu_v16f16_v16i32(<16 x half>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG1]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256: ptrue [[PG1:p[0-9]+]].h, vl16
 ; VBITS_EQ_256-DAG: ld1h { [[VEC:z[0-9]+]].h }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: mov x8, sp
-; VBITS_EQ_256-DAG: st1h { [[VEC:z[0-9]+]].h }, [[PG1]], [x8]
-; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
-; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].s, z[[LO]].h
-; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].s, z[[HI]].h
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].s, [[VEC]].h
+; VBITS_EQ_256-DAG: ext [[VEC_HI:z[0-9]+]].b, [[VEC]].b, [[VEC]].b, #16
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].s, [[VEC_HI]].h
 ; VBITS_EQ_256-DAG: fcvtzu [[RES_LO:z[0-9]+]].s, [[PG2]]/m, [[UPK_LO]].h
 ; VBITS_EQ_256-DAG: fcvtzu [[RES_HI:z[0-9]+]].s, [[PG2]]/m, [[UPK_HI]].h
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG2]], [x1]
@@ -325,13 +323,14 @@ define <2 x i16> @fcvtzu_v2f32_v2i16(<2 x float> %op1) #0 {
 ; Don't use SVE for 128-bit vectors.
 define <4 x i16> @fcvtzu_v4f32_v4i16(<4 x float> %op1) #0 {
 ; CHECK-LABEL: fcvtzu_v4f32_v4i16:
-; CHECK: fcvtzu v0.4s, v0.4s
-; CHECK-NEXT: mov w8, v0.s[1]
-; CHECK-NEXT: mov w9, v0.s[2]
-; CHECK-NEXT: mov w10, v0.s[3]
+; CHECK: fcvtzu v1.4s, v0.4s
+; CHECK-NEXT: mov w8, v1.s[1]
+; CHECK-NEXT: mov w9, v1.s[2]
+; CHECK-NEXT: mov v0.16b, v1.16b
 ; CHECK-NEXT: mov v0.h[1], w8
+; CHECK-NEXT: mov w8, v1.s[3]
 ; CHECK-NEXT: mov v0.h[2], w9
-; CHECK-NEXT: mov v0.h[3], w10
+; CHECK-NEXT: mov v0.h[3], w8
 ; CHECK-NEXT: ret
   %res = fptoui <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -356,8 +355,8 @@ define void @fcvtzu_v16f32_v16i16(<16 x float>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_512-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_512-NEXT: fcvtzu [[CVT:z[0-9]+]].s, [[PG2]]/m, [[OP]].s
-; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_512-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
+; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
@@ -388,8 +387,8 @@ define void @fcvtzu_v32f32_v32i16(<32 x float>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_1024-NEXT: fcvtzu [[CVT:z[0-9]+]].s, [[PG2]]/m, [[OP]].s
-; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
+; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <32 x float>, <32 x float>* %a
@@ -404,8 +403,8 @@ define void @fcvtzu_v64f32_v64i16(<64 x float>* %a, <64 x i16>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_2048-NEXT: fcvtzu [[RES:z[0-9]+]].s, [[PG2]]/m, [[UPK]].s
-; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl64
+; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <64 x float>, <64 x float>* %a
@@ -547,16 +546,14 @@ define void @fcvtzu_v8f32_v8i64(<8 x float>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG1]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: ld1w { [[VEC:z[0-9]+]].s }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: mov x8, sp
-; VBITS_EQ_256-DAG: st1w { [[VEC:z[0-9]+]].s }, [[PG1]], [x8]
-; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].d, vl4
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
-; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].d, z[[LO]].s
-; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].d, z[[HI]].s
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].d, [[VEC]].s
+; VBITS_EQ_256-DAG: ext [[VEC_HI:z[0-9]+]].b, [[VEC]].b, [[VEC]].b, #16
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].d, [[VEC_HI]].s
 ; VBITS_EQ_256-DAG: fcvtzu [[RES_LO:z[0-9]+]].d, [[PG2]]/m, [[UPK_LO]].s
 ; VBITS_EQ_256-DAG: fcvtzu [[RES_HI:z[0-9]+]].d, [[PG2]]/m, [[UPK_HI]].s
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG2]], [x1]
@@ -673,9 +670,9 @@ define void @fcvtzu_v16f64_v16i16(<16 x double>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_1024-NEXT: fcvtzu [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
+; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
 ; VBITS_GE_1024-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[UZP]].h, [[UZP]].h
-; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <16 x double>, <16 x double>* %a
@@ -690,9 +687,9 @@ define void @fcvtzu_v32f64_v32i16(<32 x double>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_2048-NEXT: fcvtzu [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
+; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[UZP]].h, [[UZP]].h
-; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <32 x double>, <32 x double>* %a
@@ -744,8 +741,8 @@ define void @fcvtzu_v8f64_v8i32(<8 x double>* %a, <8 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_512-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_512-NEXT: fcvtzu [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_512-NEXT: ptrue [[PG3:p[0-9]+]].s, vl8
+; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
@@ -776,8 +773,8 @@ define void @fcvtzu_v16f64_v16i32(<16 x double>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_1024-NEXT: fcvtzu [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].s, vl16
+; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <16 x double>, <16 x double>* %a
@@ -792,8 +789,8 @@ define void @fcvtzu_v32f64_v32i32(<32 x double>* %a, <32 x i32>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_2048-NEXT: fcvtzu [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].s, vl32
+; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <32 x double>, <32 x double>* %a
@@ -1024,16 +1021,14 @@ define void @fcvtzs_v16f16_v16i32(<16 x half>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG1]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].h, vl16
 ; VBITS_EQ_256-DAG: ld1h { [[VEC:z[0-9]+]].h }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: mov x8, sp
-; VBITS_EQ_256-DAG: st1h { [[VEC:z[0-9]+]].h }, [[PG1]], [x8]
-; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
-; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].s, z[[LO]].h
-; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].s, z[[HI]].h
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].s, [[VEC]].h
+; VBITS_EQ_256-DAG: ext [[VEC_HI:z[0-9]+]].b, [[VEC]].b, [[VEC]].b, #16
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].s, [[VEC_HI]].h
 ; VBITS_EQ_256-DAG: fcvtzs [[RES_LO:z[0-9]+]].s, [[PG2]]/m, [[UPK_LO]].h
 ; VBITS_EQ_256-DAG: fcvtzs [[RES_HI:z[0-9]+]].s, [[PG2]]/m, [[UPK_HI]].h
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG2]], [x1]
@@ -1193,13 +1188,14 @@ define <2 x i16> @fcvtzs_v2f32_v2i16(<2 x float> %op1) #0 {
 ; Don't use SVE for 128-bit vectors.
 define <4 x i16> @fcvtzs_v4f32_v4i16(<4 x float> %op1) #0 {
 ; CHECK-LABEL: fcvtzs_v4f32_v4i16:
-; CHECK: fcvtzs v0.4s, v0.4s
-; CHECK-NEXT: mov w8, v0.s[1]
-; CHECK-NEXT: mov w9, v0.s[2]
-; CHECK-NEXT: mov w10, v0.s[3]
+; CHECK: fcvtzs v1.4s, v0.4s
+; CHECK-NEXT: mov w8, v1.s[1]
+; CHECK-NEXT: mov w9, v1.s[2]
+; CHECK-NEXT: mov v0.16b, v1.16b
 ; CHECK-NEXT: mov v0.h[1], w8
+; CHECK-NEXT: mov w8, v1.s[3]
 ; CHECK-NEXT: mov v0.h[2], w9
-; CHECK-NEXT: mov v0.h[3], w10
+; CHECK-NEXT: mov v0.h[3], w8
 ; CHECK-NEXT: ret
   %res = fptosi <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -1224,8 +1220,8 @@ define void @fcvtzs_v16f32_v16i16(<16 x float>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_512-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_512-NEXT: fcvtzs [[CVT:z[0-9]+]].s, [[PG2]]/m, [[OP]].s
-; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_512-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
+; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
@@ -1256,8 +1252,8 @@ define void @fcvtzs_v32f32_v32i16(<32 x float>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_1024-NEXT: fcvtzs [[CVT:z[0-9]+]].s, [[PG2]]/m, [[OP]].s
-; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
+; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <32 x float>, <32 x float>* %a
@@ -1272,8 +1268,8 @@ define void @fcvtzs_v64f32_v64i16(<64 x float>* %a, <64 x i16>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].s
 ; VBITS_GE_2048-NEXT: fcvtzs [[RES:z[0-9]+]].s, [[PG2]]/m, [[UPK]].s
-; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl64
+; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[CVT]].h, [[CVT]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <64 x float>, <64 x float>* %a
@@ -1415,16 +1411,14 @@ define void @fcvtzs_v8f32_v8i64(<8 x float>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG1]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
-; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
+; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: ld1w { [[VEC:z[0-9]+]].s }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: mov x8, sp
-; VBITS_EQ_256-DAG: st1w { [[VEC:z[0-9]+]].s }, [[PG1]], [x8]
-; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].d, vl4
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
-; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].d, z[[LO]].s
-; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].d, z[[HI]].s
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].d, [[VEC]].s
+; VBITS_EQ_256-DAG: ext [[VEC_HI:z[0-9]+]].b, [[VEC]].b, [[VEC]].b, #16
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].d, [[VEC]].s
 ; VBITS_EQ_256-DAG: fcvtzs [[RES_LO:z[0-9]+]].d, [[PG2]]/m, [[UPK_LO]].s
 ; VBITS_EQ_256-DAG: fcvtzs [[RES_HI:z[0-9]+]].d, [[PG2]]/m, [[UPK_HI]].s
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG2]], [x1]
@@ -1541,9 +1535,9 @@ define void @fcvtzs_v16f64_v16i16(<16 x double>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_1024-NEXT: fcvtzs [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
+; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
 ; VBITS_GE_1024-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].h, [[UZP]].h, [[UZP]].h
-; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].h, vl16
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <16 x double>, <16 x double>* %a
@@ -1558,9 +1552,9 @@ define void @fcvtzs_v32f64_v32i16(<32 x double>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_2048-NEXT: fcvtzs [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
+; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].h, [[UZP]].h, [[UZP]].h
-; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <32 x double>, <32 x double>* %a
@@ -1612,8 +1606,8 @@ define void @fcvtzs_v8f64_v8i32(<8 x double>* %a, <8 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_512-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_512-NEXT: fcvtzs [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_512-NEXT: ptrue [[PG3:p[0-9]+]].s, vl8
+; VBITS_GE_512-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_512-NEXT: ret
 
@@ -1644,8 +1638,8 @@ define void @fcvtzs_v16f64_v16i32(<16 x double>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_1024-NEXT: fcvtzs [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: ptrue [[PG3:p[0-9]+]].s, vl16
+; VBITS_GE_1024-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_1024-NEXT: ret
   %op1 = load <16 x double>, <16 x double>* %a
@@ -1660,8 +1654,8 @@ define void @fcvtzs_v32f64_v32i32(<32 x double>* %a, <32 x i32>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG1]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG2:p[0-9]+]].d
 ; VBITS_GE_2048-NEXT: fcvtzs [[CVT:z[0-9]+]].d, [[PG2]]/m, [[OP]].d
-; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: ptrue [[PG3:p[0-9]+]].s, vl32
+; VBITS_GE_2048-NEXT: uzp1 [[RES:z[0-9]+]].s, [[CVT]].s, [[CVT]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG3]], [x1]
 ; VBITS_GE_2048-NEXT: ret
   %op1 = load <32 x double>, <32 x double>* %a

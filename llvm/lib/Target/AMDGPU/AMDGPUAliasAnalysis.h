@@ -12,7 +12,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H
 
-#include "AMDGPU.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 
 namespace llvm {
@@ -66,9 +65,7 @@ class AMDGPUAAWrapperPass : public ImmutablePass {
 public:
   static char ID;
 
-  AMDGPUAAWrapperPass() : ImmutablePass(ID) {
-    initializeAMDGPUAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUAAWrapperPass();
 
   AMDGPUAAResult &getResult() { return *Result; }
   const AMDGPUAAResult &getResult() const { return *Result; }

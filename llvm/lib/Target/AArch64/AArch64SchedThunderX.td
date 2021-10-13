@@ -154,7 +154,8 @@ def : WriteRes<WriteFCmp, [THXT8XUnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCvt, [THXT8XUnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [THXT8XUnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [THXT8XUnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteV, [THXT8XUnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVd, [THXT8XUnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVq, [THXT8XUnitFPALU]> { let Latency = 6; }
 
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFMul, [THXT8XUnitFPMDS]> { let Latency = 6; }

@@ -169,7 +169,7 @@ public:
 } // end namespace clang
 
 const unsigned Sema::MaxAlignmentExponent;
-const unsigned Sema::MaximumAlignment;
+const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
@@ -367,6 +367,11 @@ void Sema::Initialize() {
         AddPointerSizeDependentTypes();
       }
 
+      if (getOpenCLOptions().isSupported("cl_khr_fp16", getLangOpts())) {
+        auto AtomicHalfT = Context.getAtomicType(Context.HalfTy);
+        addImplicitTypedef("atomic_half", AtomicHalfT);
+      }
+
       std::vector<QualType> Atomic64BitTypes;
       if (getOpenCLOptions().isSupported("cl_khr_int64_base_atomics",
                                          getLangOpts()) &&
@@ -403,13 +408,10 @@ void Sema::Initialize() {
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isPPC64() &&
-      Context.getTargetInfo().hasFeature("paired-vector-memops")) {
-    if (Context.getTargetInfo().hasFeature("mma")) {
+  if (Context.getTargetInfo().getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
       addImplicitTypedef(#Name, Context.Id##Ty);
 #include "clang/Basic/PPCTypes.def"
-    }
 #define PPC_VECTOR_VSX_TYPE(Name, Id, Size) \
     addImplicitTypedef(#Name, Context.Id##Ty);
 #include "clang/Basic/PPCTypes.def"

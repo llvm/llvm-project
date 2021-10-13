@@ -595,7 +595,7 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
         return failure();
       result.addAttribute("collapse_val", attr);
     } else if (keyword == "nowait") {
-      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      auto attr = UnitAttr::get(parser.getContext());
       result.addAttribute("nowait", attr);
     } else if (keyword == "ordered") {
       mlir::IntegerAttr attr;
@@ -618,7 +618,7 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
       auto attr = parser.getBuilder().getStringAttr(order);
       result.addAttribute("order", attr);
     } else if (keyword == "inclusive") {
-      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      auto attr = UnitAttr::get(parser.getContext());
       result.addAttribute("inclusive", attr);
     } else if (keyword == "reduction") {
       if (segments[reductionVarPos])
@@ -959,11 +959,109 @@ static LogicalResult verifyWsLoopOp(WsLoopOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Parser, printer and verifier for Synchronization Hint (2.17.12)
+//===----------------------------------------------------------------------===//
+
+/// Parses a Synchronization Hint clause. The value of hint is an integer
+/// which is a combination of different hints from `omp_sync_hint_t`.
+///
+/// hint-clause = `hint` `(` hint-value `)`
+static ParseResult parseSynchronizationHint(OpAsmParser &parser,
+                                            IntegerAttr &hintAttr) {
+  if (failed(parser.parseOptionalKeyword("hint"))) {
+    hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
+    return success();
+  }
+
+  if (failed(parser.parseLParen()))
+    return failure();
+  StringRef hintKeyword;
+  int64_t hint = 0;
+  do {
+    if (failed(parser.parseKeyword(&hintKeyword)))
+      return failure();
+    if (hintKeyword == "uncontended")
+      hint |= 1;
+    else if (hintKeyword == "contended")
+      hint |= 2;
+    else if (hintKeyword == "nonspeculative")
+      hint |= 4;
+    else if (hintKeyword == "speculative")
+      hint |= 8;
+    else
+      return parser.emitError(parser.getCurrentLocation())
+             << hintKeyword << " is not a valid hint";
+  } while (succeeded(parser.parseOptionalComma()));
+  if (failed(parser.parseRParen()))
+    return failure();
+  hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), hint);
+  return success();
+}
+
+/// Prints a Synchronization Hint clause
+static void printSynchronizationHint(OpAsmPrinter &p, Operation *op,
+                                     IntegerAttr hintAttr) {
+  int64_t hint = hintAttr.getInt();
+
+  if (hint == 0)
+    return;
+
+  // Helper function to get n-th bit from the right end of `value`
+  auto bitn = [](int value, int n) -> bool { return value & (1 << n); };
+
+  bool uncontended = bitn(hint, 0);
+  bool contended = bitn(hint, 1);
+  bool nonspeculative = bitn(hint, 2);
+  bool speculative = bitn(hint, 3);
+
+  SmallVector<StringRef> hints;
+  if (uncontended)
+    hints.push_back("uncontended");
+  if (contended)
+    hints.push_back("contended");
+  if (nonspeculative)
+    hints.push_back("nonspeculative");
+  if (speculative)
+    hints.push_back("speculative");
+
+  p << "hint(";
+  llvm::interleaveComma(hints, p);
+  p << ")";
+}
+
+/// Verifies a synchronization hint clause
+static LogicalResult verifySynchronizationHint(Operation *op, int32_t hint) {
+
+  // Helper function to get n-th bit from the right end of `value`
+  auto bitn = [](int value, int n) -> bool { return value & (1 << n); };
+
+  bool uncontended = bitn(hint, 0);
+  bool contended = bitn(hint, 1);
+  bool nonspeculative = bitn(hint, 2);
+  bool speculative = bitn(hint, 3);
+
+  if (uncontended && contended)
+    return op->emitOpError() << "the hints omp_sync_hint_uncontended and "
+                                "omp_sync_hint_contended cannot be combined";
+  if (nonspeculative && speculative)
+    return op->emitOpError() << "the hints omp_sync_hint_nonspeculative and "
+                                "omp_sync_hint_speculative cannot be combined.";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for critical construct (2.17.1)
+//===----------------------------------------------------------------------===//
+
 static LogicalResult verifyCriticalOp(CriticalOp op) {
-  if (!op.name().hasValue() && op.hint().hasValue() &&
-      (op.hint().getValue() != SyncHintKind::none))
+
+  if (failed(verifySynchronizationHint(op, op.hint()))) {
+    return failure();
+  }
+  if (!op.name().hasValue() && (op.hint() != 0))
     return op.emitOpError() << "must specify a name unless the effect is as if "
-                               "hint(none) is specified";
+                               "no hint is specified";
 
   if (op.nameAttr()) {
     auto symbolRef = op.nameAttr().cast<SymbolRefAttr>();

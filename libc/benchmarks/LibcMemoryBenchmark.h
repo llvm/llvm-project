@@ -13,6 +13,7 @@
 #define LLVM_LIBC_UTILS_BENCHMARK_MEMORY_BENCHMARK_H
 
 #include "LibcBenchmark.h"
+#include "LibcFunctionPrototypes.h"
 #include "MemorySizeDistributions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Alignment.h"
@@ -184,32 +185,6 @@ struct ParameterBatch {
   const size_t BufferSize;
   const size_t BatchSize;
   std::vector<ParameterType> Parameters;
-};
-
-/// Memory function prototype and configuration.
-using MemcpyFunction = void *(*)(void *__restrict, const void *__restrict,
-                                 size_t);
-struct MemcpyConfiguration {
-  MemcpyFunction Function;
-  llvm::StringRef Name;
-};
-
-using MemsetFunction = void *(*)(void *, int, size_t);
-struct MemsetConfiguration {
-  MemsetFunction Function;
-  llvm::StringRef Name;
-};
-
-using BzeroFunction = void (*)(void *, size_t);
-struct BzeroConfiguration {
-  BzeroFunction Function;
-  llvm::StringRef Name;
-};
-
-using MemcmpFunction = int (*)(const void *, const void *, size_t);
-struct MemcmpConfiguration {
-  MemcmpFunction Function;
-  llvm::StringRef Name;
 };
 
 /// Provides source and destination buffers for the Copy operation as well as

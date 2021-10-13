@@ -336,10 +336,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
-  const WasmTagType *tagType = nullptr;
   const WasmSignature *signature = nullptr;
-  auto *wasmSym = make<WasmSymbol>(*info, globalType, &tableImport->Table,
-                                   tagType, signature);
+  auto *wasmSym =
+      make<WasmSymbol>(*info, globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())
@@ -496,12 +495,11 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Functions`.
   ArrayRef<WasmFunction> funcs = wasmObj->functions();
-  ArrayRef<uint32_t> funcTypes = wasmObj->functionTypes();
   ArrayRef<WasmSignature> types = wasmObj->types();
   functions.reserve(funcs.size());
 
-  for (size_t i = 0, e = funcs.size(); i != e; ++i) {
-    auto* func = make<InputFunction>(types[funcTypes[i]], &funcs[i], this);
+  for (auto &f : funcs) {
+    auto *func = make<InputFunction>(types[f.SigIndex], &f, this);
     func->discarded = isExcludedByComdat(func);
     functions.emplace_back(func);
   }
@@ -517,7 +515,7 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Tags`.
   for (const WasmTag &t : wasmObj->tags())
-    tags.emplace_back(make<InputTag>(types[t.Type.SigIndex], t, this));
+    tags.emplace_back(make<InputTag>(types[t.SigIndex], t, this));
 
   // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());
@@ -541,7 +539,7 @@ void ObjFile::parse(bool ignoreComdats) {
   addLegacyIndirectFunctionTableIfNeeded(tableSymbolCount);
 }
 
-bool ObjFile::isExcludedByComdat(InputChunk *chunk) const {
+bool ObjFile::isExcludedByComdat(const InputChunk *chunk) const {
   uint32_t c = chunk->getComdat();
   if (c == UINT32_MAX)
     return false;
@@ -665,6 +663,14 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
     return symtab->addUndefinedTable(name, sym.Info.ImportName,
                                      sym.Info.ImportModule, flags, this,
                                      sym.TableType);
+  case WASM_SYMBOL_TYPE_TAG:
+    if (sym.isBindingLocal())
+      return make<UndefinedTag>(name, sym.Info.ImportName,
+                                sym.Info.ImportModule, flags, this,
+                                sym.Signature);
+    return symtab->addUndefinedTag(name, sym.Info.ImportName,
+                                   sym.Info.ImportModule, flags, this,
+                                   sym.Signature);
   case WASM_SYMBOL_TYPE_SECTION:
     llvm_unreachable("section symbols cannot be undefined");
   }

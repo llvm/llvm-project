@@ -55,6 +55,7 @@ public:
     UndefinedDataKind,
     UndefinedGlobalKind,
     UndefinedTableKind,
+    UndefinedTagKind,
     LazyKind,
   };
 
@@ -66,7 +67,7 @@ public:
     return symbolKind == UndefinedFunctionKind ||
            symbolKind == UndefinedDataKind ||
            symbolKind == UndefinedGlobalKind ||
-           symbolKind == UndefinedTableKind;
+           symbolKind == UndefinedTableKind || symbolKind == UndefinedTagKind;
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
@@ -437,9 +438,9 @@ public:
 // and is named '__cpp_exception' for linking.
 class TagSymbol : public Symbol {
 public:
-  static bool classof(const Symbol *s) { return s->kind() == DefinedTagKind; }
-
-  const WasmTagType *getTagType() const { return tagType; }
+  static bool classof(const Symbol *s) {
+    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind;
+  }
 
   // Get/set the tag index
   uint32_t getTagIndex() const;
@@ -450,10 +451,9 @@ public:
 
 protected:
   TagSymbol(StringRef name, Kind k, uint32_t flags, InputFile *f,
-            const WasmTagType *tagType, const WasmSignature *sig)
-      : Symbol(name, k, flags, f), signature(sig), tagType(tagType) {}
+            const WasmSignature *sig)
+      : Symbol(name, k, flags, f), signature(sig) {}
 
-  const WasmTagType *tagType;
   uint32_t tagIndex = INVALID_INDEX;
 };
 
@@ -464,6 +464,19 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedTagKind; }
 
   InputTag *tag;
+};
+
+class UndefinedTag : public TagSymbol {
+public:
+  UndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
+               llvm::Optional<StringRef> importModule, uint32_t flags,
+               InputFile *file = nullptr, const WasmSignature *sig = nullptr)
+      : TagSymbol(name, UndefinedTagKind, flags, file, sig) {
+    this->importName = importName;
+    this->importModule = importModule;
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
 // LazySymbol represents a symbol that is not yet in the link, but we know where

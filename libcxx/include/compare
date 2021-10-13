@@ -47,6 +47,9 @@ namespace std {
   template<class T, class U = T>
     using compare_three_way_result_t = typename compare_three_way_result<T, U>::type;
 
+  // [comparisons.three.way], class compare_three_way
+  struct compare_three_way; // C++20
+
   // [cmp.alg], comparison algorithms
   template<class T> constexpr strong_ordering strong_order(const T& a, const T& b);
   template<class T> constexpr weak_ordering weak_order(const T& a, const T& b);
@@ -133,7 +136,9 @@ namespace std {
 */
 
 #include <__compare/common_comparison_category.h>
+#include <__compare/compare_three_way.h>
 #include <__compare/compare_three_way_result.h>
+#include <__compare/is_eq.h>
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>

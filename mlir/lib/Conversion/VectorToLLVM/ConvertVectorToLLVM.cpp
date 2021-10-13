@@ -9,6 +9,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -59,7 +60,7 @@ static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
     return rewriter.create<InsertOp>(loc, from, into, offset);
   return rewriter.create<vector::InsertElementOp>(
       loc, vectorType, from, into,
-      rewriter.create<ConstantIndexOp>(loc, offset));
+      rewriter.create<arith::ConstantIndexOp>(loc, offset));
 }
 
 // Helper that picks the proper sequence for extracting.
@@ -86,7 +87,7 @@ static Value extractOne(PatternRewriter &rewriter, Location loc, Value vector,
     return rewriter.create<ExtractOp>(loc, vector, offset);
   return rewriter.create<vector::ExtractElementOp>(
       loc, vectorType.getElementType(), vector,
-      rewriter.create<ConstantIndexOp>(loc, offset));
+      rewriter.create<arith::ConstantIndexOp>(loc, offset));
 }
 
 // Helper that returns a subset of `arrayAttr` as a vector of int64_t.
@@ -434,18 +435,16 @@ public:
       else if (kind == "mul")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_mul>(reductionOp,
                                                              llvmType, operand);
-      else if (kind == "min" &&
-               (eltType.isIndex() || eltType.isUnsignedInteger()))
+      else if (kind == "minui")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umin>(
             reductionOp, llvmType, operand);
-      else if (kind == "min")
+      else if (kind == "minsi")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smin>(
             reductionOp, llvmType, operand);
-      else if (kind == "max" &&
-               (eltType.isIndex() || eltType.isUnsignedInteger()))
+      else if (kind == "maxui")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umax>(
             reductionOp, llvmType, operand);
-      else if (kind == "max")
+      else if (kind == "maxsi")
         rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smax>(
             reductionOp, llvmType, operand);
       else if (kind == "and")
@@ -486,10 +485,14 @@ public:
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmul>(
           reductionOp, llvmType, acc, operand,
           rewriter.getBoolAttr(reassociateFPReductions));
-    } else if (kind == "min")
+    } else if (kind == "minf")
+      // FIXME: MLIR's 'minf' and LLVM's 'vector_reduce_fmin' do not handle
+      // NaNs/-0.0/+0.0 in the same way.
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmin>(reductionOp,
                                                             llvmType, operand);
-    else if (kind == "max")
+    else if (kind == "maxf")
+      // FIXME: MLIR's 'maxf' and LLVM's 'vector_reduce_fmax' do not handle
+      // NaNs/-0.0/+0.0 in the same way.
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmax>(reductionOp,
                                                             llvmType, operand);
     else
@@ -795,8 +798,8 @@ public:
 
     auto loc = op.getLoc();
     auto elemType = vType.getElementType();
-    Value zero = rewriter.create<ConstantOp>(loc, elemType,
-                                             rewriter.getZeroAttr(elemType));
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, elemType, rewriter.getZeroAttr(elemType));
     Value desc = rewriter.create<SplatOp>(loc, vType, zero);
     for (int64_t i = 0, e = vType.getShape().front(); i != e; ++i) {
       Value extrLHS = rewriter.create<ExtractOp>(loc, op.lhs(), i);
@@ -1144,11 +1147,11 @@ private:
     if (rank == 0) {
       switch (conversion) {
       case PrintConversion::ZeroExt64:
-        value = rewriter.create<ZeroExtendIOp>(
+        value = rewriter.create<arith::ExtUIOp>(
             loc, value, IntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::SignExt64:
-        value = rewriter.create<SignExtendIOp>(
+        value = rewriter.create<arith::ExtSIOp>(
             loc, value, IntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::None:
@@ -1231,8 +1234,8 @@ public:
     }
 
     // Extract/insert on a lower ranked extract strided slice op.
-    Value zero = rewriter.create<ConstantOp>(loc, elemType,
-                                             rewriter.getZeroAttr(elemType));
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, elemType, rewriter.getZeroAttr(elemType));
     Value res = rewriter.create<SplatOp>(loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {

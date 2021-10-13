@@ -27,10 +27,10 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <memory>
 #include <utility>
 
@@ -264,7 +264,7 @@ public:
     std::string Error;
     auto Triple = Ctx.getTargetInfo().getTriple();
     if (!llvm::TargetRegistry::lookupTarget(Triple.getTriple(), Error))
-      llvm::report_fatal_error(Error);
+      llvm::report_fatal_error(llvm::Twine(Error));
 
     // Emit the serialized Clang AST into its own section.
     assert(Buffer->IsComplete && "serialization did not complete");

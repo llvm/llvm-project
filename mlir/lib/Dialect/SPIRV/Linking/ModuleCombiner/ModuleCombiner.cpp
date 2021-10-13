@@ -126,7 +126,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
   unsigned lastUsedID = 0;
 
   for (auto inputModule : inputModules) {
-    spirv::ModuleOp moduleClone = inputModule.clone();
+    OwningOpRef<spirv::ModuleOp> moduleClone = inputModule.clone();
 
     // In the combined module, rename all symbols that conflict with symbols
     // from the current input module. This renaming applies to all ops except
@@ -141,7 +141,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
       StringRef oldSymName = symbolOp.getName();
 
       if (!isa<FuncOp>(op) &&
-          failed(updateSymbolAndAllUses(symbolOp, combinedModule, moduleClone,
+          failed(updateSymbolAndAllUses(symbolOp, combinedModule, *moduleClone,
                                         lastUsedID)))
         return nullptr;
 
@@ -170,14 +170,14 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
 
     // In the current input module, rename all symbols that conflict with
     // symbols from the combined module. This includes renaming spv.funcs.
-    for (auto &op : *moduleClone.getBody()) {
+    for (auto &op : *moduleClone->getBody()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)
         continue;
 
       StringRef oldSymName = symbolOp.getName();
 
-      if (failed(updateSymbolAndAllUses(symbolOp, moduleClone, combinedModule,
+      if (failed(updateSymbolAndAllUses(symbolOp, *moduleClone, combinedModule,
                                         lastUsedID)))
         return nullptr;
 
@@ -203,7 +203,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     }
 
     // Clone all the module's ops to the combined module.
-    for (auto &op : *moduleClone.getBody())
+    for (auto &op : *moduleClone->getBody())
       combinedModuleBuilder.insert(op.clone());
   }
 

@@ -35,6 +35,7 @@ bool isGenericMode();
 
 /// Return true if the executing thread is the main thread in generic mode.
 bool isMainThreadInGenericMode();
+bool isMainThreadInGenericMode(bool IsSPMD);
 
 /// Return true if the executing thread has the lowest Id of the active threads
 /// in the warp.

@@ -131,6 +131,9 @@ write_cmake_config("config") {
     # This is both in llvm-config.h and config.h; llvm-config.h doesn't
     # define it if it's not set while config.h defines it to empty in that case.
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
+
+    # FIXME: Set to 1 on mac once the 10.14 SDK is in common use.
+    "LLVM_SUPPORT_XCODE_SIGNPOSTS=",
   ]
 
   if (current_os == "linux" || current_os == "android") {
@@ -341,10 +344,6 @@ write_cmake_config("llvm-config") {
     "LLVM_NATIVE_TARGETINFO=1",
     "LLVM_NATIVE_TARGETMC=1",
     "LLVM_NATIVE_TARGETMCA=1",
-
-    # FIXME: Set to 1 on mac once the 10.14 SDK is in common use.
-    "LLVM_SUPPORT_XCODE_SIGNPOSTS=",
-
     "LLVM_USE_INTEL_JITEVENTS=",
     "LLVM_USE_OPROFILE=",
     "LLVM_USE_PERF=",

@@ -39,5 +39,5 @@ class ExecutionEngine(_execution_engine.ExecutionEngine):
     under the provided `name`. The `ctypes_callback` must be a
     `CFuncType` that outlives the execution engine.
     """
-    callback = ctypes.cast(ctypes_callback, ctypes.c_void_p).value
+    callback = ctypes.cast(ctypes_callback, ctypes.c_void_p)
     self.raw_register_runtime("_mlir_ciface_" + name, callback)

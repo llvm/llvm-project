@@ -54,13 +54,14 @@ module {
   //
   func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
                       %argb: tensor<?xi32>,
-                      %argx: tensor<?xi32>) -> tensor<?xi32> {
+                      %argx: tensor<?xi32> {linalg.inplaceable = true})
+		      -> tensor<?xi32> {
     %0 = linalg.generic #matvec
       ins(%arga, %argb: tensor<?x?xi32, #SparseMatrix>, tensor<?xi32>)
       outs(%argx: tensor<?xi32>) {
       ^bb(%a: i32, %b: i32, %x: i32):
-        %0 = muli %a, %b : i32
-        %1 = addi %x, %0 : i32
+        %0 = arith.muli %a, %b : i32
+        %1 = arith.addi %x, %0 : i32
         linalg.yield %1 : i32
     } -> tensor<?xi32>
     return %0 : tensor<?xi32>
@@ -72,11 +73,11 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %i0 = constant 0 : i32
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c4 = constant 4 : index
-    %c256 = constant 256 : index
+    %i0 = arith.constant 0 : i32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %c256 = arith.constant 256 : index
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -86,8 +87,8 @@ module {
     %bdata = memref.alloc(%c256) : memref<?xi32>
     %xdata = memref.alloc(%c4) : memref<?xi32>
     scf.for %i = %c0 to %c256 step %c1 {
-      %k = addi %i, %c1 : index
-      %j = index_cast %k : index to i32
+      %k = arith.addi %i, %c1 : index
+      %j = arith.index_cast %k : index to i32
       memref.store %j, %bdata[%i] : memref<?xi32>
     }
     scf.for %i = %c0 to %c4 step %c1 {
@@ -111,6 +112,7 @@ module {
     // Release the resources.
     memref.dealloc %bdata : memref<?xi32>
     memref.dealloc %xdata : memref<?xi32>
+    sparse_tensor.release %a : tensor<?x?xi32, #SparseMatrix>
 
     return
   }

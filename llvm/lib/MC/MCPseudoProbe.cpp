@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <memory>
+#include <sstream>
 
 #define DEBUG_TYPE "mcpseudoprobe"
 

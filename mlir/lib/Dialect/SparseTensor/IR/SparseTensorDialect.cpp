@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -38,8 +39,7 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
-Attribute SparseTensorEncodingAttr::parse(MLIRContext *context,
-                                          DialectAsmParser &parser, Type type) {
+Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
   // Parse the data as a dictionary.
@@ -113,8 +113,8 @@ Attribute SparseTensorEncodingAttr::parse(MLIRContext *context,
     }
   }
   // Construct struct-like storage for attribute.
-  return parser.getChecked<SparseTensorEncodingAttr>(context, dlt, map, ptr,
-                                                     ind);
+  return parser.getChecked<SparseTensorEncodingAttr>(parser.getContext(), dlt,
+                                                     map, ptr, ind);
 }
 
 void SparseTensorEncodingAttr::print(DialectAsmPrinter &printer) const {
@@ -192,8 +192,8 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(Value dim, Value tensor) {
-  if (auto constantOp = dim.getDefiningOp<ConstantOp>()) {
-    unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
+  if (auto constantOp = dim.getDefiningOp<arith::ConstantOp>()) {
+    unsigned d = constantOp.value().cast<IntegerAttr>().getInt();
     if (d >= tensor.getType().cast<RankedTensorType>().getRank())
       return failure();
   }
@@ -234,6 +234,12 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
   if (getType() == source().getType())
     return source();
   return {};
+}
+
+static LogicalResult verify(ReleaseOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to release");
+  return success();
 }
 
 static LogicalResult verify(ToPointersOp op) {
@@ -298,8 +304,7 @@ Attribute SparseTensorDialect::parseAttribute(DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&attrTag)))
     return Attribute();
   Attribute attr;
-  auto parseResult =
-      generatedAttributeParser(getContext(), parser, attrTag, type, attr);
+  auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
   if (parseResult.hasValue())
     return attr;
   parser.emitError(parser.getNameLoc(), "unknown sparse tensor attribute");

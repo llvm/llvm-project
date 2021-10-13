@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -std-expand -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts \
+// RUN: mlir-opt %s -convert-scf-to-std -std-expand -convert-arith-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts \
 // RUN: | mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -7,18 +7,18 @@
 func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func @main() -> () {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
 
   // Initialize input.
   %input = memref.alloc() : memref<2x3xf32>
   %dim_x = memref.dim %input, %c0 : memref<2x3xf32>
   %dim_y = memref.dim %input, %c1 : memref<2x3xf32>
   scf.parallel (%i, %j) = (%c0, %c0) to (%dim_x, %dim_y) step (%c1, %c1) {
-    %prod = muli %i,  %dim_y : index
-    %val = addi %prod, %j : index
-    %val_i64 = index_cast %val : index to i64
-    %val_f32 = sitofp %val_i64 : i64 to f32
+    %prod = arith.muli %i,  %dim_y : index
+    %val = arith.addi %prod, %j : index
+    %val_i64 = arith.index_cast %val : index to i64
+    %val_f32 = arith.sitofp %val_i64 : i64 to f32
     memref.store %val_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
@@ -29,8 +29,8 @@ func @main() -> () {
 
   // Initialize shape.
   %shape = memref.alloc() : memref<2xindex>
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
   memref.store %c3, %shape[%c0] : memref<2xindex>
   memref.store %c2, %shape[%c1] : memref<2xindex>
 
@@ -43,6 +43,8 @@ func @main() -> () {
     : (memref<2x3xf32>, memref<2xindex>) -> ()
   call @reshape_unranked_memref_to_unranked(%input, %shape)
     : (memref<2x3xf32>, memref<2xindex>) -> ()
+  memref.dealloc %input : memref<2x3xf32>
+  memref.dealloc %shape : memref<2xindex>
   return
 }
 

@@ -35,12 +35,12 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
-                          %argx: tensor<f64>) -> tensor<f64> {
+                          %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%argx: tensor<f64>) {
       ^bb(%a: f64, %x: f64):
-        %0 = addf %x, %a : f64
+        %0 = arith.addf %x, %a : f64
         linalg.yield %0 : f64
     } -> tensor<f64>
     return %0 : tensor<f64>
@@ -52,8 +52,8 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
@@ -79,6 +79,7 @@ module {
 
     // Release the resources.
     memref.dealloc %xdata : memref<f64>
+    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
 
     return
   }

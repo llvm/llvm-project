@@ -3909,8 +3909,8 @@ define { <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld2lane(i16* %A, i16** %ptr
 define { <8 x i16>, <8 x i16> } @test_v8i16_post_reg_ld2lane(i16* %A, i16** %ptr, i64 %inc, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.h { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -3941,8 +3941,8 @@ define { <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld2lane(i16* %A, i16** %ptr
 define { <4 x i16>, <4 x i16> } @test_v4i16_post_reg_ld2lane(i16* %A, i16** %ptr, i64 %inc, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.h { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -3973,8 +3973,8 @@ define { <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld2lane(i32* %A, i32** %ptr
 define { <4 x i32>, <4 x i32> } @test_v4i32_post_reg_ld2lane(i32* %A, i32** %ptr, i64 %inc, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4005,8 +4005,8 @@ define { <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld2lane(i32* %A, i32** %ptr
 define { <2 x i32>, <2 x i32> } @test_v2i32_post_reg_ld2lane(i32* %A, i32** %ptr, i64 %inc, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4037,8 +4037,8 @@ define { <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld2lane(i64* %A, i64** %ptr
 define { <2 x i64>, <2 x i64> } @test_v2i64_post_reg_ld2lane(i64* %A, i64** %ptr, i64 %inc, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4069,8 +4069,8 @@ define { <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld2lane(i64* %A, i64** %ptr
 define { <1 x i64>, <1 x i64> } @test_v1i64_post_reg_ld2lane(i64* %A, i64** %ptr, i64 %inc, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4101,8 +4101,8 @@ define { <4 x float>, <4 x float> } @test_v4f32_post_imm_ld2lane(float* %A, floa
 define { <4 x float>, <4 x float> } @test_v4f32_post_reg_ld2lane(float* %A, float** %ptr, i64 %inc, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4133,8 +4133,8 @@ define { <2 x float>, <2 x float> } @test_v2f32_post_imm_ld2lane(float* %A, floa
 define { <2 x float>, <2 x float> } @test_v2f32_post_reg_ld2lane(float* %A, float** %ptr, i64 %inc, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4165,8 +4165,8 @@ define { <2 x double>, <2 x double> } @test_v2f64_post_imm_ld2lane(double* %A, d
 define { <2 x double>, <2 x double> } @test_v2f64_post_reg_ld2lane(double* %A, double** %ptr, i64 %inc, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -4197,8 +4197,8 @@ define { <1 x double>, <1 x double> } @test_v1f64_post_imm_ld2lane(double* %A, d
 define { <1 x double>, <1 x double> } @test_v1f64_post_reg_ld2lane(double* %A, double** %ptr, i64 %inc, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_ld2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    str x0, [x1]
@@ -5117,8 +5117,8 @@ define i16* @test_v8i16_post_imm_st2(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16
 define i16* @test_v8i16_post_reg_st2(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.8h { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5145,8 +5145,8 @@ define i16* @test_v4i16_post_imm_st2(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16
 define i16* @test_v4i16_post_reg_st2(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st2.4h { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5173,8 +5173,8 @@ define i32* @test_v4i32_post_imm_st2(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32
 define i32* @test_v4i32_post_reg_st2(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.4s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5201,8 +5201,8 @@ define i32* @test_v2i32_post_imm_st2(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32
 define i32* @test_v2i32_post_reg_st2(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st2.2s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5229,8 +5229,8 @@ define i64* @test_v2i64_post_imm_st2(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64
 define i64* @test_v2i64_post_reg_st2(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.2d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5257,8 +5257,8 @@ define i64* @test_v1i64_post_imm_st2(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64
 define i64* @test_v1i64_post_reg_st2(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5285,8 +5285,8 @@ define float* @test_v4f32_post_imm_st2(float* %A, float** %ptr, <4 x float> %B, 
 define float* @test_v4f32_post_reg_st2(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.4s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5313,8 +5313,8 @@ define float* @test_v2f32_post_imm_st2(float* %A, float** %ptr, <2 x float> %B, 
 define float* @test_v2f32_post_reg_st2(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st2.2s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5341,8 +5341,8 @@ define double* @test_v2f64_post_imm_st2(double* %A, double** %ptr, <2 x double> 
 define double* @test_v2f64_post_reg_st2(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.2d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5369,8 +5369,8 @@ define double* @test_v1f64_post_imm_st2(double* %A, double** %ptr, <1 x double> 
 define double* @test_v1f64_post_reg_st2(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -5456,8 +5456,8 @@ define i16* @test_v8i16_post_imm_st3(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16
 define i16* @test_v8i16_post_reg_st3(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.8h { v0, v1, v2 }, [x0], x8
@@ -5486,8 +5486,8 @@ define i16* @test_v4i16_post_imm_st3(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16
 define i16* @test_v4i16_post_reg_st3(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st3.4h { v0, v1, v2 }, [x0], x8
@@ -5516,8 +5516,8 @@ define i32* @test_v4i32_post_imm_st3(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32
 define i32* @test_v4i32_post_reg_st3(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.4s { v0, v1, v2 }, [x0], x8
@@ -5546,8 +5546,8 @@ define i32* @test_v2i32_post_imm_st3(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32
 define i32* @test_v2i32_post_reg_st3(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st3.2s { v0, v1, v2 }, [x0], x8
@@ -5576,8 +5576,8 @@ define i64* @test_v2i64_post_imm_st3(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64
 define i64* @test_v2i64_post_reg_st3(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.2d { v0, v1, v2 }, [x0], x8
@@ -5606,8 +5606,8 @@ define i64* @test_v1i64_post_imm_st3(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64
 define i64* @test_v1i64_post_reg_st3(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
@@ -5636,8 +5636,8 @@ define float* @test_v4f32_post_imm_st3(float* %A, float** %ptr, <4 x float> %B, 
 define float* @test_v4f32_post_reg_st3(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.4s { v0, v1, v2 }, [x0], x8
@@ -5666,8 +5666,8 @@ define float* @test_v2f32_post_imm_st3(float* %A, float** %ptr, <2 x float> %B, 
 define float* @test_v2f32_post_reg_st3(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st3.2s { v0, v1, v2 }, [x0], x8
@@ -5696,8 +5696,8 @@ define double* @test_v2f64_post_imm_st3(double* %A, double** %ptr, <2 x double> 
 define double* @test_v2f64_post_reg_st3(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.2d { v0, v1, v2 }, [x0], x8
@@ -5726,8 +5726,8 @@ define double* @test_v1f64_post_imm_st3(double* %A, double** %ptr, <1 x double> 
 define double* @test_v1f64_post_reg_st3(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
@@ -6191,8 +6191,8 @@ define i16* @test_v8i16_post_imm_st1x2(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i
 define i16* @test_v8i16_post_reg_st1x2(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st1.8h { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6219,8 +6219,8 @@ define i16* @test_v4i16_post_imm_st1x2(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i
 define i16* @test_v4i16_post_reg_st1x2(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.4h { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6247,8 +6247,8 @@ define i32* @test_v4i32_post_imm_st1x2(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i
 define i32* @test_v4i32_post_reg_st1x2(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st1.4s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6275,8 +6275,8 @@ define i32* @test_v2i32_post_imm_st1x2(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i
 define i32* @test_v2i32_post_reg_st1x2(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.2s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6303,8 +6303,8 @@ define i64* @test_v2i64_post_imm_st1x2(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i
 define i64* @test_v2i64_post_reg_st1x2(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st1.2d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6331,8 +6331,8 @@ define i64* @test_v1i64_post_imm_st1x2(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i
 define i64* @test_v1i64_post_reg_st1x2(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6359,8 +6359,8 @@ define float* @test_v4f32_post_imm_st1x2(float* %A, float** %ptr, <4 x float> %B
 define float* @test_v4f32_post_reg_st1x2(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st1.4s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6387,8 +6387,8 @@ define float* @test_v2f32_post_imm_st1x2(float* %A, float** %ptr, <2 x float> %B
 define float* @test_v2f32_post_reg_st1x2(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.2s { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6415,8 +6415,8 @@ define double* @test_v2f64_post_imm_st1x2(double* %A, double** %ptr, <2 x double
 define double* @test_v2f64_post_reg_st1x2(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st1.2d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6443,8 +6443,8 @@ define double* @test_v1f64_post_imm_st1x2(double* %A, double** %ptr, <1 x double
 define double* @test_v1f64_post_reg_st1x2(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st1x2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-NEXT:    ret
@@ -6530,8 +6530,8 @@ define i16* @test_v8i16_post_imm_st1x3(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i
 define i16* @test_v8i16_post_reg_st1x3(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st1.8h { v0, v1, v2 }, [x0], x8
@@ -6560,8 +6560,8 @@ define i16* @test_v4i16_post_imm_st1x3(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i
 define i16* @test_v4i16_post_reg_st1x3(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.4h { v0, v1, v2 }, [x0], x8
@@ -6590,8 +6590,8 @@ define i32* @test_v4i32_post_imm_st1x3(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i
 define i32* @test_v4i32_post_reg_st1x3(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st1.4s { v0, v1, v2 }, [x0], x8
@@ -6620,8 +6620,8 @@ define i32* @test_v2i32_post_imm_st1x3(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i
 define i32* @test_v2i32_post_reg_st1x3(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.2s { v0, v1, v2 }, [x0], x8
@@ -6650,8 +6650,8 @@ define i64* @test_v2i64_post_imm_st1x3(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i
 define i64* @test_v2i64_post_reg_st1x3(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st1.2d { v0, v1, v2 }, [x0], x8
@@ -6680,8 +6680,8 @@ define i64* @test_v1i64_post_imm_st1x3(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i
 define i64* @test_v1i64_post_reg_st1x3(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
@@ -6710,8 +6710,8 @@ define float* @test_v4f32_post_imm_st1x3(float* %A, float** %ptr, <4 x float> %B
 define float* @test_v4f32_post_reg_st1x3(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st1.4s { v0, v1, v2 }, [x0], x8
@@ -6740,8 +6740,8 @@ define float* @test_v2f32_post_imm_st1x3(float* %A, float** %ptr, <2 x float> %B
 define float* @test_v2f32_post_reg_st1x3(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.2s { v0, v1, v2 }, [x0], x8
@@ -6770,8 +6770,8 @@ define double* @test_v2f64_post_imm_st1x3(double* %A, double** %ptr, <2 x double
 define double* @test_v2f64_post_reg_st1x3(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st1.2d { v0, v1, v2 }, [x0], x8
@@ -6800,8 +6800,8 @@ define double* @test_v1f64_post_imm_st1x3(double* %A, double** %ptr, <1 x double
 define double* @test_v1f64_post_reg_st1x3(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st1x3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
@@ -7264,8 +7264,8 @@ define i16* @test_v8i16_post_imm_st2lane(i16* %A, i16** %ptr, <8 x i16> %B, <8 x
 define i16* @test_v8i16_post_reg_st2lane(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.h { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7292,8 +7292,8 @@ define i16* @test_v4i16_post_imm_st2lane(i16* %A, i16** %ptr, <4 x i16> %B, <4 x
 define i16* @test_v4i16_post_reg_st2lane(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.h { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7320,8 +7320,8 @@ define i32* @test_v4i32_post_imm_st2lane(i32* %A, i32** %ptr, <4 x i32> %B, <4 x
 define i32* @test_v4i32_post_reg_st2lane(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7348,8 +7348,8 @@ define i32* @test_v2i32_post_imm_st2lane(i32* %A, i32** %ptr, <2 x i32> %B, <2 x
 define i32* @test_v2i32_post_reg_st2lane(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7376,8 +7376,8 @@ define i64* @test_v2i64_post_imm_st2lane(i64* %A, i64** %ptr, <2 x i64> %B, <2 x
 define i64* @test_v2i64_post_reg_st2lane(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7404,8 +7404,8 @@ define i64* @test_v1i64_post_imm_st2lane(i64* %A, i64** %ptr, <1 x i64> %B, <1 x
 define i64* @test_v1i64_post_reg_st2lane(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7432,8 +7432,8 @@ define float* @test_v4f32_post_imm_st2lane(float* %A, float** %ptr, <4 x float> 
 define float* @test_v4f32_post_reg_st2lane(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7460,8 +7460,8 @@ define float* @test_v2f32_post_imm_st2lane(float* %A, float** %ptr, <2 x float> 
 define float* @test_v2f32_post_reg_st2lane(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7488,8 +7488,8 @@ define double* @test_v2f64_post_imm_st2lane(double* %A, double** %ptr, <2 x doub
 define double* @test_v2f64_post_reg_st2lane(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7516,8 +7516,8 @@ define double* @test_v1f64_post_imm_st2lane(double* %A, double** %ptr, <1 x doub
 define double* @test_v1f64_post_reg_st2lane(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st2lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-NEXT:    ret
@@ -7603,8 +7603,8 @@ define i16* @test_v8i16_post_imm_st3lane(i16* %A, i16** %ptr, <8 x i16> %B, <8 x
 define i16* @test_v8i16_post_reg_st3lane(i16* %A, i16** %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v8i16_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.h { v0, v1, v2 }[0], [x0], x8
@@ -7633,8 +7633,8 @@ define i16* @test_v4i16_post_imm_st3lane(i16* %A, i16** %ptr, <4 x i16> %B, <4 x
 define i16* @test_v4i16_post_reg_st3lane(i16* %A, i16** %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i16_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.h { v0, v1, v2 }[0], [x0], x8
@@ -7663,8 +7663,8 @@ define i32* @test_v4i32_post_imm_st3lane(i32* %A, i32** %ptr, <4 x i32> %B, <4 x
 define i32* @test_v4i32_post_reg_st3lane(i32* %A, i32** %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4i32_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
@@ -7693,8 +7693,8 @@ define i32* @test_v2i32_post_imm_st3lane(i32* %A, i32** %ptr, <2 x i32> %B, <2 x
 define i32* @test_v2i32_post_reg_st3lane(i32* %A, i32** %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i32_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
@@ -7723,8 +7723,8 @@ define i64* @test_v2i64_post_imm_st3lane(i64* %A, i64** %ptr, <2 x i64> %B, <2 x
 define i64* @test_v2i64_post_reg_st3lane(i64* %A, i64** %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2i64_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
@@ -7753,8 +7753,8 @@ define i64* @test_v1i64_post_imm_st3lane(i64* %A, i64** %ptr, <1 x i64> %B, <1 x
 define i64* @test_v1i64_post_reg_st3lane(i64* %A, i64** %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1i64_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
@@ -7783,8 +7783,8 @@ define float* @test_v4f32_post_imm_st3lane(float* %A, float** %ptr, <4 x float> 
 define float* @test_v4f32_post_reg_st3lane(float* %A, float** %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v4f32_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
@@ -7813,8 +7813,8 @@ define float* @test_v2f32_post_imm_st3lane(float* %A, float** %ptr, <2 x float> 
 define float* @test_v2f32_post_reg_st3lane(float* %A, float** %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f32_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
@@ -7843,8 +7843,8 @@ define double* @test_v2f64_post_imm_st3lane(double* %A, double** %ptr, <2 x doub
 define double* @test_v2f64_post_reg_st3lane(double* %A, double** %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v2f64_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
@@ -7873,8 +7873,8 @@ define double* @test_v1f64_post_imm_st3lane(double* %A, double** %ptr, <1 x doub
 define double* @test_v1f64_post_reg_st3lane(double* %A, double** %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-LABEL: test_v1f64_post_reg_st3lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    lsl x8, x2, #3
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
@@ -8721,8 +8721,8 @@ define <4 x i16> @test_v4i16_post_imm_ld1lane(i16* %bar, i16** %ptr, <4 x i16> %
 define <4 x i16> @test_v4i16_post_reg_ld1lane(i16* %bar, i16** %ptr, i64 %inc, <4 x i16> %A) {
 ; CHECK-LABEL: test_v4i16_post_reg_ld1lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.h { v0 }[1], [x0], x8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
@@ -8779,8 +8779,8 @@ define <2 x i32> @test_v2i32_post_imm_ld1lane(i32* %bar, i32** %ptr, <2 x i32> %
 define <2 x i32> @test_v2i32_post_reg_ld1lane(i32* %bar, i32** %ptr, i64 %inc, <2 x i32> %A) {
 ; CHECK-LABEL: test_v2i32_post_reg_ld1lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], x8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
@@ -8864,8 +8864,8 @@ define <2 x float> @test_v2f32_post_imm_ld1lane(float* %bar, float** %ptr, <2 x 
 define <2 x float> @test_v2f32_post_reg_ld1lane(float* %bar, float** %ptr, i64 %inc, <2 x float> %A) {
 ; CHECK-LABEL: test_v2f32_post_reg_ld1lane:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    lsl x8, x2, #2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], x8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
@@ -8912,8 +8912,8 @@ define <4 x float> @test_v4f32_post_reg_ld1lane_dep_vec_on_load(float* %bar, flo
 ; CHECK-NEXT:    str q0, [x3]
 ; CHECK-NEXT:    ldr q0, [x4]
 ; CHECK-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp1 = load float, float* %bar
   store <4 x float> %vec, <4 x float>* %dep_ptr_1, align 16
@@ -8934,8 +8934,8 @@ define <4 x float> @test_v4f32_post_reg_ld1lane_dep_vec_on_load(float* %bar, flo
 define <4 x i16> @test_v4i16_post_reg_ld1lane_forced_narrow(i16* %bar, i16** %ptr, i64 %inc, <4 x i16> %A, <2 x i32>* %d) {
 ; CHECK-LABEL: test_v4i16_post_reg_ld1lane_forced_narrow:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    lsl x8, x2, #1
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.h { v0 }[1], [x0], x8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
@@ -8960,11 +8960,11 @@ declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 define void @test_ld1lane_build(i32* %ptr0, i32* %ptr1, i32* %ptr2, i32* %ptr3, <2 x i32>* %out) {
 ; CHECK-LABEL: test_ld1lane_build:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldr s1, [x2]
-; CHECK-NEXT:    ld1.s { v0 }[1], [x1]
-; CHECK-NEXT:    ld1.s { v1 }[1], [x3]
-; CHECK-NEXT:    sub.2s v0, v0, v1
+; CHECK-NEXT:    ldr s0, [x2]
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    ld1.s { v0 }[1], [x3]
+; CHECK-NEXT:    ld1.s { v1 }[1], [x1]
+; CHECK-NEXT:    sub.2s v0, v1, v0
 ; CHECK-NEXT:    str d0, [x4]
 ; CHECK-NEXT:    ret
   %load0 = load i32, i32* %ptr0, align 4
@@ -9096,8 +9096,8 @@ define i8 @load_single_extract_variable_index_i8(<16 x i8>* %A, i32 %idx) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    bfxil x8, x1, #0, #4
 ; CHECK-NEXT:    str q0, [sp]
@@ -9114,9 +9114,9 @@ define i16 @load_single_extract_variable_index_i16(<8 x i16>* %A, i32 %idx) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    and x8, x1, #0x7
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    bfi x9, x8, #1, #3
 ; CHECK-NEXT:    str q0, [sp]
@@ -9143,18 +9143,12 @@ define i32 @load_single_extract_variable_index_i32(<4 x i32>* %A, i32 %idx) {
 define i32 @load_single_extract_variable_index_v3i32_small_align(<3 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_v3i32_small_align:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ld1.s { v0 }[2], [x8]
-; CHECK-NEXT:    and x8, x1, #0x3
-; CHECK-NEXT:    bfi x9, x8, #2, #2
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldr w0, [x9]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    cmp x9, #2
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %lv = load <3 x i32>, <3 x i32>* %A, align 2
   %e = extractelement <3 x i32> %lv, i32 %idx
@@ -9165,10 +9159,10 @@ define i32 @load_single_extract_variable_index_v3i32_default_align(<3 x i32>* %A
 ; CHECK-LABEL: load_single_extract_variable_index_v3i32_default_align:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
-; CHECK-NEXT:    cmp x8, #2
-; CHECK-NEXT:    mov w9, #2
-; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    cmp x9, #2
+; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %lv = load <3 x i32>, <3 x i32>* %A

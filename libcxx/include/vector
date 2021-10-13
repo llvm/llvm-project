@@ -302,33 +302,18 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <bool>
-class _LIBCPP_TEMPLATE_VIS __vector_base_common
-{
-protected:
-    _LIBCPP_INLINE_VISIBILITY __vector_base_common() {}
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
+struct __vector_base_common;
+
+template <>
+struct __vector_base_common<true> {
+    // Both are defined in vector.cpp
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
 };
-
-template <bool __b>
-void
-__vector_base_common<__b>::__throw_length_error() const
-{
-    _VSTD::__throw_length_error("vector");
-}
-
-template <bool __b>
-void
-__vector_base_common<__b>::__throw_out_of_range() const
-{
-    _VSTD::__throw_out_of_range("vector");
-}
-
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_common<true>)
 
 template <class _Tp, class _Allocator>
 class __vector_base
-    : protected __vector_base_common<true>
+    : protected __vector_base_common<true> // This base class is historical, but it needs to remain for ABI compatibility
 {
 public:
     typedef _Allocator                               allocator_type;
@@ -1421,7 +1406,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>&
 vector<_Tp, _Allocator>::operator=(const vector& __x)
 {
-    if (this != &__x)
+    if (this != _VSTD::addressof(__x))
     {
         __base::__copy_assign_alloc(__x);
         assign(__x.__begin_, __x.__end_);
@@ -2874,7 +2859,7 @@ template <class _Allocator>
 vector<bool, _Allocator>&
 vector<bool, _Allocator>::operator=(const vector& __v)
 {
-    if (this != &__v)
+    if (this != _VSTD::addressof(__v))
     {
         __copy_assign_alloc(__v);
         if (__v.__size_)

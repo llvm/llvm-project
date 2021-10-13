@@ -338,7 +338,9 @@ collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) const
 }
 
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>)
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>)
+#endif
 
 // template <class CharT> class collate_byname;
 
@@ -363,6 +365,7 @@ protected:
     virtual string_type do_transform(const char_type* __lo, const char_type* __hi) const;
 };
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS collate_byname<wchar_t>
     : public collate<wchar_t>
@@ -382,6 +385,7 @@ protected:
                            const char_type* __lo2, const char_type* __hi2) const;
     virtual string_type do_transform(const char_type* __lo, const char_type* __hi) const;
 };
+#endif
 
 template <class _CharT, class _Traits, class _Allocator>
 bool
@@ -516,6 +520,7 @@ public:
 
 template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype;
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS ctype<wchar_t>
     : public locale::facet,
@@ -617,6 +622,7 @@ protected:
     virtual char do_narrow(char_type, char __dfault) const;
     virtual const char_type* do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const;
 };
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <>
 class _LIBCPP_TYPE_VIS ctype<char>
@@ -761,6 +767,7 @@ protected:
     virtual const char_type* do_tolower(char_type* __low, const char_type* __high) const;
 };
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS ctype_byname<wchar_t>
     : public ctype<wchar_t>
@@ -786,6 +793,7 @@ protected:
     virtual char do_narrow(char_type, char __dfault) const;
     virtual const char_type* do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const;
 };
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <class _CharT>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -992,6 +1000,7 @@ protected:
 
 // template <> class codecvt<wchar_t, char, mbstate_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS codecvt<wchar_t, char, mbstate_t>
     : public locale::facet,
@@ -1072,6 +1081,7 @@ protected:
     virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const;
     virtual int do_max_length() const  _NOEXCEPT;
 };
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // template <> class codecvt<char16_t, char, mbstate_t> // deprecated in C++20
 
@@ -1450,7 +1460,9 @@ codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname()
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
+#endif
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>) // deprecated in C++20
 _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>) // deprecated in C++20
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
@@ -1681,6 +1693,7 @@ protected:
     string __grouping_;
 };
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS numpunct<wchar_t>
     : public locale::facet
@@ -1711,6 +1724,7 @@ protected:
     char_type __thousands_sep_;
     string __grouping_;
 };
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // template <class charT> class numpunct_byname
 
@@ -1734,6 +1748,7 @@ private:
     void __init(const char*);
 };
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 class _LIBCPP_TYPE_VIS numpunct_byname<wchar_t>
 : public numpunct<wchar_t>
@@ -1751,6 +1766,7 @@ protected:
 private:
     void __init(const char*);
 };
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 _LIBCPP_END_NAMESPACE_STD
 

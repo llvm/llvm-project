@@ -494,6 +494,7 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
           MadeAnyChanges = true;
           PN.setIncomingValue(IncomingValIdx,
                               ExitVal->getIncomingValue(PreheaderIdx));
+          SE->forgetValue(&PN);
         }
       }
     }
@@ -1274,9 +1275,9 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       // Skip debug info intrinsics.
       do {
         --I;
-      } while (isa<DbgInfoIntrinsic>(I) && I != Preheader->begin());
+      } while (I->isDebugOrPseudoInst() && I != Preheader->begin());
 
-      if (isa<DbgInfoIntrinsic>(I) && I == Preheader->begin())
+      if (I->isDebugOrPseudoInst() && I == Preheader->begin())
         Done = true;
     } else {
       Done = true;

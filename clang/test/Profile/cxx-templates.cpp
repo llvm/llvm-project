@@ -10,8 +10,10 @@
 // RUN: FileCheck --input-file=%tuse -check-prefix=T0USE -check-prefix=ALL %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=T100USE -check-prefix=ALL %s
 
-// T0GEN: @[[T0C:__profc__Z4loopILj0EEvv]] = linkonce_odr {{(hidden|dso_local)}} global [2 x i64] zeroinitializer
-// T100GEN: @[[T100C:__profc__Z4loopILj100EEvv]] = linkonce_odr {{(hidden|dso_local)}} global [2 x i64] zeroinitializer
+// The linkage can be target dependent, so accept all linkage here,
+// the linkage tests for different target are in llvm/test/Instrumentation/InstrProfiling/profiling.ll
+// T0GEN: @[[T0C:__profc__Z4loopILj0EEvv]] = {{.*}} global [2 x i64] zeroinitializer
+// T100GEN: @[[T100C:__profc__Z4loopILj100EEvv]] = {{.*}} global [2 x i64] zeroinitializer
 
 // T0GEN-LABEL: define linkonce_odr {{.*}}void @_Z4loopILj0EEvv()
 // T0USE-LABEL: define linkonce_odr {{.*}}void @_Z4loopILj0EEvv()

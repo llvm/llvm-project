@@ -37,14 +37,14 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w8, w0
 ; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    mov w10, #32767
-; CHECK-NEXT:    add w8, w8, w9, sxth
-; CHECK-NEXT:    cmp w8, w10
-; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
+; CHECK-NEXT:    sxth w10, w0
+; CHECK-NEXT:    mov w8, #32767
+; CHECK-NEXT:    add w9, w10, w9, sxth
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    csel w8, w9, w8, lt
 ; CHECK-NEXT:    mov w9, #-32768
+; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i16 %y, %z
@@ -55,14 +55,14 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w8, w0
 ; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    add w8, w8, w9, sxtb
-; CHECK-NEXT:    mov w10, #127
-; CHECK-NEXT:    cmp w8, #127
-; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #128
+; CHECK-NEXT:    sxtb w10, w0
+; CHECK-NEXT:    mov w8, #127
+; CHECK-NEXT:    add w9, w10, w9, sxtb
+; CHECK-NEXT:    cmp w9, #127
+; CHECK-NEXT:    csel w8, w9, w8, lt
 ; CHECK-NEXT:    mov w9, #-128
+; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i8 %y, %z
@@ -74,14 +74,14 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-LABEL: func4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    sbfx w8, w0, #0, #4
+; CHECK-NEXT:    sbfx w10, w0, #0, #4
+; CHECK-NEXT:    mov w8, #7
 ; CHECK-NEXT:    lsl w9, w9, #28
-; CHECK-NEXT:    add w8, w8, w9, asr #28
-; CHECK-NEXT:    mov w10, #7
-; CHECK-NEXT:    cmp w8, #7
-; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #8
+; CHECK-NEXT:    add w9, w10, w9, asr #28
+; CHECK-NEXT:    cmp w9, #7
+; CHECK-NEXT:    csel w8, w9, w8, lt
 ; CHECK-NEXT:    mov w9, #-8
+; CHECK-NEXT:    cmn w8, #8
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i4 %y, %z

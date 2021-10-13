@@ -93,7 +93,7 @@ bool IsConstantExprHelper::IsConstantStructureConstructorComponent(
 }
 
 bool IsConstantExprHelper::operator()(const ProcedureRef &call) const {
-  // LBOUND, UBOUND, and SIZE with DIM= arguments will have been reritten
+  // LBOUND, UBOUND, and SIZE with DIM= arguments will have been rewritten
   // into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
     if (intrinsic->name == "kind" ||
@@ -626,8 +626,12 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
-    if (ultimate.attrs().test(semantics::Attr::CONTIGUOUS) ||
-        ultimate.Rank() == 0) {
+    if (ultimate.attrs().test(semantics::Attr::CONTIGUOUS)) {
+      return true;
+    } else if (ultimate.Rank() == 0) {
+      // Extension: accept scalars as a degenerate case of
+      // simple contiguity to allow their use in contexts like
+      // data targets in pointer assignments with remapping.
       return true;
     } else if (semantics::IsPointer(ultimate)) {
       return false;

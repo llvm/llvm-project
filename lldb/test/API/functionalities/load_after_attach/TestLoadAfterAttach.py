@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
     def test_load_after_attach(self):
@@ -17,18 +18,19 @@ class TestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         lib = self.getBuildArtifact(lib_name)
 
+        target = self.dbg.CreateTarget(exe)
+        environment = self.registerSharedLibrariesWithTarget(target, ["lib_b"])
+
         # Spawn a new process.
         # use realpath to workaround llvm.org/pr48376
         # Pass path to solib for dlopen to properly locate the library.
-        popen = self.spawnSubprocess(os.path.realpath(exe), args = [os.path.realpath(lib)])
-        pid = popen.pid
+        popen = self.spawnSubprocess(os.path.realpath(exe), extra_env=environment)
 
         # Attach to the spawned process.
-        self.runCmd("process attach -p " + str(pid))
-
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-        self.assertTrue(process, PROCESS_IS_VALID)
+        error = lldb.SBError()
+        process = target.AttachToProcessWithID(self.dbg.GetListener(),
+                popen.pid, error)
+        self.assertSuccess(error)
 
         # Continue until first breakpoint.
         breakpoint1 = self.target().BreakpointCreateBySourceRegex(
@@ -36,13 +38,6 @@ class TestCase(TestBase):
         self.assertEqual(breakpoint1.GetNumResolvedLocations(), 1)
         stopped_threads = lldbutil.continue_to_breakpoint(self.process(), breakpoint1)
         self.assertEqual(len(stopped_threads), 1)
-
-        # Check that image list does not contain liblib_b before dlopen.
-        self.match(
-                "image list",
-                patterns = [lib_name],
-                matching = False,
-                msg = lib_name + " should not have been in image list")
 
         # Change a variable to escape the loop
         self.runCmd("expression main_thread_continue = 1")

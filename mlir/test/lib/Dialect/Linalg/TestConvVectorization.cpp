@@ -93,7 +93,7 @@ void TestConvVectorization::runOnOperation() {
   // Post staged patterns transforms
   //===--------------------------------------------------------------------===//
 
-  VectorTransformsOptions vectorTransformsOptions{
+  VectorTransformsOptions vectorTransformOptions{
       VectorContractLowering::Dot, VectorTransposeLowering::EltWise};
 
   RewritePatternSet vectorTransferPatterns(context);
@@ -101,7 +101,7 @@ void TestConvVectorization::runOnOperation() {
   // supported as can be seen in splitFullAndPartialTransferPrecondition,
   // VectorTransforms.cpp
   vectorTransferPatterns.add<VectorTransferFullPartialRewriter>(
-      context, vectorTransformsOptions);
+      context, vectorTransformOptions);
   (void)applyPatternsAndFoldGreedily(module, std::move(vectorTransferPatterns));
 
   // Programmatic controlled lowering of linalg.copy and linalg.fill.
@@ -112,10 +112,13 @@ void TestConvVectorization::runOnOperation() {
 
   // Programmatic controlled lowering of vector.contract only.
   RewritePatternSet vectorContractLoweringPatterns(context);
+  populateVectorBroadcastLoweringPatterns(vectorContractLoweringPatterns);
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
-                                         vectorTransformsOptions);
+                                         vectorTransformOptions);
+  populateVectorMaskOpLoweringPatterns(vectorContractLoweringPatterns);
+  populateVectorShapeCastLoweringPatterns(vectorContractLoweringPatterns);
   populateVectorTransposeLoweringPatterns(vectorContractLoweringPatterns,
-                                          vectorTransformsOptions);
+                                          vectorTransformOptions);
   (void)applyPatternsAndFoldGreedily(module,
                                      std::move(vectorContractLoweringPatterns));
 

@@ -24,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -255,7 +255,8 @@ public:
                                         sys::Memory::MF_WRITE,
                                         EC);
     if (!MB.base())
-      report_fatal_error("Can't allocate enough memory: " + EC.message());
+      report_fatal_error(Twine("Can't allocate enough memory: ") +
+                         EC.message());
 
     PreallocSlab = MB;
     UsePreallocation = true;
@@ -312,7 +313,8 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
                                       sys::Memory::MF_WRITE,
                                       EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + EC.message());
+    report_fatal_error(Twine("MemoryManager allocation failed: ") +
+                       EC.message());
   FunctionMemory.push_back(SectionInfo(SectionName, MB, SectionID));
   return (uint8_t*)MB.base();
 }
@@ -340,7 +342,8 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
                                       sys::Memory::MF_WRITE,
                                       EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + EC.message());
+    report_fatal_error(Twine("MemoryManager allocation failed: ") +
+                       EC.message());
   DataMemory.push_back(SectionInfo(SectionName, MB, SectionID));
   return (uint8_t*)MB.base();
 }
@@ -395,10 +398,10 @@ static void ErrorAndExit(const Twine &Msg) {
 static void loadDylibs() {
   for (const std::string &Dylib : Dylibs) {
     if (!sys::fs::is_regular_file(Dylib))
-      report_fatal_error("Dylib not found: '" + Dylib + "'.");
+      report_fatal_error(Twine("Dylib not found: '") + Dylib + "'.");
     std::string ErrMsg;
     if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
-      report_fatal_error("Error loading '" + Dylib + "': " + ErrMsg);
+      report_fatal_error(Twine("Error loading '") + Dylib + "': " + ErrMsg);
   }
 }
 
@@ -757,15 +760,15 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
     size_t EqualsIdx = Mapping.find_first_of('=');
 
     if (EqualsIdx == StringRef::npos)
-      report_fatal_error("Invalid dummy symbol specification '" + Mapping +
-                         "'. Should be '<symbol name>=<addr>'");
+      report_fatal_error(Twine("Invalid dummy symbol specification '") +
+                         Mapping + "'. Should be '<symbol name>=<addr>'");
 
     std::string Symbol = Mapping.substr(0, EqualsIdx);
     std::string AddrStr = Mapping.substr(EqualsIdx + 1);
 
     uint64_t Addr;
     if (StringRef(AddrStr).getAsInteger(0, Addr))
-      report_fatal_error("Invalid symbol mapping '" + Mapping + "'.");
+      report_fatal_error(Twine("Invalid symbol mapping '") + Mapping + "'.");
 
     MemMgr.addDummySymbol(Symbol, Addr);
   }
@@ -1021,7 +1024,7 @@ int main(int argc, char **argv) {
 
   Timers = ShowTimes ? std::make_unique<RTDyldTimers>() : nullptr;
 
-  int Result;
+  int Result = 0;
   switch (Action) {
   case AC_Execute:
     Result = executeInput();

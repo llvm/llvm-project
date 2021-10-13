@@ -35,12 +35,6 @@
 #include <span>
 #endif
 
-#if TEST_STD_VER >= 11
-#define DELETE_FUNCTION = delete
-#else
-#define DELETE_FUNCTION
-#endif
-
 class T;  // incomplete
 
 class my_input_iterator
@@ -231,10 +225,12 @@ int main(int, char**)
     static_assert(( std::__is_cpp17_contiguous_iterator<std::string::const_iterator>        ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::string::reverse_iterator>      ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::string::const_reverse_iterator>::value), "");
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     static_assert(( std::__is_cpp17_contiguous_iterator<std::wstring::iterator>              ::value), "");
     static_assert(( std::__is_cpp17_contiguous_iterator<std::wstring::const_iterator>        ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::wstring::reverse_iterator>      ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::wstring::const_reverse_iterator>::value), "");
+#endif
 
 //  deque is random-access but not contiguous
     static_assert((!std::__is_cpp17_contiguous_iterator<std::deque<int>::iterator>                   ::value), "");

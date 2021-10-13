@@ -69,7 +69,9 @@ void TestHelper<CharT, 4>::test() {
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   TestHelper<wchar_t>::test();
+#endif
   TestHelper<char16_t>::test();
   TestHelper<char32_t>::test();
   return 0;

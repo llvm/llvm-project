@@ -221,7 +221,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     ///     ins(%6, %6 : tensor<i32>, tensor<i32>)
     ///     outs(%7 : tensor<i32>) {
     ///     ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):
-    ///       %9 = addi %arg0, %arg1 : i32
+    ///       %9 = arith.addi %arg0, %arg1 : i32
     ///       linalg.yield %9 : i32
     ///   } -> tensor<i32>
     ///   %10 = "some.op"(%9)

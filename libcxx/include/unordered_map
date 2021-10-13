@@ -1056,7 +1056,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
-        if (this != &__u) {
+        if (this != _VSTD::addressof(__u)) {
             __table_.clear();
             __table_.hash_function() = __u.__table_.hash_function();
             __table_.key_eq() = __u.__table_.key_eq();
@@ -1448,13 +1448,13 @@ public:
 #if _LIBCPP_DEBUG_LEVEL == 2
 
     bool __dereferenceable(const const_iterator* __i) const
-        {return __table_.__dereferenceable(&__i->__i_);}
+        {return __table_.__dereferenceable(_VSTD::addressof(__i->__i_));}
     bool __decrementable(const const_iterator* __i) const
-        {return __table_.__decrementable(&__i->__i_);}
+        {return __table_.__decrementable(_VSTD::addressof(__i->__i_));}
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const
-        {return __table_.__addable(&__i->__i_, __n);}
+        {return __table_.__addable(_VSTD::addressof(__i->__i_), __n);}
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
-        {return __table_.__addable(&__i->__i_, __n);}
+        {return __table_.__addable(_VSTD::addressof(__i->__i_), __n);}
 
 #endif // _LIBCPP_DEBUG_LEVEL == 2
 
@@ -1988,7 +1988,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
-        if (this != &__u) {
+        if (this != _VSTD::addressof(__u)) {
             __table_.clear();
             __table_.hash_function() = __u.__table_.hash_function();
             __table_.key_eq() = __u.__table_.key_eq();
@@ -2250,13 +2250,13 @@ public:
 #if _LIBCPP_DEBUG_LEVEL == 2
 
     bool __dereferenceable(const const_iterator* __i) const
-        {return __table_.__dereferenceable(&__i->__i_);}
+        {return __table_.__dereferenceable(_VSTD::addressof(__i->__i_));}
     bool __decrementable(const const_iterator* __i) const
-        {return __table_.__decrementable(&__i->__i_);}
+        {return __table_.__decrementable(_VSTD::addressof(__i->__i_));}
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const
-        {return __table_.__addable(&__i->__i_, __n);}
+        {return __table_.__addable(_VSTD::addressof(__i->__i_), __n);}
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
-        {return __table_.__addable(&__i->__i_, __n);}
+        {return __table_.__addable(_VSTD::addressof(__i->__i_), __n);}
 
 #endif // _LIBCPP_DEBUG_LEVEL == 2
 

@@ -8,10 +8,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 // RUN:    %p/Inputs/icf-non-mergeable.s -o %t2
 
-// RUN: ld.lld %t1 %t2 -o /dev/null --icf=all --verbose 2>&1 | FileCheck %s
-
-// CHECK-NOT: selected section '.text.f1'
-// CHECK-NOT:   removing identical section '.text.f2'
+// RUN: ld.lld %t1 %t2 -o /dev/null --icf=all --print-icf-sections | count 0
 
 .globl _start, f1, f2, d1, d2
 _start:

@@ -2050,6 +2050,13 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     ReturnStmts.push_back(S->getBeginLoc());
     return true;
 
+  case Stmt::AttributedStmtClass:
+    // Attributes on a statement don't affect its formal kind and hence don't
+    // affect its validity in a constexpr function.
+    return CheckConstexprFunctionStmt(SemaRef, Dcl,
+                                      cast<AttributedStmt>(S)->getSubStmt(),
+                                      ReturnStmts, Cxx1yLoc, Cxx2aLoc, Kind);
+
   case Stmt::CompoundStmtClass: {
     // C++1y allows compound-statements.
     if (!Cxx1yLoc.isValid())
@@ -2063,11 +2070,6 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     }
     return true;
   }
-
-  case Stmt::AttributedStmtClass:
-    if (!Cxx1yLoc.isValid())
-      Cxx1yLoc = S->getBeginLoc();
-    return true;
 
   case Stmt::IfStmtClass: {
     // C++1y allows if-statements.
@@ -5882,6 +5884,7 @@ struct CheckAbstractUsage {
     if (CT != Info.AbstractType) return;
 
     // It matched; do some magic.
+    // FIXME: These should be at most warnings. See P0929R2, CWG1640, CWG1646.
     if (Sel == Sema::AbstractArrayType) {
       Info.S.Diag(Ctx->getLocation(), diag::err_array_of_abstract_type)
         << T << TL.getSourceRange();
@@ -5900,19 +5903,31 @@ void AbstractUsageInfo::CheckType(const NamedDecl *D, TypeLoc TL,
 
 }
 
-/// Check for invalid uses of an abstract type in a method declaration.
+/// Check for invalid uses of an abstract type in a function declaration.
 static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
-                                    CXXMethodDecl *MD) {
+                                    FunctionDecl *FD) {
   // No need to do the check on definitions, which require that
   // the return/param types be complete.
-  if (MD->doesThisDeclarationHaveABody())
+  if (FD->doesThisDeclarationHaveABody())
     return;
 
   // For safety's sake, just ignore it if we don't have type source
   // information.  This should never happen for non-implicit methods,
   // but...
-  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
-    Info.CheckType(MD, TSI->getTypeLoc(), Sema::AbstractNone);
+  if (TypeSourceInfo *TSI = FD->getTypeSourceInfo())
+    Info.CheckType(FD, TSI->getTypeLoc(), Sema::AbstractNone);
+}
+
+/// Check for invalid uses of an abstract type in a variable0 declaration.
+static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
+                                    VarDecl *VD) {
+  // No need to do the check on definitions, which require that
+  // the type is complete.
+  if (VD->isThisDeclarationADefinition())
+    return;
+
+  Info.CheckType(VD, VD->getTypeSourceInfo()->getTypeLoc(),
+                 Sema::AbstractVariableType);
 }
 
 /// Check for invalid uses of an abstract type within a class definition.
@@ -5921,29 +5936,32 @@ static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
   for (auto *D : RD->decls()) {
     if (D->isImplicit()) continue;
 
-    // Methods and method templates.
-    if (isa<CXXMethodDecl>(D)) {
-      CheckAbstractClassUsage(Info, cast<CXXMethodDecl>(D));
-    } else if (isa<FunctionTemplateDecl>(D)) {
-      FunctionDecl *FD = cast<FunctionTemplateDecl>(D)->getTemplatedDecl();
-      CheckAbstractClassUsage(Info, cast<CXXMethodDecl>(FD));
+    // Step through friends to the befriended declaration.
+    if (auto *FD = dyn_cast<FriendDecl>(D)) {
+      D = FD->getFriendDecl();
+      if (!D) continue;
+    }
+
+    // Functions and function templates.
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      CheckAbstractClassUsage(Info, FD);
+    } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D)) {
+      CheckAbstractClassUsage(Info, FTD->getTemplatedDecl());
 
     // Fields and static variables.
-    } else if (isa<FieldDecl>(D)) {
-      FieldDecl *FD = cast<FieldDecl>(D);
+    } else if (auto *FD = dyn_cast<FieldDecl>(D)) {
       if (TypeSourceInfo *TSI = FD->getTypeSourceInfo())
         Info.CheckType(FD, TSI->getTypeLoc(), Sema::AbstractFieldType);
-    } else if (isa<VarDecl>(D)) {
-      VarDecl *VD = cast<VarDecl>(D);
-      if (TypeSourceInfo *TSI = VD->getTypeSourceInfo())
-        Info.CheckType(VD, TSI->getTypeLoc(), Sema::AbstractVariableType);
+    } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+      CheckAbstractClassUsage(Info, VD);
+    } else if (auto *VTD = dyn_cast<VarTemplateDecl>(D)) {
+      CheckAbstractClassUsage(Info, VTD->getTemplatedDecl());
 
     // Nested classes and class templates.
-    } else if (isa<CXXRecordDecl>(D)) {
-      CheckAbstractClassUsage(Info, cast<CXXRecordDecl>(D));
-    } else if (isa<ClassTemplateDecl>(D)) {
-      CheckAbstractClassUsage(Info,
-                             cast<ClassTemplateDecl>(D)->getTemplatedDecl());
+    } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+      CheckAbstractClassUsage(Info, RD);
+    } else if (auto *CTD = dyn_cast<ClassTemplateDecl>(D)) {
+      CheckAbstractClassUsage(Info, CTD->getTemplatedDecl());
     }
   }
 }
@@ -8202,7 +8220,7 @@ private:
     if (ReturnFalse.isInvalid())
       return StmtError();
 
-    return S.ActOnIfStmt(Loc, false, Loc, nullptr,
+    return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, nullptr,
                          S.ActOnCondition(nullptr, Loc, NotCond.get(),
                                           Sema::ConditionKind::Boolean),
                          Loc, ReturnFalse.get(), SourceLocation(), nullptr);
@@ -8357,8 +8375,8 @@ private:
         return StmtError();
 
       // if (...)
-      return S.ActOnIfStmt(Loc, /*IsConstexpr=*/false, Loc, InitStmt, Cond, Loc,
-                           ReturnStmt.get(),
+      return S.ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, InitStmt, Cond,
+                           Loc, ReturnStmt.get(),
                            /*ElseLoc=*/SourceLocation(), /*Else=*/nullptr);
     }
 

@@ -237,6 +237,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; GFX900-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; GFX900-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
+  ; GFX900-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; GFX900-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX900-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; GFX900-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX900-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX900-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -268,10 +272,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX900-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX900-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX900-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
-  ; GFX900-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX900-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; GFX900-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -323,6 +323,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; GFX908-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; GFX908-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
+  ; GFX908-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; GFX908-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX908-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; GFX908-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX908-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX908-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -354,10 +358,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX908-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX908-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX908-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
-  ; GFX908-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX908-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; GFX908-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -453,6 +453,10 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; GFX900-NEXT:   [[COPY33:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
+  ; GFX900-NEXT:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; GFX900-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX900-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
+  ; GFX900-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX900-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX900-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -484,10 +488,6 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX900-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX900-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX900-NEXT:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
-  ; GFX900-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX900-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
-  ; GFX900-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900-NEXT:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
   ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)
@@ -579,6 +579,10 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; GFX908-NEXT:   [[COPY33:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
+  ; GFX908-NEXT:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; GFX908-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX908-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
+  ; GFX908-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX908-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX908-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -610,10 +614,6 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX908-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX908-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX908-NEXT:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
-  ; GFX908-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX908-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
-  ; GFX908-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908-NEXT:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
   ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)

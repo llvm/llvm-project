@@ -18,7 +18,7 @@
 # LINES32:       Inputs/basic32.o:	file format aixcoff-rs6000
 # LINES32:       Disassembly of section .text:
 # LINES32:       00000000 <.text>:
-# LINES32:       ; main():
+# LINES32:       ; .main():
 # LINES32-NEXT:  ; /basic.c:1
 # LINES32-NEXT:         0: 38 60 00 00  	li 3, 0
 # LINES32-NEXT:  ; /basic.c:3
@@ -35,7 +35,7 @@
 # LINES64:       Inputs/basic64.o:	file format aix5coff64-rs6000
 # LINES64:       Disassembly of section .text:
 # LINES64:       0000000000000000 <.main>:
-# LINES64:       ; main():
+# LINES64:       ; .main():
 # LINES64-NEXT:  ; /basic.c:1
 # LINES64-NEXT:         0: 38 60 00 00  	li 3, 0
 # LINES64-NEXT:  ; /basic.c:3

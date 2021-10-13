@@ -32,7 +32,9 @@ add_libc_unittest(
     getenv_and_setenv_test.cpp
   DEPENDS
     libc.src.fenv.fegetenv
+    libc.src.fenv.fegetround
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetround
     libc.src.__support.FPUtil.fputil
 )
 

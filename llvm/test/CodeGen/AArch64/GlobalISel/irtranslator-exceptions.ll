@@ -101,7 +101,6 @@ define void @test_invoke_varargs() personality i8* bitcast (i32 (...)* @__gxx_pe
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $x0 = COPY [[C]](p0)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
@@ -110,6 +109,7 @@ define void @test_invoke_varargs() personality i8* bitcast (i32 (...)* @__gxx_pe
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
   ; CHECK-NEXT:   G_STORE [[C2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack + 8, align 1)
+  ; CHECK-NEXT:   $x0 = COPY [[C]](p0)
   ; CHECK-NEXT:   BL @printf, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >

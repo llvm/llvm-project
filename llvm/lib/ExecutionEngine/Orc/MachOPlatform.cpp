@@ -53,7 +53,7 @@ public:
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<MachOHeaderMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
-    auto &HeaderSection = G->createSection("__header", sys::Memory::MF_READ);
+    auto &HeaderSection = G->createSection("__header", jitlink::MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
     // Init symbol is header-start symbol.

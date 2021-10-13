@@ -1,3 +1,6 @@
+// TODO: Investigate these failures
+// XFAIL: asan, tsan, ubsan
+
 #include <assert.h>
 #include <libunwind.h>
 

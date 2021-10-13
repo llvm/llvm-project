@@ -16,6 +16,7 @@
 
 #include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -125,11 +126,13 @@ class GlobalOp;
 // names. Duplicates are avoided.
 class GlobalCreator {
 public:
-  explicit GlobalCreator(ModuleOp module) : moduleOp(module) {}
-  memref::GlobalOp getGlobalFor(ConstantOp constantOp);
+  GlobalCreator(ModuleOp module, unsigned alignment = 0)
+      : moduleOp(module), alignment(alignment) {}
+  memref::GlobalOp getGlobalFor(arith::ConstantOp constantOp);
 
 private:
   ModuleOp moduleOp;
+  unsigned alignment;
   // This could use memref::GlobalOp key but we avoid introducing a new
   // dependence to the memref dialect for this.
   DenseMap<Attribute, Operation *> globals;

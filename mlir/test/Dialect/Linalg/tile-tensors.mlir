@@ -32,11 +32,11 @@ func @matmul_tensors(
 // TLOOP-SAME: (%[[ARG_0:.*]]: [[TY:.*]], %[[ARG_1:.*]]: [[TY]],
 // TLOOP-SAME: %[[ARG_2:.*]]: [[TY]]) -> [[TY]] {
 
-// TLOOP-DAG: %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG: %[[C1:.*]] = constant 1 : index
-// TLOOP-DAG: %[[C2:.*]] = constant 2 : index
-// TLOOP-DAG: %[[C3:.*]] = constant 3 : index
-// TLOOP-DAG: %[[C4:.*]] = constant 4 : index
+// TLOOP-DAG: %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG: %[[C1:.*]] = arith.constant 1 : index
+// TLOOP-DAG: %[[C2:.*]] = arith.constant 2 : index
+// TLOOP-DAG: %[[C3:.*]] = arith.constant 3 : index
+// TLOOP-DAG: %[[C4:.*]] = arith.constant 4 : index
 
 // TLOOP: %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
 // TLOOP: %[[ARG_0_Y:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : [[TY]]
@@ -65,9 +65,9 @@ func @matmul_tensors(
 
 func @generic_op_tensors(
   %arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
@@ -80,7 +80,7 @@ func @generic_op_tensors(
     ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
     outs(%3 : tensor<?x?x?xf32>) {
     ^bb0(%arg2 : f32, %arg3: f32, %arg4: f32):
-      %5 = addf %arg2, %arg3 : f32
+      %5 = arith.addf %arg2, %arg3 : f32
       linalg.yield %5 : f32
     } -> tensor<?x?x?xf32>
   return %4 : tensor<?x?x?xf32>
@@ -112,11 +112,11 @@ func @generic_op_tensors(
 // TLOOP-SAME:    %[[ARG_0:.*]]: [[TY:.*]],
 // TLOOP-SAME:    %[[ARG_1:.*]]: [[TY]]) -> [[TY]] {
 
-// TLOOP-DAG: %[[C0:.*]] = constant 0 : index
-// TLOOP-DAG: %[[C1:.*]] = constant 1 : index
-// TLOOP-DAG: %[[C2:.*]] = constant 2 : index
-// TLOOP-DAG: %[[C3:.*]] = constant 3 : index
-// TLOOP-DAG: %[[C4:.*]] = constant 4 : index
+// TLOOP-DAG: %[[C0:.*]] = arith.constant 0 : index
+// TLOOP-DAG: %[[C1:.*]] = arith.constant 1 : index
+// TLOOP-DAG: %[[C2:.*]] = arith.constant 2 : index
+// TLOOP-DAG: %[[C3:.*]] = arith.constant 3 : index
+// TLOOP-DAG: %[[C4:.*]] = arith.constant 4 : index
 
 // TLOOP:     %[[INIT:.*]] = linalg.init_tensor
 // TLOOP:     %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
@@ -143,8 +143,8 @@ func @generic_op_tensors(
 func @fold_extract_slice(
   %arg0 : tensor<?x128xf32>, %arg1 : tensor<?x42xf32>, %arg2 : tensor<?x42x?xf32>) -> tensor<?x42xf32> {
 
-  //      CHECK:    %[[C0:.*]] = constant 0
-  %c0 = constant 0 : index
+  //      CHECK:    %[[C0:.*]] = arith.constant 0
+  %c0 = arith.constant 0 : index
 
   //      CHECK:    %[[DIM:.*]] = tensor.dim %[[ARG1]], %[[C0]]
   %0 = tensor.dim %arg1, %c0 : tensor<?x42xf32>
@@ -170,7 +170,7 @@ func @fold_extract_slice(
     ins(%1, %arg2 : tensor<?x42xf32>, tensor<?x42x?xf32>)
     outs(%arg1 : tensor<?x42xf32>) {
     ^bb0(%arg3 : f32, %arg4: f32, %arg5: f32):
-      %5 = addf %arg3, %arg5 : f32
+      %5 = arith.addf %arg3, %arg5 : f32
       linalg.yield %5 : f32
     } -> tensor<?x42xf32>
   return %2 : tensor<?x42xf32>

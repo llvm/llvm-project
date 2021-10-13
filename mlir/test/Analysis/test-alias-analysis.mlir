@@ -201,7 +201,7 @@ func @region_loop_control_flow(%arg: memref<2xf32>, %loopI0 : index,
 func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "func"} {
   %1 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %2 = memref.alloca (%size) {test.ptr = "alloca_1"} : memref<?xi8>
   %3 = memref.view %2[%c0][] {test.ptr = "view"} : memref<?xi8> to memref<8x64xf32>
   return
@@ -225,9 +225,9 @@ func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "func"
 func @constants(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
   %1 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
-  %c0 = constant {test.ptr = "constant_1"} 0 : index
-  %c0_2 = constant {test.ptr = "constant_2"} 0 : index
-  %c1 = constant {test.ptr = "constant_3"} 1 : index
+  %c0 = arith.constant {test.ptr = "constant_1"} 0 : index
+  %c0_2 = arith.constant {test.ptr = "constant_2"} 0 : index
+  %c1 = arith.constant {test.ptr = "constant_3"} 1 : index
 
   return
 }

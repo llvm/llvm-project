@@ -224,11 +224,11 @@ define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
 define i32 @imp_null_check_hoist_over_udiv(i32* %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: imp_null_check_hoist_over_udiv:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:  .Ltmp6:
-; CHECK-NEXT:    ldr w8, [x0] // on-fault: .LBB9_2
+; CHECK-NEXT:    cbz x0, .LBB9_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
-; CHECK-NEXT:    udiv w9, w1, w2
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    udiv w8, w1, w2
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    mov w0, #42
@@ -279,7 +279,7 @@ define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) 
 define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
 ; CHECK-LABEL: imp_null_check_gep_load_with_use_dep:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:  .Ltmp7:
+; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    ldr w8, [x0] // on-fault: .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    add w9, w0, w1
@@ -404,7 +404,7 @@ define void @imp_null_check_unordered_store(i32* %x) {
 define i32 @imp_null_check_neg_gep_load(i32* %x) {
 ; CHECK-LABEL: imp_null_check_neg_gep_load:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:  .Ltmp8:
+; CHECK-NEXT:  .Ltmp7:
 ; CHECK-NEXT:    ldur w0, [x0, #-128] // on-fault: .LBB16_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret

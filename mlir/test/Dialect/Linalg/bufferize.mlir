@@ -98,8 +98,8 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 
 // CHECK-LABEL:   func @dynamic_results(
 // CHECK-SAME:                          %[[ARG:.*]]: tensor<?x?xf32>
-// CHECK-DAG:       %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:       %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[MEMREF_ARG:.*]] = memref.buffer_cast %[[ARG]] : memref<?x?xf32>
 // CHECK:           %[[DIM0:.*]] = tensor.dim %[[ARG]], %[[C0]] : tensor<?x?xf32>
 // CHECK:           %[[DIM1:.*]] = tensor.dim %[[ARG]], %[[C1]] : tensor<?x?xf32>
@@ -204,10 +204,10 @@ func private @make_index() -> index
 //  CHECK-SAME:   %[[ST1:[0-9a-z]*]]: tensor<2x?xf32>
 func @bufferize_insert_slice(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %st1 : tensor<2x?xf32>) ->
     (tensor<?x?xf32>, tensor<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
-  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
   %i0 = call @make_index() : () -> index
   // CHECK: %[[IDX:.*]] = call @make_index() : () -> index
 
@@ -242,7 +242,7 @@ func @bufferize_insert_slice(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %st1 
 // CHECK-LABEL: func @bufferize_fill(
 // CHECK-SAME:    %[[IN:.*]]: tensor<?xf32>
 func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
-  %c0 = constant 0.0 : f32
+  %c0 = arith.constant 0.0 : f32
   // CHECK: %[[MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<?xf32>
   // CHECK: linalg.fill(%cst, %[[MEMREF]]) : f32, memref<?xf32>
   // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF]] : memref<?xf32>
@@ -272,8 +272,8 @@ func @bufferize_tensor_collapse_shape(%arg0: tensor<4x5xf32>) -> tensor<20xf32> 
 // CHECK-SAME:                                   %[[IN:.*]]: tensor<4x?x2x?xf32>,
 // CHECK-SAME:                                   %[[OFFSET:.*]]: index) -> tensor<4x?x?x?xf32> {
 func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tensor<4x?x?x?xf32> {
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
   %out = linalg.pad_tensor %arg0 low[%c0, %c0, %arg1, %c0] high[%c0, %c0, %c0, %arg1]  {
   ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index, %gen_arg4: index):  // no predecessors
     linalg.yield %cst : f32
@@ -281,14 +281,14 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
   return %out : tensor<4x?x?x?xf32>
 }
 
-// CHECK-DAG:       %[[C3:.*]] = constant 3 : index
-// CHECK-DAG:       %[[C2:.*]] = constant 2 : index
-// CHECK-DAG:       %[[C1:.*]] = constant 1 : index
-// CHECK-DAG:       %[[CST:.*]] = constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[DIM1:.*]] = tensor.dim %[[IN]], %[[C1]] : tensor<4x?x2x?xf32>
-// CHECK:           %[[OUT_DIM2:.*]] = addi %[[OFFSET]], %[[C2]] : index
+// CHECK:           %[[OUT_DIM2:.*]] = arith.addi %[[OFFSET]], %[[C2]] : index
 // CHECK:           %[[DIM3:.*]] = tensor.dim %[[IN]], %[[C3]] : tensor<4x?x2x?xf32>
-// CHECK:           %[[OUT_DIM3:.*]] = addi %[[DIM3]], %[[OFFSET]] : index
+// CHECK:           %[[OUT_DIM3:.*]] = arith.addi %[[DIM3]], %[[OFFSET]] : index
 // CHECK:           %[[FILLED:.*]] = memref.alloc(%[[DIM1]], %[[OUT_DIM2]], %[[OUT_DIM3]]) : memref<4x?x?x?xf32>
 // CHECK:           linalg.fill(%[[CST]], %[[FILLED]]) : f32, memref<4x?x?x?xf32>
 // CHECK:           %[[IN_MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<4x?x2x?xf32>
@@ -305,8 +305,8 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
 
 // CHECK-LABEL:   func @vector_transfer
 func @vector_transfer(%in: tensor<4xf32>, %out: tensor<4xf32>) {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
   %read = vector.transfer_read %in[%c0], %cst {in_bounds = [true]}
       : tensor<4xf32>, vector<4xf32>
   %tanh = math.tanh %read : vector<4xf32>

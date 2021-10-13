@@ -26,6 +26,10 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
   const auto &Users = OldF.users();
   for (auto I = Users.begin(), E = Users.end(); I != E; )
     if (auto *CI = dyn_cast<CallInst>(*I++)) {
+      // Skip uses in call instructions where OldF isn't the called function
+      // (e.g. if OldF is an argument of the call).
+      if (CI->getCalledFunction() != &OldF)
+        continue;
       SmallVector<Value *, 8> Args;
       for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI)
         if (ArgIndexesToKeep.count(ArgI - CI->arg_begin()))
@@ -49,14 +53,11 @@ static bool shouldRemoveArguments(const Function &F) {
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
-                                       Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractArgumentsFromModule(Oracle &O, Module &Program) {
   std::set<Argument *> ArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
-  for (auto &F : *Program)
+  for (auto &F : Program)
     if (shouldRemoveArguments(F)) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
@@ -98,7 +99,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
     ClonedFunc->removeFromParent();
-    Program->getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
+    Program.getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
 
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
     // Rename Cloned Function to Old's name
@@ -111,12 +112,12 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
 
 /// Counts the amount of arguments in functions and prints their respective
 /// name, index, and parent function name
-static int countArguments(Module *Program) {
+static int countArguments(Module &Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   outs() << "Param Index Reference:\n";
   int ArgsCount = 0;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     if (shouldRemoveArguments(F)) {
       outs() << "  " << F.getName() << "\n";
       for (auto &A : F.args())

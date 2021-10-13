@@ -298,7 +298,7 @@ public:
     __hash_iterator(const __hash_iterator& __i)
         : __node_(__i.__node_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1541,7 +1541,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>&
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u)
 {
-    if (this != &__u)
+    if (this != _VSTD::addressof(__u))
     {
         __copy_assign_alloc(__u);
         hash_function() = __u.hash_function();

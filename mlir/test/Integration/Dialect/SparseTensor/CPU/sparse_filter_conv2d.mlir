@@ -41,11 +41,11 @@ module {
   }
 
   func @entry() {
-    %c0 = constant 0 : index
-    %i0 = constant 0 : i32
+    %c0 = arith.constant 0 : index
+    %i0 = arith.constant 0 : i32
 
     // A typical edge detection filter.
-    %filter = constant dense<[
+    %filter = arith.constant dense<[
       [  1,  0, -1 ],
       [  0,  0,  0 ],
       [ -1,  0,  1 ]
@@ -53,7 +53,7 @@ module {
     %sparse_filter = sparse_tensor.convert %filter
       : tensor<3x3xi32> to tensor<3x3xi32, #DCSR>
 
-    %input = constant dense<[
+    %input = arith.constant dense<[
       [  1,  2,  3,  4,  0,  6,  7,  8 ],
       [  2,  2,  4,  4,  0,  0,  6,  8 ],
       [  2,  2,  4,  4,  0,  0,  6,  8 ],
@@ -65,7 +65,7 @@ module {
     ]> : tensor<8x8xi32>
 
     // Call the kernel.
-    %output = constant dense<0> : tensor<6x6xi32>
+    %output = arith.constant dense<0> : tensor<6x6xi32>
     %0 = call @conv2d(%input, %sparse_filter, %output)
        : (tensor<8x8xi32>,
           tensor<3x3xi32, #DCSR>, tensor<6x6xi32>) -> tensor<6x6xi32>
@@ -83,6 +83,10 @@ module {
     %v = vector.transfer_read %m[%c0, %c0], %i0
       : memref<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>
+
+    // Release the resources.
+    sparse_tensor.release %sparse_filter : tensor<3x3xi32, #DCSR>
+    memref.dealloc %m : memref<6x6xi32>
 
     return
   }

@@ -18,7 +18,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 
@@ -322,6 +321,8 @@ class AsmParser {
 public:
   AsmParser() = default;
   virtual ~AsmParser();
+
+  MLIRContext *getContext() const;
 
   /// Return the location of the original name token.
   virtual llvm::SMLoc getNameLoc() const = 0;

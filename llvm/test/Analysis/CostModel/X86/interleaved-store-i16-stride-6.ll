@@ -1,4 +1,7 @@
-; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2 --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s
+; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+sse2 --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,SSE2
+; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx  --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AVX1
+; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2 --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AVX2
+; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512bw,+avx512vl --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AVX512
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -8,11 +11,32 @@ target triple = "x86_64-unknown-linux-gnu"
 @B = global [1024 x i16] zeroinitializer, align 128
 
 ; CHECK: LV: Checking a loop in "test"
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v5, i16* %out5, align 2
-; CHECK: LV: Found an estimated cost of 35 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
-; CHECK: LV: Found an estimated cost of 66 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
-; CHECK: LV: Found an estimated cost of 147 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
-; CHECK: LV: Found an estimated cost of 342 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
+;
+; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v5, i16* %out5, align 2
+; SSE2: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
+; SSE2: LV: Found an estimated cost of 51 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
+; SSE2: LV: Found an estimated cost of 102 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
+;
+; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX1: LV: Found an estimated cost of 30 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX1: LV: Found an estimated cost of 53 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX1: LV: Found an estimated cost of 105 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX1: LV: Found an estimated cost of 258 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
+;
+; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX2: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX2: LV: Found an estimated cost of 17 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX2: LV: Found an estimated cost of 24 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX2: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
+;
+; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 13 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 27 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 40 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 81 for VF 32 For instruction:   store i16 %v5, i16* %out5, align 2
+; AVX512: LV: Found an estimated cost of 162 for VF 64 For instruction:   store i16 %v5, i16* %out5, align 2
+;
 ; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   store i16 %v5, i16* %out5, align 2
 
 define void @test() {

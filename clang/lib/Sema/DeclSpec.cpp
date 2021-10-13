@@ -1156,6 +1156,17 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Validate and finalize AltiVec vector declspec.
   if (TypeAltiVecVector) {
+    // No vector long long without VSX (or ZVector).
+    if ((getTypeSpecWidth() == TypeSpecifierWidth::LongLong) &&
+        !S.Context.getTargetInfo().hasFeature("vsx") &&
+        !S.getLangOpts().ZVector)
+      S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_long_long_decl_spec);
+
+    // No vector __int128 prior to Power8.
+    if ((TypeSpecType == TST_int128) &&
+        !S.Context.getTargetInfo().hasFeature("power8-vector"))
+      S.Diag(TSTLoc, diag::err_invalid_vector_int128_decl_spec);
+
     if (TypeAltiVecBool) {
       // Sign specifiers are not allowed with vector bool. (PIM 2.1)
       if (getTypeSpecSign() != TypeSpecifierSign::Unspecified) {
@@ -1184,13 +1195,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_bool_decl_spec)
             << getSpecifierName(getTypeSpecWidth());
 
-      // vector bool long long requires VSX support or ZVector.
-      if ((getTypeSpecWidth() == TypeSpecifierWidth::LongLong) &&
-          (!S.Context.getTargetInfo().hasFeature("vsx")) &&
-          (!S.Context.getTargetInfo().hasFeature("power8-vector")) &&
-          !S.getLangOpts().ZVector)
-        S.Diag(TSTLoc, diag::err_invalid_vector_long_long_decl_spec);
-
       // Elements of vector bool are interpreted as unsigned. (PIM 2.1)
       if ((TypeSpecType == TST_char) || (TypeSpecType == TST_int) ||
           (TypeSpecType == TST_int128) ||
@@ -1213,13 +1217,15 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
           !S.Context.getTargetInfo().hasFeature("arch12"))
         S.Diag(TSTLoc, diag::err_invalid_vector_float_decl_spec);
     } else if (getTypeSpecWidth() == TypeSpecifierWidth::Long) {
-      // vector long is unsupported for ZVector and deprecated for AltiVec.
+      // Vector long is unsupported for ZVector, or without VSX, and deprecated
+      // for AltiVec.
       // It has also been historically deprecated on AIX (as an alias for
       // "vector int" in both 32-bit and 64-bit modes). It was then made
       // unsupported in the Clang-based XL compiler since the deprecated type
       // has a number of conflicting semantics and continuing to support it
       // is a disservice to users.
       if (S.getLangOpts().ZVector ||
+          !S.Context.getTargetInfo().hasFeature("vsx") ||
           S.Context.getTargetInfo().getTriple().isOSAIX())
         S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_long_decl_spec);
       else
@@ -1301,7 +1307,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       if (!S.getLangOpts().CPlusPlus)
         S.Diag(TSTLoc, diag::ext_integer_complex);
     } else if (TypeSpecType != TST_float && TypeSpecType != TST_double &&
-               TypeSpecType != TST_float128 && TypeSpecType != TST_float16) {
+               TypeSpecType != TST_float128 && TypeSpecType != TST_float16 &&
+               TypeSpecType != TST_ibm128) {
       // FIXME: __fp16?
       S.Diag(TSCLoc, diag::err_invalid_complex_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);

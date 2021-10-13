@@ -2521,12 +2521,9 @@ it in an instantiation which changes its value.
 In order to produce the unique name, the current implementation of the bultin
 uses Itanium mangling even if the host compilation uses a different name
 mangling scheme at runtime. The mangler marks all the lambdas required to name
-the SYCL kernel and emits a stable local ordering of the respective lambdas,
-starting from ``10000``. The initial value of ``10000`` serves as an obvious
-differentiator from ordinary lambda mangling numbers but does not serve any
-other purpose and may change in the future. The resulting pattern is
-demanglable. When non-lambda types are passed to the builtin, the mangler emits
-their usual pattern without any special treatment.
+the SYCL kernel and emits a stable local ordering of the respective lambdas.
+The resulting pattern is demanglable.  When non-lambda types are passed to the
+builtin, the mangler emits their usual pattern without any special treatment.
 
 **Syntax**:
 
@@ -3148,7 +3145,7 @@ the same purpose. The preprocessor symbols ``__SEG_FS`` and ``__SEG_GS``
 indicate their support.
 
 PowerPC Language Extensions
-------------------------------
+---------------------------
 
 Set the Floating Point Rounding Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

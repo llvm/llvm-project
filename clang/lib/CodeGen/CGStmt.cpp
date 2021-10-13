@@ -26,6 +26,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -712,6 +713,17 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 }
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
+  // The else branch of a consteval if statement is always the only branch that
+  // can be runtime evaluated.
+  if (S.isConsteval()) {
+    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : S.getElse();
+    if (Executed) {
+      RunCleanupsScope ExecutedScope(*this);
+      EmitStmt(Executed);
+    }
+    return;
+  }
+
   // C99 6.8.4.1: The first substatement is executed if the expression compares
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
@@ -2207,6 +2219,20 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
       Result.addFnAttr(llvm::Attribute::ReadNone);
     else if (ReadOnly)
       Result.addFnAttr(llvm::Attribute::ReadOnly);
+  }
+
+  // Attach OpenMP assumption attributes from the caller, if they exist.
+  if (CGF.CGM.getLangOpts().OpenMP) {
+    SmallVector<StringRef, 4> Attrs;
+
+    for (const AssumptionAttr *AA :
+         CGF.CurFuncDecl->specific_attrs<AssumptionAttr>())
+      AA->getAssumption().split(Attrs, ",");
+
+    if (!Attrs.empty())
+      Result.addFnAttr(
+          llvm::Attribute::get(CGF.getLLVMContext(), llvm::AssumptionAttrKey,
+                               llvm::join(Attrs.begin(), Attrs.end(), ",")));
   }
 
   // Slap the source location of the inline asm into a !srcloc metadata on the

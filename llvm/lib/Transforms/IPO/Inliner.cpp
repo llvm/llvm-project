@@ -464,7 +464,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         }
         ++NumInlined;
 
-        emitInlinedInto(ORE, DLoc, Block, *Callee, *Caller, *OIC);
+        emitInlinedIntoBasedOnCost(ORE, DLoc, Block, *Callee, *Caller, *OIC);
 
         // If inlining this function gave us any new call sites, throw them
         // onto our worklist to process.  They are useful inline candidates.
@@ -1048,10 +1048,11 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
         createDevirtSCCRepeatedPass(std::move(PM), MaxDevirtIterations)));
   MPM.run(M, MAM);
 
-  IAA.clear();
-
-  // The ModulePassManager has already taken care of invalidating analyses.
-  return PreservedAnalyses::all();
+  // Discard the InlineAdvisor, a subsequent inlining session should construct
+  // its own.
+  auto PA = PreservedAnalyses::all();
+  PA.abandon<InlineAdvisorAnalysis>();
+  return PA;
 }
 
 void InlinerPass::printPipeline(

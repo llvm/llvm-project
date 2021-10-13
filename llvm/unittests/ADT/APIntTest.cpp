@@ -1874,6 +1874,10 @@ TEST(APIntTest, insertBits) {
   i63.insertBits(iSrc, 4);
   EXPECT_EQ(static_cast<int64_t>(0x012345600123456Full), i63.getSExtValue());
 
+  // Zero width insert is a noop.
+  i31.insertBits(APInt::getZeroWidth(), 1);
+  EXPECT_EQ(static_cast<int64_t>(0x00123456ull), i31.getSExtValue());
+
   // Insert single word src into one word of dst.
   APInt i120(120, UINT64_MAX, true);
   i120.insertBits(iSrc, 8);
@@ -2587,7 +2591,7 @@ TEST(APIntTest, truncOrSelf) {
   EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));
 }
 
-TEST(APIntTest, concatMSB) {
+TEST(APIntTest, concat) {
   APInt Int1(4, 0x1ULL);
   APInt Int3(4, 0x3ULL);
 
@@ -2597,6 +2601,11 @@ TEST(APIntTest, concatMSB) {
 
   APInt I64(64, 0x3ULL);
   EXPECT_EQ(I64, I64.concat(I64).lshr(64).trunc(64));
+
+  APInt I65(65, 0x3ULL);
+  APInt I0 = APInt::getZeroWidth();
+  EXPECT_EQ(I65, I65.concat(I0));
+  EXPECT_EQ(I65, I0.concat(I65));
 }
 
 TEST(APIntTest, multiply) {
@@ -2939,6 +2948,7 @@ TEST(APIntTest, ZeroWidth) {
   // Methods like getLowBitsSet work with zero bits.
   EXPECT_EQ(0U, APInt::getLowBitsSet(0, 0).getBitWidth());
   EXPECT_EQ(0U, APInt::getSplat(0, ZW).getBitWidth());
+  EXPECT_EQ(0U, APInt(4, 10).extractBits(0, 2).getBitWidth());
 
   // Logical operators.
   ZW |= ZW2;
@@ -2981,6 +2991,7 @@ TEST(APIntTest, ZeroWidth) {
   EXPECT_EQ(0U, ZW.getLoBits(0).getBitWidth());
   EXPECT_EQ(0, ZW.zext(4));
   EXPECT_EQ(0U, APInt(4, 3).trunc(0).getBitWidth());
+  EXPECT_TRUE(ZW.isAllOnes());
 
   SmallString<42> STR;
   ZW.toStringUnsigned(STR);

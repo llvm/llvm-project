@@ -1380,9 +1380,6 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.Entries)
     return;
 
-  if (!Section.Entries)
-    return;
-
   for (const ELFYAML::StackSizeEntry &E : *Section.Entries) {
     CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(E.Size);
@@ -1485,9 +1482,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::HashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Bucket)
-    return;
-
   if (!Section.Bucket)
     return;
 
@@ -1660,9 +1654,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::AddrsigSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Symbols)
-    return;
-
   if (!Section.Symbols)
     return;
 

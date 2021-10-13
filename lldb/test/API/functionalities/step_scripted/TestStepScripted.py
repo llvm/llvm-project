@@ -7,7 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-@skipIfReproducer # FIXME: Unexpected packet during (active) replay
 class StepScriptedTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

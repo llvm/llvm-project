@@ -66,9 +66,9 @@ module {
   // Main driver that reads matrix from file and calls the kernel.
   //
   func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -94,6 +94,10 @@ module {
       : tensor<?x?xf64, #DenseMatrix> to memref<?xf64>
     %v = vector.load %m[%c0] : memref<?xf64>, vector<25xf64>
     vector.print %v : vector<25xf64>
+
+    // Release the resources.
+    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    sparse_tensor.release %x : tensor<?x?xf64, #DenseMatrix>
 
     return
   }

@@ -519,6 +519,13 @@ def fabs_fabs_fold: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// Fold (fabs (fneg x)) -> (fabs x).
+def fabs_fneg_fold: GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FABS):$root,
+         [{ return Helper.matchCombineFAbsOfFNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // Fold (unmerge cst) -> cst1, cst2, ...
 def unmerge_cst_matchinfo : GIDefMatchData<"SmallVector<APInt, 8>">;
 def unmerge_cst : GICombineRule<
@@ -687,6 +694,15 @@ def bitfield_extract_from_shr : GICombineRule<
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
                                             bitfield_extract_from_and,
                                             bitfield_extract_from_shr]>;
+
+def udiv_by_const : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UDIV):$root,
+   [{ return Helper.matchUDivByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivByConst(*${root}); }])>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_const]>;
+
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_PTR_ADD):$root,
@@ -701,6 +717,26 @@ def constant_fold : GICombineRule<
   (match (wip_match_opcode G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR):$d,
    [{ return Helper.matchConstantFold(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+
+def mulo_by_2: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UMULO, G_SMULO):$root,
+         [{ return Helper.matchMulOBy2(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
+def mulh_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UMULH):$root,
+         [{ return Helper.matchUMulHToLShr(*${root}); }]),
+  (apply [{ Helper.applyUMulHToLShr(*${root}); }])>;
+
+def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
+
+def redundant_neg_operands: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMAD, G_FMA):$root,
+    [{ return Helper.matchRedundantNegOperands(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -718,7 +754,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         fneg_fneg_fold, right_identity_one]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
-                                     overlapping_and]>;
+                                     overlapping_and, mulo_by_2]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
@@ -748,7 +784,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
-    form_bitfield_extract, constant_fold]>;
+    form_bitfield_extract, constant_fold, fabs_fneg_fold,
+    intdiv_combines, mulh_combines, redundant_neg_operands]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

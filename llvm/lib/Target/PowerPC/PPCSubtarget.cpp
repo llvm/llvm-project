@@ -23,8 +23,8 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdlib>
 
@@ -127,6 +127,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasStoreFusion = false;
   HasAddiLoadFusion = false;
   HasAddisLoadFusion = false;
+  IsISA2_06 = false;
   IsISA2_07 = false;
   IsISA3_0 = false;
   IsISA3_1 = false;

@@ -164,7 +164,7 @@ bool BPFMIPreEmitChecking::processAtomicInsts(void) {
         DebugLoc Empty;
         const DebugLoc &DL = MI.getDebugLoc();
         if (DL != Empty)
-          report_fatal_error("line " + std::to_string(DL.getLine()) +
+          report_fatal_error(Twine("line ") + std::to_string(DL.getLine()) +
                              ": Invalid usage of the XADD return value", false);
         else
           report_fatal_error("Invalid usage of the XADD return value", false);

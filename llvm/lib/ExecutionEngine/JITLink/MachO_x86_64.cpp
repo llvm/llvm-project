@@ -479,16 +479,14 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ);
+      GOTSection = &G.createSection("$__GOT", MemProt::Read);
     return *GOTSection;
   }
 
   Section &getStubsSection() {
-    if (!StubsSection) {
-      auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
-          sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", StubsProt);
-    }
+    if (!StubsSection)
+      StubsSection =
+          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
     return *StubsSection;
   }
 
@@ -533,6 +531,10 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
     // Add eh-frame passses.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
+
+    // Add compact unwind splitter pass.
+    Config.PrePrunePasses.push_back(
+        CompactUnwindSplitter("__LD,__compact_unwind"));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))

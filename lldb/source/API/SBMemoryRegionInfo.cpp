@@ -22,6 +22,24 @@ SBMemoryRegionInfo::SBMemoryRegionInfo() : m_opaque_up(new MemoryRegionInfo()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBMemoryRegionInfo);
 }
 
+SBMemoryRegionInfo::SBMemoryRegionInfo(const char *name, lldb::addr_t begin,
+                                       lldb::addr_t end, uint32_t permissions,
+                                       bool mapped, bool stack_memory)
+    : SBMemoryRegionInfo() {
+  LLDB_RECORD_CONSTRUCTOR(
+      SBMemoryRegionInfo,
+      (const char *, lldb::addr_t, lldb::addr_t, uint32_t, bool, bool), name,
+      begin, end, permissions, mapped, stack_memory);
+  m_opaque_up->SetName(name);
+  m_opaque_up->GetRange().SetRangeBase(begin);
+  m_opaque_up->GetRange().SetRangeEnd(end);
+  m_opaque_up->SetLLDBPermissions(permissions);
+  m_opaque_up->SetMapped(mapped ? MemoryRegionInfo::eYes
+                                : MemoryRegionInfo::eNo);
+  m_opaque_up->SetIsStackMemory(stack_memory ? MemoryRegionInfo::eYes
+                                             : MemoryRegionInfo::eNo);
+}
+
 SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
     : m_opaque_up(new MemoryRegionInfo()) {
   if (lldb_object_ptr)
@@ -178,6 +196,9 @@ void RegisterMethods<SBMemoryRegionInfo>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfo, ());
   LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfo,
                             (const lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_CONSTRUCTOR(
+      SBMemoryRegionInfo,
+      (const char *, lldb::addr_t, lldb::addr_t, uint32_t, bool, bool));
   LLDB_REGISTER_METHOD(
       const lldb::SBMemoryRegionInfo &,
       SBMemoryRegionInfo, operator=,(const lldb::SBMemoryRegionInfo &));

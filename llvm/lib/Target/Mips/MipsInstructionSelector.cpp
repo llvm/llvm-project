@@ -145,14 +145,14 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
                                                   MachineIRBuilder &B) const {
   assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
   // Ori zero extends immediate. Used for values with zeros in high 16 bits.
-  if (Imm.getHiBits(16).isNullValue()) {
+  if (Imm.getHiBits(16).isZero()) {
     MachineInstr *Inst =
         B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
             .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
   // Lui places immediate in high 16 bits and sets low 16 bits to zero.
-  if (Imm.getLoBits(16).isNullValue()) {
+  if (Imm.getLoBits(16).isZero()) {
     MachineInstr *Inst = B.buildInstr(Mips::LUi, {DestReg}, {})
                              .addImm(Imm.getHiBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);

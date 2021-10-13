@@ -12,7 +12,7 @@ func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 // CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 // CHECK-SAME: %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-DAG: %[[C42:.+]] = constant 4.200000e+01 : f32
+//  CHECK-DAG: %[[C42:.+]] = arith.constant 4.200000e+01 : f32
 //      CHECK: scf.for
 //      CHECK:   scf.for
 //      CHECK:     scf.for

@@ -12,6 +12,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -173,8 +174,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Value, 8> ivs, tileSizes, sizeBounds;
   SmallVector<Range, 8> loopRanges;
   Location loc = producer.getLoc();
-  auto zero = b.create<ConstantIndexOp>(loc, 0);
-  auto one = b.create<ConstantIndexOp>(loc, 1);
+  auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
+  auto one = b.create<arith::ConstantIndexOp>(loc, 1);
 
   for (unsigned i = 0, e = producer.getNumLoops(); i < e; ++i) {
     auto shapeDim = getShapeDefiningLoopRange(producer, i);
@@ -323,16 +324,6 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
                << "\n***Not fusable due to an interleaved dependence:\t"
                << *producer.getOperation());
     return false;
-  }
-  if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return false;
-  }
-  if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return false;
   }
   return true;
 }
@@ -790,7 +781,7 @@ tileRootOperation(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizeVector,
                   const LinalgTilingOptions &options,
                   const std::set<unsigned> &fusedLoops) {
   SmallVector<Value, 4> tileSizes(tileSizeVector.begin(), tileSizeVector.end());
-  auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
+  auto zero = b.create<arith::ConstantIndexOp>(op.getLoc(), 0);
   for (unsigned i = 0, e = tileSizes.size(); i != e; ++i)
     if (!fusedLoops.count(i))
       tileSizes[i] = zero;

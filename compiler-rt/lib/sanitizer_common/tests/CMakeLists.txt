@@ -17,7 +17,9 @@ set(SANITIZER_UNITTESTS
   sanitizer_common_test.cpp
   sanitizer_deadlock_detector_test.cpp
   sanitizer_flags_test.cpp
+  sanitizer_flat_map_test.cpp
   sanitizer_format_interceptor_test.cpp
+  sanitizer_hash_test.cpp
   sanitizer_ioctl_test.cpp
   sanitizer_libc_test.cpp
   sanitizer_linux_test.cpp

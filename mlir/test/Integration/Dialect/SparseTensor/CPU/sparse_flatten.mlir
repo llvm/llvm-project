@@ -41,12 +41,13 @@ module {
   // A kernel that flattens a rank 8 tensor into a dense matrix.
   //
   func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
-                       %argx: tensor<7x3xf64>) -> tensor<7x3xf64> {
+                       %argx: tensor<7x3xf64> {linalg.inplaceable = true})
+		       -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
       ins(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>)
       outs(%argx: tensor<7x3xf64>) {
       ^bb(%a: f64, %x: f64):
-        %0 = addf %x, %a : f64
+        %0 = arith.addf %x, %a : f64
         linalg.yield %0 : f64
     } -> tensor<7x3xf64>
     return %0 : tensor<7x3xf64>
@@ -58,11 +59,11 @@ module {
   // Main driver that reads tensor from file and calls the sparse kernel.
   //
   func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c3 = constant 3 : index
-    %c7 = constant 7 : index
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %c7 = arith.constant 7 : index
 
     // Setup matrix memory that is initialized to zero.
     %xdata = memref.alloc() : memref<7x3xf64>
@@ -99,6 +100,7 @@ module {
 
     // Release the resources.
     memref.dealloc %xdata : memref<7x3xf64>
+    sparse_tensor.release %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
 
     return
   }

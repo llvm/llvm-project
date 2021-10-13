@@ -77,7 +77,8 @@ def WriteFImm    : SchedWrite; // Floating-point immediate.
 def WriteFMul    : SchedWrite; // Floating-point multiply.
 def WriteFDiv    : SchedWrite; // Floating-point division.
 
-def WriteV   : SchedWrite; // Vector ops.
+def WriteVd  : SchedWrite; // 64bit Vector D ops.
+def WriteVq  : SchedWrite; // 128bit Vector Q ops.
 def WriteVLD : SchedWrite; // Vector loads.
 def WriteVST : SchedWrite; // Vector stores.
 
@@ -87,9 +88,9 @@ def WriteAtomic : SchedWrite; // Atomic memory operations (CAS, Swap, LDOP)
 def ReadVLD : SchedRead;
 
 // Sequential vector load and shuffle.
-def WriteVLDShuffle     : WriteSequence<[WriteVLD, WriteV]>;
-def WriteVLDPairShuffle : WriteSequence<[WriteVLD, WriteV, WriteV]>;
+def WriteVLDShuffle     : WriteSequence<[WriteVLD, WriteVq]>;
+def WriteVLDPairShuffle : WriteSequence<[WriteVLD, WriteVq, WriteVq]>;
 
 // Store a shuffled vector.
-def WriteVSTShuffle : WriteSequence<[WriteV, WriteVST]>;
-def WriteVSTPairShuffle : WriteSequence<[WriteV, WriteV, WriteVST]>;
+def WriteVSTShuffle : WriteSequence<[WriteVq, WriteVST]>;
+def WriteVSTPairShuffle : WriteSequence<[WriteVq, WriteVq, WriteVST]>;

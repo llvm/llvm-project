@@ -130,9 +130,12 @@ NativeProcessFreeBSD::Factory::Attach(
 
 NativeProcessFreeBSD::Extension
 NativeProcessFreeBSD::Factory::GetSupportedExtensions() const {
-  return Extension::multiprocess | Extension::fork | Extension::vfork |
-         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
-         Extension::savecore;
+  return
+#if defined(PT_COREDUMP)
+      Extension::savecore |
+#endif
+      Extension::multiprocess | Extension::fork | Extension::vfork |
+      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
 }
 
 // Public Instance Methods
@@ -1013,6 +1016,7 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
 
 llvm::Expected<std::string>
 NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
+#if defined(PT_COREDUMP)
   using namespace llvm::sys::fs;
 
   llvm::SmallString<128> path{path_hint};
@@ -1036,4 +1040,9 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
     return llvm::createStringError(
         close_err, "Unable to close the core dump after writing");
   return path.str().str();
+#else // !defined(PT_COREDUMP)
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "PT_COREDUMP not supported in the FreeBSD version used to build LLDB");
+#endif
 }

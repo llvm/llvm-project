@@ -524,7 +524,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <cwchar>
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
@@ -534,6 +533,10 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <utility>
 #include <version>
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar>
+#endif
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 # include <cstdint>
@@ -613,28 +616,14 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
 
 template <bool>
-class _LIBCPP_TEMPLATE_VIS __basic_string_common
-{
-protected:
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
+struct __basic_string_common;
+
+template <>
+struct __basic_string_common<true> {
+    // Both are defined in string.cpp
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
 };
-
-template <bool __b>
-void
-__basic_string_common<__b>::__throw_length_error() const
-{
-    _VSTD::__throw_length_error("basic_string");
-}
-
-template <bool __b>
-void
-__basic_string_common<__b>::__throw_out_of_range() const
-{
-    _VSTD::__throw_out_of_range("basic_string");
-}
-
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __basic_string_common<true>)
 
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
@@ -688,7 +677,7 @@ class
     _LIBCPP_PREFERRED_NAME(u32string)
 #endif
     basic_string
-    : private __basic_string_common<true>
+    : private __basic_string_common<true> // This base class is historical, but it needs to remain for ABI compatibility
 {
 public:
     typedef basic_string                                 __self;
@@ -1406,28 +1395,28 @@ public:
     int compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
 
 #if _LIBCPP_STD_VER > 17
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(__self_view __sv) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(__self_view __sv) const noexcept
     { return __self_view(data(), size()).starts_with(__sv); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(front(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(const value_type* __s) const noexcept
     { return starts_with(__self_view(__s)); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(__self_view __sv) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(__self_view __sv) const noexcept
     { return __self_view(data(), size()).ends_with( __sv); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(back(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(const value_type* __s) const noexcept
     { return ends_with(__self_view(__s)); }
 #endif
 
@@ -1743,11 +1732,15 @@ private:
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#   endif
 #else
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#   endif
 #endif
 
 
@@ -4409,6 +4402,7 @@ _LIBCPP_FUNC_VIS string to_string(float __val);
 _LIBCPP_FUNC_VIS string to_string(double __val);
 _LIBCPP_FUNC_VIS string to_string(long double __val);
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
@@ -4428,6 +4422,7 @@ _LIBCPP_FUNC_VIS wstring to_wstring(unsigned long long __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(float __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(double __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(long double __val);
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template<class _CharT, class _Traits, class _Allocator>
 _LIBCPP_TEMPLATE_DATA_VIS
@@ -4549,11 +4544,13 @@ inline namespace literals
         return basic_string<char> (__str, __len);
     }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     inline _LIBCPP_INLINE_VISIBILITY
     basic_string<wchar_t> operator "" s( const wchar_t *__str, size_t __len )
     {
         return basic_string<wchar_t> (__str, __len);
     }
+#endif
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_INLINE_VISIBILITY

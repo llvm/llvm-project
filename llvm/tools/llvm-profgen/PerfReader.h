@@ -388,8 +388,8 @@ using ContextSampleCounterMap =
 
 struct FrameStack {
   SmallVector<uint64_t, 16> Stack;
-  const ProfiledBinary *Binary;
-  FrameStack(const ProfiledBinary *B) : Binary(B) {}
+  ProfiledBinary *Binary;
+  FrameStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
     Stack.push_back(Cur->Address);
     return true;
@@ -404,8 +404,8 @@ struct FrameStack {
 
 struct ProbeStack {
   SmallVector<const MCDecodedPseudoProbe *, 16> Stack;
-  const ProfiledBinary *Binary;
-  ProbeStack(const ProfiledBinary *B) : Binary(B) {}
+  ProfiledBinary *Binary;
+  ProbeStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
     const MCDecodedPseudoProbe *CallProbe =
         Binary->getCallProbeForAddr(Cur->Address);
@@ -458,7 +458,7 @@ range as sample counter for further CS profile generation.
 */
 class VirtualUnwinder {
 public:
-  VirtualUnwinder(ContextSampleCounterMap *Counter, const ProfiledBinary *B)
+  VirtualUnwinder(ContextSampleCounterMap *Counter, ProfiledBinary *B)
       : CtxCounterMap(Counter), Binary(B) {}
   bool unwind(const PerfSample *Sample, uint64_t Repeat);
   std::set<uint64_t> &getUntrackedCallsites() { return UntrackedCallsites; }
@@ -495,7 +495,7 @@ private:
 
   ContextSampleCounterMap *CtxCounterMap;
   // Profiled binary that current frame address belongs to
-  const ProfiledBinary *Binary;
+  ProfiledBinary *Binary;
   // Keep track of all untracked callsites
   std::set<uint64_t> UntrackedCallsites;
 };
@@ -503,67 +503,25 @@ private:
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
-  PerfReaderBase(ProfiledBinary *B) : Binary(B) {
+  PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace,
+                 PerfScriptType Type = PERF_UNKNOWN)
+      : Binary(B), PerfTraceFile(PerfTrace), PerfType(Type) {
     // Initialize the base address to preferred address.
     Binary->setBaseAddress(Binary->getPreferredBaseAddress());
   };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
-  create(ProfiledBinary *Binary, cl::list<std::string> &PerfTraceFilenames);
+  create(ProfiledBinary *Binary, StringRef PerfInputFile, bool IsPerfData);
 
-  // A LBR sample is like:
-  // 40062f 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
-  // A heuristic for fast detection by checking whether a
-  // leading "  0x" and the '/' exist.
-  static bool isLBRSample(StringRef Line) {
-    // Skip the leading instruction pointer
-    SmallVector<StringRef, 32> Records;
-    Line.trim().split(Records, " ", 2, false);
-    if (Records.size() < 2)
-      return false;
-    if (Records[1].startswith("0x") && Records[1].find('/') != StringRef::npos)
-      return true;
-    return false;
+  PerfScriptType getPerfScriptType() const { return PerfType; }
+  // Entry of the reader to parse multiple perf traces
+  void parsePerfTraces();
+  const ContextSampleCounterMap &getSampleCounters() const {
+    return SampleCounters;
   }
+  bool profileIsCS() { return ProfileIsCS; }
 
-  // The raw hybird sample is like
-  // e.g.
-  // 	          4005dc    # call stack leaf
-  //	          400634
-  //	          400684    # call stack root
-  // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
-  //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
-  // Determine the perfscript contains hybrid samples(call stack + LBRs) by
-  // checking whether there is a non-empty call stack immediately followed by
-  // a LBR sample
-  static PerfScriptType checkPerfScriptType(StringRef FileName) {
-    TraceStream TraceIt(FileName);
-    uint64_t FrameAddr = 0;
-    while (!TraceIt.isAtEoF()) {
-      // Skip the aggregated count
-      if (!TraceIt.getCurrentLine().getAsInteger(10, FrameAddr))
-        TraceIt.advance();
-
-      // Detect sample with call stack
-      int32_t Count = 0;
-      while (!TraceIt.isAtEoF() &&
-             !TraceIt.getCurrentLine().ltrim().getAsInteger(16, FrameAddr)) {
-        Count++;
-        TraceIt.advance();
-      }
-      if (!TraceIt.isAtEoF()) {
-        if (isLBRSample(TraceIt.getCurrentLine())) {
-          if (Count > 0)
-            return PERF_LBR_STACK;
-          else
-            return PERF_LBR;
-        }
-        TraceIt.advance();
-      }
-    }
-    return PERF_INVALID;
-  }
-
+protected:
   // The parsed MMap event
   struct MMapEvent {
     uint64_t PID = 0;
@@ -572,24 +530,25 @@ public:
     uint64_t Offset = 0;
     StringRef BinaryPath;
   };
-
+  // Generate perf script from perf data
+  static std::string convertPerfDataToTrace(ProfiledBinary *Binary,
+                                            StringRef PerfData);
+  // Check whether a given line is LBR sample
+  static bool isLBRSample(StringRef Line);
+  // Check whether a given line is MMAP event
+  static bool isMMap2Event(StringRef Line);
+  // Extract perf script type by peaking at the input
+  static PerfScriptType checkPerfScriptType(StringRef FileName);
+  // Parse a single line of a PERF_RECORD_MMAP2 event looking for a
+  // mapping between the binary name and its memory layout.
+  static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                         MMapEvent &MMap);
+  // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
-  PerfScriptType getPerfScriptType() const { return PerfType; }
-  // Entry of the reader to parse multiple perf traces
-  void parsePerfTraces(cl::list<std::string> &PerfTraceFilenames);
-  const ContextSampleCounterMap &getSampleCounters() const {
-    return SampleCounters;
-  }
-
-protected:
-  static PerfScriptType
-  extractPerfType(cl::list<std::string> &PerfTraceFilenames);
-  /// Parse a single line of a PERF_RECORD_MMAP2 event looking for a
-  /// mapping between the binary name and its memory layout.
-  ///
+  // Parse mmap event and update binary address
   void parseMMap2Event(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
-  void parseAndAggregateTrace(StringRef Filename);
+  void parseAndAggregateTrace();
   // Parse either an MMAP event or a perf sample
   void parseEventOrSample(TraceStream &TraceIt);
   // Warn if the relevant mmap event is missing.
@@ -616,13 +575,34 @@ protected:
   void writeRawProfile(raw_fd_ostream &OS);
 
   ProfiledBinary *Binary = nullptr;
-
+  StringRef PerfTraceFile;
   ContextSampleCounterMap SampleCounters;
   // Samples with the repeating time generated by the perf reader
   AggregatedCounter AggregatedSamples;
   PerfScriptType PerfType = PERF_UNKNOWN;
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
+
+  bool ProfileIsCS = false;
+};
+
+/*
+  The reader of LBR only perf script.
+  A typical LBR sample is like:
+    40062f 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
+          ... 0x4005c8/0x4005dc/P/-/-/0
+*/
+class LBRPerfReader : public PerfReaderBase {
+public:
+  LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
+                PerfScriptType Type = PERF_LBR)
+      : PerfReaderBase(Binary, PerfTrace, Type){};
+  // Parse the LBR only sample.
+  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) override;
+  virtual void generateRawProfile() override;
+
+private:
+  void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
 };
 
 /*
@@ -634,11 +614,10 @@ protected:
     0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
           ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
 */
-class HybridPerfReader : public PerfReaderBase {
+class HybridPerfReader : public LBRPerfReader {
 public:
-  HybridPerfReader(ProfiledBinary *Binary) : PerfReaderBase(Binary) {
-    PerfType = PERF_LBR_STACK;
-  };
+  HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace)
+      : LBRPerfReader(Binary, PerfTrace, PERF_LBR_STACK){};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateRawProfile() override;
@@ -646,32 +625,6 @@ public:
 private:
   // Unwind the hybrid samples after aggregration
   void unwindSamples();
-};
-
-/*
-  The reader of LBR only perf script.
-  A typical LBR sample is like:
-    40062f 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
-          ... 0x4005c8/0x4005dc/P/-/-/0
-*/
-class LBRPerfReader : public PerfReaderBase {
-public:
-  LBRPerfReader(ProfiledBinary *Binary) : PerfReaderBase(Binary) {
-    // There is no context for LBR only sample, so initialize one entry with
-    // fake "empty" context key.
-    std::shared_ptr<StringBasedCtxKey> Key =
-        std::make_shared<StringBasedCtxKey>();
-    Key->genHashCode();
-    SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
-    PerfType = PERF_LBR;
-  };
-
-  // Parse the LBR only sample.
-  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
-  void generateRawProfile() override;
-
-private:
-  void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
 };
 
 } // end namespace sampleprof

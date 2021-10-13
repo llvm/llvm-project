@@ -151,6 +151,18 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read flags",
                    ["eflags = 0x94939291"])
 
+        # both stX and xmmX should be displayed as vectors
+        self.match("register read st0",
+                   ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"])
+        self.match("register read st1",
+                   ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"])
+        self.match("register read xmm0",
+                   ["xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
+                    "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
+        self.match("register read xmm1",
+                   ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
+                    "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
+
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
@@ -265,32 +277,44 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read flags",
                    ["eflags = 0x94939291"])
 
+        # both stX and xmmX should be displayed as vectors
+        self.match("register read st0",
+                   ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"])
+        self.match("register read st1",
+                   ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"])
+        self.match("register read xmm0",
+                   ["xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
+                    "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
+        self.match("register read xmm1",
+                   ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
+                    "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
+
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_regs(self):
         """Test grabbing various aarch64 registers from gdbserver."""
-        reg_data = [
-            "0102030405060708",  # x0
-            "1112131415161718",  # x1
-        ] + 27 * [
-            "2122232425262728",  # x2..x28
-        ] + [
-            "3132333435363738",  # x29 (fp)
-            "4142434445464748",  # x30 (lr)
-            "5152535455565758",  # x31 (sp)
-            "6162636465666768",  # pc
-            "71727374",  # cpsr
-            "8182838485868788898a8b8c8d8e8f90",  # v0
-            "9192939495969798999a9b9c9d9e9fa0",  # v1
-        ] + 30 * [
-            "a1a2a3a4a5a6a7a8a9aaabacadaeafb0",  # v2..v31
-        ] + [
-            "00000000",  # fpsr
-            "00000000",  # fpcr
-        ]
-
         class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "0102030405060708"  # x0
+                "1112131415161718"  # x1
+            ) + 27 * (
+                "2122232425262728"  # x2..x28
+            ) + (
+                "3132333435363738"  # x29 (fp)
+                "4142434445464748"  # x30 (lr)
+                "5152535455565758"  # x31 (sp)
+                "6162636465666768"  # pc
+                "71727374"  # cpsr
+                "8182838485868788898a8b8c8d8e8f90"  # v0
+                "9192939495969798999a9b9c9d9e9fa0"  # v1
+            ) + 30 * (
+                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # v2..v31
+            ) + (
+                "00000000"  # fpsr
+                "00000000"  # fpcr
+            )
+
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
                     return """<?xml version="1.0"?>
@@ -377,9 +401,10 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                 return ""
 
             def readRegisters(self):
-                return "".join(reg_data)
+                return self.reg_data
 
             def writeRegisters(self, reg_hex):
+                self.reg_data = reg_hex
                 return "OK"
 
             def haltReason(self):
@@ -429,3 +454,43 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["v0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
         self.match("register read v31",
                    ["v31 = {0xa1 0xa2 0xa3 0xa4 0xa5 0xa6 0xa7 0xa8 0xa9 0xaa 0xab 0xac 0xad 0xae 0xaf 0xb0}"])
+
+        # test partial registers
+        self.match("register read w0",
+                   ["w0 = 0x04030201"])
+        self.runCmd("register write w0 0xfffefdfc")
+        self.match("register read x0",
+                   ["x0 = 0x08070605fffefdfc"])
+
+        self.match("register read w1",
+                   ["w1 = 0x14131211"])
+        self.runCmd("register write w1 0xefeeedec")
+        self.match("register read x1",
+                   ["x1 = 0x18171615efeeedec"])
+
+        self.match("register read w30",
+                   ["w30 = 0x44434241"])
+        self.runCmd("register write w30 0xdfdedddc")
+        self.match("register read x30",
+                   ["x30 = 0x48474645dfdedddc"])
+
+        self.match("register read w31",
+                   ["w31 = 0x54535251"])
+        self.runCmd("register write w31 0xcfcecdcc")
+        self.match("register read x31",
+                   ["sp = 0x58575655cfcecdcc"])
+
+        # test FPU registers (overlapping with vector registers)
+        self.runCmd("register write d0 16")
+        self.match("register read v0",
+                   ["v0 = {0x00 0x00 0x00 0x00 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
+        self.runCmd("register write v31 '{0x00 0x00 0x00 0x00 0x00 0x00 0x50 0x40 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'")
+        self.match("register read d31",
+                   ["d31 = 64"])
+
+        self.runCmd("register write s0 32")
+        self.match("register read v0",
+                   ["v0 = {0x00 0x00 0x00 0x42 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
+        self.runCmd("register write v31 '{0x00 0x00 0x00 0x43 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'")
+        self.match("register read s31",
+                   ["s31 = 128"])

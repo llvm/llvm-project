@@ -1,7 +1,7 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -1417,6 +1417,7 @@ TEST(MachineInstr, MVEVecSize) {
     case MVE_VPNOT:
     case MVE_VPSEL:
     case MVE_VPST:
+    case MQPRCopy:
       return 0;
     case MVE_VABAVs16:
     case MVE_VABAVu16:

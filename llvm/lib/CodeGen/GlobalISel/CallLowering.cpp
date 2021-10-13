@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -617,14 +618,31 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
   const unsigned NumArgs = Args.size();
 
+  // Stores thunks for outgoing register assignments. This is used so we delay
+  // generating register copies until mem loc assignments are done. We do this
+  // so that if the target is using the delayed stack protector feature, we can
+  // find the split point of the block accurately. E.g. if we have:
+  // G_STORE %val, %memloc
+  // $x0 = COPY %foo
+  // $x1 = COPY %bar
+  // CALL func
+  // ... then the split point for the block will correctly be at, and including,
+  // the copy to $x0. If instead the G_STORE instruction immediately precedes
+  // the CALL, then we'd prematurely choose the CALL as the split point, thus
+  // generating a split block with a CALL that uses undefined physregs.
+  SmallVector<std::function<void()>> DelayedOutgoingRegAssignments;
+
   for (unsigned i = 0, j = 0; i != NumArgs; ++i, ++j) {
     assert(j < ArgLocs.size() && "Skipped too many arg locs");
     CCValAssign &VA = ArgLocs[j];
     assert(VA.getValNo() == i && "Location doesn't correspond to current arg");
 
     if (VA.needsCustom()) {
-      unsigned NumArgRegs =
-          Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      std::function<void()> Thunk;
+      unsigned NumArgRegs = Handler.assignCustomValue(
+          Args[i], makeArrayRef(ArgLocs).slice(j), &Thunk);
+      if (Thunk)
+        DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)
         return false;
       j += NumArgRegs;
@@ -743,7 +761,13 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         continue;
       }
 
-      Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
+      if (Handler.isIncomingArgumentHandler())
+        Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
+      else {
+        DelayedOutgoingRegAssignments.emplace_back([=, &Handler]() {
+          Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
+        });
+      }
     }
 
     // Now that all pieces have been assigned, re-pack the register typed values
@@ -757,6 +781,8 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
     j += NumParts - 1;
   }
+  for (auto &Fn : DelayedOutgoingRegAssignments)
+    Fn();
 
   return true;
 }
@@ -1157,7 +1183,7 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
 
 void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,
                                                           Register PhysReg,
-                                                          CCValAssign &VA) {
+                                                          CCValAssign VA) {
   const MVT LocVT = VA.getLocVT();
   const LLT LocTy(LocVT);
   const LLT RegTy = MRI.getType(ValVReg);

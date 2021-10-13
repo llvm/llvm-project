@@ -8,7 +8,6 @@ import json
 import platform
 import re
 
-@skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)

@@ -7,11 +7,11 @@ declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 define i32 @test_udot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b) {
 ; CHECK-LABEL: test_udot_v8i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    udot v2.2s, v1.8b, v0.8b
-; CHECK-NEXT:    addp v0.2s, v2.2s, v2.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    udot v0.2s, v2.8b, v1.8b
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -29,10 +29,10 @@ entry:
 define i32 @test_udot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    movi v0.8b, #1
+; CHECK-NEXT:    ldr d2, [x0]
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.8b, #1
-; CHECK-NEXT:    udot v1.2s, v0.8b, v2.8b
+; CHECK-NEXT:    udot v1.2s, v2.8b, v0.8b
 ; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -47,11 +47,11 @@ entry:
 define i32 @test_sdot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b) {
 ; CHECK-LABEL: test_sdot_v8i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    sdot v2.2s, v1.8b, v0.8b
-; CHECK-NEXT:    addp v0.2s, v2.2s, v2.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    sdot v0.2s, v2.8b, v1.8b
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -69,10 +69,10 @@ entry:
 define i32 @test_sdot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_sdot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    movi v0.8b, #1
+; CHECK-NEXT:    ldr d2, [x0]
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.8b, #1
-; CHECK-NEXT:    sdot v1.2s, v0.8b, v2.8b
+; CHECK-NEXT:    sdot v1.2s, v2.8b, v0.8b
 ; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -88,11 +88,11 @@ entry:
 define i32 @test_udot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
 ; CHECK-LABEL: test_udot_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    udot v2.4s, v1.16b, v0.16b
-; CHECK-NEXT:    addv s0, v2.4s
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add w0, w8, w2
 ; CHECK-NEXT:    ret
@@ -112,11 +112,11 @@ entry:
 define i32 @test_udot_v16i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v16i8_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    movi v1.16b, #1
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    udot v2.4s, v0.16b, v1.16b
-; CHECK-NEXT:    addv s0, v2.4s
+; CHECK-NEXT:    movi v0.16b, #1
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    udot v1.4s, v2.16b, v0.16b
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -130,11 +130,11 @@ entry:
 define i32 @test_sdot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
 ; CHECK-LABEL: test_sdot_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    sdot v2.4s, v1.16b, v0.16b
-; CHECK-NEXT:    addv s0, v2.4s
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.16b
+; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add w0, w8, w2
 ; CHECK-NEXT:    ret
@@ -154,11 +154,11 @@ entry:
 define i32 @test_sdot_v16i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-LABEL: test_sdot_v16i8_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    movi v1.16b, #1
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    sdot v2.4s, v0.16b, v1.16b
-; CHECK-NEXT:    addv s0, v2.4s
+; CHECK-NEXT:    movi v0.16b, #1
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sdot v1.4s, v2.16b, v0.16b
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -195,11 +195,11 @@ entry:
 define i32 @test_udot_v8i8_double_nomla(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: test_udot_v8i8_double_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    movi v3.8b, #1
-; CHECK-NEXT:    udot v1.2s, v2.8b, v3.8b
-; CHECK-NEXT:    udot v1.2s, v0.8b, v3.8b
-; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    udot v3.2s, v2.8b, v1.8b
+; CHECK-NEXT:    udot v3.2s, v0.8b, v1.8b
+; CHECK-NEXT:    addp v0.2s, v3.2s, v3.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -277,11 +277,11 @@ entry:
 define i32 @test_sdot_v8i8_double_nomla(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; CHECK-LABEL: test_sdot_v8i8_double_nomla:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    movi v3.8b, #1
-; CHECK-NEXT:    sdot v1.2s, v2.8b, v3.8b
-; CHECK-NEXT:    sdot v1.2s, v0.8b, v3.8b
-; CHECK-NEXT:    addp v0.2s, v1.2s, v1.2s
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    sdot v3.2s, v2.8b, v1.8b
+; CHECK-NEXT:    sdot v3.2s, v0.8b, v1.8b
+; CHECK-NEXT:    addp v0.2s, v3.2s, v3.2s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:

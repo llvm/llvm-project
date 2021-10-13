@@ -230,6 +230,8 @@ def FenvAPI: PublicAPI<"fenv.h"> {
     SimpleMacroDef<"FE_TONEAREST", "2">,
     SimpleMacroDef<"FE_TOWARDZERO", "4">,
     SimpleMacroDef<"FE_UPWARD", "8">,
+
+    SimpleMacroDef<"FE_DFL_ENV", "((fenv_t *)-1)">,
   ];
   let TypeDeclarations = [
     FEnvT,

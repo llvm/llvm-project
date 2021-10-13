@@ -1038,6 +1038,31 @@ public:
     return cast<T>(N.release()->replaceWithDistinctImpl());
   }
 
+  /// Print in tree shape.
+  ///
+  /// Prints definition of \c this in tree shape.
+  ///
+  /// If \c M is provided, metadata nodes will be numbered canonically;
+  /// otherwise, pointer addresses are substituted.
+  /// @{
+  void printTree(raw_ostream &OS, const Module *M = nullptr) const;
+  void printTree(raw_ostream &OS, ModuleSlotTracker &MST,
+                 const Module *M = nullptr) const;
+  /// @}
+
+  /// User-friendly dump in tree shape.
+  ///
+  /// If \c M is provided, metadata nodes will be numbered canonically;
+  /// otherwise, pointer addresses are substituted.
+  ///
+  /// Note: this uses an explicit overload instead of default arguments so that
+  /// the nullptr version is easy to call from a debugger.
+  ///
+  /// @{
+  void dumpTree() const;
+  void dumpTree(const Module *M) const;
+  /// @}
+
 private:
   MDNode *replaceWithPermanentImpl();
   MDNode *replaceWithUniquedImpl();

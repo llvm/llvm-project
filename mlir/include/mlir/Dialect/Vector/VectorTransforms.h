@@ -173,9 +173,9 @@ struct DistributeOps {
 /// canonicalizations pattern to propagate and fold the vector
 /// insert_map/extract_map operations.
 /// Transforms:
-//  %v = addf %a, %b : vector<32xf32>
+//  %v = arith.addf %a, %b : vector<32xf32>
 /// to:
-/// %v = addf %a, %b : vector<32xf32>
+/// %v = arith.addf %a, %b : vector<32xf32>
 /// %ev = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
 /// %nv = vector.insert_map %ev, %id, 32 : vector<1xf32> into vector<32xf32>
 Optional<DistributeOps>
@@ -218,17 +218,17 @@ public:
   }
 
   ContractionOpToMatmulOpLowering(
-      vector::VectorTransformsOptions vectorTransformsOptions,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformsOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -259,17 +259,17 @@ public:
   }
 
   ContractionOpToOuterProductOpLowering(
-      vector::VectorTransformsOptions vectorTransformsOptions,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformsOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -303,18 +303,17 @@ public:
   }
 
   ContractionOpToDotLowering(
-      vector::VectorTransformsOptions vectorTransformsOptions,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions),
-        filter(defaultFilter) {}
+        vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformsOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -342,18 +341,18 @@ public:
     return success();
   }
 
-  ContractionOpLowering(vector::VectorTransformsOptions vectorTransformsOptions,
+  ContractionOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
                         MLIRContext *context,
                         FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformsOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
   // Lower one parallel dimension.
   Value lowerParallel(vector::ContractionOp op, int64_t lhsIndex,

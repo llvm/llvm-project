@@ -1,0 +1,20 @@
+RUN: printf '\201rforpl\377' > %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\40\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Check for a corrupted size being too large past the end of the file.
+RUN: printf '\7\7\7\7\7\7\7\7' >> %t.profraw
+RUN: printf '\0\1\2\3\4\5\6\7' >> %t.profraw
+RUN: printf '\0\1\2\3\4\5\6\7' >> %t.profraw
+RUN: printf '\0\1\2\3\0\0\0\0' >> %t.profraw
+
+// RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
+// CHECK: malformed instrumentation profile data

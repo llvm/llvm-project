@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: libc++
-
 // http://wg21.link/LWG2447 gives implementors freedom to reject volatile types in `std::allocator`.
 
 #include <memory>

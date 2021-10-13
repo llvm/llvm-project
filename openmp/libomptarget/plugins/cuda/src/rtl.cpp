@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "Debug.h"
+#include "DeviceEnvironment.h"
 #include "omptargetplugin.h"
 
 #define TARGET_NAME CUDA
@@ -85,16 +86,6 @@ struct KernelTy {
 
   KernelTy(CUfunction _Func, llvm::omp::OMPTgtExecModeFlags _ExecutionMode)
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
-};
-
-/// Device environment data
-/// Manually sync with the deviceRTL side for now, move to a dedicated header
-/// file later.
-struct omptarget_device_environmentTy {
-  int32_t debug_level;
-  uint32_t num_devices;
-  uint32_t device_num;
-  uint64_t dynamic_shared_size;
 };
 
 namespace {
@@ -757,7 +748,7 @@ public:
         DeviceData[DeviceId].ThreadsPerBlock) {
       DP("Default number of threads exceeds device limit, capping at %d\n",
          DeviceData[DeviceId].ThreadsPerBlock);
-      DeviceData[DeviceId].NumTeams = DeviceData[DeviceId].ThreadsPerBlock;
+      DeviceData[DeviceId].NumThreads = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
     return OFFLOAD_SUCCESS;
@@ -897,13 +888,13 @@ public:
     // send device environment data to the device
     {
       // TODO: The device ID used here is not the real device ID used by OpenMP.
-      omptarget_device_environmentTy DeviceEnv{
-          0, static_cast<uint32_t>(NumberOfDevices),
-          static_cast<uint32_t>(DeviceId), DynamicMemorySize};
+      DeviceEnvironmentTy DeviceEnv{0, static_cast<uint32_t>(NumberOfDevices),
+                                    static_cast<uint32_t>(DeviceId),
+                                    static_cast<uint32_t>(DynamicMemorySize)};
 
 #ifdef OMPTARGET_DEBUG
       if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
-        DeviceEnv.debug_level = std::stoi(EnvStr);
+        DeviceEnv.DebugKind = std::stoi(EnvStr);
 #endif
 
       const char *DeviceEnvName = "omptarget_device_environment";

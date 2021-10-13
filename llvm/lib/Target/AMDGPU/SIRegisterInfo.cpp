@@ -1356,6 +1356,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                          SB.SuperReg != SB.MFI.getFrameOffsetReg()));
 
   if (SpillToVGPR) {
+
+    assert(SB.NumSubRegs == VGPRSpills.size() &&
+           "Num of VGPR lanes should be equal to num of SGPRs spilled");
+
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =
           SB.NumSubRegs == 1
@@ -2175,14 +2179,6 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
   else
     RC = getPhysRegClass(Reg);
   return isSGPRClass(RC);
-}
-
-bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
-  return RC->TSFlags & SIRCFlags::HasVGPR;
-}
-
-bool SIRegisterInfo::hasAGPRs(const TargetRegisterClass *RC) const {
-  return RC->TSFlags & SIRCFlags::HasAGPR;
 }
 
 const TargetRegisterClass *

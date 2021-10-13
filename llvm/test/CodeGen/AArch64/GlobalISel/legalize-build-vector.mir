@@ -8,12 +8,12 @@ body: |
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: legal_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -29,10 +29,10 @@ body: |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: legal_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
@@ -46,10 +46,10 @@ body: |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: legal_v2p0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<2 x p0>)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<2 x p0>)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(<2 x p0>) = G_BUILD_VECTOR %0(p0), %1(p0)
@@ -62,10 +62,10 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: legal_v16s8
     ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s8) = G_IMPLICIT_DEF
     %1:_(s8) = G_IMPLICIT_DEF
     %2:_(<16 x s8>) = G_BUILD_VECTOR %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8)
@@ -78,13 +78,44 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: legal_v8s8
     ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
-    ; CHECK: $d0 = COPY [[BUILD_VECTOR]](<8 x s8>)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
+    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(s8) = G_IMPLICIT_DEF
     %1:_(s8) = G_IMPLICIT_DEF
     %2:_(<8 x s8>) = G_BUILD_VECTOR %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8)
     $d0 = COPY %2(<8 x s8>)
+    RET_ReallyLR
+...
+---
+name:            widen_v16s1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: widen_v16s1
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[COPY]](s8), [[COPY1]](s8), [[COPY2]](s8), [[COPY3]](s8), [[COPY4]](s8), [[COPY5]](s8), [[COPY6]](s8), [[COPY7]](s8), [[COPY8]](s8), [[COPY9]](s8), [[COPY10]](s8), [[COPY11]](s8), [[COPY12]](s8), [[COPY13]](s8), [[COPY14]](s8), [[DEF]](s8)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s1) = G_IMPLICIT_DEF
+    %1:_(s1) = G_IMPLICIT_DEF
+    %2:_(<16 x s1>) = G_BUILD_VECTOR %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1), %0(s1), %1(s1)
+    %w:_(<16 x s8>) = G_ANYEXT %2
+    $q0 = COPY %w(<16 x s8>)
     RET_ReallyLR
 ...

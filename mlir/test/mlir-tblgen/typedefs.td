@@ -19,16 +19,16 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::SingleParameterType,
 // DEF: ::test::IntegerType
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(::mlir::MLIRContext *context,
+// DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(
 // DEF-NEXT: ::mlir::DialectAsmParser &parser,
 // DEF-NEXT: ::llvm::StringRef mnemonic,
 // DEF-NEXT: ::mlir::Type &value) {
 // DEF: if (mnemonic == ::test::CompoundAType::getMnemonic()) {
-// DEF-NEXT:   value = ::test::CompoundAType::parse(context, parser);
+// DEF-NEXT:   value = ::test::CompoundAType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
 // DEF-NEXT: }
 // DEF-NEXT: if (mnemonic == ::test::IndexType::getMnemonic()) {
-// DEF-NEXT:   value = ::test::IndexType::parse(context, parser);
+// DEF-NEXT:   value = ::test::IndexType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: return {};
 
@@ -71,8 +71,7 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("cmpnd_a");
 // DECL: }
-// DECL: static ::mlir::Type parse(::mlir::MLIRContext *context,
-// DECL-NEXT: ::mlir::DialectAsmParser &parser);
+// DECL: static ::mlir::Type parse(::mlir::DialectAsmParser &parser);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
 // DECL: ::test::SimpleTypeA getExampleTdType() const;
@@ -91,8 +90,7 @@ def C_IndexType : TestType<"Index"> {
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("index");
 // DECL: }
-// DECL: static ::mlir::Type parse(::mlir::MLIRContext *context,
-// DECL-NEXT: ::mlir::DialectAsmParser &parser);
+// DECL: static ::mlir::Type parse(::mlir::DialectAsmParser &parser);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 }
 

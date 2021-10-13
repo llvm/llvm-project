@@ -139,8 +139,8 @@ defm : X86WriteRes<WriteBitTestSet,      [AtomPort1],  1, [1], 1>;
 def : WriteRes<WriteLEA, [AtomPort1]>;
 
 // Bit counts.
-defm : AtomWriteResPair<WriteBSF, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
-defm : AtomWriteResPair<WriteBSR, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
+defm : AtomWriteResPair<WriteBSF, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 16, 16, [16,16], [16,16], 10, 10>;
+defm : AtomWriteResPair<WriteBSR, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 16, 16, [16,16], [16,16], 10, 10>;
 defm : X86WriteResPairUnsupported<WritePOPCNT>;
 defm : X86WriteResPairUnsupported<WriteLZCNT>;
 defm : X86WriteResPairUnsupported<WriteTZCNT>;
@@ -396,8 +396,8 @@ defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : X86WriteResPairUnsupported<WriteVecTest>;
 defm : X86WriteResPairUnsupported<WriteVecTestY>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
-defm : AtomWriteResPair<WriteVecShift,     [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 2, 3, [1,1], [2,2]>;
-defm : AtomWriteResPair<WriteVecShiftX,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 2, 3, [1,1], [2,2]>;
+defm : AtomWriteResPair<WriteVecShift,     [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 2, 3, [1,1], [2,2], 2, 3>;
+defm : AtomWriteResPair<WriteVecShiftX,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 2, 3, [1,1], [2,2], 2, 3>;
 defm : X86WriteResPairUnsupported<WriteVecShiftY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
 defm : AtomWriteResPair<WriteVecShiftImm,   [AtomPort0],  [AtomPort0], 1, 1>;

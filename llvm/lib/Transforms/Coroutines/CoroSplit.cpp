@@ -627,7 +627,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
       auto Slot = getSwiftErrorSlot(ValueTy);
       MappedResult = Builder.CreateLoad(ValueTy, Slot);
     } else {
-      assert(Op->getNumArgOperands() == 1);
+      assert(Op->arg_size() == 1);
       auto Value = MappedOp->getArgOperand(0);
       auto ValueTy = Value->getType();
       auto Slot = getSwiftErrorSlot(ValueTy);

@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s --check-prefix=CHECK-64B
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr8 | FileCheck %s --check-prefix=CHECK-64B
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s --check-prefix=CHECK-32B

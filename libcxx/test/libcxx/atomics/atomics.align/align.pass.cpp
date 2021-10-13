@@ -65,7 +65,9 @@ int main(int, char**) {
   CHECK_ALIGNMENT(unsigned char);
   CHECK_ALIGNMENT(char16_t);
   CHECK_ALIGNMENT(char32_t);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   CHECK_ALIGNMENT(wchar_t);
+#endif
   CHECK_ALIGNMENT(short);
   CHECK_ALIGNMENT(unsigned short);
   CHECK_ALIGNMENT(int);

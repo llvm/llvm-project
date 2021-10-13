@@ -1119,7 +1119,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   StatepointLoweringInfo SI(DAG);
   unsigned ArgBeginIndex = Call->arg_begin() - Call->op_begin();
   populateCallLoweringInfo(
-      SI.CLI, Call, ArgBeginIndex, Call->getNumArgOperands(), Callee,
+      SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,
       ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
       false);
   if (!VarArgDisallowed)

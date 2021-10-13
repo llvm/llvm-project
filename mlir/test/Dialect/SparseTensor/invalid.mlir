@@ -8,8 +8,16 @@ func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
 
 // -----
 
+func @invalid_release_dense(%arg0: tensor<4xi32>) {
+  // expected-error@+1 {{expected a sparse tensor to release}}
+  sparse_tensor.release %arg0 : tensor<4xi32>
+  return
+}
+
+// -----
+
 func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   // expected-error@+1 {{expected a sparse tensor to get pointers}}
   %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -18,7 +26,7 @@ func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
 // -----
 
 func @invalid_pointers_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   // expected-error@+1 {{expected a sparse tensor to get pointers}}
   %0 = sparse_tensor.pointers %arg0, %c : tensor<*xf64> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -29,7 +37,7 @@ func @invalid_pointers_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], pointerBitWidth=32}>
 
 func @mismatch_pointers_types(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   // expected-error@+1 {{unexpected type for pointers}}
   %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -40,7 +48,7 @@ func @mismatch_pointers_types(%arg0: tensor<128xf64, #SparseVector>) -> memref<?
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func @pointers_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // expected-error@+1 {{requested pointers dimension out of bounds}}
   %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -49,7 +57,7 @@ func @pointers_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
 // -----
 
 func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // expected-error@+1 {{expected a sparse tensor to get indices}}
   %0 = sparse_tensor.indices %arg0, %c : tensor<10x10xi32> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -58,7 +66,7 @@ func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
 // -----
 
 func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   // expected-error@+1 {{expected a sparse tensor to get indices}}
   %0 = sparse_tensor.indices %arg0, %c : tensor<*xf64> to memref<?xindex>
   return %0 : memref<?xindex>
@@ -69,7 +77,7 @@ func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func @mismatch_indices_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<?xi32> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   // expected-error@+1 {{unexpected type for indices}}
   %0 = sparse_tensor.indices %arg0, %c : tensor<?xf64, #SparseVector> to memref<?xi32>
   return %0 : memref<?xi32>
@@ -80,7 +88,7 @@ func @mismatch_indices_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<?xi3
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func @indices_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = constant 1 : index
+  %c = arith.constant 1 : index
   // expected-error@+1 {{requested indices dimension out of bounds}}
   %0 = sparse_tensor.indices %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>

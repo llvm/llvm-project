@@ -129,7 +129,7 @@ static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
 
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved) {
+  if (isReservedInAllContexts(II->isReserved(Lang))) {
     // list from:
     // - https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
     // - https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
@@ -183,7 +183,7 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   // Do not warn on keyword undef.  It is generally harmless and widely used.
-  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved)
+  if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
   return MD_NoWarn;
 }
@@ -745,7 +745,7 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
   // to the current module, if there is one.
   return getLangOpts().CurrentModule.empty()
              ? nullptr
-             : HeaderInfo.lookupModule(getLangOpts().CurrentModule);
+             : HeaderInfo.lookupModule(getLangOpts().CurrentModule, Loc);
 }
 
 const FileEntry *

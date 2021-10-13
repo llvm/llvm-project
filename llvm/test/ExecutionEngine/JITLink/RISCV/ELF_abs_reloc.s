@@ -1,10 +1,16 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=riscv64 -filetype=obj -o %t/elf_riscv64_non_pc_indirect_reloc.o %s
-# RUN: llvm-mc -triple=riscv32 -filetype=obj -o %t/elf_riscv32_non_pc_indirect_reloc.o %s
-# RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 -define-abs external_data=0xfff10000\
-# RUN:              -check %s %t/elf_riscv64_non_pc_indirect_reloc.o
-# RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 -define-abs external_data=0xfff10000\
-# RUN:              -check %s %t/elf_riscv32_non_pc_indirect_reloc.o
+# RUN: llvm-mc -triple=riscv64 -filetype=obj \
+# RUN:     -o %t/elf_riscv64_non_pc_indirect_reloc.o %s
+# RUN: llvm-mc -triple=riscv32 -filetype=obj \
+# RUN:     -o %t/elf_riscv32_non_pc_indirect_reloc.o %s
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:     -define-abs external_data=0xfff10000 \
+# RUN:     -check %s %t/elf_riscv64_non_pc_indirect_reloc.o
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:     -define-abs external_data=0xfff10000 \
+# RUN:     -check %s %t/elf_riscv32_non_pc_indirect_reloc.o
 #
 
         .text

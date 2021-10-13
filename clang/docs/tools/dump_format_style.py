@@ -87,15 +87,20 @@ def indent(text, columns, indent_first_line=True):
   return indent + s
 
 class Option(object):
-  def __init__(self, name, type, comment):
+  def __init__(self, name, type, comment, version):
     self.name = name
     self.type = type
     self.comment = comment.strip()
     self.enum = None
     self.nested_struct = None
+    self.version = version
 
   def __str__(self):
-    s = '**%s** (``%s``)\n%s' % (self.name, to_yaml_type(self.type),
+    if self.version:
+      s = '**%s** (``%s``) :versionbadge:`clang-format %s`\n%s' % (self.name, to_yaml_type(self.type), self.version,
+                                 doxygen2rst(indent(self.comment, 2)))
+    else:
+      s = '**%s** (``%s``)\n%s' % (self.name, to_yaml_type(self.type),
                                  doxygen2rst(indent(self.comment, 2)))
     if self.enum and self.enum.values:
       s += indent('\n\nPossible values:\n\n%s\n' % self.enum, 2)
@@ -194,6 +199,7 @@ def read_options(header):
   comment = ''
   enum = None
   nested_struct = None
+  version = None
 
   for line in header:
     line = line.strip()
@@ -208,7 +214,11 @@ def read_options(header):
         state = State.Finished
         break
     elif state == State.InFieldComment:
-      if line.startswith('///'):
+      if line.startswith(r'/// \version'):
+        match = re.match(r'/// \\version\s*(?P<version>[0-9.]+)*',line)
+        if match:
+            version = match.group('version')
+      elif line.startswith('///'):
         comment += clean_comment_line(line)
       elif line.startswith('enum'):
         state = State.InEnum
@@ -222,10 +232,14 @@ def read_options(header):
         state = State.InStruct
         field_type, field_name = re.match(r'([<>:\w(,\s)]+)\s+(\w+);',
                                           line).groups()
-        option = Option(str(field_name), str(field_type), comment)
+
+        if not version:
+            print('Warning missing version for ', field_name)
+        option = Option(str(field_name), str(field_type), comment, version)
         options.append(option)
+        version=None
       else:
-        raise Exception('Invalid format, expected comment, field or enum')
+        raise Exception('Invalid format, expected comment, field or enum\n'+line)
     elif state == State.InNestedStruct:
       if line.startswith('///'):
         state = State.InNestedFieldComment

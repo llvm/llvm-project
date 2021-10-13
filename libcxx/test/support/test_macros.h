@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===---------------------------- test_macros.h ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -346,6 +346,11 @@ inline void DoNotOptimize(Tp const& value) {
 
 #ifdef _WIN32
 #define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+#endif
+
+// Support for carving out parts of the test suite, like removing wide characters, etc.
+#if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#   define TEST_HAS_NO_WIDE_CHARACTERS
 #endif
 
 #if defined(__GNUC__)

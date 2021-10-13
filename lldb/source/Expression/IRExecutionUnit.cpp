@@ -26,6 +26,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -33,7 +34,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 
-#include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
 using namespace lldb_private;
@@ -652,52 +652,6 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
   return return_value;
 }
 
-static ConstString FindBestAlternateMangledName(ConstString demangled,
-                                                const SymbolContext &sym_ctx) {
-  CPlusPlusLanguage::MethodName cpp_name(demangled);
-  std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
-
-  if (!scope_qualified_name.size())
-    return ConstString();
-
-  if (!sym_ctx.module_sp)
-    return ConstString();
-
-  lldb_private::SymbolFile *sym_file = sym_ctx.module_sp->GetSymbolFile();
-  if (!sym_file)
-    return ConstString();
-
-  std::vector<ConstString> alternates;
-  sym_file->GetMangledNamesForFunction(scope_qualified_name, alternates);
-
-  std::vector<ConstString> param_and_qual_matches;
-  std::vector<ConstString> param_matches;
-  for (size_t i = 0; i < alternates.size(); i++) {
-    ConstString alternate_mangled_name = alternates[i];
-    Mangled mangled(alternate_mangled_name);
-    ConstString demangled = mangled.GetDemangledName();
-
-    CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
-    if (!cpp_name.IsValid())
-      continue;
-
-    if (alternate_cpp_name.GetArguments() == cpp_name.GetArguments()) {
-      if (alternate_cpp_name.GetQualifiers() == cpp_name.GetQualifiers())
-        param_and_qual_matches.push_back(alternate_mangled_name);
-      else
-        param_matches.push_back(alternate_mangled_name);
-    }
-  }
-
-  if (param_and_qual_matches.size())
-    return param_and_qual_matches[0]; // It is assumed that there will be only
-                                      // one!
-  else if (param_matches.size())
-    return param_matches[0]; // Return one of them as a best match
-  else
-    return ConstString();
-}
-
 void IRExecutionUnit::CollectCandidateCNames(std::vector<ConstString> &C_names,
                                              ConstString name) {
   if (m_strip_underscore && name.AsCString()[0] == '_')
@@ -712,10 +666,9 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
     for (const ConstString &name : C_names) {
       Mangled mangled(name);
       if (cpp_lang->SymbolNameFitsToLanguage(mangled)) {
-        if (ConstString demangled = mangled.GetDemangledName()) {
-          if (ConstString best_alternate_mangled_name =
-                  FindBestAlternateMangledName(demangled, sc))
-            CPP_names.push_back(best_alternate_mangled_name);
+        if (ConstString best_alternate =
+                cpp_lang->FindBestAlternateFunctionMangledName(mangled, sc)) {
+          CPP_names.push_back(best_alternate);
         }
       }
 

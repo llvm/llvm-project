@@ -16,6 +16,7 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -105,7 +106,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
-static constexpr TypePattern TEAM_TYPE{IntType, KindCode::teamType};
+static constexpr TypePattern TeamType{DerivedType, KindCode::teamType};
 static constexpr TypePattern DoublePrecision{
     RealType, KindCode::doublePrecision};
 static constexpr TypePattern DoublePrecisionComplex{
@@ -237,6 +238,8 @@ static constexpr IntrinsicDummyArgument MissingDIM{"dim",
     common::Intent::In};
 static constexpr IntrinsicDummyArgument OptionalMASK{"mask", AnyLogical,
     Rank::conformable, Optionality::optional, common::Intent::In};
+static constexpr IntrinsicDummyArgument OptionalTEAM{
+    "team", TeamType, Rank::scalar, Optionality::optional, common::Intent::In};
 
 struct IntrinsicInterface {
   static constexpr int maxArguments{7}; // if not a MAX/MIN(...)
@@ -247,7 +250,7 @@ struct IntrinsicInterface {
   IntrinsicClass intrinsicClass{IntrinsicClass::elementalFunction};
   std::optional<SpecificCall> Match(const CallCharacteristics &,
       const common::IntrinsicTypeDefaultKinds &, ActualArguments &,
-      FoldingContext &context) const;
+      FoldingContext &context, const semantics::Scope *builtins) const;
   int CountArguments() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
@@ -452,6 +455,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"floor", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"fraction", {{"x", SameReal}}, SameReal},
     {"gamma", {{"x", SameReal}}, SameReal},
+    {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
+        TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"huge", {{"x", SameIntOrReal, Rank::anyOrAssumedRank}}, SameIntOrReal,
         Rank::scalar, IntrinsicClass::inquiryFunction},
     {"hypot", {{"x", OperandReal}, {"y", OperandReal}}, OperandReal},
@@ -476,10 +481,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ichar", {{"c", AnyChar}, DefaultingKIND}, KINDInt},
     {"ieor", {{"i", SameInt}, {"j", SameInt, Rank::elementalOrBOZ}}, SameInt},
     {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
-    {"image_status",
-        {{"image", SameInt},
-            {"team", TEAM_TYPE, Rank::scalar, Optionality::optional}},
-        DefaultInt},
+    {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameChar}, {"substring", SameChar},
             {"back", AnyLogical, Rank::scalar, Optionality::optional},
@@ -688,7 +690,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"a", ExtensibleDerived, Rank::anyOrAssumedRank},
             {"b", ExtensibleDerived, Rank::anyOrAssumedRank}},
         DefaultLogical, Rank::scalar, IntrinsicClass::inquiryFunction},
-    {"scale", {{"x", SameReal}, {"i", AnyInt}}, SameReal},
+    {"scale", {{"x", SameReal}, {"i", AnyInt}}, SameReal}, // == IEEE_SCALB()
     {"scan",
         {{"string", SameChar}, {"set", SameChar},
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
@@ -746,11 +748,14 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
-    // optional team dummy arguments needed to complete the following
-    // this_image versions
-    {"this_image", {{"coarray", AnyData, Rank::coarray}, OptionalDIM},
+    {"team_number", {OptionalTEAM}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
+    {"this_image",
+        {{"coarray", AnyData, Rank::coarray}, RequiredDIM, OptionalTEAM},
         DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"this_image", {}, DefaultInt, Rank::scalar,
+    {"this_image", {{"coarray", AnyData, Rank::coarray}, OptionalTEAM},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"tiny", {{"x", SameReal, Rank::anyOrAssumedRank}}, SameReal, Rank::scalar,
         IntrinsicClass::inquiryFunction},
@@ -786,6 +791,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             DefaultingKIND},
         KINDInt},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_next_after", {{"x", SameReal}, {"y", AnyReal}}, SameReal},
+    {"__builtin_ieee_next_down", {{"x", SameReal}}, SameReal},
+    {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_selected_real_kind", // alias for selected_real_kind
         {{"p", AnyInt, Rank::scalar},
             {"r", AnyInt, Rank::scalar, Optionality::optional},
@@ -824,8 +832,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//   LCOBOUND, UCOBOUND, FAILED_IMAGES, GET_TEAM, IMAGE_INDEX,
-//   STOPPED_IMAGES, TEAM_NUMBER, COSHAPE
+//   LCOBOUND, UCOBOUND, FAILED_IMAGES, IMAGE_INDEX,
+//   STOPPED_IMAGES, COSHAPE
 // TODO: Non-standard intrinsic functions
 //  AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -1027,6 +1035,7 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 };
 
 static const IntrinsicInterface intrinsicSubroutine[]{
+    {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"cpu_time",
         {{"time", AnyReal, Rank::scalar, Optionality::required,
             common::Intent::Out}},
@@ -1051,6 +1060,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command",
         {{"command", DefaultChar, Rank::scalar, Optionality::optional,
              common::Intent::Out},
@@ -1116,11 +1127,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
-        {{"count", AnyInt, Rank::scalar, Optionality::optional,
+        {{"count", SameInt, Rank::scalar, Optionality::optional,
              common::Intent::Out},
             {"count_rate", AnyIntOrReal, Rank::scalar, Optionality::optional,
                 common::Intent::Out},
-            {"count_max", AnyInt, Rank::scalar, Optionality::optional,
+            {"count_max", SameInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
@@ -1129,12 +1140,34 @@ static const IntrinsicInterface intrinsicSubroutine[]{
 // TODO: Atomic intrinsic subroutines: ATOMIC_ADD &al.
 // TODO: Collective intrinsic subroutines: CO_BROADCAST &al.
 
+// Finds a built-in derived type and returns it as a DynamicType.
+static DynamicType GetBuiltinDerivedType(
+    const semantics::Scope *builtinsScope, const char *which) {
+  if (!builtinsScope) {
+    common::die("INTERNAL: The __fortran_builtins module was not found, and "
+                "the type '%s' was required",
+        which);
+  }
+  auto iter{
+      builtinsScope->find(semantics::SourceName{which, std::strlen(which)})};
+  if (iter == builtinsScope->cend()) {
+    common::die(
+        "INTERNAL: The __fortran_builtins module does not define the type '%s'",
+        which);
+  }
+  const semantics::Symbol &symbol{*iter->second};
+  const semantics::Scope &scope{DEREF(symbol.scope())};
+  const semantics::DerivedTypeSpec &derived{DEREF(scope.derivedTypeSpec())};
+  return DynamicType{derived};
+}
+
 // Intrinsic interface matching against the arguments of a particular
 // procedure reference.
 std::optional<SpecificCall> IntrinsicInterface::Match(
     const CallCharacteristics &call,
     const common::IntrinsicTypeDefaultKinds &defaults,
-    ActualArguments &arguments, FoldingContext &context) const {
+    ActualArguments &arguments, FoldingContext &context,
+    const semantics::Scope *builtinsScope) const {
   auto &messages{context.messages()};
   // Attempt to construct a 1-1 correspondence between the dummy arguments in
   // a particular intrinsic procedure's generic interface and the actual
@@ -1293,8 +1326,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     switch (d.typePattern.kindCode) {
     case KindCode::none:
     case KindCode::typeless:
-    case KindCode::teamType: // TODO: TEAM_TYPE
       argOk = false;
+      break;
+    case KindCode::teamType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsTeamType(&type->GetDerivedTypeSpec());
       break;
     case KindCode::defaultIntegerKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Integer);
@@ -1620,9 +1657,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType =
           DynamicType{TypeCategory::Integer, defaults.sizeIntegerKind()};
       break;
+    case KindCode::teamType:
+      CHECK(result.categorySet == DerivedType);
+      CHECK(*category == TypeCategory::Derived);
+      resultType = DynamicType{
+          GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
+      break;
     case KindCode::defaultCharKind:
     case KindCode::typeless:
-    case KindCode::teamType:
     case KindCode::any:
     case KindCode::kindArg:
     case KindCode::dimArg:
@@ -1728,10 +1770,20 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         dummyArgs.emplace_back(dummyArgs[sameDummyArg.value()]);
       } else {
         auto category{d.typePattern.categorySet.LeastElement().value()};
-        characteristics::TypeAndShape typeAndShape{
-            DynamicType{category, defaults.GetDefaultKind(category)}};
-        dummyArgs.emplace_back(std::string{d.keyword},
-            characteristics::DummyDataObject{std::move(typeAndShape)});
+        if (category == TypeCategory::Derived) {
+          // TODO: any other built-in derived types used as optional intrinsic
+          // dummies?
+          CHECK(d.typePattern.kindCode == KindCode::teamType);
+          characteristics::TypeAndShape typeAndShape{
+              GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
+          dummyArgs.emplace_back(std::string{d.keyword},
+              characteristics::DummyDataObject{std::move(typeAndShape)});
+        } else {
+          characteristics::TypeAndShape typeAndShape{
+              DynamicType{category, defaults.GetDefaultKind(category)}};
+          dummyArgs.emplace_back(std::string{d.keyword},
+              characteristics::DummyDataObject{std::move(typeAndShape)});
+        }
       }
       dummyArgs.back().SetOptional();
     }
@@ -1772,6 +1824,10 @@ public:
     }
   }
 
+  void SupplyBuiltins(const semantics::Scope &builtins) {
+    builtinsScope_ = &builtins;
+  }
+
   bool IsIntrinsic(const std::string &) const;
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
@@ -1779,8 +1835,8 @@ public:
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
 
-  std::optional<SpecificCall> Probe(const CallCharacteristics &,
-      ActualArguments &, FoldingContext &, const IntrinsicProcTable &) const;
+  std::optional<SpecificCall> Probe(
+      const CallCharacteristics &, ActualArguments &, FoldingContext &) const;
 
   std::optional<SpecificIntrinsicFunctionInterface> IsSpecificIntrinsicFunction(
       const std::string &) const;
@@ -1797,6 +1853,7 @@ private:
   std::multimap<std::string, const IntrinsicInterface *> genericFuncs_;
   std::multimap<std::string, const SpecificIntrinsicInterface *> specificFuncs_;
   std::multimap<std::string, const IntrinsicInterface *> subroutines_;
+  const semantics::Scope *builtinsScope_{nullptr};
 };
 
 bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
@@ -2228,7 +2285,7 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
 // match for a given procedure reference.
 std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
-    FoldingContext &context, const IntrinsicProcTable &intrinsics) const {
+    FoldingContext &context) const {
 
   // All special cases handled here before the table probes below must
   // also be recognized as special names in IsIntrinsicSubroutine().
@@ -2248,8 +2305,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   if (call.isSubroutineCall) {
     auto subrRange{subroutines_.equal_range(call.name)};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
-      if (auto specificCall{
-              iter->second->Match(call, defaults_, arguments, context)}) {
+      if (auto specificCall{iter->second->Match(
+              call, defaults_, arguments, context, builtinsScope_)}) {
         return specificCall;
       }
     }
@@ -2270,8 +2327,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   auto matchOrBufferMessages{
       [&](const IntrinsicInterface &intrinsic,
           parser::Messages &buffer) -> std::optional<SpecificCall> {
-        if (auto specificCall{
-                intrinsic.Match(call, defaults_, arguments, localContext)}) {
+        if (auto specificCall{intrinsic.Match(
+                call, defaults_, arguments, localContext, builtinsScope_)}) {
           if (finalBuffer) {
             finalBuffer->Annex(std::move(localBuffer));
           }
@@ -2416,35 +2473,40 @@ IntrinsicProcTable IntrinsicProcTable::Configure(
   return result;
 }
 
+void IntrinsicProcTable::SupplyBuiltins(
+    const semantics::Scope &builtins) const {
+  DEREF(impl_.get()).SupplyBuiltins(builtins);
+}
+
 bool IntrinsicProcTable::IsIntrinsic(const std::string &name) const {
-  return DEREF(impl_).IsIntrinsic(name);
+  return DEREF(impl_.get()).IsIntrinsic(name);
 }
 bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
-  return DEREF(impl_).IsIntrinsicFunction(name);
+  return DEREF(impl_.get()).IsIntrinsicFunction(name);
 }
 bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
-  return DEREF(impl_).IsIntrinsicSubroutine(name);
+  return DEREF(impl_.get()).IsIntrinsicSubroutine(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(
     const std::string &name) const {
-  return DEREF(impl_).GetIntrinsicClass(name);
+  return DEREF(impl_.get()).GetIntrinsicClass(name);
 }
 
 std::string IntrinsicProcTable::GetGenericIntrinsicName(
     const std::string &name) const {
-  return DEREF(impl_).GetGenericIntrinsicName(name);
+  return DEREF(impl_.get()).GetGenericIntrinsicName(name);
 }
 
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
     FoldingContext &context) const {
-  return DEREF(impl_).Probe(call, arguments, context, *this);
+  return DEREF(impl_.get()).Probe(call, arguments, context);
 }
 
 std::optional<SpecificIntrinsicFunctionInterface>
 IntrinsicProcTable::IsSpecificIntrinsicFunction(const std::string &name) const {
-  return DEREF(impl_).IsSpecificIntrinsicFunction(name);
+  return DEREF(impl_.get()).IsSpecificIntrinsicFunction(name);
 }
 
 llvm::raw_ostream &TypePattern::Dump(llvm::raw_ostream &o) const {
@@ -2510,7 +2572,7 @@ llvm::raw_ostream &IntrinsicProcTable::Implementation::Dump(
 }
 
 llvm::raw_ostream &IntrinsicProcTable::Dump(llvm::raw_ostream &o) const {
-  return impl_->Dump(o);
+  return DEREF(impl_.get()).Dump(o);
 }
 
 // In general C846 prohibits allocatable coarrays to be passed to INTENT(OUT)

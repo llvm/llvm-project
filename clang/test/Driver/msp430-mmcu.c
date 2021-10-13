@@ -14,3 +14,9 @@
 // RUN:   | FileCheck -check-prefix=MSP430-UNSUP %s
 
 // MSP430-UNSUP: error: the clang compiler does not support 'not-a-mcu'
+
+// The generic MCU name "msp430" is not supported.
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -mmcu=msp430 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSP430 %s
+
+// MSP430: error: the clang compiler does not support 'msp430'

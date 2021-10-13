@@ -13,6 +13,8 @@
 
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
@@ -187,6 +189,14 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
+    if (SrcOps[0].getLLTTy(*getMRI()).isVector()) {
+      // Try to constant fold vector constants.
+      auto VecCst = ConstantFoldVectorBinop(
+          Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI(), *this);
+      if (VecCst)
+        return MachineInstrBuilder(getMF(), *VecCst);
+      break;
+    }
     if (Optional<APInt> Cst = ConstantFoldBinOp(Opc, SrcOps[0].getReg(),
                                                 SrcOps[1].getReg(), *getMRI()))
       return buildConstant(DstOps[0], *Cst);
@@ -212,6 +222,22 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
             Opc, DstOps[0].getLLTTy(*getMRI()), SrcOps[0].getReg(), *getMRI()))
       return buildFConstant(DstOps[0], *Cst);
     break;
+  }
+  case TargetOpcode::G_CTLZ: {
+    assert(SrcOps.size() == 1 && "Expected one source");
+    assert(DstOps.size() == 1 && "Expected one dest");
+    auto MaybeCsts = ConstantFoldCTLZ(SrcOps[0].getReg(), *getMRI());
+    if (!MaybeCsts)
+      break;
+    if (MaybeCsts->size() == 1)
+      return buildConstant(DstOps[0], (*MaybeCsts)[0]);
+    // This was a vector constant. Build a G_BUILD_VECTOR for them.
+    SmallVector<Register> ConstantRegs;
+    LLT VecTy = DstOps[0].getLLTTy(*getMRI());
+    for (unsigned Cst : *MaybeCsts)
+      ConstantRegs.emplace_back(
+          buildConstant(VecTy.getScalarType(), Cst).getReg(0));
+    return buildBuildVector(DstOps[0], ConstantRegs);
   }
   }
   bool CanCopy = checkCopyToDefsPossible(DstOps);

@@ -174,6 +174,7 @@ set(bc_flags -S -x c++ -std=c++17
              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
              -Xclang -target-feature -Xclang +ptx61
              -I${include_directory}
+             -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 

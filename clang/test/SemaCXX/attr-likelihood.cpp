@@ -154,4 +154,9 @@ void o()
                                   // expected-note {{conflicting attribute is here}}
   }
 }
+
+constexpr int constexpr_function() {
+  [[likely]] return 0;
+}
+static_assert(constexpr_function() == 0);
 #endif

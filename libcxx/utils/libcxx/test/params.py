@@ -8,6 +8,7 @@
 
 from libcxx.test.dsl import *
 from libcxx.test.features import _isMSVC
+import re
 
 _warningFlags = [
   '-Werror',
@@ -59,6 +60,7 @@ DEFAULT_PARAMETERS = [
             actions=lambda triple: filter(None, [
               AddFeature('target={}'.format(triple)),
               AddFlagIfSupported('--target={}'.format(triple)),
+              AddSubstitution('%{triple}', triple)
             ])),
 
   Parameter(name='std', choices=_allStandards, type=str,
@@ -91,11 +93,27 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-fno-rtti')
             ]),
 
-  Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
-            help="The C++ Standard Library implementation being tested.",
-            actions=lambda stdlib: [
-              AddFeature(stdlib)
-            ]),
+  Parameter(name='stdlib', choices=['llvm-libc++', 'apple-libc++', 'libstdc++', 'msvc'], type=str, default='llvm-libc++',
+            help="""The C++ Standard Library implementation being tested.
+
+                 Note that this parameter can also be used to encode different 'flavors' of the same
+                 standard library, such as libc++ as shipped by a different vendor, if it has different
+                 properties worth testing.
+
+                 The Standard libraries currently supported are:
+                 - llvm-libc++: The 'upstream' libc++ as shipped with LLVM.
+                 - apple-libc++: libc++ as shipped by Apple. This is basically like the LLVM one, but
+                                 there are a few differences like installation paths and the use of
+                                 universal dylibs.
+                 - libstdc++: The GNU C++ library typically shipped with GCC.
+                 - msvc: The Microsoft implementation of the C++ Standard Library.
+                """,
+            actions=lambda stdlib: filter(None, [
+              AddFeature('stdlib={}'.format(stdlib)),
+              # Also add an umbrella feature 'stdlib=libc++' for all flavors of libc++, to simplify
+              # the test suite.
+              AddFeature('stdlib=libc++') if re.match('.+-libc\+\+', stdlib) else None
+            ])),
 
   Parameter(name='enable_warnings', choices=[True, False], type=bool, default=True,
             help="Whether to enable warnings when compiling the test suite.",
@@ -162,7 +180,8 @@ DEFAULT_PARAMETERS = [
             help="Whether to build the test suite in 32 bit mode even on a 64 bit target. This basically controls "
                  "whether -m32 is used when building the test suite.",
             actions=lambda enabled: [] if not enabled else [
-              AddFlag('-m32')
+              AddFlag('-m32'),
+              AddFeature('32bits-on-64bits')
             ]),
 
   Parameter(name='additional_features', type=list, default=[],

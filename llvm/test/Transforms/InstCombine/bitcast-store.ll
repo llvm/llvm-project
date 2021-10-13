@@ -35,7 +35,7 @@ entry:
 ; Check that we don't combine the bitcast into the store. This would create a
 ; bitcast of the swifterror which is invalid.
 
-; CHECK-LABEL; @swifterror_store
+; CHECK-LABEL: @swifterror_store
 ; CHECK: bitcast i64
 ; CHECK: store %swift.error
 
@@ -44,6 +44,16 @@ define void @swifterror_store(i64* %x, %swift.error** swifterror %err) {
 entry:
   %casted = bitcast i64* %x to %swift.error*
   store %swift.error* %casted, %swift.error** %err
+  ret void
+}
+
+; CHECK-LABEL: @ppcf128_ones_store
+; CHECK: store ppc_fp128 0xMFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ppc_fp128* %dest, align 16
+define void @ppcf128_ones_store(ppc_fp128* %dest) {
+entry:
+  %int = or i128 0, 340282366920938463463374607431768211455 ; 128 ones
+  %val = bitcast i128 %int to ppc_fp128
+  store ppc_fp128 %val, ppc_fp128* %dest, align 16
   ret void
 }
 

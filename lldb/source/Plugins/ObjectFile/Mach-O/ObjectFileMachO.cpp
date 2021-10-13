@@ -21,7 +21,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -44,6 +43,8 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
 
+#include "lldb/Host/SafeMachO.h"
+
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -65,48 +66,65 @@
 #include <bitset>
 #include <memory>
 
-#if LLVM_SUPPORT_XCODE_SIGNPOSTS
 // Unfortunately the signpost header pulls in the system MachO header, too.
+#ifdef CPU_TYPE_ARM
 #undef CPU_TYPE_ARM
+#endif
+#ifdef CPU_TYPE_ARM64
 #undef CPU_TYPE_ARM64
+#endif
+#ifdef CPU_TYPE_ARM64_32
 #undef CPU_TYPE_ARM64_32
+#endif
+#ifdef CPU_TYPE_I386
 #undef CPU_TYPE_I386
+#endif
+#ifdef CPU_TYPE_X86_64
 #undef CPU_TYPE_X86_64
-#undef MH_BINDATLOAD
-#undef MH_BUNDLE
-#undef MH_CIGAM
-#undef MH_CIGAM_64
-#undef MH_CORE
-#undef MH_DSYM
-#undef MH_DYLDLINK
-#undef MH_DYLIB
-#undef MH_DYLIB_STUB
+#endif
+#ifdef MH_DYLINKER
 #undef MH_DYLINKER
-#undef MH_DYLINKER
-#undef MH_EXECUTE
-#undef MH_FVMLIB
-#undef MH_INCRLINK
-#undef MH_KEXT_BUNDLE
-#undef MH_MAGIC
-#undef MH_MAGIC_64
-#undef MH_NOUNDEFS
+#endif
+#ifdef MH_OBJECT
 #undef MH_OBJECT
-#undef MH_OBJECT
-#undef MH_PRELOAD
-
-#undef LC_BUILD_VERSION
+#endif
+#ifdef LC_VERSION_MIN_MACOSX
 #undef LC_VERSION_MIN_MACOSX
+#endif
+#ifdef LC_VERSION_MIN_IPHONEOS
 #undef LC_VERSION_MIN_IPHONEOS
+#endif
+#ifdef LC_VERSION_MIN_TVOS
 #undef LC_VERSION_MIN_TVOS
+#endif
+#ifdef LC_VERSION_MIN_WATCHOS
 #undef LC_VERSION_MIN_WATCHOS
-
+#endif
+#ifdef LC_BUILD_VERSION
+#undef LC_BUILD_VERSION
+#endif
+#ifdef PLATFORM_MACOS
 #undef PLATFORM_MACOS
+#endif
+#ifdef PLATFORM_MACCATALYST
 #undef PLATFORM_MACCATALYST
+#endif
+#ifdef PLATFORM_IOS
 #undef PLATFORM_IOS
+#endif
+#ifdef PLATFORM_IOSSIMULATOR
 #undef PLATFORM_IOSSIMULATOR
+#endif
+#ifdef PLATFORM_TVOS
 #undef PLATFORM_TVOS
+#endif
+#ifdef PLATFORM_TVOSSIMULATOR
 #undef PLATFORM_TVOSSIMULATOR
+#endif
+#ifdef PLATFORM_WATCHOS
 #undef PLATFORM_WATCHOS
+#endif
+#ifdef PLATFORM_WATCHOSSIMULATOR
 #undef PLATFORM_WATCHOSSIMULATOR
 #endif
 
@@ -4997,10 +5015,14 @@ struct OSEnv {
     case llvm::MachO::PLATFORM_WATCHOS:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
       return;
-      // NEED_BRIDGEOS_TRIPLE      case llvm::MachO::PLATFORM_BRIDGEOS:
-      // NEED_BRIDGEOS_TRIPLE        os_type =
-      // llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-      // NEED_BRIDGEOS_TRIPLE        return;
+    // TODO: add BridgeOS & DriverKit once in llvm/lib/Support/Triple.cpp
+    // NEED_BRIDGEOS_TRIPLE
+    // case llvm::MachO::PLATFORM_BRIDGEOS:
+    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+    //   return;
+    // case llvm::MachO::PLATFORM_DRIVERKIT:
+    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
+    //   return;
     case llvm::MachO::PLATFORM_MACCATALYST:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
       environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);

@@ -17,9 +17,6 @@ define void @test_varargs() {
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_FCONSTANT double 2.000000e+00
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 40, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
-  ; CHECK-NEXT:   $d0 = COPY [[C1]](s64)
-  ; CHECK-NEXT:   $x1 = COPY [[C2]](s64)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C3]](s8)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -41,6 +38,9 @@ define void @test_varargs() {
   ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
   ; CHECK-NEXT:   G_STORE [[C7]](s64), [[PTR_ADD4]](p0) :: (store (s64) into stack + 32, align 1)
+  ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
+  ; CHECK-NEXT:   $d0 = COPY [[C1]](s64)
+  ; CHECK-NEXT:   $x1 = COPY [[C2]](s64)
   ; CHECK-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 40, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
@@ -66,16 +66,6 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(s8) = G_CONSTANT i8 99
   ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(s8) = G_CONSTANT i8 100
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 6, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $x0 = COPY [[C]](s64)
-  ; CHECK-NEXT:   $x1 = COPY [[C1]](s64)
-  ; CHECK-NEXT:   $x2 = COPY [[C2]](s64)
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C3]](s8)
-  ; CHECK-NEXT:   $w3 = COPY [[SEXT]](s32)
-  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C4]](s16)
-  ; CHECK-NEXT:   $w4 = COPY [[SEXT1]](s32)
-  ; CHECK-NEXT:   $x5 = COPY [[C5]](s64)
-  ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
-  ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
@@ -89,6 +79,16 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
   ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
   ; CHECK-NEXT:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store (s8) into stack + 5)
+  ; CHECK-NEXT:   $x0 = COPY [[C]](s64)
+  ; CHECK-NEXT:   $x1 = COPY [[C1]](s64)
+  ; CHECK-NEXT:   $x2 = COPY [[C2]](s64)
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C3]](s8)
+  ; CHECK-NEXT:   $w3 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C4]](s16)
+  ; CHECK-NEXT:   $w4 = COPY [[SEXT1]](s32)
+  ; CHECK-NEXT:   $x5 = COPY [[C5]](s64)
+  ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
+  ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   BL @i8i16callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 6, 0, implicit-def $sp, implicit $sp

@@ -16,6 +16,7 @@
 #endif
 
 #include <string>
+#include <string_view>
 
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
 #define CHAR8_ONLY(x) x,
@@ -23,16 +24,24 @@
 #define CHAR8_ONLY(x)
 #endif
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+# define IF_WIDE_CHARACTERS(...) __VA_ARGS__
+#else
+# define IF_WIDE_CHARACTERS(...) /* nothing */
+#endif
+
 #define MKSTR(Str)                                                             \
   {                                                                            \
-    Str, TEST_CONCAT(L, Str),                                                  \
+    Str, IF_WIDE_CHARACTERS(TEST_CONCAT(L, Str),)                              \
         CHAR8_ONLY(TEST_CONCAT(u8, Str)) TEST_CONCAT(u, Str),                  \
         TEST_CONCAT(U, Str)                                                    \
   }
 
 struct MultiStringType {
   const char* s;
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   const wchar_t* w;
+#endif
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
   const char8_t* u8;
 #endif
@@ -40,7 +49,9 @@ struct MultiStringType {
   const char32_t* u32;
 
   constexpr operator const char*() const { return s; }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   constexpr operator const wchar_t*() const { return w; }
+#endif
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
   constexpr operator const char8_t*() const { return u8; }
 #endif
@@ -53,6 +64,11 @@ struct MultiStringType {
 // valid ASCII which means the input is also valid UTF-8.
 #define MAKE_STRING(CharT, Str)                                                \
   std::basic_string<CharT> {                                                   \
+    static_cast<const CharT*>(MultiStringType MKSTR(Str))                      \
+  }
+
+#define MAKE_STRING_VIEW(CharT, Str)                                           \
+  std::basic_string_view<CharT> {                                              \
     static_cast<const CharT*>(MultiStringType MKSTR(Str))                      \
   }
 

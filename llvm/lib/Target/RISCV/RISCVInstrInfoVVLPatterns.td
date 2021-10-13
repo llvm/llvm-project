@@ -622,8 +622,8 @@ foreach vti = AllVectors in {
 }
 
 foreach mti = AllMasks in {
-  defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#mti.BX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#mti.BX);
+  defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#mti.BX);
+  defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#mti.BX);
   def : Pat<(mti.Mask (riscv_vle_vl BaseAddr:$rs1, VLOpFrag)),
             (load_instr BaseAddr:$rs1, GPR:$vl, mti.Log2SEW)>;
   def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), BaseAddr:$rs1,
@@ -942,7 +942,7 @@ defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 let Predicates = [HasStdExtV, HasStdExtF] in {
 defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]

@@ -573,14 +573,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   if (config->timeTraceEnabled) {
-    if (auto E = timeTraceProfilerWrite(args.getLastArgValue(OPT_time_trace_file_eq).str(),
-                                        config->outputFile)) {
-      handleAllErrors(std::move(E), [&](const StringError &SE) {
-        error(SE.getMessage());
-      });
-      return;
-    }
-
+    checkError(timeTraceProfilerWrite(
+        args.getLastArgValue(OPT_time_trace_file_eq).str(),
+        config->outputFile));
     timeTraceProfilerCleanup();
   }
 }
@@ -1843,12 +1838,15 @@ static void demoteSharedSymbols() {
   llvm::TimeTraceScope timeScope("Demote shared symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!s || s->getFile().isNeeded)
+    if (!((s && !s->getFile().isNeeded) ||
+          (sym->isLazy() && sym->isUsedInRegularObj)))
       continue;
 
-    bool used = s->used;
-    s->replace(Undefined{nullptr, s->getName(), STB_WEAK, s->stOther, s->type});
-    s->used = used;
+    bool used = sym->used;
+    sym->replace(
+        Undefined{nullptr, sym->getName(), STB_WEAK, sym->stOther, sym->type});
+    sym->used = used;
+    sym->versionId = VER_NDX_GLOBAL;
   }
 }
 

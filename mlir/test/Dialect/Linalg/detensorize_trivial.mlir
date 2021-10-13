@@ -10,7 +10,7 @@
 }
 
 func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
-  %c10 = constant 10 : i32
+  %c10 = arith.constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
   %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
   %3 = linalg.init_tensor [] : tensor<i1>
@@ -18,7 +18,7 @@ func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
     ins(%farg0, %reshaped1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
     ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):
-      %8 = cmpi slt, %arg0, %arg1 : i32
+      %8 = arith.cmpi slt, %arg0, %arg1 : i32
       linalg.yield %8 : i1
   } -> tensor<i1>
   return %4 : tensor<i1>
@@ -26,20 +26,20 @@ func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
 
 
 // DET-ALL-LABEL: func @main(%{{.*}}: tensor<i32>)
-// DET-ALL-NEXT:    constant 10
+// DET-ALL-NEXT:    arith.constant 10
 // DET-ALL-NEXT:    tensor.extract %{{.*}}[]
-// DET-ALL-NEXT:    cmpi slt, %{{.*}}, %{{.*}}
+// DET-ALL-NEXT:    arith.cmpi slt, %{{.*}}, %{{.*}}
 // DET-ALL-NEXT:    tensor.from_elements %{{.*}}
 // DET-ALL-NEXT:    linalg.tensor_collapse_shape %{{.*}}
 // DET-ALL-NEXT:    return %{{.*}} : tensor<i1>
 // DET-ALL-NEXT:  }
 
 // DET-CF-LABEL: func @main(%{{.*}}: tensor<i32>)
-// DET-CF-NEXT:    constant dense<10> : tensor<i32>
+// DET-CF-NEXT:    arith.constant dense<10> : tensor<i32>
 // DET-CF-NEXT:    linalg.init_tensor [] : tensor<i1>
 // DET-CF-NEXT:    linalg.generic
 // DET-CF-NEXT:    ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i1)
-// DET-CF-NEXT:      cmpi slt, %{{.*}}, %{{.*}}
+// DET-CF-NEXT:      arith.cmpi slt, %{{.*}}, %{{.*}}
 // DET-CF-NEXT:      linalg.yield %{{.*}}
 // DET-CF-NEXT:    } -> tensor<i1>
 // DET-CF-NEXT:    return %{{.*}}

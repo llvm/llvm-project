@@ -29,7 +29,7 @@
 
 // RUN:   mlir-opt %s -async-parallel-for="async-dispatch=false                \
 // RUN:                                    num-workers=20                      \
-// RUN:                                    target-block-size=1"                \
+// RUN:                                    min-task-size=1"                \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
@@ -45,23 +45,23 @@
 // RUN: | FileCheck %s --dump-input=always
 
 func @entry() {
-  %c0 = constant 0.0 : f32
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
+  %c0 = arith.constant 0.0 : f32
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c8 = arith.constant 8 : index
 
-  %lb = constant 0 : index
-  %ub = constant 8 : index
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 8 : index
 
   %A = memref.alloc() : memref<8x8xf32>
   %U = memref.cast %A :  memref<8x8xf32> to memref<*xf32>
 
   // 1. (%i, %i) = (0, 8) to (8, 8) step (1, 1)
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c1) {
-    %0 = muli %i, %c8 : index
-    %1 = addi %j, %0  : index
-    %2 = index_cast %1 : index to i32
-    %3 = sitofp %2 : i32 to f32
+    %0 = arith.muli %i, %c8 : index
+    %1 = arith.addi %j, %0  : index
+    %2 = arith.index_cast %1 : index to i32
+    %3 = arith.sitofp %2 : i32 to f32
     memref.store %3, %A[%i, %j] : memref<8x8xf32>
   }
 
@@ -81,10 +81,10 @@ func @entry() {
 
   // 2. (%i, %i) = (0, 8) to (8, 8) step (2, 1)
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c2, %c1) {
-    %0 = muli %i, %c8 : index
-    %1 = addi %j, %0  : index
-    %2 = index_cast %1 : index to i32
-    %3 = sitofp %2 : i32 to f32
+    %0 = arith.muli %i, %c8 : index
+    %1 = arith.addi %j, %0  : index
+    %2 = arith.index_cast %1 : index to i32
+    %3 = arith.sitofp %2 : i32 to f32
     memref.store %3, %A[%i, %j] : memref<8x8xf32>
   }
 
@@ -104,10 +104,10 @@ func @entry() {
 
   // 3. (%i, %i) = (0, 8) to (8, 8) step (1, 2)
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c2) {
-    %0 = muli %i, %c8 : index
-    %1 = addi %j, %0  : index
-    %2 = index_cast %1 : index to i32
-    %3 = sitofp %2 : i32 to f32
+    %0 = arith.muli %i, %c8 : index
+    %1 = arith.addi %j, %0  : index
+    %2 = arith.index_cast %1 : index to i32
+    %3 = arith.sitofp %2 : i32 to f32
     memref.store %3, %A[%i, %j] : memref<8x8xf32>
   }
 

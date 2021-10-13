@@ -642,15 +642,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
-    //   __spv__{SPIR-V module name}_{function name}_execution_mode_info
+    //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
     ModuleOp module = op->getParentOfType<ModuleOp>();
+    IntegerAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
     if (module.getName().hasValue())
       moduleName = "_" + module.getName().getValue().str();
     else
       moduleName = "";
-    std::string executionModeInfoName = llvm::formatv(
-        "__spv_{0}_{1}_execution_mode_info", moduleName, op.fn().str());
+    std::string executionModeInfoName =
+        llvm::formatv("__spv_{0}_{1}_execution_mode_info_{2}", moduleName,
+                      op.fn().str(), executionModeAttr.getValue());
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
@@ -683,7 +685,6 @@ public:
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPoint(block, block->begin());
     Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
-    IntegerAttr executionModeAttr = op.execution_modeAttr();
     Value executionMode =
         rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, executionModeAttr);
     structValue = rewriter.create<LLVM::InsertValueOp>(
@@ -733,17 +734,22 @@ public:
     // required by SPIR-V runner.
     // This is okay because multiple invocations are not supported yet.
     auto storageClass = srcType.getStorageClass();
-    if (storageClass != spirv::StorageClass::Input &&
-        storageClass != spirv::StorageClass::Private &&
-        storageClass != spirv::StorageClass::Output &&
-        storageClass != spirv::StorageClass::StorageBuffer) {
+    switch (storageClass) {
+    case spirv::StorageClass::Input:
+    case spirv::StorageClass::Private:
+    case spirv::StorageClass::Output:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::UniformConstant:
+      break;
+    default:
       return failure();
     }
 
     // LLVM dialect spec: "If the global value is a constant, storing into it is
-    // not allowed.". This corresponds to SPIR-V 'Input' storage class that is
-    // read-only.
-    bool isConstant = storageClass == spirv::StorageClass::Input;
+    // not allowed.". This corresponds to SPIR-V 'Input' and 'UniformConstant'
+    // storage class that is read-only.
+    bool isConstant = (storageClass == spirv::StorageClass::Input) ||
+                      (storageClass == spirv::StorageClass::UniformConstant);
     // SPIR-V spec: "By default, functions and global variables are private to a
     // module and cannot be accessed by other modules. However, a module may be
     // written to export or import functions and global (module scope)
@@ -752,9 +758,14 @@ public:
     auto linkage = storageClass == spirv::StorageClass::Private
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
-    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+    auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.sym_name(), Attribute(),
         /*alignment=*/0);
+
+    // Attach location attribute if applicable
+    if (op.locationAttr())
+      newGlobalOp->setAttr(op.locationAttrName(), op.locationAttr());
+
     return success();
   }
 };

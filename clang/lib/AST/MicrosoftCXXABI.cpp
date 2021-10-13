@@ -78,6 +78,19 @@ public:
   }
 };
 
+class MSSYCLNumberingContext : public MicrosoftNumberingContext {
+  std::unique_ptr<MangleNumberingContext> DeviceCtx;
+
+public:
+  MSSYCLNumberingContext(MangleContext *DeviceMangler) {
+    DeviceCtx = createItaniumNumberingContext(DeviceMangler);
+  }
+
+  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
+    return DeviceCtx->getManglingNumber(CallOperator);
+  }
+};
+
 class MicrosoftCXXABI : public CXXABI {
   ASTContext &Context;
   llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> RecordToCopyCtor;
@@ -99,6 +112,10 @@ public:
              "Unexpected combination of C++ ABIs.");
       DeviceMangler.reset(
           Context.createMangleContext(Context.getAuxTargetInfo()));
+    }
+    else if (Context.getLangOpts().isSYCL()) {
+      DeviceMangler.reset(
+          ItaniumMangleContext::create(Context, Context.getDiagnostics()));
     }
   }
 
@@ -162,7 +179,11 @@ public:
     if (Context.getLangOpts().CUDA && Context.getAuxTargetInfo()) {
       assert(DeviceMangler && "Missing device mangler");
       return std::make_unique<MSHIPNumberingContext>(DeviceMangler.get());
+    } else if (Context.getLangOpts().isSYCL()) {
+      assert(DeviceMangler && "Missing device mangler");
+      return std::make_unique<MSSYCLNumberingContext>(DeviceMangler.get());
     }
+
     return std::make_unique<MicrosoftNumberingContext>();
   }
 };

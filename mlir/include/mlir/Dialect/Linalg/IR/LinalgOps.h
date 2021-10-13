@@ -34,11 +34,7 @@
 namespace mlir {
 namespace linalg {
 
-class ConvOp;
 class LinalgOp;
-class PoolingMaxOp;
-class PoolingMinOp;
-class PoolingSumOp;
 
 // TOFO: allow an extra ValueRange to specify an indexing and allow
 // non-hyperrectangular shapes.
@@ -83,14 +79,6 @@ std::string generateLibraryCallName(Operation *op);
 ///   [startIdx, startIdx + num) and increments `startIdx` to `startIdx + num`.
 SmallVector<AffineExpr, 4> makeAffineDimExprs(unsigned num, unsigned &startIdx,
                                               MLIRContext *context);
-
-/// Builds the indexing expressions for a ConvOp/PoolingOp `op`. Returns the
-/// vector of AffineMaps representing:
-///   `stride[i] * outputDims[i] + dilation[i] * windowDims[i] - pad_low[i]`
-template <typename PoolingOp>
-extern SmallVector<AffineExpr, 4>
-weightedPoolingInputIndex(PoolingOp op, ArrayRef<AffineExpr> outputDims,
-                          ArrayRef<AffineExpr> windowDims);
 
 /// Returns `maybeMap.get()` if `maybeMap` is set, otherwise returns the
 /// symbol-less identity map of `rank`.

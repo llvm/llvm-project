@@ -685,7 +685,7 @@ const Function *findCalleeInModule(const GlobalValue *GV) {
     const GlobalAlias *A = dyn_cast<GlobalAlias>(GV);
     if (!A)
       return nullptr;
-    GV = A->getBaseObject();
+    GV = A->getAliaseeObject();
     if (GV == A)
       return nullptr;
   }

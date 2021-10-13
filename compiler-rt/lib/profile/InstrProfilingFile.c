@@ -1153,7 +1153,10 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
                 fileno(File));
       return 1;
     }
-    lprofLockFileHandle(File);
+    if (lprofLockFileHandle(File) != 0) {
+      PROF_WARN("Data may be corrupted during profile merging : %s\n",
+                "Fail to obtain file lock due to system limit.");
+    }
     uint64_t ProfileFileSize = 0;
     if (getProfileFileSizeForMerging(File, &ProfileFileSize) == -1) {
       lprofUnlockFileHandle(File);
@@ -1170,6 +1173,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
                  strerror(errno));
         return 1;
       }
+      fflush(File);
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */

@@ -57,8 +57,10 @@ define i32 @signext_param_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
   ; CHECK:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[SEXTLOAD]], 1
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK:   [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s8)
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s1)
   ; CHECK:   $w0 = COPY [[ZEXT]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
                                 i64 %g, i64 %h, i64 %i, i1 signext %j) {

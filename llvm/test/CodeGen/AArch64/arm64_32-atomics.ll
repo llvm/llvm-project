@@ -254,9 +254,9 @@ define {i8*, i1} @test_cmpxchg_ptr(i8** %addr, i8* %cmp, i8* %new) {
 ; CHECK:     ret
 
 ; CHECK: [[DONE]]:
-; CHECK:     clrex
 ; CHECK:     mov w1, wzr
 ; CHECK:     mov w0, [[OLD]]
+; CHECK:     clrex
 ; CHECK:     ret
   %res = cmpxchg i8** %addr, i8* %cmp, i8* %new acq_rel acquire
   ret {i8*, i1} %res

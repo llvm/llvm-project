@@ -912,7 +912,11 @@ code. This issue is expected to be rectified soon.
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
-        <td class="partial" align="center">Partial</td>
+        <td class="partial" align="center">
+          <details><summary>Partial</summary>
+            Constraining template template parameters is not yet supported.
+          </details>
+        </td>
       </tr>
       <tr> <!-- from San Diego -->
         <td><a href="https://wg21.link/p1084r2">P1084R2</a></td>
@@ -944,7 +948,11 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
-        <td rowspan="1" class="partial" align="center">Partial</td>
+        <td rowspan="1" class="partial" align="center">
+          <details><summary>Partial</summary>
+            <tt>typename</tt> not yet optional (depends on P0634R3).
+          </details>
+        </td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2113r0">P2113R0</a></td>
@@ -1013,7 +1021,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="partial" align="center">Clang 13</td>
+      <td class="partial" align="center">Partial</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -1105,7 +1113,11 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Using consteval functions as default parameters is not yet supported.
+        </details>
+      </td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
@@ -1226,7 +1238,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
       <td><a href="https://wg21.link/p0388r4">P0388R4</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 14</td>
     </tr>
     <tr>
       <td><tt>constinit</tt></td>
@@ -1289,7 +1301,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td><tt>if consteval</tt></td>
       <td><a href="https://wg21.link/P1938R3">P1938R3</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Allow duplicate attributes</td>
@@ -1321,6 +1333,53 @@ C++20, informally referred to as C++2b.</p>
       <td><a href="https://wg21.link/p2201r1">P2201R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
+    <!-- October 2021 papers -->
+    <tr>
+      <td>Deducing this</td>
+      <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Change scope of lambda trailing-return-type</td>
+      <td><a href="https://wg21.link/P2036R3">P2036R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Multidimensional subscript operator</td>
+      <td><a href="https://wg21.link/P2128R6">P2128R6</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Non-literal variables (and labels and gotos) in constexpr functions</td>
+      <td><a href="https://wg21.link/P2242R3">P2242R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Character encoding of diagnostic text</td>
+      <td><a href="https://wg21.link/P2246R1">P2246R1</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Character sets and encodings</td>
+      <td><a href="https://wg21.link/P2314R4">P2314R4</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Consistent character literal encoding</td>
+      <td><a href="https://wg21.link/P2316R2">P2316R2</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Add support for preprocessing directives elifdef and elifndef</td>
+      <td><a href="https://wg21.link/P2334R1">P2334R1</a></td>
+      <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td>Extend init-statement to allow alias-declaration</td>
+      <td><a href="https://wg21.link/P2360R0">P2360R0</a></td>
+      <td class="unreleased" align="center">Clang 14</td>
+    </tr>
+
 </table>
 </details>
 

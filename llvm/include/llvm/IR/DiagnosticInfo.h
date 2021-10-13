@@ -33,6 +33,7 @@ namespace llvm {
 
 // Forward declarations.
 class DiagnosticPrinter;
+class CallInst;
 class Function;
 class Instruction;
 class InstructionCost;
@@ -1070,15 +1071,20 @@ public:
   }
 };
 
+void diagnoseDontCall(const CallInst &CI);
+
 class DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
+  StringRef Note;
   unsigned LocCookie;
 
 public:
-  DiagnosticInfoDontCall(StringRef CalleeName, unsigned LocCookie)
-      : DiagnosticInfo(DK_DontCall, DS_Error), CalleeName(CalleeName),
+  DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
+                         DiagnosticSeverity DS, unsigned LocCookie)
+      : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
         LocCookie(LocCookie) {}
   StringRef getFunctionName() const { return CalleeName; }
+  StringRef getNote() const { return Note; }
   unsigned getLocCookie() const { return LocCookie; }
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {

@@ -300,8 +300,8 @@ class CGDebugInfo {
   llvm::DINodeArray CollectCXXTemplateParams(const RecordDecl *TS,
                                              llvm::DIFile *F);
 
-  /// A helper function to collect debug info for btf_tag annotations.
-  llvm::DINodeArray CollectBTFTagAnnotations(const Decl *D);
+  /// A helper function to collect debug info for btf_decl_tag annotations.
+  llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
@@ -428,6 +428,9 @@ public:
   /// the source file. If the location is invalid, the previous
   /// location will be reused.
   void EmitLocation(CGBuilderTy &Builder, SourceLocation Loc);
+
+  QualType getFunctionType(const FunctionDecl *FD, QualType RetTy,
+                           const SmallVectorImpl<const VarDecl *> &Args);
 
   /// Emit a call to llvm.dbg.function.start to indicate
   /// start of a new function.

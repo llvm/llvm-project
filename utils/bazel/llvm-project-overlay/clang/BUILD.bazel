@@ -1584,6 +1584,7 @@ cc_library(
         "//llvm:Coroutines",
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
         "//llvm:FrontendOpenMP",
         "//llvm:IPO",
         "//llvm:IRReader",

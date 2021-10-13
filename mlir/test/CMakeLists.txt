@@ -1,17 +1,6 @@
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
-llvm_canonicalize_cmake_booleans(
-  MLIR_ENABLE_BINDINGS_PYTHON
-  LLVM_BUILD_EXAMPLES
-  MLIR_ENABLE_CUDA_CONVERSIONS
-  MLIR_ENABLE_CUDA_RUNNER
-  MLIR_ENABLE_ROCM_CONVERSIONS
-  MLIR_ENABLE_ROCM_RUNNER
-  MLIR_ENABLE_SPIRV_CPU_RUNNER
-  MLIR_ENABLE_VULKAN_RUNNER
-  )
-
 # Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
 # can find MLIR's CMake configuration
 set(MLIR_CMAKE_DIR
@@ -45,6 +34,21 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
           DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
 
+llvm_canonicalize_cmake_booleans(
+  LLVM_BUILD_EXAMPLES
+  MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_CUDA_CONVERSIONS
+  MLIR_ENABLE_CUDA_RUNNER
+  MLIR_ENABLE_ROCM_CONVERSIONS
+  MLIR_ENABLE_ROCM_RUNNER
+  MLIR_ENABLE_SPIRV_CPU_RUNNER
+  MLIR_ENABLE_VULKAN_RUNNER
+  MLIR_INCLUDE_INTEGRATION_TESTS
+  MLIR_RUN_AMX_TESTS
+  MLIR_RUN_CUDA_TENSOR_CORE_TESTS
+  MLIR_RUN_X86VECTOR_TESTS
+  )
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -66,7 +70,6 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
-  mlir-linalg-ods-gen
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
@@ -124,6 +127,14 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
     MLIRPythonTestModules
   )
 endif()
+
+# This target can be used to just build the dependencies
+# for the check-mlir target without executing the tests.
+# This is useful for bots when splitting the build step
+# from the testing step.
+add_custom_target(check-mlir-build-only
+  DEPENDS ${MLIR_TEST_DEPENDS}
+)
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}

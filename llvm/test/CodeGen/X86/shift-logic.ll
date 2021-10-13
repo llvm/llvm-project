@@ -4,10 +4,10 @@
 define i8 @shl_and(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: shl_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $2, %sil
-; CHECK-NEXT:    shlb $5, %al
-; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    shlb $5, %dil
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i8 %x, 3

@@ -67,7 +67,8 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+- Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
+  Clang-Tidy warnings over multiple lines.
 
 New checks
 ^^^^^^^^^^
@@ -111,6 +112,10 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Removed default setting `cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"`,
+  to match the current state of the C++ Core Guidelines.
+
 
 Removed checks
 ^^^^^^^^^^^^^^

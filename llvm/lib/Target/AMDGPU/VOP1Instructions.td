@@ -187,7 +187,6 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
 } // End isMoveImm = 1
 
-// TODO-GFX11
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: Make profile for this, there is VOP3 encoding also
 def V_READFIRSTLANE_B32 :

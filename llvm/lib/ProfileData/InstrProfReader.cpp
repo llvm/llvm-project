@@ -367,6 +367,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     return error(instrprof_error::unsupported_version);
 
   BinaryIdsSize = swap(Header.BinaryIdsSize);
+  if (BinaryIdsSize % sizeof(uint64_t))
+    return error(instrprof_error::bad_header);
+
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
@@ -401,6 +404,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
+
+  const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
+  if (BinaryIdsStart + BinaryIdsSize > BufferEnd)
+    return error(instrprof_error::bad_header);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = createSymtab(*NewSymtab.get()))
@@ -520,6 +527,10 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   return success();
 }
 
+static size_t RoundUp(size_t size, size_t align) {
+  return (size + align - 1) & ~(align - 1);
+}
+
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
   if (BinaryIdsSize == 0)
@@ -527,8 +538,21 @@ Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
 
   OS << "Binary IDs: \n";
   const uint8_t *BI = BinaryIdsStart;
-  while (BI < BinaryIdsStart + BinaryIdsSize) {
+  const uint8_t *BIEnd = BinaryIdsStart + BinaryIdsSize;
+  while (BI < BIEnd) {
+    size_t Remaining = BIEnd - BI;
+
+    // There should be enough left to read the binary ID size field.
+    if (Remaining < sizeof(uint64_t))
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
     uint64_t BinaryIdLen = swap(*reinterpret_cast<const uint64_t *>(BI));
+
+    // There should be enough left to read the binary ID size field, and the
+    // binary ID.
+    if (Remaining < sizeof(BinaryIdLen) + BinaryIdLen)
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
     // Increment by binary id length data type size.
     BI += sizeof(BinaryIdLen);
     if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
@@ -538,8 +562,9 @@ Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
       OS << format("%02x", BI[I]);
     OS << "\n";
 
-    // Increment by binary id data length.
-    BI += BinaryIdLen;
+    // Increment by binary id data length, rounded to the next 8 bytes. This
+    // accounts for the zero-padding after each build ID.
+    BI += RoundUp(BinaryIdLen, sizeof(uint64_t));
     if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed);
   }

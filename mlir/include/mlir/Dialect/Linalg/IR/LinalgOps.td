@@ -146,9 +146,9 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     * low: A list contains the padding along the start of each
            dimension, i.e `low`.
     * high: A list contains the padding along the end of each
-           dimension, i.e. `high`.
-    * packing: whether the padding operation is guaranteed to create a new
-           tensor suitable for packing, i.e. a copy.
+            dimension, i.e. `high`.
+    * nofold: indicates that the operation should not be folded when source and
+              result types are equal.
 
     The result tensor dimensions are `low` + `dim` + `high` along that
     dimension. The number of elements of `low` and `high` must match
@@ -161,10 +161,9 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     the rank of the `source` tensor. The value `yield`-ed by the
     region is used as the value of the view at the given position.
 
-    If `packing` is indicated, the padding is guaranteed to produce a new
-    tensor, e.g., to use for packing or promotion to faster memory. Such
-    operations are not optimized away even when the source type has the same
-    static shape.
+    If `nofold` is set, the padding operation will not be folded away even
+    if the source type and the padded type have the same static shape. This can
+    be used, e.g., for packing or promotion to faster memory.
 
     Example 1:
 
@@ -199,9 +198,9 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Example 4:
 
     ```mlir
-      // Force a padded value to be always exist with `packing`.
+      // Force a padded value to be always exist with `nofold`.
       %pad_value = ... : f32
-      %0 = linalg.pad_tensor %arg0 packing low[0, 0] high[0, 0] {
+      %0 = linalg.pad_tensor %arg0 nofold low[0, 0] high[0, 0] {
       ^bb0(%arg1: index, %arg2: index):
         linalg.yield %pad_value : f32
       } : tensor<2x3xf32> to tensor<2x3xf32>
@@ -214,7 +213,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Variadic<Index>:$high,
     I64ArrayAttr:$static_low,
     I64ArrayAttr:$static_high,
-    UnitAttr:$packing);
+    UnitAttr:$nofold);
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -223,7 +222,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
   // TODO: Remove custom<InferType> when AllTypesMatch supports opt. operands.
   let assemblyFormat = [{
     $source
-    (`packing` $packing^)?
+    (`nofold` $nofold^)?
     `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
     `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
     $region attr-dict `:` type($source) `to` type($result)
@@ -260,7 +259,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // "high" padding (i.e. it adds trailing padding values until the desired
     // size is met).
     static linalg::PadTensorOp createPadHighOp(
-        Type type, Value source, Value pad, bool packing, Location loc,
+        Type type, Value source, Value pad, bool nofold, Location loc,
         OpBuilder & builder);
 
     // Return a PadTensorOp that pads `source to `type` size with `pad` value.
@@ -268,7 +267,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // directly. If the type passed is nullptr, it is inferred.
     static linalg::PadTensorOp createPadScalarOp(
         Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
-        ArrayRef<OpFoldResult> high, bool packing, Location loc,
+        ArrayRef<OpFoldResult> high, bool nofold, Location loc,
         OpBuilder & builder);
 
     // Return the pad value if it is a constant. Return null value otherwise.
@@ -313,17 +312,17 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // Build a PadTensorOp with mixed static and dynamic entries.
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$staticLow,
       "ArrayRef<int64_t>":$staticHigh, "ValueRange":$low, "ValueRange":$high,
-      CArg<"bool", "false">:$packing,
+      CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadTensorOp with all dynamic entries.
     OpBuilder<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
-      CArg<"bool", "false">:$packing,
+      CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadTensorOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.
     OpBuilder<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
-      CArg<"bool", "false">:$packing,
+      CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 

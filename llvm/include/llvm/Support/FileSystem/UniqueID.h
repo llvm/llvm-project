@@ -14,7 +14,10 @@
 #ifndef LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 #define LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include <cstdint>
+#include <utility>
 
 namespace llvm {
 namespace sys {
@@ -47,6 +50,31 @@ public:
 
 } // end namespace fs
 } // end namespace sys
+
+// Support UniqueIDs as DenseMap keys.
+template <> struct DenseMapInfo<llvm::sys::fs::UniqueID> {
+  static inline llvm::sys::fs::UniqueID getEmptyKey() {
+    auto EmptyKey = DenseMapInfo<std::pair<unsigned, unsigned>>::getEmptyKey();
+    return {EmptyKey.first, EmptyKey.second};
+  }
+
+  static inline llvm::sys::fs::UniqueID getTombstoneKey() {
+    auto TombstoneKey =
+        DenseMapInfo<std::pair<unsigned, unsigned>>::getTombstoneKey();
+    return {TombstoneKey.first, TombstoneKey.second};
+  }
+
+  static unsigned getHashValue(const llvm::sys::fs::UniqueID &Tag) {
+    return hash_value(
+        std::pair<unsigned, unsigned>(Tag.getDevice(), Tag.getFile()));
+  }
+
+  static bool isEqual(const llvm::sys::fs::UniqueID &LHS,
+                      const llvm::sys::fs::UniqueID &RHS) {
+    return LHS == RHS;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H

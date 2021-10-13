@@ -6,11 +6,11 @@ func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, 1]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, 1]> {
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
   %0 = memref.dim %A, %c0 : memref<?x?xf32, offset: 0, strides: [?, 1]>
   %1 = memref.dim %A, %c1 : memref<?x?xf32, offset: 0, strides: [?, 1]>
   %2 = memref.dim %B, %c1 : memref<?x?xf32, offset: 0, strides: [?, 1]>
@@ -54,11 +54,11 @@ func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   linalg.matmul ins(%A, %B : memref<?x?xf32, offset: 0, strides: [?, ?]>,
                              memref<?x?xf32, offset: 0, strides: [?, ?]>)
                outs(%C: memref<?x?xf32, offset: 0, strides: [?, ?]>)
@@ -106,11 +106,11 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   linalg.matmul ins(%A, %B : memref<?x?xf32, offset: 0, strides: [?, ?]>,
                              memref<?x?xf32, offset: 0, strides: [?, ?]>)
                outs(%C : memref<?x?xf32, offset: 0, strides: [?, ?]>)
@@ -139,8 +139,8 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f3
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK:  %[[D_0:.*]] = memref.dim %[[D]], %[[C0]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[D_1:.*]] = memref.dim %[[D]], %[[C1]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[C_1:.*]] = memref.dim %[[C]], %[[C1]] : memref<?x?xf32, #[[$strided2D]]>
@@ -160,11 +160,11 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   linalg.matmul ins(%A, %B : memref<?x?xf32, offset: 0, strides: [?, ?]>,
                              memref<?x?xf32, offset: 0, strides: [?, ?]>)
                outs(%C : memref<?x?xf32, offset: 0, strides: [?, ?]>)
@@ -196,8 +196,8 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f4
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK:  %[[C_0:.*]] = memref.dim %[[C]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[C_1:.*]] = memref.dim %[[C]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[D_1:.*]] = memref.dim %[[D]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
@@ -218,11 +218,11 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %B, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = memref.dim %D, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = memref.dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -258,8 +258,8 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK-DAG: #[[BOUND_4_MAP:.+]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
 // CHECK: func @f5
 // CHECK-SAME:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:  %[[A_0:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK-DAG:  %[[B_1:.*]] = memref.dim %[[B]], %[[C1]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK-DAG:  %[[C_0:.*]] = memref.dim %[[C]], %[[C0]] : memref<?x?xf32, #[[$strided2D]]>
@@ -296,11 +296,11 @@ func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   linalg.matmul ins(%A, %B : memref<?x?xf32, offset: 0, strides: [?, ?]>,
                              memref<?x?xf32, offset: 0, strides: [?, ?]>)
@@ -351,11 +351,11 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %A, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = memref.dim %A, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = memref.dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -407,8 +407,8 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f7
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK:  %[[A_0:.*]] = memref.dim %[[A]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[A_1:.*]] = memref.dim %[[A]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[C_1:.*]] = memref.dim %[[C]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
@@ -438,11 +438,11 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %E: memref<?x?xf32, offset: 0, strides: [?, ?]>
         ) -> memref<?x?xf32, offset: 0, strides: [?, ?]> {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %A, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = memref.dim %A, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   linalg.matmul ins(%A, %C : memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -496,16 +496,16 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %D: memref<?x?xf32, offset: 0, strides: [?, ?]>) {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   linalg.generic #pointwise_2d_trait
       ins(%A, %A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                   memref<?x?xf32, offset: 0, strides: [?, ?]>)
      outs(%B : memref<?x?xf32, offset: 0, strides: [?, ?]>) {
   ^bb0(%E: f32, %arg5: f32, %arg6: f32):   // no predecessors
-    %2 = addf %E, %arg5 : f32
+    %2 = arith.addf %E, %arg5 : f32
     linalg.yield %2 : f32
   }
   %0 = memref.dim %B, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -526,7 +526,7 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                     memref<?x?xf32, offset: ?, strides: [?, ?]>)
        outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
       ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
-        %7 = mulf %arg6, %arg7 : f32
+        %7 = arith.mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
       }
     }
@@ -538,9 +538,9 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK:    scf.for
 // CHECK-NOT:  scf.for
 // CHECK:      linalg.generic
-// CHECK:        addf
+// CHECK:        arith.addf
 // CHECK:      linalg.generic
-// CHECK:        mulf
+// CHECK:        arith.mulf
 
 // -----
 
@@ -550,10 +550,10 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   iterator_types = ["parallel", "parallel"]
 }
 func @pointwise_no_view(%M: index, %N: index) {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
   %A = memref.alloc (%M, %N): memref<?x?xf32>
   %B = memref.alloc (%M, %N): memref<?x?xf32>
   %C = memref.alloc (%M, %N): memref<?x?xf32>
@@ -563,7 +563,7 @@ func @pointwise_no_view(%M: index, %N: index) {
     ins(%A, %A : memref<?x?xf32>, memref<?x?xf32>)
    outs(%B : memref<?x?xf32>) {
   ^bb0(%e: f32, %arg5: f32, %arg6: f32):   // no predecessors
-    %2 = addf %e, %arg5 : f32
+    %2 = arith.addf %e, %arg5 : f32
     linalg.yield %2 : f32
   }
   %0 = memref.dim %B, %c0 : memref<?x?xf32>
@@ -584,7 +584,7 @@ func @pointwise_no_view(%M: index, %N: index) {
                     memref<?x?xf32, offset: ?, strides: [?, ?]>)
        outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
       ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
-        %7 = mulf %arg6, %arg7 : f32
+        %7 = arith.mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
       }
     }
@@ -596,9 +596,9 @@ func @pointwise_no_view(%M: index, %N: index) {
 // CHECK:    scf.for
 // CHECK-NOT:  scf.for
 // CHECK:      linalg.generic
-// CHECK:        addf
+// CHECK:        arith.addf
 // CHECK:      linalg.generic
-// CHECK:        mulf
+// CHECK:        arith.mulf
 
 
 // -----
@@ -610,8 +610,8 @@ func @pointwise_no_view(%M: index, %N: index) {
 func @fusion_of_three(%arg0: memref<100x10xf32>,
                       %arg1: memref<100xf32>,
                       %arg2: memref<100x10xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %0 = memref.alloc() {temp = true} : memref<100x10xf32>
   linalg.generic {
     indexing_maps = [#map0, #map1],
@@ -628,7 +628,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
     ins(%arg0, %0: memref<100x10xf32>, memref<100x10xf32>)
    outs(%1 : memref<100x10xf32>) {
       ^bb0(%arg3: f32, %arg4: f32, %arg5: f32): // no predecessors
-        %2 = subf %arg3, %arg4 : f32
+        %2 = arith.subf %arg3, %arg4 : f32
         linalg.yield %2 : f32
       }
   memref.dealloc %0 : memref<100x10xf32>
@@ -664,7 +664,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 // CHECK:       linalg.generic
 // CHECK:         linalg.yield
 // CHECK:       linalg.generic
-// CHECK:         subf
+// CHECK:         arith.subf
 // CHECK:         linalg.yield
 // CHECK:       linalg.generic
 // CHECK:         exp
@@ -672,44 +672,33 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 
 // -----
 
-#map0 = affine_map<(d0, d1, d2) -> (d0, d1 - d2)>
-#map1 = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
-#map2 = affine_map<()[s0] -> (s0 + 3)>
 
-func @fill_and_conv(%arg0: memref<?x?x?x?xf32>, %arg1: memref<2x3x1x1xf32>, %arg2: memref<?x?x?x?xf32>) {
-  %cst = constant 0.000000e+00 : f32
-  linalg.fill(%cst, %arg2) : f32, memref<?x?x?x?xf32>
+#map0 = affine_map<(d0)[s0] -> (2, -d0 + s0)>
+#map1 = affine_map<(d0)[s0] -> (3, -d0 + s0)>
+#map2 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+#map3 = affine_map<(d0)[s0, s1] -> (s0 + 1, -d0 + s0 + s1)>
+#map4 = affine_map<(d0)[s0, s1] -> (s0 + 2, -d0 + s0 + s1)>
 
-  %c4 = constant 4 : index
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %4 = memref.dim %arg1, %c0 : memref<2x3x1x1xf32>
-  %5 = memref.dim %arg1, %c1 : memref<2x3x1x1xf32>
-  %6 = memref.dim %arg0, %c0 : memref<?x?x?x?xf32>
-  %7 = memref.dim %arg0, %c1 : memref<?x?x?x?xf32>
-  %8 = memref.dim %arg0, %c3 : memref<?x?x?x?xf32>
-  %9 = memref.dim %arg2, %c0 : memref<?x?x?x?xf32>
-  %10 = memref.dim %arg2, %c1 : memref<?x?x?x?xf32>
-  %11 = memref.dim %arg2, %c2 : memref<?x?x?x?xf32>
-  %12 = memref.dim %arg2, %c3 : memref<?x?x?x?xf32>
-  %13 = linalg.range %c0 : %6 : %c2 : !linalg.range
-  %14 = linalg.range %c0 : %10 : %c3 : !linalg.range
-  scf.for %arg3 = %c0 to %6 step %c2 {
-    scf.for %arg4 = %c0 to %10 step %c3 {
-      %15 = affine.min #map0(%c2, %c1, %arg3)
-      %16 = affine.apply #map2()[%7]
-      %17 = affine.min #map0(%16, %c4, %arg4)
-      %18 = memref.dim %arg0, %c2 : memref<?x?x?x?xf32>
-      %19 = memref.dim %arg0, %c3 : memref<?x?x?x?xf32>
-      %20 = memref.subview %arg0[%arg3, %arg4, %c0, %c0] [%15, %17, %18, %19] [%c1, %c1, %c1, %c1] : memref<?x?x?x?xf32> to memref<?x?x?x?xf32, #map1>
-      %21 = affine.min #map0(%c2, %c1, %arg3)
-      %22 = affine.min #map0(%c3, %c4, %arg4)
-      %23 = memref.dim %arg2, %c2 : memref<?x?x?x?xf32>
-      %24 = memref.dim %arg2, %c3 : memref<?x?x?x?xf32>
-      %25 = memref.subview %arg2[%arg3, %arg4, %c0, %c0] [%21, %22, %23, %24] [%c1, %c1, %c1, %c1] : memref<?x?x?x?xf32> to memref<?x?x?x?xf32, #map1>
-      linalg.conv(%arg1, %20, %25) {dilations = [1, 1], strides = [1, 1]} : memref<2x3x1x1xf32>, memref<?x?x?x?xf32, #map1>, memref<?x?x?x?xf32, #map1>
+func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  linalg.fill(%cst, %arg0) : f32, memref<?x?xf32>
+  %2 = memref.dim %arg1, %c0 : memref<?x?xf32>
+  %3 = memref.dim %arg1, %c1 : memref<?x?xf32>
+  %4 = memref.dim %arg2, %c0 : memref<?x?xf32>
+  %5 = memref.dim %arg2, %c1 : memref<?x?xf32>
+  scf.for %arg3 = %c0 to %4 step %c2 {
+    scf.for %arg4 = %c0 to %5 step %c3 {
+      %6 = affine.min #map3(%arg3)[%2, %4]
+      %7 = affine.min #map4(%arg4)[%3, %5]
+      %8 = memref.subview %arg0[%arg3, %arg4] [%6, %7] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map2>
+      %9 = affine.min #map0(%arg3)[%4]
+      %10 = affine.min #map1(%arg4)[%5]
+      %11 = memref.subview %arg2[%arg3, %arg4] [%9, %10] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map2>
+      linalg.conv_2d ins(%8, %arg1 : memref<?x?xf32, #map2>, memref<?x?xf32>) outs(%11 : memref<?x?xf32, #map2>)
     }
   }
   return
@@ -718,17 +707,17 @@ func @fill_and_conv(%arg0: memref<?x?x?x?xf32>, %arg1: memref<2x3x1x1xf32>, %arg
 // CHECK: scf.for
 // CHECK:   scf.for
 // CHECK:     linalg.fill
-// CHECK:     linalg.conv
+// CHECK:     linalg.conv_2d
 
 // -----
 
 // Test that different allocation-like ops are recognized and properly handled.
 func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
 
   %A = memref.alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %B = memref.alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>

@@ -231,8 +231,8 @@ define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 ;
 ; NOBMI-X64-LABEL: n8_not_lowbit_mask:
 ; NOBMI-X64:       # %bb.0:
-; NOBMI-X64-NEXT:    movl %esi, %eax
-; NOBMI-X64-NEXT:    incl %eax
+; NOBMI-X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; NOBMI-X64-NEXT:    leal 1(%rsi), %eax
 ; NOBMI-X64-NEXT:    notl %eax
 ; NOBMI-X64-NEXT:    andl %edi, %eax
 ; NOBMI-X64-NEXT:    retq
@@ -260,8 +260,8 @@ define i32 @n9_sub_is_not_commutative(i32 %ptr, i32 %alignment) nounwind {
 ;
 ; X64-LABEL: n9_sub_is_not_commutative:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    decl %eax
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    leal -1(%rsi), %eax
 ; X64-NEXT:    andl %edi, %eax
 ; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    retq

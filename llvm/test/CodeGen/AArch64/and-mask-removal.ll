@@ -10,17 +10,17 @@ define void @new_position(i32 %pos) {
 ; CHECK-LABEL: new_position:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    adrp x9, _board@GOTPAGE
-; CHECK-NEXT:    ldr x9, [x9, _board@GOTPAGEOFF]
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    ldr x9, [x9, _board@GOTPAGEOFF]
 ; CHECK-NEXT:    ldrb w9, [x9, x8]
 ; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    b.hi LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-NEXT:    adrp x9, _next_string@GOTPAGE
-; CHECK-NEXT:    ldr x9, [x9, _next_string@GOTPAGEOFF]
 ; CHECK-NEXT:    adrp x10, _string_number@GOTPAGE
+; CHECK-NEXT:    ldr x9, [x9, _next_string@GOTPAGEOFF]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    ldr x10, [x10, _string_number@GOTPAGEOFF]
 ; CHECK-NEXT:    str w9, [x10, x8, lsl #2]
@@ -149,7 +149,6 @@ define zeroext i1 @test8_6(i8 zeroext %x)  align 2 {
 ; CHECK-LABEL: test8_6:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub w8, w0, #58
-; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    cmp w8, #154
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
@@ -219,8 +218,8 @@ define zeroext i1 @test16_2(i16 zeroext %x)  align 2 {
 ; CHECK-LABEL: test16_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov w8, #16882
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    mov w9, #40700
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    cmp w9, w8, uxth
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
@@ -255,8 +254,8 @@ define zeroext i1 @test16_4(i16 zeroext %x)  align 2 {
 ; CHECK-LABEL: test16_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov w8, #29985
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    mov w9, #15676
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    cmp w9, w8, uxth
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -291,10 +290,10 @@ define zeroext i1 @test16_6(i16 zeroext %x)  align 2 {
 ; CHECK-LABEL: test16_6:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov w8, #-32194
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    mov w9, #24320
-; CHECK-NEXT:    cmp w9, w8, uxth
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    add w8, w0, w8
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %0 = add i16 %x, -32194
@@ -310,8 +309,8 @@ define zeroext i1 @test16_7(i16 zeroext %x)  align 2 {
 ; CHECK-LABEL: test16_7:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov w8, #9272
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    mov w9, #22619
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    cmp w9, w8, uxth
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret

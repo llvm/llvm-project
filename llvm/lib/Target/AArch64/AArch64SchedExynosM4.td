@@ -558,7 +558,8 @@ def : SchedAlias<WriteVLD, M4WriteL5>;
 def : SchedAlias<WriteVST, M4WriteVST1>;
 
 // ASIMD FP instructions.
-def : SchedAlias<WriteV, M4WriteNALU1>;
+def : SchedAlias<WriteVd, M4WriteNALU1>;
+def : SchedAlias<WriteVq, M4WriteNALU1>;
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }

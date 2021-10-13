@@ -113,6 +113,7 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
     timeout_in_minutes: 120
+
   - label: "C++11"
     command: "libcxx/utils/ci/run-buildbot generic-cxx11"
     artifact_paths:
@@ -159,6 +160,7 @@ steps:
   #
   - wait
 
+  # Tests with the supported compilers.
   - label: "GCC 11 / C++11"
     command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
     artifact_paths:
@@ -198,6 +200,100 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  # Tests with the sanitizers.
+  - label: "ASAN"
+    command: "libcxx/utils/ci/run-buildbot generic-asan"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "TSAN"
+    command: "libcxx/utils/ci/run-buildbot generic-tsan"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "UBSAN"
+    command: "libcxx/utils/ci/run-buildbot generic-ubsan"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  # Tests with the various supported ways to build libc++.
+  - label: "Legacy Lit configuration"
+    command: "libcxx/utils/ci/run-buildbot legacy-test-config"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Legacy standalone build"
+    command: "libcxx/utils/ci/run-buildbot legacy-standalone"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "New standalone runtimes build"
+    command: "libcxx/utils/ci/run-buildbot new-standalone"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Runtimes build"
+    command: "libcxx/utils/ci/run-buildbot runtimes-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  # Tests with various build configurations.
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
     artifact_paths:
@@ -265,47 +361,21 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "ASAN"
-    command: "libcxx/utils/ci/run-buildbot generic-asan"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "TSAN"
-    command: "libcxx/utils/ci/run-buildbot generic-tsan"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "UBSAN"
-    command: "libcxx/utils/ci/run-buildbot generic-ubsan"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "With LLVM's libunwind"
     command: "libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "32 bit"
+    command: "libcxx/utils/ci/run-buildbot generic-32bit"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -343,7 +413,7 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "No Filesystem"
+  - label: "No filesystem"
     command: "libcxx/utils/ci/run-buildbot generic-no-filesystem"
     artifact_paths:
       - "**/test-results.xml"
@@ -395,6 +465,20 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "No wide characters"
+    command: "libcxx/utils/ci/run-buildbot generic-no-wide-characters"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  # Other non-testing CI jobs
   - label: "Benchmarks"
     command: "libcxx/utils/ci/run-buildbot benchmarks"
     artifact_paths:
@@ -421,58 +505,7 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Legacy Lit configuration"
-    command: "libcxx/utils/ci/run-buildbot legacy-test-config"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Legacy standalone build"
-    command: "libcxx/utils/ci/run-buildbot legacy-standalone"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Unified standalone build"
-    command: "libcxx/utils/ci/run-buildbot unified-standalone"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Runtimes build"
-    command: "libcxx/utils/ci/run-buildbot runtimes-build"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
+  # Tests on non-Unix platforms
   - label: "Windows (DLL)"
     command: "bash libcxx/utils/ci/run-buildbot windows-dll"
     artifact_paths:
@@ -491,19 +524,6 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "windows"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "32 bit"
-    command: "libcxx/utils/ci/run-buildbot generic-32bit"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -543,19 +563,6 @@ steps:
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
     command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "macos"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Apple system -fno-exceptions"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-noexceptions"
     artifact_paths:
       - "**/test-results.xml"
     agents:

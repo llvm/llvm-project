@@ -7,13 +7,13 @@
 # CHECK:       bb.0:
 # CHECK:        bl _cb1
 # CHECK-NEXT:   mov x29, x29
-# CHECK-NEXT:   bl _OUTLINED_FUNCTION_0
+# CHECK:        b _OUTLINED_FUNCTION_0
 #
 # CHECK-LABEL: _fn2:
 # CHECK:       bb.0:
 # CHECK:        bl _cb2
 # CHECK-NEXT:   mov x29, x29
-# CHECK-NEXT:   bl _OUTLINED_FUNCTION_0
+# CHECK:        b _OUTLINED_FUNCTION_0
 #
 # CHECK-LABEL: _OUTLINED_FUNCTION_0:
 # CHECK:       bb.0:

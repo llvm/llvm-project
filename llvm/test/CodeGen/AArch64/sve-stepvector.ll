@@ -48,10 +48,9 @@ entry:
 define <vscale x 4 x i64> @stepvector_nxv4i64() {
 ; CHECK-LABEL: stepvector_nxv4i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    add z1.d, z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    incd z1.d
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
@@ -61,14 +60,13 @@ entry:
 define <vscale x 16 x i32> @stepvector_nxv16i32() {
 ; CHECK-LABEL: stepvector_nxv16i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    cnth x8
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    mov z1.s, w9
-; CHECK-NEXT:    mov z3.s, w8
-; CHECK-NEXT:    add z1.s, z0.s, z1.s
-; CHECK-NEXT:    add z2.s, z0.s, z3.s
-; CHECK-NEXT:    add z3.s, z1.s, z3.s
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    incw z1.s
+; CHECK-NEXT:    incw z2.s, all, mul #2
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    incw z3.s, all, mul #2
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
@@ -186,9 +184,9 @@ entry:
 define <vscale x 4 x i32> @multiple_use_stepvector_nxv4i32_1(i32 %data) {
 ; CHECK-LABEL: multiple_use_stepvector_nxv4i32_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z0.s, w0
 ; CHECK-NEXT:    index z1.s, w0, #1
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -218,9 +216,9 @@ entry:
 define <vscale x 2 x i64> @multiple_use_stepvector_nxv2i64_1(i64 %data) {
 ; CHECK-LABEL: multiple_use_stepvector_nxv2i64_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.d, x0
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z1.d, z1.d, z0.d
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -343,9 +341,9 @@ define <vscale x 8 x i16> @sub_multiple_use_stepvector_nxv8i16() {
 ; CHECK-LABEL: sub_multiple_use_stepvector_nxv8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    subr z1.h, z1.h, #2 // =0x2
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -386,13 +384,13 @@ entry:
 define <vscale x 16 x i32> @split_sub_stepvector_nxv16i32() {
 ; CHECK-LABEL: split_sub_stepvector_nxv16i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    cnth x9
+; CHECK-NEXT:    neg x8, x8
 ; CHECK-NEXT:    neg x9, x9
 ; CHECK-NEXT:    index z0.s, #0, #-1
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    mov z1.s, w9
-; CHECK-NEXT:    mov z3.s, w8
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z3.s, w9
 ; CHECK-NEXT:    add z1.s, z0.s, z1.s
 ; CHECK-NEXT:    add z2.s, z0.s, z3.s
 ; CHECK-NEXT:    add z3.s, z1.s, z3.s

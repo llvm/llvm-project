@@ -47,7 +47,7 @@ module {
       ins(%arga: tensor<32xi32, #SV>)
       outs(%argx: tensor<i32>) {
         ^bb(%a: i32, %x: i32):
-          %0 = addi %x, %a : i32
+          %0 = arith.addi %x, %a : i32
           linalg.yield %0 : i32
     } -> tensor<i32>
     return %0 : tensor<i32>
@@ -59,7 +59,7 @@ module {
       ins(%arga: tensor<32xf32, #SV>)
       outs(%argx: tensor<f32>) {
         ^bb(%a: f32, %x: f32):
-          %0 = addf %x, %a : f32
+          %0 = arith.addf %x, %a : f32
           linalg.yield %0 : f32
     } -> tensor<f32>
     return %0 : tensor<f32>
@@ -71,7 +71,7 @@ module {
       ins(%arga: tensor<32xi32, #DV>)
       outs(%argx: tensor<i32>) {
         ^bb(%a: i32, %x: i32):
-          %0 = muli %x, %a : i32
+          %0 = arith.muli %x, %a : i32
           linalg.yield %0 : i32
     } -> tensor<i32>
     return %0 : tensor<i32>
@@ -83,7 +83,7 @@ module {
       ins(%arga: tensor<32xf32, #DV>)
       outs(%argx: tensor<f32>) {
         ^bb(%a: f32, %x: f32):
-          %0 = mulf %x, %a : f32
+          %0 = arith.mulf %x, %a : f32
           linalg.yield %0 : f32
     } -> tensor<f32>
     return %0 : tensor<f32>
@@ -95,7 +95,7 @@ module {
       ins(%arga: tensor<32xi32, #DV>)
       outs(%argx: tensor<i32>) {
         ^bb(%a: i32, %x: i32):
-          %0 = and %x, %a : i32
+          %0 = arith.andi %x, %a : i32
           linalg.yield %0 : i32
     } -> tensor<i32>
     return %0 : tensor<i32>
@@ -107,7 +107,7 @@ module {
       ins(%arga: tensor<32xi32, #SV>)
       outs(%argx: tensor<i32>) {
         ^bb(%a: i32, %x: i32):
-          %0 = or %x, %a : i32
+          %0 = arith.ori %x, %a : i32
           linalg.yield %0 : i32
     } -> tensor<i32>
     return %0 : tensor<i32>
@@ -119,48 +119,46 @@ module {
       ins(%arga: tensor<32xi32, #SV>)
       outs(%argx: tensor<i32>) {
         ^bb(%a: i32, %x: i32):
-          %0 = xor %x, %a : i32
+          %0 = arith.xori %x, %a : i32
           linalg.yield %0 : i32
     } -> tensor<i32>
     return %0 : tensor<i32>
   }
 
-  func @dump_i32(%arg0 : tensor<i32>) {
-    %m = memref.buffer_cast %arg0 : memref<i32>
-    %v = memref.load %m[] : memref<i32>
+  func @dump_i32(%arg0 : memref<i32>) {
+    %v = memref.load %arg0[] : memref<i32>
     vector.print %v : i32
     return
   }
 
-  func @dump_f32(%arg0 : tensor<f32>) {
-    %m = memref.buffer_cast %arg0 : memref<f32>
-    %v = memref.load %m[] : memref<f32>
+  func @dump_f32(%arg0 : memref<f32>) {
+    %v = memref.load %arg0[] : memref<f32>
     vector.print %v : f32
     return
   }
 
   func @entry() {
-    %ri = constant dense< 7   > : tensor<i32>
-    %rf = constant dense< 2.0 > : tensor<f32>
+    %ri = arith.constant dense< 7   > : tensor<i32>
+    %rf = arith.constant dense< 2.0 > : tensor<f32>
 
-    %c_0_i32 = constant dense<[
+    %c_0_i32 = arith.constant dense<[
       0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 4, 0, 0, 0,
       0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0
     ]> : tensor<32xi32>
 
-    %c_0_f32 = constant dense<[
+    %c_0_f32 = arith.constant dense<[
       0.0, 1.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 2.5, 0.0, 0.0, 0.0,
       2.0, 0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 9.0
     ]> : tensor<32xf32>
 
-    %c_1_i32 = constant dense<[
+    %c_1_i32 = arith.constant dense<[
       1, 1, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 3
     ]> : tensor<32xi32>
 
-    %c_1_f32 = constant dense<[
+    %c_1_f32 = arith.constant dense<[
       1.0, 1.0, 1.0, 3.5, 1.0, 1.0, 1.0, 1.0,
       1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0,
       1.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0, 1.0,
@@ -203,13 +201,33 @@ module {
     // CHECK: 15
     // CHECK: 10
     //
-    call @dump_i32(%0) : (tensor<i32>) -> ()
-    call @dump_f32(%1) : (tensor<f32>) -> ()
-    call @dump_i32(%2) : (tensor<i32>) -> ()
-    call @dump_f32(%3) : (tensor<f32>) -> ()
-    call @dump_i32(%4) : (tensor<i32>) -> ()
-    call @dump_i32(%5) : (tensor<i32>) -> ()
-    call @dump_i32(%6) : (tensor<i32>) -> ()
+    %m0 = memref.buffer_cast %0 : memref<i32>
+    call @dump_i32(%m0) : (memref<i32>) -> ()
+    %m1 = memref.buffer_cast %1 : memref<f32>
+    call @dump_f32(%m1) : (memref<f32>) -> ()
+    %m2 = memref.buffer_cast %2 : memref<i32>
+    call @dump_i32(%m2) : (memref<i32>) -> ()
+    %m3 = memref.buffer_cast %3 : memref<f32>
+    call @dump_f32(%m3) : (memref<f32>) -> ()
+    %m4 = memref.buffer_cast %4 : memref<i32>
+    call @dump_i32(%m4) : (memref<i32>) -> ()
+    %m5 = memref.buffer_cast %5 : memref<i32>
+    call @dump_i32(%m5) : (memref<i32>) -> ()
+    %m6 = memref.buffer_cast %6 : memref<i32>
+    call @dump_i32(%m6) : (memref<i32>) -> ()
+
+    // Release the resources.
+    sparse_tensor.release %sparse_input_i32 : tensor<32xi32, #SV>
+    sparse_tensor.release %sparse_input_f32 : tensor<32xf32, #SV>
+    sparse_tensor.release %dense_input_i32  : tensor<32xi32, #DV>
+    sparse_tensor.release %dense_input_f32  : tensor<32xf32, #DV>
+    memref.dealloc %m0 : memref<i32>
+    memref.dealloc %m1 : memref<f32>
+    memref.dealloc %m2 : memref<i32>
+    memref.dealloc %m3 : memref<f32>
+    memref.dealloc %m4 : memref<i32>
+    memref.dealloc %m5 : memref<i32>
+    memref.dealloc %m6 : memref<i32>
 
     return
   }

@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRVector
   VectorOps.cpp
+  VectorMultiDimReductionTransforms.cpp
   VectorTransferOpTransforms.cpp
   VectorTransforms.cpp
   VectorUtils.cpp
@@ -12,6 +13,7 @@ add_mlir_dialect_library(MLIRVector
   MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRDialectUtils
   MLIRIR
   MLIRStandard

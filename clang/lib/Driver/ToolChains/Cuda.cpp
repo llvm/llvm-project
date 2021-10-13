@@ -299,8 +299,6 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     return;
   }
 
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
   CC1Args.push_back("-include");
   CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
 }
@@ -612,8 +610,16 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
+                      false, false);
+
+  // Find nvlink and pass it as "--nvlink-path=" argument of
+  // clang-nvlink-wrapper.
+  CmdArgs.push_back(Args.MakeArgString(
+      Twine("--nvlink-path=" + getToolChain().GetProgramPath("nvlink"))));
+
   const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
@@ -743,6 +749,8 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
+    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
+                        /* bitcode SDL?*/ true, /* PostClang Link? */ true);
   }
 }
 
@@ -867,6 +875,11 @@ CudaToolChain::GetCXXStdlibType(const ArgList &Args) const {
 void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+
+  if (!DriverArgs.hasArg(options::OPT_nogpuinc) && CudaInstallation.isValid())
+    CC1Args.append(
+        {"-internal-isystem",
+         DriverArgs.MakeArgString(CudaInstallation.getIncludePath())});
 }
 
 void CudaToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,

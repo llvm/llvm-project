@@ -24,11 +24,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -107,7 +107,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-static void handleLLVMFatalError(void *, const std::string &Message, bool) {
+static void handleLLVMFatalError(void *, const char *Message, bool) {
   // TODO: Would it be better to call into the fuzzer internals directly?
   dbgs() << "LLVM ERROR: " << Message << "\n"
          << "Aborting to trigger fuzzer exit handling.\n";

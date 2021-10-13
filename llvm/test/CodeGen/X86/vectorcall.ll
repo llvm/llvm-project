@@ -172,8 +172,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
 
 define x86_vectorcallcc void @test_mixed_7(%struct.HVA5* noalias sret(%struct.HVA5) %agg.result) {
-; X86-LABEL: test_mixed_7@@4
-; X64-LABEL: test_mixed_7@@8
+; CHECK-LABEL: test_mixed_7@@0
 ; X64:         mov{{[ql]}}	%rcx, %rax
 ; CHECK:       movaps	%xmm{{[0-9]}}, 64(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, 48(%{{rcx|eax}})

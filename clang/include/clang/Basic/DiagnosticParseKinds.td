@@ -549,6 +549,12 @@ def err_expected_init_in_condition_lparen : Error<
   "variable declaration in condition cannot have a parenthesized initializer">;
 def err_extraneous_rparen_in_condition : Error<
   "extraneous ')' after condition, expected a statement">;
+def ext_alias_in_init_statement : ExtWarn<
+  "alias declaration in this context is a C++2b extension">,
+  InGroup<CXX2b>;
+def warn_cxx20_alias_in_init_statement  : Warning<
+  "alias declaration in this context is incompatible with C++ standards before C++2b">,
+  DefaultIgnore, InGroup<CXXPre2bCompat>;
 def warn_dangling_else : Warning<
   "add explicit braces to avoid dangling else">,
   InGroup<DanglingElse>;
@@ -626,6 +632,13 @@ def ext_constexpr_if : ExtWarn<
 def warn_cxx14_compat_constexpr_if : Warning<
   "constexpr if is incompatible with C++ standards before C++17">,
   DefaultIgnore, InGroup<CXXPre17Compat>;
+def ext_consteval_if : ExtWarn<
+  "consteval if is a C++2b extension">,
+   InGroup<CXX2b>;
+def warn_cxx20_compat_consteval_if : Warning<
+  "consteval if is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+
 def ext_init_statement : ExtWarn<
   "'%select{if|switch}0' initialization statements are a C++17 extension">,
   InGroup<CXX17>;
@@ -742,8 +755,9 @@ def err_unknown_template_name : Error<
   "unknown template name %0">;
 def err_expected_comma_greater : Error<
   "expected ',' or '>' in template-parameter-list">;
-def err_class_on_template_template_param : Error<
-  "template template parameter requires 'class' after the parameter list">;
+def err_class_on_template_template_param
+    : Error<"template template parameter requires 'class'%select{| or "
+            "'typename'}0 after the parameter list">;
 def ext_template_template_param_typename : ExtWarn<
   "template template parameter using 'typename' is a C++17 extension">,
   InGroup<CXX17>;
@@ -1102,6 +1116,9 @@ def warn_pragma_expected_integer : Warning<
 def warn_pragma_ms_struct : Warning<
   "incorrect use of '#pragma ms_struct on|off' - ignored">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_ms_fenv_access : Warning<
+  "incorrect use of '#pragma fenv_access (on|off)' - ignored">,
+  InGroup<IgnoredPragmas>;
 def warn_pragma_extra_tokens_at_eol : Warning<
   "extra tokens at end of '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
@@ -1167,9 +1184,6 @@ def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
 // The C standard 7.6.1p2 says "The [FENV_ACCESS] pragma shall occur either
 // outside external declarations or preceding all explicit declarations and
 // statements inside a compound statement.
-def err_pragma_stdc_fenv_access_scope : Error<
-  "'#pragma STDC FENV_ACCESS' can only appear at file scope or at the start of"
-  " a compound statement">;
 def warn_stdc_fenv_round_not_supported :
    Warning<"pragma STDC FENV_ROUND is not supported">,
    InGroup<UnknownPragmas>;

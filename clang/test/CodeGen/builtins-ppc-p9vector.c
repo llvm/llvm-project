@@ -1260,3 +1260,9 @@ vector signed long long test_vec_signextll_sll_si(void) {
     // CHECK-NEXT: ret <2 x i64>
     return vec_signextll(vsia);
 }
+
+vector unsigned long long test_vbpermd(void) {
+  // CHECK: @llvm.ppc.altivec.vbpermd(<2 x i64>
+  // CHECK-BE: @llvm.ppc.altivec.vbpermd(<2 x i64>
+  return vec_bperm(vula, vuca);
+}

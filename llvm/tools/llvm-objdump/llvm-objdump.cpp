@@ -47,6 +47,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -71,7 +72,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1774,7 +1774,9 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
     return;
 
   const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
-  if (!Elf || Elf->getEType() != ELF::ET_DYN) {
+  if (!Elf || !any_of(Elf->sections(), [](const ELFSectionRef Sec) {
+        return Sec.getType() == ELF::SHT_DYNAMIC;
+      })) {
     reportError(Obj->getFileName(), "not a dynamic object");
     return;
   }
@@ -1783,7 +1785,12 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
   if (DynRelSec.empty())
     return;
 
-  outs() << "DYNAMIC RELOCATION RECORDS\n";
+  outs() << "\nDYNAMIC RELOCATION RECORDS\n";
+  const uint32_t OffsetPadding = (Obj->getBytesInAddress() > 4 ? 16 : 8);
+  const uint32_t TypePadding = 24;
+  outs() << left_justify("OFFSET", OffsetPadding) << ' '
+         << left_justify("TYPE", TypePadding) << " VALUE\n";
+
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
   for (const SectionRef &Section : DynRelSec)
     for (const RelocationRef &Reloc : Section.relocations()) {
@@ -1793,8 +1800,8 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
       Reloc.getTypeName(RelocName);
       if (Error E = getRelocationValueString(Reloc, ValueStr))
         reportError(std::move(E), Obj->getFileName());
-      outs() << format(Fmt.data(), Address) << " " << RelocName << " "
-             << ValueStr << "\n";
+      outs() << format(Fmt.data(), Address) << ' '
+             << left_justify(RelocName, TypePadding) << ' ' << ValueStr << '\n';
     }
 }
 
@@ -2043,20 +2050,55 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   } else if (Common) {
     outs() << "*COM*";
   } else if (Section == O->section_end()) {
-    outs() << "*UND*";
+    if (O->isXCOFF()) {
+      XCOFFSymbolRef XCOFFSym = dyn_cast<const XCOFFObjectFile>(O)->toSymbolRef(
+          Symbol.getRawDataRefImpl());
+      if (XCOFF::N_DEBUG == XCOFFSym.getSectionNumber())
+        outs() << "*DEBUG*";
+      else
+        outs() << "*UND*";
+    } else
+      outs() << "*UND*";
   } else {
     StringRef SegmentName = getSegmentName(MachO, *Section);
     if (!SegmentName.empty())
       outs() << SegmentName << ",";
     StringRef SectionName = unwrapOrError(Section->getName(), FileName);
     outs() << SectionName;
+    if (O->isXCOFF()) {
+      Optional<SymbolRef> SymRef = getXCOFFSymbolContainingSymbolRef(
+          dyn_cast<const XCOFFObjectFile>(O), Symbol);
+      if (SymRef) {
+
+        Expected<StringRef> NameOrErr = SymRef.getValue().getName();
+
+        if (NameOrErr) {
+          outs() << " (csect:";
+          std::string SymName(NameOrErr.get());
+
+          if (Demangle)
+            SymName = demangle(SymName);
+
+          if (SymbolDescription)
+            SymName = getXCOFFSymbolDescription(
+                createSymbolInfo(O, SymRef.getValue()), SymName);
+
+          outs() << ' ' << SymName;
+          outs() << ") ";
+        } else
+          reportWarning(toString(NameOrErr.takeError()), FileName);
+      }
+    }
   }
 
-  if (Common || O->isELF()) {
-    uint64_t Val =
-        Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
-    outs() << '\t' << format(Fmt, Val);
-  }
+  if (Common)
+    outs() << '\t' << format(Fmt, static_cast<uint64_t>(Symbol.getAlignment()));
+  else if (O->isXCOFF())
+    outs() << '\t'
+           << format(Fmt, dyn_cast<const XCOFFObjectFile>(O)->getSymbolSize(
+                              Symbol.getRawDataRefImpl()));
+  else if (O->isELF())
+    outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
 
   if (O->isELF()) {
     if (!SymbolVersions.empty()) {
@@ -2089,10 +2131,14 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
     outs() << " .hidden";
   }
 
+  std::string SymName(Name);
   if (Demangle)
-    outs() << ' ' << demangle(std::string(Name)) << '\n';
-  else
-    outs() << ' ' << Name << '\n';
+    SymName = demangle(SymName);
+
+  if (O->isXCOFF() && SymbolDescription)
+    SymName = getXCOFFSymbolDescription(createSymbolInfo(O, Symbol), SymName);
+
+  outs() << ' ' << SymName << '\n';
 }
 
 static void printUnwindInfo(const ObjectFile *O) {

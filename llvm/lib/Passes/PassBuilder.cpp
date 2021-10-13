@@ -1302,8 +1302,11 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       bool UseMemorySSA = (Name == "loop-mssa");
       bool UseBFI = llvm::any_of(
           InnerPipeline, [](auto Pipeline) { return Pipeline.Name == "licm"; });
+      bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
+        return Pipeline.Name == "loop-predication";
+      });
       FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI));
+                                                  UseBFI, UseBPI));
       return Error::success();
     }
     if (auto Count = parseRepeatPassName(Name)) {

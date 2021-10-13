@@ -2,10 +2,10 @@
 
 // CHECK-LABEL: func @memref_cast(
 func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c8 = constant 8 : index
-  %c16 = constant 16 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
   %1 = memref.alloc (%b) : memref<?xi8>
   %2 = memref.view %1[%c0][] : memref<?xi8> to memref<16x16xf32>
   %3 = memref.cast %2 : memref<16x16xf32> to memref<?x?xf32>
@@ -24,10 +24,10 @@ func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
 func @memref_cast_into_tiled_loop(%arg0: memref<192xf32>)  {
   %0 = memref.cast %arg0
     : memref<192xf32> to memref<192xf32, #map>
-  %cst = constant 0.000000e+00 : f32
-  %c24 = constant 24 : index
-  %c0 = constant 0 : index
-  %c192 = constant 192 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c24 = arith.constant 24 : index
+  %c0 = arith.constant 0 : index
+  %c192 = arith.constant 192 : index
   // CHECK: linalg.tiled_loop
   // CHECK-SAME: outs (%{{.*}} = %{{.*}}: memref<192xf32>)
   linalg.tiled_loop (%arg3) = (%c0) to (%c192) step (%c24)
@@ -355,49 +355,49 @@ func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf
 
 func @reshape_splat_constant_int32() -> tensor<2x4x2xi32>
 {
-  %c0 = constant dense<42> : tensor<2x8xi32>
+  %c0 = arith.constant dense<42> : tensor<2x8xi32>
   %0 = linalg.tensor_expand_shape %c0 [[0], [1, 2]]
       : tensor<2x8xi32> into tensor<2x4x2xi32>
   return %0 : tensor<2x4x2xi32>
 }
 // CHECK-LABEL: @reshape_splat_constant_int32
-//       CHECK:   %[[CST:.*]] = constant dense<{{.*}}> : tensor<2x4x2xi32>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xi32>
 //   CHECK-NOT:   linalg.tensor_expand_shape
 //       CHECK:   return %[[CST]]
 
 func @reshape_splat_constant_int16() -> tensor<2x4x2xi16>
 {
-  %c0 = constant dense<42> : tensor<2x8xi16>
+  %c0 = arith.constant dense<42> : tensor<2x8xi16>
   %0 = linalg.tensor_expand_shape %c0 [[0], [1, 2]]
       : tensor<2x8xi16> into tensor<2x4x2xi16>
   return %0 : tensor<2x4x2xi16>
 }
 // CHECK-LABEL: @reshape_splat_constant_int16
-//       CHECK:   %[[CST:.*]] = constant dense<{{.*}}> : tensor<2x4x2xi16>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xi16>
 //   CHECK-NOT:   linalg.tensor_expand_shape
 //       CHECK:   return %[[CST]]
 
 func @reshape_splat_constant_float32() -> tensor<2x4x2xf32>
 {
-  %c0 = constant dense<42.0> : tensor<2x8xf32>
+  %c0 = arith.constant dense<42.0> : tensor<2x8xf32>
   %0 = linalg.tensor_expand_shape %c0 [[0], [1, 2]]
       : tensor<2x8xf32> into tensor<2x4x2xf32>
   return %0 : tensor<2x4x2xf32>
 }
 // CHECK-LABEL: @reshape_splat_constant_float32
-//       CHECK:   %[[CST:.*]] = constant dense<{{.*}}> : tensor<2x4x2xf32>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xf32>
 //   CHECK-NOT:   linalg.tensor_expand_shape
 //       CHECK:   return %[[CST]]
 
 func @reshape_splat_constant_float64() -> tensor<2x4x2xf64>
 {
-  %c0 = constant dense<42.0> : tensor<2x8xf64>
+  %c0 = arith.constant dense<42.0> : tensor<2x8xf64>
   %0 = linalg.tensor_expand_shape %c0 [[0], [1, 2]]
       : tensor<2x8xf64> into tensor<2x4x2xf64>
   return %0 : tensor<2x4x2xf64>
 }
 // CHECK-LABEL: @reshape_splat_constant_float64
-//       CHECK:   %[[CST:.*]] = constant dense<{{.*}}> : tensor<2x4x2xf64>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xf64>
 //   CHECK-NOT:   linalg.tensor_expand_shape
 //       CHECK:   return %[[CST]]
 
@@ -441,7 +441,7 @@ func @linalg_effects(%a : tensor<?x?xf32>, %b : memref<?x?xf32>, %c : tensor<?x?
 // -----
 
 func @init_tensor_canonicalize() -> (tensor<4x5x?xf32>) {
-  %c6 = constant 6 : index
+  %c6 = arith.constant 6 : index
   %0 = linalg.init_tensor [4, 5, %c6] : tensor<4x5x?xf32>
   return %0 : tensor<4x5x?xf32>
 }
@@ -485,9 +485,9 @@ func @init_tensor_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
   -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
@@ -511,9 +511,9 @@ func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cst = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
@@ -537,9 +537,9 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
   -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %cst = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
@@ -595,9 +595,9 @@ func @fold_init_tensor_with_slice
 //       CHECK:   return
 func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>,
                          %arg2: tensor<?x?xf32>, %high : index) {
-  %c0_i32 = constant 0 : i32
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = linalg.fill(%c0_i32, %arg0) : i32, tensor<7x7xi32> -> tensor<7x7xi32>
   %1 = linalg.matmul ins(%arg1, %arg1: tensor<7x7xf32>, tensor<7x7xf32>)
                      outs(%arg1: tensor<7x7xf32>) -> tensor<7x7xf32>
@@ -620,7 +620,7 @@ func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>,
 //       CHECK:   return %[[ARG0]]
 func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
     -> tensor<5x6xf32> {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = linalg.pad_tensor %arg0 low[%a, 0] high[0, %a] {
         ^bb0(%arg1: index, %arg2: index):
           linalg.yield %cst : f32
@@ -630,14 +630,14 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 
 // -----
 
-// CHECK-LABEL: func @pad_tensor_packing_same_static_shape(
+// CHECK-LABEL: func @pad_tensor_nofold_same_static_shape(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
 //       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
 //       CHECK:   return %[[PAD]]
-func @pad_tensor_packing_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
+func @pad_tensor_nofold_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
     -> tensor<5x6xf32> {
-  %cst = constant 0.000000e+00 : f32
-  %0 = linalg.pad_tensor %arg0 packing low[%a, 0] high[0, %a] {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = linalg.pad_tensor %arg0 nofold low[%a, 0] high[0, %a] {
         ^bb0(%arg1: index, %arg2: index):
           linalg.yield %cst : f32
   } : tensor<5x6xf32> to tensor<5x6xf32>
@@ -648,7 +648,7 @@ func @pad_tensor_packing_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 
 // CHECK-LABEL:   func @pad_tensor_after_cast_different_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
-// CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[PADDED:.*]] = linalg.pad_tensor %[[INPUT]]
 // CHECK-SAME:        low[0, 0, 1, 1] high[0, 0, 1, 1]  {
 // CHECK:           ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):
@@ -660,7 +660,7 @@ func @pad_tensor_packing_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 // CHECK:         }
 func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
     -> tensor<?x?x?x?xf32> {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
   %padded = linalg.pad_tensor %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1]  {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  // no predecessors
@@ -674,7 +674,7 @@ func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
 // CHECK-LABEL:   func @pad_tensor_after_cast_same_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>,
 // CHECK-SAME:      %[[PADDING:.*]]: index) -> tensor<?x?x?x?xf32> {
-// CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[PADDED:.*]] = linalg.pad_tensor %[[INPUT]]
 // CHECK-SAME:        low[0, %[[PADDING]], 1, 1] high[0, %[[PADDING]], 1, 1]  {
 // CHECK:           ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):
@@ -684,7 +684,7 @@ func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
 // CHECK:         }
 func @pad_tensor_after_cast_same_shape(%arg0: tensor<?x64x?x?xf32>, %padding : index)
     -> tensor<?x?x?x?xf32> {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
   %padded = linalg.pad_tensor %dynamic low[0, %padding, 1, 1] high[0, %padding, 1, 1]  {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  // no predecessors
@@ -700,8 +700,8 @@ func @pad_tensor_after_cast_same_shape(%arg0: tensor<?x64x?x?xf32>, %padding : i
 // CHECK:         linalg.pad_tensor
 // CHECK:         tensor<8x?xf32> to tensor<8x32xf32>
 func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.cast %t : tensor<8x?xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %s]  {
   ^bb0(%arg9: index, %arg10: index):  // no predecessors
@@ -714,7 +714,7 @@ func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
 
 // CHECK-LABEL: @cast_of_pad_more_static
 func @cast_of_pad_more_static(%arg0: tensor<?x?xf32>, %padding: index) -> tensor<32x32xf32> {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   // CHECK: %[[PAD:.*]] = linalg.pad_tensor
   // CHECK: tensor<?x?xf32> to tensor<32x32xf32>
   %padded = linalg.pad_tensor %arg0 low[%padding, %padding] high[0, 0] {
@@ -731,7 +731,7 @@ func @cast_of_pad_more_static(%arg0: tensor<?x?xf32>, %padding: index) -> tensor
 
 // CHECK-LABEL: @cast_of_pad_less_static
 func @cast_of_pad_less_static(%arg0: tensor<32x?x?xf32>, %padding: index) -> tensor<?x32x32xf32> {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   // CHECK: linalg.pad_tensor
   %padded = linalg.pad_tensor %arg0 low[%padding, %padding, %padding] high[0, 0, 0] {
   ^bb0(%arg1: index, %arg2: index, %arg3: index):
@@ -747,10 +747,10 @@ func @cast_of_pad_less_static(%arg0: tensor<32x?x?xf32>, %padding: index) -> ten
 
 func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
     %arg3 : index) -> tensor<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c21 = constant 21 : index
-  %c42 = constant 42 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c21 = arith.constant 21 : index
+  %c42 = arith.constant 42 : index
   %0 = linalg.init_tensor [%c21, %c42] : tensor<?x?xf32>
   %1 = linalg.fill(%arg1, %0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
   %2 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
@@ -795,7 +795,7 @@ func @self_copy_with_permutation(%arg0 : memref<2x3x?x4xf32>) {
 
 // CHECK-LABEL: func @fold_fill_reshape()
 func @fold_fill_reshape() -> tensor<6x4xf32> {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [6, 4] : tensor<6x4xf32>
   %init = linalg.init_tensor [1, 2, 3, 4] : tensor<1x2x3x4xf32>
   // CHECK: %[[FILL:.+]] = linalg.fill(%cst, %[[INIT]]) : f32, tensor<6x4xf32> -> tensor<6x4xf32>
@@ -811,7 +811,7 @@ func @fold_fill_reshape() -> tensor<6x4xf32> {
 //       CHECK: func @fold_fill_reshape_dynamic
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?x?xf32>
 func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf32> {
-  %zero = constant 0.0 : f32
+  %zero = arith.constant 0.0 : f32
   // CHECK: %[[RESHAPE:.+]] = linalg.tensor_collapse_shape %[[ARG0]]
   %0 = linalg.fill(%zero, %arg0) : f32, tensor<?x?x?x?x?xf32> -> tensor<?x?x?x?x?xf32>
   // CHECK: %[[RESULT:.+]] = linalg.fill(%{{.+}}, %[[RESHAPE]])
@@ -829,9 +829,9 @@ func private @foo(%A: memref<48xf32>, %B: tensor<48xf32>,
 
 func @fold_tiled_loop_results(%A: memref<48xf32>, %B: tensor<48xf32>,
     %C: memref<48xf32>, %C_tensor: tensor<48xf32>) -> tensor<48xf32> {
-  %c0 = constant 0 : index
-  %c24 = constant 24 : index
-  %c48 = constant 48 : index
+  %c0 = arith.constant 0 : index
+  %c24 = arith.constant 24 : index
+  %c48 = arith.constant 48 : index
   %useful, %useless = linalg.tiled_loop (%i) = (%c0) to (%c48) step (%c24)
       ins (%A_ = %A: memref<48xf32>)
       outs (%B_ = %B: tensor<48xf32>,
@@ -848,9 +848,9 @@ func @fold_tiled_loop_results(%A: memref<48xf32>, %B: tensor<48xf32>,
 // CHECK-SAME:   %[[A:.*]]: [[BUF_TY:memref<48xf32>]], %[[B:.*]]: [[TY:tensor<48xf32>]],
 // CHECK-SAME:   %[[C:.*]]: [[BUF_TY]],  %[[C_TENSOR:.*]]: [[TY]]) -> [[TY]] {
 
-// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
-// CHECK-DAG:  %[[C24:.*]] = constant 24 : index
-// CHECK-DAG:  %[[C48:.*]] = constant 48 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C24:.*]] = arith.constant 24 : index
+// CHECK-DAG:  %[[C48:.*]] = arith.constant 48 : index
 
 // CHECK-NOT: %{{.*}} = linalg.tiled_loop
 // CHECK:  %[[RESULT:.*]] = linalg.tiled_loop (%{{.*}}) = (%[[C0]])
@@ -868,9 +868,9 @@ func private @foo(%A: memref<192xf32>, %B: tensor<192xf32>) -> tensor<192xf32>
 
 func @fold_tiled_loop_inputs(%A: memref<192xf32>, %A_tensor: tensor<192xf32>,
                              %B_tensor: tensor<192xf32>) -> tensor<192xf32> {
-  %c0 = constant 0 : index
-  %c24 = constant 24 : index
-  %c192 = constant 192 : index
+  %c0 = arith.constant 0 : index
+  %c24 = arith.constant 24 : index
+  %c192 = arith.constant 192 : index
   %result = linalg.tiled_loop (%i) = (%c0) to (%c192) step (%c24)
       ins (%A_ = %A: memref<192xf32>, %AT_ = %A_tensor: tensor<192xf32>)
       outs (%BT_ = %B_tensor: tensor<192xf32>) {
@@ -889,8 +889,8 @@ func @fold_tiled_loop_inputs(%A: memref<192xf32>, %A_tensor: tensor<192xf32>,
 // -----
 
 func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
   %0 = tensor.cast %arg0 : tensor<4x4xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %c0]  {
     ^bb0(%arg1: index, %arg2: index):  // no predecessors
@@ -909,7 +909,7 @@ func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
 //   CHECK-NOT:   tensor.cast
 //       CHECK:   %[[RESULT:.*]] = linalg.pad_tensor %[[ARG0]]
 func @fold_pad_tensor_source_cast(%arg0: tensor<4x?xf32>) -> tensor<4x4xf32> {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[0, 1]  {
     ^bb0(%arg1: index, %arg2: index):  // no predecessors
@@ -926,7 +926,7 @@ func @fold_pad_tensor_source_cast(%arg0: tensor<4x?xf32>) -> tensor<4x4xf32> {
 //       CHECK:   %[[RESULT:.*]] = tensor.cast %[[ARG0]] : tensor<?x?x?xf32> to tensor<2x3x4xf32>
 //       CHECK:   return %[[RESULT]]
 func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = linalg.pad_tensor %arg0 low[0, %c0, 0] high[0, 0, %c0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
       linalg.yield %pad_value : f32
@@ -937,13 +937,13 @@ func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<
 
 // -----
 
-// CHECK-LABEL: func @pad_packing_static_zero(
+// CHECK-LABEL: func @pad_nofold_static_zero(
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<?x?x?xf32>
 //       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
 //       CHECK:   return %[[PAD]]
-func @pad_packing_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
-  %c0 = constant 0 : index
-  %0 = linalg.pad_tensor %arg0 packing low[0, %c0, 0] high[0, 0, %c0] {
+func @pad_nofold_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = linalg.pad_tensor %arg0 nofold low[0, %c0, 0] high[0, 0, %c0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
       linalg.yield %pad_value : f32
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
@@ -958,8 +958,8 @@ func private @some_use(%i : index, %j : index)
 // CHECK-LABEL: func @init_canonicalize
 //  CHECK-SAME:   %[[I:.*]]: index
 func @init_canonicalize(%i : index) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
 
   // CHECK-NOT: init_tensor
   %0 = linalg.init_tensor [%i, 42] : tensor<?x42xf32>
@@ -968,7 +968,7 @@ func @init_canonicalize(%i : index) {
   %1 = tensor.dim %0, %c0: tensor<?x42xf32>
   %2 = tensor.dim %0, %c1: tensor<?x42xf32>
 
-  // CHECK: %[[c42:.*]] = constant 42 : index
+  // CHECK: %[[c42:.*]] = arith.constant 42 : index
   // CHECK: call @some_use(%[[I]], %[[c42]])
   call @some_use(%1, %2) : (index, index) -> ()
 
@@ -991,14 +991,14 @@ func @rank_reducing_init_extract(%sz : index, %idx : index) -> tensor<2xf32> {
 
 // CHECK-LABEL: func @dim_of_tiled_loop_input_no_canonicalize(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
-//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   linalg.tiled_loop {{.*}} outs (%[[o:.*]] =
 //       CHECK:     %[[dim:.*]] = tensor.dim %[[o]], %[[c0]]
-//       CHECK:     index_cast %[[dim]]
+//       CHECK:     arith.index_cast %[[dim]]
 func @dim_of_tiled_loop_input_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>, %s: index)
     -> tensor<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %r = linalg.tiled_loop (%iv0, %iv1) = (%c0, %c0)
@@ -1006,8 +1006,8 @@ func @dim_of_tiled_loop_input_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: ten
       ins (%in0 = %arg0 : tensor<?x?xf32>, %in1 = %arg1 : tensor<?x?xf32>)
       outs (%out1 = %arg2 : tensor<?x?xf32>) {
     %inner_dim = tensor.dim %out1, %c0 : tensor<?x?xf32>
-    %cast1 = std.index_cast %inner_dim : index to i32
-    %cast2 = std.sitofp %cast1 : i32 to f32
+    %cast1 = arith.index_cast %inner_dim : index to i32
+    %cast2 = arith.sitofp %cast1 : i32 to f32
     %fill = linalg.fill(%cast2, %out1) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
     %slice = tensor.extract_slice %fill[0, 0][%s, %s][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
     linalg.yield %slice : tensor<?x?xf32>
@@ -1019,14 +1019,14 @@ func @dim_of_tiled_loop_input_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: ten
 
 // CHECK-LABEL: func @dim_of_tiled_loop_input(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
-//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   linalg.tiled_loop
 //       CHECK:     %[[dim:.*]] = tensor.dim %[[arg1]], %[[c0]]
-//       CHECK:     index_cast %[[dim]]
+//       CHECK:     arith.index_cast %[[dim]]
 func @dim_of_tiled_loop_input(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %r = linalg.tiled_loop (%iv0, %iv1) = (%c0, %c0)
@@ -1034,8 +1034,8 @@ func @dim_of_tiled_loop_input(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %a
       ins (%in0 = %arg0 : tensor<?x?xf32>, %in1 = %arg1 : tensor<?x?xf32>)
       outs (%out1 = %arg2 : tensor<?x?xf32>) {
     %inner_dim = tensor.dim %in1, %c0 : tensor<?x?xf32>
-    %cast1 = std.index_cast %inner_dim : index to i32
-    %cast2 = std.sitofp %cast1 : i32 to f32
+    %cast1 = arith.index_cast %inner_dim : index to i32
+    %cast2 = arith.sitofp %cast1 : i32 to f32
     %fill = linalg.fill(%cast2, %out1) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
     linalg.yield %fill : tensor<?x?xf32>
   }
@@ -1046,12 +1046,12 @@ func @dim_of_tiled_loop_input(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %a
 
 // CHECK-LABEL: func @dim_of_tiled_loop_result(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
-//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   tensor.dim %[[arg2]], %[[c0]]
 func @dim_of_tiled_loop_result(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>, %s: index)
     -> index {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %r = linalg.tiled_loop (%iv0, %iv1) = (%c0, %c0)
@@ -1069,13 +1069,13 @@ func @dim_of_tiled_loop_result(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %
 
 // CHECK-LABEL: func @dim_of_tiled_loop_result_no_canonicalize(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
-//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[r:.*]] = linalg.tiled_loop
 //       CHECK:   tensor.dim %[[r]], %[[c0]]
 func @dim_of_tiled_loop_result_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>, %s: index)
     -> index {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %r = linalg.tiled_loop (%iv0, %iv1) = (%c0, %c0)

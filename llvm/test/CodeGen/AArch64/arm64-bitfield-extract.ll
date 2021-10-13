@@ -896,18 +896,18 @@ define i80 @fct20(i128 %a, i128 %b) {
 ; LLC-LABEL: fct20:
 ; LLC:       // %bb.0: // %entry
 ; LLC-NEXT:    mov x12, #11776
+; LLC-NEXT:    extr x9, x1, x0, #18
 ; LLC-NEXT:    movk x12, #25856, lsl #16
+; LLC-NEXT:    lsr x8, x1, #18
 ; LLC-NEXT:    movk x12, #11077, lsl #32
-; LLC-NEXT:    extr x8, x1, x0, #18
-; LLC-NEXT:    lsr x9, x1, #18
 ; LLC-NEXT:    orr x10, x2, x3
 ; LLC-NEXT:    mov w11, #26220
 ; LLC-NEXT:    movk x12, #45, lsl #48
-; LLC-NEXT:    and x11, x9, x11
-; LLC-NEXT:    and x12, x8, x12
+; LLC-NEXT:    and x11, x8, x11
+; LLC-NEXT:    and x12, x9, x12
 ; LLC-NEXT:    cmp x10, #0
-; LLC-NEXT:    csel x0, x12, x8, eq
-; LLC-NEXT:    csel x1, x11, x9, eq
+; LLC-NEXT:    csel x0, x12, x9, eq
+; LLC-NEXT:    csel x1, x11, x8, eq
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct20(
 ; OPT-NEXT:  entry:
@@ -941,8 +941,8 @@ end:
 define i64 @fct21(i64 %x) {
 ; LLC-LABEL: fct21:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    adrp x9, arr
 ; LLC-NEXT:    ubfx x8, x0, #4, #4
+; LLC-NEXT:    adrp x9, arr
 ; LLC-NEXT:    add x9, x9, :lo12:arr
 ; LLC-NEXT:    ldr x0, [x9, x8, lsl #3]
 ; LLC-NEXT:    ret

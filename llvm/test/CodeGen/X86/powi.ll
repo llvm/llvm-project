@@ -46,8 +46,7 @@ define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 ; X64-NEXT:    mulsd %xmm1, %xmm1
 ; X64-NEXT:    mulsd %xmm1, %xmm0
 ; X64-NEXT:    mulsd %xmm1, %xmm1
-; X64-NEXT:    mulsd %xmm0, %xmm1
-; X64-NEXT:    movapd %xmm1, %xmm0
+; X64-NEXT:    mulsd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ret = tail call double @llvm.powi.f64.i32(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret

@@ -209,8 +209,8 @@ func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
 // -----
 
 func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
-  %c0 = constant 0 : index
-  %c10 = constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
   // expected-error @+1 {{expected result type with size = 10 instead of -1 in dim = 0}}
   %out = memref.reinterpret_cast %in to
            offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
@@ -342,6 +342,11 @@ func @mismatched_types() {
   %0 = memref.get_global @gv : memref<3xf32>
   return
 }
+
+// -----
+
+// expected-error @+1 {{alignment attribute value 63 is not a power of 2}}
+memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
 
 // -----
 

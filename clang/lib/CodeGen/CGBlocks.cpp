@@ -2695,8 +2695,8 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
     size = varOffset;
 
   // Conversely, we might have to prevent LLVM from inserting padding.
-  } else if (CGM.getDataLayout().getABITypeAlignment(varTy)
-               > varAlign.getQuantity()) {
+  } else if (CGM.getDataLayout().getABITypeAlignment(varTy) >
+             uint64_t(varAlign.getQuantity())) {
     packed = true;
   }
   types.push_back(varTy);

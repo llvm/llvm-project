@@ -104,6 +104,13 @@ define i32 @test_too_big_stack() {
   ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
   ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 9
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $sp, implicit $sp
+  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
+  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; DARWIN-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
+  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; DARWIN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+  ; DARWIN-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 2, align 1)
   ; DARWIN-NEXT:   $x0 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   $x1 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   $x2 = COPY [[DEF]](s64)
@@ -112,13 +119,6 @@ define i32 @test_too_big_stack() {
   ; DARWIN-NEXT:   $x5 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   $x6 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   $x7 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
-  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-  ; DARWIN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 2, align 1)
   ; DARWIN-NEXT:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit $sp
@@ -130,6 +130,13 @@ define i32 @test_too_big_stack() {
   ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
   ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 9
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
+  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; WINDOWS-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; WINDOWS-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
+  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; WINDOWS-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+  ; WINDOWS-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 8, align 1)
   ; WINDOWS-NEXT:   $x0 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   $x1 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   $x2 = COPY [[DEF]](s64)
@@ -138,13 +145,6 @@ define i32 @test_too_big_stack() {
   ; WINDOWS-NEXT:   $x5 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   $x6 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   $x7 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; WINDOWS-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; WINDOWS-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
-  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; WINDOWS-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; WINDOWS-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 8, align 1)
   ; WINDOWS-NEXT:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -206,13 +206,13 @@ define void @test_varargs_2() {
   ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
   ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
-  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
   ; DARWIN-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
+  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
+  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
+  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
   ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
@@ -255,13 +255,13 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
   ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
-  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
   ; DARWIN-NEXT:   [[COPY8:%[0-9]+]]:_(p0) = COPY $sp
   ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](s64)
   ; DARWIN-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
+  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
+  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
+  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
   ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR

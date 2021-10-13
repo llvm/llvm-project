@@ -11,7 +11,7 @@
 // This test hangs forever when built against libstdc++ and MSVC. In order to allow
 // validation of the test suite against other STLs we have to mark it
 // unsupported.
-// UNSUPPORTED: libstdc++, msvc
+// UNSUPPORTED: stdlib=libstdc++, stdlib=msvc
 
 // <mutex>
 

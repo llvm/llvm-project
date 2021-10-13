@@ -120,7 +120,9 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"FE_DOWNWARD">,
           Macro<"FE_TONEAREST">,
           Macro<"FE_TOWARDZERO">,
-          Macro<"FE_UPWARD">
+          Macro<"FE_UPWARD">,
+
+          Macro<"FE_DFL_ENV">
       ],
       [
           NamedType<"fenv_t">,

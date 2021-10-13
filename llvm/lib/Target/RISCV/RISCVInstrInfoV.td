@@ -858,10 +858,14 @@ def VLE32FF_V : VUnitStrideLoad<LUMOPUnitStrideFF, LSWidth32, "vle32ff.v">,
 def VLE64FF_V : VUnitStrideLoad<LUMOPUnitStrideFF, LSWidth64, "vle64ff.v">,
                 VLFSched<64>;
 
-def VLE1_V : VUnitStrideLoadMask<"vle1.v">,
+def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM, ReadVLDX]>;
-def VSE1_V : VUnitStrideStoreMask<"vse1.v">,
+def VSM_V : VUnitStrideStoreMask<"vsm.v">,
              Sched<[WriteVSTM, ReadVSTM, ReadVSTX]>;
+def : InstAlias<"vle1.v $vd, (${rs1})",
+                (VLM_V VR:$vd, GPR:$rs1), 0>;
+def : InstAlias<"vse1.v $vs3, (${rs1})",
+                (VSM_V VR:$vs3, GPR:$rs1), 0>;
 
 def VSE8_V  : VUnitStrideStore<SUMOPUnitStride, LSWidth8,  "vse8.v">,
               VSESched<8>;
@@ -1329,10 +1333,13 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
 let RVVConstraint = NoConstraint in {
 defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
-defm VFREDSUM : VRED_FV_V<"vfredsum", 0b000001>;
+defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
 defm VFREDMAX : VRED_FV_V<"vfredmax", 0b000111>;
 defm VFREDMIN : VRED_FV_V<"vfredmin", 0b000101>;
 } // RVVConstraint = NoConstraint
+
+def : InstAlias<"vfredsum.vs $vd, $vs2, $vs1$vm",
+                (VFREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
 
 // Vector Widening Floating-Point Reduction Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
@@ -1341,9 +1348,13 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
-defm VFWREDSUM : VWRED_FV_V<"vfwredsum", 0b110001>;
+defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+def : InstAlias<"vfwredsum.vs $vd, $vs2, $vs1$vm",
+                (VFWREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
+
 
 let Predicates = [HasStdExtV] in {
 // Vector Mask-Register Logical Instructions

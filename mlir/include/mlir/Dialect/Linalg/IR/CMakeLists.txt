@@ -1,36 +1,3 @@
-# Declare a function to generate ODS with mlir-linalg-ods-gen
-function(add_linalg_ods_tc_gen tc_filename output_file)
-  set(TC_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${tc_filename})
-  set(GEN_ODS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.tcgen.td)
-  set(GEN_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.tcgen.cpp.inc)
-  set_source_files_properties(
-    ${GEN_ODS_FILE}
-    PROPERTIES GENERATED TRUE)
-  set_source_files_properties(
-    ${GEN_CPP_FILE}
-    PROPERTIES GENERATED TRUE)
-  add_custom_command(
-    OUTPUT ${GEN_ODS_FILE} ${GEN_CPP_FILE}
-    COMMAND ${MLIR_LINALG_ODS_GEN_EXE} -gen-ods-decl ${TC_SOURCE} > ${GEN_ODS_FILE}
-    COMMAND ${MLIR_LINALG_ODS_GEN_EXE} -gen-impl ${TC_SOURCE} > ${GEN_CPP_FILE}
-    MAIN_DEPENDENCY
-    ${TC_SOURCE}
-    DEPENDS
-    ${MLIR_LINALG_ODS_GEN_EXE}
-    ${MLIR_LINALG_ODS_GEN_TARGET}
-    VERBATIM)
-  add_custom_target(
-    MLIR${output_file}TcIncGen
-    DEPENDS
-    ${MLIR_LINALG_ODS_GEN_EXE}
-    ${MLIR_LINALG_ODS_GEN_TARGET}
-    ${GEN_ODS_FILE} ${GEN_CPP_FILE})
-  # Setup the file dependencies needed for the subsequent tablegen step.
-  # TODO: Once there is only one way of generating named ops remove this parent
-  # scope manipulation and implement the tablegen generation in the same scope.
-  set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} ${GEN_ODS_FILE} PARENT_SCOPE)
-endfunction()
-
 # Declare a function to generate ODS with mlir-linalg-ods-yaml-gen
 function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
   set(YAML_AST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${yaml_ast_file})
@@ -56,25 +23,21 @@ function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
     ${MLIR_LINALG_ODS_YAML_GEN_EXE}
     ${MLIR_LINALG_ODS_YAML_GEN_TARGET}
     ${GEN_ODS_FILE} ${GEN_CPP_FILE})
-  # Setup the file dependencies needed for the subsequent tablegen step.
-  # TODO: Once there is only one way of generating named ops remove this parent
-  # scope manipulation and implement the tablegen generation in the same scope.
-  set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} ${GEN_ODS_FILE} PARENT_SCOPE)
+  list(APPEND LLVM_TARGET_DEPENDS ${GEN_ODS_FILE})
+  set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} PARENT_SCOPE)
 endfunction()
 
-# TODO: Delete tc generation and replace with the YAML variant once all ops are
-# ported. At the same time, move the YAML and TableGen generation to the same
-# scope to avoid the at a distance dependency manipulation via
-# LLVM_TARGET_DEPENDS.
+# NOTE: LLVM_TARGET_DEPENDS gets picked up by tablegen targets to add file
+# level dependencies. This is gross but CMake requires depending on both
+# targets and generated files, and it must be done when the custom target is
+# declared (there is no way to add after the fact).
 set(LLVM_TARGET_DEPENDS "")
-add_linalg_ods_tc_gen(LinalgNamedStructuredOpsSpec.tc LinalgNamedStructuredOps)
 add_linalg_ods_yaml_gen(LinalgNamedStructuredOps.yaml LinalgNamedStructuredOps)
 
 # Provide a short name for all external dependency that needs to
 # include Linalg in ODS
 add_custom_target(LinalgOdsGen
   DEPENDS
-  MLIRLinalgNamedStructuredOpsTcIncGen
   MLIRLinalgNamedStructuredOpsYamlIncGen
 )
 add_dependencies(mlir-headers LinalgOdsGen)

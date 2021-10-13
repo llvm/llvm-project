@@ -31,6 +31,8 @@ private:
   const ARMBaseInstrInfo *TII;
   std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
   MachineLoopInfo *MLI = nullptr;
+  // A list of WLS instructions that need to be reverted to DLS.
+  SmallVector<MachineInstr *> RevertedWhileLoops;
 
 public:
   static char ID;
@@ -41,7 +43,7 @@ public:
   bool blockIsBefore(MachineBasicBlock *BB, MachineBasicBlock *Other);
   bool fixBackwardsWLS(MachineLoop *ML);
   bool processPostOrderLoops(MachineLoop *ML);
-  bool revertWhileToDo(MachineInstr *WLS, MachineLoop *ML);
+  bool revertWhileToDoLoop(MachineInstr *WLS);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
@@ -84,7 +86,7 @@ static MachineInstr *findWLS(MachineLoop *ML) {
 
 // Revert a WhileLoopStart to an equivalent DoLoopStart and branch. Note that
 // because of the branches this requires an extra block to be created.
-bool ARMBlockPlacement::revertWhileToDo(MachineInstr *WLS, MachineLoop *ML) {
+bool ARMBlockPlacement::revertWhileToDoLoop(MachineInstr *WLS) {
   //   lr = t2WhileLoopStartTP r0, r1, TgtBB
   //   t2Br Ph
   // ->
@@ -185,12 +187,11 @@ bool ARMBlockPlacement::fixBackwardsWLS(MachineLoop *ML) {
       // TODO: Analyse the blocks to make a decision if it would be worth
       // moving Preheader even if we'd introduce a backwards WLS
       if (WLSTarget == Predecessor) {
-        LLVM_DEBUG(
-            dbgs() << DEBUG_PREFIX
-                   << "Can't move Predecessor"
-                      "block as it would convert a WLS from forward to a "
-                      "backwards branching WLS\n");
-        return revertWhileToDo(WlsInstr, ML);
+        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Can't move Predecessor block as "
+                          << "it would convert a WLS from forward to a "
+                          << "backwards branching WLS\n");
+        RevertedWhileLoops.push_back(WlsInstr);
+        return false;
       }
     }
   }
@@ -222,10 +223,15 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   BBUtils->computeAllBlockSizes();
   BBUtils->adjustBBOffsetsAfter(&MF.front());
   bool Changed = false;
+  RevertedWhileLoops.clear();
 
   // Find loops with a backwards branching WLS and fix if possible.
   for (auto *ML : *MLI)
     Changed |= processPostOrderLoops(ML);
+
+  // Revert any While loops still out of range to DLS loops.
+  for (auto *WlsInstr : RevertedWhileLoops)
+    Changed |= revertWhileToDoLoop(WlsInstr);
 
   return Changed;
 }

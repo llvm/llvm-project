@@ -705,7 +705,6 @@ getUndefinedSymbolTreatment(const ArgList &args) {
 }
 
 static ICFLevel getICFLevel(const ArgList &args) {
-  bool noDeduplicate = args.hasArg(OPT_no_deduplicate);
   StringRef icfLevelStr = args.getLastArgValue(OPT_icf_eq);
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
@@ -715,10 +714,6 @@ static ICFLevel getICFLevel(const ArgList &args) {
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
-    icfLevel = ICFLevel::none;
-  } else if (icfLevel != ICFLevel::none && noDeduplicate) {
-    warn(Twine("`--icf=" + icfLevelStr +
-               "' conflicts with -no_deduplicate, setting to `none'"));
     icfLevel = ICFLevel::none;
   } else if (icfLevel == ICFLevel::safe) {
     warn(Twine("`--icf=safe' is not yet implemented, reverting to `none'"));
@@ -1441,12 +1436,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   if (config->timeTraceEnabled) {
-    if (auto E = timeTraceProfilerWrite(
-            args.getLastArgValue(OPT_time_trace_file_eq).str(),
-            config->outputFile)) {
-      handleAllErrors(std::move(E),
-                      [&](const StringError &SE) { error(SE.getMessage()); });
-    }
+    checkError(timeTraceProfilerWrite(
+        args.getLastArgValue(OPT_time_trace_file_eq).str(),
+        config->outputFile));
 
     timeTraceProfilerCleanup();
   }

@@ -83,9 +83,9 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -806,10 +806,6 @@ static int readModRM(struct InternalInstruction *insn) {
       return prefix##_DR0 + index;                                             \
     case TYPE_CONTROLREG:                                                      \
       return prefix##_CR0 + index;                                             \
-    case TYPE_BNDR:                                                            \
-      if (index > 3)                                                           \
-        *valid = 0;                                                            \
-      return prefix##_BND0 + index;                                            \
     case TYPE_MVSIBX:                                                          \
       return prefix##_XMM0 + index;                                            \
     case TYPE_MVSIBY:                                                          \

@@ -191,51 +191,69 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-/// To call a inline dump() method in a debugger, at it must have been
-/// instantiated in at least one translation unit. Because isl's dump() method
-/// are meant to be called from a debugger only, but not from code, no such
-/// instantiation would exist. We use this method to force an instantiation in
-/// this translation unit. Because it has non-static linking, the compiler does
-/// not know that it is never called, and therefore must ensure the existence of
-/// the dump functions.
-void neverCalled() {
-  polly::dumpIslObj(isl::aff());
-  polly::dumpIslObj(isl::aff_list());
-  polly::dumpIslObj(isl::ast_expr());
-  polly::dumpIslObj(isl::ast_node());
-  polly::dumpIslObj(isl::ast_node_list());
-  polly::dumpIslObj(isl::basic_map());
-  polly::dumpIslObj(isl::basic_map_list());
-  polly::dumpIslObj(isl::basic_set());
-  polly::dumpIslObj(isl::basic_set_list());
-  polly::dumpIslObj(isl::constraint());
-  polly::dumpIslObj(isl::id());
-  polly::dumpIslObj(isl::id_list());
-  polly::dumpIslObj(isl::id_to_ast_expr());
-  polly::dumpIslObj(isl::local_space());
-  polly::dumpIslObj(isl::map());
-  polly::dumpIslObj(isl::map_list());
-  polly::dumpIslObj(isl::multi_aff());
-  polly::dumpIslObj(isl::multi_pw_aff());
-  polly::dumpIslObj(isl::multi_union_pw_aff());
-  polly::dumpIslObj(isl::multi_val());
-  polly::dumpIslObj(isl::point());
-  polly::dumpIslObj(isl::pw_aff());
-  polly::dumpIslObj(isl::pw_aff_list());
-  polly::dumpIslObj(isl::pw_multi_aff());
-  polly::dumpIslObj(isl::schedule());
-  polly::dumpIslObj(isl::schedule_constraints());
-  polly::dumpIslObj(isl::schedule_node());
-  polly::dumpIslObj(isl::set());
-  polly::dumpIslObj(isl::set_list());
-  polly::dumpIslObj(isl::space());
-  polly::dumpIslObj(isl::union_map());
-  polly::dumpIslObj(isl::union_pw_aff());
-  polly::dumpIslObj(isl::union_pw_aff_list());
-  polly::dumpIslObj(isl::union_pw_multi_aff());
-  polly::dumpIslObj(isl::union_set());
-  polly::dumpIslObj(isl::union_set_list());
-  polly::dumpIslObj(isl::val());
-  polly::dumpIslObj(isl::val_list());
+#define ISL_DUMP_OBJECT_IMPL(NAME)                                             \
+  void polly::dumpIslObj(const isl::NAME &Obj) {                               \
+    isl_##NAME##_dump(Obj.get());                                              \
+  }                                                                            \
+  void polly::dumpIslObj(isl_##NAME *Obj) { isl_##NAME##_dump(Obj); }
+
+ISL_DUMP_OBJECT_IMPL(aff)
+ISL_DUMP_OBJECT_IMPL(aff_list)
+ISL_DUMP_OBJECT_IMPL(ast_expr)
+ISL_DUMP_OBJECT_IMPL(ast_node)
+ISL_DUMP_OBJECT_IMPL(ast_node_list)
+ISL_DUMP_OBJECT_IMPL(basic_map)
+ISL_DUMP_OBJECT_IMPL(basic_map_list)
+ISL_DUMP_OBJECT_IMPL(basic_set)
+ISL_DUMP_OBJECT_IMPL(basic_set_list)
+ISL_DUMP_OBJECT_IMPL(constraint)
+ISL_DUMP_OBJECT_IMPL(id)
+ISL_DUMP_OBJECT_IMPL(id_list)
+ISL_DUMP_OBJECT_IMPL(id_to_ast_expr)
+ISL_DUMP_OBJECT_IMPL(local_space)
+ISL_DUMP_OBJECT_IMPL(map)
+ISL_DUMP_OBJECT_IMPL(map_list)
+ISL_DUMP_OBJECT_IMPL(multi_aff)
+ISL_DUMP_OBJECT_IMPL(multi_pw_aff)
+ISL_DUMP_OBJECT_IMPL(multi_union_pw_aff)
+ISL_DUMP_OBJECT_IMPL(multi_val)
+ISL_DUMP_OBJECT_IMPL(point)
+ISL_DUMP_OBJECT_IMPL(pw_aff)
+ISL_DUMP_OBJECT_IMPL(pw_aff_list)
+ISL_DUMP_OBJECT_IMPL(pw_multi_aff)
+ISL_DUMP_OBJECT_IMPL(schedule)
+ISL_DUMP_OBJECT_IMPL(schedule_constraints)
+ISL_DUMP_OBJECT_IMPL(schedule_node)
+ISL_DUMP_OBJECT_IMPL(set)
+ISL_DUMP_OBJECT_IMPL(set_list)
+ISL_DUMP_OBJECT_IMPL(space)
+ISL_DUMP_OBJECT_IMPL(union_map)
+ISL_DUMP_OBJECT_IMPL(union_pw_aff)
+ISL_DUMP_OBJECT_IMPL(union_pw_aff_list)
+ISL_DUMP_OBJECT_IMPL(union_pw_multi_aff)
+ISL_DUMP_OBJECT_IMPL(union_set)
+ISL_DUMP_OBJECT_IMPL(union_set_list)
+ISL_DUMP_OBJECT_IMPL(val)
+ISL_DUMP_OBJECT_IMPL(val_list)
+
+void polly::dumpIslObj(__isl_keep isl_schedule_node *node, raw_ostream &OS) {
+  if (!node)
+    return;
+
+  isl_ctx *ctx = isl_schedule_node_get_ctx(node);
+  isl_printer *p = isl_printer_to_str(ctx);
+  p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
+  p = isl_printer_print_schedule_node(p, node);
+
+  char *char_str = isl_printer_get_str(p);
+  OS << char_str;
+
+  free(char_str);
+  isl_printer_free(p);
 }
+
+void polly::dumpIslObj(const isl::schedule_node &Node, raw_ostream &OS) {
+  dumpIslObj(Node.get(), OS);
+}
+
 #endif

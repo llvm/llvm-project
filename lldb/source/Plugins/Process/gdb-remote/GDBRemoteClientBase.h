@@ -59,10 +59,6 @@ public:
       std::chrono::seconds interrupt_timeout,
       llvm::function_ref<void(llvm::StringRef)> output_callback);
 
-  bool SendvContPacket(llvm::StringRef payload,
-                       std::chrono::seconds interrupt_timeout,
-                       StringExtractorGDBRemote &response);
-
   class Lock {
   public:
     // If interrupt_timeout == 0 seconds, only take the lock if the target is

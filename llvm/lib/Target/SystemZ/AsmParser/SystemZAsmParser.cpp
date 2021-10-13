@@ -26,10 +26,10 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1518,10 +1518,6 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
     Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
   return false;
 }
-
-static std::string SystemZMnemonicSpellCheck(StringRef S,
-                                             const FeatureBitset &FBS,
-                                             unsigned VariantID = 0);
 
 bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,

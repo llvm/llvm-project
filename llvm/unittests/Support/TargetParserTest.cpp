@@ -31,6 +31,8 @@ const char *ARMArch[] = {
     "armv8.5a",    "armv8.6-a",    "armv8.6a",    "armv8.7-a",    "armv8.7a",
     "armv8-r",     "armv8r",       "armv8-m.base","armv8m.base",  "armv8-m.main",
     "armv8m.main", "iwmmxt",       "iwmmxt2",     "xscale",       "armv8.1-m.main",
+    "armv9-a",     "armv9",        "armv9a",      "armv9.1-a",    "armv9.1a",
+    "armv9.2-a",   "armv9.2a",
 };
 
 template <ARM::ISAKind ISAKind>
@@ -493,6 +495,15 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv8.7-a", "generic", "v8.7a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
+      testARMArch("armv9-a", "generic", "v9a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
+      testARMArch("armv9.1-a", "generic", "v9.1a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
+      testARMArch("armv9.2-a", "generic", "v9.2a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
       testARMArch("armv8-r", "cortex-r52", "v8r",
                           ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(
@@ -821,6 +832,9 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV8_5A:
     case ARM::ArchKind::ARMV8_6A:
     case ARM::ArchKind::ARMV8_7A:
+    case ARM::ArchKind::ARMV9A:
+    case ARM::ArchKind::ARMV9_1A:
+    case ARM::ArchKind::ARMV9_2A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1181,9 +1195,9 @@ TEST(TargetParserTest, testAArch64CPUArchList) {
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                      unsigned ArchAttr) {
   AArch64::ArchKind AK = AArch64::parseArch(Arch);
-  return (AK != AArch64::ArchKind::INVALID) &
-         AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &
-         AArch64::getSubArch(AK).equals(SubArch) &
+  return (AK != AArch64::ArchKind::INVALID) &&
+         AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &&
+         AArch64::getSubArch(AK).equals(SubArch) &&
          (AArch64::getArchAttr(AK) == ArchAttr);
 }
 
@@ -1203,6 +1217,12 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv8.6-a", "generic", "v8.6a",
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv8.7-a", "generic", "v8.7a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv9-a", "generic", "v9a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv9.1-a", "generic", "v9.1a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv9.2-a", "generic", "v9.2a",
                               ARMBuildAttrs::CPUArch::v8_A));
 }
 

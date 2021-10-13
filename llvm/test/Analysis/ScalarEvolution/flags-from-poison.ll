@@ -90,6 +90,283 @@ exit:
   ret void
 }
 
+; Case where we're checking to see if add flags are valid in defining scope
+; and all operands (other than addrec) are invariant
+define void @test-add-scope-invariant(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-invariant'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-invariant
+; CHECK-NEXT:    %offset = load i32, i32* %input, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + (-1 * %offset) + %needle) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: ((-1 * %offset) + %needle) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
+; CHECK-NEXT:    --> {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %needle LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 %needle to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-invariant
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %offset) + %needle)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %offset) + %needle)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %offset = load i32, i32* %input
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %i.next = add nuw i32 %i, 1
+  %of_interest = add nuw nsw i32 %i.next, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %of_interest, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Case where we're checking to see if add flags are valid in defining scope
+; and other operands are *not* invariant.
+define void @test-add-scope-bound(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i32, i32* %input, i32 %i
+; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
+; CHECK-NEXT:    --> ({1,+,1}<nuw><%loop> + %offset)<nuw><nsw> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+; CHECK-NEXT:    --> ((4 * ((sext i32 {1,+,1}<nuw><%loop> to i64) + (sext i32 %offset to i64))<nsw>)<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %gep = getelementptr i32, i32* %input, i32 %i
+  %offset = load i32, i32* %gep
+  %i.next = add nuw i32 %i, 1
+  %of_interest = add nuw nsw i32 %i.next, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %of_interest
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %of_interest, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test-add-scope-bound-unkn-preheader(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-preheader'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-preheader
+; CHECK-NEXT:    %offset = load i32, i32* %input, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> {%offset,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-preheader
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %offset = load i32, i32* %input
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test-add-scope-bound-unkn-preheader-neg1(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-preheader-neg1'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-preheader-neg1
+; CHECK-NEXT:    %offset = load i32, i32* %input, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> {%offset,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-preheader-neg1
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %offset = load i32, i32* %input
+  call void @foo()
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test-add-scope-bound-unkn-preheader-neg2(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-preheader-neg2'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-preheader-neg2
+; CHECK-NEXT:    %offset = load i32, i32* %input, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> {%offset,+,%offset}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-preheader-neg2
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %offset = load i32, i32* %input
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  call void @foo()
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @test-add-scope-bound-unkn-header(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-header'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-header
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> %i U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep = getelementptr i32, i32* %input, i32 %i
+; CHECK-NEXT:    --> ((4 * (sext i32 %i to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %gep = getelementptr i32, i32* %input, i32 %i
+  %offset = load i32, i32* %gep
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test-add-scope-bound-unkn-header2(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-header2'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-header2
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> %i U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep = getelementptr i32, i32* %input, i32 %i
+; CHECK-NEXT:    --> ((4 * (sext i32 %i to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> (%offset + %i)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i)<nuw> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header2
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  call void @foo()
+  %gep = getelementptr i32, i32* %input, i32 %i
+  %offset = load i32, i32* %gep
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test-add-scope-bound-unkn-header-neg(i32* %input, i32 %needle) {
+; CHECK-LABEL: 'test-add-scope-bound-unkn-header-neg'
+; CHECK-NEXT:  Classifying expressions for: @test-add-scope-bound-unkn-header-neg
+; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> %i U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep = getelementptr i32, i32* %input, i32 %i
+; CHECK-NEXT:    --> ((4 * (sext i32 %i to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %offset = load i32, i32* %gep, align 4
+; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
+; CHECK-NEXT:    --> (%offset + %i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep2 = getelementptr i32, i32* %input, i32 %i.next
+; CHECK-NEXT:    --> ((4 * (sext i32 (%offset + %i) to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-header-neg
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
+  %gep = getelementptr i32, i32* %input, i32 %i
+  %offset = load i32, i32* %gep
+  call void @foo()
+  %i.next = add nuw i32 %i, %offset
+  %gep2 = getelementptr i32, i32* %input, i32 %i.next
+  store i32 0, i32* %gep2
+  %exitcond = icmp eq i32 %i.next, %needle
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @test-add-nuw-from-icmp(float* %input, i32 %offset,
 ; CHECK-LABEL: 'test-add-nuw-from-icmp'
 ; CHECK-NEXT:  Classifying expressions for: @test-add-nuw-from-icmp
@@ -1259,65 +1536,6 @@ exit:
   ret void
 }
 
-
-; Subtraction of two recurrences. The addition in the SCEV that this
-; maps to is NSW, but the negation of the RHS does not since that
-; recurrence could be the most negative representable value.
-define void @subrecurrences(i32 %outer_l, i32 %inner_l, i32 %val) {
-; CHECK-LABEL: 'subrecurrences'
-; CHECK-NEXT:  Classifying expressions for: @subrecurrences
-; CHECK-NEXT:    %o_idx = phi i32 [ 0, %entry ], [ %o_idx.inc, %outer.be ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%outer> U: [0,-2147483648) S: [0,-2147483648) Exits: %outer_l LoopDispositions: { %outer: Computable, %inner: Invariant }
-; CHECK-NEXT:    %o_idx.inc = add nsw i32 %o_idx, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%outer> U: [1,0) S: [1,0) Exits: (1 + %outer_l) LoopDispositions: { %outer: Computable, %inner: Invariant }
-; CHECK-NEXT:    %i_idx = phi i32 [ 0, %outer ], [ %i_idx.inc, %inner ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner> U: [0,-2147483648) S: [0,-2147483648) Exits: %inner_l LoopDispositions: { %inner: Computable, %outer: Variant }
-; CHECK-NEXT:    %i_idx.inc = add nsw i32 %i_idx, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%inner> U: [1,0) S: [1,0) Exits: (1 + %inner_l) LoopDispositions: { %inner: Computable, %outer: Variant }
-; CHECK-NEXT:    %v = sub nsw i32 %i_idx, %o_idx.inc
-; CHECK-NEXT:    -->
-; NOTE: Line deleted from autogen output due to format confusing regex matcher
-; CHECK-NEXT:    %forub = udiv i32 1, %v
-; CHECK-NEXT:    -->
-; NOTE: Line deleted from autogen output due to format confusing regex matcher
-; CHECK-NEXT:  Determining loop execution counts for: @subrecurrences
-; CHECK-NEXT:  Loop %inner: backedge-taken count is %inner_l
-; CHECK-NEXT:  Loop %inner: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is %inner_l
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %inner: Trip multiple is 1
-; CHECK-NEXT:  Loop %outer: backedge-taken count is %outer_l
-; CHECK-NEXT:  Loop %outer: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %outer: Predicated backedge-taken count is %outer_l
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %outer: Trip multiple is 1
-;
-entry:
-  br label %outer
-
-outer:
-  %o_idx = phi i32 [ 0, %entry ], [ %o_idx.inc, %outer.be ]
-  %o_idx.inc = add nsw i32 %o_idx, 1
-  %cond = icmp eq i32 %o_idx, %val
-  br i1 %cond, label %inner, label %outer.be
-
-inner:
-  %i_idx = phi i32 [ 0, %outer ], [ %i_idx.inc, %inner ]
-  %i_idx.inc = add nsw i32 %i_idx, 1
-  %v = sub nsw i32 %i_idx, %o_idx.inc
-  %forub = udiv i32 1, %v
-  %cond2 = icmp eq i32 %i_idx, %inner_l
-  br i1 %cond2, label %outer.be, label %inner
-
-outer.be:
-  %cond3 = icmp eq i32 %o_idx, %outer_l
-  br i1 %cond3, label %exit, label %outer
-
-exit:
-  ret void
-}
-
-
 ; PR28932: Don't assert on non-SCEV-able value %2.
 %struct.anon = type { i8* }
 @a = common global %struct.anon* null, align 8
@@ -1401,4 +1619,252 @@ cont6:                                            ; preds = %cont1, %if.then
   %ph = phi %struct.anon* [ %9, %cont1 ], [ %1, %if.then ]
   store i32 %3, i32* @b, align 4
   br label %for.cond
+}
+
+define noundef i32 @add-basic(i32 %a, i32 %b) {
+; CHECK-LABEL: 'add-basic'
+; CHECK-NEXT:  Classifying expressions for: @add-basic
+; CHECK-NEXT:    %res = add nuw nsw i32 %a, %b
+; CHECK-NEXT:    --> (%a + %b)<nuw><nsw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @add-basic
+;
+  %res = add nuw nsw i32 %a, %b
+  ret i32 %res
+}
+
+define noundef i32 @sub-basic(i32 %a, i32 %b) {
+; CHECK-LABEL: 'sub-basic'
+; CHECK-NEXT:  Classifying expressions for: @sub-basic
+; CHECK-NEXT:    %res = sub nuw nsw i32 %a, %b
+; CHECK-NEXT:    --> ((-1 * %b) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @sub-basic
+;
+  %res = sub nuw nsw i32 %a, %b
+  ret i32 %res
+}
+
+define noundef i32 @mul-basic(i32 %a, i32 %b) {
+; CHECK-LABEL: 'mul-basic'
+; CHECK-NEXT:  Classifying expressions for: @mul-basic
+; CHECK-NEXT:    %res = mul nuw nsw i32 %a, %b
+; CHECK-NEXT:    --> (%a * %b)<nuw><nsw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @mul-basic
+;
+  %res = mul nuw nsw i32 %a, %b
+  ret i32 %res
+}
+
+define noundef i32 @udiv-basic(i32 %a, i32 %b) {
+; CHECK-LABEL: 'udiv-basic'
+; CHECK-NEXT:  Classifying expressions for: @udiv-basic
+; CHECK-NEXT:    %res = udiv exact i32 %a, %b
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv-basic
+;
+  %res = udiv exact i32 %a, %b
+  ret i32 %res
+}
+
+@gA = external global i32
+@gB = external global i32
+@gC = external global i32
+@gD = external global i32
+
+define noundef i64 @add-zext-recurse(i64 %arg) {
+; CHECK-LABEL: 'add-zext-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-zext-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = zext i32 %a to i64
+; CHECK-NEXT:    --> (zext i32 %a to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %res = add nuw i64 %x, %arg
+; CHECK-NEXT:    --> ((zext i32 %a to i64) + %arg)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @add-zext-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = zext i32 %a to i64
+  %res = add nuw i64 %x, %arg
+  ret i64 %res
+}
+
+define noundef i64 @add-sext-recurse(i64 %arg) {
+; CHECK-LABEL: 'add-sext-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-sext-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = sext i32 %a to i64
+; CHECK-NEXT:    --> (sext i32 %a to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %res = add nuw i64 %x, %arg
+; CHECK-NEXT:    --> ((sext i32 %a to i64) + %arg)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @add-sext-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = sext i32 %a to i64
+  %res = add nuw i64 %x, %arg
+  ret i64 %res
+}
+
+define noundef i16 @add-trunc-recurse() {
+; CHECK-LABEL: 'add-trunc-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-trunc-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = trunc i32 %a to i16
+; CHECK-NEXT:    --> (trunc i32 %a to i16) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i16 %x, 1
+; CHECK-NEXT:    --> (1 + (trunc i32 %a to i16))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-trunc-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = trunc i32 %a to i16
+  %res = add nuw i16 %x, 1
+  ret i16 %res
+}
+
+define noundef i32 @add-udiv-recurse(i32 %arg) {
+; CHECK-LABEL: 'add-udiv-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-udiv-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = udiv i32 %a, %arg
+; CHECK-NEXT:    --> (%a /u %arg) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (%a /u %arg))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-udiv-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = udiv i32 %a, %arg
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+define noundef i32 @add-mul-recurse() {
+; CHECK-LABEL: 'add-mul-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-mul-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = mul i32 %a, 3
+; CHECK-NEXT:    --> (3 * %a) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (3 * %a))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-mul-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = mul i32 %a, 3
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
+declare i32 @llvm.umax.i32(i32, i32)
+
+define noundef i32 @add-smin-recurse(i32 %arg) {
+; CHECK-LABEL: 'add-smin-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-smin-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = call i32 @llvm.smin.i32(i32 %a, i32 %arg)
+; CHECK-NEXT:    --> (%arg smin %a) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (%arg smin %a))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-smin-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = call i32 @llvm.smin.i32(i32 %a, i32 %arg)
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+define noundef i32 @add-smax-recurse(i32 %arg) {
+; CHECK-LABEL: 'add-smax-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-smax-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = call i32 @llvm.smax.i32(i32 %a, i32 %arg)
+; CHECK-NEXT:    --> (%arg smax %a) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (%arg smax %a))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-smax-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = call i32 @llvm.smax.i32(i32 %a, i32 %arg)
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+define noundef i32 @add-umin-recurse(i32 %arg) {
+; CHECK-LABEL: 'add-umin-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-umin-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = call i32 @llvm.umin.i32(i32 %a, i32 %arg)
+; CHECK-NEXT:    --> (%arg umin %a) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (%arg umin %a))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-umin-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = call i32 @llvm.umin.i32(i32 %a, i32 %arg)
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+define noundef i32 @add-umax-recurse(i32 %arg) {
+; CHECK-LABEL: 'add-umax-recurse'
+; CHECK-NEXT:  Classifying expressions for: @add-umax-recurse
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %x = call i32 @llvm.umax.i32(i32 %a, i32 %arg)
+; CHECK-NEXT:    --> (%arg umax %a) U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + (%arg umax %a))<nuw> U: [1,0) S: [1,0)
+; CHECK-NEXT:  Determining loop execution counts for: @add-umax-recurse
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %x = call i32 @llvm.umax.i32(i32 %a, i32 %arg)
+  %res = add nuw i32 %x, 1
+  ret i32 %res
+}
+
+
+define noundef i32 @add-recurse-inline() {
+; CHECK-LABEL: 'add-recurse-inline'
+; CHECK-NEXT:  Classifying expressions for: @add-recurse-inline
+; CHECK-NEXT:    %a = load i32, i32* @gA, align 4
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %b = load i32, i32* @gB, align 4
+; CHECK-NEXT:    --> %b U: full-set S: full-set
+; CHECK-NEXT:    %c = load i32, i32* @gC, align 4
+; CHECK-NEXT:    --> %c U: full-set S: full-set
+; CHECK-NEXT:    %d = load i32, i32* @gD, align 4
+; CHECK-NEXT:    --> %d U: full-set S: full-set
+; CHECK-NEXT:    %x = add nuw i32 %a, %b
+; CHECK-NEXT:    --> (%a + %b)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %y = add nuw i32 %c, %d
+; CHECK-NEXT:    --> (%c + %d)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %res = add nuw i32 %x, %y
+; CHECK-NEXT:    --> (%a + %b + %c + %d)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @add-recurse-inline
+;
+  call void @foo()
+  %a = load i32, i32* @gA
+  %b = load i32, i32* @gB
+  %c = load i32, i32* @gC
+  %d = load i32, i32* @gD
+
+  %x = add nuw i32 %a, %b
+  %y = add nuw i32 %c, %d
+  %res = add nuw i32 %x, %y
+  ret i32 %res
 }

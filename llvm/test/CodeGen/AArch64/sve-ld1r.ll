@@ -20,8 +20,8 @@ define <vscale x 16 x i8> @ld1r_stack() {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, :got:g8
-; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g8]
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g8]
 ; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [sp, #12]
 ; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [sp, #14]

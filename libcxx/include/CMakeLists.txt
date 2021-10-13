@@ -102,7 +102,9 @@ set(files
   __charconv/from_chars_result.h
   __charconv/to_chars_result.h
   __compare/common_comparison_category.h
+  __compare/compare_three_way.h
   __compare/compare_three_way_result.h
+  __compare/is_eq.h
   __compare/ordering.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
@@ -139,6 +141,11 @@ set(files
   __format/format_parse_context.h
   __format/format_string.h
   __format/formatter.h
+  __format/formatter_bool.h
+  __format/formatter_char.h
+  __format/formatter_integer.h
+  __format/formatter_integral.h
+  __format/formatter_string.h
   __format/parser_std_format_spec.h
   __function_like.h
   __functional_base
@@ -204,6 +211,7 @@ set(files
   __iterator/wrap_iter.h
   __libcpp_version
   __locale
+  __mbstate_t.h
   __memory/addressof.h
   __memory/allocation_guard.h
   __memory/allocator_arg_t.h

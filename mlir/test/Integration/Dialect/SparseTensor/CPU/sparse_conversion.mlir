@@ -34,12 +34,12 @@ module {
   // Verify utilities.
   //
   func @checkf64(%arg0: memref<?xf64>, %arg1: memref<?xf64>) {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     // Same lengths?
     %0 = memref.dim %arg0, %c0 : memref<?xf64>
     %1 = memref.dim %arg1, %c0 : memref<?xf64>
-    %2 = cmpi ne, %0, %1 : index
+    %2 = arith.cmpi ne, %0, %1 : index
     scf.if %2 {
       call @exit(%c1) : (index) -> ()
     }
@@ -47,7 +47,7 @@ module {
     scf.for %i = %c0 to %0 step %c1 {
       %a = memref.load %arg0[%i] : memref<?xf64>
       %b = memref.load %arg1[%i] : memref<?xf64>
-      %c = cmpf une, %a, %b : f64
+      %c = arith.cmpf une, %a, %b : f64
       scf.if %c {
         call @exit(%c1) : (index) -> ()
       }
@@ -55,12 +55,12 @@ module {
     return
   }
   func @check(%arg0: memref<?xindex>, %arg1: memref<?xindex>) {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     // Same lengths?
     %0 = memref.dim %arg0, %c0 : memref<?xindex>
     %1 = memref.dim %arg1, %c0 : memref<?xindex>
-    %2 = cmpi ne, %0, %1 : index
+    %2 = arith.cmpi ne, %0, %1 : index
     scf.if %2 {
       call @exit(%c1) : (index) -> ()
     }
@@ -68,7 +68,7 @@ module {
     scf.for %i = %c0 to %0 step %c1 {
       %a = memref.load %arg0[%i] : memref<?xindex>
       %b = memref.load %arg1[%i] : memref<?xindex>
-      %c = cmpi ne, %a, %b : index
+      %c = arith.cmpi ne, %a, %b : index
       scf.if %c {
         call @exit(%c1) : (index) -> ()
       }
@@ -80,8 +80,8 @@ module {
   // Output utility.
   //
   func @dumpf64(%arg0: memref<?xf64>) {
-    %c0 = constant 0 : index
-    %d0 = constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %d0 = arith.constant 0.0 : f64
     %0 = vector.transfer_read %arg0[%c0], %d0: memref<?xf64>, vector<24xf64>
     vector.print %0 : vector<24xf64>
     return
@@ -91,14 +91,14 @@ module {
   // Main driver.
   //
   func @entry() {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c2 = constant 2 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
 
     //
     // Initialize a 3-dim dense tensor.
     //
-    %t = constant dense<[
+    %t = arith.constant dense<[
        [  [  1.0,  2.0,  3.0,  4.0 ],
           [  5.0,  6.0,  7.0,  8.0 ],
           [  9.0, 10.0, 11.0, 12.0 ] ],
@@ -245,7 +245,17 @@ module {
     call @dumpf64(%v2) : (memref<?xf64>) -> ()
     call @dumpf64(%v3) : (memref<?xf64>) -> ()
 
+    // Release the resources.
+    sparse_tensor.release %1 : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %2 : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %3 : tensor<2x3x4xf64, #Tensor3>
+    sparse_tensor.release %b : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %c : tensor<2x3x4xf64, #Tensor1>
+    sparse_tensor.release %d : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %f : tensor<2x3x4xf64, #Tensor2>
+    sparse_tensor.release %g : tensor<2x3x4xf64, #Tensor3>
+    sparse_tensor.release %h : tensor<2x3x4xf64, #Tensor3>
+
     return
   }
 }
-

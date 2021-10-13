@@ -441,7 +441,8 @@ struct OperationFormat {
   };
 
   OperationFormat(const Operator &op)
-      : allOperands(false), allOperandTypes(false), allResultTypes(false) {
+      : allOperands(false), allOperandTypes(false), allResultTypes(false),
+        infersResultTypes(false) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
@@ -481,6 +482,9 @@ struct OperationFormat {
   /// A flag indicating if all operand/result types were seen. If the format
   /// contains these, it can not contain individual type resolvers.
   bool allOperands, allOperandTypes, allResultTypes;
+
+  /// A flag indicating if this operation infers its result types
+  bool infersResultTypes;
 
   /// A flag indicating if this operation has the SingleBlockImplicitTerminator
   /// trait.
@@ -680,6 +684,19 @@ const char *const functionalTypeParserCode = R"(
     return ::mlir::failure();
   {0}Types = {0}__{1}_functionType.getInputs();
   {1}Types = {0}__{1}_functionType.getResults();
+)";
+
+/// The code snippet used to generate a parser call to infer return types.
+///
+/// {0}: The operation class name
+const char *const inferReturnTypesParserCode = R"(
+  ::llvm::SmallVector<::mlir::Type> inferredReturnTypes;
+  if (::mlir::failed({0}::inferReturnTypes(parser.getContext(),
+      result.location, result.operands,
+      result.attributes.getDictionary(parser.getContext()),
+      result.regions, inferredReturnTypes)))
+    return ::mlir::failure();
+  result.addTypes(inferredReturnTypes);
 )";
 
 /// The code snippet used to generate a parser call for a region list.
@@ -1416,7 +1433,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
       if (Optional<StringRef> tform = resolver.getVarTransformer()) {
         FmtContext fmtContext;
-        fmtContext.addSubst("_ctxt", "parser.getBuilder().getContext()");
+        fmtContext.addSubst("_ctxt", "parser.getContext()");
         if (var->isVariadic())
           fmtContext.withSelf(var->name + "Types");
         else
@@ -1437,19 +1454,25 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   };
 
   // Resolve each of the result types.
-  if (allResultTypes) {
-    body << "  result.addTypes(allResultTypes);\n";
-  } else {
-    for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
-      body << "  result.addTypes(";
-      emitTypeResolver(resultTypes[i], op.getResultName(i));
-      body << ");\n";
+  if (!infersResultTypes) {
+    if (allResultTypes) {
+      body << "  result.addTypes(allResultTypes);\n";
+    } else {
+      for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
+        body << "  result.addTypes(";
+        emitTypeResolver(resultTypes[i], op.getResultName(i));
+        body << ");\n";
+      }
     }
   }
 
   // Early exit if there are no operands.
-  if (op.getNumOperands() == 0)
+  if (op.getNumOperands() == 0) {
+    // Handle return type inference here if there are no operands
+    if (infersResultTypes)
+      body << formatv(inferReturnTypesParserCode, op.getCppClassName());
     return;
+  }
 
   // Handle the case where all operand types are in one group.
   if (allOperandTypes) {
@@ -1532,6 +1555,10 @@ void OperationFormat::genParserTypeResolution(Operator &op,
       body << ", " << operand.name << "OperandsLoc";
     body << ", result.operands))\n    return ::mlir::failure();\n";
   }
+
+  // Handle return type inference once all operands have been resolved
+  if (infersResultTypes)
+    body << formatv(inferReturnTypesParserCode, op.getCppClassName());
 }
 
 void OperationFormat::genParserRegionResolution(Operator &op,
@@ -2478,6 +2505,7 @@ private:
   // during parsing.
   bool hasAttrDict = false;
   bool hasAllRegions = false, hasAllSuccessors = false;
+  bool canInferResultTypes = false;
   llvm::SmallBitVector seenOperandTypes, seenResultTypes;
   llvm::SmallSetVector<const NamedAttribute *, 8> seenAttrs;
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
@@ -2515,6 +2543,9 @@ LogicalResult FormatParser::parse() {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
+    } else if (def.getName() == "InferTypeOpInterface" &&
+               !op.allResultTypesKnown()) {
+      canInferResultTypes = true;
     }
   }
 
@@ -2683,6 +2714,14 @@ LogicalResult FormatParser::verifyResults(
   // If we format all of the types together, there is nothing to check.
   if (fmt.allResultTypes)
     return ::mlir::success();
+
+  // If no result types are specified and we can infer them, infer all result
+  // types
+  if (op.getNumResults() > 0 && seenResultTypes.count() == 0 &&
+      canInferResultTypes) {
+    fmt.infersResultTypes = true;
+    return ::mlir::success();
+  }
 
   // Check that all of the result types can be inferred.
   auto &buildableTypes = fmt.buildableTypes;

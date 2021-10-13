@@ -4,7 +4,7 @@
 // RUN: FileCheck %s
 
 func @transfer_read_2d(%A : memref<40xi32>, %base1: index) {
-  %i42 = constant -42: i32
+  %i42 = arith.constant -42: i32
   %f = vector.transfer_read %A[%base1], %i42
       {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<40xi32>, vector<40xi32>
@@ -13,34 +13,34 @@ func @transfer_read_2d(%A : memref<40xi32>, %base1: index) {
 }
 
 func @entry() {
-  %c0 = constant 0: index
-  %c20 = constant 20: i32
-  %c10 = constant 10: i32
-  %cmin10 = constant -10: i32
+  %c0 = arith.constant 0: index
+  %c20 = arith.constant 20: i32
+  %c10 = arith.constant 10: i32
+  %cmin10 = arith.constant -10: i32
   %A = memref.alloc() : memref<40xi32>
 
   // print numerator
   affine.for %i = 0 to 40  {
-    %ii = index_cast %i: index to i32
-    %ii30 = subi %ii, %c20 : i32
+    %ii = arith.index_cast %i: index to i32
+    %ii30 = arith.subi %ii, %c20 : i32
     memref.store %ii30, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
   // test with ceil(*, 10)
   affine.for %i = 0 to 40  {
-    %ii = index_cast %i: index to i32
-    %ii30 = subi %ii, %c20 : i32
-    %val = ceildivi_signed %ii30, %c10 : i32
+    %ii = arith.index_cast %i: index to i32
+    %ii30 = arith.subi %ii, %c20 : i32
+    %val = arith.ceildivsi %ii30, %c10 : i32
     memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
     // test with floor(*, 10)
   affine.for %i = 0 to 40  {
-    %ii = index_cast %i: index to i32
-    %ii30 = subi %ii, %c20 : i32
-    %val = floordivi_signed %ii30, %c10 : i32
+    %ii = arith.index_cast %i: index to i32
+    %ii30 = arith.subi %ii, %c20 : i32
+    %val = arith.floordivsi %ii30, %c10 : i32
     memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
@@ -48,22 +48,23 @@ func @entry() {
 
   // test with ceil(*, -10)
   affine.for %i = 0 to 40  {
-    %ii = index_cast %i: index to i32
-    %ii30 = subi %ii, %c20 : i32
-    %val = ceildivi_signed %ii30, %cmin10 : i32
+    %ii = arith.index_cast %i: index to i32
+    %ii30 = arith.subi %ii, %c20 : i32
+    %val = arith.ceildivsi %ii30, %cmin10 : i32
     memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
   // test with floor(*, -10)
   affine.for %i = 0 to 40  {
-    %ii = index_cast %i: index to i32
-    %ii30 = subi %ii, %c20 : i32
-    %val = floordivi_signed %ii30, %cmin10 : i32
+    %ii = arith.index_cast %i: index to i32
+    %ii30 = arith.subi %ii, %c20 : i32
+    %val = arith.floordivsi %ii30, %cmin10 : i32
     memref.store %val, %A[%i] : memref<40xi32>
   }
   call @transfer_read_2d(%A, %c0) : (memref<40xi32>, index) -> ()
 
+  memref.dealloc %A : memref<40xi32>
   return
 }
 

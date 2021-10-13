@@ -6564,10 +6564,176 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
   EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
 }
 
+TEST_P(ImportAttributes, ImportGuardedVar) {
+  GuardedVarAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>("int test __attribute__((guarded_var));", FromAttr,
+                      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportPtGuardedVar) {
+  PtGuardedVarAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>("int *test __attribute__((pt_guarded_var));", FromAttr,
+                      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportScopedLockable) {
+  ScopedLockableAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>("struct __attribute__((scoped_lockable)) test {};",
+                            FromAttr, ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportCapability) {
+  CapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      "struct __attribute__((capability(\"cap\"))) test {};", FromAttr, ToAttr);
+  EXPECT_EQ(FromAttr->getName(), ToAttr->getName());
+}
+
 TEST_P(ImportAttributes, ImportAssertCapability) {
   AssertCapabilityAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
       "void test(int A1, int A2) __attribute__((assert_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAcquireCapability) {
+  AcquireCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((acquire_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportTryAcquireCapability) {
+  TryAcquireCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
+      "A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportReleaseCapability) {
+  ReleaseCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((release_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportRequiresCapability) {
+  RequiresCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((requires_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportNoThreadSafetyAnalysis) {
+  NoThreadSafetyAnalysisAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test() __attribute__((no_thread_safety_analysis));", FromAttr,
+      ToAttr);
+}
+
+TEST_P(ImportAttributes, ImportGuardedBy) {
+  GuardedByAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      int G;
+      int test __attribute__((guarded_by(G)));
+      )",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportPtGuardedBy) {
+  PtGuardedByAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      int G;
+      int *test __attribute__((pt_guarded_by(G)));
+      )",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportAcquiredAfter) {
+  AcquiredAfterAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      struct __attribute__((lockable)) L {};
+      L A1;
+      L A2;
+      L test __attribute__((acquired_after(A1, A2)));
+      )",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAcquiredBefore) {
+  AcquiredBeforeAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
+      R"(
+      struct __attribute__((lockable)) L {};
+      L A1;
+      L A2;
+      L test __attribute__((acquired_before(A1, A2)));
+      )",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAssertExclusiveLock) {
+  AssertExclusiveLockAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>("void test(int A1, int A2) "
+                           "__attribute__((assert_exclusive_lock(A1, A2)));",
+                           FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportAssertSharedLock) {
+  AssertSharedLockAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((assert_shared_lock(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
+  ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
+      "A1, A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
+  SharedTrylockFunctionAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
+      "A2)));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportLockReturned) {
+  LockReturnedAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1) __attribute__((lock_returned(A1)));", FromAttr,
+      ToAttr);
+  checkImported(FromAttr->getArg(), ToAttr->getArg());
+}
+
+TEST_P(ImportAttributes, ImportLocksExcluded) {
+  LocksExcludedAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
       FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
@@ -6879,6 +7045,244 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
   EXPECT_TRUE(ToD->getMemberSpecializationInfo());
   EXPECT_EQ(FromD->getTemplateSpecializationKind(),
             ToD->getTemplateSpecializationKind());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIsInheritingConstructorBit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        A(int);
+      };
+      struct B : A {
+        using A::A; // Inherited ctor.
+      };
+      void f() {
+        (B(0));
+      }
+      )",
+      Lang_CXX11);
+  auto *FromD = FirstDeclMatcher<CXXConstructorDecl>().match(
+      FromTU, cxxConstructorDecl(isInheritingConstructor()));
+  ASSERT_TRUE(FromD);
+  ASSERT_TRUE(FromD->isInheritingConstructor());
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->isInheritingConstructor());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportConstructorUsingShadow) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        A(int, int);
+      };
+      struct B : A {
+        using A::A;
+      };
+      struct C : B {
+        using B::B;
+      };
+      )",
+      Lang_CXX11);
+
+  auto CheckAST = [](TranslationUnitDecl *TU, CXXRecordDecl *RecordC) {
+    auto *RecordA = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("A")));
+    auto *RecordB = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("B")));
+    auto *ConstrA = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordA)),
+                               parameterCountIs(2)));
+    auto *ShadowBA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordB)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowCA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordC)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    EXPECT_EQ(ShadowBA->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowBA->getNominatedBaseClass(), RecordA);
+    EXPECT_EQ(ShadowBA->getConstructedBaseClass(), RecordA);
+    EXPECT_EQ(ShadowBA->getNominatedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowBA->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_FALSE(ShadowBA->constructsVirtualBase());
+    EXPECT_EQ(ShadowCA->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowCA->getNominatedBaseClass(), RecordB);
+    EXPECT_EQ(ShadowCA->getConstructedBaseClass(), RecordB);
+    EXPECT_EQ(ShadowCA->getNominatedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowCA->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_FALSE(ShadowCA->constructsVirtualBase());
+  };
+
+  auto *FromC = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("C")));
+
+  auto *ToC = Import(FromC, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToC->getTranslationUnitDecl();
+
+  CheckAST(FromTU, FromC);
+  CheckAST(ToTU, ToC);
+}
+
+AST_MATCHER_P(UsingShadowDecl, hasIntroducerDecl, internal::Matcher<NamedDecl>,
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.getIntroducer(), Finder, Builder);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportConstructorUsingShadowVirtualBase) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A { A(int, int); };
+      struct B : A { using A::A; };
+
+      struct V1 : virtual B { using B::B; };
+      struct V2 : virtual B { using B::B; };
+
+      struct D2 : V1, V2 {
+        using V1::V1;
+        using V2::V2;
+      };
+      )",
+      Lang_CXX11);
+
+  auto CheckAST = [](TranslationUnitDecl *TU, CXXRecordDecl *RecordD2) {
+    auto *RecordA = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("A")));
+    auto *RecordB = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("B")));
+    auto *RecordV1 = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("V1")));
+    auto *RecordV2 = FirstDeclMatcher<CXXRecordDecl>().match(
+        TU, cxxRecordDecl(hasName("V2")));
+    auto *ConstrA = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordA)),
+                               parameterCountIs(2)));
+    auto *ConstrB = FirstDeclMatcher<CXXConstructorDecl>().match(
+        TU, cxxConstructorDecl(hasParent(equalsNode(RecordB)),
+                               isCopyConstructor()));
+    auto *UsingD2V1 = FirstDeclMatcher<UsingDecl>().match(
+        TU, usingDecl(hasParent(equalsNode(RecordD2))));
+    auto *UsingD2V2 = LastDeclMatcher<UsingDecl>().match(
+        TU, usingDecl(hasParent(equalsNode(RecordD2))));
+    auto *ShadowBA = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordB)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV1A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV1)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV1B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV1)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowV2A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV2)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowV2B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordV2)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowD2V1A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V1)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowD2V1B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V1)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+    auto *ShadowD2V2A = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V2)),
+                                hasTargetDecl(equalsNode(ConstrA)))));
+    auto *ShadowD2V2B = cast<ConstructorUsingShadowDecl>(
+        FirstDeclMatcher<UsingShadowDecl>().match(
+            TU, usingShadowDecl(hasParent(equalsNode(RecordD2)),
+                                hasIntroducerDecl(equalsNode(UsingD2V2)),
+                                hasTargetDecl(equalsNode(ConstrB)))));
+
+    EXPECT_EQ(ShadowD2V1A->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowD2V1A->getNominatedBaseClassShadowDecl(), ShadowV1A);
+    EXPECT_EQ(ShadowD2V1A->getNominatedBaseClass(), RecordV1);
+    EXPECT_EQ(ShadowD2V1A->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowD2V1A->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V1A->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V1B->getTargetDecl(), ConstrB);
+    EXPECT_EQ(ShadowD2V1B->getNominatedBaseClassShadowDecl(), ShadowV1B);
+    EXPECT_EQ(ShadowD2V1B->getNominatedBaseClass(), RecordV1);
+    EXPECT_EQ(ShadowD2V1B->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowD2V1B->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V1B->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V2A->getTargetDecl(), ConstrA);
+    EXPECT_EQ(ShadowD2V2A->getNominatedBaseClassShadowDecl(), ShadowV2A);
+    EXPECT_EQ(ShadowD2V2A->getNominatedBaseClass(), RecordV2);
+    EXPECT_EQ(ShadowD2V2A->getConstructedBaseClassShadowDecl(), ShadowBA);
+    EXPECT_EQ(ShadowD2V2A->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V2A->constructsVirtualBase());
+    EXPECT_EQ(ShadowD2V2B->getTargetDecl(), ConstrB);
+    EXPECT_EQ(ShadowD2V2B->getNominatedBaseClassShadowDecl(), ShadowV2B);
+    EXPECT_EQ(ShadowD2V2B->getNominatedBaseClass(), RecordV2);
+    EXPECT_EQ(ShadowD2V2B->getConstructedBaseClassShadowDecl(), nullptr);
+    EXPECT_EQ(ShadowD2V2B->getConstructedBaseClass(), RecordB);
+    EXPECT_TRUE(ShadowD2V2B->constructsVirtualBase());
+
+    EXPECT_TRUE(ShadowV1A->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV1B->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV2A->constructsVirtualBase());
+    EXPECT_TRUE(ShadowV2B->constructsVirtualBase());
+    EXPECT_FALSE(ShadowBA->constructsVirtualBase());
+  };
+
+  auto *FromD2 = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("D2")));
+
+  auto *ToD2 = Import(FromD2, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToD2->getTranslationUnitDecl();
+
+  CheckAST(FromTU, FromD2);
+  CheckAST(ToTU, ToD2);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingShadowList) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        void f();
+        void f(int);
+      };
+      struct B : A {
+        using A::f;
+      };
+      )",
+      Lang_CXX11);
+
+  auto *FromB = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("B")));
+
+  auto *ToB = Import(FromB, Lang_CXX11);
+  TranslationUnitDecl *ToTU = ToB->getTranslationUnitDecl();
+
+  auto *ToUsing = FirstDeclMatcher<UsingDecl>().match(
+      ToTU, usingDecl(hasParent(equalsNode(ToB))));
+  auto *ToUsingShadowF1 = FirstDeclMatcher<UsingShadowDecl>().match(
+      ToTU, usingShadowDecl(hasTargetDecl(
+                functionDecl(hasName("f"), parameterCountIs(0)))));
+  auto *ToUsingShadowF2 = FirstDeclMatcher<UsingShadowDecl>().match(
+      ToTU, usingShadowDecl(hasTargetDecl(
+                functionDecl(hasName("f"), parameterCountIs(1)))));
+
+  EXPECT_EQ(ToUsing->shadow_size(), 2u);
+  auto ShadowI = ToUsing->shadow_begin();
+  EXPECT_EQ(*ShadowI, ToUsingShadowF1);
+  ++ShadowI;
+  EXPECT_EQ(*ShadowI, ToUsingShadowF2);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

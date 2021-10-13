@@ -336,6 +336,24 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setMinimumJumpTableEntries(2);
 }
 
+MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
+                                            uint32_t AS) const {
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
+    return MVT::externref;
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
+    return MVT::funcref;
+  return TargetLowering::getPointerTy(DL, AS);
+}
+
+MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
+                                               uint32_t AS) const {
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
+    return MVT::externref;
+  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
+    return MVT::funcref;
+  return TargetLowering::getPointerMemTy(DL, AS);
+}
+
 TargetLowering::AtomicExpansionKind
 WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // We have wasm instructions for these
@@ -549,7 +567,21 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   if (IsIndirect) {
     auto FnPtr = CallParams.getOperand(0);
     CallParams.RemoveOperand(0);
-    CallParams.addOperand(FnPtr);
+
+    // For funcrefs, call_indirect is done through __funcref_call_table and the
+    // funcref is always installed in slot 0 of the table, therefore instead of having
+    // the function pointer added at the end of the params list, a zero (the index in
+    // __funcref_call_table is added).
+    if (IsFuncrefCall) {
+      Register RegZero =
+          MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+      MachineInstrBuilder MIBC0 =
+          BuildMI(MF, DL, TII.get(WebAssembly::CONST_I32), RegZero).addImm(0);
+
+      BB->insert(CallResults.getIterator(), MIBC0);
+      MachineInstrBuilder(MF, CallParams).addReg(RegZero);
+    } else
+      CallParams.addOperand(FnPtr);
   }
 
   for (auto Def : CallResults.defs())
@@ -1132,7 +1164,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB && isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
+  if (CLI.CB &&
+      WebAssembly::isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1150,7 +1183,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
         MVT::funcref,
         // Machine Mem Operand args
-        MachinePointerInfo(WasmAddressSpace::FUNCREF),
+        MachinePointerInfo(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
         CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
         MachineMemOperand::MOStore);
 
@@ -1386,16 +1420,6 @@ static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
 
   auto &MF = DAG.getMachineFunction();
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());
-}
-
-bool WebAssemblyTargetLowering::isFuncrefType(const Type *Ty) {
-  return isa<PointerType>(Ty) &&
-         Ty->getPointerAddressSpace() == WasmAddressSpace::FUNCREF;
-}
-
-bool WebAssemblyTargetLowering::isExternrefType(const Type *Ty) {
-  return isa<PointerType>(Ty) &&
-         Ty->getPointerAddressSpace() == WasmAddressSpace::EXTERNREF;
 }
 
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
@@ -1727,14 +1751,22 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     return SDValue(); // Don't custom lower most intrinsics.
 
   case Intrinsic::wasm_lsda: {
-    EVT VT = Op.getValueType();
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    auto &Context = MF.getMMI().getContext();
-    MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
-                                            Twine(MF.getFunctionNumber()));
-    return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                       DAG.getMCSymbol(S, PtrVT));
+    auto PtrVT = getPointerTy(MF.getDataLayout());
+    const char *SymName = MF.createExternalSymbolName(
+        "GCC_except_table" + std::to_string(MF.getFunctionNumber()));
+    if (isPositionIndependent()) {
+      SDValue Node = DAG.getTargetExternalSymbol(
+          SymName, PtrVT, WebAssemblyII::MO_MEMORY_BASE_REL);
+      const char *BaseName = MF.createExternalSymbolName("__memory_base");
+      SDValue BaseAddr =
+          DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT,
+                      DAG.getTargetExternalSymbol(BaseName, PtrVT));
+      SDValue SymAddr =
+          DAG.getNode(WebAssemblyISD::WrapperREL, DL, PtrVT, Node);
+      return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymAddr);
+    }
+    SDValue Node = DAG.getTargetExternalSymbol(SymName, PtrVT);
+    return DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT, Node);
   }
 
   case Intrinsic::wasm_shuffle: {

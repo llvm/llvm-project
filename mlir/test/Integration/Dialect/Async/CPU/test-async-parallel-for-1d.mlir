@@ -31,7 +31,7 @@
 
 // RUN:   mlir-opt %s -async-parallel-for="async-dispatch=false                \
 // RUN:                                    num-workers=20                      \
-// RUN:                                    target-block-size=1"                \
+// RUN:                                    min-task-size=1"                \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
@@ -49,26 +49,26 @@
 
 // Suppress constant folding by introducing "dynamic" zero value at runtime.
 func private @zero() -> index {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   return %0 : index
 }
 
 func @entry() {
-  %c0 = constant 0.0 : f32
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
+  %c0 = arith.constant 0.0 : f32
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
 
-  %lb = constant 0 : index
-  %ub = constant 9 : index
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 9 : index
 
   %A = memref.alloc() : memref<9xf32>
   %U = memref.cast %A :  memref<9xf32> to memref<*xf32>
 
   // 1. %i = (0) to (9) step (1)
   scf.parallel (%i) = (%lb) to (%ub) step (%c1) {
-    %0 = index_cast %i : index to i32
-    %1 = sitofp %0 : i32 to f32
+    %0 = arith.index_cast %i : index to i32
+    %1 = arith.sitofp %0 : i32 to f32
     memref.store %1, %A[%i] : memref<9xf32>
   }
   // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -80,8 +80,8 @@ func @entry() {
 
   // 2. %i = (0) to (9) step (2)
   scf.parallel (%i) = (%lb) to (%ub) step (%c2) {
-    %0 = index_cast %i : index to i32
-    %1 = sitofp %0 : i32 to f32
+    %0 = arith.index_cast %i : index to i32
+    %1 = arith.sitofp %0 : i32 to f32
     memref.store %1, %A[%i] : memref<9xf32>
   }
   // CHECK:  [0, 0, 2, 0, 4, 0, 6, 0, 8]
@@ -92,13 +92,13 @@ func @entry() {
   }
 
   // 3. %i = (-20) to (-11) step (3)
-  %lb0 = constant -20 : index
-  %ub0 = constant -11 : index
+  %lb0 = arith.constant -20 : index
+  %ub0 = arith.constant -11 : index
   scf.parallel (%i) = (%lb0) to (%ub0) step (%c3) {
-    %0 = index_cast %i : index to i32
-    %1 = sitofp %0 : i32 to f32
-    %2 = constant 20 : index
-    %3 = addi %i, %2 : index
+    %0 = arith.index_cast %i : index to i32
+    %1 = arith.sitofp %0 : i32 to f32
+    %2 = arith.constant 20 : index
+    %3 = arith.addi %i, %2 : index
     memref.store %1, %A[%3] : memref<9xf32>
   }
   // CHECK: [-20, 0, 0, -17, 0, 0, -14, 0, 0]
@@ -109,7 +109,7 @@ func @entry() {
   %ub1 = call @zero(): () -> (index)
 
   scf.parallel (%i) = (%lb1) to (%ub1) step (%c1) {
-    %false = constant 0 : i1
+    %false = arith.constant 0 : i1
     assert %false, "should never be executed"
   }
 

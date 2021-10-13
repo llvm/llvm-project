@@ -83,6 +83,7 @@ class CrashLog(symbolication.Symbolicator):
             self.registers = dict()
             self.reason = None
             self.queue = None
+            self.crashed = False
             self.app_specific_backtrace = app_specific_backtrace
 
         def dump(self, prefix):
@@ -160,6 +161,9 @@ class CrashLog(symbolication.Symbolicator):
                 print()
                 for reg in self.registers.keys():
                     print("    %-8s = %#16.16x" % (reg, self.registers[reg]))
+            elif self.crashed:
+               print()
+               print("No thread state (register information) available")
 
         def add_ident(self, ident):
             if ident not in self.idents:
@@ -330,6 +334,7 @@ class CrashLog(symbolication.Symbolicator):
         self.threads = list()
         self.backtraces = list()  # For application specific backtraces
         self.idents = list()  # A list of the required identifiers for doing all stack backtraces
+        self.errors = list()
         self.crashed_thread_idx = -1
         self.version = -1
         self.target = None
@@ -415,8 +420,14 @@ class JSONCrashLogParser:
         with open(self.path, 'r') as f:
             buffer = f.read()
 
-        # First line is meta-data.
-        buffer = buffer[buffer.index('\n') + 1:]
+        # Skip the first line if it contains meta data.
+        head, _, tail = buffer.partition('\n')
+        try:
+            metadata = json.loads(head)
+            if 'app_name' in metadata and 'app_version' in metadata:
+                buffer = tail
+        except ValueError:
+            pass
 
         try:
             self.data = json.loads(buffer)
@@ -427,6 +438,7 @@ class JSONCrashLogParser:
             self.parse_process_info(self.data)
             self.parse_images(self.data['usedImages'])
             self.parse_threads(self.data['threads'])
+            self.parse_errors(self.data)
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
             reason = self.parse_crash_reason(self.data['exception'])
             if thread.reason:
@@ -499,8 +511,10 @@ class JSONCrashLogParser:
                 thread.reason = json_thread['name']
             if json_thread.get('triggered', False):
                 self.crashlog.crashed_thread_idx = idx
-                thread.registers = self.parse_thread_registers(
-                    json_thread['threadState'])
+                thread.crashed = True
+                if 'threadState' in json_thread:
+                    thread.registers = self.parse_thread_registers(
+                        json_thread['threadState'])
             thread.queue = json_thread.get('queue')
             self.parse_frames(thread, json_thread.get('frames', []))
             self.crashlog.threads.append(thread)
@@ -515,6 +529,10 @@ class JSONCrashLogParser:
             except (TypeError, ValueError):
                pass
         return registers
+
+    def parse_errors(self, json_data):
+       if 'reportNotes' in json_data:
+          self.crashlog.errors = json_data['reportNotes']
 
 
 class CrashLogParseMode:
@@ -1054,6 +1072,11 @@ def SymbolicateCrashLog(crash_log, options):
     for thread in crash_log.threads:
         thread.dump_symbolicated(crash_log, options)
         print()
+
+    if crash_log.errors:
+        print("Errors:")
+        for error in crash_log.errors:
+            print(error)
 
 
 def CreateSymbolicateCrashLogOptions(

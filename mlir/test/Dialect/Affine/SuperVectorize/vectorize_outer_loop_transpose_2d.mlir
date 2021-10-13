@@ -4,9 +4,9 @@
 // CHECK: #[[map_proj_d0d1d2_d2d0:map[0-9]*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
 
 func @vec2d(%A : memref<?x?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %M = memref.dim %A, %c0 : memref<?x?x?xf32>
   %N = memref.dim %A, %c1 : memref<?x?x?xf32>
   %P = memref.dim %A, %c2 : memref<?x?x?xf32>
@@ -37,9 +37,9 @@ func @vec2d(%A : memref<?x?x?xf32>) {
 }
 
 func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %A, %c0 : memref<?x?x?xf32>
   %1 = memref.dim %A, %c1 : memref<?x?x?xf32>
   %2 = memref.dim %A, %c2 : memref<?x?x?xf32>

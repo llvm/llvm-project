@@ -19,7 +19,6 @@ class FunctionStartsTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test_function_starts_binary(self):
         """Test that we make synthetic symbols when we have the binary."""
         self.build(dictionary={'CODESIGN': ''}) # Binary is getting stripped later.
@@ -27,7 +26,6 @@ class FunctionStartsTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test_function_starts_no_binary(self):
         """Test that we make synthetic symbols when we don't have the binary"""
         self.build(dictionary={'CODESIGN': ''}) # Binary is getting stripped later.

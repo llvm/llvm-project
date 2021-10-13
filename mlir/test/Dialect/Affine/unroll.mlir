@@ -27,12 +27,12 @@
 func @loop_nest_simplest() {
   // UNROLL-FULL: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
-    // UNROLL-FULL: %c1_i32 = constant 1 : i32
-    // UNROLL-FULL-NEXT: %c1_i32_0 = constant 1 : i32
-    // UNROLL-FULL-NEXT: %c1_i32_1 = constant 1 : i32
-    // UNROLL-FULL-NEXT: %c1_i32_2 = constant 1 : i32
+    // UNROLL-FULL: %c1_i32 = arith.constant 1 : i32
+    // UNROLL-FULL-NEXT: %c1_i32_0 = arith.constant 1 : i32
+    // UNROLL-FULL-NEXT: %c1_i32_1 = arith.constant 1 : i32
+    // UNROLL-FULL-NEXT: %c1_i32_2 = arith.constant 1 : i32
     affine.for %j = 0 to 4 {
-      %x = constant 1 : i32
+      %x = arith.constant 1 : i32
     }
   }       // UNROLL-FULL:  }
   return  // UNROLL-FULL:  return
@@ -40,7 +40,7 @@ func @loop_nest_simplest() {
 
 // UNROLL-FULL-LABEL: func @loop_nest_simple_iv_use() {
 func @loop_nest_simple_iv_use() {
-  // UNROLL-FULL: %c0 = constant 0 : index
+  // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
     // UNROLL-FULL: %0 = "addi32"(%c0, %c0) : (index, index) -> i32
@@ -60,11 +60,11 @@ func @loop_nest_simple_iv_use() {
 // Operations in the loop body have results that are used therein.
 // UNROLL-FULL-LABEL: func @loop_nest_body_def_use() {
 func @loop_nest_body_def_use() {
-  // UNROLL-FULL: %c0 = constant 0 : index
+  // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
-    // UNROLL-FULL: %c0_0 = constant 0 : index
-    %c0 = constant 0 : index
+    // UNROLL-FULL: %c0_0 = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
     // UNROLL-FULL:      %0 = affine.apply [[$MAP0]](%c0)
     // UNROLL-FULL-NEXT: %1 = "addi32"(%0, %c0_0) : (index, index) -> index
     // UNROLL-FULL-NEXT: %2 = affine.apply [[$MAP0]](%c0)
@@ -87,8 +87,8 @@ func @loop_nest_body_def_use() {
 
 // UNROLL-FULL-LABEL: func @loop_nest_strided() {
 func @loop_nest_strided() {
-  // UNROLL-FULL: %c2 = constant 2 : index
-  // UNROLL-FULL-NEXT: %c2_0 = constant 2 : index
+  // UNROLL-FULL: %c2 = arith.constant 2 : index
+  // UNROLL-FULL-NEXT: %c2_0 = arith.constant 2 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-FULL:      %0 = affine.apply [[$MAP0]](%c2_0)
@@ -120,7 +120,7 @@ func @loop_nest_strided() {
 
 // UNROLL-FULL-LABEL: func @loop_nest_multiple_results() {
 func @loop_nest_multiple_results() {
-  // UNROLL-FULL: %c0 = constant 0 : index
+  // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-FULL: %0 = affine.apply [[$MAP4]](%arg0, %c0)
@@ -146,9 +146,9 @@ func @loop_nest_multiple_results() {
 // Imperfect loop nest. Unrolling innermost here yields a perfect nest.
 // UNROLL-FULL-LABEL: func @loop_nest_seq_imperfect(%arg0: memref<128x128xf32>) {
 func @loop_nest_seq_imperfect(%a : memref<128x128xf32>) {
-  // UNROLL-FULL: %c0 = constant 0 : index
-  // UNROLL-FULL-NEXT: %c128 = constant 128 : index
-  %c128 = constant 128 : index
+  // UNROLL-FULL: %c0 = arith.constant 0 : index
+  // UNROLL-FULL-NEXT: %c128 = arith.constant 128 : index
+  %c128 = arith.constant 128 : index
   // UNROLL-FULL: affine.for %arg1 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-FULL: %0 = "vld"(%arg1) : (index) -> i32
@@ -184,8 +184,8 @@ func @loop_nest_seq_imperfect(%a : memref<128x128xf32>) {
 
 // UNROLL-FULL-LABEL: func @loop_nest_seq_multiple() {
 func @loop_nest_seq_multiple() {
-  // UNROLL-FULL: c0 = constant 0 : index
-  // UNROLL-FULL-NEXT: %c0_0 = constant 0 : index
+  // UNROLL-FULL: c0 = arith.constant 0 : index
+  // UNROLL-FULL-NEXT: %c0_0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: %0 = affine.apply [[$MAP0]](%c0_0)
   // UNROLL-FULL-NEXT: "mul"(%0, %0) : (index, index) -> ()
   // UNROLL-FULL-NEXT: %1 = affine.apply [[$MAP0]](%c0_0)
@@ -203,8 +203,8 @@ func @loop_nest_seq_multiple() {
     "mul"(%x, %x) : (index, index) -> ()
   }
 
-  // UNROLL-FULL: %c99 = constant 99 : index
-  %k = constant 99 : index
+  // UNROLL-FULL: %c99 = arith.constant 99 : index
+  %k = arith.constant 99 : index
   // UNROLL-FULL: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %m = 0 to 100 step 2 {
     // UNROLL-FULL: %7 = affine.apply [[$MAP0]](%c0)
@@ -269,11 +269,11 @@ func @loop_nest_seq_long() -> i32 {
   %B = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %C = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
 
-  %zero = constant 0 : i32
-  %one = constant 1 : i32
-  %two = constant 2 : i32
+  %zero = arith.constant 0 : i32
+  %one = arith.constant 1 : i32
+  %two = arith.constant 2 : i32
 
-  %zero_idx = constant 0 : index
+  %zero_idx = arith.constant 0 : index
 
   // CHECK: affine.for %arg0 = 0 to 512
   affine.for %n0 = 0 to 512 {
@@ -406,8 +406,8 @@ func @unroll_non_unit_stride_cleanup() {
 // Both the unrolled loop and the cleanup loop are single iteration loops.
 // UNROLL-BY-4-LABEL: func @loop_nest_single_iteration_after_unroll
 func @loop_nest_single_iteration_after_unroll(%N: index) {
-  // UNROLL-BY-4: %c0 = constant 0 : index
-  // UNROLL-BY-4: %c4 = constant 4 : index
+  // UNROLL-BY-4: %c0 = arith.constant 0 : index
+  // UNROLL-BY-4: %c4 = arith.constant 4 : index
   // UNROLL-BY-4: affine.for %arg1 = 0 to %arg0 {
   affine.for %i = 0 to %N {
     // UNROLL-BY-4: %0 = "addi32"(%c0, %c0) : (index, index) -> i32
@@ -586,7 +586,7 @@ func @unroll_by_one_should_promote_single_iteration_loop() {
     %x = "foo"(%i) : (index) -> i32
   }
   return
-// UNROLL-BY-1-NEXT: %c0 = constant 0 : index
+// UNROLL-BY-1-NEXT: %c0 = arith.constant 0 : index
 // UNROLL-BY-1-NEXT: %0 = "foo"(%c0) : (index) -> i32
 // UNROLL-BY-1-NEXT: return
 }
@@ -595,23 +595,23 @@ func @unroll_by_one_should_promote_single_iteration_loop() {
 
 // UNROLL-BY-4-LABEL: loop_unroll_with_iter_args_and_cleanup
 func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
-  %cf1 = constant 1.0 : f32
-  %cf2 = constant 2.0 : f32
+  %cf1 = arith.constant 1.0 : f32
+  %cf2 = arith.constant 2.0 : f32
   %sum:2 = affine.for %iv = 0 to 10 iter_args(%i0 = %arg0, %i1 = %arg1) -> (f32, f32) {
-    %sum0 = addf %i0, %cf1 : f32
-    %sum1 = addf %i1, %cf2 : f32
+    %sum0 = arith.addf %i0, %cf1 : f32
+    %sum1 = arith.addf %i1, %cf2 : f32
     affine.yield %sum0, %sum1 : f32, f32
   }
   return %sum#0, %sum#1 : f32, f32
   // UNROLL-BY-4:      %[[SUM:.*]]:2 = affine.for {{.*}} = 0 to 8 step 4 iter_args
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   addf
-  // UNROLL-BY-4-NEXT:   %[[Y1:.*]] = addf
-  // UNROLL-BY-4-NEXT:   %[[Y2:.*]] = addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   arith.addf
+  // UNROLL-BY-4-NEXT:   %[[Y1:.*]] = arith.addf
+  // UNROLL-BY-4-NEXT:   %[[Y2:.*]] = arith.addf
   // UNROLL-BY-4-NEXT:   affine.yield %[[Y1]], %[[Y2]]
   // UNROLL-BY-4-NEXT: }
   // UNROLL-BY-4-NEXT: %[[SUM1:.*]]:2 = affine.for {{.*}} = 8 to 10 iter_args(%[[V1:.*]] = %[[SUM]]#0, %[[V2:.*]] = %[[SUM]]#1)
@@ -623,21 +623,29 @@ func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : inde
 
 // UNROLL-BY-4-LABEL: unroll_with_iter_args_and_promotion
 func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
-  %from = constant 0 : index
-  %to = constant 10 : index
-  %step = constant 1 : index
+  %from = arith.constant 0 : index
+  %to = arith.constant 10 : index
+  %step = arith.constant 1 : index
   %sum = affine.for %iv = 0 to 9 iter_args(%sum_iter = %arg0) -> (f32) {
-    %next = addf %sum_iter, %arg1 : f32
+    %next = arith.addf %sum_iter, %arg1 : f32
     affine.yield %next : f32
   }
   // UNROLL-BY-4:      %[[SUM:.*]] = affine.for %{{.*}} = 0 to 8 step 4 iter_args(%[[V0:.*]] =
-  // UNROLL-BY-4-NEXT:   %[[V1:.*]] = addf %[[V0]]
-  // UNROLL-BY-4-NEXT:   %[[V2:.*]] = addf %[[V1]]
-  // UNROLL-BY-4-NEXT:   %[[V3:.*]] = addf %[[V2]]
-  // UNROLL-BY-4-NEXT:   %[[V4:.*]] = addf %[[V3]]
+  // UNROLL-BY-4-NEXT:   %[[V1:.*]] = arith.addf %[[V0]]
+  // UNROLL-BY-4-NEXT:   %[[V2:.*]] = arith.addf %[[V1]]
+  // UNROLL-BY-4-NEXT:   %[[V3:.*]] = arith.addf %[[V2]]
+  // UNROLL-BY-4-NEXT:   %[[V4:.*]] = arith.addf %[[V3]]
   // UNROLL-BY-4-NEXT:   affine.yield %[[V4]]
   // UNROLL-BY-4-NEXT: }
-  // UNROLL-BY-4-NEXT: %[[RES:.*]] = addf %[[SUM]],
+  // UNROLL-BY-4-NEXT: %[[RES:.*]] = arith.addf %[[SUM]],
   // UNROLL-BY-4-NEXT: return %[[RES]]
   return %sum : f32
+}
+
+// UNROLL-FULL: func @unroll_zero_trip_count_case
+func @unroll_zero_trip_count_case() {
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to 0
+  affine.for %i = 0 to 0 {
+  }
+  return
 }

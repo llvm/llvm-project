@@ -940,8 +940,7 @@ TEST_F(PatternMatchTest, VectorOps) {
   VecElemIdxs.push_back(ConstantInt::get(i32, 2));
   auto *IdxVec = ConstantVector::get(VecElemIdxs);
 
-  Value *UndefVec = UndefValue::get(VecTy);
-  Value *VI1 = IRB.CreateInsertElement(UndefVec, IRB.getInt8(1), (uint64_t)0);
+  Value *VI1 = IRB.CreateInsertElement(VecTy, IRB.getInt8(1), (uint64_t)0);
   Value *VI2 = IRB.CreateInsertElement(VI1, Val2, Val);
   Value *VI3 = IRB.CreateInsertElement(VI1, Val2, (uint64_t)1);
   Value *VI4 = IRB.CreateInsertElement(VI1, IRB.getInt8(2), Val);
@@ -1093,29 +1092,29 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APInt(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APIntForbidUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APInt(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APIntForbidUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
 
   // Whether splats with undef can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APInt(C)));
   EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidUndef(C)));
   C = nullptr;
   EXPECT_TRUE(match(VectorZeroUndef, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
 }
 
 TEST_F(PatternMatchTest, VectorUndefFloat) {
@@ -1441,7 +1440,7 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
 namespace {
 
 struct is_unsigned_zero_pred {
-  bool isValue(const APInt &C) { return C.isNullValue(); }
+  bool isValue(const APInt &C) { return C.isZero(); }
 };
 
 struct is_float_zero_pred {
@@ -1634,6 +1633,78 @@ TEST_F(PatternMatchTest, InsertValue) {
       match(Ins1, m_InsertValue<1>(m_InsertValue<0>(m_Value(), m_Value()),
                                    m_SpecificInt(90))));
   EXPECT_FALSE(match(IRB.getInt64(99), m_InsertValue<0>(m_Value(), m_Value())));
+}
+
+TEST_F(PatternMatchTest, LogicalSelects) {
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
+  Value *X = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *Y = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Constant *T = IRB.getInt1(true);
+  Constant *F = IRB.getInt1(false);
+  Value *And = IRB.CreateSelect(X, Y, F);
+  Value *Or = IRB.CreateSelect(X, T, Y);
+
+  // Logical and:
+  // Check basic no-capture logic - opcode and constant must match.
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(And, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(And, m_c_LogicalOr(m_Value(), m_Value())));
+
+  // Check with captures.
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Value())));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Value(), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Specific(Y))));
+
+  // Check captures for commutative match.
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Specific(X))));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(And, m_c_LogicalAnd(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Specific(Y))));
+
+  // Logical or:
+  // Check basic no-capture logic - opcode and constant must match.
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Or, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Or, m_c_LogicalAnd(m_Value(), m_Value())));
+
+  // Check with captures.
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Value())));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Value(), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Specific(Y))));
+
+  // Check captures for commutative match.
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Specific(X))));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(Y))));
 }
 
 TEST_F(PatternMatchTest, VScale) {

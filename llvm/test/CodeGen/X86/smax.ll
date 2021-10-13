@@ -141,12 +141,12 @@ define i64 @test_i64(i64 %a, i64 %b) nounwind {
 define i128 @test_i128(i128 %a, i128 %b) nounwind {
 ; X64-LABEL: test_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    cmpq %rdx, %rdi
-; X64-NEXT:    cmovaq %rdi, %rdx
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    cmovaq %rdi, %rax
 ; X64-NEXT:    cmpq %rcx, %rsi
-; X64-NEXT:    cmovgq %rdi, %rax
-; X64-NEXT:    cmoveq %rdx, %rax
+; X64-NEXT:    cmovgq %rdi, %rdx
+; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    cmovgq %rsi, %rcx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    retq
@@ -238,8 +238,7 @@ define <2 x i32> @test_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i32:
@@ -271,8 +270,7 @@ define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v3i32:
@@ -312,8 +310,7 @@ define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4i32:
@@ -360,14 +357,12 @@ define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm4
 ; SSE-NEXT:    pand %xmm4, %xmm0
 ; SSE-NEXT:    pandn %xmm2, %xmm4
-; SSE-NEXT:    por %xmm0, %xmm4
+; SSE-NEXT:    por %xmm4, %xmm0
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    pcmpgtd %xmm3, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v8i32:
@@ -528,8 +523,7 @@ define <16 x i8> @test_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE-NEXT:    pcmpgtb %xmm1, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8:

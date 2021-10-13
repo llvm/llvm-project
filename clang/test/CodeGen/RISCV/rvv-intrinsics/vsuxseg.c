@@ -6091,897 +6091,6 @@ void test_vsuxseg2ei64_v_u64m4 (uint64_t *base, vuint64m4_t bindex, vuint64m4_t 
   return vsuxseg2ei64_v_u64m4(base, bindex, v0, v1, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16mf4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16mf4(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16mf2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16mf2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m1(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16m1(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16m2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m4 (_Float16 *base, vuint8m2_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16mf4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16mf4(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16mf2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16mf2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m1(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16m1(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16m2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m4 (_Float16 *base, vuint16m4_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16mf4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16mf4(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16mf2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16mf2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m1(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16m1(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16m2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m4 (_Float16 *base, vuint32m8_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16mf4(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16mf4(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16mf2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16mf2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16m1(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16m1(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16m2(base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16m2(base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
-}
-
 // CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f32.nxv1i8.i64(<vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], float* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
@@ -14110,897 +13219,6 @@ void test_vsuxseg2ei64_v_u64m4_m (vbool16_t mask, uint64_t *base, vuint64m4_t bi
   return vsuxseg2ei64_v_u64m4_m(mask, base, bindex, v0, v1, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m1_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei8_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei8_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei8_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint8m2_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei8_v_f16m4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m1_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei16_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei16_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei16_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint16m4_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei16_v_f16m4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m1_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei32_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei32_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei32_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint32m8_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
-  return vsuxseg2ei32_v_f16m4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16m1_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg5ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
-  return vsuxseg5ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg6ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
-  return vsuxseg6ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg7ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
-  return vsuxseg7ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg8ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
-  return vsuxseg8ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg2ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
-  return vsuxseg2ei64_v_f16m2_m(mask, base, bindex, v0, v1, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg3ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
-  return vsuxseg3ei64_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsuxseg4ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
-  return vsuxseg4ei64_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
-}
-
 // CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f32.nxv1i8.i64(<vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], float* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
@@ -16045,3 +14263,1784 @@ void test_vsuxseg2ei64_v_f64m4_m (vbool16_t mask, double *base, vuint64m4_t bind
   return vsuxseg2ei64_v_f64m4_m(mask, base, bindex, v0, v1, vl);
 }
 
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16mf4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16mf4(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16mf2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16mf2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m1(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16m1(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16m2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m4 (_Float16 *base, vuint8m2_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16mf4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16mf4(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16mf2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16mf2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m1(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16m1(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16m2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m4 (_Float16 *base, vuint16m4_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16mf4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16mf4(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16mf2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16mf2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m1(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16m1(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16m2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m4 (_Float16 *base, vuint32m8_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16mf4(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16mf4(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16mf4(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16mf2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16mf2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16mf2(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16m1(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16m1(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16m1(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16m1(base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16m2(base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16m2(base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16m2(base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m1_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei8_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei8_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei8_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei8_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei8_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei8_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei8_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint8m2_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei8_v_f16m4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m1_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei16_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei16_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei16_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei16_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei16_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei16_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei16_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint16m4_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei16_v_f16m4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m1_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei32_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei32_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei32_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei32_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei32_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei32_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei32_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint32m8_t bindex, vfloat16m4_t v0, vfloat16m4_t v1, size_t vl) {
+  return vsuxseg2ei32_v_f16m4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16mf4_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t v0, vfloat16mf4_t v1, vfloat16mf4_t v2, vfloat16mf4_t v3, vfloat16mf4_t v4, vfloat16mf4_t v5, vfloat16mf4_t v6, vfloat16mf4_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16mf4_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16mf2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t v0, vfloat16mf2_t v1, vfloat16mf2_t v2, vfloat16mf2_t v3, vfloat16mf2_t v4, vfloat16mf2_t v5, vfloat16mf2_t v6, vfloat16mf2_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16mf2_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16m1_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg5ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg5.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg5ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, size_t vl) {
+  return vsuxseg5ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg6ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg6.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg6ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, size_t vl) {
+  return vsuxseg6ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg7ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg7.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg7ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, size_t vl) {
+  return vsuxseg7ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg8ei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg8.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]], half* [[BASE:%.*]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg8ei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t v0, vfloat16m1_t v1, vfloat16m1_t v2, vfloat16m1_t v3, vfloat16m1_t v4, vfloat16m1_t v5, vfloat16m1_t v6, vfloat16m1_t v7, size_t vl) {
+  return vsuxseg8ei64_v_f16m1_m(mask, base, bindex, v0, v1, v2, v3, v4, v5, v6, v7, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg2ei64_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg2.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg2ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, size_t vl) {
+  return vsuxseg2ei64_v_f16m2_m(mask, base, bindex, v0, v1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg3ei64_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg3.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg3ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, size_t vl) {
+  return vsuxseg3ei64_v_f16m2_m(mask, base, bindex, v0, v1, v2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsuxseg4ei64_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsuxseg4.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]], half* [[BASE:%.*]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsuxseg4ei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t v0, vfloat16m2_t v1, vfloat16m2_t v2, vfloat16m2_t v3, size_t vl) {
+  return vsuxseg4ei64_v_f16m2_m(mask, base, bindex, v0, v1, v2, v3, vl);
+}

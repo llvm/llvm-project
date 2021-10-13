@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -53,7 +54,7 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
   for (auto dim : llvm::seq<unsigned>(0, subViewOp.getSourceType().getRank())) {
     if (unusedDims.count(dim))
-      useIndices.push_back(rewriter.create<ConstantIndexOp>(loc, 0));
+      useIndices.push_back(rewriter.create<arith::ConstantIndexOp>(loc, 0));
     else
       useIndices.push_back(indices[resultDim++]);
   }
@@ -107,12 +108,11 @@ static AffineMap getPermutationMap(MLIRContext *context,
                                    AffineMap currPermutationMap) {
   llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
   SmallVector<AffineExpr> exprs;
-  unsigned resultIdx = 0;
   int64_t sourceRank = subViewOp.getSourceType().getRank();
   for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
     if (unusedDims.count(dim))
       continue;
-    exprs.push_back(getAffineDimExpr(resultIdx++, context));
+    exprs.push_back(getAffineDimExpr(dim, context));
   }
   auto resultDimToSourceDimMap = AffineMap::get(sourceRank, 0, exprs, context);
   return currPermutationMap.compose(resultDimToSourceDimMap);

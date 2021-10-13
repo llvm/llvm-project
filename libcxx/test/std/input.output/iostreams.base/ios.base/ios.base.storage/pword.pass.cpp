@@ -13,7 +13,7 @@
 // void*& pword(int idx);
 
 // This test compiles but never completes when compiled against the MSVC STL
-// UNSUPPORTED: msvc
+// UNSUPPORTED: stdlib=msvc
 
 #include <ios>
 #include <string>

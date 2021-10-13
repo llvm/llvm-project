@@ -42,28 +42,26 @@ using namespace lldb_private;
 using namespace lldb_private::platform_android;
 using namespace std::chrono;
 
-namespace {
+static const seconds kReadTimeout(20);
+static const char *kOKAY = "OKAY";
+static const char *kFAIL = "FAIL";
+static const char *kDATA = "DATA";
+static const char *kDONE = "DONE";
 
-const seconds kReadTimeout(20);
-const char *kOKAY = "OKAY";
-const char *kFAIL = "FAIL";
-const char *kDATA = "DATA";
-const char *kDONE = "DONE";
+static const char *kSEND = "SEND";
+static const char *kRECV = "RECV";
+static const char *kSTAT = "STAT";
 
-const char *kSEND = "SEND";
-const char *kRECV = "RECV";
-const char *kSTAT = "STAT";
-
-const size_t kSyncPacketLen = 8;
+static const size_t kSyncPacketLen = 8;
 // Maximum size of a filesync DATA packet.
-const size_t kMaxPushData = 2 * 1024;
+static const size_t kMaxPushData = 2 * 1024;
 // Default mode for pushed files.
-const uint32_t kDefaultMode = 0100770; // S_IFREG | S_IRWXU | S_IRWXG
+static const uint32_t kDefaultMode = 0100770; // S_IFREG | S_IRWXU | S_IRWXG
 
-const char *kSocketNamespaceAbstract = "localabstract";
-const char *kSocketNamespaceFileSystem = "localfilesystem";
+static const char *kSocketNamespaceAbstract = "localabstract";
+static const char *kSocketNamespaceFileSystem = "localfilesystem";
 
-Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
+static Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
 
   Status error;
   ConnectionStatus status;
@@ -89,8 +87,6 @@ Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
         status);
   return error;
 }
-
-} // namespace
 
 Status AdbClient::CreateByDeviceID(const std::string &device_id,
                                    AdbClient &adb) {

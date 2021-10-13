@@ -80,11 +80,6 @@ static bool isDecorated(StringRef Sym, bool MingwDef) {
          (!MingwDef && Sym.contains('@'));
 }
 
-static Error createError(const Twine &Err) {
-  return make_error<StringError>(StringRef(Err.str()),
-                                 object_error::parse_failed);
-}
-
 class Lexer {
 public:
   Lexer(StringRef S) : Buf(S) {}

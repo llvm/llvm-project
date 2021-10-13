@@ -494,7 +494,7 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
     IdentifierInfo *II = Name.Identifier;
     ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
     SourceLocation Loc = Name.getEndLoc();
-    if (Status != ReservedIdentifierStatus::NotReserved &&
+    if (isReservedInAllContexts(Status) &&
         !PP.getSourceManager().isInSystemHeader(Loc)) {
       Diag(Loc, diag::warn_reserved_extern_symbol)
           << II << static_cast<int>(Status)
@@ -6674,8 +6674,15 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       } else if (Steps.size() == 1) {
         bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2);
         bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1);
-        if (MaybeQ1 == MaybeQ2)
-          return QualType(); // No unique best address space.
+        if (MaybeQ1 == MaybeQ2) {
+          // Exception for ptr size address spaces. Should be able to choose
+          // either address space during comparison.
+          if (isPtrSizeAddressSpace(Q1.getAddressSpace()) ||
+              isPtrSizeAddressSpace(Q2.getAddressSpace()))
+            MaybeQ1 = true;
+          else
+            return QualType(); // No unique best address space.
+        }
         Quals.setAddressSpace(MaybeQ1 ? Q1.getAddressSpace()
                                       : Q2.getAddressSpace());
       } else {
@@ -6704,6 +6711,36 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     }
 
     // FIXME: Can we unify the following with UnwrapSimilarTypes?
+
+    const ArrayType *Arr1, *Arr2;
+    if ((Arr1 = Context.getAsArrayType(Composite1)) &&
+        (Arr2 = Context.getAsArrayType(Composite2))) {
+      auto *CAT1 = dyn_cast<ConstantArrayType>(Arr1);
+      auto *CAT2 = dyn_cast<ConstantArrayType>(Arr2);
+      if (CAT1 && CAT2 && CAT1->getSize() == CAT2->getSize()) {
+        Composite1 = Arr1->getElementType();
+        Composite2 = Arr2->getElementType();
+        Steps.emplace_back(Step::Array, CAT1);
+        continue;
+      }
+      bool IAT1 = isa<IncompleteArrayType>(Arr1);
+      bool IAT2 = isa<IncompleteArrayType>(Arr2);
+      if ((IAT1 && IAT2) ||
+          (getLangOpts().CPlusPlus20 && (IAT1 != IAT2) &&
+           ((bool)CAT1 != (bool)CAT2) &&
+           (Steps.empty() || Steps.back().K != Step::Array))) {
+        // In C++20 onwards, we can unify an array of N T with an array of
+        // a different or unknown bound. But we can't form an array whose
+        // element type is an array of unknown bound by doing so.
+        Composite1 = Arr1->getElementType();
+        Composite2 = Arr2->getElementType();
+        Steps.emplace_back(Step::Array);
+        if (CAT1 || CAT2)
+          NeedConstBefore = Steps.size();
+        continue;
+      }
+    }
+
     const PointerType *Ptr1, *Ptr2;
     if ((Ptr1 = Composite1->getAs<PointerType>()) &&
         (Ptr2 = Composite2->getAs<PointerType>())) {
@@ -6763,8 +6800,6 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       Steps.emplace_back(Step::Pointer);
       continue;
     }
-
-    // FIXME: arrays
 
     // FIXME: block pointer types?
 
@@ -8523,7 +8558,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
     if (FullExpr.isInvalid())
       return ExprError();
 
-    DiagnoseUnusedExprResult(FullExpr.get());
+    DiagnoseUnusedExprResult(FullExpr.get(), diag::warn_unused_expr);
   }
 
   FullExpr = CorrectDelayedTyposInExpr(FullExpr.get(), /*InitDecl=*/nullptr,

@@ -369,10 +369,16 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
         if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
             SpillFIs[MI.getOperand(0).getIndex()]) {
           MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
-          MI.getOperand(0).setIsDebug();
         }
       }
     }
+
+    // All those frame indices which are dead by now should be removed from the
+    // function frame. Othewise, there is a side effect such as re-mapping of
+    // free frame index ids by the later pass(es) like "stack slot coloring"
+    // which in turn could mess-up with the book keeping of "frame index to VGPR
+    // lane".
+    FuncInfo->removeDeadFrameIndices(MFI);
 
     MadeChange = true;
   } else if (FuncInfo->VGPRReservedForSGPRSpill) {

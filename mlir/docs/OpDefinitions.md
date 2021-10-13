@@ -929,6 +929,11 @@ these equal constraints to discern the types of missing variables. The currently
 supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`, and
 `SameOperandsAndResultType`.
 
+*   InferTypeOpInterface
+
+Operations that implement `InferTypeOpInterface` can omit their result types in
+their assembly format since the result types can be inferred from the operands.
+
 ### `hasCanonicalizer`
 
 This boolean field indicate whether canonicalization patterns have been defined
@@ -1111,7 +1116,7 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `F32Attr:$attr`,`$_self` will be
+    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be

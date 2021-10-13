@@ -71,13 +71,13 @@ public:
   /// Returns true if value is all zero.
   bool isZero() const {
     assert(!hasConflict() && "KnownBits conflict!");
-    return Zero.isAllOnesValue();
+    return Zero.isAllOnes();
   }
 
   /// Returns true if value is all one bits.
   bool isAllOnes() const {
     assert(!hasConflict() && "KnownBits conflict!");
-    return One.isAllOnesValue();
+    return One.isAllOnes();
   }
 
   /// Make all bits known to be zero and discard any previous information.
@@ -282,6 +282,10 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  unsigned countMaxActiveBits() const {
+    return getBitWidth() - countMinLeadingZeros();
+  }
+
   /// Create known bits from a known constant.
   static KnownBits makeConstant(const APInt &C) {
     return KnownBits(~C, C);
@@ -294,7 +298,7 @@ public:
 
   /// Return true if LHS and RHS have no common bits set.
   static bool haveNoCommonBitsSet(const KnownBits &LHS, const KnownBits &RHS) {
-    return (LHS.Zero | RHS.Zero).isAllOnesValue();
+    return (LHS.Zero | RHS.Zero).isAllOnes();
   }
 
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.

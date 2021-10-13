@@ -70,7 +70,8 @@ public:
   // Find and read the module file for a module or submodule.
   // If ancestor is specified, look for a submodule of that module.
   // Return the Scope for that module/submodule or nullptr on error.
-  Scope *Read(const SourceName &, Scope *ancestor = nullptr);
+  Scope *Read(
+      const SourceName &, Scope *ancestor = nullptr, bool silent = false);
 
 private:
   SemanticsContext &context_;

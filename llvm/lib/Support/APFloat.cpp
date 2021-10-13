@@ -92,7 +92,7 @@ namespace llvm {
      Note: we need to make the value different from semBogus as otherwise
      an unsafe optimization may collapse both values to a single address,
      and we heavily rely on them having distinct addresses.             */
-  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 0};
+  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
 
   /* These are legacy semantics for the fallback, inaccrurate implementation of
      IBM double-double, if the accurate semPPCDoubleDouble doesn't handle the
@@ -3396,7 +3396,6 @@ double IEEEFloat::convertToDouble() const {
 ///  exponent = 0, integer bit 1 ("pseudodenormal")
 /// At the moment, the first three are treated as NaNs, the last one as Normal.
 void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==80);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   uint64_t myexponent = (i2 & 0x7fff);
@@ -3428,7 +3427,6 @@ void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromPPCDoubleDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==128);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   opStatus fs;
@@ -3452,7 +3450,6 @@ void IEEEFloat::initFromPPCDoubleDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==128);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   uint64_t myexponent = (i2 >> 48) & 0x7fff;
@@ -3488,7 +3485,6 @@ void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==64);
   uint64_t i = *api.getRawData();
   uint64_t myexponent = (i >> 52) & 0x7ff;
   uint64_t mysignificand = i & 0xfffffffffffffLL;
@@ -3517,7 +3513,6 @@ void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromFloatAPInt(const APInt &api) {
-  assert(api.getBitWidth()==32);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 23) & 0xff;
   uint32_t mysignificand = i & 0x7fffff;
@@ -3546,7 +3541,6 @@ void IEEEFloat::initFromFloatAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
-  assert(api.getBitWidth() == 16);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 7) & 0xff;
   uint32_t mysignificand = i & 0x7f;
@@ -3575,7 +3569,6 @@ void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromHalfAPInt(const APInt &api) {
-  assert(api.getBitWidth()==16);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 10) & 0x1f;
   uint32_t mysignificand = i & 0x3ff;
@@ -3608,6 +3601,7 @@ void IEEEFloat::initFromHalfAPInt(const APInt &api) {
 /// isIEEE argument distinguishes between PPC128 and IEEE128 (not meaningful
 /// when the size is anything else).
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
+  assert(api.getBitWidth() == Sem->sizeInBits);
   if (Sem == &semIEEEhalf)
     return initFromHalfAPInt(api);
   if (Sem == &semBFloat)
@@ -4864,9 +4858,8 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
   llvm_unreachable("Unexpected semantics");
 }
 
-APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth) {
-  return APFloat(Semantics, APInt::getAllOnes(BitWidth));
+APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
+  return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
 }
 
 void APFloat::print(raw_ostream &OS) const {

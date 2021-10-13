@@ -40,6 +40,18 @@ namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
 
+/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// semantics of the `vector.broadcast` op.
+enum class BroadcastableToResult {
+  Success = 0,
+  SourceRankHigher = 1,
+  DimensionMismatch = 2,
+  SourceTypeNotAVector = 3
+};
+BroadcastableToResult
+isBroadcastableTo(Type srcType, VectorType dstVectorType,
+                  std::pair<int, int> *mismatchingDims = nullptr);
+
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
     RewritePatternSet &patterns);
@@ -79,8 +91,28 @@ void populateVectorTransferPermutationMapLoweringPatterns(
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                bool enableIndexOptimizations);
 
-// Collect a set of patterns to convert vector.multi_reduction op into
-// a sequence of vector.reduction ops.
+/// Collect a set of patterns to convert vector.multi_reduction op into
+/// a sequence of vector.reduction ops. The patterns comprise:
+/// - InnerOuterDimReductionConversion: rewrites vector.multi_reduction such
+/// that all reduction dimensions are either innermost or outermost, by adding
+/// the proper vector.transpose operations.
+/// - ReduceMultiDimReductionRank: once in innermost or outermost reduction
+/// form, rewrites n-D vector.multi_reduction into 2-D vector.multi_reduction,
+/// by introducing vector.shape_cast ops to collapse + multi-reduce + expand
+/// back.
+/// - TwoDimMultiReductionToElementWise: once in 2-D vector.multi_reduction
+/// form, with an **outermost** reduction dimension, unroll the outer dimension
+/// to obtain a sequence of 1-D vector ops. This also has an opportunity for
+/// tree-reduction (in the future).
+/// - TwoDimMultiReductionToReduction: once in 2-D vector.multi_reduction form,
+/// with an **innermost** reduction dimension, unroll the outer dimension to
+/// obtain a sequence of extract + vector.reduction + insert. This can further
+/// lower to horizontal reduction ops.
+/// - OneDimMultiReductionToTwoDim: for cases that reduce to 1-D vector<k>
+/// reduction (and are thus missing either a parallel or a reduction), we lift
+/// them back up to 2-D with a simple vector.shape_cast to vector<1xk> so that
+/// the other patterns can kick in, thus fully exiting out of the
+/// vector.multi_reduction abstraction.
 void populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, bool useInnerDimsForReduction = false);
 
@@ -159,23 +191,29 @@ struct VectorTransformsOptions {
   }
 };
 
-/// Collect a set of transformation patterns that are related to contracting
-/// or expanding vector operations:
-///   ContractionOpLowering,
-///   ShapeCastOp2DDownCastRewritePattern,
-///   ShapeCastOp2DUpCastRewritePattern
-///   BroadcastOpLowering,
-///   OuterproductOpLowering
-/// These transformation express higher level vector ops in terms of more
-/// elementary extraction, insertion, reduction, product, and broadcast ops.
+/// Collects patterns to progressively lower vector.broadcast ops on high-D
+/// vectors to low-D vector ops.
+void populateVectorBroadcastLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collects patterns to progressively lower vector contraction ops on high-D
+/// into low-D reduction and product ops.
 void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions());
+
+/// Collects patterns to progressively lower vector mask ops into elementary
+/// selection and insertion ops.
+void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collects patterns to progressively lower vector.shape_cast ops on high-D
+/// vectors into 1-D/2-D vector ops by generating data movement extract/insert
+/// ops.
+void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns);
 
 /// Insert TransposeLowering patterns into extraction/insertion.
 void populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions());
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);

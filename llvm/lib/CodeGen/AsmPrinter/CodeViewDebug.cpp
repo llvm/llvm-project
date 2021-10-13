@@ -746,6 +746,7 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::Cpp;
   case dwarf::DW_LANG_Fortran77:
   case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
   case dwarf::DW_LANG_Fortran03:
   case dwarf::DW_LANG_Fortran08:
     return SourceLanguage::Fortran;
@@ -1728,9 +1729,14 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
   }
 
   // Apply some fixups based on the source-level type name.
-  if (STK == SimpleTypeKind::Int32 && Ty->getName() == "long int")
+  // Include some amount of canonicalization from an old naming scheme Clang
+  // used to use for integer types (in an outdated effort to be compatible with
+  // GCC's debug info/GDB's behavior, which has since been addressed).
+  if (STK == SimpleTypeKind::Int32 &&
+      (Ty->getName() == "long int" || Ty->getName() == "long"))
     STK = SimpleTypeKind::Int32Long;
-  if (STK == SimpleTypeKind::UInt32 && Ty->getName() == "long unsigned int")
+  if (STK == SimpleTypeKind::UInt32 && (Ty->getName() == "long unsigned int" ||
+                                        Ty->getName() == "unsigned long"))
     STK = SimpleTypeKind::UInt32Long;
   if (STK == SimpleTypeKind::UInt16Short &&
       (Ty->getName() == "wchar_t" || Ty->getName() == "__wchar_t"))

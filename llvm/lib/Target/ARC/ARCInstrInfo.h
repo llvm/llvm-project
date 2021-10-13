@@ -24,11 +24,12 @@ namespace llvm {
 class ARCSubtarget;
 
 class ARCInstrInfo : public ARCGenInstrInfo {
+  const ARCSubtarget &ST;
   const ARCRegisterInfo RI;
   virtual void anchor();
 
 public:
-  ARCInstrInfo();
+  ARCInstrInfo(const ARCSubtarget &);
 
   const ARCRegisterInfo &getRegisterInfo() const { return RI; }
 
@@ -57,19 +58,19 @@ public:
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &dl,
+                        const DebugLoc &,
                         int *BytesAdded = nullptr) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &dl, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool isKill, int FrameIndex,
+                           bool IsKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 

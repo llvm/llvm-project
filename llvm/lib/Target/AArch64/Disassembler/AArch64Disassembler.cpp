@@ -21,10 +21,10 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <algorithm>
 #include <memory>
 
@@ -322,6 +322,22 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
       // MOVA <Zd>.B, <Pg>/M, ZA0<HV>.B[<Ws>, <imm>]
       //                      ^ insert implicit 8-bit element tile
       MI.insert(MI.begin()+2, MCOperand::createReg(AArch64::ZAB0));
+      break;
+    case AArch64::LD1_MXIPXX_H_Q:
+    case AArch64::LD1_MXIPXX_V_Q:
+    case AArch64::ST1_MXIPXX_H_Q:
+    case AArch64::ST1_MXIPXX_V_Q:
+      // 128-bit load/store have implicit zero vector index.
+      MI.insert(MI.begin()+2, MCOperand::createImm(0));
+      break;
+    // 128-bit mova have implicit zero vector index.
+    case AArch64::INSERT_MXIPZ_H_Q:
+    case AArch64::INSERT_MXIPZ_V_Q:
+      MI.insert(MI.begin()+2, MCOperand::createImm(0));
+      break;
+    case AArch64::EXTRACT_ZPMXI_H_Q:
+    case AArch64::EXTRACT_ZPMXI_V_Q:
+      MI.addOperand(MCOperand::createImm(0));
       break;
     case AArch64::SMOVvi8to32_idx0:
     case AArch64::SMOVvi8to64_idx0:

@@ -27,6 +27,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -37,7 +38,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -255,7 +255,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // Parse a custom AA pipeline if asked to.
   if (!Conf.AAPipeline.empty()) {
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
-      report_fatal_error("unable to parse AA pipeline description '" +
+      report_fatal_error(Twine("unable to parse AA pipeline description '") +
                          Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
   } else {
@@ -298,7 +298,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
-      report_fatal_error("unable to parse pass pipeline description '" +
+      report_fatal_error(Twine("unable to parse pass pipeline description '") +
                          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
   } else if (IsThinLTO) {
@@ -394,8 +394,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (!Conf.DwoDir.empty()) {
     std::error_code EC;
     if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
-                         EC.message());
+      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                         ": " + EC.message());
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
@@ -407,7 +407,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
-      report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
 
   auto Stream = AddStream(Task);

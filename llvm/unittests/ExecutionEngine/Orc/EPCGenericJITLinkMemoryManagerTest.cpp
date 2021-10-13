@@ -68,8 +68,7 @@ public:
       }
       auto MB = std::move(I->second);
       Blocks.erase(I);
-      auto MBToRelease = MB.getMemoryBlock();
-      if (auto EC = sys::Memory::releaseMappedMemory(MBToRelease))
+      if (auto EC = MB.release())
         Err = joinErrors(std::move(Err), errorCodeToError(EC));
     }
     return Err;
@@ -116,28 +115,27 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
 
-  jitlink::JITLinkMemoryManager::SegmentsRequestMap SRM;
   StringRef Hello = "hello";
-  SRM[sys::Memory::MF_READ] = {8, Hello.size(), 8};
-  auto Alloc = MemMgr->allocate(nullptr, SRM);
-  EXPECT_THAT_EXPECTED(Alloc, Succeeded());
+  auto SSA = jitlink::SimpleSegmentAlloc::Create(
+      *MemMgr, nullptr, {{jitlink::MemProt::Read, {Hello.size(), Align(1)}}});
+  EXPECT_THAT_EXPECTED(SSA, Succeeded());
+  auto SegInfo = SSA->getSegInfo(jitlink::MemProt::Read);
+  memcpy(SegInfo.WorkingMem.data(), Hello.data(), Hello.size());
 
-  MutableArrayRef<char> WorkingMem =
-      (*Alloc)->getWorkingMemory(sys::Memory::MF_READ);
-  memcpy(WorkingMem.data(), Hello.data(), Hello.size());
+  auto FA = SSA->finalize();
+  EXPECT_THAT_EXPECTED(FA, Succeeded());
 
-  auto Err = (*Alloc)->finalize();
-  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
-
-  ExecutorAddr TargetAddr((*Alloc)->getTargetMemory(sys::Memory::MF_READ));
+  ExecutorAddr TargetAddr(SegInfo.Addr);
 
   const char *TargetMem = TargetAddr.toPtr<const char *>();
-  EXPECT_NE(TargetMem, WorkingMem.data());
+  EXPECT_NE(TargetMem, SegInfo.WorkingMem.data());
   StringRef TargetHello(TargetMem, Hello.size());
   EXPECT_EQ(Hello, TargetHello);
 
-  auto Err2 = (*Alloc)->deallocate();
+  auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
+
+  cantFail(SelfEPC->disconnect());
 }
 
 } // namespace

@@ -186,10 +186,13 @@ ISL_OBJECT_TO_STRING(union_pw_aff)
 ISL_OBJECT_TO_STRING(union_pw_multi_aff)
 //@}
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// C++ wrapper for isl_*_dump() functions.
 //@{
+
 #define ISL_DUMP_OBJECT(name)                                                  \
-  inline void dumpIslObj(const isl::name &Obj) { isl_##name##_dump(Obj.get()); }
+  void dumpIslObj(const isl::name &Obj);                                       \
+  void dumpIslObj(isl_##name *Obj);
 
 ISL_DUMP_OBJECT(aff)
 ISL_DUMP_OBJECT(aff_list)
@@ -230,6 +233,13 @@ ISL_DUMP_OBJECT(union_set_list)
 ISL_DUMP_OBJECT(val)
 ISL_DUMP_OBJECT(val_list)
 //@}
+
+/// Emit the equivaltent of the isl_*_dump output into a raw_ostream.
+/// @{
+void dumpIslObj(const isl::schedule_node &Node, llvm::raw_ostream &OS);
+void dumpIslObj(__isl_keep isl_schedule_node *node, llvm::raw_ostream &OS);
+/// @}
+#endif
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_map *Map) {

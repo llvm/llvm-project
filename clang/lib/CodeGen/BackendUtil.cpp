@@ -38,6 +38,7 @@
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
@@ -45,7 +46,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -147,6 +147,14 @@ class EmitAssemblyHelper {
     return F;
   }
 
+  void
+  RunOptimizationPipeline(BackendAction Action,
+                          std::unique_ptr<raw_pwrite_stream> &OS,
+                          std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS);
+  void RunCodegenPipeline(BackendAction Action,
+                          std::unique_ptr<raw_pwrite_stream> &OS,
+                          std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+
 public:
   EmitAssemblyHelper(DiagnosticsEngine &_Diags,
                      const HeaderSearchOptions &HeaderSearchOpts,
@@ -164,11 +172,16 @@ public:
 
   std::unique_ptr<TargetMachine> TM;
 
+  // Emit output using the legacy pass manager for the optimization pipeline.
+  // This will be removed soon when using the legacy pass manager for the
+  // optimization pipeline is no longer supported.
+  void EmitAssemblyWithLegacyPassManager(BackendAction Action,
+                                         std::unique_ptr<raw_pwrite_stream> OS);
+
+  // Emit output using the new pass manager for the optimization pipeline. This
+  // is the default.
   void EmitAssembly(BackendAction Action,
                     std::unique_ptr<raw_pwrite_stream> OS);
-
-  void EmitAssemblyWithNewPassManager(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS);
 };
 
 // We need this wrapper to access LangOpts and CGOpts from extension functions
@@ -539,6 +552,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
   Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
+  Options.ApproxFuncFPMath = LangOpts.ApproxFunc;
 
   Options.BBSections =
       llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
@@ -957,8 +971,8 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
   return true;
 }
 
-void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS) {
+void EmitAssemblyHelper::EmitAssemblyWithLegacyPassManager(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
 
   setCommandLineOpts(CodeGenOpts);
@@ -1198,29 +1212,9 @@ static void addSanitizers(const Triple &TargetTriple,
   });
 }
 
-/// A clean version of `EmitAssembly` that uses the new pass manager.
-///
-/// Not all features are currently supported in this system, but where
-/// necessary it falls back to the legacy pass manager to at least provide
-/// basic functionality.
-///
-/// This API is planned to have its functionality finished and then to replace
-/// `EmitAssembly` at some point in the future when the default switches.
-void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS) {
-  TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
-  setCommandLineOpts(CodeGenOpts);
-
-  bool RequiresCodeGen = (Action != Backend_EmitNothing &&
-                          Action != Backend_EmitBC &&
-                          Action != Backend_EmitLL);
-  CreateTargetMachine(RequiresCodeGen);
-
-  if (RequiresCodeGen && !TM)
-    return;
-  if (TM)
-    TheModule->setDataLayout(TM->createDataLayout());
-
+void EmitAssemblyHelper::RunOptimizationPipeline(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS) {
   Optional<PGOOptions> PGOOpt;
 
   if (CodeGenOpts.hasProfileIRInstr())
@@ -1436,18 +1430,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       MPM.addPass(ModuleMemProfilerPass());
     }
   }
-
-  // FIXME: We still use the legacy pass manager to do code generation. We
-  // create that pass manager here and use it as needed below.
-  legacy::PassManager CodeGenPasses;
-  bool NeedCodeGen = false;
-  std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
-
-  // Append any output we need to the pass manager.
   switch (Action) {
-  case Backend_EmitNothing:
-    break;
-
   case Backend_EmitBC:
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
@@ -1463,8 +1446,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // Emit a module summary by default for Regular LTO except for ld64
       // targets
       bool EmitLTOSummary =
-          (CodeGenOpts.PrepareForLTO &&
-           !CodeGenOpts.DisableLLVMPasses &&
+          (CodeGenOpts.PrepareForLTO && !CodeGenOpts.DisableLLVMPasses &&
            llvm::Triple(TheModule->getTargetTriple()).getVendor() !=
                llvm::Triple::Apple);
       if (EmitLTOSummary) {
@@ -1482,10 +1464,28 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists));
     break;
 
+  default:
+    break;
+  }
+
+  // Now that we have all of the passes ready, run them.
+  PrettyStackTraceString CrashInfo("Optimizer");
+  MPM.run(*TheModule, MAM);
+}
+
+void EmitAssemblyHelper::RunCodegenPipeline(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
+  // We still use the legacy PM to run the codegen pipeline since the new PM
+  // does not work with the codegen pipeline.
+  // FIXME: make the new PM work with the codegen pipeline.
+  legacy::PassManager CodeGenPasses;
+
+  // Append any output we need to the pass manager.
+  switch (Action) {
   case Backend_EmitAssembly:
   case Backend_EmitMCNull:
   case Backend_EmitObj:
-    NeedCodeGen = true;
     CodeGenPasses.add(
         createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
     if (!CodeGenOpts.SplitDwarfOutput.empty()) {
@@ -1498,22 +1498,42 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // FIXME: Should we handle this error differently?
       return;
     break;
+  default:
+    return;
   }
+
+  PrettyStackTraceString CrashInfo("Code generation");
+  CodeGenPasses.run(*TheModule);
+}
+
+/// A clean version of `EmitAssembly` that uses the new pass manager.
+///
+/// Not all features are currently supported in this system, but where
+/// necessary it falls back to the legacy pass manager to at least provide
+/// basic functionality.
+///
+/// This API is planned to have its functionality finished and then to replace
+/// `EmitAssembly` at some point in the future when the default switches.
+void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
+                                      std::unique_ptr<raw_pwrite_stream> OS) {
+  TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
+  setCommandLineOpts(CodeGenOpts);
+
+  bool RequiresCodeGen = (Action != Backend_EmitNothing &&
+                          Action != Backend_EmitBC && Action != Backend_EmitLL);
+  CreateTargetMachine(RequiresCodeGen);
+
+  if (RequiresCodeGen && !TM)
+    return;
+  if (TM)
+    TheModule->setDataLayout(TM->createDataLayout());
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
 
-  // Now that we have all of the passes ready, run them.
-  {
-    PrettyStackTraceString CrashInfo("Optimizer");
-    MPM.run(*TheModule, MAM);
-  }
-
-  // Now if needed, run the legacy PM for codegen.
-  if (NeedCodeGen) {
-    PrettyStackTraceString CrashInfo("Code generation");
-    CodeGenPasses.run(*TheModule);
-  }
+  std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
+  RunOptimizationPipeline(Action, OS, ThinLinkOS);
+  RunCodegenPipeline(Action, OS, DwoOS);
 
   if (ThinLinkOS)
     ThinLinkOS->keep();
@@ -1671,8 +1691,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
 
   EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M);
 
-  if (!CGOpts.LegacyPassManager)
-    AsmHelper.EmitAssemblyWithNewPassManager(Action, std::move(OS));
+  if (CGOpts.LegacyPassManager)
+    AsmHelper.EmitAssemblyWithLegacyPassManager(Action, std::move(OS));
   else
     AsmHelper.EmitAssembly(Action, std::move(OS));
 

@@ -1164,10 +1164,11 @@ private:
 
 /// Pattern to fold a generic op with a splat constant/scalar constant. Does not
 /// handle cases where the constant is not single-valued.
-class FoldConstants : public OpRewritePattern<GenericOp> {
+class FoldScalarOrSplatConstant : public OpRewritePattern<GenericOp> {
 public:
-  FoldConstants(MLIRContext *context, ControlElementwiseOpsFusionFn &fun,
-                PatternBenefit benefit = 1)
+  FoldScalarOrSplatConstant(MLIRContext *context,
+                            ControlElementwiseOpsFusionFn &fun,
+                            PatternBenefit benefit = 1)
       : OpRewritePattern<GenericOp>(context, benefit), controlFn(fun) {}
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
@@ -1214,13 +1215,17 @@ public:
       // values at the constant index dropped.
       SmallVector<AffineMap> fusedIndexMaps;
       SmallVector<Value> fusedOperands;
+      SmallVector<Location> fusedLocs{genericOp.getLoc()};
       fusedIndexMaps.reserve(genericOp.getNumInputsAndOutputs());
       fusedOperands.reserve(genericOp.getNumInputs());
+      fusedLocs.reserve(fusedLocs.size() + genericOp.getNumInputs());
       for (OpOperand *inputOperand : genericOp.getInputOperands()) {
         if (inputOperand == opOperand)
           continue;
+        Value inputValue = inputOperand->get();
         fusedIndexMaps.push_back(genericOp.getTiedIndexingMap(inputOperand));
-        fusedOperands.push_back(inputOperand->get());
+        fusedOperands.push_back(inputValue);
+        fusedLocs.push_back(inputValue.getLoc());
       }
       for (OpOperand *outputOperand : genericOp.getOutputOperands())
         fusedIndexMaps.push_back(genericOp.getTiedIndexingMap(outputOperand));
@@ -1232,12 +1237,12 @@ public:
       }
 
       // Create a constant scalar value from the splat constant.
-      Value scalarConstant = rewriter.create<ConstantOp>(
+      Value scalarConstant = rewriter.create<arith::ConstantOp>(
           def->getLoc(), constantAttr, constantAttr.getType());
 
       SmallVector<Value> outputOperands = genericOp.getOutputOperands();
       auto fusedOp = rewriter.create<GenericOp>(
-          rewriter.getUnknownLoc(), genericOp->getResultTypes(),
+          rewriter.getFusedLoc(fusedLocs), genericOp->getResultTypes(),
           /*inputs=*/fusedOperands,
           /*outputs=*/outputOperands,
           rewriter.getAffineMapArrayAttr(fusedIndexMaps),
@@ -1264,6 +1269,237 @@ public:
 private:
   ControlElementwiseOpsFusionFn controlFn;
 };
+
+/// Base class for constant folding linalg.generic ops with N inputs, 1 output,
+/// and permutation indexing maps.
+///
+/// `ConcreteType` should provide methods with signatures
+///
+/// ```c++
+///   bool matchIndexingMaps(GenericOp genericOp) const;
+///   RegionComputationFn getRegionComputeFn(GenericOp) const;
+/// ```
+///
+/// The latter inspects the region and returns the computation inside as a
+/// functor. The functor will be invoked with constant elements for all inputs
+/// and should return the corresponding computea constant element for output.
+template <typename ConcreteType>
+class FoldConstantBase : public OpRewritePattern<GenericOp> {
+public:
+  struct APIntOrFloatArray {
+    SmallVector<APInt> apInts;
+    SmallVector<APFloat> apFloats;
+  };
+  using RegionComputationFn =
+      std::function<APIntOrFloatArray(APIntOrFloatArray)>;
+
+  FoldConstantBase(MLIRContext *context,
+                   const ControlElementwiseOpsFusionFn &controlFn,
+                   PatternBenefit benefit = 1)
+      : OpRewritePattern<GenericOp>(context, benefit), controlFn(controlFn) {}
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    if (genericOp.hasBufferSemantics())
+      return failure();
+
+    // Only support ops generating one output for now.
+    if (genericOp.getNumOutputs() != 1)
+      return failure();
+
+    auto outputType = genericOp.getResultTypes().front().dyn_cast<ShapedType>();
+    // Require the output types to be static give we are generating constants.
+    if (!outputType || !outputType.hasStaticShape())
+      return failure();
+
+    if (!llvm::all_of(genericOp.getInputOperands(), [](OpOperand *operand) {
+          return operand->get().getType().isa<ShapedType>();
+        }))
+      return failure();
+
+    // Make sure all element types are the same.
+    auto getOperandElementType = [](OpOperand *operand) {
+      return operand->get().getType().cast<ShapedType>().getElementType();
+    };
+    if (!llvm::is_splat(llvm::map_range(genericOp.getInputAndOutputOperands(),
+                                        getOperandElementType)))
+      return failure();
+
+    // We can only handle the case where we have int/float elements.
+    auto elementType = outputType.getElementType();
+    if (!elementType.isIntOrFloat())
+      return failure();
+
+    // Require all indexing maps to be permutations for now. This is common and
+    // it simplifies input/output access greatly: we can do the data shuffling
+    // entirely in the compiler, without needing to turn all indices into
+    // Values, and then do affine apply on them, and then match back the
+    // constant again.
+    if (!llvm::all_of(genericOp.getIndexingMaps(),
+                      [](AffineMap map) { return map.isPermutation(); }))
+      return failure();
+
+    for (OpOperand *operand : genericOp.getOutputOperands()) {
+      if (genericOp.payloadUsesValueFromOperand(operand))
+        return failure();
+    }
+
+    // Further check the indexing maps are okay for the ConcreteType.
+    if (!static_cast<const ConcreteType *>(this)->matchIndexingMaps(genericOp))
+      return failure();
+
+    // Defer to the concrete type to check the region and discover the
+    // computation inside.
+    RegionComputationFn computeFn =
+        static_cast<const ConcreteType *>(this)->getRegionComputeFn(genericOp);
+    if (!computeFn)
+      return failure();
+
+    // All inputs should be constants.
+    int numInputs = genericOp.getNumInputs();
+    SmallVector<DenseIntOrFPElementsAttr> inputValues(numInputs);
+    for (auto operand : llvm::enumerate(genericOp.getInputOperands())) {
+      if (!matchPattern(operand.value()->get(),
+                        m_Constant(&inputValues[operand.index()])))
+        return failure();
+    }
+
+    // Identified this as a potential candidate for folding. Now check the
+    // policy to see whether we are allowed to proceed.
+    for (int i = 0; i < numInputs; ++i) {
+      OpOperand *consumer = genericOp.getInputOperand(i);
+      OpResult producer = consumer->get().cast<OpResult>();
+      if (!controlFn(producer, *consumer))
+        return failure();
+    }
+
+    auto linalgOp = cast<LinalgOp>(genericOp.getOperation());
+    SmallVector<int64_t, 4> loopBounds = linalgOp.computeStaticLoopSizes();
+    int64_t numElements = outputType.getNumElements();
+
+    // Use APInt/APFloat instead of Attribute here for constructing the output.
+    // This helps to avoid blowing up compiler memory usage: Attributes would
+    // unify the following cases but they have lifetime as the MLIRContext.
+    SmallVector<APInt> intOutputValues;
+    SmallVector<APFloat> fpOutputValues;
+    if (elementType.template isa<FloatType>())
+      fpOutputValues.resize(numElements, APFloat(0.f));
+    else
+      intOutputValues.resize(numElements);
+
+    // Return the constant dim positions from the given permutation map.
+    auto getDimPositions = [](AffineMap map) {
+      SmallVector<unsigned> dims;
+      dims.reserve(map.getNumResults());
+      for (AffineExpr result : map.getResults()) {
+        dims.push_back(result.cast<AffineDimExpr>().getPosition());
+      }
+      return dims;
+    };
+
+    SmallVector<SmallVector<unsigned>> inputDims;
+    for (int i = 0; i < numInputs; ++i)
+      inputDims.push_back(getDimPositions(genericOp.getIndexingMaps()[i]));
+    auto outputDims = getDimPositions(genericOp.getIndexingMaps().back());
+    auto outputShape = outputType.getShape();
+
+    // Transpose the input constant. Because we don't know its rank in advance,
+    // we need to loop over the range [0, element count) and delinearize the
+    // index.
+    for (int linearIndex0 = 0; linearIndex0 < numElements; ++linearIndex0) {
+      SmallVector<uint64_t> indices(loopBounds.size(), 0);
+      int totalCount = linearIndex0;
+      for (int dim = loopBounds.size() - 1; dim >= 0; --dim) {
+        indices[dim] = totalCount % loopBounds[dim];
+        totalCount /= loopBounds[dim];
+      }
+
+      SmallVector<SmallVector<uint64_t>> srcIndices;
+      for (int i = 0; i < numInputs; ++i)
+        srcIndices.emplace_back(loopBounds.size(), 0);
+      SmallVector<uint64_t> dstIndices(loopBounds.size(), 0);
+
+      for (int dim = loopBounds.size() - 1; dim >= 0; --dim) {
+        for (int i = 0; i < numInputs; ++i)
+          srcIndices[i][dim] = indices[inputDims[i][dim]];
+        dstIndices[dim] = indices[outputDims[dim]];
+      }
+
+      uint64_t linearIndex1 = dstIndices.front();
+      for (int dim = 1; dim < outputType.getRank(); ++dim)
+        linearIndex1 = linearIndex1 * outputShape[dim] + dstIndices[dim];
+
+      // Collect constant elements for all inputs at this loop iteration.
+      SmallVector<APInt> intValues;
+      SmallVector<APFloat> fpValues;
+      if (elementType.isa<FloatType>()) {
+        for (int i = 0; i < numInputs; ++i)
+          fpValues.push_back(inputValues[i].getValue<APFloat>(srcIndices[i]));
+      } else {
+        for (int i = 0; i < numInputs; ++i)
+          intValues.push_back(inputValues[i].getValue<APInt>(srcIndices[i]));
+      }
+
+      // Invoke the computation to get the corresponding constant output
+      // element.
+      APIntOrFloatArray inputs = {intValues, fpValues};
+      APIntOrFloatArray outputs = computeFn(inputs);
+
+      if (elementType.isa<FloatType>()) {
+        fpOutputValues[linearIndex1] = outputs.apFloats.front();
+      } else {
+        intOutputValues[linearIndex1] = outputs.apInts.front();
+      }
+    }
+
+    DenseIntOrFPElementsAttr outputAttr;
+    if (elementType.isa<FloatType>()) {
+      outputAttr = DenseFPElementsAttr::get(outputType, fpOutputValues);
+    } else {
+      outputAttr = DenseIntElementsAttr::get(outputType, intOutputValues);
+    }
+    rewriter.replaceOpWithNewOp<ConstantOp>(genericOp, outputAttr);
+    return success();
+  }
+
+private:
+  ControlElementwiseOpsFusionFn controlFn;
+};
+
+// Folds linalg.generic ops that are actually transposes on constant values.
+struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
+  using FoldConstantBase::FoldConstantBase;
+
+  bool matchIndexingMaps(GenericOp genericOp) const {
+    // We should have one input and one output.
+    return genericOp.getIndexingMaps().size() == 2;
+  }
+
+  RegionComputationFn getRegionComputeFn(GenericOp genericOp) const {
+    // Make sure the region only contains a yield op.
+    Block &body = genericOp.region().front();
+    if (!llvm::hasSingleElement(body))
+      return nullptr;
+    auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
+    if (!yieldOp)
+      return nullptr;
+
+    // The yield op should return the block argument corresponds to the input.
+    for (Value yieldVal : yieldOp.values()) {
+      auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
+      if (!yieldArg || yieldArg.getOwner() != &body)
+        return nullptr;
+      if (yieldArg.getArgNumber() != 0)
+        return nullptr;
+    }
+
+    // No computation; just return the orginal value.
+    return [](APIntOrFloatArray inputs) { return inputs; };
+  }
+
+  ControlElementwiseOpsFusionFn controlFn;
+};
+
 } // namespace
 
 static Optional<SmallVector<Value>>
@@ -1438,8 +1674,9 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
 void mlir::linalg::populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns, LinalgElementwiseFusionOptions options) {
   auto *context = patterns.getContext();
-  patterns.add<FuseElementwiseOps, FoldConstants>(
-      context, options.controlElementwiseOpsFusionFn);
+  patterns.add<FuseElementwiseOps, FoldScalarOrSplatConstant,
+               FoldConstantTranspose>(context,
+                                      options.controlElementwiseOpsFusionFn);
   patterns.add<RemoveOutsDependency>(context);
   populateFoldReshapeOpsByExpansionPatterns(patterns,
                                             options.controlFoldingReshapesFn);

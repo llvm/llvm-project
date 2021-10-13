@@ -17,8 +17,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -499,8 +499,8 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Add multiple debug uses of Reg.
-  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
-  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
 
   EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));

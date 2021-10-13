@@ -41,7 +41,7 @@ gpu.module @kernel {
     // ROCDL: llvm.extractvalue %[[descr6:.*]]
     // ROCDL: llvm.getelementptr
     // ROCDL: llvm.store
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<4xf32, 5>
 
     "terminator"() : () -> ()
@@ -107,7 +107,7 @@ gpu.module @kernel {
     // ROCDL: llvm.extractvalue %[[descr6:.*]]
     // ROCDL: llvm.getelementptr
     // ROCDL: llvm.store
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<4xf32, 3>
 
     "terminator"() : () -> ()
@@ -177,7 +177,7 @@ gpu.module @kernel {
     // ROCDL: %[[c1:.*]] = llvm.mlir.constant(1 : index) : i64
     // ROCDL: %[[descr10:.*]] = llvm.insertvalue %[[c1]], %[[descr9]][4, 2]
 
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0,%c0,%c0] : memref<4x2x6xf32, 3>
     "terminator"() : () -> ()
   }
@@ -221,7 +221,7 @@ gpu.module @kernel {
     // ROCDL: %[[c4:.*]] = llvm.mlir.constant(4 : i64)
     // ROCDL: llvm.alloca %[[c4]] x f32 : (i64) -> !llvm.ptr<f32, 5>
 
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<1xf32, 3>
     memref.store %arg0, %arg2[%c0] : memref<2xf32, 3>
     memref.store %arg0, %arg3[%c0] : memref<3xf32, 5>

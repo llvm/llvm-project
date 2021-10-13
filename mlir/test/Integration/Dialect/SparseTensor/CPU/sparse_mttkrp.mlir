@@ -40,15 +40,16 @@ module {
   func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseMatrix>,
                       %argc: tensor<?x?xf64>,
                       %argd: tensor<?x?xf64>,
-                      %arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
+                      %arga: tensor<?x?xf64> {linalg.inplaceable = true})
+		      -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:
             tensor<?x?x?xf64, #SparseMatrix>, tensor<?x?xf64>, tensor<?x?xf64>)
       outs(%arga: tensor<?x?xf64>) {
       ^bb(%b: f64, %c: f64, %d: f64, %a: f64):
-        %0 = mulf %b, %c : f64
-        %1 = mulf %d, %0 : f64
-        %2 = addf %a, %1 : f64
+        %0 = arith.mulf %b, %c : f64
+        %1 = arith.mulf %d, %0 : f64
+        %2 = arith.addf %a, %1 : f64
         linalg.yield %2 : f64
     } -> tensor<?x?xf64>
     return %0 : tensor<?x?xf64>
@@ -60,14 +61,14 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %i0 = constant 0. : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c2 = constant 2 : index
-    %c3 = constant 3 : index
-    %c4 = constant 4 : index
-    %c5 = constant 5 : index
-    %c256 = constant 256 : index
+    %i0 = arith.constant 0. : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %c3 = arith.constant 3 : index
+    %c4 = arith.constant 4 : index
+    %c5 = arith.constant 5 : index
+    %c256 = arith.constant 256 : index
 
     // Read the sparse B input from a file.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -78,10 +79,10 @@ module {
     %cdata = memref.alloc(%c3, %c5) : memref<?x?xf64>
     scf.for %i = %c0 to %c3 step %c1 {
       scf.for %j = %c0 to %c5 step %c1 {
-        %k0 = muli %i, %c5 : index
-        %k1 = addi %k0, %j : index
-        %k2 = index_cast %k1 : index to i32
-        %k = sitofp %k2 : i32 to f64
+        %k0 = arith.muli %i, %c5 : index
+        %k1 = arith.addi %k0, %j : index
+        %k2 = arith.index_cast %k1 : index to i32
+        %k = arith.sitofp %k2 : i32 to f64
         memref.store %k, %cdata[%i, %j] : memref<?x?xf64>
       }
     }
@@ -90,10 +91,10 @@ module {
     %ddata = memref.alloc(%c4, %c5) : memref<?x?xf64>
     scf.for %i = %c0 to %c4 step %c1 {
       scf.for %j = %c0 to %c5 step %c1 {
-        %k0 = muli %i, %c5 : index
-        %k1 = addi %k0, %j : index
-        %k2 = index_cast %k1 : index to i32
-        %k = sitofp %k2 : i32 to f64
+        %k0 = arith.muli %i, %c5 : index
+        %k1 = arith.addi %k0, %j : index
+        %k2 = arith.index_cast %k1 : index to i32
+        %k = arith.sitofp %k2 : i32 to f64
         memref.store %k, %ddata[%i, %j] : memref<?x?xf64>
       }
     }
@@ -126,6 +127,7 @@ module {
     memref.dealloc %adata : memref<?x?xf64>
     memref.dealloc %cdata : memref<?x?xf64>
     memref.dealloc %ddata : memref<?x?xf64>
+    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseMatrix>
 
     return
   }

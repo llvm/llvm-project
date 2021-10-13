@@ -325,8 +325,9 @@ TEST(RegisterContextFreeBSDTest, arm) {
                               sizeof(fpreg::fbsd_reg)))
 
 TEST(RegisterContextFreeBSDTest, arm64) {
+  Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
   ArchSpec arch{"aarch64-unknown-freebsd"};
-  RegisterInfoPOSIX_arm64 reg_ctx{arch};
+  RegisterInfoPOSIX_arm64 reg_ctx{arch, opt_regsets};
 
   EXPECT_GPR_ARM64(x0, x[0]);
   EXPECT_GPR_ARM64(x1, x[1]);

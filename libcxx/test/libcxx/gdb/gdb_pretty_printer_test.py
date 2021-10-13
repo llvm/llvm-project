@@ -20,6 +20,14 @@ import gdb
 import sys
 
 test_failures = 0
+# Sometimes the inital run command can fail to trace the process.
+# (e.g. you don't have ptrace permissions)
+# In these cases gdb still sends us an exited event so we cannot
+# see what "run" printed to check for a warning message, since
+# we get taken to our exit handler before we can look.
+# Instead check that at least one test has been run by the time
+# we exit.
+has_run_tests = False
 
 
 class CheckResult(gdb.Command):
@@ -29,7 +37,11 @@ class CheckResult(gdb.Command):
             "print_and_compare", gdb.COMMAND_DATA)
 
     def invoke(self, arg, from_tty):
+        global has_run_tests
+
         try:
+            has_run_tests = True
+
             # Stack frame is:
             # 0. StopForDebugger
             # 1. ComparePrettyPrintToChars or ComparePrettyPrintToRegex
@@ -89,7 +101,12 @@ class CheckResult(gdb.Command):
 
 def exit_handler(event=None):
     global test_failures
-    if test_failures:
+    global has_run_tests
+
+    if not has_run_tests:
+        print("FAILED test program did not run correctly, check gdb warnings")
+        test_failures = -1
+    elif test_failures:
         print("FAILED %d cases" % test_failures)
     exit(test_failures)
 

@@ -37,6 +37,7 @@ int main(int, char**)
         assert(f.compare(ib+1, ib+3, ia, ia+sa) == 1);
         assert(f.compare(ia, ia+3, ib, ib+3) == 0);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         const wchar_t ia[] = L"1234";
         const unsigned sa = sizeof(ia)/sizeof(ia[0]);
@@ -50,6 +51,7 @@ int main(int, char**)
         assert(f.compare(ib+1, ib+3, ia, ia+sa) == 1);
         assert(f.compare(ia, ia+3, ib, ib+3) == 0);
     }
+#endif
 
   return 0;
 }

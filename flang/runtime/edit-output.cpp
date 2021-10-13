@@ -12,27 +12,27 @@
 
 namespace Fortran::runtime::io {
 
-template <typename INT, typename UINT>
-bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
-  char buffer[130], *end = &buffer[sizeof buffer], *p = end;
-  bool isNegative{false};
-  if constexpr (std::is_same_v<INT, UINT>) {
-    isNegative = (n >> (8 * sizeof(INT) - 1)) != 0;
-  } else {
-    isNegative = n < 0;
-  }
-  UINT un{static_cast<UINT>(isNegative ? -n : n)};
+template <int KIND>
+bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
+    common::HostSignedIntType<8 * KIND> n) {
+  char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
+  bool isNegative{n < 0};
+  using Unsigned = common::HostUnsignedIntType<8 * KIND>;
+  Unsigned un{static_cast<Unsigned>(n)};
   int signChars{0};
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'G':
   case 'I':
+    if (isNegative) {
+      un = -un;
+    }
     if (isNegative || (edit.modes.editingFlags & signPlus)) {
       signChars = 1; // '-' or '+'
     }
     while (un > 0) {
       auto quotient{un / 10u};
-      *--p = '0' + static_cast<int>(un - UINT{10} * quotient);
+      *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
       un = quotient;
     }
     break;
@@ -382,8 +382,7 @@ bool RealOutputEditing<binaryPrecision>::EditEXOutput(const DataEdit &) {
       "EX output editing is not yet implemented"); // TODO
 }
 
-template <int binaryPrecision>
-bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
+template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
   switch (edit.descriptor) {
   case 'D':
     return EditEorDOutput(edit);
@@ -398,8 +397,9 @@ bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
   case 'B':
   case 'O':
   case 'Z':
-    return EditIntegerOutput(io_, edit,
-        decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw());
+    return EditIntegerOutput<KIND>(io_, edit,
+        static_cast<common::HostSignedIntType<8 * KIND>>(
+            decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw()));
   case 'G':
     return Edit(EditForGOutput(edit));
   default:
@@ -503,10 +503,16 @@ bool EditDefaultCharacterOutput(IoStatementState &io, const DataEdit &edit,
       io.Emit(x, std::min(width, len));
 }
 
-template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
+template bool EditIntegerOutput<1>(
+    IoStatementState &, const DataEdit &, std::int8_t);
+template bool EditIntegerOutput<2>(
+    IoStatementState &, const DataEdit &, std::int16_t);
+template bool EditIntegerOutput<4>(
+    IoStatementState &, const DataEdit &, std::int32_t);
+template bool EditIntegerOutput<8>(
     IoStatementState &, const DataEdit &, std::int64_t);
-template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
-    IoStatementState &, const DataEdit &, common::uint128_t);
+template bool EditIntegerOutput<16>(
+    IoStatementState &, const DataEdit &, common::int128_t);
 
 template class RealOutputEditing<2>;
 template class RealOutputEditing<3>;

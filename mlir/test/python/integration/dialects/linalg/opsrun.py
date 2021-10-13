@@ -19,9 +19,9 @@ def log(*args):
 
 matmul_boiler = """
 func @main() -> f32 attributes {llvm.emit_c_interface} {
-  %v0 = constant 0.0 : f32
-  %v1 = constant 1.0 : f32
-  %v2 = constant 2.0 : f32
+  %v0 = arith.constant 0.0 : f32
+  %v1 = arith.constant 1.0 : f32
+  %v2 = arith.constant 2.0 : f32
 
   %A = memref.alloc() : memref<4x16xf32>
   %B = memref.alloc() : memref<16x8xf32>
@@ -33,7 +33,7 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   call @matmul_on_buffers(%A, %B, %C) :
     (memref<4x16xf32>, memref<16x8xf32>, memref<4x8xf32>) -> ()
 
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.load %C[%c0, %c0] : memref<4x8xf32>
 
   // TODO: FFI-based solution to allow testing and printing with python code.
@@ -44,14 +44,14 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
 fill_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O = memref.alloc() : memref<4x16xi32>
-  %min = constant -1000.0 : f64
-  %max = constant 1000.0 : f64
-  %seed = constant 42 : i32
+  %min = arith.constant -1000.0 : f64
+  %max = arith.constant 1000.0 : f64
+  %seed = arith.constant 42 : i32
 
   call @fill_on_buffers(%min, %max, %seed, %O) :
     (f64, f64, i32, memref<4x16xi32>) -> ()
 
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.load %O[%c0, %c0] : memref<4x16xi32>
 
   // TODO: FFI-based solution to allow testing and printing with python code.
@@ -61,9 +61,9 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 
 conv_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
-  %v0 = constant 0 : i32
-  %v1 = constant 1.0 : f64
-  %v2 = constant 2.0 : f64
+  %v0 = arith.constant 0 : i32
+  %v1 = arith.constant 1.0 : f64
+  %v2 = arith.constant 2.0 : f64
 
   %input = memref.alloc() : memref<1x4x16x1xf64>
   %filter = memref.alloc() : memref<2x2x1xf64>
@@ -75,7 +75,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   call @conv_on_buffers(%input, %filter, %output) :
     (memref<1x4x16x1xf64>, memref<2x2x1xf64>, memref<1x2x4x1xi32>) -> ()
 
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.load %output[%c0, %c0, %c0, %c0] : memref<1x2x4x1xi32>
 
   // TODO: FFI-based solution to allow testing and printing with python code.
@@ -85,11 +85,11 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 
 pooling_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
-  %v0 = constant 0 : i32
-  %v42 = constant 42.0 : f64
-  %v77 = constant 77.0 : f64
-  %v-13 = constant -13.0 : f64
-  %v1 = constant 1.0 : f64
+  %v0 = arith.constant 0 : i32
+  %v42 = arith.constant 42.0 : f64
+  %v77 = arith.constant 77.0 : f64
+  %v-13 = arith.constant -13.0 : f64
+  %v1 = arith.constant 1.0 : f64
 
   %input = memref.alloc() : memref<1x4x16x1xf64>
   %shape = memref.alloc() : memref<2x2xf64>
@@ -98,9 +98,9 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   linalg.fill(%v1, %shape) : f64, memref<2x2xf64>
   linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
 
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   memref.store %v42, %input[%c0, %c0, %c0, %c0] : memref<1x4x16x1xf64>
   memref.store %v77, %input[%c0, %c0, %c1, %c0] : memref<1x4x16x1xf64>
   memref.store %v-13, %input[%c0, %c0, %c2, %c0] : memref<1x4x16x1xf64>
@@ -118,7 +118,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 
 def transform(module, boilerplate):
   import mlir.conversions
-  import mlir.dialects.linalg.passes
+  import mlir.all_passes_registration
   import mlir.transforms
 
   # TODO: Allow cloning functions from one module to another.
@@ -128,8 +128,8 @@ def transform(module, boilerplate):
       boilerplate)
   pm = PassManager.parse(
       "builtin.func(convert-linalg-to-loops, lower-affine, " +
-      "convert-scf-to-std), convert-vector-to-llvm," +
-      "convert-memref-to-llvm,convert-std-to-llvm," +
+      "convert-scf-to-std, std-expand), convert-vector-to-llvm," +
+      "convert-memref-to-llvm, convert-std-to-llvm," +
       "reconcile-unrealized-casts")
   pm.run(mod)
   return mod

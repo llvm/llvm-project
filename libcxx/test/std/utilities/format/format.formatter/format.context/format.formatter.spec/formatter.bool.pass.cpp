@@ -67,13 +67,15 @@ void test_termination_condition(StringT expected, StringT f, bool arg) {
 
 template <class CharT>
 void test_boolean() {
-  test_termination_condition(STR("1"), STR("}"), true);
-  test_termination_condition(STR("0"), STR("}"), false);
+  test_termination_condition(STR("true"), STR("}"), true);
+  test_termination_condition(STR("false"), STR("}"), false);
 }
 
 int main(int, char**) {
   test_boolean<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_boolean<wchar_t>();
+#endif
 
   return 0;
 }

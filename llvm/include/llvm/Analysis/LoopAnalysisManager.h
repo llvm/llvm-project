@@ -58,6 +58,7 @@ struct LoopStandardAnalysisResults {
   TargetLibraryInfo &TLI;
   TargetTransformInfo &TTI;
   BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   MemorySSA *MSSA;
 };
 

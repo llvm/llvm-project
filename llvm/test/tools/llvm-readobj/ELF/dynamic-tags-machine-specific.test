@@ -391,3 +391,41 @@ ProgramHeaders:
   - Type:     PT_DYNAMIC
     FirstSec: .dynamic
     LastSec:  .dynamic
+
+## Case 6: Test that RISC-V machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=6 %s -o %t.rv
+# RUN: llvm-readobj --dynamic-table %t.rv | FileCheck %s --check-prefix=LLVM-RISCV
+# RUN: llvm-readelf --dynamic-table %t.rv | FileCheck %s --check-prefix=GNU-RISCV
+
+# LLVM-RISCV:      DynamicSection [ (2 entries)
+# LLVM-RISCV-NEXT:   Tag                Type                Name/Value
+# LLVM-RISCV-NEXT:   0x0000000070000001 RISCV_VARIANT_CC    0x1
+# LLVM-RISCV-NEXT:   0x0000000000000000 NULL                0x0
+# LLVM-RISCV-NEXT: ]
+
+# GNU-RISCV:       Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-RISCV-NEXT:   Tag                Type                 Name/Value
+# GNU-RISCV-NEXT:   0x0000000070000001 (RISCV_VARIANT_CC)   0x1
+# GNU-RISCV-NEXT:   0x0000000000000000 (NULL)               0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RISCV_VARIANT_CC
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

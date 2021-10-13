@@ -441,12 +441,6 @@ define void @test_simple_arg8_call(i32 %in0) {
   ; X64-NEXT: {{  $}}
   ; X64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
   ; X64-NEXT:   ADJCALLSTACKDOWN64 16, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; X64-NEXT:   $edi = COPY [[COPY]](s32)
-  ; X64-NEXT:   $esi = COPY [[COPY]](s32)
-  ; X64-NEXT:   $edx = COPY [[COPY]](s32)
-  ; X64-NEXT:   $ecx = COPY [[COPY]](s32)
-  ; X64-NEXT:   $r8d = COPY [[COPY]](s32)
-  ; X64-NEXT:   $r9d = COPY [[COPY]](s32)
   ; X64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $rsp
   ; X64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; X64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
@@ -455,6 +449,12 @@ define void @test_simple_arg8_call(i32 %in0) {
   ; X64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; X64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C1]](s64)
   ; X64-NEXT:   G_STORE [[COPY]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack + 8, align 1)
+  ; X64-NEXT:   $edi = COPY [[COPY]](s32)
+  ; X64-NEXT:   $esi = COPY [[COPY]](s32)
+  ; X64-NEXT:   $edx = COPY [[COPY]](s32)
+  ; X64-NEXT:   $ecx = COPY [[COPY]](s32)
+  ; X64-NEXT:   $r8d = COPY [[COPY]](s32)
+  ; X64-NEXT:   $r9d = COPY [[COPY]](s32)
   ; X64-NEXT:   CALL64pcrel32 @simple_arg8_callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $edx, implicit $ecx, implicit $r8d, implicit $r9d
   ; X64-NEXT:   ADJCALLSTACKUP64 16, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64-NEXT:   RET 0

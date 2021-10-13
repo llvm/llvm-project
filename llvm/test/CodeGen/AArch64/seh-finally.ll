@@ -66,8 +66,8 @@ entry:
 ; CHECK-LABEL: fin_simple_seh
 ; CHECK: movz    x8, #:abs_g1_s:.Lsimple_seh$frame_escape_0
 ; CHECK: movk    x8, #:abs_g0_nc:.Lsimple_seh$frame_escape_0
-; CHECK: ldr     w8, [x1, x8]
 ; CHECK: strb    w0, [sp, #15]
+; CHECK: ldr     w8, [x1, x8]
 ; CHECK: bl      foo
 
   %frame_pointer.addr = alloca i8*, align 8
@@ -120,8 +120,8 @@ entry:
 ; CHECK-LABEL: fin_stack_realign
 ; CHECK: movz    x8, #:abs_g1_s:.Lstack_realign$frame_escape_0
 ; CHECK: movk    x8, #:abs_g0_nc:.Lstack_realign$frame_escape_0
-; CHECK: ldr     w8, [x1, x8]
 ; CHECK: strb    w0, [sp, #15]
+; CHECK: ldr     w8, [x1, x8]
 ; CHECK: bl      foo
 
   %frame_pointer.addr = alloca i8*, align 8
@@ -186,8 +186,8 @@ entry:
 ; CHECK-LABEL: fin_vla_present
 ; CHECK: movz    x8, #:abs_g1_s:.Lvla_present$frame_escape_0
 ; CHECK: movk    x8, #:abs_g0_nc:.Lvla_present$frame_escape_0
-; CHECK: ldr     w8, [x1, x8]
 ; CHECK: strb    w0, [sp, #15]
+; CHECK: ldr     w8, [x1, x8]
 ; CHECK: bl      foo
 
   %frame_pointer.addr = alloca i8*, align 8
@@ -256,8 +256,8 @@ entry:
 ; CHECK-LABEL: fin_vla_and_realign
 ; CHECK: movz    x8, #:abs_g1_s:.Lvla_and_realign$frame_escape_0
 ; CHECK: movk    x8, #:abs_g0_nc:.Lvla_and_realign$frame_escape_0
-; CHECK: ldr     w8, [x1, x8]
 ; CHECK: strb    w0, [sp, #15]
+; CHECK: ldr     w8, [x1, x8]
 ; CHECK: bl      foo
 
   %frame_pointer.addr = alloca i8*, align 8

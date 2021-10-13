@@ -254,7 +254,8 @@ def : WriteRes<WriteVST, [M3UnitS,
                                         let NumMicroOps = 1; }
 
 // ASIMD FP instructions.
-def : WriteRes<WriteV, [M3UnitNALU]> { let Latency = 3; }
+def : WriteRes<WriteVd, [M3UnitNALU]> { let Latency = 3; }
+def : WriteRes<WriteVq, [M3UnitNALU]> { let Latency = 3; }
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }

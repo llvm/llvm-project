@@ -15,6 +15,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -60,15 +61,17 @@ AsmParser::~AsmParser() {}
 DialectAsmParser::~DialectAsmParser() {}
 OpAsmParser::~OpAsmParser() {}
 
-//===--------------------------------------------------------------------===//
+MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
+
+//===----------------------------------------------------------------------===//
 // DialectAsmPrinter
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 DialectAsmPrinter::~DialectAsmPrinter() {}
 
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // OpAsmPrinter
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 OpAsmPrinter::~OpAsmPrinter() {}
 
@@ -100,9 +103,9 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
     os << ')';
 }
 
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // Operation OpAsm interface.
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmInterface.cpp.inc"
@@ -1918,7 +1921,7 @@ void AsmPrinter::Impl::printType(Type type) {
         os << ") -> ";
         ArrayRef<Type> results = funcTy.getResults();
         if (results.size() == 1 && !results[0].isa<FunctionType>()) {
-          os << results[0];
+          printType(results[0]);
         } else {
           os << '(';
           interleaveComma(results, [&](Type ty) { printType(ty); });
@@ -1929,7 +1932,8 @@ void AsmPrinter::Impl::printType(Type type) {
         os << "vector<";
         for (int64_t dim : vectorTy.getShape())
           os << dim << 'x';
-        os << vectorTy.getElementType() << '>';
+        printType(vectorTy.getElementType());
+        os << '>';
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
         os << "tensor<";
@@ -1940,7 +1944,7 @@ void AsmPrinter::Impl::printType(Type type) {
             os << dim;
           os << 'x';
         }
-        os << tensorTy.getElementType();
+        printType(tensorTy.getElementType());
         // Only print the encoding attribute value if set.
         if (tensorTy.getEncoding()) {
           os << ", ";

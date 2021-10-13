@@ -61,9 +61,9 @@ module {
       ins(%args, %arga, %argb: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%argx: tensor<?x?xf32>) {
         ^bb(%s: f32, %a: f32, %b: f32, %x: f32):
-          %0 = mulf %a, %b : f32
-          %1 = mulf %s, %0 : f32
-          %2 = addf %x, %1 : f32
+          %0 = arith.mulf %a, %b : f32
+          %1 = arith.mulf %s, %0 : f32
+          %2 = arith.addf %x, %1 : f32
           linalg.yield %2 : f32
     } -> tensor<?x?xf32>
     return %0 : tensor<?x?xf32>
@@ -75,11 +75,11 @@ module {
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
   func @entry() {
-    %d0 = constant 0.0 : f32
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c5 = constant 5 : index
-    %c10 = constant 10 : index
+    %d0 = arith.constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c5 = arith.constant 5 : index
+    %c10 = arith.constant 10 : index
 
     // Setup memory for the dense matrices and initialize.
     %adata = memref.alloc(%c5, %c10) : memref<?x?xf32>
@@ -89,9 +89,9 @@ module {
       scf.for %j = %c0 to %c5 step %c1 {
         memref.store %d0, %xdata[%i, %j] : memref<?x?xf32>
       }
-      %p = addi %i, %c1 : index
-      %q = index_cast %p : index to i32
-      %d = sitofp %q : i32 to f32
+      %p = arith.addi %i, %c1 : index
+      %q = arith.index_cast %p : index to i32
+      %d = arith.sitofp %q : i32 to f32
       scf.for %j = %c0 to %c10 step %c1 {
         memref.store %d, %adata[%i, %j] : memref<?x?xf32>
         memref.store %d, %bdata[%j, %i] : memref<?x?xf32>
@@ -128,6 +128,7 @@ module {
     memref.dealloc %adata : memref<?x?xf32>
     memref.dealloc %bdata : memref<?x?xf32>
     memref.dealloc %xdata : memref<?x?xf32>
+    sparse_tensor.release %s : tensor<?x?xf32, #SparseMatrix>
 
     return
   }

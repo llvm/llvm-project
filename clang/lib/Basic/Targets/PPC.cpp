@@ -73,6 +73,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasROPProtect = true;
     } else if (Feature == "+privileged") {
       HasPrivileged = true;
+    } else if (Feature == "+isa-v206-instructions") {
+      IsISA2_06 = true;
     } else if (Feature == "+isa-v207-instructions") {
       IsISA2_07 = true;
     } else if (Feature == "+isa-v30-instructions") {
@@ -238,6 +240,13 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fsqrts", "__builtin_ppc_fsqrts");
   Builder.defineMacro("__addex", "__builtin_ppc_addex");
   Builder.defineMacro("__cmplxl", "__builtin_complex");
+  Builder.defineMacro("__compare_exp_uo", "__builtin_ppc_compare_exp_uo");
+  Builder.defineMacro("__compare_exp_lt", "__builtin_ppc_compare_exp_lt");
+  Builder.defineMacro("__compare_exp_gt", "__builtin_ppc_compare_exp_gt");
+  Builder.defineMacro("__compare_exp_eq", "__builtin_ppc_compare_exp_eq");
+  Builder.defineMacro("__test_data_class", "__builtin_ppc_test_data_class");
+  Builder.defineMacro("__swdiv", "__builtin_ppc_swdiv");
+  Builder.defineMacro("__swdivs", "__builtin_ppc_swdivs");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
@@ -245,7 +254,10 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
 void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
 
-  defineXLCompatMacros(Builder);
+  // We define the XLC compatibility macros only on AIX and Linux since XLC
+  // was never available on any other platforms.
+  if (getTriple().isOSAIX() || getTriple().isOSLinux())
+    defineXLCompatMacros(Builder);
 
   // Target identification.
   Builder.defineMacro("__ppc__");
@@ -425,11 +437,11 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
 
   // vsx was not explicitly turned off.
-  if (llvm::find(FeaturesVec, "-vsx") == FeaturesVec.end())
+  if (!llvm::is_contained(FeaturesVec, "-vsx"))
     return true;
 
   auto FindVSXSubfeature = [&](StringRef Feature, StringRef Option) {
-    if (llvm::find(FeaturesVec, Feature) != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, Feature)) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << Option << "-mno-vsx";
       return true;
     }
@@ -516,6 +528,13 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
+  Features["isa-v206-instructions"] = llvm::StringSwitch<bool>(CPU)
+                                          .Case("ppc64le", true)
+                                          .Case("pwr9", true)
+                                          .Case("pwr8", true)
+                                          .Case("pwr7", true)
+                                          .Default(false);
+
   Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
                                           .Case("ppc64le", true)
                                           .Case("pwr9", true)
@@ -543,28 +562,28 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
 
   if (!(ArchDefs & ArchDefinePwr9) && (ArchDefs & ArchDefinePpcgr) &&
-      llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+float128")) {
     // We have __float128 on PPC but not power 9 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr10) &&
-      llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+mma")) {
     // We have MMA on PPC but not power 10 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::find(FeaturesVec, "+rop-protect") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+rop-protect")) {
     // We can turn on ROP Protect on Power 8 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
     return false;
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::find(FeaturesVec, "+privileged") != FeaturesVec.end()) {
+      llvm::is_contained(FeaturesVec, "+privileged")) {
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
   }
@@ -612,6 +631,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
       .Case("privileged", HasPrivileged)
+      .Case("isa-v206-instructions", IsISA2_06)
       .Case("isa-v207-instructions", IsISA2_07)
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
@@ -762,7 +782,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"powerpc64le"}, {"ppc64le"}, {"future"}};
 
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {

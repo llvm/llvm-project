@@ -37,7 +37,12 @@ bool PrescanAndParseAction::BeginSourceFileAction() {
 }
 
 bool PrescanAndSemaAction::BeginSourceFileAction() {
-  return RunPrescan() & RunParse() && RunSemanticChecks();
+  return RunPrescan() && RunParse() && RunSemanticChecks();
+}
+
+bool PrescanAndSemaDebugAction::BeginSourceFileAction() {
+  // Semantic checks are made to succeed unconditionally.
+  return RunPrescan() && RunParse() && (RunSemanticChecks() || true);
 }
 
 //===----------------------------------------------------------------------===//

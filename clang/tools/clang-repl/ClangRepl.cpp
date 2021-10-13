@@ -32,7 +32,7 @@ static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::ZeroOrMore,
                                              llvm::cl::desc("[code to run]"));
 
-static void LLVMErrorHandler(void *UserData, const std::string &Message,
+static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
   auto &Diags = *static_cast<clang::DiagnosticsEngine *>(UserData);
 
@@ -79,6 +79,9 @@ int main(int argc, const char **argv) {
   // error handler.
   llvm::install_fatal_error_handler(LLVMErrorHandler,
                                     static_cast<void *>(&CI->getDiagnostics()));
+
+  // Load any requested plugins.
+  CI->LoadRequestedPlugins();
 
   auto Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
   for (const std::string &input : OptInputs) {

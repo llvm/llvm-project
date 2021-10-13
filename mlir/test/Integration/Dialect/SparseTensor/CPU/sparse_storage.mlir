@@ -55,14 +55,14 @@ module {
   // everything is working "under the hood".
   //
   func @entry() {
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %d0 = constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d0 = arith.constant 0.0 : f64
 
     //
     // Initialize a dense tensor.
     //
-    %t = constant dense<[
+    %t = arith.constant dense<[
        [ 1.0,  0.0,  2.0,  0.0,  0.0,  0.0,  0.0,  3.0],
        [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
        [ 0.0,  0.0,  4.0,  0.0,  0.0,  0.0,  0.0,  0.0],
@@ -249,6 +249,15 @@ module {
     %49 = sparse_tensor.values %y : tensor<10x8xf64, #BlockCol> to memref<?xf64>
     %50 = vector.transfer_read %49[%c0], %d0: memref<?xf64>, vector<70xf64>
     vector.print %50 : vector<70xf64>
+
+    // Release the resources.
+    sparse_tensor.release %0 : tensor<10x8xf64, #Dense>
+    sparse_tensor.release %1 : tensor<10x8xf64, #CSR>
+    sparse_tensor.release %2 : tensor<10x8xf64, #DCSR>
+    sparse_tensor.release %3 : tensor<10x8xf64, #CSC>
+    sparse_tensor.release %4 : tensor<10x8xf64, #DCSC>
+    sparse_tensor.release %x : tensor<10x8xf64, #BlockRow>
+    sparse_tensor.release %y : tensor<10x8xf64, #BlockCol>
 
     return
   }

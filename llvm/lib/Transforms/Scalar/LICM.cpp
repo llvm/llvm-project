@@ -1068,6 +1068,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
       return false;
     Addr = BC->getOperand(0);
   }
+  // If we've ended up at a global/constant, bail. We shouldn't be looking at
+  // uselists for non-local Values in a loop pass.
+  if (isa<Constant>(Addr))
+    return false;
 
   unsigned UsesVisited = 0;
   // Traverse all uses of the load operand value, to see if invariant.start is
@@ -1240,7 +1244,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       // writes to this memory in the loop, we can hoist or sink.
       if (AAResults::onlyAccessesArgPointees(Behavior)) {
         // TODO: expand to writeable arguments
-        for (Value *Op : CI->arg_operands())
+        for (Value *Op : CI->args())
           if (Op->getType()->isPointerTy()) {
             bool Invalidated;
             if (CurAST)
@@ -1853,7 +1857,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   MemorySSAUpdater *MSSAU;
   LoopInfo &LI;
   DebugLoc DL;
-  int Alignment;
+  Align Alignment;
   bool UnorderedAtomic;
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
@@ -1882,12 +1886,12 @@ public:
                SmallVectorImpl<Instruction *> &LIP,
                SmallVectorImpl<MemoryAccess *> &MSSAIP, PredIteratorCache &PIC,
                MemorySSAUpdater *MSSAU, LoopInfo &li, DebugLoc dl,
-               int alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
+               Align Alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
                ICFLoopSafetyInfo &SafetyInfo)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), MSSAInsertPts(MSSAIP),
         PredCache(PIC), MSSAU(MSSAU), LI(li), DL(std::move(dl)),
-        Alignment(alignment), UnorderedAtomic(UnorderedAtomic), AATags(AATags),
+        Alignment(Alignment), UnorderedAtomic(UnorderedAtomic), AATags(AATags),
         SafetyInfo(SafetyInfo) {}
 
   bool isInstInList(Instruction *I,
@@ -1914,7 +1918,7 @@ public:
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
       if (UnorderedAtomic)
         NewSI->setOrdering(AtomicOrdering::Unordered);
-      NewSI->setAlignment(Align(Alignment));
+      NewSI->setAlignment(Alignment);
       NewSI->setDebugLoc(DL);
       if (AATags)
         NewSI->setAAMetadata(AATags);
@@ -2221,8 +2225,7 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
                         InsertPts, MSSAInsertPts, PIC, MSSAU, *LI, DL,
-                        Alignment.value(), SawUnorderedAtomic, AATags,
-                        *SafetyInfo);
+                        Alignment, SawUnorderedAtomic, AATags, *SafetyInfo);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -51,9 +52,9 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
     alignmentAttr = b.getI64IntegerAttr(alignment.getValue());
 
   // Static buffer.
-  if (auto cst = allocSize.getDefiningOp<ConstantIndexOp>()) {
+  if (auto cst = allocSize.getDefiningOp<arith::ConstantIndexOp>()) {
     auto staticBufferType =
-        MemRefType::get(width * cst.getValue(), b.getIntegerType(8));
+        MemRefType::get(width * cst.value(), b.getIntegerType(8));
     if (options.useAlloca) {
       return b.createOrFold<memref::AllocaOp>(staticBufferType, ValueRange{},
                                               alignmentAttr);
@@ -64,8 +65,8 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
 
   // Fallback dynamic buffer.
   auto dynamicBufferType = MemRefType::get(-1, b.getIntegerType(8));
-  Value mul =
-      b.createOrFold<MulIOp>(b.create<ConstantIndexOp>(width), allocSize);
+  Value mul = b.createOrFold<arith::MulIOp>(
+      b.create<arith::ConstantIndexOp>(width), allocSize);
   if (options.useAlloca)
     return b.create<memref::AllocaOp>(dynamicBufferType, mul, alignmentAttr);
   return b.create<memref::AllocOp>(dynamicBufferType, mul, alignmentAttr);
@@ -82,12 +83,12 @@ defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
                            Optional<unsigned> alignment, DataLayout &layout) {
   ShapedType viewType = subView.getType();
   ImplicitLocOpBuilder b(subView.getLoc(), builder);
-  auto zero = b.createOrFold<ConstantIndexOp>(0);
-  auto one = b.createOrFold<ConstantIndexOp>(1);
+  auto zero = b.createOrFold<arith::ConstantIndexOp>(0);
+  auto one = b.createOrFold<arith::ConstantIndexOp>(1);
 
   Value allocSize = one;
   for (auto size : llvm::enumerate(boundingSubViewSize))
-    allocSize = b.createOrFold<MulIOp>(allocSize, size.value());
+    allocSize = b.createOrFold<arith::MulIOp>(allocSize, size.value());
   Value buffer = allocBuffer(b, options, viewType.getElementType(), allocSize,
                              layout, alignment);
   SmallVector<int64_t, 4> dynSizes(boundingSubViewSize.size(),
@@ -223,8 +224,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
     IntegerAttr sizeAttr = getSmallestBoundingIndex(rangeValue.size);
-    Value size =
-        (!sizeAttr) ? rangeValue.size : b.create<ConstantOp>(loc, sizeAttr);
+    Value size = (!sizeAttr) ? rangeValue.size
+                             : b.create<arith::ConstantOp>(loc, sizeAttr);
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(
@@ -267,17 +268,17 @@ promoteSubViews(ImplicitLocOpBuilder &b,
     Value fillVal =
         llvm::TypeSwitch<Type, Value>(subviewEltType)
             .Case([&](FloatType t) {
-              return b.create<ConstantOp>(FloatAttr::get(t, 0.0));
+              return b.create<arith::ConstantOp>(FloatAttr::get(t, 0.0));
             })
             .Case([&](IntegerType t) {
-              return b.create<ConstantOp>(IntegerAttr::get(t, 0));
+              return b.create<arith::ConstantOp>(IntegerAttr::get(t, 0));
             })
             .Case([&](ComplexType t) {
               Value tmp;
               if (auto et = t.getElementType().dyn_cast<FloatType>())
-                tmp = b.create<ConstantOp>(FloatAttr::get(et, 0.0));
+                tmp = b.create<arith::ConstantOp>(FloatAttr::get(et, 0.0));
               else if (auto et = t.getElementType().cast<IntegerType>())
-                tmp = b.create<ConstantOp>(IntegerAttr::get(et, 0));
+                tmp = b.create<arith::ConstantOp>(IntegerAttr::get(et, 0));
               return b.create<complex::CreateOp>(t, tmp, tmp);
             })
             .Default([](auto) { return Value(); });
@@ -303,12 +304,6 @@ static Optional<LinalgOp>
 promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
                 LinalgOpInstancePromotionOptions options, DataLayout &layout) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
-
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // TODO: add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      return {};
-  }
 
   // 1. Promote the specified views and use them in the new op.
   auto promotedBuffersAndViews = promoteSubViews(b, options, layout);

@@ -385,6 +385,83 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   return MessageSendInfo(argsInfo, signatureType);
 }
 
+bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                             const ObjCMethodDecl *method,
+                                             bool isSuper,
+                                       const ObjCInterfaceDecl *classReceiver,
+                                             llvm::Value *receiver) {
+  // Super dispatch assumes that self is non-null; even the messenger
+  // doesn't have a null check internally.
+  if (isSuper)
+    return false;
+
+  // If this is a direct dispatch of a class method, check whether the class,
+  // or anything in its hierarchy, was weak-linked.
+  if (classReceiver && method && method->isClassMethod())
+    return isWeakLinkedClass(classReceiver);
+
+  // If we're emitting a method, and self is const (meaning just ARC, for now),
+  // and the receiver is a load of self, then self is a valid object.
+  if (auto curMethod =
+               dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+    auto self = curMethod->getSelfDecl();
+    if (self->getType().isConstQualified()) {
+      if (auto LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
+        llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).getPointer();
+        if (selfAddr == LI->getPointerOperand()) {
+          return false;
+        }
+      }
+    }
+  }
+
+  // Otherwise, assume it can be null.
+  return true;
+}
+
+bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
+  do {
+    if (ID->isWeakImported())
+      return true;
+  } while ((ID = ID->getSuperClass()));
+
+  return false;
+}
+
+void CGObjCRuntime::destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
+                                              const ObjCMethodDecl *method,
+                                              const CallArgList &callArgs) {
+  CallArgList::const_iterator I = callArgs.begin();
+  for (auto i = method->param_begin(), e = method->param_end();
+         i != e; ++i, ++I) {
+    const ParmVarDecl *param = (*i);
+    if (param->hasAttr<NSConsumedAttr>()) {
+      RValue RV = I->getRValue(CGF);
+      assert(RV.isScalar() &&
+             "NullReturnState::complete - arg not on object");
+      CGF.EmitARCRelease(RV.getScalarVal(), ARCImpreciseLifetime);
+    } else {
+      QualType QT = param->getType();
+      auto *RT = QT->getAs<RecordType>();
+      if (RT && RT->getDecl()->isParamDestroyedInCallee()) {
+        RValue RV = I->getRValue(CGF);
+        QualType::DestructionKind DtorKind = QT.isDestructedType();
+        switch (DtorKind) {
+        case QualType::DK_cxx_destructor:
+          CGF.destroyCXXObject(CGF, RV.getAggregateAddress(), QT);
+          break;
+        case QualType::DK_nontrivial_c_struct:
+          CGF.destroyNonTrivialCStruct(CGF, RV.getAggregateAddress(), QT);
+          break;
+        default:
+          llvm_unreachable("unexpected dtor kind");
+          break;
+        }
+      }
+    }
+  }
+}
+
 llvm::Constant *
 clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
                                        const ObjCProtocolDecl *protocol) {

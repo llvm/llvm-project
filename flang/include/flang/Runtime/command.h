@@ -9,8 +9,9 @@
 #ifndef FORTRAN_RUNTIME_COMMAND_H_
 #define FORTRAN_RUNTIME_COMMAND_H_
 
-#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
+
+#include <cstdint>
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -20,7 +21,7 @@ extern "C" {
 //
 // Lowering may need to cast the result to match the precision of the default
 // integer kind.
-CppTypeFor<TypeCategory::Integer, 4> RTNAME(ArgumentCount)();
+std::int32_t RTNAME(ArgumentCount)();
 
 // 16.9.83 GET_COMMAND_ARGUMENT
 // We're breaking up the interface into several different functions, since most
@@ -28,14 +29,27 @@ CppTypeFor<TypeCategory::Integer, 4> RTNAME(ArgumentCount)();
 
 // Try to get the value of the n'th argument.
 // Returns a STATUS as described in the standard.
-CppTypeFor<TypeCategory::Integer, 4> RTNAME(ArgumentValue)(
-    CppTypeFor<TypeCategory::Integer, 4> n, const Descriptor *value,
-    const Descriptor *errmsg);
+std::int32_t RTNAME(ArgumentValue)(
+    std::int32_t n, const Descriptor *value, const Descriptor *errmsg);
 
 // Try to get the significant length of the n'th argument.
 // Returns 0 if it doesn't manage.
-CppTypeFor<TypeCategory::Integer, 4> RTNAME(ArgumentLength)(
-    CppTypeFor<TypeCategory::Integer, 4> n);
+std::int64_t RTNAME(ArgumentLength)(std::int32_t n);
+
+// 16.9.84 GET_ENVIRONMENT_VARIABLE
+// We're breaking up the interface into several different functions, since most
+// of the parameters are optional.
+
+// Try to get the value of the environment variable specified by NAME.
+// Returns a STATUS as described in the standard.
+std::int32_t RTNAME(EnvVariableValue)(const Descriptor &name,
+    const Descriptor *value = nullptr, bool trim_name = true,
+    const Descriptor *errmsg = nullptr);
+
+// Try to get the significant length of the environment variable specified by
+// NAME. Returns 0 if it doesn't manage.
+std::int64_t RTNAME(EnvVariableLength)(
+    const Descriptor &name, bool trim_name = true);
 }
 } // namespace Fortran::runtime
 

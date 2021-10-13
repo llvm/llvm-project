@@ -77,7 +77,8 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
                                      Tosa_QuantizedType<"int4", [4, 0], 1>,
                                      Tosa_QuantizedType<"int8", [8, 0], 1>,
-                                     Tosa_QuantizedType<"int16", [16, 0], 1>]>;
+                                     Tosa_QuantizedType<"int16", [16, 0], 1>,
+                                     Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point types.
@@ -148,7 +149,7 @@ class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<
      AnyTypeOf<types>.predicate,
      VectorOf<types>.predicate,
      TensorOf<types>.predicate]>,
-     "signless-integer-32-like">;
+     description>;
 
 def Tosa_Int8Like : Tosa_TypeLike<[Tosa_Int8], "signless-integer-8-bit-like">;
 def Tosa_Int16Like : Tosa_TypeLike<[Tosa_Int16], "signless-integer-16-bit-like">;

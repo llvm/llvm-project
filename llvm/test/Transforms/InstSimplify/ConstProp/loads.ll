@@ -30,11 +30,12 @@ define i16 @test2() {
   ret i16 %r
 }
 
-; FIXME: Should be able to load through a constant addrspacecast.
 define i16 @test2_addrspacecast() {
-; CHECK-LABEL: @test2_addrspacecast(
-; CHECK-NEXT:    [[R:%.*]] = load i16, i16 addrspace(1)* addrspacecast (i16* bitcast ({ { i32, i8 }, i32 }* @g1 to i16*) to i16 addrspace(1)*), align 8
-; CHECK-NEXT:    ret i16 [[R]]
+; LE-LABEL: @test2_addrspacecast(
+; LE-NEXT:    ret i16 -16657
+;
+; BE-LABEL: @test2_addrspacecast(
+; BE-NEXT:    ret i16 -8531
 ;
   %r = load i16, i16 addrspace(1)* addrspacecast(i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0) to i16 addrspace(1)*)
   ret i16 %r
@@ -246,7 +247,7 @@ define i64 @test_leading_zero_size_elems_big() {
 
 define i64 @test_array_of_zero_size_array() {
 ; CHECK-LABEL: @test_array_of_zero_size_array(
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 undef
 ;
   %v = load i64, i64* bitcast ([4294967295 x [0 x i32]]* @g9 to i64*)
   ret i64 %v
@@ -260,4 +261,14 @@ define i32* @test_undef_aggregate() {
 ;
   %v = load i32*, i32** bitcast ({i128}* @g10 to i32**)
   ret i32* %v
+}
+
+@g11 = constant <{ [8 x i8], [8 x i8] }> <{ [8 x i8] undef, [8 x i8] zeroinitializer }>, align 4
+
+define {}* @test_trailing_zero_gep_index() {
+; CHECK-LABEL: @test_trailing_zero_gep_index(
+; CHECK-NEXT:    ret {}* null
+;
+  %v = load {}*, {}** bitcast (i8* getelementptr inbounds (<{ [8 x i8], [8 x i8] }>, <{ [8 x i8], [8 x i8] }>* @g11, i32 0, i32 1, i32 0) to {}**), align 4
+  ret {}* %v
 }

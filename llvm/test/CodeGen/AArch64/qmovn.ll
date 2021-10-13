@@ -86,10 +86,10 @@ define <2 x i32> @vqmovni64_smaxmin(<2 x i64> %s0) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    mov x9, #-2147483648
+; CHECK-NEXT:    mov x8, #-2147483648
 ; CHECK-NEXT:    cmgt v2.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    dup v1.2d, x9
+; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmgt v2.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
@@ -108,10 +108,10 @@ define <2 x i32> @vqmovni64_sminmax(<2 x i64> %s0) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #-2147483648
 ; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    mov w9, #2147483647
+; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    cmgt v2.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    dup v1.2d, x9
+; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    cmgt v2.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    xtn v0.2s, v0.2d

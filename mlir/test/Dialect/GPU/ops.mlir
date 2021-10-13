@@ -48,11 +48,11 @@ module attributes {gpu.container_module} {
       %numSg = gpu.num_subgroups : index
       %SgSi = gpu.subgroup_size : index
 
-      %one = constant 1.0 : f32
+      %one = arith.constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
-      %width = constant 7 : i32
-      %offset = constant 3 : i32
+      %width = arith.constant 7 : i32
+      %offset = arith.constant 3 : i32
       // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} xor : f32
       %shfl, %pred = gpu.shuffle %arg0, %offset, %width xor : f32
 
@@ -71,12 +71,15 @@ module attributes {gpu.container_module} {
   func @foo() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<?xf32, 1>)
-    // CHECK: %{{.*}} = constant 8
-    %cst = constant 8 : index
+    // CHECK: %{{.*}} = arith.constant 8
+    %cst = arith.constant 8 : index
+    %c0 = arith.constant 0 : i32
     %t0 = gpu.wait async
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) dynamic_shared_memory_size %c0 args(%0 : f32, %1 : memref<?xf32, 1>)
 
     // CHECK: gpu.launch_func @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
     gpu.launch_func @kernels::@kernel_2 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
@@ -210,10 +213,10 @@ module attributes {gpu.container_module} {
     // CHECK-LABEL: func @mmamatrix_valid_element_type
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     // CHECK: %[[wg:.*]] = memref.alloca()
-    %i = constant 16 : index
-    // CHECK: %[[i:.*]] = constant 16 : index
-     %cst = constant 1.000000e+00 : f32
-    // CHECK: %[[cst:.*]] = constant 1.000000e+00 : f32
+    %i = arith.constant 16 : index
+    // CHECK: %[[i:.*]] = arith.constant 16 : index
+     %cst = arith.constant 1.000000e+00 : f32
+    // CHECK: %[[cst:.*]] = arith.constant 1.000000e+00 : f32
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     // CHECK: gpu.subgroup_mma_load_matrix %[[wg]][%[[i]], %[[i]]] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     %1 = gpu.subgroup_mma_constant_matrix %cst : !gpu.mma_matrix<16x16xf32, "COp">

@@ -72,13 +72,38 @@ void test_char_pointer() {
 
   std::basic_string<CharT> s(CSTR("abc\0abc"), 7);
   test_termination_condition<ArgumentT>(STR("abc"), STR("}"), s.c_str());
+
+  test_termination_condition<ArgumentT>(STR("world"), STR("}"), CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("world"), STR("_>}"),
+                                        CSTR("world"));
+
+  test_termination_condition<ArgumentT>(STR("   world"), STR(">8}"),
+                                        CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("___world"), STR("_>8}"),
+                                        CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("_world__"), STR("_^8}"),
+                                        CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("world___"), STR("_<8}"),
+                                        CSTR("world"));
+
+  test_termination_condition<ArgumentT>(STR("world"), STR(".5}"),
+                                        CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("unive"), STR(".5}"),
+                                        CSTR("universe"));
+
+  test_termination_condition<ArgumentT>(STR("%world%"), STR("%^7.7}"),
+                                        CSTR("world"));
+  test_termination_condition<ArgumentT>(STR("univers"), STR("%^7.7}"),
+                                        CSTR("universe"));
 }
 
 int main(int, char**) {
   test_char_pointer<char*>();
   test_char_pointer<const char*>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_char_pointer<wchar_t*>();
   test_char_pointer<const wchar_t*>();
+#endif
 
   return 0;
 }

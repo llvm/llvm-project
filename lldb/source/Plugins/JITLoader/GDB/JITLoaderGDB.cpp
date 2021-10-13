@@ -105,11 +105,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> JITLoaderGDBPropertiesSP;
-
-static const JITLoaderGDBPropertiesSP &GetGlobalPluginProperties() {
-  static const auto g_settings_sp(std::make_shared<PluginProperties>());
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 template <typename ptr_t>
@@ -160,7 +158,7 @@ void JITLoaderGDB::DebuggerInitialize(Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForJITLoaderPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the JIT LoaderGDB plug-in."),
         is_global_setting);
   }
@@ -412,7 +410,7 @@ lldb_private::ConstString JITLoaderGDB::GetPluginNameStatic() {
 JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
   JITLoaderSP jit_loader_sp;
   bool enable;
-  switch (GetGlobalPluginProperties()->GetEnable()) {
+  switch (GetGlobalPluginProperties().GetEnable()) {
     case EnableJITLoaderGDB::eEnableJITLoaderGDBOn:
       enable = true;
       break;

@@ -1072,8 +1072,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
       defined(__APPLE__) || \
       defined(__sun__) || \
       defined(__MVS__) || \
-      defined(_AIX) || \
-      (defined(__MINGW32__) && __has_include(<pthread.h>))
+      defined(_AIX)
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(__Fuchsia__)
      // TODO(44575): Switch to C11 thread API when possible.
@@ -1242,6 +1241,16 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_PREFERRED_NAME(x)
 #endif
 
+// We often repeat things just for handling wide characters in the library.
+// When wide characters are disabled, it can be useful to have a quick way of
+// disabling it without having to resort to #if-#endif, which has a larger
+// impact on readability.
+#if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+# define _LIBCPP_IF_WIDE_CHARACTERS(...)
+#else
+# define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
+#endif
+
 #if defined(_LIBCPP_ABI_MICROSOFT) && \
     (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
 #  define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
@@ -1331,7 +1340,13 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if __has_attribute(init_priority)
-# define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
+    // TODO: Remove this once we drop support for building libc++ with old Clangs
+#   if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1200) || \
+       (defined(__apple_build_version__) && __apple_build_version__ < 13000000)
+#     define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
+#   else
+#     define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(100)))
+#   endif
 #else
 # define _LIBCPP_INIT_PRIORITY_MAX
 #endif

@@ -222,7 +222,7 @@ inline raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr) {
 }
 
 /// Allow printing to a stream.
-inline raw_ostream &operator<<(raw_ostream &os, OpState &op) {
+inline raw_ostream &operator<<(raw_ostream &os, OpState op) {
   op.print(os, OpPrintingFlags().useLocalScope());
   return os;
 }
@@ -1383,11 +1383,11 @@ struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
 ///
 /// Examples:
 /// ```
-/// %scalar = "std.addf"(%a, %b) : (f32, f32) -> f32
+/// %scalar = "arith.addf"(%a, %b) : (f32, f32) -> f32
 /// ```
 /// can be tensorized to
 /// ```
-/// %tensor = "std.addf"(%a, %b) : (tensor<?xf32>, tensor<?xf32>)
+/// %tensor = "arith.addf"(%a, %b) : (tensor<?xf32>, tensor<?xf32>)
 ///               -> tensor<?xf32>
 /// ```
 ///

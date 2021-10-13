@@ -1799,6 +1799,11 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known.Zero = APInt::getHighBitsSet(64, 32);
     break;
   }
+  case AArch64ISD::ASSERT_ZEXT_BOOL: {
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known.Zero |= APInt(Known.getBitWidth(), 0xFE);
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(1));
     Intrinsic::ID IntID = static_cast<Intrinsic::ID>(CN->getZExtValue());
@@ -2190,6 +2195,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
     MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
+    MAKE_CASE(AArch64ISD::ASSERT_ZEXT_BOOL)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -5369,6 +5375,19 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       if (Subtarget->isTargetILP32() && Ins[i].Flags.isPointer())
         ArgValue = DAG.getNode(ISD::AssertZext, DL, ArgValue.getValueType(),
                                ArgValue, DAG.getValueType(MVT::i32));
+
+      // i1 arguments are zero-extended to i8 by the caller. Emit a
+      // hint to reflect this.
+      if (Ins[i].isOrigArg()) {
+        Argument *OrigArg = MF.getFunction().getArg(Ins[i].getOrigArgIndex());
+        if (OrigArg->getType()->isIntegerTy(1)) {
+          if (!Ins[i].Flags.isZExt()) {
+            ArgValue = DAG.getNode(AArch64ISD::ASSERT_ZEXT_BOOL, DL,
+                                   ArgValue.getValueType(), ArgValue);
+          }
+        }
+      }
+
       InVals.push_back(ArgValue);
     }
   }
@@ -5807,6 +5826,19 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
          CallCC == CallingConv::Tail || CallCC == CallingConv::SwiftTail;
 }
 
+// Check if the value is zero-extended from i1 to i8
+static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
+  unsigned SizeInBits = Arg.getValueType().getSizeInBits();
+  if (SizeInBits < 8)
+    return false;
+
+  APInt LowBits(SizeInBits, 0xFF);
+  APInt RequredZero(SizeInBits, 0xFE);
+  KnownBits Bits = DAG.computeKnownBits(Arg, LowBits, 4);
+  bool ZExtBool = (Bits.Zero & RequredZero) == RequredZero;
+  return ZExtBool;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -6004,8 +6036,22 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     case CCValAssign::AExt:
       if (Outs[i].ArgVT == MVT::i1) {
         // AAPCS requires i1 to be zero-extended to 8-bits by the caller.
-        Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
-        Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
+        //
+        // Check if we actually have to do this, because the value may
+        // already be zero-extended.
+        //
+        // We cannot just emit a (zext i8 (trunc (assert-zext i8)))
+        // and rely on DAGCombiner to fold this, because the following
+        // (anyext i32) is combined with (zext i8) in DAG.getNode:
+        //
+        //   (ext (zext x)) -> (zext x)
+        //
+        // This will give us (zext i32), which we cannot remove, so
+        // try to check this beforehand.
+        if (!checkZExtBool(Arg, DAG)) {
+          Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
+          Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
+        }
       }
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
@@ -7630,11 +7676,14 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
 
 SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
                                                   SelectionDAG &DAG) const {
-
   EVT Ty = Op.getValueType();
   auto Idx = Op.getConstantOperandAPInt(2);
-  if (Idx.sge(-1) && Idx.slt(Ty.getVectorMinNumElements()))
+
+  // This will select to an EXT instruction, which has a maximum immediate
+  // value of 255, hence 2048-bits is the maximum value we can lower.
+  if (Idx.sge(-1) && Idx.slt(2048 / Ty.getVectorElementType().getSizeInBits()))
     return Op;
+
   return SDValue();
 }
 
@@ -10224,7 +10273,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         unsigned BitSize = VT.getVectorElementType().getSizeInBits();
         APInt Val(BitSize,
                   Const->getAPIntValue().zextOrTrunc(BitSize).getZExtValue());
-        if (Val.isNullValue() || Val.isAllOnesValue())
+        if (Val.isZero() || Val.isAllOnes())
           return Op;
       }
   }
@@ -10670,6 +10719,10 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   unsigned Idx = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
   unsigned Size = Op.getValueSizeInBits();
 
+  // If we don't have legal types yet, do nothing
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT))
+    return SDValue();
+
   if (InVT.isScalableVector()) {
     // This will be matched by custom code during ISelDAGToDAG.
     if (Idx == 0 && isPackedVectorType(InVT, DAG))
@@ -10687,6 +10740,18 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   if (Size == 64 && Idx * InVT.getScalarSizeInBits() == 64 &&
       InVT.getSizeInBits() == 128)
     return Op;
+
+  if (useSVEForFixedLengthVectorVT(InVT)) {
+    SDLoc DL(Op);
+
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
+    SDValue NewInVec =
+        convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+
+    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, ContainerVT, NewInVec,
+                                 NewInVec, DAG.getConstant(Idx, DL, MVT::i64));
+    return convertFromScalableVector(DAG, Op.getValueType(), Splice);
+  }
 
   return SDValue();
 }
@@ -11323,7 +11388,7 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
   // memVT is `NumVecs * VT`.
   Info.memVT = EVT::getVectorVT(CI.getType()->getContext(), VT.getScalarType(),
                                 EC * NumVecs);
-  Info.ptrVal = CI.getArgOperand(CI.getNumArgOperands() - 1);
+  Info.ptrVal = CI.getArgOperand(CI.arg_size() - 1);
   Info.offset = 0;
   Info.align.reset();
   Info.flags = MachineMemOperand::MOStore;
@@ -11361,7 +11426,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Conservatively set memVT to the entire set of vectors loaded.
     uint64_t NumElts = DL.getTypeSizeInBits(I.getType()) / 64;
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
-    Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
+    Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
     Info.align.reset();
     // volatile loads with NEON intrinsics not supported
@@ -11380,14 +11445,14 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_VOID;
     // Conservatively set memVT to the entire set of vectors stored.
     unsigned NumElts = 0;
-    for (unsigned ArgI = 0, ArgE = I.getNumArgOperands(); ArgI < ArgE; ++ArgI) {
-      Type *ArgTy = I.getArgOperand(ArgI)->getType();
+    for (const Value *Arg : I.args()) {
+      Type *ArgTy = Arg->getType();
       if (!ArgTy->isVectorTy())
         break;
       NumElts += DL.getTypeSizeInBits(ArgTy) / 64;
     }
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
-    Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
+    Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
     Info.align.reset();
     // volatile stores with NEON intrinsics not supported
@@ -16151,7 +16216,7 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
                           MVT::v2i32, MVT::v4i32, MVT::v2i64}),
             VT.getSimpleVT().SimpleTy) &&
         ISD::isConstantSplatVector(SplatLHS, SplatLHSVal) &&
-        SplatLHSVal.isOneValue() && ISD::isConstantSplatVectorAllOnes(CmpRHS) &&
+        SplatLHSVal.isOne() && ISD::isConstantSplatVectorAllOnes(CmpRHS) &&
         ISD::isConstantSplatVectorAllOnes(SplatRHS)) {
       unsigned NumElts = VT.getVectorNumElements();
       SmallVector<SDValue, 8> Ops(

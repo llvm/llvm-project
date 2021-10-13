@@ -99,10 +99,11 @@ define i1 @shifts_necmp_i64_i8(i64 %x) nounwind {
 define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_i16_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, w0, uxth
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    sub w8, w8, #128
+; CHECK-NEXT:    lsr w8, w8, #8
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i16 %tmp0, -256 ; ~0U << 8
@@ -168,10 +169,11 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: add_ulecmp_i16_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, w0, uxth
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    sub w8, w8, #128
+; CHECK-NEXT:    lsr w8, w8, #8
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ule i16 %tmp0, -257 ; ~0U << 8 - 1

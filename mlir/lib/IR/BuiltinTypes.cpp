@@ -445,10 +445,14 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "vector types must have at least one dimension";
 
   if (!isValidElementType(elementType))
-    return emitError() << "vector elements must be int/index/float type";
+    return emitError()
+           << "vector elements must be int/index/float type but got "
+           << elementType;
 
   if (any_of(shape, [](int64_t i) { return i <= 0; }))
-    return emitError() << "vector types must have positive constant sizes";
+    return emitError()
+           << "vector types must have positive constant sizes but got "
+           << shape;
 
   return success();
 }
@@ -773,16 +777,13 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
                                         AffineExpr &offset) {
   auto affineMaps = t.getAffineMaps();
 
+  if (affineMaps.size() > 1)
+    return failure();
+
   if (!affineMaps.empty() && affineMaps.back().getNumResults() != 1)
     return failure();
 
-  AffineMap m;
-  if (!affineMaps.empty()) {
-    m = affineMaps.back();
-    for (size_t i = affineMaps.size() - 1; i > 0; --i)
-      m = m.compose(affineMaps[i - 1]);
-    assert(!m.isIdentity() && "unexpected identity map");
-  }
+  AffineMap m = affineMaps.empty() ? AffineMap() : affineMaps.back();
 
   auto zero = getAffineConstantExpr(0, t.getContext());
   auto one = getAffineConstantExpr(1, t.getContext());
@@ -790,7 +791,7 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   strides.assign(t.getRank(), zero);
 
   // Canonical case for empty map.
-  if (!m) {
+  if (!m || m.isIdentity()) {
     // 0-D corner case, offset is already 0.
     if (t.getRank() == 0)
       return success();

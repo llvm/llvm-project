@@ -442,10 +442,16 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 }
 
 void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
-  // The FP & BP spills haven't been inserted yet, so keep them around.
-  for (auto &R : SGPRToVGPRSpills) {
-    if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex)
+  // Remove dead frame indices from function frame, however keep FP & BP since
+  // spills for them haven't been inserted yet. And also make sure to remove the
+  // frame indices from `SGPRToVGPRSpills` data structure, otherwise, it could
+  // result in an unexpected side effect and bug, in case of any re-mapping of
+  // freed frame indices by later pass(es) like "stack slot coloring".
+  for (auto &R : make_early_inc_range(SGPRToVGPRSpills)) {
+    if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex) {
       MFI.RemoveStackObject(R.first);
+      SGPRToVGPRSpills.erase(R.first);
+    }
   }
 
   // All other SPGRs must be allocated on the default stack, so reset the stack

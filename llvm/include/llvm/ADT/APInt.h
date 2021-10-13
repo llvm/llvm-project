@@ -183,13 +183,11 @@ public:
   static APInt getZeroWidth() { return getZero(0); }
 
   /// Gets maximum unsigned value of APInt for specific bit width.
-  static APInt getMaxValue(unsigned numBits) {
-    return getAllOnesValue(numBits);
-  }
+  static APInt getMaxValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Gets maximum signed value of APInt for a specific bit width.
   static APInt getSignedMaxValue(unsigned numBits) {
-    APInt API = getAllOnesValue(numBits);
+    APInt API = getAllOnes(numBits);
     API.clearBit(numBits - 1);
     return API;
   }
@@ -345,14 +343,12 @@ public:
   /// \returns true if this APInt is non-positive.
   bool isNonPositive() const { return !isStrictlyPositive(); }
 
-  /// Determine if all bits are set.
+  /// Determine if all bits are set.  This is true for zero-width values.
   bool isAllOnes() const {
-    if (isSingleWord()) {
-      // Calculate the shift amount, handling the zero-bit wide case without UB.
-      unsigned ShiftAmt =
-          (APINT_BITS_PER_WORD - BitWidth) % APINT_BITS_PER_WORD;
-      return U.VAL == WORDTYPE_MAX >> ShiftAmt;
-    }
+    if (BitWidth == 0)
+      return true;
+    if (isSingleWord())
+      return U.VAL == WORDTYPE_MAX >> (APINT_BITS_PER_WORD - BitWidth);
     return countTrailingOnesSlowCase() == BitWidth;
   }
 

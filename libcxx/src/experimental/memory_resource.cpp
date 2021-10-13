@@ -76,7 +76,9 @@ union ResourceInitHelper {
   ~ResourceInitHelper() {}
 };
 
+# 79 "memory_resource.cpp" 1 3
 _LIBCPP_SAFE_STATIC ResourceInitHelper res_init _LIBCPP_INIT_PRIORITY_MAX;
+# 81 "memory_resource.cpp" 2
 
 } // end namespace
 

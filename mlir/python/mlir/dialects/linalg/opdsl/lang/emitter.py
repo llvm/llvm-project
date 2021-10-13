@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence, Tuple, Union
 
 from .....ir import *
 from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
@@ -10,6 +10,8 @@ from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
 from .... import linalg
 from .... import std
 from .... import math
+from .... import arith
+from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
 
 from .scalar_expr import *
 from .config import *
@@ -18,8 +20,10 @@ import numpy as np
 __all__ = [
     "emit_generic_structured_op",
     "emit_named_structured_op",
+    "ValueList",
 ]
 
+ValueList = Union[Sequence[Value], OpResultList]
 
 def isa(cls: Type, ty: Type):
   try:
@@ -30,17 +34,18 @@ def isa(cls: Type, ty: Type):
 
 
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
-                                 *ins: Value, outs: Sequence[Value],
+                                 *ins: Value, outs: ValueList,
                                  **attrs: Sequence[int]):
   all_arg_defs = op_config.ordered_operands
   in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "InputOperand"]
   out_arg_defs = [arg for arg in all_arg_defs if arg.usage == "OutputOperand"]
   attr_arg_defs = [arg for arg in all_arg_defs if arg.usage == "IndexAttribute"]
 
-  # Verify outs is a sequence.
-  if not isinstance(outs, Sequence):
-    raise ValueError(f"Expected named argument outs to have type Sequence "
-                     f"but got {type(outs)}")
+  # Verify outs is a sequence or a list of results.
+  if not isinstance(outs, (Sequence, OpResultList)):
+    raise ValueError(
+        f"Expected named argument outs to have type Sequence or OpResultLis but got {type(outs)}"
+    )
 
   # Arity validation.
   if len(ins) != len(in_arg_defs):
@@ -122,7 +127,7 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
-                               outs: Sequence[Value], **attrs: Sequence[int]):
+                               outs: ValueList, **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
   indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
@@ -153,8 +158,8 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
 
 
 def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
-                             op_class_name: str, *ins: Value,
-                             outs: Sequence[Value], **attrs: Sequence[int]):
+                             op_class_name: str, *ins: Value, outs: ValueList,
+                             **attrs: Sequence[int]):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
   indexing_maps_attr, iterator_types_attr, index_attributes, block_arg_types = \
      prepare_common_structured_op(op_config, *ins, outs = outs, **attrs)
@@ -212,10 +217,10 @@ class _BodyBuilder:
                          f"this structured op.")
     elif expr.scalar_const:
       value_attr = Attribute.parse(expr.scalar_const.value)
-      return std.ConstantOp(value_attr.type, value_attr).result
+      return arith.ConstantOp(value_attr.type, value_attr).result
     elif expr.scalar_index:
-      dim_attr = IntegerAttr.get(IntegerType.get_signless(64),
-                                 expr.scalar_index.dim)
+      dim_attr = IntegerAttr.get(
+          IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(IndexType.get(), dim_attr).result
     elif expr.scalar_apply:
       try:
@@ -230,10 +235,12 @@ class _BodyBuilder:
       return fn(*operand_values)
     elif expr.symbolic_cast:
       operand_value = self.expression(expr.symbolic_cast.operand)
-      return self.cast(expr.symbolic_cast.to_type.name, operand_value)
+      return self.cast(expr.symbolic_cast.to_type.name, operand_value,
+                       expr.symbolic_cast.is_unsigned_cast)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
-  def cast(self, type_var_name: str, operand: Value) -> Value:
+  def cast(self, type_var_name: str, operand: Value,
+           is_unsigned_cast: bool) -> Value:
     try:
       to_type = self.type_mapping[type_var_name]
     except KeyError:
@@ -242,37 +249,45 @@ class _BodyBuilder:
     if operand.type == to_type:
       return operand
     if _is_integer_type(to_type):
-      return self._cast_to_integer(to_type, operand)
+      return self._cast_to_integer(to_type, operand, is_unsigned_cast)
     elif _is_floating_point_type(to_type):
-      return self._cast_to_floating_point(to_type, operand)
+      return self._cast_to_floating_point(to_type, operand, is_unsigned_cast)
 
-  def _cast_to_integer(self, to_type: Type, operand: Value) -> Value:
+  def _cast_to_integer(self, to_type: Type, operand: Value,
+                       is_unsigned_cast: bool) -> Value:
     to_width = IntegerType(to_type).width
     operand_type = operand.type
     if _is_floating_point_type(operand_type):
-      return std.FPToSIOp(to_type, operand).result
+      if is_unsigned_cast:
+        return arith.FPToUIOp(to_type, operand).result
+      return arith.FPToSIOp(to_type, operand).result
     if _is_index_type(operand_type):
-      return std.IndexCastOp(to_type, operand).result
+      return arith.IndexCastOp(to_type, operand).result
     # Assume integer.
     from_width = IntegerType(operand_type).width
     if to_width > from_width:
-      return std.SignExtendIOp(to_type, operand).result
+      if is_unsigned_cast:
+        return arith.ExtUIOp(to_type, operand).result
+      return arith.ExtSIOp(to_type, operand).result
     elif to_width < from_width:
-      return std.TruncateIOp(to_type, operand).result
+      return arith.TruncIOp(to_type, operand).result
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
-  def _cast_to_floating_point(self, to_type: Type, operand: Value) -> Value:
+  def _cast_to_floating_point(self, to_type: Type, operand: Value,
+                              is_unsigned_cast: bool) -> Value:
     operand_type = operand.type
     if _is_integer_type(operand_type):
-      return std.SIToFPOp(to_type, operand).result
+      if is_unsigned_cast:
+        return arith.UIToFPOp(to_type, operand).result
+      return arith.SIToFPOp(to_type, operand).result
     # Assume FloatType.
     to_width = _get_floating_point_width(to_type)
     from_width = _get_floating_point_width(operand_type)
     if to_width > from_width:
-      return std.FPExtOp(to_type, operand).result
+      return arith.ExtFOp(to_type, operand).result
     elif to_width < from_width:
-      return std.FPTruncOp(to_type, operand).result
+      return arith.TruncFOp(to_type, operand).result
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
@@ -288,9 +303,9 @@ class _BodyBuilder:
 
   def _eval_add(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.AddFOp(lhs.type, lhs, rhs).result
+      return arith.AddFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.AddIOp(lhs.type, lhs, rhs).result
+      return arith.AddIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operand: {lhs}")
 
   def _eval_exp(self, x: Value) -> Value:
@@ -305,42 +320,52 @@ class _BodyBuilder:
 
   def _eval_sub(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.SubFOp(lhs.type, lhs, rhs).result
+      return arith.SubFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.SubIOp(lhs.type, lhs, rhs).result
+      return arith.SubIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'sub' operand: {lhs}")
 
   def _eval_mul(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MulFOp(lhs.type, lhs, rhs).result
+      return arith.MulFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MulIOp(lhs.type, lhs, rhs).result
+      return arith.MulIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operand: {lhs}")
 
   def _eval_max(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      ogt_attr = IntegerAttr.get(IntegerType.get_signless(64), 2)
-      return _emit_cmpf_and_select(lhs, rhs, ogt_attr)
+      return std.MaxFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      sgt_attr = IntegerAttr.get(IntegerType.get_signless(64), 4)
-      return _emit_cmpi_and_select(lhs, rhs, sgt_attr)
+      return std.MaxSIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'max' operand: {lhs}")
+
+  def _eval_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
+    if _is_floating_point_type(lhs.type):
+      return std.MaxFOp(lhs.type, lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      return std.MaxUIOp(lhs.type, lhs, rhs).result
+    raise NotImplementedError("Unsupported 'max_unsigned' operand: {lhs}")
 
   def _eval_min(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      olt_attr = IntegerAttr.get(IntegerType.get_signless(64), 4)
-      return _emit_cmpf_and_select(lhs, rhs, olt_attr)
+      return std.MinFOp(lhs.type, lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      slt_attr = IntegerAttr.get(IntegerType.get_signless(64), 2)
-      return _emit_cmpi_and_select(lhs, rhs, slt_attr)
+      return std.MinSIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'min' operand: {lhs}")
 
+  def _eval_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
+    if _is_floating_point_type(lhs.type):
+      return std.MinFOp(lhs.type, lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      return std.MinUIOp(lhs.type, lhs, rhs).result
+    raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
 
-def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
-                           in_arg_defs: Sequence[OperandDefConfig],
-                           ins: Sequence[Value],
-                           out_arg_defs: Sequence[OperandDefConfig],
-                           outs: Sequence[Value]):
+
+def _infer_structured_outs(
+    op_config: LinalgStructuredOpConfig,
+    in_arg_defs: Sequence[OperandDefConfig], ins: Sequence[Value],
+    out_arg_defs: Sequence[OperandDefConfig],
+    outs: Union[Sequence[Value], OpResultList]) -> Tuple[ValueList, List[Type]]:
   """Infers implicit outs and output types.
 
   Respects existing contents of outs if not empty.
@@ -413,13 +438,3 @@ def _get_floating_point_width(t: Type) -> int:
   if BF16Type.isinstance(t):
     return 16
   raise NotImplementedError(f"Unhandled floating point type switch {t}")
-
-
-def _emit_cmpf_and_select(lhs: Value, rhs: Value, pred: IntegerAttr) -> Value:
-  cond = std.CmpFOp(IntegerType.get_signless(1), pred, lhs, rhs).result
-  return std.SelectOp(lhs.type, cond, lhs, rhs).result
-
-
-def _emit_cmpi_and_select(lhs: Value, rhs: Value, pred: IntegerAttr) -> Value:
-  cond = std.CmpIOp(IntegerType.get_signless(1), pred, lhs, rhs).result
-  return std.SelectOp(lhs.type, cond, lhs, rhs).result

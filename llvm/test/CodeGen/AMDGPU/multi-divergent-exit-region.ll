@@ -98,7 +98,7 @@
 
 ; GCN: ; %Flow5
 ; GCN-NEXT: s_or_b64            exec, exec,
-; GCN-NEXT; s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
+; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
 
 ; GCN: ; %exit0
 ; GCN:      buffer_store_dword

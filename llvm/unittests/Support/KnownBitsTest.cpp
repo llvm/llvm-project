@@ -166,7 +166,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           KnownMulHU.One &= Res;
           KnownMulHU.Zero &= ~Res;
 
-          if (!N2.isNullValue()) {
+          if (!N2.isZero()) {
             Res = N1.udiv(N2);
             KnownUDiv.One &= Res;
             KnownUDiv.Zero &= ~Res;
@@ -428,6 +428,17 @@ TEST(KnownBitsTest, GetSignedMinMaxVal) {
     });
     EXPECT_EQ(Min, Known.getSignedMinValue());
     EXPECT_EQ(Max, Known.getSignedMaxValue());
+  });
+}
+
+TEST(KnownBitsTest, CountMaxActiveBits) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    unsigned Expected = 0;
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      Expected = std::max(Expected, N.getActiveBits());
+    });
+    EXPECT_EQ(Expected, Known.countMaxActiveBits());
   });
 }
 

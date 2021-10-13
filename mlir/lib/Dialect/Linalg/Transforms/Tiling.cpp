@@ -32,8 +32,8 @@ using namespace mlir::scf;
 #define DEBUG_TYPE "linalg-tiling"
 
 static bool isZero(Value v) {
-  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
-    return cst.getValue() == 0;
+  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cst.value() == 0;
   return false;
 }
 
@@ -71,8 +71,8 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   // Create a new range with the applied tile sizes.
   SmallVector<Range, 4> res;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx)
-    res.push_back(Range{b.create<ConstantIndexOp>(loc, 0), shapeSizes[idx],
-                        tileSizes[idx]});
+    res.push_back(Range{b.create<arith::ConstantIndexOp>(loc, 0),
+                        shapeSizes[idx], tileSizes[idx]});
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
 
@@ -116,8 +116,8 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 //       %i = linalg.index 0 : index
 //       %j = linalg.index 1 : index
 //       // Indices `k` and `l` are implicitly captured in the body.
-//       %transformed_i = addi %i, %k : index // index `i` is offset by %k
-//       %transformed_j = addi %j, %l : index // index `j` is offset by %l
+//       %transformed_i = arith.addi %i, %k : index // index `i` is offset by %k
+//       %transformed_j = arith.addi %j, %l : index // index `j` is offset by %l
 //       // Every use of %i, %j is replaced with %transformed_i, %transformed_j
 //       <some operations that use %transformed_i, %transformed_j>
 //     }: memref<?x?xf32, #strided>, memref<?x?xf32, #strided>
@@ -161,13 +161,6 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
 
   if (llvm::all_of(tileSizes, isZero))
     return llvm::None;
-
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // For conv op only support tiling along batch dimension (which is the first
-    // loop).
-    if (convOp.padding() && !llvm::all_of(tileSizes.drop_front(), isZero))
-      return llvm::None;
-  }
 
   // 1. Build the tiled loop ranges.
   auto allShapeSizes = op.createFlatListOfOperandDims(b, op.getLoc());
@@ -313,7 +306,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   SmallVector<Value, 4> tileSizeVector =
       options.tileSizeComputationFunction(b, op);
   if (tileSizeVector.size() < nLoops) {
-    auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
+    auto zero = b.create<arith::ConstantIndexOp>(op.getLoc(), 0);
     tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
   }
 
@@ -475,16 +468,22 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
   AffineForOp::getCanonicalizationPatterns(patterns, ctx);
   AffineMinOp::getCanonicalizationPatterns(patterns, ctx);
   AffineMaxOp::getCanonicalizationPatterns(patterns, ctx);
+  arith::ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
+
+  memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
+  memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
+
   scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
   scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
-  ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
+
+  tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::InsertSliceOp::getCanonicalizationPatterns(patterns, ctx);
-  memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
-  memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
+
+  InitTensorOp::getCanonicalizationPatterns(patterns, ctx);
   PadTensorOp::getCanonicalizationPatterns(patterns, ctx);
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
+
   CanonicalizationPatternList<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"

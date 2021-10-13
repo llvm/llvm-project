@@ -42,8 +42,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -161,7 +161,7 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
           "Emscripten EH/SjLj does not support multivalue returns: " +
           std::string(F->getName()) + ": " +
           WebAssembly::signatureToString(Sig);
-      report_fatal_error(Msg);
+      report_fatal_error(Twine(Msg));
     }
     WasmSym = cast<MCSymbolWasm>(
         GetExternalSymbolSymbol(getEmscriptenInvokeSymbolName(Sig)));
@@ -234,18 +234,22 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     return WasmSym;
   }
 
+  if (Name.startswith("GCC_except_table")) {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_DATA);
+    return WasmSym;
+  }
+
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
   if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
-    // We can't confirm its signature index for now because there can be
-    // imported exceptions. Set it to be 0 for now.
-    WasmSym->setTagType(
-        {wasm::WASM_TAG_ATTRIBUTE_EXCEPTION, /* SigIndex */ 0});
-    // We may have multiple C++ compilation units to be linked together, each of
-    // which defines the exception symbol. To resolve them, we declare them as
-    // weak.
-    WasmSym->setWeak(true);
+    // In static linking we define tag symbols in WasmException::endModule().
+    // But we may have multiple objects to be linked together, each of which
+    // defines the tag symbols. To resolve them, we declare them as weak. In
+    // dynamic linking we make tag symbols undefined in the backend, define it
+    // in JS, and feed them to each importing module.
+    if (!isPositionIndependent())
+      WasmSym->setWeak(true);
     WasmSym->setExternal(true);
 
     // Currently both C++ exceptions and C longjmps have a single pointer type

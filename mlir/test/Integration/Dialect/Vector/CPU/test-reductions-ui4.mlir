@@ -4,7 +4,8 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %v = std.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xui4>
+  %v0 = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi4>
+  %v = vector.bitcast %v0 : vector<16xi4> to vector<16xui4>
   vector.print %v : vector<16xui4>
   //
   // Test vector:
@@ -19,11 +20,11 @@ func @entry() {
   vector.print %1 : ui4
   // CHECK: 0
 
-  %2 = vector.reduction "min", %v : vector<16xui4> into ui4
+  %2 = vector.reduction "minui", %v : vector<16xui4> into ui4
   vector.print %2 : ui4
   // CHECK: 0
 
-  %3 = vector.reduction "max", %v : vector<16xui4> into ui4
+  %3 = vector.reduction "maxui", %v : vector<16xui4> into ui4
   vector.print %3 : ui4
   // CHECK: 15
 

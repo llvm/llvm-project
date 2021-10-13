@@ -202,23 +202,37 @@ Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
   return llvm::EmitGEPOffset(&Builder, DL, GEP);
 }
 
+/// Legal integers and common types are considered desirable. This is used to
+/// avoid creating instructions with types that may not be supported well by the
+/// the backend.
+/// NOTE: This treats i8, i16 and i32 specially because they are common
+///       types in frontend languages.
+bool InstCombinerImpl::isDesirableIntType(unsigned BitWidth) const {
+  switch (BitWidth) {
+  case 8:
+  case 16:
+  case 32:
+    return true;
+  default:
+    return DL.isLegalInteger(BitWidth);
+  }
+}
+
 /// Return true if it is desirable to convert an integer computation from a
 /// given bit width to a new bit width.
 /// We don't want to convert from a legal to an illegal type or from a smaller
-/// to a larger illegal type. A width of '1' is always treated as a legal type
-/// because i1 is a fundamental type in IR, and there are many specialized
-/// optimizations for i1 types. Widths of 8, 16 or 32 are equally treated as
+/// to a larger illegal type. A width of '1' is always treated as a desirable
+/// type because i1 is a fundamental type in IR, and there are many specialized
+/// optimizations for i1 types. Common/desirable widths are equally treated as
 /// legal to convert to, in order to open up more combining opportunities.
-/// NOTE: this treats i8, i16 and i32 specially, due to them being so common
-/// from frontend languages.
 bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
                                         unsigned ToWidth) const {
   bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
   bool ToLegal = ToWidth == 1 || DL.isLegalInteger(ToWidth);
 
-  // Convert to widths of 8, 16 or 32 even if they are not legal types. Only
-  // shrink types, to prevent infinite loops.
-  if (ToWidth < FromWidth && (ToWidth == 8 || ToWidth == 16 || ToWidth == 32))
+  // Convert to desirable widths even if they are not legal types.
+  // Only shrink types, to prevent infinite loops.
+  if (ToWidth < FromWidth && isDesirableIntType(ToWidth))
     return true;
 
   // If this is a legal integer from type, and the result would be an illegal
@@ -962,14 +976,14 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
            "Expected constant-foldable intrinsic");
     Intrinsic::ID IID = II->getIntrinsicID();
-    if (II->getNumArgOperands() == 1)
+    if (II->arg_size() == 1)
       return Builder.CreateUnaryIntrinsic(IID, SO);
 
     // This works for real binary ops like min/max (where we always expect the
     // constant operand to be canonicalized as op1) and unary ops with a bonus
     // constant argument like ctlz/cttz.
     // TODO: Handle non-commutative binary intrinsics as below for binops.
-    assert(II->getNumArgOperands() == 2 && "Expected binary intrinsic");
+    assert(II->arg_size() == 2 && "Expected binary intrinsic");
     assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
     return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
@@ -1059,7 +1073,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op,
         // Compare for equality including undefs as equal.
         auto *Cmp = ConstantExpr::getCompare(ICmpInst::ICMP_EQ, ConstA, ConstB);
         const APInt *C;
-        return match(Cmp, m_APIntAllowUndef(C)) && C->isOneValue();
+        return match(Cmp, m_APIntAllowUndef(C)) && C->isOne();
       };
 
       if ((areLooselyEqual(TV, Op0) && areLooselyEqual(FV, Op1)) ||
@@ -2911,7 +2925,7 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
 
   auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
     auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
-      return isa<DbgInfoIntrinsic>(BBI) ||
+      return BBI->isDebugOrPseudoInst() ||
              (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
     };
 
@@ -3530,8 +3544,14 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // While we could change the other users of OrigOp to use freeze(OrigOp), that
   // potentially reduces their optimization potential, so let's only do this iff
   // the OrigOp is only used by the freeze.
-  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp) ||
-      canCreateUndefOrPoison(dyn_cast<Operator>(OrigOp)))
+  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp))
+    return nullptr;
+
+  // We can't push the freeze through an instruction which can itself create
+  // poison.  If the only source of new poison is flags, we can simply
+  // strip them (since we know the only use is the freeze and nothing can
+  // benefit from them.)
+  if (canCreateUndefOrPoison(cast<Operator>(OrigOp), /*ConsiderFlags*/ false))
     return nullptr;
 
   // If operand is guaranteed not to be poison, there is no need to add freeze
@@ -3546,6 +3566,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     else
       return nullptr;
   }
+
+  OrigOpInst->dropPoisonGeneratingFlags();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
   if (!MaybePoisonOperand)

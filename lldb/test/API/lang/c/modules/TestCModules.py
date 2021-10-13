@@ -44,8 +44,6 @@ class CModulesTestCase(TestBase):
 
         # Enable logging of the imported AST.
         log_file = self.getBuildArtifact("lldb-ast-log.txt")
-        if configuration.is_reproducer_replay():
-            log_file = self.getReproducerRemappedPath(log_file)
         self.runCmd("log enable lldb ast -f '%s'" % log_file)
 
         self.expect(

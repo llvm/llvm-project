@@ -11,16 +11,58 @@
 
 #include "sanitizer_chained_origin_depot.h"
 
+#include "sanitizer_persistent_allocator.h"
+#include "sanitizer_stackdepotbase.h"
+
 namespace __sanitizer {
 
-bool ChainedOriginDepot::ChainedOriginDepotNode::eq(
-    u32 hash, const args_type &args) const {
-  return here_id == args.here_id && prev_id == args.prev_id;
-}
+namespace {
+struct ChainedOriginDepotDesc {
+  u32 here_id;
+  u32 prev_id;
+};
 
-uptr ChainedOriginDepot::ChainedOriginDepotNode::storage_size(
-    const args_type &args) {
-  return sizeof(ChainedOriginDepotNode);
+struct ChainedOriginDepotNode {
+  using hash_type = u32;
+  u32 link;
+  u32 here_id;
+  u32 prev_id;
+
+  typedef ChainedOriginDepotDesc args_type;
+
+  bool eq(hash_type hash, const args_type &args) const;
+
+  static uptr allocated() { return 0; }
+
+  static hash_type hash(const args_type &args);
+
+  static bool is_valid(const args_type &args);
+
+  void store(const args_type &args, hash_type other_hash);
+
+  args_type load() const;
+
+  struct Handle {
+    const ChainedOriginDepotNode *node_ = nullptr;
+    u32 id_ = 0;
+    Handle(const ChainedOriginDepotNode *node, u32 id) : node_(node), id_(id) {}
+    bool valid() const { return node_; }
+    u32 id() const { return id_; }
+    int here_id() const { return node_->here_id; }
+    int prev_id() const { return node_->prev_id; }
+  };
+
+  static Handle get_handle(u32 id);
+
+  typedef Handle handle_type;
+};
+
+}  // namespace
+
+static StackDepotBase<ChainedOriginDepotNode, 4, 20> depot;
+
+bool ChainedOriginDepotNode::eq(hash_type hash, const args_type &args) const {
+  return here_id == args.here_id && prev_id == args.prev_id;
 }
 
 /* This is murmur2 hash for the 64->32 bit case.
@@ -36,7 +78,8 @@ uptr ChainedOriginDepot::ChainedOriginDepotNode::storage_size(
    split, or one of two reserved values (-1) or (-2). Either case can
    dominate depending on the workload.
 */
-u32 ChainedOriginDepot::ChainedOriginDepotNode::hash(const args_type &args) {
+ChainedOriginDepotNode::hash_type ChainedOriginDepotNode::hash(
+    const args_type &args) {
   const u32 m = 0x5bd1e995;
   const u32 seed = 0x9747b28c;
   const u32 r = 24;
@@ -61,37 +104,33 @@ u32 ChainedOriginDepot::ChainedOriginDepotNode::hash(const args_type &args) {
   return h;
 }
 
-bool ChainedOriginDepot::ChainedOriginDepotNode::is_valid(
-    const args_type &args) {
-  return true;
-}
+bool ChainedOriginDepotNode::is_valid(const args_type &args) { return true; }
 
-void ChainedOriginDepot::ChainedOriginDepotNode::store(const args_type &args,
-                                                       u32 other_hash) {
+void ChainedOriginDepotNode::store(const args_type &args,
+                                   hash_type other_hash) {
   here_id = args.here_id;
   prev_id = args.prev_id;
 }
 
-ChainedOriginDepot::ChainedOriginDepotNode::args_type
-ChainedOriginDepot::ChainedOriginDepotNode::load() const {
+ChainedOriginDepotNode::args_type ChainedOriginDepotNode::load() const {
   args_type ret = {here_id, prev_id};
   return ret;
 }
 
-ChainedOriginDepot::ChainedOriginDepotNode::Handle
-ChainedOriginDepot::ChainedOriginDepotNode::get_handle() {
-  return Handle(this);
+ChainedOriginDepotNode::Handle ChainedOriginDepotNode::get_handle(u32 id) {
+  return Handle(&depot.nodes[id], id);
 }
 
 ChainedOriginDepot::ChainedOriginDepot() {}
 
-StackDepotStats *ChainedOriginDepot::GetStats() { return depot.GetStats(); }
+StackDepotStats ChainedOriginDepot::GetStats() const {
+  return depot.GetStats();
+}
 
 bool ChainedOriginDepot::Put(u32 here_id, u32 prev_id, u32 *new_id) {
   ChainedOriginDepotDesc desc = {here_id, prev_id};
   bool inserted;
-  ChainedOriginDepotNode::Handle h = depot.Put(desc, &inserted);
-  *new_id = h.valid() ? h.id() : 0;
+  *new_id = depot.Put(desc, &inserted);
   return inserted;
 }
 

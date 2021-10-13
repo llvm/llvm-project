@@ -170,10 +170,14 @@ void ImportSection::addImport(Symbol *sym) {
       g->setGlobalIndex(entry.first->second);
     }
   } else if (auto *t = dyn_cast<TagSymbol>(sym)) {
-    // NB: There's currently only one possible kind of tag, and no
-    // `UndefinedTag`, so we don't bother de-duplicating tag imports.
-    importedSymbols.emplace_back(sym);
-    t->setTagIndex(numImportedTags++);
+    ImportKey<WasmSignature> key(*(t->getSignature()), module, name);
+    auto entry = importedTags.try_emplace(key, numImportedTags);
+    if (entry.second) {
+      importedSymbols.emplace_back(sym);
+      t->setTagIndex(numImportedTags++);
+    } else {
+      t->setTagIndex(entry.first->second);
+    }
   } else {
     assert(TableSymbol::classof(sym));
     auto *table = cast<TableSymbol>(sym);
@@ -226,8 +230,7 @@ void ImportSection::writeBody() {
       import.Global = *globalSym->getGlobalType();
     } else if (auto *tagSym = dyn_cast<TagSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_TAG;
-      import.Tag.Attribute = tagSym->getTagType()->Attribute;
-      import.Tag.SigIndex = out.typeSec->lookupType(*tagSym->signature);
+      import.SigIndex = out.typeSec->lookupType(*tagSym->signature);
     } else {
       auto *tableSym = cast<TableSymbol>(sym);
       import.Kind = WASM_EXTERNAL_TABLE;
@@ -332,9 +335,8 @@ void TagSection::writeBody() {
 
   writeUleb128(os, inputTags.size(), "tag count");
   for (InputTag *t : inputTags) {
-    WasmTagType type = t->getType();
-    type.SigIndex = out.typeSec->lookupType(t->signature);
-    writeTagType(os, type);
+    writeUleb128(os, 0, "tag attribute"); // Reserved "attribute" field
+    writeUleb128(os, out.typeSec->lookupType(t->signature), "sig index");
   }
 }
 

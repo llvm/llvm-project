@@ -148,7 +148,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   Function *I =
       Intrinsic::getDeclaration(II.getModule(), II.getIntrinsicID(), ArgTys);
 
-  SmallVector<Value *, 8> Args(II.arg_operands());
+  SmallVector<Value *, 8> Args(II.args());
 
   unsigned EndIndex =
       OnlyDerivatives ? ImageDimIntr->CoordStart : ImageDimIntr->VAddrEnd;

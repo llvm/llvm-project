@@ -28,6 +28,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -81,6 +82,7 @@ static cl::opt<bool> EnableNonTrivialUnswitch(
 
 static cl::opt<int>
     UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
+                      cl::ZeroOrMore,
                       cl::desc("The cost threshold for unswitching a loop."));
 
 static cl::opt<bool> EnableUnswitchCostMultiplier(
@@ -108,6 +110,10 @@ static cl::opt<unsigned>
                   cl::desc("Max number of memory uses to explore during "
                            "partial unswitching analysis"),
                   cl::init(100), cl::Hidden);
+static cl::opt<bool> FreezeLoopUnswitchCond(
+    "freeze-loop-unswitch-cond", cl::init(false), cl::Hidden,
+    cl::desc("If enabled, the freeze instruction will be added to condition "
+             "of loop unswitch to prevent miscompilation."));
 
 /// Collect all of the loop invariant input values transitively used by the
 /// homogeneous instruction graph from a given root.
@@ -195,15 +201,15 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 /// Copy a set of loop invariant values \p ToDuplicate and insert them at the
 /// end of \p BB and conditionally branch on the copied condition. We only
 /// branch on a single value.
-static void buildPartialUnswitchConditionalBranch(BasicBlock &BB,
-                                                  ArrayRef<Value *> Invariants,
-                                                  bool Direction,
-                                                  BasicBlock &UnswitchedSucc,
-                                                  BasicBlock &NormalSucc) {
+static void buildPartialUnswitchConditionalBranch(
+    BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
+    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze) {
   IRBuilder<> IRB(&BB);
 
   Value *Cond = Direction ? IRB.CreateOr(Invariants) :
     IRB.CreateAnd(Invariants);
+  if (InsertFreeze)
+    Cond = IRB.CreateFreeze(Cond, Cond->getName() + ".fr");
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
 }
@@ -564,7 +570,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
     buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
-                                          *UnswitchedBB, *NewPH);
+                                          *UnswitchedBB, *NewPH, false);
   }
 
   // Update the dominator tree with the added edge.
@@ -2123,6 +2129,13 @@ static void unswitchNontrivialInvariants(
       SE->forgetTopmostLoop(&L);
   }
 
+  bool InsertFreeze = false;
+  if (FreezeLoopUnswitchCond) {
+    ICFLoopSafetyInfo SafetyInfo;
+    SafetyInfo.computeLoopSafetyInfo(&L);
+    InsertFreeze = !SafetyInfo.isGuaranteedToExecute(TI, &DT, &L);
+  }
+
   // If the edge from this terminator to a successor dominates that successor,
   // store a map from each block in its dominator subtree to it. This lets us
   // tell when cloning for a particular successor if a block is dominated by
@@ -2197,6 +2210,11 @@ static void unswitchNontrivialInvariants(
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
+      if (InsertFreeze) {
+        auto Cond = BI->getCondition();
+        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, BI, &DT))
+          BI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", BI));
+      }
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
       assert(SI && "Must either be a branch or switch!");
@@ -2211,6 +2229,11 @@ static void unswitchNontrivialInvariants(
         else
           Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
 
+      if (InsertFreeze) {
+        auto Cond = SI->getCondition();
+        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, SI, &DT))
+          SI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", SI));
+      }
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to
       // remove and insert one edge in the domtree.
@@ -2291,7 +2314,7 @@ static void unswitchNontrivialInvariants(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
     else
       buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
-                                            *ClonedPH, *LoopPH);
+                                            *ClonedPH, *LoopPH, InsertFreeze);
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
     if (MSSAU) {
@@ -2370,7 +2393,9 @@ static void unswitchNontrivialInvariants(
     ConstantInt *ContinueReplacement =
         Direction ? ConstantInt::getFalse(BI->getContext())
                   : ConstantInt::getTrue(BI->getContext());
-    for (Value *Invariant : Invariants)
+    for (Value *Invariant : Invariants) {
+      assert(!isa<Constant>(Invariant) &&
+             "Should not be replacing constant values!");
       // Use make_early_inc_range here as set invalidates the iterator.
       for (Use &U : llvm::make_early_inc_range(Invariant->uses())) {
         Instruction *UserI = dyn_cast<Instruction>(U.getUser());
@@ -2385,6 +2410,7 @@ static void unswitchNontrivialInvariants(
                  DT.dominates(ClonedPH, UserI->getParent()))
           U.set(UnswitchedReplacement);
       }
+    }
   }
 
   // We can change which blocks are exit blocks of all the cloned sibling
@@ -2726,6 +2752,9 @@ static bool unswitchBestCondition(
     while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
       Cond = CondNext;
     BI->setCondition(Cond);
+
+    if (isa<Constant>(Cond))
+      continue;
 
     if (L.isLoopInvariant(BI->getCondition())) {
       UnswitchCandidates.push_back({BI, {BI->getCondition()}});

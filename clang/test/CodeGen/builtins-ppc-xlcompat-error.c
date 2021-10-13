@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -fsyntax-only \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -fsyntax-only \
 // RUN:   -Wall -Werror -verify %s
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -fsyntax-only \
 // RUN:   -Wall -Werror -verify %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -fsyntax-only \
 // RUN:   -Wall -Werror -verify %s
@@ -103,6 +103,25 @@ int test_darn() {
 
 int test_darn_raw() {
   return __darn_raw(); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+int test_builtin_ppc_compare_and_swaplp(long a, long b, long c) {
+  return __compare_and_swaplp(&a, &b, c); // expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+void test_builtin_ppc_fetch_and_addlp(long a, long b) {
+  __fetch_and_addlp(&a, b); // expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+void test_builtin_ppc_fetch_and_andlp(unsigned long a, unsigned long b) {
+  __fetch_and_andlp(&a, b); // expected-error {{this builtin is only available on 64-bit targets}}
+}
+void test_builtin_ppc_fetch_and_orlp(unsigned long a, unsigned long b) {
+  __fetch_and_orlp(&a, b); // expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+void test_builtin_ppc_fetch_and_swaplp(unsigned long a, unsigned long b) {
+  __fetch_and_swaplp(&a, b); // expected-error {{this builtin is only available on 64-bit targets}}
 }
 #endif
 

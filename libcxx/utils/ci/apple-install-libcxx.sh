@@ -112,16 +112,17 @@ for arch in ${architectures}; do
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
     mkdir -p "${build_dir}/${arch}"
     (cd "${build_dir}/${arch}" &&
-        xcrun --sdk "${sdk}" cmake "${llvm_root}/libcxx/utils/ci/runtimes" \
+        xcrun --sdk "${sdk}" cmake "${llvm_root}/runtimes" \
             -GNinja \
             -DCMAKE_MAKE_PROGRAM="$(xcrun --sdk "${sdk}" --find ninja)" \
-            -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
             -C "${llvm_root}/libcxx/cmake/caches/Apple.cmake" \
             -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
             -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
             -DCMAKE_OSX_ARCHITECTURES="${arch}" \
             -DLIBCXXABI_LIBRARY_VERSION="${version}" \
-            -DLIBCXX_INCLUDE_BENCHMARKS=OFF
+            -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
+            -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
     )
 
     xcrun --sdk "${sdk}" cmake --build "${build_dir}/${arch}" --target install-cxx install-cxxabi -- -v

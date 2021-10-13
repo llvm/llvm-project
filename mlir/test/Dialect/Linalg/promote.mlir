@@ -9,11 +9,11 @@
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
 func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %3 = memref.view %A[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
   %4 = memref.view %A[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %5 = memref.view %A[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
@@ -82,11 +82,11 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 // -----
 
 func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %3 = memref.view %A[%c0][%M, %K] : memref<?xi8> to memref<?x?xf64>
   %4 = memref.view %A[%c0][%K, %N] : memref<?xi8> to memref<?x?xf64>
   %5 = memref.view %A[%c0][%M, %N] : memref<?xi8> to memref<?x?xf64>

@@ -16,7 +16,7 @@
 // This test should be left as is, as it also tests CFG functionality.
 void radar9171946() {
   if (0) {
-    0 / (0 ? 1 : 0); // expected-warning {{expression result unused}}
+    0 / (0 ? 1 : 0); // no-warning
   }
 }
 

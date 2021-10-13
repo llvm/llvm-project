@@ -56,7 +56,7 @@ public:
         "<DSOHandleMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
-        G->createSection(".data.__dso_handle", sys::Memory::MF_READ);
+        G->createSection(".data.__dso_handle", jitlink::MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
         DSOHandleSection, getDSOHandleContent(PointerSize), 0, 8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(
@@ -194,7 +194,8 @@ SymbolAliasMap ELFNixPlatform::standardPlatformAliases(ExecutionSession &ES) {
 ArrayRef<std::pair<const char *, const char *>>
 ELFNixPlatform::requiredCXXAliases() {
   static const std::pair<const char *, const char *> RequiredCXXAliases[] = {
-      {"__cxa_atexit", "__orc_rt_elfnix_cxa_atexit"}};
+      {"__cxa_atexit", "__orc_rt_elfnix_cxa_atexit"},
+      {"atexit", "__orc_rt_elfnix_atexit"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(RequiredCXXAliases);
 }
@@ -474,7 +475,13 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
     KV.second->setValue((*RuntimeSymbolAddrs)[Name].getAddress());
   }
 
-  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_elfnix_platform_bootstrap))
+  auto PJDDSOHandle = ES.lookup(
+      {{&PlatformJD, JITDylibLookupFlags::MatchAllSymbols}}, DSOHandleSymbol);
+  if (!PJDDSOHandle)
+    return PJDDSOHandle.takeError();
+
+  if (auto Err = ES.callSPSWrapper<void(uint64_t)>(
+          orc_rt_elfnix_platform_bootstrap, PJDDSOHandle->getAddress()))
     return Err;
 
   // FIXME: Ordering is fuzzy here. We're probably best off saying

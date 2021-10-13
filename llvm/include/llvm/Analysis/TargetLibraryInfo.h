@@ -76,7 +76,7 @@ class TargetLibraryInfoImpl {
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
-                              const DataLayout *DL) const;
+                              const Module &M) const;
 
 public:
   /// List of known vector-functions libraries.
@@ -115,6 +115,8 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
+  ///
+  /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.

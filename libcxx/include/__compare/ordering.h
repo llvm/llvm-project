@@ -21,16 +21,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 
 // exposition only
-enum class _LIBCPP_ENUM_VIS _EqResult : unsigned char {
-  __zero = 0,
-  __equal = __zero,
-  __equiv = __equal,
-  __nonequal = 1,
-  __nonequiv = __nonequal
-};
-
 enum class _LIBCPP_ENUM_VIS _OrdResult : signed char {
   __less = -1,
+  __equiv = 0,
   __greater = 1
 };
 
@@ -55,10 +48,6 @@ struct _CmpUnspecifiedParam {
 
 class partial_ordering {
   using _ValueT = signed char;
-
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr partial_ordering(_EqResult __v) noexcept
-      : __value_(_ValueT(__v)) {}
 
   _LIBCPP_HIDE_FROM_ABI
   explicit constexpr partial_ordering(_OrdResult __v) noexcept
@@ -142,15 +131,13 @@ private:
 };
 
 inline constexpr partial_ordering partial_ordering::less(_OrdResult::__less);
-inline constexpr partial_ordering partial_ordering::equivalent(_EqResult::__equiv);
+inline constexpr partial_ordering partial_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr partial_ordering partial_ordering::greater(_OrdResult::__greater);
 inline constexpr partial_ordering partial_ordering::unordered(_NCmpResult ::__unordered);
 
 class weak_ordering {
   using _ValueT = signed char;
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr weak_ordering(_EqResult __v) noexcept : __value_(_ValueT(__v)) {}
   _LIBCPP_HIDE_FROM_ABI
   explicit constexpr weak_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
@@ -229,14 +216,12 @@ private:
 };
 
 inline constexpr weak_ordering weak_ordering::less(_OrdResult::__less);
-inline constexpr weak_ordering weak_ordering::equivalent(_EqResult::__equiv);
+inline constexpr weak_ordering weak_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr weak_ordering weak_ordering::greater(_OrdResult::__greater);
 
 class strong_ordering {
   using _ValueT = signed char;
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit constexpr strong_ordering(_EqResult __v) noexcept : __value_(_ValueT(__v)) {}
   _LIBCPP_HIDE_FROM_ABI
   explicit constexpr strong_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
@@ -323,22 +308,9 @@ private:
 };
 
 inline constexpr strong_ordering strong_ordering::less(_OrdResult::__less);
-inline constexpr strong_ordering strong_ordering::equal(_EqResult::__equal);
-inline constexpr strong_ordering strong_ordering::equivalent(_EqResult::__equiv);
+inline constexpr strong_ordering strong_ordering::equal(_OrdResult::__equiv);
+inline constexpr strong_ordering strong_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr strong_ordering strong_ordering::greater(_OrdResult::__greater);
-
-// named comparison functions
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_lt(partial_ordering __cmp) noexcept { return __cmp < 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_lteq(partial_ordering __cmp) noexcept { return __cmp <= 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_gt(partial_ordering __cmp) noexcept { return __cmp > 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_gteq(partial_ordering __cmp) noexcept { return __cmp >= 0; }
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 

@@ -381,10 +381,58 @@ static inline int getEnv(fenv_t *envp) {
 }
 
 static inline int setEnv(const fenv_t *envp) {
-  const internal::FPState *state =
+  // envp contains everything including pieces like the current
+  // top of FPU stack. We cannot arbitrarily change them. So, we first
+  // read the current status and update only those pieces which are
+  // not disruptive.
+  internal::X87StateDescriptor x87Status;
+  internal::getX87StateDescriptor(x87Status);
+
+  if (envp == FE_DFL_ENV) {
+    // Reset the exception flags in the status word.
+    x87Status.StatusWord &= ~uint16_t(0x3F);
+    // Reset other non-sensitive parts of the status word.
+    for (int i = 0; i < 5; i++)
+      x87Status._[i] = 0;
+    // In the control word, we do the following:
+    // 1. Mask all exceptions
+    // 2. Set rounding mode to round-to-nearest
+    // 3. Set the internal precision to double extended precision.
+    x87Status.ControlWord |= uint16_t(0x3F);         // Mask all exceptions.
+    x87Status.ControlWord &= ~(uint16_t(0x3) << 10); // Round to nearest.
+    x87Status.ControlWord |= (uint16_t(0x3) << 8);   // Extended precision.
+    internal::writeX87StateDescriptor(x87Status);
+
+    // We take the exact same approach MXCSR register as well.
+    // MXCSR has two additional fields, "flush-to-zero" and
+    // "denormals-are-zero". We reset those bits. Also, MXCSR does not
+    // have a field which controls the precision of internal operations.
+    uint32_t mxcsr = internal::getMXCSR();
+    mxcsr &= ~uint16_t(0x3F);        // Clear exception flags.
+    mxcsr &= ~(uint16_t(0x1) << 6);  // Reset denormals-are-zero
+    mxcsr |= (uint16_t(0x3F) << 7);  // Mask exceptions
+    mxcsr &= ~(uint16_t(0x3) << 13); // Round to nearest.
+    mxcsr &= ~(uint16_t(0x1) << 15); // Reset flush-to-zero
+    internal::writeMXCSR(mxcsr);
+
+    return 0;
+  }
+
+  const internal::FPState *fpstate =
       reinterpret_cast<const internal::FPState *>(envp);
-  internal::writeX87StateDescriptor(state->X87Status);
-  internal::writeMXCSR(state->MXCSR);
+
+  // Copy the exception status flags from envp.
+  x87Status.StatusWord &= ~uint16_t(0x3F);
+  x87Status.StatusWord |= (fpstate->X87Status.StatusWord & 0x3F);
+  // Copy other non-sensitive parts of the status word.
+  for (int i = 0; i < 5; i++)
+    x87Status._[i] = fpstate->X87Status._[i];
+  // We can set the x87 control word as is as there no sensitive bits.
+  x87Status.ControlWord = fpstate->X87Status.ControlWord;
+  internal::writeX87StateDescriptor(x87Status);
+
+  // We can write the MXCSR state as is as there are no sensitive bits.
+  internal::writeMXCSR(fpstate->MXCSR);
   return 0;
 }
 #endif

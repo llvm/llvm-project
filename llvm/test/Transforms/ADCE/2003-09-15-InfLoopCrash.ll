@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -disable-output
-; RUN: opt < %s -adce -adce-remove-loops -disable-output
+; RUN: opt < %s -passes=adce -disable-output
+; RUN: opt < %s -passes=adce -adce-remove-loops -disable-output
 
 define i32 @main() {
         br label %loop

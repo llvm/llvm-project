@@ -345,7 +345,7 @@ void APInt::flipAllBitsSlowCase() {
 /// In the slow case, we know the result is large.
 APInt APInt::concatSlowCase(const APInt &NewLSB) const {
   unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
-  APInt Result = NewLSB.zext(NewWidth);
+  APInt Result = NewLSB.zextOrSelf(NewWidth);
   Result.insertBits(*this, NewLSB.getBitWidth());
   return Result;
 }
@@ -360,8 +360,11 @@ void APInt::flipBit(unsigned bitPosition) {
 
 void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   unsigned subBitWidth = subBits.getBitWidth();
-  assert(0 < subBitWidth && (subBitWidth + bitPosition) <= BitWidth &&
-         "Illegal bit insertion");
+  assert((subBitWidth + bitPosition) <= BitWidth && "Illegal bit insertion");
+
+  // inserting no bits is a noop.
+  if (subBitWidth == 0)
+    return;
 
   // Insertion is a direct copy.
   if (subBitWidth == BitWidth) {
@@ -441,7 +444,6 @@ void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits)
 }
 
 APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
-  assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
          "Illegal bit extraction");
 
@@ -1943,7 +1945,7 @@ APInt APInt::usub_ov(const APInt &RHS, bool &Overflow) const {
 
 APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
   // MININT/-1  -->  overflow.
-  Overflow = isMinSignedValue() && RHS.isAllOnesValue();
+  Overflow = isMinSignedValue() && RHS.isAllOnes();
   return sdiv(RHS);
 }
 
@@ -2970,10 +2972,10 @@ APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth) {
   if (OldBitWidth == NewBitWidth)
     return A;
 
-  APInt NewA = APInt::getNullValue(NewBitWidth);
+  APInt NewA = APInt::getZero(NewBitWidth);
 
   // Check for null input.
-  if (A.isNullValue())
+  if (A.isZero())
     return NewA;
 
   if (NewBitWidth > OldBitWidth) {
@@ -2986,7 +2988,7 @@ APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth) {
     // Merge bits - if any old bit is set, then set scale equivalent new bit.
     unsigned Scale = OldBitWidth / NewBitWidth;
     for (unsigned i = 0; i != NewBitWidth; ++i)
-      if (!A.extractBits(Scale, i * Scale).isNullValue())
+      if (!A.extractBits(Scale, i * Scale).isZero())
         NewA.setBit(i);
   }
 

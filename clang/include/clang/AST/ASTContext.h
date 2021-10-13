@@ -102,6 +102,7 @@ class ParentMapContext;
 class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
+enum class FloatModeKind;
 class GlobalDecl;
 class ItaniumMangleContext;
 class MangleContext;
@@ -750,7 +751,8 @@ public:
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
-  QualType getRealTypeForBitwidth(unsigned DestWidth, bool ExplicitIEEE) const;
+  QualType getRealTypeForBitwidth(unsigned DestWidth,
+                                  FloatModeKind ExplicitType) const;
 
   bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
 
@@ -1091,8 +1093,6 @@ public:
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
-  CanQualType FloatComplexTy, DoubleComplexTy, LongDoubleComplexTy;
-  CanQualType Float128ComplexTy;
   CanQualType VoidPtrTy, NullPtrTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -2535,8 +2535,10 @@ public:
   bool ObjCMethodsAreEqual(const ObjCMethodDecl *MethodDecl,
                            const ObjCMethodDecl *MethodImp);
 
-  bool UnwrapSimilarTypes(QualType &T1, QualType &T2);
-  void UnwrapSimilarArrayTypes(QualType &T1, QualType &T2);
+  bool UnwrapSimilarTypes(QualType &T1, QualType &T2,
+                          bool AllowPiMismatch = true);
+  void UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
+                               bool AllowPiMismatch = true);
 
   /// Determine if two types are similar, according to the C++ rules. That is,
   /// determine if they are the same other than qualifiers on the initial
@@ -3239,31 +3241,10 @@ public:
 
   StringRef getCUIDHash() const;
 
-  void AddSYCLKernelNamingDecl(const CXXRecordDecl *RD);
-  bool IsSYCLKernelNamingDecl(const NamedDecl *RD) const;
-  unsigned GetSYCLKernelNamingIndex(const NamedDecl *RD);
-  /// A SourceLocation to store whether we have evaluated a kernel name already,
-  /// and where it happened.  If so, we need to diagnose an illegal use of the
-  /// builtin.
-  llvm::MapVector<const SYCLUniqueStableNameExpr *, std::string>
-      SYCLUniqueStableNameEvaluatedValues;
-
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
-
-  /// A list of the (right now just lambda decls) declarations required to
-  /// name all the SYCL kernels in the translation unit, so that we can get the
-  /// correct kernel name, as well as implement
-  /// __builtin_sycl_unique_stable_name.
-  llvm::DenseMap<const DeclContext *,
-                 llvm::SmallPtrSet<const CXXRecordDecl *, 4>>
-      SYCLKernelNamingTypes;
-  std::unique_ptr<ItaniumMangleContext> SYCLKernelFilterContext;
-  void FilterSYCLKernelNamingDecls(
-      const CXXRecordDecl *RD,
-      llvm::SmallVectorImpl<const CXXRecordDecl *> &Decls);
 };
 
 /// Insertion operator for diagnostics.

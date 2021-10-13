@@ -172,6 +172,9 @@ class HeaderSearch {
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
 
+  /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
+  llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
+
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
 
@@ -182,6 +185,9 @@ class HeaderSearch {
   /// NoCurDirSearch is true, then the check for the file in the current
   /// directory is suppressed.
   std::vector<DirectoryLookup> SearchDirs;
+  /// Whether the DirectoryLookup at the corresponding index in SearchDirs has
+  /// been successfully used to lookup a file.
+  std::vector<bool> SearchDirsUsage;
   unsigned AngledDirIdx = 0;
   unsigned SystemDirIdx = 0;
   bool NoCurDirSearch = false;
@@ -280,15 +286,17 @@ public:
   DiagnosticsEngine &getDiags() const { return Diags; }
 
   /// Interface for setting the file search paths.
-  void SetSearchPaths(const std::vector<DirectoryLookup> &dirs,
-                      unsigned angledDirIdx, unsigned systemDirIdx,
-                      bool noCurDirSearch) {
+  void SetSearchPaths(std::vector<DirectoryLookup> dirs, unsigned angledDirIdx,
+                      unsigned systemDirIdx, bool noCurDirSearch,
+                      llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry) {
     assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
         "Directory indices are unordered");
-    SearchDirs = dirs;
+    SearchDirs = std::move(dirs);
+    SearchDirsUsage.assign(SearchDirs.size(), false);
     AngledDirIdx = angledDirIdx;
     SystemDirIdx = systemDirIdx;
     NoCurDirSearch = noCurDirSearch;
+    SearchDirToHSEntry = std::move(searchDirToHSEntry);
     //LookupFileCache.clear();
   }
 
@@ -296,6 +304,7 @@ public:
   void AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
     unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
     SearchDirs.insert(SearchDirs.begin() + idx, dir);
+    SearchDirsUsage.insert(SearchDirsUsage.begin() + idx, false);
     if (!isAngled)
       AngledDirIdx++;
     SystemDirIdx++;
@@ -505,6 +514,10 @@ public:
     return FI && FI->isImport;
   }
 
+  /// Determine which HeaderSearchOptions::UserEntries have been successfully
+  /// used so far and mark their index with 'true' in the resulting bit vector.
+  std::vector<bool> computeUserEntryUsage() const;
+
   /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
@@ -560,6 +573,8 @@ public:
   ///
   /// \param ModuleName The name of the module we're looking for.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowSearch Whether we are allowed to search in the various
   /// search directories to produce a module definition. If not, this lookup
   /// will only return an already-known module.
@@ -568,7 +583,9 @@ public:
   /// in subdirectories.
   ///
   /// \returns The module with the given name.
-  Module *lookupModule(StringRef ModuleName, bool AllowSearch = true,
+  Module *lookupModule(StringRef ModuleName,
+                       SourceLocation ImportLoc = SourceLocation(),
+                       bool AllowSearch = true,
                        bool AllowExtraModuleMapSearch = false);
 
   /// Try to find a module map file in the given directory, returning
@@ -638,11 +655,14 @@ private:
   /// but for compatibility with some buggy frameworks, additional attempts
   /// may be made to find the module under a related-but-different search-name.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
   /// \returns The module named ModuleName.
   Module *lookupModule(StringRef ModuleName, StringRef SearchName,
+                       SourceLocation ImportLoc,
                        bool AllowExtraModuleMapSearch = false);
 
   /// Retrieve the name of the (to-be-)cached module file that should
@@ -707,6 +727,14 @@ private:
                           Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule);
 
+  /// Cache the result of a successful lookup at the given include location
+  /// using the search path at index `HitIdx`.
+  void cacheLookupSuccess(LookupFileCacheInfo &CacheLookup, unsigned HitIdx,
+                          SourceLocation IncludeLoc);
+  /// Note that a lookup at the given include location was successful using the
+  /// search path at index `HitIdx`.
+  void noteLookupUsage(unsigned HitIdx, SourceLocation IncludeLoc);
+
 public:
   /// Retrieve the module map.
   ModuleMap &getModuleMap() { return ModMap; }
@@ -755,6 +783,9 @@ public:
   }
 
   search_dir_iterator system_dir_end() const { return SearchDirs.end(); }
+
+  /// Get the index of the given search directory.
+  Optional<unsigned> searchDirIdx(const DirectoryLookup &DL) const;
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);

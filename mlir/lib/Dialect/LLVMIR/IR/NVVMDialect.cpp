@@ -64,7 +64,7 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
     break;
   }
 
-  auto int32Ty = IntegerType::get(parser.getBuilder().getContext(), 32);
+  auto int32Ty = IntegerType::get(parser.getContext(), 32);
   return parser.resolveOperands(ops, {int32Ty, resultType, int32Ty, int32Ty},
                                 parser.getNameLoc(), result.operands);
 }
@@ -72,7 +72,7 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
 // <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
 static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
                                          OperationState &result) {
-  MLIRContext *context = parser.getBuilder().getContext();
+  MLIRContext *context = parser.getContext();
   auto int32Ty = IntegerType::get(context, 32);
   auto int1Ty = IntegerType::get(context, 1);
 

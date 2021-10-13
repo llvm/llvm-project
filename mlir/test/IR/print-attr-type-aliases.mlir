@@ -24,3 +24,7 @@
 // CHECK-DAG: #test_encoding = "alias_test:tensor_encoding"
 // CHECK-DAG: tensor<32xf32, #test_encoding>
 "test.op"() : () -> tensor<32xf32, "alias_test:tensor_encoding">
+
+// CHECK-DAG: !test_ui8_ = type !test.int<unsigned, 8>
+// CHECK-DAG: tensor<32x!test_ui8_>
+"test.op"() : () -> tensor<32x!test.int<unsigned, 8>>
