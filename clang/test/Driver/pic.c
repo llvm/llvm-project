@@ -314,8 +314,12 @@
 // RUN: %clang -c %s -target aarch64-linux-android24 -fno-PIE -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 //
-// On Windows-X64 PIC is enabled by default
+// On Windows x86_64 and aarch64 PIC is enabled by default
 // RUN: %clang -c %s -target x86_64-pc-windows-msvc18.0.0 -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
 // RUN: %clang -c %s -target x86_64-pc-windows-gnu -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target aarch64-windows-msvc -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target aarch64-windows-gnu -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2

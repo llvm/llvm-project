@@ -474,13 +474,15 @@ bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
 }
 
 bool toolchains::MinGW::isPICDefault() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 bool toolchains::MinGW::isPIEDefault() const { return false; }
 
 bool toolchains::MinGW::isPICDefaultForced() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 llvm::ExceptionHandling
