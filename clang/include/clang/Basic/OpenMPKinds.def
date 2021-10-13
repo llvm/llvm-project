@@ -59,6 +59,9 @@
 #ifndef OPENMP_REDUCTION_MODIFIER
 #define OPENMP_REDUCTION_MODIFIER(Name)
 #endif
+#ifndef OPENMP_ADJUST_ARGS_KIND
+#define OPENMP_ADJUST_ARGS_KIND(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -149,6 +152,11 @@ OPENMP_REDUCTION_MODIFIER(default)
 OPENMP_REDUCTION_MODIFIER(inscan)
 OPENMP_REDUCTION_MODIFIER(task)
 
+// Adjust-op kinds for the 'adjust_args' clause.
+OPENMP_ADJUST_ARGS_KIND(nothing)
+OPENMP_ADJUST_ARGS_KIND(need_device_ptr)
+
+#undef OPENMP_ADJUST_ARGS_KIND
 #undef OPENMP_REDUCTION_MODIFIER
 #undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_ORDER_KIND
