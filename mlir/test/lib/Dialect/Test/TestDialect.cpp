@@ -10,6 +10,7 @@
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
 #include "TestTypes.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -85,6 +86,14 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
             return elemType.isa<SimpleAType>();
           })) {
         os << "test_tuple";
+        return AliasResult::FinalAlias;
+      }
+    }
+    if (auto intType = type.dyn_cast<TestIntegerType>()) {
+      if (intType.getSignedness() ==
+              TestIntegerType::SignednessSemantics::Unsigned &&
+          intType.getWidth() == 8) {
+        os << "test_ui8";
         return AliasResult::FinalAlias;
       }
     }
@@ -340,8 +349,8 @@ TestBranchOp::getMutableSuccessorOperands(unsigned index) {
 static LogicalResult
 dialectCanonicalizationPattern(TestDialectCanonicalizerOp op,
                                PatternRewriter &rewriter) {
-  rewriter.replaceOpWithNewOp<ConstantOp>(op, rewriter.getI32Type(),
-                                          rewriter.getI32IntegerAttr(42));
+  rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+      op, rewriter.getI32IntegerAttr(42));
   return success();
 }
 

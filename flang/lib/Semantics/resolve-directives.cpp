@@ -293,6 +293,8 @@ public:
 
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
+  bool Pre(const parser::OmpCriticalDirective &x);
+  bool Pre(const parser::OmpEndCriticalDirective &x);
 
   void Post(const parser::OmpBeginBlockDirective &) {
     GetContext().withinConstruct = true;
@@ -476,7 +478,7 @@ private:
   static constexpr Symbol::Flags ompFlagsRequireNewSymbol{
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpReduction};
+      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock};
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
@@ -1374,6 +1376,22 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   return true;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::OmpCriticalDirective &x) {
+  const auto &name{std::get<std::optional<parser::Name>>(x.t)};
+  if (name) {
+    ResolveOmpName(*name, Symbol::Flag::OmpCriticalLock);
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OmpEndCriticalDirective &x) {
+  const auto &name{std::get<std::optional<parser::Name>>(x.t)};
+  if (name) {
+    ResolveOmpName(*name, Symbol::Flag::OmpCriticalLock);
+  }
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const auto &criticalDir{std::get<parser::OmpCriticalDirective>(x.t)};
   PushContext(criticalDir.source, llvm::omp::Directive::OMPD_critical);
@@ -1497,6 +1515,13 @@ void OmpAttributeVisitor::ResolveOmpName(
         AddToContextObjectWithDSA(*resolvedSymbol, ompFlag);
       }
     }
+  } else if (ompFlagsRequireNewSymbol.test(ompFlag)) {
+    const auto pair{GetContext().scope.try_emplace(
+        name.source, Attrs{}, ObjectEntityDetails{})};
+    CHECK(pair.second);
+    name.symbol = &pair.first->second.get();
+  } else {
+    DIE("OpenMP Name resolution failed");
   }
 }
 

@@ -24,11 +24,24 @@ static OwningPtr<Descriptor> CreateEmptyCharDescriptor() {
   return descriptor;
 }
 
+static OwningPtr<Descriptor> CharDescriptor(const char *value) {
+  std::size_t n{std::strlen(value)};
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(
+      sizeof(char), n, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  if (descriptor->Allocate() != 0) {
+    return nullptr;
+  }
+  std::memcpy(descriptor->OffsetElement(), value, n);
+  return descriptor;
+}
+
 class CommandFixture : public ::testing::Test {
 protected:
   CommandFixture(int argc, const char *argv[]) {
     RTNAME(ProgramStart)(argc, argv, {});
   }
+
+  CommandFixture(const char *envp[]) { RTNAME(ProgramStart)(0, nullptr, envp); }
 
   std::string GetPaddedStr(const char *text, std::size_t len) const {
     std::string res{text};
@@ -174,4 +187,21 @@ TEST_F(SeveralArguments, ErrMsgTooShort) {
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
   EXPECT_GT(RTNAME(ArgumentValue)(-1, nullptr, errMsg.get()), 0);
   CheckDescriptorEqStr(errMsg.get(), "Inv");
+}
+
+static const char *env[]{"NAME=value", nullptr};
+class EnvironmentVariables : public CommandFixture {
+protected:
+  EnvironmentVariables() : CommandFixture(env) {}
+};
+
+TEST_F(EnvironmentVariables, Length) {
+  EXPECT_EQ(5, RTNAME(EnvVariableLength)(*CharDescriptor("NAME")));
+  EXPECT_EQ(0, RTNAME(EnvVariableLength)(*CharDescriptor("DOESNT_EXIST")));
+
+  EXPECT_EQ(5, RTNAME(EnvVariableLength)(*CharDescriptor("NAME  ")));
+  EXPECT_EQ(0,
+      RTNAME(EnvVariableLength)(*CharDescriptor("NAME "), /*trim_name=*/false));
+
+  EXPECT_EQ(0, RTNAME(EnvVariableLength)(*CharDescriptor("     ")));
 }

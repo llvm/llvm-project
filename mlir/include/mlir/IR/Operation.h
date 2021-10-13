@@ -264,7 +264,9 @@ public:
                                           : MutableArrayRef<OpOperand>();
   }
 
-  OpOperand &getOpOperand(unsigned idx) { return getOpOperands()[idx]; }
+  OpOperand &getOpOperand(unsigned idx) {
+    return getOperandStorage().getOperands()[idx];
+  }
 
   // Support operand type iteration.
   using operand_type_iterator = operand_range::type_iterator;
@@ -717,8 +719,8 @@ private:
   size_t numTrailingObjects(OverloadToken<Region>) const { return numRegions; }
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, Operation &op) {
-  op.print(os, OpPrintingFlags().useLocalScope());
+inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
+  const_cast<Operation &>(op).print(os, OpPrintingFlags().useLocalScope());
   return os;
 }
 

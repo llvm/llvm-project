@@ -63,6 +63,13 @@ end
   not the bounds of the implied DO loop.  It is not advisable to use
   an object of the same name as the index variable in a bounds
   expression, but it will work, instead of being needlessly undefined.
+* If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
+  present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
+  we require that their types have the same integer kind, since the
+  kind of these arguments is used to select the clock rate.
+  In common with some other compilers, the clock is in milliseconds
+  for kinds <= 4 and nanoseconds otherwise where the target system
+  supports these rates.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -168,6 +175,10 @@ end
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
+* The definition of simple contiguity in 9.5.4 applies only to arrays;
+  we also treat scalars as being trivially contiguous, so that they
+  can be used in contexts like data targets in pointer assignments
+  with bounds remapping.
 
 ### Extensions supported when enabled by options
 
@@ -263,3 +274,69 @@ end
   This Fortran 2008 feature might as well be viewed like an
   extension; no other compiler that we've tested can handle
   it yet.
+
+## Behavior in cases where the standard is ambiguous or indefinite
+
+* When an inner procedure of a subprogram uses the value or an attribute
+  of an undeclared name in a specification expression and that name does
+  not appear in the host, it is not clear in the standard whether that
+  name is an implicitly typed local variable of the inner procedure or a
+  host association with an implicitly typed local variable of the host.
+  For example:
+```
+module module
+ contains
+  subroutine host(j)
+    ! Although "m" never appears in the specification or executable
+    ! parts of this subroutine, both of its contained subroutines
+    ! might be accessing it via host association.
+    integer, intent(in out) :: j
+    call inner1(j)
+    call inner2(j)
+   contains
+    subroutine inner1(n)
+      integer(kind(m)), intent(in) :: n
+      m = n + 1
+    end subroutine
+    subroutine inner2(n)
+      integer(kind(m)), intent(out) :: n
+      n = m + 2
+    end subroutine
+  end subroutine
+end module
+
+program demo
+  use module
+  integer :: k
+  k = 0
+  call host(k)
+  print *, k, " should be 3"
+end
+
+```
+
+  Other Fortran compilers disagree in their interpretations of this example;
+  some seem to treat the references to `m` as if they were host associations
+  to an implicitly typed variable (and print `3`), while others seem to
+  treat them as references to implicitly typed local variabless, and
+  load uninitialized values.
+
+  In f18, we chose to emit an error message for this case since the standard
+  is unclear, the usage is not portable, and the issue can be easily resolved
+  by adding a declaration.
+
+* In subclause 7.5.6.2 of Fortran 2018 the standard defines a partial ordering
+  of the final subroutine calls for finalizable objects, their non-parent
+  components, and then their parent components.
+  (The object is finalized, then the non-parent components of each element,
+  and then the parent component.)
+  Some have argued that the standard permits an implementation
+  to finalize the parent component before finalizing an allocatable component in
+  the context of deallocation, and the next revision of the language may codify
+  this option.
+  In the interest of avoiding needless confusion, this compiler implements what
+  we believe to be the least surprising order of finalization.
+  Specifically: all non-parent components are finalized before
+  the parent, allocatable or not;
+  all finalization takes place before any deallocation;
+  and no object or subobject will be finalized more than once.

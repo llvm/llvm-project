@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 func @dim(%arg : tensor<1x?xf32>) {
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
   tensor.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'tensor.dim' op index is out of range}}
   return
 }
@@ -16,33 +16,9 @@ func @rank(f32) {
 }
 
 // -----
-
-func @constant() {
-^bb:
-  %x = "std.constant"(){value = "xyz"} : () -> i32 // expected-error {{unsupported 'value' attribute}}
-  return
-}
-
-// -----
-
-func @constant_out_of_range() {
-^bb:
-  %x = "std.constant"(){value = 100} : () -> i1 // expected-error {{requires attribute's type ('i64') to match op's return type ('i1')}}
-  return
-}
-
-// -----
-
-func @constant_wrong_type() {
-^bb:
-  %x = "std.constant"(){value = 10.} : () -> f32 // expected-error {{requires attribute's type ('f64') to match op's return type ('f32')}}
-  return
-}
-
-// -----
 func @affine_apply_no_map() {
 ^bb0:
-  %i = constant 0 : index
+  %i = arith.constant 0 : index
   %x = "affine.apply" (%i) { } : (index) -> (index) //  expected-error {{requires attribute 'map'}}
   return
 }
@@ -51,7 +27,7 @@ func @affine_apply_no_map() {
 
 func @affine_apply_wrong_operand_count() {
 ^bb0:
-  %i = constant 0 : index
+  %i = arith.constant 0 : index
   %x = "affine.apply" (%i) {map = affine_map<(d0, d1) -> ((d0 + 1), (d1 + 2))>} : (index) -> (index) //  expected-error {{'affine.apply' op operand count and affine map dimension and symbol count must match}}
   return
 }
@@ -60,8 +36,8 @@ func @affine_apply_wrong_operand_count() {
 
 func @affine_apply_wrong_result_count() {
 ^bb0:
-  %i = constant 0 : index
-  %j = constant 1 : index
+  %i = arith.constant 0 : index
+  %j = arith.constant 1 : index
   %x = "affine.apply" (%i, %j) {map = affine_map<(d0, d1) -> ((d0 + 1), (d1 + 2))>} : (index,index) -> (index) //  expected-error {{'affine.apply' op mapping must produce one value}}
   return
 }
@@ -86,7 +62,7 @@ func @unknown_std_op() {
 
 func @bad_alloc_wrong_dynamic_dim_count() {
 ^bb0:
-  %0 = constant 7 : index
+  %0 = arith.constant 7 : index
   // Test alloc with wrong number of dynamic dimensions.
   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
   %1 = memref.alloc(%0)[%0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
@@ -97,7 +73,7 @@ func @bad_alloc_wrong_dynamic_dim_count() {
 
 func @bad_alloc_wrong_symbol_count() {
 ^bb0:
-  %0 = constant 7 : index
+  %0 = arith.constant 7 : index
   // Test alloc with wrong number of symbols
   // expected-error@+1 {{symbol operand count does not equal memref symbol count}}
   %1 = memref.alloc(%0) : memref<2x?xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
@@ -109,8 +85,8 @@ func @bad_alloc_wrong_symbol_count() {
 func @test_store_zero_results() {
 ^bb0:
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
-  %1 = constant 0 : index
-  %2 = constant 1 : index
+  %1 = arith.constant 0 : index
+  %2 = arith.constant 1 : index
   %3 = memref.load %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
   // Test that store returns zero results.
   %4 = memref.store %3, %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1> // expected-error {{cannot name an operation with no results}}
@@ -134,111 +110,9 @@ func @test_alloc_memref_map_rank_mismatch() {
 
 // -----
 
-func @intlimit2() {
-^bb:
-  %0 = "std.constant"() {value = 0} : () -> i16777215
-  %1 = "std.constant"() {value = 1} : () -> i16777216 // expected-error {{integer bitwidth is limited to 16777215 bits}}
-  return
-}
-
-// -----
-
 func @calls(%arg0: i32) {
   %x = call @calls() : () -> i32  // expected-error {{incorrect number of operands for callee}}
   return
-}
-
-// -----
-
-func @func_with_ops(f32) {
-^bb0(%a : f32):
-  %sf = addf %a, %a, %a : f32  // expected-error {{'std.addf' op expected 2 operands}}
-}
-
-// -----
-
-func @func_with_ops(f32) {
-^bb0(%a : f32):
-  %sf = addf(%a, %a) : f32  // expected-error {{'std.addf' expected function type}}
-}
-
-// -----
-
-func @func_with_ops(f32) {
-^bb0(%a : f32):
-  %sf = addf{%a, %a} : f32  // expected-error {{expected attribute name}}
-}
-
-// -----
-
-func @func_with_ops(f32) {
-^bb0(%a : f32):
-  // expected-error@+1 {{'std.addi' op operand #0 must be signless-integer-like}}
-  %sf = addi %a, %a : f32
-}
-
-// -----
-
-func @func_with_ops(i32) {
-^bb0(%a : i32):
-  %sf = addf %a, %a : i32  // expected-error {{'std.addf' op operand #0 must be floating-point-like}}
-}
-
-// -----
-
-func @func_with_ops(i32) {
-^bb0(%a : i32):
-  // expected-error@+1 {{failed to satisfy constraint: allowed 64-bit signless integer cases: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}
-  %r = "std.cmpi"(%a, %a) {predicate = 42} : (i32, i32) -> i1
-}
-
-// -----
-
-// Comparison are defined for arguments of the same type.
-func @func_with_ops(i32, i64) {
-^bb0(%a : i32, %b : i64): // expected-note {{prior use here}}
-  %r = cmpi eq, %a, %b : i32 // expected-error {{use of value '%b' expects different type than prior uses}}
-}
-
-// -----
-
-// Comparisons must have the "predicate" attribute.
-func @func_with_ops(i32, i32) {
-^bb0(%a : i32, %b : i32):
-  %r = cmpi %a, %b : i32 // expected-error {{expected string or keyword containing one of the following enum values}}
-}
-
-// -----
-
-// Integer comparisons are not recognized for float types.
-func @func_with_ops(f32, f32) {
-^bb0(%a : f32, %b : f32):
-  %r = cmpi eq, %a, %b : f32 // expected-error {{'lhs' must be signless-integer-like, but got 'f32'}}
-}
-
-// -----
-
-// Result type must be boolean like.
-func @func_with_ops(i32, i32) {
-^bb0(%a : i32, %b : i32):
-  %r = "std.cmpi"(%a, %b) {predicate = 0} : (i32, i32) -> i32 // expected-error {{op result #0 must be bool-like}}
-}
-
-// -----
-
-func @func_with_ops(i32, i32) {
-^bb0(%a : i32, %b : i32):
-  // expected-error@+1 {{requires attribute 'predicate'}}
-  %r = "std.cmpi"(%a, %b) {foo = 1} : (i32, i32) -> i1
-}
-
-// -----
-
-func @func_with_ops() {
-^bb0:
-  %c = constant dense<0> : vector<42 x i32>
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
-  %r = "std.cmpi"(%c, %c) {predicate = 0} : (vector<42 x i32>, vector<42 x i32>) -> vector<41 x i1>
 }
 
 // -----
@@ -280,388 +154,6 @@ func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 ^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
   // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %r = "std.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
-}
-
-// -----
-
-func @invalid_cmp_shape(%idx : () -> ()) {
-  // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
-  %cmp = cmpi eq, %idx, %idx : () -> ()
-
-// -----
-
-func @invalid_cmp_attr(%idx : i32) {
-  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
-  %cmp = cmpi i1, %idx, %idx : i32
-
-// -----
-
-func @cmpf_generic_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{attribute 'predicate' failed to satisfy constraint: allowed 64-bit signless integer cases}}
-  %r = "std.cmpf"(%a, %a) {predicate = 42} : (f32, f32) -> i1
-}
-
-// -----
-
-func @cmpf_canonical_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
-  %r = cmpf foo, %a, %a : f32
-}
-
-// -----
-
-func @cmpf_canonical_invalid_predicate_value_signed(%a : f32) {
-  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
-  %r = cmpf sge, %a, %a : f32
-}
-
-// -----
-
-func @cmpf_canonical_invalid_predicate_value_no_order(%a : f32) {
-  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
-  %r = cmpf eq, %a, %a : f32
-}
-
-// -----
-
-func @cmpf_canonical_no_predicate_attr(%a : f32, %b : f32) {
-  %r = cmpf %a, %b : f32 // expected-error {{}}
-}
-
-// -----
-
-func @cmpf_generic_no_predicate_attr(%a : f32, %b : f32) {
-  // expected-error@+1 {{requires attribute 'predicate'}}
-  %r = "std.cmpf"(%a, %b) {foo = 1} : (f32, f32) -> i1
-}
-
-// -----
-
-func @cmpf_wrong_type(%a : i32, %b : i32) {
-  %r = cmpf oeq, %a, %b : i32 // expected-error {{must be floating-point-like}}
-}
-
-// -----
-
-func @cmpf_generic_wrong_result_type(%a : f32, %b : f32) {
-  // expected-error@+1 {{result #0 must be bool-like}}
-  %r = "std.cmpf"(%a, %b) {predicate = 0} : (f32, f32) -> f32
-}
-
-// -----
-
-func @cmpf_canonical_wrong_result_type(%a : f32, %b : f32) -> f32 {
-  %r = cmpf oeq, %a, %b : f32 // expected-note {{prior use here}}
-  // expected-error@+1 {{use of value '%r' expects different type than prior uses}}
-  return %r : f32
-}
-
-// -----
-
-func @cmpf_result_shape_mismatch(%a : vector<42xf32>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
-  %r = "std.cmpf"(%a, %a) {predicate = 0} : (vector<42 x f32>, vector<42 x f32>) -> vector<41 x i1>
-}
-
-// -----
-
-func @cmpf_operand_shape_mismatch(%a : vector<42xf32>, %b : vector<41xf32>) {
-  // expected-error@+1 {{op requires all operands to have the same type}}
-  %r = "std.cmpf"(%a, %b) {predicate = 0} : (vector<42 x f32>, vector<41 x f32>) -> vector<42 x i1>
-}
-
-// -----
-
-func @cmpf_generic_operand_type_mismatch(%a : f32, %b : f64) {
-  // expected-error@+1 {{op requires all operands to have the same type}}
-  %r = "std.cmpf"(%a, %b) {predicate = 0} : (f32, f64) -> i1
-}
-
-// -----
-
-func @cmpf_canonical_type_mismatch(%a : f32, %b : f64) { // expected-note {{prior use here}}
-  // expected-error@+1 {{use of value '%b' expects different type than prior uses}}
-  %r = cmpf oeq, %a, %b : f32
-}
-
-// -----
-
-func @index_cast_index_to_index(%arg0: index) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = index_cast %arg0: index to index
-  return
-}
-
-// -----
-
-func @index_cast_float(%arg0: index, %arg1: f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = index_cast %arg0 : index to f32
-  return
-}
-
-// -----
-
-func @index_cast_float_to_index(%arg0: f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = index_cast %arg0 : f32 to index
-  return
-}
-
-// -----
-
-func @sitofp_i32_to_i64(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = sitofp %arg0 : i32 to i64
-  return
-}
-
-// -----
-
-func @sitofp_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = sitofp %arg0 : f32 to i32
-  return
-}
-
-// -----
-
-func @fpext_f32_to_f16(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : f32 to f16
-  return
-}
-
-// -----
-
-func @fpext_f16_to_f16(%arg0 : f16) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : f16 to f16
-  return
-}
-
-// -----
-
-func @fpext_i32_to_f32(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : i32 to f32
-  return
-}
-
-// -----
-
-func @fpext_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : f32 to i32
-  return
-}
-
-// -----
-
-func @fpext_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
-  %0 = fpext %arg0 : vector<2xf16> to vector<3xf32>
-  return
-}
-
-// -----
-
-func @fpext_vec_f32_to_f16(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : vector<2xf32> to vector<2xf16>
-  return
-}
-
-// -----
-
-func @fpext_vec_f16_to_f16(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : vector<2xf16> to vector<2xf16>
-  return
-}
-
-// -----
-
-func @fpext_vec_i32_to_f32(%arg0 : vector<2xi32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : vector<2xi32> to vector<2xf32>
-  return
-}
-
-// -----
-
-func @fpext_vec_f32_to_i32(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fpext %arg0 : vector<2xf32> to vector<2xi32>
-  return
-}
-
-// -----
-
-func @fptrunc_f16_to_f32(%arg0 : f16) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : f16 to f32
-  return
-}
-
-// -----
-
-func @fptrunc_f32_to_f32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : f32 to f32
-  return
-}
-
-// -----
-
-func @fptrunc_i32_to_f32(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : i32 to f32
-  return
-}
-
-// -----
-
-func @fptrunc_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : f32 to i32
-  return
-}
-
-// -----
-
-func @fptrunc_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
-  %0 = fptrunc %arg0 : vector<2xf16> to vector<3xf32>
-  return
-}
-
-// -----
-
-func @fptrunc_vec_f16_to_f32(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : vector<2xf16> to vector<2xf32>
-  return
-}
-
-// -----
-
-func @fptrunc_vec_f32_to_f32(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : vector<2xf32> to vector<2xf32>
-  return
-}
-
-// -----
-
-func @fptrunc_vec_i32_to_f32(%arg0 : vector<2xi32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : vector<2xi32> to vector<2xf32>
-  return
-}
-
-// -----
-
-func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
-  %0 = fptrunc %arg0 : vector<2xf32> to vector<2xi32>
-  return
-}
-
-// -----
-
-func @sexti_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{'index' is not a valid operand type}}
-  %0 = sexti %arg0 : index to i128
-  return
-}
-
-// -----
-
-func @zexti_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{'index' is not a valid operand type}}
-  %0 = zexti %arg0 : index to i128
-  return
-}
-
-// -----
-
-func @trunci_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{'index' is not a valid operand type}}
-  %2 = trunci %arg0 : index to i128
-  return
-}
-
-// -----
-
-func @sexti_index_as_result(%arg0 : i1) {
-  // expected-error@+1 {{'index' is not a valid result type}}
-  %0 = sexti %arg0 : i1 to index
-  return
-}
-
-// -----
-
-func @zexti_index_as_operand(%arg0 : i1) {
-  // expected-error@+1 {{'index' is not a valid result type}}
-  %0 = zexti %arg0 : i1 to index
-  return
-}
-
-// -----
-
-func @trunci_index_as_result(%arg0 : i128) {
-  // expected-error@+1 {{'index' is not a valid result type}}
-  %2 = trunci %arg0 : i128 to index
-  return
-}
-
-// -----
-
-func @sexti_cast_to_narrower(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = sexti %arg0 : i16 to i15
-  return
-}
-
-// -----
-
-func @zexti_cast_to_narrower(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = zexti %arg0 : i16 to i15
-  return
-}
-
-// -----
-
-func @trunci_cast_to_wider(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = trunci %arg0 : i16 to i17
-  return
-}
-
-// -----
-
-func @sexti_cast_to_same_width(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = sexti %arg0 : i16 to i16
-  return
-}
-
-// -----
-
-func @zexti_cast_to_same_width(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = zexti %arg0 : i16 to i16
-  return
-}
-
-// -----
-
-func @trunci_cast_to_same_width(%arg0 : i16) {
-  // expected-error@+1 {{must be wider}}
-  %0 = trunci %arg0 : i16 to i16
-  return
 }
 
 // -----
@@ -965,7 +457,7 @@ func @generic_atomic_rmw_wrong_arg_num(%I: memref<10xf32>, %i : index) {
   // expected-error@+1 {{expected single number of entry block arguments}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
     ^bb0(%arg0 : f32, %arg1 : f32):
-      %c1 = constant 1.0 : f32
+      %c1 = arith.constant 1.0 : f32
       atomic_yield %c1 : f32
   }
   return
@@ -977,7 +469,7 @@ func @generic_atomic_rmw_wrong_arg_type(%I: memref<10xf32>, %i : index) {
   // expected-error@+1 {{expected block argument of the same type result type}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
     ^bb0(%old_value : i32):
-      %c1 = constant 1.0 : f32
+      %c1 = arith.constant 1.0 : f32
       atomic_yield %c1 : f32
   }
   return
@@ -989,7 +481,7 @@ func @generic_atomic_rmw_result_type_mismatch(%I: memref<10xf32>, %i : index) {
  // expected-error@+1 {{failed to verify that result type matches element type of memref}}
  %0 = "std.generic_atomic_rmw"(%I, %i) ( {
     ^bb0(%old_value: f32):
-      %c1 = constant 1.0 : f32
+      %c1 = arith.constant 1.0 : f32
       atomic_yield %c1 : f32
     }) : (memref<10xf32>, index) -> i32
   return
@@ -1001,7 +493,7 @@ func @generic_atomic_rmw_has_side_effects(%I: memref<10xf32>, %i : index) {
   // expected-error@+4 {{should contain only operations with no side effects}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
     ^bb0(%old_value : f32):
-      %c1 = constant 1.0 : f32
+      %c1 = arith.constant 1.0 : f32
       %buf = memref.alloc() : memref<2048xf32>
       atomic_yield %c1 : f32
   }
@@ -1013,7 +505,7 @@ func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
   // expected-error@+4 {{op types mismatch between yield op: 'i32' and its parent: 'f32'}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
     ^bb0(%old_value : f32):
-      %c1 = constant 1 : i32
+      %c1 = arith.constant 1 : i32
       atomic_yield %c1 : i32
   }
   return

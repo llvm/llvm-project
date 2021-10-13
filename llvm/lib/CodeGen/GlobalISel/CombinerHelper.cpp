@@ -2210,7 +2210,7 @@ bool CombinerHelper::matchCombineTruncOfShl(
            {DstTy, getTargetLowering().getPreferredShiftAmountTy(DstTy)}})) {
     KnownBits Known = KB->getKnownBits(ShiftAmt);
     unsigned Size = DstTy.getSizeInBits();
-    if (Known.getBitWidth() - Known.countMinLeadingZeros() <= Log2_32(Size)) {
+    if (Known.countMaxActiveBits() <= Log2_32(Size)) {
       MatchInfo = std::make_pair(ShiftSrc, ShiftAmt);
       return true;
     }
@@ -2370,7 +2370,8 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
     return false;
   auto *MI = MRI.getVRegDef(MOP.getReg());
   auto MaybeCst = isConstantOrConstantSplatVector(*MI, MRI);
-  return MaybeCst.hasValue() && MaybeCst->getSExtValue() == C;
+  return MaybeCst.hasValue() && MaybeCst->getBitWidth() <= 64 &&
+         MaybeCst->getSExtValue() == C;
 }
 
 bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,

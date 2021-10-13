@@ -263,196 +263,137 @@ struct atomic<T*>
 };
 
 
-template <class T>
-  bool atomic_is_lock_free(const volatile atomic<T>* obj) noexcept;
+// [atomics.nonmembers], non-member functions
+template<class T>
+  bool atomic_is_lock_free(const volatile atomic<T>*) noexcept;
+template<class T>
+  bool atomic_is_lock_free(const atomic<T>*) noexcept;
+template<class T>
+  void atomic_store(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  void atomic_store(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  void atomic_store_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  void atomic_store_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_load(const volatile atomic<T>*) noexcept;
+template<class T>
+  T atomic_load(const atomic<T>*) noexcept;
+template<class T>
+  T atomic_load_explicit(const volatile atomic<T>*, memory_order) noexcept;
+template<class T>
+  T atomic_load_explicit(const atomic<T>*, memory_order) noexcept;
+template<class T>
+  T atomic_exchange(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_exchange(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_exchange_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_exchange_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak(volatile atomic<T>*, atomic<T>::value_type*,
+                                    atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak(atomic<T>*, atomic<T>::value_type*,
+                                    atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong(volatile atomic<T>*, atomic<T>::value_type*,
+                                      atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong(atomic<T>*, atomic<T>::value_type*,
+                                      atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak_explicit(volatile atomic<T>*, atomic<T>::value_type*,
+                                             atomic<T>::value_type,
+                                             memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak_explicit(atomic<T>*, atomic<T>::value_type*,
+                                             atomic<T>::value_type,
+                                             memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong_explicit(volatile atomic<T>*, atomic<T>::value_type*,
+                                               atomic<T>::value_type,
+                                               memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong_explicit(atomic<T>*, atomic<T>::value_type*,
+                                               atomic<T>::value_type,
+                                               memory_order, memory_order) noexcept;
 
-template <class T>
-  bool atomic_is_lock_free(const atomic<T>* obj) noexcept;
+template<class T>
+  T atomic_fetch_add(volatile atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_add(atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_add_explicit(volatile atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_add_explicit(atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_sub(volatile atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_sub(atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_sub_explicit(volatile atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_sub_explicit(atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_and(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_and(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_and_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_and_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_or(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_or(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_or_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_fetch_or_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_fetch_xor(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_xor(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_xor_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_xor_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
 
-template <class T>
-  void atomic_store(volatile atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  void atomic_store(atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  void atomic_store_explicit(volatile atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  void atomic_store_explicit(atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  T atomic_load(const volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  T atomic_load(const atomic<T>* obj) noexcept;
-
-template <class T>
-  T atomic_load_explicit(const volatile atomic<T>* obj, memory_order m) noexcept;
-
-template <class T>
-  T atomic_load_explicit(const atomic<T>* obj, memory_order m) noexcept;
-
-template <class T>
-  T atomic_exchange(volatile atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  T atomic_exchange(atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  T atomic_exchange_explicit(volatile atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  T atomic_exchange_explicit(atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak(volatile atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak(atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong(volatile atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong(atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak_explicit(volatile atomic<T>* obj, T* expc,
-                                             T desr,
-                                             memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak_explicit(atomic<T>* obj, T* expc, T desr,
-                                             memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong_explicit(volatile atomic<T>* obj,
-                                               T* expc, T desr,
-                                               memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong_explicit(atomic<T>* obj, T* expc,
-                                               T desr,
-                                               memory_order s, memory_order f) noexcept;
-
-template <class T>
-  void atomic_wait(const volatile atomic<T>* obj, T old) noexcept;
-
-template <class T>
-  void atomic_wait(const atomic<T>* obj, T old) noexcept;
-
-template <class T>
-  void atomic_wait_explicit(const volatile atomic<T>* obj, T old, memory_order m) noexcept;
-
-template <class T>
-  void atomic_wait_explicit(const atomic<T>* obj, T old, memory_order m) noexcept;
-
-template <class T>
-  void atomic_one(volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_one(atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_all(volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_all(atomic<T>* obj) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add_explicit(volatile atomic<Integral>* obj, Integral op,
-                              memory_order m) noexcept;
-template <class Integral>
-  Integral atomic_fetch_add_explicit(atomic<Integral>* obj, Integral op,
-                              memory_order m) noexcept;
-template <class Integral>
-  Integral atomic_fetch_sub(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or_explicit(volatile atomic<Integral>* obj, Integral op,
-                             memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or_explicit(atomic<Integral>* obj, Integral op,
-                             memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_add(volatile atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_add(atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_add_explicit(volatile atomic<T*>* obj, ptrdiff_t op,
-                               memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_add_explicit(atomic<T*>* obj, ptrdiff_t op, memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub(volatile atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub(atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub_explicit(volatile atomic<T*>* obj, ptrdiff_t op,
-                               memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub_explicit(atomic<T*>* obj, ptrdiff_t op, memory_order m) noexcept;
+template<class T>
+  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+template<class T>
+  void atomic_wait(const atomic<T>*, atomic<T>::value_type);
+template<class T>
+  void atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
+                            memory_order);
+template<class T>
+  void atomic_wait_explicit(const atomic<T>*, atomic<T>::value_type,
+                            memory_order);
+template<class T>
+  void atomic_notify_one(volatile atomic<T>*);
+template<class T>
+  void atomic_notify_one(atomic<T>*);
+template<class T>
+  void atomic_notify_all(volatile atomic<T>*);
+template<class T>
+  void atomic_notify_all(atomic<T>*);
 
 // Atomics for standard typedef types
 
@@ -564,10 +505,10 @@ void atomic_signal_fence(memory_order m) noexcept;
 // deprecated
 
 template <class T>
-  void atomic_init(volatile atomic<T>* obj, typename atomic<T>::value_type desr) noexcept;
+  void atomic_init(volatile atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 
 template <class T>
-  void atomic_init(atomic<T>* obj, typename atomic<T>::value_type desr) noexcept;
+  void atomic_init(atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 
 #define ATOMIC_VAR_INIT(value) see below
 
@@ -1473,7 +1414,9 @@ template<> struct __cxx_is_always_lock_free<char8_t> { enum { __value = 2 == ATO
 #endif
 template<> struct __cxx_is_always_lock_free<char16_t> { enum { __value = 2 == ATOMIC_CHAR16_T_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<char32_t> { enum { __value = 2 == ATOMIC_CHAR32_T_LOCK_FREE }; };
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template<> struct __cxx_is_always_lock_free<wchar_t> { enum { __value = 2 == ATOMIC_WCHAR_T_LOCK_FREE }; };
+#endif
 template<> struct __cxx_is_always_lock_free<short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<unsigned short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<int> { enum { __value = 2 == ATOMIC_INT_LOCK_FREE }; };
@@ -2672,7 +2615,9 @@ typedef atomic<char8_t>            atomic_char8_t;
 #endif
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef atomic<wchar_t>            atomic_wchar_t;
+#endif
 
 typedef atomic<int_least8_t>   atomic_int_least8_t;
 typedef atomic<uint_least8_t>  atomic_uint_least8_t;

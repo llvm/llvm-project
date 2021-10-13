@@ -12,6 +12,8 @@
 
 // static constexpr bool lt(char_type c1, char_type c2);
 
+// UNSUPPORTED: libcpp-has-no-wide-characters
+
 #include <string>
 #include <cassert>
 

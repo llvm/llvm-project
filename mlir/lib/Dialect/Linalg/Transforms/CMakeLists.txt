@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffine
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRArithmetic
   MLIRComplex
   MLIRIR
   MLIRMemRef

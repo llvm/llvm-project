@@ -36,9 +36,11 @@ int main(int, char**) {
     test ( std::string("") );
     test ( std::string() );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test ( std::wstring(L"QBCDE") );
     test ( std::wstring(L"") );
     test ( std::wstring() );
+#endif
 
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test ( std::u8string{u8"QBCDE"} );

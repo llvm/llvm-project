@@ -127,19 +127,6 @@ Address CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
   return CreateTempAlloca(Ty, Align, Name);
 }
 
-void CodeGenFunction::InitTempAlloca(Address Var, llvm::Value *Init) {
-  auto *Alloca = Var.getPointer();
-  assert(isa<llvm::AllocaInst>(Alloca) ||
-         (isa<llvm::AddrSpaceCastInst>(Alloca) &&
-          isa<llvm::AllocaInst>(
-              cast<llvm::AddrSpaceCastInst>(Alloca)->getPointerOperand())));
-
-  auto *Store = new llvm::StoreInst(Init, Alloca, /*volatile*/ false,
-                                    Var.getAlignment().getAsAlign());
-  llvm::BasicBlock *Block = AllocaInsertPt->getParent();
-  Block->getInstList().insertAfter(AllocaInsertPt->getIterator(), Store);
-}
-
 Address CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
   return CreateTempAlloca(ConvertType(Ty), Align, Name);
@@ -4696,9 +4683,27 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_NoOp:
   case CK_LValueToRValue:
     return EmitLValue(E->getSubExpr());
+
+  case CK_NoOp: {
+    // CK_NoOp can model a qualification conversion, which can remove an array
+    // bound and change the IR type.
+    // FIXME: Once pointee types are removed from IR, remove this.
+    LValue LV = EmitLValue(E->getSubExpr());
+    if (LV.isSimple()) {
+      Address V = LV.getAddress(*this);
+      if (V.isValid()) {
+        llvm::Type *T =
+            ConvertTypeForMem(E->getType())
+                ->getPointerTo(
+                    cast<llvm::PointerType>(V.getType())->getAddressSpace());
+        if (V.getType() != T)
+          LV.setAddress(Builder.CreateBitCast(V, T));
+      }
+    }
+    return LV;
+  }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {

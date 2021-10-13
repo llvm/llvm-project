@@ -40,6 +40,7 @@ int main(int, char**)
         os << std::resetiosflags(std::ios_base::skipws);
         assert(!(os.flags() & std::ios_base::skipws));
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wistream is(&sb);
@@ -54,6 +55,7 @@ int main(int, char**)
         os << std::resetiosflags(std::ios_base::skipws);
         assert(!(os.flags() & std::ios_base::skipws));
     }
+#endif
 
   return 0;
 }

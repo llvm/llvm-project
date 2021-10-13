@@ -21,7 +21,7 @@ func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf
   ins(%0, %B : tensor<?x112x16xf32>, tensor<16xf32>)
   outs(%init : tensor<?x112x16xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  // no predecessors
-    %s = subf %arg1, %arg2 : f32
+    %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<?x112x16xf32>
   return %2 : tensor<?x112x16xf32>
@@ -57,8 +57,8 @@ func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
   ins(%0, %1, %C : tensor<112x112x16xf32>, tensor<112x112x16xf32>, tensor<16xf32>)
   outs(%2 : tensor<112x112x16xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  // no predecessors
-    %s = subf %arg1, %arg2 : f32
-    %m = mulf %s, %arg3 : f32
+    %s = arith.subf %arg1, %arg2 : f32
+    %m = arith.mulf %s, %arg3 : f32
     linalg.yield %m : f32
   } -> tensor<112x112x16xf32>
   return %3 : tensor<112x112x16xf32>
@@ -83,7 +83,7 @@ func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<
   ins(%20, %B : tensor<112x112x16xf32>, tensor<112xf32>)
   outs(%21 : tensor<112x112x16xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  // no predecessors
-    %s = subf %arg1, %arg2 : f32
+    %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<112x112x16xf32>
   return %22 : tensor<112x112x16xf32>
@@ -93,9 +93,9 @@ func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<
 
 func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
     %arg2 : tensor<5xf32>) -> tensor<2x3x5xf32> {
-  %cst_6 = constant 1.000000e+00 : f32
-  %cst_7 = constant 7.000000e+00 : f32
-  %cst_8 = constant 1.1920929E-7 : f32
+  %cst_6 = arith.constant 1.000000e+00 : f32
+  %cst_7 = arith.constant 7.000000e+00 : f32
+  %cst_8 = arith.constant 1.1920929E-7 : f32
   %25 = linalg.tensor_expand_shape %arg0 [[0, 1], [2]]
       : tensor<6x5xi32> into tensor<2x3x5xi32>
   %26 = linalg.init_tensor [2, 3, 5] : tensor<2x3x5xf32>
@@ -108,12 +108,12 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
       ins(%25, %arg1, %arg2 : tensor<2x3x5xi32>, tensor<5xf32>, tensor<5xf32>)
       outs(%26 : tensor<2x3x5xf32>) {
       ^bb0(%arg6: i32, %arg7: f32, %arg8: f32, %arg9: f32):  // no predecessors
-        %29 = sitofp %arg6 : i32 to f32
-        %30 = addf %arg7, %cst_8 : f32
-        %31 = divf %cst_7, %30 : f32
-        %32 = divf %cst_6, %31 : f32
-        %33 = mulf %29, %32 : f32
-        %34 = addf %33, %arg8 : f32
+        %29 = arith.sitofp %arg6 : i32 to f32
+        %30 = arith.addf %arg7, %cst_8 : f32
+        %31 = arith.divf %cst_7, %30 : f32
+        %32 = arith.divf %cst_6, %31 : f32
+        %33 = arith.mulf %29, %32 : f32
+        %34 = arith.addf %33, %arg8 : f32
         linalg.yield %34 : f32
       } -> tensor<2x3x5xf32>
   return %28 : tensor<2x3x5xf32>

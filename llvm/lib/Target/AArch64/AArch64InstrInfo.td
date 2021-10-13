@@ -27,6 +27,12 @@ def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
 def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
                                  AssemblerPredicate<(all_of HasV8_7aOps), "armv8.7a">;
+def HasV9_0a         : Predicate<"Subtarget->hasV9_0aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_0aOps), "armv9-a">;
+def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_1aOps), "armv9.1a">;
+def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_2aOps), "armv9.2a">;
 def HasVH            : Predicate<"Subtarget->hasVH()">,
                        AssemblerPredicate<(all_of FeatureVH), "vh">;
 
@@ -194,6 +200,8 @@ def UseAlternateSExtLoadCVTF32
 def UseNegativeImmediates
     : Predicate<"false">, AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
                                              "NegativeImmediates">;
+
+def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -8169,6 +8177,10 @@ let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
 def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
                []>, Sched<[]>;
+
+def AArch64AssertZExtBool : SDNode<"AArch64ISD::ASSERT_ZEXT_BOOL", SDT_assert>;
+def : Pat<(AArch64AssertZExtBool GPR32:$op),
+          (i32 GPR32:$op)>;
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

@@ -32,7 +32,9 @@ constexpr void test() {
 
 constexpr bool test() {
   test<char, char*>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t, wchar_t*>();
+#endif
   test<char8_t, char8_t*>();
   test<char16_t, char16_t*>();
   test<char32_t, char32_t*>();

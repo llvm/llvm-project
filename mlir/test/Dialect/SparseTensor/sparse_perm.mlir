@@ -17,22 +17,22 @@
 // CHECK-LABEL:   func @sparse_static_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
-// CHECK:           %[[VAL_2:.*]] = constant 20 : index
-// CHECK:           %[[VAL_3:.*]] = constant 30 : index
-// CHECK:           %[[VAL_4:.*]] = constant 10 : index
-// CHECK:           %[[VAL_5:.*]] = constant 0 : index
-// CHECK:           %[[VAL_6:.*]] = constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 30 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<20x30x10xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.alloc() : memref<20x30x10xf32>
 // CHECK:           memref.copy %[[VAL_8]], %[[VAL_9]] : memref<20x30x10xf32> to memref<20x30x10xf32>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_12:.*]] = muli %[[VAL_10]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_13:.*]] = addi %[[VAL_12]], %[[VAL_11]] : index
+// CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_11]] : index
 // CHECK:               scf.for %[[VAL_14:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_6]] {
-// CHECK:                 %[[VAL_15:.*]] = muli %[[VAL_13]], %[[VAL_2]] : index
-// CHECK:                 %[[VAL_16:.*]] = addi %[[VAL_15]], %[[VAL_14]] : index
+// CHECK:                 %[[VAL_15:.*]] = arith.muli %[[VAL_13]], %[[VAL_2]] : index
+// CHECK:                 %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : index
 // CHECK:                 %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_17]], %[[VAL_9]]{{\[}}%[[VAL_14]], %[[VAL_10]], %[[VAL_11]]] : memref<20x30x10xf32>
 // CHECK:               }
@@ -55,9 +55,9 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-LABEL:   func @sparse_dynamic_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-// CHECK-DAG:       %[[VAL_2:.*]] = constant 2 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = constant 0 : index
-// CHECK-DAG:       %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xf32>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xf32>
@@ -67,11 +67,11 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<?x?x?xf32> to memref<?x?x?xf32>
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_4]] {
-// CHECK:               %[[VAL_13:.*]] = muli %[[VAL_8]], %[[VAL_11]] : index
-// CHECK:               %[[VAL_14:.*]] = addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_8]], %[[VAL_11]] : index
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
 // CHECK:               scf.for %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] {
-// CHECK:                 %[[VAL_16:.*]] = muli %[[VAL_6]], %[[VAL_14]] : index
-// CHECK:                 %[[VAL_17:.*]] = addi %[[VAL_16]], %[[VAL_15]] : index
+// CHECK:                 %[[VAL_16:.*]] = arith.muli %[[VAL_6]], %[[VAL_14]] : index
+// CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_15]] : index
 // CHECK:                 %[[VAL_18:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_17]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_18]], %[[VAL_10]]{{\[}}%[[VAL_15]], %[[VAL_11]], %[[VAL_12]]] : memref<?x?x?xf32>
 // CHECK:               }

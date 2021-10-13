@@ -236,14 +236,18 @@ void test()
 
     // Strings
     test_true     <std::string>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_true     <std::wstring>();
+#endif
     test_true     <std::u8string>();
     test_true     <std::u16string>();
     test_true     <std::u32string>();
 
     // String views
     test_true     <std::string_view>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_true     <std::wstring_view>();
+#endif
     test_true     <std::u8string_view>();
     test_true     <std::u16string_view>();
     test_true     <std::u32string_view>();

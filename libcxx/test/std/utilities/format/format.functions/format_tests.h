@@ -1100,10 +1100,12 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #endif
 }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <class TestFunction>
 void format_tests_char_to_wchar_t(TestFunction check) {
   using CharT = wchar_t;
   check(STR("hello 09azA"), STR("hello {}{}{}{}{}"), '0', '9', 'a', 'z', 'A');
 }
+#endif
 
 #endif

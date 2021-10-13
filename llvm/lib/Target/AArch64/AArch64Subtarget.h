@@ -89,6 +89,9 @@ protected:
   bool HasV8_5aOps = false;
   bool HasV8_6aOps = false;
   bool HasV8_7aOps = false;
+  bool HasV9_0aOps = false;
+  bool HasV9_1aOps = false;
+  bool HasV9_2aOps = false;
 
   bool HasV8_0rOps = false;
   bool HasCONTEXTIDREL2 = false;
@@ -120,6 +123,7 @@ protected:
   // SVE extensions
   bool HasSVE = false;
   bool UseExperimentalZeroingPseudos = false;
+  bool UseScalarIncVL = false;
 
   // Armv8.2 Crypto extensions
   bool HasSM4 = false;
@@ -344,6 +348,9 @@ public:
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
   bool hasV8_5aOps() const { return HasV8_5aOps; }
+  bool hasV9_0aOps() const { return HasV9_0aOps; }
+  bool hasV9_1aOps() const { return HasV9_1aOps; }
+  bool hasV9_2aOps() const { return HasV9_2aOps; }
   bool hasV8_0rOps() const { return HasV8_0rOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
@@ -450,6 +457,8 @@ public:
   bool useExperimentalZeroingPseudos() const {
     return UseExperimentalZeroingPseudos;
   }
+
+  bool useScalarIncVL() const { return UseScalarIncVL; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.

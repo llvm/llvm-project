@@ -264,27 +264,26 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X64-AVX2-LABEL: fshl_i128:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    movq %r8, %r9
-; X64-AVX2-NEXT:    movq %rcx, %r10
-; X64-AVX2-NEXT:    movq %rdx, %r8
-; X64-AVX2-NEXT:    movq %rsi, %rdx
+; X64-AVX2-NEXT:    movq %rcx, %r8
 ; X64-AVX2-NEXT:    movl %r9d, %ecx
-; X64-AVX2-NEXT:    shldq %cl, %rdi, %rdx
-; X64-AVX2-NEXT:    shrdq $1, %r10, %r8
-; X64-AVX2-NEXT:    shrq %r10
+; X64-AVX2-NEXT:    shldq %cl, %rdi, %rsi
+; X64-AVX2-NEXT:    shrdq $1, %r8, %rdx
+; X64-AVX2-NEXT:    shrq %r8
 ; X64-AVX2-NEXT:    notb %cl
-; X64-AVX2-NEXT:    shrdq %cl, %r10, %r8
-; X64-AVX2-NEXT:    shrq %cl, %r10
+; X64-AVX2-NEXT:    shrdq %cl, %r8, %rdx
+; X64-AVX2-NEXT:    shrq %cl, %r8
 ; X64-AVX2-NEXT:    xorl %eax, %eax
 ; X64-AVX2-NEXT:    testb $64, %cl
-; X64-AVX2-NEXT:    cmovneq %r10, %r8
-; X64-AVX2-NEXT:    cmovneq %rax, %r10
+; X64-AVX2-NEXT:    cmovneq %r8, %rdx
+; X64-AVX2-NEXT:    cmovneq %rax, %r8
 ; X64-AVX2-NEXT:    movl %r9d, %ecx
 ; X64-AVX2-NEXT:    shlq %cl, %rdi
 ; X64-AVX2-NEXT:    testb $64, %r9b
-; X64-AVX2-NEXT:    cmovneq %rdi, %rdx
+; X64-AVX2-NEXT:    cmovneq %rdi, %rsi
 ; X64-AVX2-NEXT:    cmoveq %rdi, %rax
-; X64-AVX2-NEXT:    orq %r8, %rax
-; X64-AVX2-NEXT:    orq %r10, %rdx
+; X64-AVX2-NEXT:    orq %rdx, %rax
+; X64-AVX2-NEXT:    orq %rsi, %r8
+; X64-AVX2-NEXT:    movq %r8, %rdx
 ; X64-AVX2-NEXT:    retq
   %f = call i128 @llvm.fshl.i128(i128 %x, i128 %y, i128 %z)
   ret i128 %f

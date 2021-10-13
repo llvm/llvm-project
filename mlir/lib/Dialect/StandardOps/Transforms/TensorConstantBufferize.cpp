@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements bufferization of tensor-valued std.constant ops.
+// This file implements bufferization of tensor-valued arith.constant ops.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,14 +21,14 @@
 
 using namespace mlir;
 
-memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
+memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
   auto type = constantOp.getType().cast<RankedTensorType>();
 
   BufferizeTypeConverter typeConverter;
 
   // If we already have a global for this constant value, no need to do
   // anything else.
-  auto it = globals.find(constantOp.getValue());
+  auto it = globals.find(constantOp.value());
   if (it != globals.end())
     return cast<memref::GlobalOp>(it->second);
 
@@ -52,27 +52,29 @@ memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
-      /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
+      /*initial_value=*/constantOp.value().cast<ElementsAttr>(),
       /*constant=*/true,
       /*alignment=*/memrefAlignment);
   symbolTable.insert(global);
   // The symbol table inserts at the end of the module, but globals are a bit
   // nicer if they are at the beginning.
   global->moveBefore(&moduleOp.front());
-  globals[constantOp.getValue()] = global;
+  globals[constantOp.value()] = global;
   return global;
 }
 
 namespace {
-class BufferizeTensorConstantOp : public OpConversionPattern<ConstantOp> {
+class BufferizeTensorConstantOp
+    : public OpConversionPattern<arith::ConstantOp> {
 public:
   BufferizeTensorConstantOp(GlobalCreator &globals,
                             TypeConverter &typeConverter, MLIRContext *context)
-      : OpConversionPattern<ConstantOp>(typeConverter, context, /*benefit=*/1),
+      : OpConversionPattern<arith::ConstantOp>(typeConverter, context,
+                                               /*benefit=*/1),
         globals(globals) {}
 
   LogicalResult
-  matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
+  matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getType().dyn_cast<RankedTensorType>();
     if (!type)
@@ -114,8 +116,9 @@ public:
 
     target.addLegalDialect<memref::MemRefDialect>();
     populateTensorConstantBufferizePatterns(globals, typeConverter, patterns);
-    target.addDynamicallyLegalOp<ConstantOp>(
-        [&](ConstantOp op) { return typeConverter.isLegal(op.getType()); });
+    target.addDynamicallyLegalOp<arith::ConstantOp>([&](arith::ConstantOp op) {
+      return typeConverter.isLegal(op.getType());
+    });
     if (failed(applyPartialConversion(module, target, std::move(patterns))))
       signalPassFailure();
   }

@@ -158,7 +158,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     omp.wsloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-      %sum = addf %a, %b : f32
+      %sum = arith.addf %a, %b : f32
       store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
       omp.yield
     }
@@ -369,21 +369,6 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
 }
 
 
-// TODO: Autogenerate this from OMP.td in llvm/include/Frontend
-def omp_sync_hint_none: I32EnumAttrCase<"none", 0>;
-def omp_sync_hint_uncontended: I32EnumAttrCase<"uncontended", 1>;
-def omp_sync_hint_contended: I32EnumAttrCase<"contended", 2>;
-def omp_sync_hint_nonspeculative: I32EnumAttrCase<"nonspeculative", 3>;
-def omp_sync_hint_speculative: I32EnumAttrCase<"speculative", 4>;
-
-def SyncHintKind: I32EnumAttr<"SyncHintKind", "OpenMP Sync Hint Kind",
-    [omp_sync_hint_none, omp_sync_hint_uncontended, omp_sync_hint_contended,
-     omp_sync_hint_nonspeculative, omp_sync_hint_speculative]> {
-  let cppNamespace = "::mlir::omp";
-  let stringToSymbolFnName = "ConvertToEnum";
-  let symbolToStringFnName = "ConvertToString";
-}
-
 def CriticalOp : OpenMP_Op<"critical"> {
   let summary = "critical construct";
   let description = [{
@@ -392,12 +377,12 @@ def CriticalOp : OpenMP_Op<"critical"> {
   }];
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
-                       OptionalAttr<SyncHintKind>:$hint);
+                       DefaultValuedAttr<I64Attr, "0">:$hint);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
-    (`(` $name^ `)`)? (`hint` `(` $hint^ `)`)? $region attr-dict
+    (`(` $name^ `)`)? custom<SynchronizationHint>($hint) $region attr-dict
   }];
 
   let verifier = "return ::verifyCriticalOp(*this);";

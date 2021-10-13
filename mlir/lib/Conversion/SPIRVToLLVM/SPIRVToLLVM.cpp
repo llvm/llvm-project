@@ -642,15 +642,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
-    //   __spv__{SPIR-V module name}_{function name}_execution_mode_info
+    //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
     ModuleOp module = op->getParentOfType<ModuleOp>();
+    IntegerAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
     if (module.getName().hasValue())
       moduleName = "_" + module.getName().getValue().str();
     else
       moduleName = "";
-    std::string executionModeInfoName = llvm::formatv(
-        "__spv_{0}_{1}_execution_mode_info", moduleName, op.fn().str());
+    std::string executionModeInfoName =
+        llvm::formatv("__spv_{0}_{1}_execution_mode_info_{2}", moduleName,
+                      op.fn().str(), executionModeAttr.getValue());
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
@@ -683,7 +685,6 @@ public:
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPoint(block, block->begin());
     Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
-    IntegerAttr executionModeAttr = op.execution_modeAttr();
     Value executionMode =
         rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, executionModeAttr);
     structValue = rewriter.create<LLVM::InsertValueOp>(

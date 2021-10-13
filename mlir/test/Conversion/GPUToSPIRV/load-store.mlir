@@ -6,15 +6,15 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
   func @load_store(%arg0: memref<12x4xf32>, %arg1: memref<12x4xf32>, %arg2: memref<12x4xf32>) {
-    %c0 = constant 0 : index
-    %c12 = constant 12 : index
-    %0 = subi %c12, %c0 : index
-    %c1 = constant 1 : index
-    %c0_0 = constant 0 : index
-    %c4 = constant 4 : index
-    %1 = subi %c4, %c0_0 : index
-    %c1_1 = constant 1 : index
-    %c1_2 = constant 1 : index
+    %c0 = arith.constant 0 : index
+    %c12 = arith.constant 12 : index
+    %0 = arith.subi %c12, %c0 : index
+    %c1 = arith.constant 1 : index
+    %c0_0 = arith.constant 0 : index
+    %c4 = arith.constant 4 : index
+    %1 = arith.subi %c4, %c0_0 : index
+    %c1_1 = arith.constant 1 : index
+    %c1_2 = arith.constant 1 : index
     gpu.launch_func @kernels::@load_store_kernel
         blocks in (%0, %c1_2, %c1_2) threads in (%1, %c1_2, %c1_2)
         args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>,
@@ -56,9 +56,9 @@ module attributes {
       %10 = "gpu.block_dim"() {dimension = "y"} : () -> index
       %11 = "gpu.block_dim"() {dimension = "z"} : () -> index
       // CHECK: %[[INDEX1:.*]] = spv.IAdd %[[ARG3]], %[[WORKGROUPIDX]]
-      %12 = addi %arg3, %0 : index
+      %12 = arith.addi %arg3, %0 : index
       // CHECK: %[[INDEX2:.*]] = spv.IAdd %[[ARG4]], %[[LOCALINVOCATIONIDX]]
-      %13 = addi %arg4, %3 : index
+      %13 = arith.addi %arg4, %3 : index
       // CHECK: %[[ZERO:.*]] = spv.Constant 0 : i32
       // CHECK: %[[OFFSET1_0:.*]] = spv.Constant 0 : i32
       // CHECK: %[[STRIDE1_1:.*]] = spv.Constant 4 : i32
@@ -74,7 +74,7 @@ module attributes {
       // CHECK-NEXT: %[[VAL2:.*]] = spv.Load "StorageBuffer" %[[PTR2]]
       %15 = memref.load %arg1[%12, %13] : memref<12x4xf32>
       // CHECK: %[[VAL3:.*]] = spv.FAdd %[[VAL1]], %[[VAL2]]
-      %16 = addf %14, %15 : f32
+      %16 = arith.addf %14, %15 : f32
       // CHECK: %[[PTR3:.*]] = spv.AccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: spv.Store "StorageBuffer" %[[PTR3]], %[[VAL3]]
       memref.store %16, %arg2[%12, %13] : memref<12x4xf32>

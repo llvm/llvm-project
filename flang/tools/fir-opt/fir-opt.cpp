@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/MlirOptMain.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
@@ -19,6 +20,7 @@ using namespace mlir;
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
+  fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
   DialectRegistry registry;
   fir::support::registerDialects(registry);

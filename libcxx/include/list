@@ -330,7 +330,7 @@ public:
     __list_iterator(const __list_iterator& __p)
         : __ptr_(__p.__ptr_)
     {
-        __get_db()->__iterator_copy(this, &__p);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -342,9 +342,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __list_iterator& operator=(const __list_iterator& __p)
     {
-        if (this != &__p)
+        if (this != _VSTD::addressof(__p))
         {
-            __get_db()->__iterator_copy(this, &__p);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
             __ptr_ = __p.__ptr_;
         }
         return *this;
@@ -448,7 +448,7 @@ public:
         : __ptr_(__p.__ptr_)
     {
 #if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__iterator_copy(this, &__p);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
 #endif
     }
 
@@ -458,7 +458,7 @@ public:
     __list_const_iterator(const __list_const_iterator& __p)
         : __ptr_(__p.__ptr_)
     {
-        __get_db()->__iterator_copy(this, &__p);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1536,7 +1536,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
              typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type*)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::insert(iterator, range) called with an iterator not"
         " referring to this list");
     iterator __r(__p.__ptr_, this);
@@ -1842,10 +1842,10 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::erase(const_iterator __f, const_iterator __l)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__f) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__f)) == this,
         "list::erase(iterator, iterator) called with an iterator not"
         " referring to this list");
-   _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__l) == this,
+   _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__l)) == this,
         "list::erase(iterator, iterator) called with an iterator not"
         " referring to this list");
 #endif

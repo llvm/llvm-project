@@ -208,8 +208,9 @@ void Finalize(
 }
 
 // The order of finalization follows Fortran 2018 7.5.6.2, with
-// elementwise deallocation of non-parent components (and their consequent
-// finalizations) taking place before parent component finalization.
+// elementwise finalization of non-parent components taking place
+// before parent component finalization, and with all finalization
+// preceding any deallocation.
 void Destroy(const Descriptor &descriptor, bool finalize,
     const typeInfo::DerivedType &derived) {
   if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {

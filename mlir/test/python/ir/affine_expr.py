@@ -8,9 +8,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testAffineExprCapsule
+@run
 def testAffineExprCapsule():
   with Context() as ctx:
     affine_expr = AffineExpr.get_constant(42)
@@ -24,10 +26,9 @@ def testAffineExprCapsule():
   assert affine_expr == affine_expr_2
   assert affine_expr_2.context == ctx
 
-run(testAffineExprCapsule)
-
 
 # CHECK-LABEL: TEST: testAffineExprEq
+@run
 def testAffineExprEq():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -44,10 +45,9 @@ def testAffineExprEq():
     # CHECK: False
     print(a1 == "foo")
 
-run(testAffineExprEq)
-
 
 # CHECK-LABEL: TEST: testAffineExprContext
+@run
 def testAffineExprContext():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -61,6 +61,7 @@ run(testAffineExprContext)
 
 
 # CHECK-LABEL: TEST: testAffineExprConstant
+@run
 def testAffineExprConstant():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -77,10 +78,9 @@ def testAffineExprConstant():
 
     assert a1 == a2
 
-run(testAffineExprConstant)
-
 
 # CHECK-LABEL: TEST: testAffineExprDim
+@run
 def testAffineExprDim():
   with Context():
     d1 = AffineExpr.get_dim(1)
@@ -100,10 +100,9 @@ def testAffineExprDim():
     assert d1 == d11
     assert d1 != d2
 
-run(testAffineExprDim)
-
 
 # CHECK-LABEL: TEST: testAffineExprSymbol
+@run
 def testAffineExprSymbol():
   with Context():
     s1 = AffineExpr.get_symbol(1)
@@ -123,10 +122,9 @@ def testAffineExprSymbol():
     assert s1 == s11
     assert s1 != s2
 
-run(testAffineExprSymbol)
-
 
 # CHECK-LABEL: TEST: testAffineAddExpr
+@run
 def testAffineAddExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -143,10 +141,9 @@ def testAffineAddExpr():
     assert d12.lhs == d1
     assert d12.rhs == d2
 
-run(testAffineAddExpr)
-
 
 # CHECK-LABEL: TEST: testAffineMulExpr
+@run
 def testAffineMulExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -163,10 +160,9 @@ def testAffineMulExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineMulExpr)
-
 
 # CHECK-LABEL: TEST: testAffineModExpr
+@run
 def testAffineModExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -183,10 +179,9 @@ def testAffineModExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineModExpr)
-
 
 # CHECK-LABEL: TEST: testAffineFloorDivExpr
+@run
 def testAffineFloorDivExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -198,10 +193,9 @@ def testAffineFloorDivExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineFloorDivExpr)
-
 
 # CHECK-LABEL: TEST: testAffineCeilDivExpr
+@run
 def testAffineCeilDivExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -213,10 +207,9 @@ def testAffineCeilDivExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineCeilDivExpr)
-
 
 # CHECK-LABEL: TEST: testAffineExprSub
+@run
 def testAffineExprSub():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -232,9 +225,8 @@ def testAffineExprSub():
     # CHECK: -1
     print(rhs.rhs)
 
-run(testAffineExprSub)
-
-
+# CHECK-LABEL: TEST: testClassHierarchy
+@run
 def testClassHierarchy():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -272,4 +264,28 @@ def testClassHierarchy():
       # CHECK: Cannot cast affine expression to AffineBinaryExpr
       print(e)
 
-run(testClassHierarchy)
+# CHECK-LABEL: TEST: testIsInstance
+@run
+def testIsInstance():
+  with Context():
+    d1 = AffineDimExpr.get(1)
+    c2 = AffineConstantExpr.get(2)
+    add = AffineAddExpr.get(d1, c2)
+    mul = AffineMulExpr.get(d1, c2)
+
+    # CHECK: True
+    print(AffineDimExpr.isinstance(d1))
+    # CHECK: False
+    print(AffineConstantExpr.isinstance(d1))
+    # CHECK: True
+    print(AffineConstantExpr.isinstance(c2))
+    # CHECK: False
+    print(AffineMulExpr.isinstance(c2))
+    # CHECK: True
+    print(AffineAddExpr.isinstance(add))
+    # CHECK: False
+    print(AffineMulExpr.isinstance(add))
+    # CHECK: True
+    print(AffineMulExpr.isinstance(mul))
+    # CHECK: False
+    print(AffineAddExpr.isinstance(mul))

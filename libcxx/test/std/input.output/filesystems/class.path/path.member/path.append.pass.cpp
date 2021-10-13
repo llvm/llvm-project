@@ -386,14 +386,18 @@ int main(int, char**)
       assert(&Res == &LHS);
     }
     doAppendSourceTest<char>    (TC);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     doAppendSourceTest<wchar_t> (TC);
+#endif
     doAppendSourceTest<char16_t>(TC);
     doAppendSourceTest<char32_t>(TC);
   }
   for (auto const & TC : LongLHSCases) {
     (void)TC;
     LIBCPP_ONLY(doAppendSourceAllocTest<char>(TC));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     LIBCPP_ONLY(doAppendSourceAllocTest<wchar_t>(TC));
+#endif
   }
   test_sfinae();
 

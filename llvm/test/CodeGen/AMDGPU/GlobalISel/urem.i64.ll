@@ -963,35 +963,15 @@ define i64 @v_urem_i64_pow2k_denom(i64 %num) {
 }
 
 define <2 x i64> @v_urem_v2i64_pow2k_denom(<2 x i64> %num) {
-; GISEL-LABEL: v_urem_v2i64_pow2k_denom:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_movk_i32 s4, 0x1000
-; GISEL-NEXT:    s_add_u32 s5, s4, -1
-; GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GISEL-NEXT:    s_and_b32 s6, s6, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GISEL-NEXT:    s_addc_u32 s6, 0, -1
-; GISEL-NEXT:    s_add_u32 s4, s4, -1
-; GISEL-NEXT:    s_cselect_b32 s7, 1, 0
-; GISEL-NEXT:    v_and_b32_e32 v0, s5, v0
-; GISEL-NEXT:    s_and_b32 s5, s7, 1
-; GISEL-NEXT:    v_and_b32_e32 v1, s6, v1
-; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
-; GISEL-NEXT:    s_addc_u32 s5, 0, -1
-; GISEL-NEXT:    v_and_b32_e32 v2, s4, v2
-; GISEL-NEXT:    v_and_b32_e32 v3, s5, v3
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; CGP-LABEL: v_urem_v2i64_pow2k_denom:
-; CGP:       ; %bb.0:
-; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CGP-NEXT:    s_movk_i32 s4, 0xfff
-; CGP-NEXT:    v_and_b32_e32 v0, s4, v0
-; CGP-NEXT:    v_and_b32_e32 v2, s4, v2
-; CGP-NEXT:    v_mov_b32_e32 v1, 0
-; CGP-NEXT:    v_mov_b32_e32 v3, 0
-; CGP-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: v_urem_v2i64_pow2k_denom:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_movk_i32 s4, 0xfff
+; CHECK-NEXT:    v_and_b32_e32 v0, s4, v0
+; CHECK-NEXT:    v_and_b32_e32 v2, s4, v2
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = urem <2 x i64> %num, <i64 4096, i64 4096>
   ret <2 x i64> %result
 }

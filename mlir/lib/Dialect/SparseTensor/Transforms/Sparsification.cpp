@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -454,7 +455,7 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
             dynShape, genIntType(rewriter, enc.getPointerBitWidth()));
         auto indTp = MemRefType::get(
             dynShape, genIntType(rewriter, enc.getIndexBitWidth()));
-        Value dim = rewriter.create<ConstantIndexOp>(loc, d);
+        Value dim = rewriter.create<arith::ConstantIndexOp>(loc, d);
         // Generate sparse primitives to obtains pointer and indices.
         codegen.pointers[tensor][idx] =
             rewriter.create<ToPointersOp>(loc, ptrTp, t->get(), dim);
@@ -521,7 +522,7 @@ static Value genVectorMask(CodeGen &codegen, PatternRewriter &rewriter,
       matchPattern(step, m_Constant(&stepInt))) {
     if (((hiInt.getInt() - loInt.getInt()) % stepInt.getInt()) == 0)
       return rewriter.create<vector::BroadcastOp>(
-          loc, mtp, rewriter.create<ConstantIntOp>(loc, 1, 1));
+          loc, mtp, rewriter.create<arith::ConstantIntOp>(loc, 1, 1));
   }
   // Otherwise, generate a vector mask that avoids overrunning the upperbound
   // during vector execution. Here we rely on subsequent loop optimizations to
@@ -542,11 +543,12 @@ static Value genVectorLoad(CodeGen &codegen, PatternRewriter &rewriter,
                            Value ptr, ArrayRef<Value> args) {
   Location loc = ptr.getLoc();
   VectorType vtp = vectorType(codegen, ptr);
-  Value pass = rewriter.create<ConstantOp>(loc, vtp, rewriter.getZeroAttr(vtp));
+  Value pass =
+      rewriter.create<arith::ConstantOp>(loc, vtp, rewriter.getZeroAttr(vtp));
   if (args.back().getType().isa<VectorType>()) {
     SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
     Value indexVec = args.back();
-    scalarArgs.back() = rewriter.create<ConstantIndexOp>(loc, 0);
+    scalarArgs.back() = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     return rewriter.create<vector::GatherOp>(
         loc, vtp, ptr, scalarArgs, indexVec, codegen.curVecMask, pass);
   }
@@ -561,7 +563,7 @@ static void genVectorStore(CodeGen &codegen, PatternRewriter &rewriter,
   if (args.back().getType().isa<VectorType>()) {
     SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
     Value indexVec = args.back();
-    scalarArgs.back() = rewriter.create<ConstantIndexOp>(loc, 0);
+    scalarArgs.back() = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     rewriter.create<vector::ScatterOp>(loc, ptr, scalarArgs, indexVec,
                                        codegen.curVecMask, rhs);
     return;
@@ -591,19 +593,19 @@ static Value genAffine(CodeGen &codegen, PatternRewriter &rewriter,
   }
   case AffineExprKind::Add: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
-    return rewriter.create<AddIOp>(
+    return rewriter.create<arith::AddIOp>(
         loc, genAffine(codegen, rewriter, binOp.getLHS(), loc),
         genAffine(codegen, rewriter, binOp.getRHS(), loc));
   }
   case AffineExprKind::Mul: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
-    return rewriter.create<MulIOp>(
+    return rewriter.create<arith::MulIOp>(
         loc, genAffine(codegen, rewriter, binOp.getLHS(), loc),
         genAffine(codegen, rewriter, binOp.getRHS(), loc));
   }
   case AffineExprKind::Constant: {
     int64_t c = a.cast<AffineConstantExpr>().getValue();
-    return rewriter.create<ConstantIndexOp>(loc, c);
+    return rewriter.create<arith::ConstantIndexOp>(loc, c);
   }
   default:
     llvm_unreachable("unexpected affine subscript");
@@ -698,11 +700,11 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
     Value vload = genVectorLoad(codegen, rewriter, ptr, {s});
     if (!etp.isa<IndexType>()) {
       if (etp.getIntOrFloatBitWidth() < 32)
-        vload = rewriter.create<ZeroExtendIOp>(
+        vload = rewriter.create<arith::ExtUIOp>(
             loc, vload, vectorType(codegen, rewriter.getIntegerType(32)));
       else if (etp.getIntOrFloatBitWidth() < 64 &&
                !codegen.options.enableSIMDIndex32)
-        vload = rewriter.create<ZeroExtendIOp>(
+        vload = rewriter.create<arith::ExtUIOp>(
             loc, vload, vectorType(codegen, rewriter.getIntegerType(64)));
     }
     return vload;
@@ -714,9 +716,10 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
   Value load = rewriter.create<memref::LoadOp>(loc, ptr, s);
   if (!load.getType().isa<IndexType>()) {
     if (load.getType().getIntOrFloatBitWidth() < 64)
-      load = rewriter.create<ZeroExtendIOp>(loc, load,
-                                            rewriter.getIntegerType(64));
-    load = rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
+      load = rewriter.create<arith::ExtUIOp>(loc, load,
+                                             rewriter.getIntegerType(64));
+    load =
+        rewriter.create<arith::IndexCastOp>(loc, load, rewriter.getIndexType());
   }
   return load;
 }
@@ -733,12 +736,13 @@ static Value genInvariantValue(Merger &merger, CodeGen &codegen,
 /// Generates an address computation "sz * p + i".
 static Value genAddress(CodeGen &codegen, PatternRewriter &rewriter,
                         Location loc, Value size, Value p, Value i) {
-  Value mul = rewriter.create<MulIOp>(loc, size, p);
+  Value mul = rewriter.create<arith::MulIOp>(loc, size, p);
   if (auto vtp = i.getType().dyn_cast<VectorType>()) {
-    Value inv = rewriter.create<IndexCastOp>(loc, mul, vtp.getElementType());
+    Value inv =
+        rewriter.create<arith::IndexCastOp>(loc, mul, vtp.getElementType());
     mul = genVectorInvariantValue(codegen, rewriter, inv);
   }
-  return rewriter.create<AddIOp>(loc, mul, i);
+  return rewriter.create<arith::AddIOp>(loc, mul, i);
 }
 
 /// Generates start of a reduction.
@@ -876,11 +880,11 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
             break;
         }
         Value ptr = codegen.pointers[tensor][idx];
-        Value one = rewriter.create<ConstantIndexOp>(loc, 1);
-        Value p0 = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
+        Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+        Value p0 = (pat == 0) ? rewriter.create<arith::ConstantIndexOp>(loc, 0)
                               : codegen.pidxs[tensor][topSort[pat - 1]];
         codegen.pidxs[tensor][idx] = genLoad(codegen, rewriter, loc, ptr, p0);
-        Value p1 = rewriter.create<AddIOp>(loc, p0, one);
+        Value p1 = rewriter.create<arith::AddIOp>(loc, p0, one);
         codegen.highs[tensor][idx] = genLoad(codegen, rewriter, loc, ptr, p1);
       } else {
         // Dense index still in play.
@@ -890,7 +894,7 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   }
 
   // Initialize the universal dense index.
-  codegen.loops[idx] = rewriter.create<ConstantIndexOp>(loc, 0);
+  codegen.loops[idx] = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   return needsUniv;
 }
 
@@ -929,22 +933,23 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   llvm_unreachable("unexpected parallelization strategy");
 }
 
-/// Checks unit strides for dense tensors. The iteration graph may have ignored
+/// Checks unit stride for dense tensors. The iteration graph may have ignored
 /// dense access patterns in order to avoid cycles (sparse access patterns are
 /// always placed innermost), but that means dense access has become strided.
-/// For now, we reject vectorization of such cases.
-/// TODO: implement strided load/stores on dense arrays
+/// This prevents effective vectorization.
 static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
-                             unsigned ldx) {
+                             unsigned idx) {
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     if (!getSparseTensorEncoding(t->get().getType())) {
       auto map = op.getTiedIndexingMap(t);
       for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
         AffineExpr a = map.getResult(d);
-        if (a.getKind() != AffineExprKind::DimId)
-          return false; // very conservative
-        unsigned idx = a.cast<AffineDimExpr>().getPosition();
-        if (idx == ldx && d != rank - 1)
+        // Report non-unit stride if innermost index appears at an outer
+        // dimension (true non-unit stride) or if the innermost index appears
+        // in a compound subscript in the innermost dimension. Even if the
+        // latter is unit stride, it does not play well with scatter/gather.
+        if (a.isFunctionOfDim(idx) &&
+            ((d != rank - 1) || (a.getKind() != AffineExprKind::DimId)))
           return false;
       }
     }
@@ -976,7 +981,8 @@ static Operation *genFor(Merger &merger, CodeGen &codegen,
   Location loc = op.getLoc();
   Value lo = isSparse ? codegen.pidxs[tensor][idx] : codegen.loops[idx];
   Value hi = isSparse ? codegen.highs[tensor][idx] : codegen.sizes[idx];
-  Value step = rewriter.create<ConstantIndexOp>(loc, codegen.curVecLength);
+  Value step =
+      rewriter.create<arith::ConstantIndexOp>(loc, codegen.curVecLength);
 
   // Emit a parallel loop.
   if (isParallel) {
@@ -1056,8 +1062,9 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
       assert(idx == merger.index(b));
       Value op1 = before->getArgument(o);
       Value op2 = codegen.highs[tensor][idx];
-      Value opc = rewriter.create<CmpIOp>(loc, CmpIPredicate::ult, op1, op2);
-      cond = cond ? rewriter.create<AndOp>(loc, cond, opc) : opc;
+      Value opc = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                                 op1, op2);
+      cond = cond ? rewriter.create<arith::AndIOp>(loc, cond, opc) : opc;
       codegen.pidxs[tensor][idx] = after->getArgument(o++);
     }
   }
@@ -1107,8 +1114,8 @@ static void genLocals(Merger &merger, CodeGen &codegen,
       codegen.idxs[tensor][idx] = load;
       if (!needsUniv) {
         if (min) {
-          Value cmp =
-              rewriter.create<CmpIOp>(loc, CmpIPredicate::ult, load, min);
+          Value cmp = rewriter.create<arith::CmpIOp>(
+              loc, arith::CmpIPredicate::ult, load, min);
           min = rewriter.create<SelectOp>(loc, cmp, load, min);
         } else {
           min = load;
@@ -1135,7 +1142,7 @@ static void genLocals(Merger &merger, CodeGen &codegen,
       for (; pat != 0; pat--)
         if (codegen.pidxs[tensor][topSort[pat - 1]])
           break;
-      Value p = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
+      Value p = (pat == 0) ? rewriter.create<arith::ConstantIndexOp>(loc, 0)
                            : codegen.pidxs[tensor][topSort[pat - 1]];
       codegen.pidxs[tensor][idx] = genAddress(
           codegen, rewriter, loc, codegen.sizes[idx], p, codegen.loops[idx]);
@@ -1151,7 +1158,7 @@ static void genWhileInduction(Merger &merger, CodeGen &codegen,
   Location loc = op.getLoc();
   unsigned o = 0;
   SmallVector<Value, 4> operands;
-  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+  Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   for (unsigned b = 0, be = induction.size(); b < be; b++) {
     if (induction[b] && merger.isDim(b, Dim::kSparse)) {
       unsigned tensor = merger.tensor(b);
@@ -1159,14 +1166,16 @@ static void genWhileInduction(Merger &merger, CodeGen &codegen,
       Value op1 = codegen.idxs[tensor][idx];
       Value op2 = codegen.loops[idx];
       Value op3 = codegen.pidxs[tensor][idx];
-      Value cmp = rewriter.create<CmpIOp>(loc, CmpIPredicate::eq, op1, op2);
-      Value add = rewriter.create<AddIOp>(loc, op3, one);
+      Value cmp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                 op1, op2);
+      Value add = rewriter.create<arith::AddIOp>(loc, op3, one);
       operands.push_back(rewriter.create<SelectOp>(loc, cmp, add, op3));
       codegen.pidxs[tensor][idx] = results[o++];
     }
   }
   if (needsUniv) {
-    operands.push_back(rewriter.create<AddIOp>(loc, codegen.loops[idx], one));
+    operands.push_back(
+        rewriter.create<arith::AddIOp>(loc, codegen.loops[idx], one));
     codegen.loops[idx] = results[o++];
   }
   assert(o == operands.size());
@@ -1187,11 +1196,12 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen,
       if (merger.isDim(b, Dim::kSparse)) {
         Value op1 = codegen.idxs[tensor][idx];
         Value op2 = codegen.loops[idx];
-        clause = rewriter.create<CmpIOp>(loc, CmpIPredicate::eq, op1, op2);
+        clause = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                op1, op2);
       } else {
-        clause = rewriter.create<ConstantIntOp>(loc, 1, 1); // true
+        clause = rewriter.create<arith::ConstantIntOp>(loc, 1, 1); // true
       }
-      cond = cond ? rewriter.create<AndOp>(loc, cond, clause) : clause;
+      cond = cond ? rewriter.create<arith::AndIOp>(loc, cond, clause) : clause;
     }
   }
   scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ true);

@@ -56,13 +56,12 @@ Note: It is generally good practice to define the implementation of the
 `verifyTrait` hook out-of-line as a free function when possible to avoid
 instantiating the implementation for every concrete operation type.
 
-Operation traits may also provide a `foldTrait` hook that is called when
-folding the concrete operation. The trait folders will only be invoked if
-the concrete operation fold is either not implemented, fails, or performs
-an in-place fold.
+Operation traits may also provide a `foldTrait` hook that is called when folding
+the concrete operation. The trait folders will only be invoked if the concrete
+operation fold is either not implemented, fails, or performs an in-place fold.
 
-The following signature of fold will be called if it is implemented
-and the op has a single result.
+The following signature of fold will be called if it is implemented and the op
+has a single result.
 
 ```c++
 template <typename ConcreteType>
@@ -76,8 +75,8 @@ public:
 };
 ```
 
-Otherwise, if the operation has a single result and the above signature is
-not implemented, or the operation has multiple results, then the following signature
+Otherwise, if the operation has a single result and the above signature is not
+implemented, or the operation has multiple results, then the following signature
 will be used (if implemented):
 
 ```c++
@@ -200,9 +199,9 @@ defined at the top-level of such operations, or appear as region arguments for
 such operations automatically become valid symbols for the polyhedral scope
 defined by that operation. As a result, such SSA values could be used as the
 operands or index operands of various affine dialect operations like affine.for,
-affine.load, and affine.store.  The polyhedral scope defined by an operation
-with this trait includes all operations in its region excluding operations that
-are nested inside of other operations that themselves have this trait.
+affine.load, and affine.store. The polyhedral scope defined by an operation with
+this trait includes all operations in its region excluding operations that are
+nested inside of other operations that themselves have this trait.
 
 ### AutomaticAllocationScope
 
@@ -211,7 +210,8 @@ are nested inside of other operations that themselves have this trait.
 This trait is carried by region holding operations that define a new scope for
 automatic allocation. Such allocations are automatically freed when control is
 transferred back from the regions of such operations. As an example, allocations
-performed by [`memref.alloca`](Dialects/MemRef.md/#memrefalloca-mlirmemrefallocaop) are
+performed by
+[`memref.alloca`](Dialects/MemRef.md/#memrefalloca-mlirmemrefallocaop) are
 automatically freed when control leaves the region of its closest surrounding op
 that has the trait AutomaticAllocationScope.
 
@@ -241,7 +241,7 @@ Y op X`
 
 ### ElementwiseMappable
 
-* `OpTrait::ElementwiseMappable` -- `ElementwiseMappable`
+*   `OpTrait::ElementwiseMappable` -- `ElementwiseMappable`
 
 This trait tags scalar ops that also can be applied to vectors/tensors, with
 their semantics on vectors/tensors being elementwise application. This trait
@@ -300,7 +300,7 @@ that the following is invalid if `foo.region_op` is defined as
 `IsolatedFromAbove`:
 
 ```mlir
-%result = constant 10 : i32
+%result = arith.constant 10 : i32
 foo.region_op {
   foo.yield %result : i32
 }
@@ -311,14 +311,13 @@ to have [passes](PassManagement.md) scheduled under them.
 
 ### MemRefsNormalizable
 
-* `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
+*   `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
 
-This trait is used to flag operations that consume or produce
-values of `MemRef` type where those references can be 'normalized'.
-In cases where an associated `MemRef` has a
-non-identity memory-layout specification, such normalizable operations can be
-modified so that the `MemRef` has an identity layout specification.
-This can be implemented by associating the operation with its own
+This trait is used to flag operations that consume or produce values of `MemRef`
+type where those references can be 'normalized'. In cases where an associated
+`MemRef` has a non-identity memory-layout specification, such normalizable
+operations can be modified so that the `MemRef` has an identity layout
+specification. This can be implemented by associating the operation with its own
 index expression that can express the equivalent of the memory-layout
 specification of the MemRef type. See [the -normalize-memrefs pass].
 (https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)

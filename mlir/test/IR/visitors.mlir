@@ -6,9 +6,9 @@
 // callbacks with return so that the output includes more cases in pre-order.
 
 func @structured_cfg() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   scf.for %i = %c1 to %c10 step %c1 {
     %cond = "use0"(%i) : (index) -> (i1)
     scf.if %cond {

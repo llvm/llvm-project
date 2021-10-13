@@ -132,7 +132,7 @@ func @static_mixed_data_low_high_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
 // CHECK-LABEL: @dynamic_high_pad
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x5xf32>
 //   CHECK-NOT:   linalg.pad_tensor
-//       CHECK:   %[[C0:.*]] = constant 0 : index
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   tensor.dim %[[ARG0]], %[[C0]]
 //       CHECK:   %[[RESULT:.*]] = scf.if %{{.*}} -> (tensor<3x4xf32>) {
 //       CHECK:     %[[GEN:.*]] = tensor.generate
@@ -157,7 +157,7 @@ func @dynamic_high_pad(%arg0 : tensor<?x5xf32>, %h1: index, %pad : f32) -> tenso
 // CHECK-LABEL: @dynamic_extract_size
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x5xf32>, %[[ARG1:.*]]: index
 //   CHECK-NOT:   linalg.pad_tensor
-//       CHECK:   %[[C0:.*]] = constant 0 : index
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   tensor.dim %[[ARG0]], %[[C0]]
 //       CHECK:   %[[RESULT:.*]] = scf.if %{{.*}} -> (tensor<?x4xf32>) {
 //       CHECK:     %[[GEN:.*]] = tensor.generate %[[ARG1]]

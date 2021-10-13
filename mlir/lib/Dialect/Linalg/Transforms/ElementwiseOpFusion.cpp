@@ -1237,7 +1237,7 @@ public:
       }
 
       // Create a constant scalar value from the splat constant.
-      Value scalarConstant = rewriter.create<ConstantOp>(
+      Value scalarConstant = rewriter.create<arith::ConstantOp>(
           def->getLoc(), constantAttr, constantAttr.getType());
 
       SmallVector<Value> outputOperands = genericOp.getOutputOperands();

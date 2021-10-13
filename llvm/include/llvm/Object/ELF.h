@@ -81,10 +81,6 @@ getElfArchType(StringRef Object) {
                         (uint8_t)Object[ELF::EI_DATA]);
 }
 
-static inline Error createError(const Twine &Err) {
-  return make_error<StringError>(Err, object_error::parse_failed);
-}
-
 enum PPCInstrMasks : uint64_t {
   PADDI_R12_NO_DISP = 0x0610000039800000,
   ADDIS_R12_TO_R2_NO_DISP = 0x3D820000,

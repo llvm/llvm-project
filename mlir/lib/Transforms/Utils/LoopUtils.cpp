@@ -18,6 +18,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/AffineMap.h"
@@ -127,10 +128,11 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   assert(divisor > 0 && "expected positive divisor");
   assert(dividend.getType().isIndex() && "expected index-typed value");
 
-  Value divisorMinusOneCst = builder.create<ConstantIndexOp>(loc, divisor - 1);
-  Value divisorCst = builder.create<ConstantIndexOp>(loc, divisor);
-  Value sum = builder.create<AddIOp>(loc, dividend, divisorMinusOneCst);
-  return builder.create<SignedDivIOp>(loc, sum, divisorCst);
+  Value divisorMinusOneCst =
+      builder.create<arith::ConstantIndexOp>(loc, divisor - 1);
+  Value divisorCst = builder.create<arith::ConstantIndexOp>(loc, divisor);
+  Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOneCst);
+  return builder.create<arith::DivSIOp>(loc, sum, divisorCst);
 }
 
 // Build the IR that performs ceil division of a positive value by another
@@ -141,10 +143,10 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
                              Value divisor) {
   assert(dividend.getType().isIndex() && "expected index-typed value");
 
-  Value cstOne = builder.create<ConstantIndexOp>(loc, 1);
-  Value divisorMinusOne = builder.create<SubIOp>(loc, divisor, cstOne);
-  Value sum = builder.create<AddIOp>(loc, dividend, divisorMinusOne);
-  return builder.create<SignedDivIOp>(loc, sum, divisor);
+  Value cstOne = builder.create<arith::ConstantIndexOp>(loc, 1);
+  Value divisorMinusOne = builder.create<arith::SubIOp>(loc, divisor, cstOne);
+  Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOne);
+  return builder.create<arith::DivSIOp>(loc, sum, divisor);
 }
 
 /// Helper to replace uses of loop carried values (iter_args) and loop
@@ -184,7 +186,7 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
       OpBuilder topBuilder(forOp->getParentOfType<FuncOp>().getBody());
-      auto constOp = topBuilder.create<ConstantIndexOp>(
+      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
@@ -216,14 +218,14 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
 LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  auto lbCstOp = forOp.lowerBound().getDefiningOp<ConstantIndexOp>();
-  auto ubCstOp = forOp.upperBound().getDefiningOp<ConstantIndexOp>();
-  auto stepCstOp = forOp.step().getDefiningOp<ConstantIndexOp>();
-  if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.getValue() < 0 ||
-      ubCstOp.getValue() < 0 || stepCstOp.getValue() < 0)
+  auto lbCstOp = forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto ubCstOp = forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCstOp = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
+  if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.value() < 0 ||
+      ubCstOp.value() < 0 || stepCstOp.value() < 0)
     return failure();
-  int64_t tripCount = mlir::ceilDiv(ubCstOp.getValue() - lbCstOp.getValue(),
-                                    stepCstOp.getValue());
+  int64_t tripCount =
+      mlir::ceilDiv(ubCstOp.value() - lbCstOp.value(), stepCstOp.value());
   if (tripCount != 1)
     return failure();
   auto iv = forOp.getInductionVar();
@@ -1052,6 +1054,8 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.hasValue()) {
     uint64_t tripCount = mayBeConstantTripCount.getValue();
+    if (tripCount == 0)
+      return success();
     if (tripCount == 1)
       return promoteIfSingleIteration(forOp);
     return loopUnrollByFactor(forOp, tripCount);
@@ -1236,14 +1240,14 @@ LogicalResult mlir::loopUnrollByFactor(
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  auto lbCstOp = forOp.lowerBound().getDefiningOp<ConstantIndexOp>();
-  auto ubCstOp = forOp.upperBound().getDefiningOp<ConstantIndexOp>();
-  auto stepCstOp = forOp.step().getDefiningOp<ConstantIndexOp>();
+  auto lbCstOp = forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto ubCstOp = forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCstOp = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
   if (lbCstOp && ubCstOp && stepCstOp) {
     // Constant loop bounds computation.
-    int64_t lbCst = lbCstOp.getValue();
-    int64_t ubCst = ubCstOp.getValue();
-    int64_t stepCst = stepCstOp.getValue();
+    int64_t lbCst = lbCstOp.value();
+    int64_t ubCst = ubCstOp.value();
+    int64_t stepCst = stepCstOp.value();
     assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
            "expected positive loop bounds and step");
     int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
@@ -1255,37 +1259,39 @@ LogicalResult mlir::loopUnrollByFactor(
     // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.
     generateEpilogueLoop = upperBoundUnrolledCst < ubCst;
     if (generateEpilogueLoop)
-      upperBoundUnrolled =
-          boundsBuilder.create<ConstantIndexOp>(loc, upperBoundUnrolledCst);
+      upperBoundUnrolled = boundsBuilder.create<arith::ConstantIndexOp>(
+          loc, upperBoundUnrolledCst);
     else
       upperBoundUnrolled = ubCstOp;
 
     // Create constant for 'stepUnrolled'.
-    stepUnrolled =
-        stepCst == stepUnrolledCst
-            ? step
-            : boundsBuilder.create<ConstantIndexOp>(loc, stepUnrolledCst);
+    stepUnrolled = stepCst == stepUnrolledCst
+                       ? step
+                       : boundsBuilder.create<arith::ConstantIndexOp>(
+                             loc, stepUnrolledCst);
   } else {
     // Dynamic loop bounds computation.
     // TODO: Add dynamic asserts for negative lb/ub/step, or
     // consider using ceilDiv from AffineApplyExpander.
     auto lowerBound = forOp.lowerBound();
     auto upperBound = forOp.upperBound();
-    Value diff = boundsBuilder.create<SubIOp>(loc, upperBound, lowerBound);
+    Value diff =
+        boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
     Value unrollFactorCst =
-        boundsBuilder.create<ConstantIndexOp>(loc, unrollFactor);
+        boundsBuilder.create<arith::ConstantIndexOp>(loc, unrollFactor);
     Value tripCountRem =
-        boundsBuilder.create<SignedRemIOp>(loc, tripCount, unrollFactorCst);
+        boundsBuilder.create<arith::RemSIOp>(loc, tripCount, unrollFactorCst);
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
     Value tripCountEvenMultiple =
-        boundsBuilder.create<SubIOp>(loc, tripCount, tripCountRem);
+        boundsBuilder.create<arith::SubIOp>(loc, tripCount, tripCountRem);
     // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
-    upperBoundUnrolled = boundsBuilder.create<AddIOp>(
+    upperBoundUnrolled = boundsBuilder.create<arith::AddIOp>(
         loc, lowerBound,
-        boundsBuilder.create<MulIOp>(loc, tripCountEvenMultiple, step));
+        boundsBuilder.create<arith::MulIOp>(loc, tripCountEvenMultiple, step));
     // Scale 'step' by 'unrollFactor'.
-    stepUnrolled = boundsBuilder.create<MulIOp>(loc, step, unrollFactorCst);
+    stepUnrolled =
+        boundsBuilder.create<arith::MulIOp>(loc, step, unrollFactorCst);
   }
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
@@ -1319,9 +1325,9 @@ LogicalResult mlir::loopUnrollByFactor(
       forOp.getBody(), forOp.getInductionVar(), unrollFactor,
       [&](unsigned i, Value iv, OpBuilder b) {
         // iv' = iv + step * i;
-        auto stride =
-            b.create<MulIOp>(loc, step, b.create<ConstantIndexOp>(loc, i));
-        return b.create<AddIOp>(loc, iv, stride);
+        auto stride = b.create<arith::MulIOp>(
+            loc, step, b.create<arith::ConstantIndexOp>(loc, i));
+        return b.create<arith::AddIOp>(loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
@@ -1540,7 +1546,8 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   if (forOp.getNumResults() > 0) {
     // Create reduction ops to combine every `unrollJamFactor` related results
     // into one value. For example, for %0:2 = affine.for ... and addf, we add
-    // %1 = addf %0#0, %0#1, and replace the following uses of %0#0 with %1.
+    // %1 = arith.addf %0#0, %0#1, and replace the following uses of %0#0 with
+    // %1.
     builder.setInsertionPointAfter(forOp);
     auto loc = forOp.getLoc();
     unsigned oldNumResults = forOp.getNumResults() / unrollJamFactor;
@@ -1862,7 +1869,7 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
   auto iv = forOp.getInductionVar();
 
   OpBuilder b(forOp);
-  forOp.setStep(b.create<MulIOp>(forOp.getLoc(), originalStep, factor));
+  forOp.setStep(b.create<arith::MulIOp>(forOp.getLoc(), originalStep, factor));
 
   Loops innerLoops;
   for (auto t : targets) {
@@ -1872,9 +1879,9 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
 
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator((t.getBody()));
-    Value stepped = b.create<AddIOp>(t.getLoc(), iv, forOp.step());
-    Value less = b.create<CmpIOp>(t.getLoc(), CmpIPredicate::slt,
-                                  forOp.upperBound(), stepped);
+    Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.step());
+    Value less = b.create<arith::CmpIOp>(t.getLoc(), arith::CmpIPredicate::slt,
+                                         forOp.upperBound(), stepped);
     Value ub =
         b.create<SelectOp>(t.getLoc(), less, forOp.upperBound(), stepped);
 
@@ -2051,8 +2058,8 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
     auto forOp = forOps[i];
     OpBuilder builder(forOp);
     auto loc = forOp.getLoc();
-    Value diff =
-        builder.create<SubIOp>(loc, forOp.upperBound(), forOp.lowerBound());
+    Value diff = builder.create<arith::SubIOp>(loc, forOp.upperBound(),
+                                               forOp.lowerBound());
     Value numIterations = ceilDivPositive(builder, loc, diff, forOp.step());
     Value iterationsPerBlock =
         ceilDivPositive(builder, loc, numIterations, sizes[i]);
@@ -2081,12 +2088,12 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
   bool isZeroBased = false;
-  if (auto ubCst = lowerBound.getDefiningOp<ConstantIndexOp>())
-    isZeroBased = ubCst.getValue() == 0;
+  if (auto ubCst = lowerBound.getDefiningOp<arith::ConstantIndexOp>())
+    isZeroBased = ubCst.value() == 0;
 
   bool isStepOne = false;
-  if (auto stepCst = step.getDefiningOp<ConstantIndexOp>())
-    isStepOne = stepCst.getValue() == 1;
+  if (auto stepCst = step.getDefiningOp<arith::ConstantIndexOp>())
+    isStepOne = stepCst.value() == 1;
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
@@ -2097,22 +2104,25 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
     return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
             /*step=*/step};
 
-  Value diff = boundsBuilder.create<SubIOp>(loc, upperBound, lowerBound);
+  Value diff = boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
   Value newUpperBound = ceilDivPositive(boundsBuilder, loc, diff, step);
 
   Value newLowerBound =
-      isZeroBased ? lowerBound : boundsBuilder.create<ConstantIndexOp>(loc, 0);
+      isZeroBased ? lowerBound
+                  : boundsBuilder.create<arith::ConstantIndexOp>(loc, 0);
   Value newStep =
-      isStepOne ? step : boundsBuilder.create<ConstantIndexOp>(loc, 1);
+      isStepOne ? step : boundsBuilder.create<arith::ConstantIndexOp>(loc, 1);
 
   // Insert code computing the value of the original loop induction variable
   // from the "normalized" one.
   Value scaled =
-      isStepOne ? inductionVar
-                : insideLoopBuilder.create<MulIOp>(loc, inductionVar, step);
+      isStepOne
+          ? inductionVar
+          : insideLoopBuilder.create<arith::MulIOp>(loc, inductionVar, step);
   Value shifted =
-      isZeroBased ? scaled
-                  : insideLoopBuilder.create<AddIOp>(loc, scaled, lowerBound);
+      isZeroBased
+          ? scaled
+          : insideLoopBuilder.create<arith::AddIOp>(loc, scaled, lowerBound);
 
   SmallPtrSet<Operation *, 2> preserve{scaled.getDefiningOp(),
                                        shifted.getDefiningOp()};
@@ -2160,7 +2170,8 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
   Location loc = outermost.getLoc();
   Value upperBound = outermost.upperBound();
   for (auto loop : loops.drop_front())
-    upperBound = builder.create<MulIOp>(loc, upperBound, loop.upperBound());
+    upperBound =
+        builder.create<arith::MulIOp>(loc, upperBound, loop.upperBound());
   outermost.setUpperBound(upperBound);
 
   builder.setInsertionPointToStart(outermost.getBody());
@@ -2177,11 +2188,11 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
   for (unsigned i = 0, e = loops.size(); i < e; ++i) {
     unsigned idx = loops.size() - i - 1;
     if (i != 0)
-      previous = builder.create<SignedDivIOp>(loc, previous,
-                                              loops[idx + 1].upperBound());
+      previous = builder.create<arith::DivSIOp>(loc, previous,
+                                                loops[idx + 1].upperBound());
 
     Value iv = (i == e - 1) ? previous
-                            : builder.create<SignedRemIOp>(
+                            : builder.create<arith::RemSIOp>(
                                   loc, previous, loops[idx].upperBound());
     replaceAllUsesInRegionWith(loops[idx].getInductionVar(), iv,
                                loops.back().region());
@@ -2338,13 +2349,13 @@ void mlir::collapseParallelLoops(
 
   // Combine iteration spaces.
   SmallVector<Value, 3> lowerBounds, upperBounds, steps;
-  auto cst0 = outsideBuilder.create<ConstantIndexOp>(loc, 0);
-  auto cst1 = outsideBuilder.create<ConstantIndexOp>(loc, 1);
+  auto cst0 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 0);
+  auto cst1 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
   for (unsigned i = 0, e = sortedDimensions.size(); i < e; ++i) {
-    Value newUpperBound = outsideBuilder.create<ConstantIndexOp>(loc, 1);
+    Value newUpperBound = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
     for (auto idx : sortedDimensions[i]) {
-      newUpperBound = outsideBuilder.create<MulIOp>(loc, newUpperBound,
-                                                    normalizedUpperBounds[idx]);
+      newUpperBound = outsideBuilder.create<arith::MulIOp>(
+          loc, newUpperBound, normalizedUpperBounds[idx]);
     }
     lowerBounds.push_back(cst0);
     steps.push_back(cst1);
@@ -2368,14 +2379,14 @@ void mlir::collapseParallelLoops(
             unsigned idx = combinedDimensions[i][j];
 
             // Determine the current induction value's current loop iteration
-            Value iv = insideBuilder.create<SignedRemIOp>(
+            Value iv = insideBuilder.create<arith::RemSIOp>(
                 loc, previous, normalizedUpperBounds[idx]);
             replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
                                        loops.region());
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
-            previous = insideBuilder.create<SignedDivIOp>(
+            previous = insideBuilder.create<arith::DivSIOp>(
                 loc, previous, normalizedUpperBounds[idx]);
           }
 
@@ -2614,7 +2625,7 @@ static LogicalResult generateCopy(
 
   FuncOp f = begin->getParentOfType<FuncOp>();
   OpBuilder topBuilder(f.getBody());
-  Value zeroIndex = topBuilder.create<ConstantIndexOp>(f.getLoc(), 0);
+  Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   if (begin == end)
     return success();
@@ -2707,7 +2718,7 @@ static LogicalResult generateCopy(
         memIndices.push_back(zeroIndex);
       } else {
         memIndices.push_back(
-            top.create<ConstantIndexOp>(loc, indexVal).getResult());
+            top.create<arith::ConstantIndexOp>(loc, indexVal).getResult());
       }
     } else {
       // The coordinate for the start location is just the lower bound along the
@@ -2754,7 +2765,7 @@ static LogicalResult generateCopy(
   }
 
   auto numElementsSSA =
-      top.create<ConstantIndexOp>(loc, numElements.getValue());
+      top.create<arith::ConstantIndexOp>(loc, numElements.getValue());
 
   Value dmaStride = nullptr;
   Value numEltPerDmaStride = nullptr;
@@ -2770,9 +2781,10 @@ static LogicalResult generateCopy(
     }
 
     if (!dmaStrideInfos.empty()) {
-      dmaStride = top.create<ConstantIndexOp>(loc, dmaStrideInfos[0].stride);
-      numEltPerDmaStride =
-          top.create<ConstantIndexOp>(loc, dmaStrideInfos[0].numEltPerStride);
+      dmaStride =
+          top.create<arith::ConstantIndexOp>(loc, dmaStrideInfos[0].stride);
+      numEltPerDmaStride = top.create<arith::ConstantIndexOp>(
+          loc, dmaStrideInfos[0].numEltPerStride);
     }
   }
 

@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=32,64,256 test-fastest-varying=2,1,0" | FileCheck %s
 
 func @vec3d(%A : memref<?x?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
   %0 = memref.dim %A, %c0 : memref<?x?x?xf32>
   %1 = memref.dim %A, %c1 : memref<?x?x?xf32>
   %2 = memref.dim %A, %c2 : memref<?x?x?xf32>

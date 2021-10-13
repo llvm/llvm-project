@@ -627,7 +627,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     %1 = "gpu.all_reduce"(%0) ({}) { op = "add" } : (f32) -> (f32)
     %2 = "gpu.all_reduce"(%0) ({
     ^bb(%lhs : f32, %rhs : f32):
-      %sum = addf %lhs, %rhs : f32
+      %sum = arith.addf %lhs, %rhs : f32
       "gpu.yield"(%sum) : (f32) -> ()
     }) : (f32) -> (f32)
     ```

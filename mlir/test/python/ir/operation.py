@@ -5,19 +5,23 @@ import io
 import itertools
 from mlir.ir import *
 
+
 def run(f):
   print("\nTEST:", f.__name__)
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # Verify iterator based traversal of the op/region/block hierarchy.
 # CHECK-LABEL: TEST: testTraverseOpRegionBlockIterators
+@run
 def testTraverseOpRegionBlockIterators():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -66,15 +70,15 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:           OP 1: return
   walk_operations("", op)
 
-run(testTraverseOpRegionBlockIterators)
-
 
 # Verify index based traversal of the op/region/block hierarchy.
 # CHECK-LABEL: TEST: testTraverseOpRegionBlockIndices
+@run
 def testTraverseOpRegionBlockIndices():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -106,13 +110,35 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:           OP 1: parent builtin.func
   walk_operations("", module.operation)
 
-run(testTraverseOpRegionBlockIndices)
+
+# CHECK-LABEL: TEST: testBlockAndRegionOwners
+@run
+def testBlockAndRegionOwners():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(
+      r"""
+    builtin.module {
+      builtin.func @f() {
+        std.return
+      }
+    }
+  """, ctx)
+
+  assert module.operation.regions[0].owner == module.operation
+  assert module.operation.regions[0].blocks[0].owner == module.operation
+
+  func = module.body.operations[0]
+  assert func.operation.regions[0].owner == func
+  assert func.operation.regions[0].blocks[0].owner == func
 
 
 # CHECK-LABEL: TEST: testBlockArgumentList
+@run
 def testBlockArgumentList():
   with Context() as ctx:
-    module = Module.parse(r"""
+    module = Module.parse(
+        r"""
       func @f1(%arg0: i32, %arg1: f64, %arg2: index) {
         return
       }
@@ -152,10 +178,8 @@ def testBlockArgumentList():
       print("Type: ", t)
 
 
-run(testBlockArgumentList)
-
-
 # CHECK-LABEL: TEST: testOperationOperands
+@run
 def testOperationOperands():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -175,10 +199,10 @@ def testOperationOperands():
       print(f"Operand {i}, type {operand.type}")
 
 
-run(testOperationOperands)
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSlice
+@run
 def testOperationOperandsSlice():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -233,10 +257,10 @@ def testOperationOperandsSlice():
       print(operand)
 
 
-run(testOperationOperandsSlice)
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSet
+@run
 def testOperationOperandsSet():
   with Context() as ctx, Location.unknown(ctx):
     ctx.allow_unregistered_dialects = True
@@ -265,17 +289,20 @@ def testOperationOperandsSet():
     print(consumer.operands[0])
 
 
-run(testOperationOperandsSet)
 
 
 # CHECK-LABEL: TEST: testDetachedOperation
+@run
 def testDetachedOperation():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     i32 = IntegerType.get_signed(32)
     op1 = Operation.create(
-        "custom.op1", results=[i32, i32], regions=1, attributes={
+        "custom.op1",
+        results=[i32, i32],
+        regions=1,
+        attributes={
             "foo": StringAttr.get("foo_value"),
             "bar": StringAttr.get("bar_value"),
         })
@@ -285,14 +312,14 @@ def testDetachedOperation():
 
   # TODO: Check successors once enough infra exists to do it properly.
 
-run(testDetachedOperation)
-
 
 # CHECK-LABEL: TEST: testOperationInsertionPoint
+@run
 def testOperationInsertionPoint():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
       %1 = "custom.addi"(%arg0, %arg0) : (i32, i32) -> i32
       return %1 : i32
@@ -323,10 +350,9 @@ def testOperationInsertionPoint():
   else:
     assert False, "expected insert of attached op to raise"
 
-run(testOperationInsertionPoint)
-
 
 # CHECK-LABEL: TEST: testOperationWithRegion
+@run
 def testOperationWithRegion():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -364,13 +390,13 @@ def testOperationWithRegion():
     # CHECK: %0 = "custom.addi"
     print(module)
 
-run(testOperationWithRegion)
-
 
 # CHECK-LABEL: TEST: testOperationResultList
+@run
 def testOperationResultList():
   ctx = Context()
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1() {
       %0:3 = call @f2() : () -> (i32, f64, index)
       return
@@ -393,10 +419,10 @@ def testOperationResultList():
     print(f"Result type {t}")
 
 
-run(testOperationResultList)
 
 
 # CHECK-LABEL: TEST: testOperationResultListSlice
+@run
 def testOperationResultListSlice():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
@@ -444,14 +470,15 @@ def testOperationResultListSlice():
       print(f"Result {res.result_number}, type {res.type}")
 
 
-run(testOperationResultListSlice)
 
 
 # CHECK-LABEL: TEST: testOperationAttributes
+@run
 def testOperationAttributes():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     "some.op"() { some.attribute = 1 : i8,
                   other.attribute = 3.0,
                   dependent = "text" } : () -> ()
@@ -491,15 +518,16 @@ def testOperationAttributes():
     assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
 
-run(testOperationAttributes)
 
 
 # CHECK-LABEL: TEST: testOperationPrint
+@run
 def testOperationPrint():
   ctx = Context()
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: i32) -> i32 {
-      %0 = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+      %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
       return %arg0 : i32
     }
   """, ctx)
@@ -529,27 +557,32 @@ def testOperationPrint():
   # Test get_asm with options.
   # CHECK: value = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>
   # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
-  module.operation.print(large_elements_limit=2, enable_debug_info=True,
-      pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
+  module.operation.print(
+      large_elements_limit=2,
+      enable_debug_info=True,
+      pretty_debug_info=True,
+      print_generic_op_form=True,
+      use_local_scope=True)
 
-run(testOperationPrint)
+
 
 
 # CHECK-LABEL: TEST: testKnownOpView
+@run
 def testKnownOpView():
   with Context(), Location.unknown():
     Context.current.allow_unregistered_dialects = True
     module = Module.parse(r"""
       %1 = "custom.f32"() : () -> f32
       %2 = "custom.f32"() : () -> f32
-      %3 = addf %1, %2 : f32
+      %3 = arith.addf %1, %2 : f32
     """)
     print(module)
 
     # addf should map to a known OpView class in the std dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
-    # CHECK: <mlir.dialects._std_ops_gen._AddFOp object
+    # CHECK: <mlir.dialects._arith_ops_gen._AddFOp object
     print(repr(addf))
     # CHECK: "custom.f32"()
     print(addf.lhs)
@@ -564,10 +597,9 @@ def testKnownOpView():
     # CHECK: OpView object
     print(repr(custom))
 
-run(testKnownOpView)
-
 
 # CHECK-LABEL: TEST: testSingleResultProperty
+@run
 def testSingleResultProperty():
   with Context(), Location.unknown():
     Context.current.allow_unregistered_dialects = True
@@ -597,9 +629,9 @@ def testSingleResultProperty():
   # CHECK: %1 = "custom.one_result"() : () -> f32
   print(module.body.operations[2])
 
-run(testSingleResultProperty)
 
 # CHECK-LABEL: TEST: testPrintInvalidOperation
+@run
 def testPrintInvalidOperation():
   ctx = Context()
   with Location.unknown(ctx):
@@ -613,10 +645,10 @@ def testPrintInvalidOperation():
     print(module)
     # CHECK: .verify = False
     print(f".verify = {module.operation.verify()}")
-run(testPrintInvalidOperation)
 
 
 # CHECK-LABEL: TEST: testCreateWithInvalidAttributes
+@run
 def testCreateWithInvalidAttributes():
   ctx = Context()
   with Location.unknown(ctx):
@@ -642,14 +674,15 @@ def testCreateWithInvalidAttributes():
     except Exception as e:
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)
-run(testCreateWithInvalidAttributes)
 
 
 # CHECK-LABEL: TEST: testOperationName
+@run
 def testOperationName():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     %0 = "custom.op1"() : () -> f32
     %1 = "custom.op2"() : () -> i32
     %2 = "custom.op1"() : () -> f32
@@ -661,9 +694,9 @@ def testOperationName():
   for op in module.body.operations:
     print(op.operation.name)
 
-run(testOperationName)
 
 # CHECK-LABEL: TEST: testCapsuleConversions
+@run
 def testCapsuleConversions():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -674,9 +707,9 @@ def testCapsuleConversions():
     m2 = Operation._CAPICreate(m_capsule)
     assert m2 is m
 
-run(testCapsuleConversions)
 
 # CHECK-LABEL: TEST: testOperationErase
+@run
 def testOperationErase():
   ctx = Context()
   ctx.allow_unregistered_dialects = True
@@ -695,5 +728,3 @@ def testOperationErase():
 
       # Ensure we can create another operation
       Operation.create("custom.op2")
-
-run(testOperationErase)

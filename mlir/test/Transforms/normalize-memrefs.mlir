@@ -155,14 +155,14 @@ func @alignment() {
 // CHECK-SAME:  (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64, %[[C:arg[0-9]+]]: memref<2x4xf64>, %[[D:arg[0-9]+]]: memref<24xf64>) -> f64
 func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf64, #tile>, %D: memref<24xf64>) -> f64 {
   %a = affine.load %A[0] : memref<16xf64, #tile>
-  %p = mulf %a, %a : f64
+  %p = arith.mulf %a, %a : f64
   affine.store %p, %A[10] : memref<16xf64, #tile>
   call @single_argument_type(%C): (memref<8xf64, #tile>) -> ()
   return %B : f64
 }
 
 // CHECK: %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
-// CHECK: %[[p:[0-9]+]] = mulf %[[a]], %[[a]] : f64
+// CHECK: %[[p:[0-9]+]] = arith.mulf %[[a]], %[[a]] : f64
 // CHECK: affine.store %[[p]], %[[A]][2, 2] : memref<4x4xf64>
 // CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
 // CHECK: return %[[B]] : f64
@@ -173,7 +173,7 @@ func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf6
 func @single_argument_type(%C : memref<8xf64, #tile>) {
   %a = memref.alloc(): memref<8xf64, #tile>
   %b = memref.alloc(): memref<16xf64, #tile>
-  %d = constant 23.0 : f64
+  %d = arith.constant 23.0 : f64
   %e = memref.alloc(): memref<24xf64>
   call @single_argument_type(%a): (memref<8xf64, #tile>) -> ()
   call @single_argument_type(%C): (memref<8xf64, #tile>) -> ()
@@ -183,7 +183,7 @@ func @single_argument_type(%C : memref<8xf64, #tile>) {
 
 // CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
 // CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
-// CHECK: %cst = constant 2.300000e+01 : f64
+// CHECK: %cst = arith.constant 2.300000e+01 : f64
 // CHECK: %[[e:[0-9]+]] = memref.alloc() : memref<24xf64>
 // CHECK: call @single_argument_type(%[[a]]) : (memref<2x4xf64>) -> ()
 // CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
@@ -193,7 +193,7 @@ func @single_argument_type(%C : memref<8xf64, #tile>) {
 // CHECK-LABEL: func @non_memref_ret
 // CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>) -> i1
 func @non_memref_ret(%A: memref<8xf64, #tile>) -> i1 {
-  %d = constant 1 : i1
+  %d = arith.constant 1 : i1
   return %d : i1
 }
 
@@ -204,8 +204,8 @@ func @non_memref_ret(%A: memref<8xf64, #tile>) -> i1 {
 // CHECK-SAME: (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64, %[[C:arg[0-9]+]]: memref<2x4xf64>) -> (memref<2x4xf64>, f64)
 func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf64, #tile>) -> (memref<8xf64, #tile>, f64) {
   %a = affine.load %A[0] : memref<16xf64, #tile>
-  %p = mulf %a, %a : f64
-  %cond = constant 1 : i1
+  %p = arith.mulf %a, %a : f64
+  %cond = arith.constant 1 : i1
   cond_br %cond, ^bb1, ^bb2
   ^bb1:
     %res1, %res2 = call @ret_single_argument_type(%C) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
@@ -215,8 +215,8 @@ func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<
 }
 
 // CHECK:   %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
-// CHECK:   %[[p:[0-9]+]] = mulf %[[a]], %[[a]] : f64
-// CHECK:   %true = constant true
+// CHECK:   %[[p:[0-9]+]] = arith.mulf %[[a]], %[[a]] : f64
+// CHECK:   %true = arith.constant true
 // CHECK:   cond_br %true, ^bb1, ^bb2
 // CHECK: ^bb1:  // pred: ^bb0
 // CHECK:   %[[res:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
@@ -229,7 +229,7 @@ func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<
 func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>){
   %a = memref.alloc() : memref<8xf64, #tile>
   %b = memref.alloc() : memref<16xf64, #tile>
-  %d = constant 23.0 : f64
+  %d = arith.constant 23.0 : f64
   call @ret_single_argument_type(%a) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
   call @ret_single_argument_type(%C) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
   %res1, %res2 = call @ret_multiple_argument_type(%b, %d, %a) : (memref<16xf64, #tile>, f64, memref<8xf64, #tile>) -> (memref<8xf64, #tile>, f64)
@@ -239,7 +239,7 @@ func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64, #til
 
 // CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
 // CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
-// CHECK: %cst = constant 2.300000e+01 : f64
+// CHECK: %cst = arith.constant 2.300000e+01 : f64
 // CHECK: %[[resA:[0-9]+]]:2 = call @ret_single_argument_type(%[[a]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK: %[[resB:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK: %[[resC:[0-9]+]]:2 = call @ret_multiple_argument_type(%[[b]], %cst, %[[a]]) : (memref<4x4xf64>, f64, memref<2x4xf64>) -> (memref<2x4xf64>, f64)
@@ -322,7 +322,7 @@ func @use_value_of_external(%A: memref<16xf64, #tile>, %B: f64) -> (memref<8xf64
 
 // CHECK-LABEL: func @affine_parallel_norm
 func @affine_parallel_norm() ->  memref<8xf32, #tile> {
-  %c = constant 23.0 : f32
+  %c = arith.constant 23.0 : f32
   %a = memref.alloc() : memref<8xf32, #tile>
   // CHECK: affine.parallel (%{{.*}}) = (0) to (8) reduce ("assign") -> (memref<2x4xf32>)
   %1 = affine.parallel (%i) = (0) to (8) reduce ("assign") ->  memref<8xf32, #tile> {

@@ -5034,6 +5034,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::VSCALE && !NewNodesMustHaveLegalTypes)
+      return getVScale(DL, VT, Operand.getConstantOperandAPInt(0));
     break;
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:

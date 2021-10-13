@@ -5,16 +5,16 @@
 // CHECK-LABEL: func @add4x2
 //      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A1:.*]] = addf %[[S1]], %[[S2]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A1:.*]] = arith.addf %[[S1]], %[[S2]] : vector<2x2xf32>
 // CHECK-NEXT: %[[VEC0:.*]] = vector.insert_strided_slice %[[A1]], %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A2:.*]] = addf %[[S3]], %[[S4]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A2:.*]] = arith.addf %[[S3]], %[[S4]] : vector<2x2xf32>
 // CHECK-NEXT: %[[VEC1:.*]] = vector.insert_strided_slice %[[A2]], %[[VEC0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: return %[[VEC1:.*]] : vector<4x2xf32>
 
 func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
-  %1 = addf %0, %0: vector<4x2xf32>
+  %1 = arith.addf %0, %0: vector<4x2xf32>
   return %1: vector<4x2xf32>
 }
 
@@ -22,43 +22,43 @@ func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
 //      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 
-// CHECK-NEXT: %[[A1:.*]] = addf %[[S1]], %[[S2]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A1:.*]] = arith.addf %[[S1]], %[[S2]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 
-// CHECK-NEXT: %[[A2:.*]] = addf %[[S3]], %[[S4]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A2:.*]] = arith.addf %[[S3]], %[[S4]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[S5:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S6:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A3:.*]] = addf %[[S5]], %[[S6]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A3:.*]] = arith.addf %[[S5]], %[[S6]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[S7:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S8:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A4:.*]] = addf %[[S7]], %[[S8]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A4:.*]] = arith.addf %[[S7]], %[[S8]] : vector<2x2xf32>
 
 // CHECK-NEXT: %[[S9:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A5:.*]] = addf %[[S9]], %[[A1]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A5:.*]] = arith.addf %[[S9]], %[[A1]] : vector<2x2xf32>
 // CHECK-NEXT: %[[R1:.*]] = vector.insert_strided_slice %[[A5]], %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 
 
 // CHECK-NEXT: %[[S11:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A6:.*]] = addf %[[S11]], %[[A2]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A6:.*]] = arith.addf %[[S11]], %[[A2]] : vector<2x2xf32>
 // CHECK-NEXT: %[[R2:.*]] = vector.insert_strided_slice %[[A6]], %[[R1]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 
 // CHECK-NEXT: %[[S13:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A7:.*]] = addf %[[S13]], %[[A3]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A7:.*]] = arith.addf %[[S13]], %[[A3]] : vector<2x2xf32>
 // CHECK-NEXT: %[[R3:.*]] = vector.insert_strided_slice %[[A7]], %[[R2]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 
 // CHECK-NEXT: %[[S15:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[A8:.*]] = addf %[[S15]], %[[A4]] : vector<2x2xf32>
+// CHECK-NEXT: %[[A8:.*]] = arith.addf %[[S15]], %[[A4]] : vector<2x2xf32>
 // CHECK-NEXT: %[[R4:.*]] = vector.insert_strided_slice %[[A8]], %[[R3]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 
 // CHECK-NEXT: return %[[R4]] : vector<4x4xf32>
 
 func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
-  %2 = addf %0, %1: vector<4x4xf32>
-  %3 = addf %1, %2: vector<4x4xf32>
+  %2 = arith.addf %0, %1: vector<4x4xf32>
+  %3 = arith.addf %1, %2: vector<4x4xf32>
   return %3: vector<4x4xf32>
 }
 
@@ -244,8 +244,8 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 
 // CHECK-LABEL: func @contraction4x4_ikj_xfer_read
 
-// CHECK-DAG:      %[[C2:.*]] = constant 2 : index
-// CHECK-DAG:      %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
 
 // Check LHS vector.transfer read is split for each user.
 
@@ -274,8 +274,8 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
                                    %arg1 : memref<2x4xf32>,
                                    %arg2 : memref<4x4xf32>) {
-  %c0 = constant 0 : index
-  %cf0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
 
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0
     { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
@@ -301,21 +301,21 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
 // TODO: Update test with VTR split transform.
 // CHECK-LABEL: func @vector_transfers
 // CHECK-COUNT-8: vector.transfer_read
-// CHECK-COUNT-4: addf
+// CHECK-COUNT-4: arith.addf
 // CHECK-COUNT-4: vector.transfer_write
 
 func @vector_transfers(%arg0: index, %arg1: index) {
-  %cst = constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-  %cst_0 = constant 1.000000e+00 : f32
-  %cst_1 = constant 2.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 2.000000e+00 : f32
   affine.for %arg2 = 0 to %arg0 step 4 {
     affine.for %arg3 = 0 to %arg1 step 4 {
       %4 = vector.transfer_read %0[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
       %5 = vector.transfer_read %1[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
-      %6 = addf %4, %5 : vector<4x4xf32>
+      %6 = arith.addf %4, %5 : vector<4x4xf32>
       vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : vector<4x4xf32>, memref<?x?xf32>
     }
   }
@@ -333,8 +333,8 @@ func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
 
 // CHECK-LABEL: func @elementwise_unroll
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32>, %[[ARG1:.*]]: memref<4x4xf32>)
-//       CHECK-DAG:   %[[C2:.*]] = constant 2 : index
-//       CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//       CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//       CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[VT0:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT1:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT2:.*]] = vector.transfer_read %[[ARG0]][%[[C2]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
@@ -343,10 +343,10 @@ func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
 //       CHECK:   %[[VT5:.*]] = vector.transfer_read %[[ARG1]][%[[C0]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT6:.*]] = vector.transfer_read %[[ARG1]][%[[C2]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT7:.*]] = vector.transfer_read %[[ARG1]][%[[C2]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
-//       CHECK:   %[[CMP0:.*]] = cmpf ult, %[[VT0]], %[[VT4]] : vector<2x2xf32>
-//       CHECK:   %[[CMP1:.*]] = cmpf ult, %[[VT1]], %[[VT5]] : vector<2x2xf32>
-//       CHECK:   %[[CMP2:.*]] = cmpf ult, %[[VT2]], %[[VT6]] : vector<2x2xf32>
-//       CHECK:   %[[CMP3:.*]] = cmpf ult, %[[VT3]], %[[VT7]] : vector<2x2xf32>
+//       CHECK:   %[[CMP0:.*]] = arith.cmpf ult, %[[VT0]], %[[VT4]] : vector<2x2xf32>
+//       CHECK:   %[[CMP1:.*]] = arith.cmpf ult, %[[VT1]], %[[VT5]] : vector<2x2xf32>
+//       CHECK:   %[[CMP2:.*]] = arith.cmpf ult, %[[VT2]], %[[VT6]] : vector<2x2xf32>
+//       CHECK:   %[[CMP3:.*]] = arith.cmpf ult, %[[VT3]], %[[VT7]] : vector<2x2xf32>
 //       CHECK:   %[[VT0:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT1:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT2:.*]] = vector.transfer_read %[[ARG0]][%[[C2]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
@@ -364,11 +364,11 @@ func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
 //       CHECK:   vector.transfer_write %[[SEL2]], %[[ARG0]][%[[C2]], %[[C0]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 //       CHECK:   vector.transfer_write %[[SEL3]], %[[ARG0]][%[[C2]], %[[C2]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
-  %c0 = constant 0 : index
-  %cf0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
   %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
-  %cond = cmpf ult, %0, %1 : vector<4x4xf32>
+  %cond = arith.cmpf ult, %0, %1 : vector<4x4xf32>
   // Vector transfer split pattern only support single user right now.
   %2 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
   %3 = vector.transfer_read %arg1[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
@@ -404,8 +404,8 @@ func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
                                           %arg1 : tensor<2x4xf32>,
                                           %arg2 : tensor<4x4xf32>) ->
   tensor<4x4xf32> {
-  %c0 = constant 0 : index
-  %cf0 = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 :
     tensor<4x2xf32>, vector<4x2xf32>
   %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 :
@@ -441,19 +441,20 @@ func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %a
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element
+//  CHECK-SAME: %[[ARG0:.+]]: vector<1x1xf16>, %{{.+}}: vector<1x1x1xf16>
 func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
-  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
-  // CHECK: vector.shape_cast %{{.+}} : vector<1x1x1xf16> to vector<1xf16>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %[[ARG0]] : vector<1x1xf16> to vector<1x1x1xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x1xf16> into vector<1x1x1xf16>
+  // CHECK: return %[[CAST]]
   return %0: vector<1x1x1xf16>
 }
 
 // CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims
 func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> vector<1x4xf16> {
-  // CHECK: %[[C0:.+]] = constant 0 : index
-  %c0 = constant 0 : index
-  // CHECK: %[[F0:.+]] = constant 0.000000e+00 : f16
-  %f0 = constant 0. : f16
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f16
+  %f0 = arith.constant 0. : f16
   // CHECK: %[[READ:.+]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[F0]] {in_bounds = [true]} : memref<1x4x8x16xf16>, vector<4xf16>
   // CHECK: %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<4xf16> to vector<1x4xf16>
   %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0 {in_bounds = [true, true]} : memref<1x4x8x16xf16>, vector<1x4xf16>
@@ -463,8 +464,8 @@ func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> v
 
 // CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims_one_element
 func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>) -> vector<1x1xf16> {
-  %c0 = constant 0 : index
-  %f0 = constant 0. : f16
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0. : f16
   // CHECK: vector.shape_cast %{{.+}} : vector<1xf16> to vector<1x1xf16>
   %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0 {in_bounds = [true, true]} : memref<1x1x1x1xf16>, vector<1x1xf16>
   return %0: vector<1x1xf16>
@@ -472,8 +473,8 @@ func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1
 
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims
 func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>) {
-  // CHECK: %[[C0:.+]] = constant 0 : index
-  %c0 = constant 0 : index
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
   // CHECK: %[[CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xf16> to vector<4xf16>
   // CHECK: vector.transfer_write %[[CAST]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true]} : vector<4xf16>, memref<1x4x8x16xf16>
 
@@ -483,7 +484,7 @@ func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %ar
 
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims_one_element
 func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x1xf16>, memref<1x1x1x1xf16>
   return
@@ -493,7 +494,6 @@ func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x
 func @cast_away_broadcast_leading_one_dims(
   %arg0: vector<8xf32>, %arg1: f32, %arg2: vector<1x4xf32>) ->
   (vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>, vector<1x1x4xf32>) {
-  // CHECK:  vector.broadcast %{{.*}} : vector<8xf32> to vector<8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
   %0 = vector.broadcast %arg0 : vector<8xf32> to vector<1x1x8xf32>
   // CHECK:  vector.broadcast %{{.*}} : f32 to vector<4xf32>
@@ -516,14 +516,14 @@ func @cast_away_elementwise_leading_one_dims(
   (vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>) {
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x1x8xf32> to vector<8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x1x8xf32> to vector<8xf32>
-  // CHECK:  addf %{{.*}}, %{{.*}} : vector<8xf32>
+  // CHECK:  arith.addf %{{.*}}, %{{.*}} : vector<8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
-  %0 = addf %arg0, %arg0 : vector<1x1x8xf32>
+  %0 = arith.addf %arg0, %arg0 : vector<1x1x8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
-  // CHECK:  cmpf ogt, %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK:  arith.cmpf ogt, %{{.*}}, %{{.*}} : vector<4xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<4xi1> to vector<1x4xi1>
-  %1 = cmpf ogt, %arg2, %arg3 : vector<1x4xf32>
+  %1 = arith.cmpf ogt, %arg2, %arg3 : vector<1x4xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
   // CHECK:  select %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xf32>

@@ -54,13 +54,17 @@ int main(int, char**)
 {
     {
         test_string_typedef<char,     pmr::string>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         test_string_typedef<wchar_t,  pmr::wstring>();
+#endif
         test_string_typedef<char16_t, pmr::u16string>();
         test_string_typedef<char32_t, pmr::u32string>();
     }
     {
         test_basic_string_alias<char,    constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         test_basic_string_alias<wchar_t, constexpr_char_traits<wchar_t>>();
+#endif
         test_basic_string_alias<char16_t, constexpr_char_traits<char16_t>>();
         test_basic_string_alias<char32_t, constexpr_char_traits<char32_t>>();
     }

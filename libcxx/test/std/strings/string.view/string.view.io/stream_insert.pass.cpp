@@ -21,14 +21,11 @@
 
 #include "test_macros.h"
 
-using std::string_view;
-using std::wstring_view;
-
 int main(int, char**)
 {
     {
         std::ostringstream out;
-        string_view sv("some text");
+        std::string_view sv("some text");
         out << sv;
         assert(out.good());
         assert(sv == out.str());
@@ -36,15 +33,16 @@ int main(int, char**)
     {
         std::ostringstream out;
         std::string s("some text");
-        string_view sv(s);
+        std::string_view sv(s);
         out.width(12);
         out << sv;
         assert(out.good());
         assert("   " + s == out.str());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wostringstream out;
-        wstring_view sv(L"some text");
+        std::wstring_view sv(L"some text");
         out << sv;
         assert(out.good());
         assert(sv == out.str());
@@ -52,12 +50,13 @@ int main(int, char**)
     {
         std::wostringstream out;
         std::wstring s(L"some text");
-        wstring_view sv(s);
+        std::wstring_view sv(s);
         out.width(12);
         out << sv;
         assert(out.good());
         assert(L"   " + s == out.str());
     }
+#endif
 
   return 0;
 }

@@ -876,6 +876,37 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   return type_sp;
 }
 
+static clang::CallingConv
+ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
+  switch (attrs.calling_convention) {
+  case llvm::dwarf::DW_CC_normal:
+    return clang::CC_C;
+  case llvm::dwarf::DW_CC_BORLAND_stdcall:
+    return clang::CC_X86StdCall;
+  case llvm::dwarf::DW_CC_BORLAND_msfastcall:
+    return clang::CC_X86FastCall;
+  case llvm::dwarf::DW_CC_LLVM_vectorcall:
+    return clang::CC_X86VectorCall;
+  case llvm::dwarf::DW_CC_BORLAND_pascal:
+    return clang::CC_X86Pascal;
+  case llvm::dwarf::DW_CC_LLVM_Win64:
+    return clang::CC_Win64;
+  case llvm::dwarf::DW_CC_LLVM_X86_64SysV:
+    return clang::CC_X86_64SysV;
+  case llvm::dwarf::DW_CC_LLVM_X86RegCall:
+    return clang::CC_X86RegCall;
+  default:
+    break;
+  }
+
+  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
+                                        DWARF_LOG_LOOKUPS));
+  LLDB_LOG(log, "Unsupported DW_AT_calling_convention value: {0}",
+           attrs.calling_convention);
+  // Use the default calling convention as a fallback.
+  return clang::CC_C;
+}
+
 TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                            ParsedDWARFTypeAttributes &attrs) {
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
@@ -954,11 +985,14 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
     is_cxx_method = false;
   }
 
+  clang::CallingConv calling_convention =
+      ConvertDWARFCallingConventionToClang(attrs);
+
   // clang_type will get the function prototype clang type after this
   // call
   CompilerType clang_type = m_ast.CreateFunctionType(
       return_clang_type, function_param_types.data(),
-      function_param_types.size(), is_variadic, type_quals);
+      function_param_types.size(), is_variadic, type_quals, calling_convention);
 
   if (attrs.name) {
     bool type_handled = false;
@@ -1370,6 +1404,123 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
                                   Type::ResolveState::Forward);
   }
   return nullptr;
+}
+
+void DWARFASTParserClang::ParseInheritance(
+    const DWARFDIE &die, const DWARFDIE &parent_die,
+    const CompilerType class_clang_type, const AccessType default_accessibility,
+    const lldb::ModuleSP &module_sp,
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
+    ClangASTImporter::LayoutInfo &layout_info) {
+
+  TypeSystemClang *ast =
+      llvm::dyn_cast_or_null<TypeSystemClang>(class_clang_type.GetTypeSystem());
+  if (ast == nullptr)
+    return;
+
+  // TODO: implement DW_TAG_inheritance type parsing.
+  DWARFAttributes attributes;
+  const size_t num_attributes = die.GetAttributes(attributes);
+  if (num_attributes == 0)
+    return;
+
+  DWARFFormValue encoding_form;
+  AccessType accessibility = default_accessibility;
+  bool is_virtual = false;
+  bool is_base_of_class = true;
+  off_t member_byte_offset = 0;
+
+  for (uint32_t i = 0; i < num_attributes; ++i) {
+    const dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      switch (attr) {
+      case DW_AT_type:
+        encoding_form = form_value;
+        break;
+      case DW_AT_data_member_location:
+        if (form_value.BlockData()) {
+          Value initialValue(0);
+          Value memberOffset(0);
+          const DWARFDataExtractor &debug_info_data = die.GetData();
+          uint32_t block_length = form_value.Unsigned();
+          uint32_t block_offset =
+              form_value.BlockData() - debug_info_data.GetDataStart();
+          if (DWARFExpression::Evaluate(
+                  nullptr, nullptr, module_sp,
+                  DataExtractor(debug_info_data, block_offset, block_length),
+                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                  memberOffset, nullptr)) {
+            member_byte_offset = memberOffset.ResolveValue(nullptr).UInt();
+          }
+        } else {
+          // With DWARF 3 and later, if the value is an integer constant,
+          // this form value is the offset in bytes from the beginning of
+          // the containing entity.
+          member_byte_offset = form_value.Unsigned();
+        }
+        break;
+
+      case DW_AT_accessibility:
+        accessibility = DW_ACCESS_to_AccessType(form_value.Unsigned());
+        break;
+
+      case DW_AT_virtuality:
+        is_virtual = form_value.Boolean();
+        break;
+
+      default:
+        break;
+      }
+    }
+  }
+
+  Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
+  if (base_class_type == nullptr) {
+    module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
+                           "resolve the base class at 0x%8.8x"
+                           " from enclosing type 0x%8.8x. \nPlease file "
+                           "a bug and attach the file at the start of "
+                           "this error message",
+                           die.GetOffset(),
+                           encoding_form.Reference().GetOffset(),
+                           parent_die.GetOffset());
+    return;
+  }
+
+  CompilerType base_class_clang_type = base_class_type->GetFullCompilerType();
+  assert(base_class_clang_type);
+  if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
+    ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
+    return;
+  }
+  std::unique_ptr<clang::CXXBaseSpecifier> result =
+      ast->CreateBaseClassSpecifier(base_class_clang_type.GetOpaqueQualType(),
+                                    accessibility, is_virtual,
+                                    is_base_of_class);
+  if (!result)
+    return;
+
+  base_classes.push_back(std::move(result));
+
+  if (is_virtual) {
+    // Do not specify any offset for virtual inheritance. The DWARF
+    // produced by clang doesn't give us a constant offset, but gives
+    // us a DWARF expressions that requires an actual object in memory.
+    // the DW_AT_data_member_location for a virtual base class looks
+    // like:
+    //      DW_AT_data_member_location( DW_OP_dup, DW_OP_deref,
+    //      DW_OP_constu(0x00000018), DW_OP_minus, DW_OP_deref,
+    //      DW_OP_plus )
+    // Given this, there is really no valid response we can give to
+    // clang for virtual base class offsets, and this should eventually
+    // be removed from LayoutRecordType() in the external
+    // AST source in clang.
+  } else {
+    layout_info.base_offsets.insert(std::make_pair(
+        ast->GetAsCXXRecordDecl(base_class_clang_type.GetOpaqueQualType()),
+        clang::CharUnits::fromQuantity(member_byte_offset)));
+  }
 }
 
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
@@ -2310,56 +2461,52 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   return nullptr;
 }
 
-void DWARFASTParserClang::ParseSingleMember(
-    const DWARFDIE &die, const DWARFDIE &parent_die,
-    const lldb_private::CompilerType &class_clang_type,
-    lldb::AccessType default_accessibility,
-    DelayedPropertyList &delayed_properties,
-    lldb_private::ClangASTImporter::LayoutInfo &layout_info,
-    FieldInfo &last_field_info) {
-  ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
-  const dw_tag_t tag = die.Tag();
-  // Get the parent byte size so we can verify any members will fit
-  const uint64_t parent_byte_size =
-      parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
-  const uint64_t parent_bit_size =
-      parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
-
-  DWARFAttributes attributes;
-  const size_t num_attributes = die.GetAttributes(attributes);
-  if (num_attributes == 0)
-    return;
-
+namespace {
+/// Parsed form of all attributes that are relevant for parsing type members.
+struct MemberAttributes {
+  explicit MemberAttributes(const DWARFDIE &die, const DWARFDIE &parent_die,
+                            ModuleSP module_sp);
   const char *name = nullptr;
+  /// Indicates how many bits into the word (according to the host endianness)
+  /// the low-order bit of the field starts. Can be negative.
+  int64_t bit_offset = 0;
+  /// Indicates the size of the field in bits.
+  size_t bit_size = 0;
+  uint64_t data_bit_offset = UINT64_MAX;
+  AccessType accessibility = eAccessNone;
+  llvm::Optional<uint64_t> byte_size;
+  DWARFFormValue encoding_form;
+  /// Indicates the byte offset of the word from the base address of the
+  /// structure.
+  uint32_t member_byte_offset;
+  bool is_artificial = false;
+  /// On DW_TAG_members, this means the member is static.
+  bool is_external = false;
+};
+
+/// Parsed form of all attributes that are relevant for parsing Objective-C
+/// properties.
+struct PropertyAttributes {
+  explicit PropertyAttributes(const DWARFDIE &die);
   const char *prop_name = nullptr;
   const char *prop_getter_name = nullptr;
   const char *prop_setter_name = nullptr;
+  /// \see clang::ObjCPropertyAttribute
   uint32_t prop_attributes = 0;
+};
+} // namespace
 
-  bool is_artificial = false;
-  DWARFFormValue encoding_form;
-  AccessType accessibility = eAccessNone;
-  uint32_t member_byte_offset =
-      (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
-  llvm::Optional<uint64_t> byte_size;
-  int64_t bit_offset = 0;
-  uint64_t data_bit_offset = UINT64_MAX;
-  size_t bit_size = 0;
-  bool is_external =
-      false; // On DW_TAG_members, this means the member is static
-  uint32_t i;
-  for (i = 0; i < num_attributes && !is_artificial; ++i) {
+MemberAttributes::MemberAttributes(const DWARFDIE &die,
+                                   const DWARFDIE &parent_die,
+                                   ModuleSP module_sp) {
+  member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
+
+  DWARFAttributes attributes;
+  const size_t num_attributes = die.GetAttributes(attributes);
+  for (std::size_t i = 0; i < num_attributes; ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-      // DW_AT_data_member_location indicates the byte offset of the
-      // word from the base address of the structure.
-      //
-      // DW_AT_bit_offset indicates how many bits into the word
-      // (according to the host endianness) the low-order bit of the
-      // field starts.  AT_bit_offset can be negative.
-      //
-      // DW_AT_bit_size indicates the size of the field in bits.
       switch (attr) {
       case DW_AT_name:
         name = form_value.AsCString();
@@ -2410,62 +2557,12 @@ void DWARFASTParserClang::ParseSingleMember(
       case DW_AT_artificial:
         is_artificial = form_value.Boolean();
         break;
-      case DW_AT_APPLE_property_name:
-        prop_name = form_value.AsCString();
-        break;
-      case DW_AT_APPLE_property_getter:
-        prop_getter_name = form_value.AsCString();
-        break;
-      case DW_AT_APPLE_property_setter:
-        prop_setter_name = form_value.AsCString();
-        break;
-      case DW_AT_APPLE_property_attribute:
-        prop_attributes = form_value.Unsigned();
-        break;
       case DW_AT_external:
         is_external = form_value.Boolean();
         break;
-
       default:
-      case DW_AT_declaration:
-      case DW_AT_description:
-      case DW_AT_mutable:
-      case DW_AT_visibility:
-      case DW_AT_sibling:
         break;
       }
-    }
-  }
-
-  if (prop_name) {
-    ConstString fixed_setter;
-
-    // Check if the property getter/setter were provided as full names.
-    // We want basenames, so we extract them.
-
-    if (prop_getter_name && prop_getter_name[0] == '-') {
-      ObjCLanguage::MethodName prop_getter_method(prop_getter_name, true);
-      prop_getter_name = prop_getter_method.GetSelector().GetCString();
-    }
-
-    if (prop_setter_name && prop_setter_name[0] == '-') {
-      ObjCLanguage::MethodName prop_setter_method(prop_setter_name, true);
-      prop_setter_name = prop_setter_method.GetSelector().GetCString();
-    }
-
-    // If the names haven't been provided, they need to be filled in.
-
-    if (!prop_getter_name) {
-      prop_getter_name = prop_name;
-    }
-    if (!prop_setter_name && prop_name[0] &&
-        !(prop_attributes & DW_APPLE_PROPERTY_readonly)) {
-      StreamString ss;
-
-      ss.Printf("set%c%s:", toupper(prop_name[0]), &prop_name[1]);
-
-      fixed_setter.SetString(ss.GetString());
-      prop_setter_name = fixed_setter.GetCString();
     }
   }
 
@@ -2481,51 +2578,130 @@ void DWARFASTParserClang::ParseSingleMember(
   // are not sane, remove them. If we don't do this then we will end up
   // with a crash if we try to use this type in an expression when clang
   // becomes unhappy with its recycled debug info.
-
   if (byte_size.getValueOr(0) == 0 && bit_offset < 0) {
     bit_size = 0;
     bit_offset = 0;
   }
+}
+
+PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
+
+  DWARFAttributes attributes;
+  const size_t num_attributes = die.GetAttributes(attributes);
+  for (size_t i = 0; i < num_attributes; ++i) {
+    const dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      switch (attr) {
+      case DW_AT_APPLE_property_name:
+        prop_name = form_value.AsCString();
+        break;
+      case DW_AT_APPLE_property_getter:
+        prop_getter_name = form_value.AsCString();
+        break;
+      case DW_AT_APPLE_property_setter:
+        prop_setter_name = form_value.AsCString();
+        break;
+      case DW_AT_APPLE_property_attribute:
+        prop_attributes = form_value.Unsigned();
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
+  if (!prop_name)
+    return;
+  ConstString fixed_setter;
+
+  // Check if the property getter/setter were provided as full names.
+  // We want basenames, so we extract them.
+  if (prop_getter_name && prop_getter_name[0] == '-') {
+    ObjCLanguage::MethodName prop_getter_method(prop_getter_name, true);
+    prop_getter_name = prop_getter_method.GetSelector().GetCString();
+  }
+
+  if (prop_setter_name && prop_setter_name[0] == '-') {
+    ObjCLanguage::MethodName prop_setter_method(prop_setter_name, true);
+    prop_setter_name = prop_setter_method.GetSelector().GetCString();
+  }
+
+  // If the names haven't been provided, they need to be filled in.
+  if (!prop_getter_name)
+    prop_getter_name = prop_name;
+  if (!prop_setter_name && prop_name[0] &&
+      !(prop_attributes & DW_APPLE_PROPERTY_readonly)) {
+    StreamString ss;
+
+    ss.Printf("set%c%s:", toupper(prop_name[0]), &prop_name[1]);
+
+    fixed_setter.SetString(ss.GetString());
+    prop_setter_name = fixed_setter.GetCString();
+  }
+}
+
+void DWARFASTParserClang::ParseSingleMember(
+    const DWARFDIE &die, const DWARFDIE &parent_die,
+    const lldb_private::CompilerType &class_clang_type,
+    lldb::AccessType default_accessibility,
+    DelayedPropertyList &delayed_properties,
+    lldb_private::ClangASTImporter::LayoutInfo &layout_info,
+    FieldInfo &last_field_info) {
+  ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
+  const dw_tag_t tag = die.Tag();
+  // Get the parent byte size so we can verify any members will fit
+  const uint64_t parent_byte_size =
+      parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
+  const uint64_t parent_bit_size =
+      parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
+
+  // FIXME: Remove the workarounds below and make this const.
+  MemberAttributes attrs(die, parent_die, module_sp);
+  // Skip artificial members such as vtable pointers.
+  // FIXME: This check should verify that this is indeed an artificial member
+  // we are supposed to ignore.
+  if (attrs.is_artificial)
+    return;
+
+  const PropertyAttributes propAttrs(die);
 
   const bool class_is_objc_object_or_interface =
       TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type);
 
   // FIXME: Make Clang ignore Objective-C accessibility for expressions
   if (class_is_objc_object_or_interface)
-    accessibility = eAccessNone;
+    attrs.accessibility = eAccessNone;
 
   // Handle static members
-  if (is_external && member_byte_offset == UINT32_MAX) {
-    Type *var_type = die.ResolveTypeUID(encoding_form.Reference());
+  if (attrs.is_external && attrs.member_byte_offset == UINT32_MAX) {
+    Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
 
     if (var_type) {
-      if (accessibility == eAccessNone)
-        accessibility = eAccessPublic;
+      if (attrs.accessibility == eAccessNone)
+        attrs.accessibility = eAccessPublic;
       TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, name, var_type->GetForwardCompilerType(),
-          accessibility);
+          class_clang_type, attrs.name, var_type->GetForwardCompilerType(),
+          attrs.accessibility);
     }
     return;
   }
 
-  if (is_artificial)
-    return;
-
-  Type *member_type = die.ResolveTypeUID(encoding_form.Reference());
+  Type *member_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
   if (!member_type) {
     // FIXME: This should not silently fail.
-    if (prop_name)
+    if (propAttrs.prop_name)
       return;
-    if (name)
+    if (attrs.name)
       module_sp->ReportError(
           "0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8x"
           " which was unable to be parsed",
-          die.GetID(), name, encoding_form.Reference().GetOffset());
+          die.GetID(), attrs.name, attrs.encoding_form.Reference().GetOffset());
     else
       module_sp->ReportError(
           "0x%8.8" PRIx64 ": DW_TAG_member refers to type 0x%8.8x"
           " which was unable to be parsed",
-          die.GetID(), encoding_form.Reference().GetOffset());
+          die.GetID(), attrs.encoding_form.Reference().GetOffset());
     return;
   }
 
@@ -2535,29 +2711,30 @@ void DWARFASTParserClang::ParseSingleMember(
   if (tag == DW_TAG_member) {
     CompilerType member_clang_type = member_type->GetLayoutCompilerType();
 
-    if (accessibility == eAccessNone)
-      accessibility = default_accessibility;
+    if (attrs.accessibility == eAccessNone)
+      attrs.accessibility = default_accessibility;
 
-    uint64_t field_bit_offset =
-        (member_byte_offset == UINT32_MAX ? 0 : (member_byte_offset * 8));
+    uint64_t field_bit_offset = (attrs.member_byte_offset == UINT32_MAX
+                                     ? 0
+                                     : (attrs.member_byte_offset * 8));
 
-    if (bit_size > 0) {
+    if (attrs.bit_size > 0) {
       FieldInfo this_field_info;
       this_field_info.bit_offset = field_bit_offset;
-      this_field_info.bit_size = bit_size;
+      this_field_info.bit_size = attrs.bit_size;
 
-      if (data_bit_offset != UINT64_MAX) {
-        this_field_info.bit_offset = data_bit_offset;
+      if (attrs.data_bit_offset != UINT64_MAX) {
+        this_field_info.bit_offset = attrs.data_bit_offset;
       } else {
-        if (!byte_size)
-          byte_size = member_type->GetByteSize(nullptr);
+        if (!attrs.byte_size)
+          attrs.byte_size = member_type->GetByteSize(nullptr);
 
         ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
         if (objfile->GetByteOrder() == eByteOrderLittle) {
-          this_field_info.bit_offset += byte_size.getValueOr(0) * 8;
-          this_field_info.bit_offset -= (bit_offset + bit_size);
+          this_field_info.bit_offset += attrs.byte_size.getValueOr(0) * 8;
+          this_field_info.bit_offset -= (attrs.bit_offset + attrs.bit_size);
         } else {
-          this_field_info.bit_offset += bit_offset;
+          this_field_info.bit_offset += attrs.bit_offset;
         }
       }
 
@@ -2580,7 +2757,7 @@ void DWARFASTParserClang::ParseSingleMember(
             "bit offset (0x%8.8" PRIx64
             ") member will be ignored. Please file a bug against the "
             "compiler and include the preprocessed output for %s\n",
-            die.GetID(), DW_TAG_value_to_name(tag), name,
+            die.GetID(), DW_TAG_value_to_name(tag), attrs.name,
             this_field_info.bit_offset, GetUnitName(parent_die).c_str());
         return;
       }
@@ -2638,7 +2815,7 @@ void DWARFASTParserClang::ParseSingleMember(
                   class_clang_type, llvm::StringRef(),
                   m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint,
                                                             word_width),
-                  accessibility, unnamed_field_info->bit_size);
+                  attrs.accessibility, unnamed_field_info->bit_size);
 
           layout_info.field_offsets.insert(std::make_pair(
               unnamed_bitfield_decl, unnamed_field_info->bit_offset));
@@ -2679,14 +2856,15 @@ void DWARFASTParserClang::ParseSingleMember(
         uint64_t parent_byte_size =
             parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
 
-        if (member_byte_offset >= parent_byte_size) {
+        if (attrs.member_byte_offset >= parent_byte_size) {
           if (member_array_size != 1 &&
               (member_array_size != 0 ||
-               member_byte_offset > parent_byte_size)) {
+               attrs.member_byte_offset > parent_byte_size)) {
             module_sp->ReportError(
                 "0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8x"
                 " which extends beyond the bounds of 0x%8.8" PRIx64,
-                die.GetID(), name, encoding_form.Reference().GetOffset(),
+                die.GetID(), attrs.name,
+                attrs.encoding_form.Reference().GetOffset(),
                 parent_die.GetID());
           }
 
@@ -2699,7 +2877,8 @@ void DWARFASTParserClang::ParseSingleMember(
     RequireCompleteType(member_clang_type);
 
     field_decl = TypeSystemClang::AddFieldToRecordType(
-        class_clang_type, name, member_clang_type, accessibility, bit_size);
+        class_clang_type, attrs.name, member_clang_type, attrs.accessibility,
+        attrs.bit_size);
 
     m_ast.SetMetadataAsUserID(field_decl, die.GetID());
 
@@ -2707,7 +2886,7 @@ void DWARFASTParserClang::ParseSingleMember(
         std::make_pair(field_decl, field_bit_offset));
   }
 
-  if (prop_name != nullptr) {
+  if (propAttrs.prop_name != nullptr) {
     clang::ObjCIvarDecl *ivar_decl = nullptr;
 
     if (field_decl) {
@@ -2718,9 +2897,10 @@ void DWARFASTParserClang::ParseSingleMember(
     ClangASTMetadata metadata;
     metadata.SetUserID(die.GetID());
     delayed_properties.push_back(DelayedAddObjCClassProperty(
-        class_clang_type, prop_name, member_type->GetLayoutCompilerType(),
-        ivar_decl, prop_setter_name, prop_getter_name, prop_attributes,
-        &metadata));
+        class_clang_type, propAttrs.prop_name,
+        member_type->GetLayoutCompilerType(), ivar_decl,
+        propAttrs.prop_setter_name, propAttrs.prop_getter_name,
+        propAttrs.prop_attributes, &metadata));
 
     if (ivar_decl)
       m_ast.SetMetadataAsUserID(ivar_decl, die.GetID());
@@ -2731,7 +2911,8 @@ bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<DWARFDIE> &member_function_dies,
-    DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
+    DelayedPropertyList &delayed_properties,
+    const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
     return false;
@@ -2760,117 +2941,10 @@ bool DWARFASTParserClang::ParseChildMembers(
       member_function_dies.push_back(die);
       break;
 
-    case DW_TAG_inheritance: {
-      // TODO: implement DW_TAG_inheritance type parsing
-      DWARFAttributes attributes;
-      const size_t num_attributes = die.GetAttributes(attributes);
-      if (num_attributes > 0) {
-        DWARFFormValue encoding_form;
-        AccessType accessibility = default_accessibility;
-        bool is_virtual = false;
-        bool is_base_of_class = true;
-        off_t member_byte_offset = 0;
-        uint32_t i;
-        for (i = 0; i < num_attributes; ++i) {
-          const dw_attr_t attr = attributes.AttributeAtIndex(i);
-          DWARFFormValue form_value;
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            switch (attr) {
-            case DW_AT_type:
-              encoding_form = form_value;
-              break;
-            case DW_AT_data_member_location:
-              if (form_value.BlockData()) {
-                Value initialValue(0);
-                Value memberOffset(0);
-                const DWARFDataExtractor &debug_info_data = die.GetData();
-                uint32_t block_length = form_value.Unsigned();
-                uint32_t block_offset =
-                    form_value.BlockData() - debug_info_data.GetDataStart();
-                if (DWARFExpression::Evaluate(
-                        nullptr, nullptr, module_sp,
-                        DataExtractor(debug_info_data, block_offset,
-                                      block_length),
-                        die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                        memberOffset, nullptr)) {
-                  member_byte_offset =
-                      memberOffset.ResolveValue(nullptr).UInt();
-                }
-              } else {
-                // With DWARF 3 and later, if the value is an integer constant,
-                // this form value is the offset in bytes from the beginning of
-                // the containing entity.
-                member_byte_offset = form_value.Unsigned();
-              }
-              break;
-
-            case DW_AT_accessibility:
-              accessibility = DW_ACCESS_to_AccessType(form_value.Unsigned());
-              break;
-
-            case DW_AT_virtuality:
-              is_virtual = form_value.Boolean();
-              break;
-
-            case DW_AT_sibling:
-              break;
-
-            default:
-              break;
-            }
-          }
-        }
-
-        Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
-        if (base_class_type == nullptr) {
-          module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
-                                 "resolve the base class at 0x%8.8x"
-                                 " from enclosing type 0x%8.8x. \nPlease file "
-                                 "a bug and attach the file at the start of "
-                                 "this error message",
-                                 die.GetOffset(),
-                                 encoding_form.Reference().GetOffset(),
-                                 parent_die.GetOffset());
-          break;
-        }
-
-        CompilerType base_class_clang_type =
-            base_class_type->GetFullCompilerType();
-        assert(base_class_clang_type);
-        if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
-          ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
-        } else {
-          std::unique_ptr<clang::CXXBaseSpecifier> result =
-              ast->CreateBaseClassSpecifier(
-                  base_class_clang_type.GetOpaqueQualType(), accessibility,
-                  is_virtual, is_base_of_class);
-          if (!result)
-            break;
-
-          base_classes.push_back(std::move(result));
-
-          if (is_virtual) {
-            // Do not specify any offset for virtual inheritance. The DWARF
-            // produced by clang doesn't give us a constant offset, but gives
-            // us a DWARF expressions that requires an actual object in memory.
-            // the DW_AT_data_member_location for a virtual base class looks
-            // like:
-            //      DW_AT_data_member_location( DW_OP_dup, DW_OP_deref,
-            //      DW_OP_constu(0x00000018), DW_OP_minus, DW_OP_deref,
-            //      DW_OP_plus )
-            // Given this, there is really no valid response we can give to
-            // clang for virtual base class offsets, and this should eventually
-            // be removed from LayoutRecordType() in the external
-            // AST source in clang.
-          } else {
-            layout_info.base_offsets.insert(std::make_pair(
-                ast->GetAsCXXRecordDecl(
-                    base_class_clang_type.GetOpaqueQualType()),
-                clang::CharUnits::fromQuantity(member_byte_offset)));
-          }
-        }
-      }
-    } break;
+    case DW_TAG_inheritance:
+      ParseInheritance(die, parent_die, class_clang_type, default_accessibility,
+                       module_sp, base_classes, layout_info);
+      break;
 
     default:
       break;

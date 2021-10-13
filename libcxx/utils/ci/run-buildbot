@@ -364,10 +364,17 @@ generic-no-unicode)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
     check-runtimes
 ;;
+generic-no-wide-characters)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-wide-characters.cmake" \
+                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
+    check-runtimes
+;;
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in"
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-shared.cfg.in"
     check-runtimes
 ;;
 x86_64-apple-system-backdeployment-*)

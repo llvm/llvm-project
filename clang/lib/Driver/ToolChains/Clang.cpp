@@ -4592,8 +4592,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (llvm::find(kBitcodeOptionBlacklist, A->getOption().getID()) !=
-          std::end(kBitcodeOptionBlacklist))
+      if (llvm::is_contained(kBitcodeOptionBlacklist, A->getOption().getID()))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
     // Render the CodeGen options that need to be passed.
@@ -5480,6 +5479,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_relative_cxx_abi_vtables,
                   options::OPT_fno_experimental_relative_cxx_abi_vtables);
+
+  if (Arg *A = Args.getLastArg(options::OPT_ffuchsia_api_level_EQ))
+    A->render(Args, CmdArgs);
 
   // Handle -{std, ansi, trigraphs} -- take the last of -{std, ansi}
   // (-ansi is equivalent to -std=c89 or -std=c++98).

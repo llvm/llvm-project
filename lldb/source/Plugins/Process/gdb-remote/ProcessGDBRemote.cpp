@@ -442,7 +442,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     return;
 
   char packet[128];
-  std::vector<RemoteRegisterInfo> registers;
+  std::vector<DynamicRegisterInfo::Register> registers;
   uint32_t reg_num = 0;
   for (StringExtractorGDBRemote::ResponseType response_type =
            StringExtractorGDBRemote::eResponse;
@@ -458,7 +458,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
       if (response_type == StringExtractorGDBRemote::eResponse) {
         llvm::StringRef name;
         llvm::StringRef value;
-        RemoteRegisterInfo reg_info;
+        DynamicRegisterInfo::Register reg_info;
 
         while (response.GetNameColonValue(name, value)) {
           if (name.equals("name")) {
@@ -4223,7 +4223,7 @@ struct GdbServerTargetInfo {
 };
 
 bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
-                    std::vector<RemoteRegisterInfo> &registers) {
+                    std::vector<DynamicRegisterInfo::Register> &registers) {
   if (!feature_node)
     return false;
 
@@ -4231,7 +4231,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
       "reg", [&target_info, &registers](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
-        RemoteRegisterInfo reg_info;
+        DynamicRegisterInfo::Register reg_info;
         bool encoding_set = false;
         bool format_set = false;
 
@@ -4312,10 +4312,12 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
             reg_info.format = eFormatAddressInfo;
             reg_info.encoding = eEncodingUint;
-          } else if (gdb_type == "i387_ext" || gdb_type == "float") {
+          } else if (gdb_type == "float") {
             reg_info.format = eFormatFloat;
             reg_info.encoding = eEncodingIEEE754;
-          } else if (gdb_type == "aarch64v") {
+          } else if (gdb_type == "aarch64v" ||
+                     llvm::StringRef(gdb_type).startswith("vec") ||
+                     gdb_type == "i387_ext") {
             reg_info.format = eFormatVectorOfUInt8;
             reg_info.encoding = eEncodingVector;
           }
@@ -4356,7 +4358,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 // for nested register definition files.  It returns true if it was able
 // to fetch and parse an xml file.
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
-    ArchSpec &arch_to_use, std::string xml_filename, std::vector<RemoteRegisterInfo> &registers) {
+    ArchSpec &arch_to_use, std::string xml_filename,
+    std::vector<DynamicRegisterInfo::Register> &registers) {
   // request the target xml file
   llvm::Expected<std::string> raw = m_gdb_comm.ReadExtFeature("features", xml_filename);
   if (errorToBool(raw.takeError()))
@@ -4466,16 +4469,12 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
 }
 
 void ProcessGDBRemote::AddRemoteRegisters(
-    std::vector<RemoteRegisterInfo> &registers, const ArchSpec &arch_to_use) {
-  // Don't use Process::GetABI, this code gets called from DidAttach, and
-  // in that context we haven't set the Target's architecture yet, so the
-  // ABI is also potentially incorrect.
-  ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
-
+    std::vector<DynamicRegisterInfo::Register> &registers,
+    const ArchSpec &arch_to_use) {
   std::map<uint32_t, uint32_t> remote_to_local_map;
   uint32_t remote_regnum = 0;
   for (auto it : llvm::enumerate(registers)) {
-    RemoteRegisterInfo &remote_reg_info = it.value();
+    DynamicRegisterInfo::Register &remote_reg_info = it.value();
 
     // Assign successive remote regnums if missing.
     if (remote_reg_info.regnum_remote == LLDB_INVALID_REGNUM)
@@ -4487,10 +4486,7 @@ void ProcessGDBRemote::AddRemoteRegisters(
     remote_regnum = remote_reg_info.regnum_remote + 1;
   }
 
-  for (auto it : llvm::enumerate(registers)) {
-    uint32_t local_regnum = it.index();
-    RemoteRegisterInfo &remote_reg_info = it.value();
-
+  for (DynamicRegisterInfo::Register &remote_reg_info : registers) {
     auto proc_to_lldb = [&remote_to_local_map](uint32_t process_regnum) {
       auto lldb_regit = remote_to_local_map.find(process_regnum);
       return lldb_regit != remote_to_local_map.end() ? lldb_regit->second
@@ -4501,32 +4497,15 @@ void ProcessGDBRemote::AddRemoteRegisters(
                     remote_reg_info.value_regs.begin(), proc_to_lldb);
     llvm::transform(remote_reg_info.invalidate_regs,
                     remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
+  }
 
-    auto regs_with_sentinel = [](std::vector<uint32_t> &vec) -> uint32_t * {
-      if (!vec.empty()) {
-        vec.push_back(LLDB_INVALID_REGNUM);
-        return vec.data();
-      }
-      return nullptr;
-    };
+  // Don't use Process::GetABI, this code gets called from DidAttach, and
+  // in that context we haven't set the Target's architecture yet, so the
+  // ABI is also potentially incorrect.
+  if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
+    abi_sp->AugmentRegisterInfo(registers);
 
-    struct RegisterInfo reg_info {
-      remote_reg_info.name.AsCString(), remote_reg_info.alt_name.AsCString(),
-          remote_reg_info.byte_size, remote_reg_info.byte_offset,
-          remote_reg_info.encoding, remote_reg_info.format,
-          {remote_reg_info.regnum_ehframe, remote_reg_info.regnum_dwarf,
-           remote_reg_info.regnum_generic, remote_reg_info.regnum_remote,
-           local_regnum},
-          regs_with_sentinel(remote_reg_info.value_regs),
-          regs_with_sentinel(remote_reg_info.invalidate_regs),
-    };
-
-    if (abi_sp)
-      abi_sp->AugmentRegisterInfo(reg_info);
-    m_register_info_sp->AddRegister(reg_info, remote_reg_info.set_name);
-  };
-
-  m_register_info_sp->Finalize(arch_to_use);
+  m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
 }
 
 // query the target of gdb-remote for extended target information returns
@@ -4540,7 +4519,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return false;
 
-  std::vector<RemoteRegisterInfo> registers;
+  std::vector<DynamicRegisterInfo::Register> registers;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
                                             registers))
     AddRemoteRegisters(registers, arch_to_use);
@@ -4590,14 +4569,12 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
 
     root_element.ForEachChildElementWithName(
         "library", [log, &list](const XMLNode &library) -> bool {
-
           LoadedModuleInfoList::LoadedModuleInfo module;
 
           // FIXME: we're silently ignoring invalid data here
           library.ForEachAttribute(
               [&module](const llvm::StringRef &name,
                         const llvm::StringRef &value) -> bool {
-
                 uint64_t uint_value = LLDB_INVALID_ADDRESS;
                 if (name == "name")
                   module.set_name(value.str());

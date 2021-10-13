@@ -1722,216 +1722,6 @@ void test_vsoxei64_v_u64m8(uint64_t *base, vuint64m8_t bindex,
   return vsoxei64_v_u64m8(base, bindex, value, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16mf4(_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei8_v_f16mf4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16mf2(_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei8_v_f16mf2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m1(_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei8_v_f16m1(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m2(_Float16 *base, vuint8m1_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei8_v_f16m2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m4(_Float16 *base, vuint8m2_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei8_v_f16m4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32f16.nxv32i8.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m8(_Float16 *base, vuint8m4_t bindex, vfloat16m8_t value, size_t vl) {
-  return vsoxei8_v_f16m8(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16mf4(_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei16_v_f16mf4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16mf2(_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei16_v_f16mf2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m1(_Float16 *base, vuint16m1_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei16_v_f16m1(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m2(_Float16 *base, vuint16m2_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei16_v_f16m2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m4(_Float16 *base, vuint16m4_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei16_v_f16m4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m8(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32f16.nxv32i16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m8(_Float16 *base, vuint16m8_t bindex, vfloat16m8_t value, size_t vl) {
-  return vsoxei16_v_f16m8(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16mf4(_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei32_v_f16mf4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16mf2(_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei32_v_f16mf2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m1(_Float16 *base, vuint32m2_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei32_v_f16m1(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m2(_Float16 *base, vuint32m4_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei32_v_f16m2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m4(_Float16 *base, vuint32m8_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei32_v_f16m4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf4(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16mf4(_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei64_v_f16mf4(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16mf2(_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei64_v_f16mf2(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m1(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16m1(_Float16 *base, vuint64m4_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei64_v_f16m1(base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m2(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16m2(_Float16 *base, vuint64m8_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei64_v_f16m2(base, bindex, value, vl);
-}
-
 // CHECK-RV64-LABEL: @test_vsoxei8_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -4051,216 +3841,6 @@ void test_vsoxei64_v_u64m8_m(vbool8_t mask, uint64_t *base, vuint64m8_t bindex,
   return vsoxei64_v_u64m8_m(mask, base, bindex, value, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16mf4_m(vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei8_v_f16mf4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16mf2_m(vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei8_v_f16mf2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m1_m(vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei8_v_f16m1_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m2_m(vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei8_v_f16m2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m4_m(vbool4_t mask, _Float16 *base, vuint8m2_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei8_v_f16m4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m8_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32f16.nxv32i8.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i8> [[BINDEX:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei8_v_f16m8_m(vbool2_t mask, _Float16 *base, vuint8m4_t bindex, vfloat16m8_t value, size_t vl) {
-  return vsoxei8_v_f16m8_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16mf4_m(vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei16_v_f16mf4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16mf2_m(vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei16_v_f16mf2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m1_m(vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei16_v_f16m1_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m2_m(vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei16_v_f16m2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m4_m(vbool4_t mask, _Float16 *base, vuint16m4_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei16_v_f16m4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m8_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32f16.nxv32i16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i16> [[BINDEX:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei16_v_f16m8_m(vbool2_t mask, _Float16 *base, vuint16m8_t bindex, vfloat16m8_t value, size_t vl) {
-  return vsoxei16_v_f16m8_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16mf4_m(vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei32_v_f16mf4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16mf2_m(vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei32_v_f16mf2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m1_m(vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei32_v_f16m1_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m2_m(vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei32_v_f16m2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei32_v_f16m4_m(vbool4_t mask, _Float16 *base, vuint32m8_t bindex, vfloat16m4_t value, size_t vl) {
-  return vsoxei32_v_f16m4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf4_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16mf4_m(vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t value, size_t vl) {
-  return vsoxei64_v_f16mf4_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16mf2_m(vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t value, size_t vl) {
-  return vsoxei64_v_f16mf2_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m1_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16m1_m(vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t value, size_t vl) {
-  return vsoxei64_v_f16m1_m(mask, base, bindex, value, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m2_m(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vsoxei64_v_f16m2_m(vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t value, size_t vl) {
-  return vsoxei64_v_f16m2_m(mask, base, bindex, value, vl);
-}
-
 // CHECK-RV64-LABEL: @test_vsoxei8_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
@@ -4641,7 +4221,427 @@ void test_vsoxei64_v_f64m4_m(vbool16_t mask, double *base, vuint64m4_t bindex,
 // CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f64.nxv8i64.i64(<vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vsoxei64_v_f64m8_m (vbool8_t mask, double *base, vuint64m8_t bindex, vfloat64m8_t value, size_t vl) {
+void test_vsoxei64_v_f64m8_m(vbool8_t mask, double *base, vuint64m8_t bindex,
+                             vfloat64m8_t value, size_t vl) {
   return vsoxei64_v_f64m8_m(mask, base, bindex, value, vl);
 }
 
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16mf4 (_Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei8_v_f16mf4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16mf2 (_Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei8_v_f16mf2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m1 (_Float16 *base, vuint8mf2_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei8_v_f16m1 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m2 (_Float16 *base, vuint8m1_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei8_v_f16m2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m4 (_Float16 *base, vuint8m2_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei8_v_f16m4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32f16.nxv32i8.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m8 (_Float16 *base, vuint8m4_t bindex, vfloat16m8_t value, size_t vl) {
+  return vsoxei8_v_f16m8 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16mf4 (_Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei16_v_f16mf4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16mf2 (_Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei16_v_f16mf2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m1 (_Float16 *base, vuint16m1_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei16_v_f16m1 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m2 (_Float16 *base, vuint16m2_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei16_v_f16m2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m4 (_Float16 *base, vuint16m4_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei16_v_f16m4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m8(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv32f16.nxv32i16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m8 (_Float16 *base, vuint16m8_t bindex, vfloat16m8_t value, size_t vl) {
+  return vsoxei16_v_f16m8 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16mf4 (_Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei32_v_f16mf4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16mf2 (_Float16 *base, vuint32m1_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei32_v_f16mf2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m1 (_Float16 *base, vuint32m2_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei32_v_f16m1 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m2 (_Float16 *base, vuint32m4_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei32_v_f16m2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m4 (_Float16 *base, vuint32m8_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei32_v_f16m4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf4(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16mf4 (_Float16 *base, vuint64m1_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei64_v_f16mf4 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16mf2 (_Float16 *base, vuint64m2_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei64_v_f16mf2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m1(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16m1 (_Float16 *base, vuint64m4_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei64_v_f16m1 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m2(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16m2 (_Float16 *base, vuint64m8_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei64_v_f16m2 (base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i8.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint8mf8_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei8_v_f16mf4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i8.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint8mf4_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei8_v_f16mf2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i8.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint8mf2_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei8_v_f16m1_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i8.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint8m1_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei8_v_f16m2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i8.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint8m2_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei8_v_f16m4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei8_v_f16m8_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32f16.nxv32i8.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i8> [[BINDEX:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei8_v_f16m8_m (vbool2_t mask, _Float16 *base, vuint8m4_t bindex, vfloat16m8_t value, size_t vl) {
+  return vsoxei8_v_f16m8_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i16.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint16mf4_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei16_v_f16mf4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i16.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint16mf2_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei16_v_f16mf2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i16.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint16m1_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei16_v_f16m1_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i16.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint16m2_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei16_v_f16m2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i16.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint16m4_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei16_v_f16m4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei16_v_f16m8_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv32f16.nxv32i16.i64(<vscale x 32 x half> [[VALUE:%.*]], <vscale x 32 x half>* [[TMP0]], <vscale x 32 x i16> [[BINDEX:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei16_v_f16m8_m (vbool2_t mask, _Float16 *base, vuint16m8_t bindex, vfloat16m8_t value, size_t vl) {
+  return vsoxei16_v_f16m8_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i32.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint32mf2_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei32_v_f16mf4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i32.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint32m1_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei32_v_f16mf2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i32.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint32m2_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei32_v_f16m1_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i32.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint32m4_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei32_v_f16m2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei32_v_f16m4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv16f16.nxv16i32.i64(<vscale x 16 x half> [[VALUE:%.*]], <vscale x 16 x half>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei32_v_f16m4_m (vbool4_t mask, _Float16 *base, vuint32m8_t bindex, vfloat16m4_t value, size_t vl) {
+  return vsoxei32_v_f16m4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf4_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1f16.nxv1i64.i64(<vscale x 1 x half> [[VALUE:%.*]], <vscale x 1 x half>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16mf4_m (vbool64_t mask, _Float16 *base, vuint64m1_t bindex, vfloat16mf4_t value, size_t vl) {
+  return vsoxei64_v_f16mf4_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16mf2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv2f16.nxv2i64.i64(<vscale x 2 x half> [[VALUE:%.*]], <vscale x 2 x half>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16mf2_m (vbool32_t mask, _Float16 *base, vuint64m2_t bindex, vfloat16mf2_t value, size_t vl) {
+  return vsoxei64_v_f16mf2_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m1_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv4f16.nxv4i64.i64(<vscale x 4 x half> [[VALUE:%.*]], <vscale x 4 x half>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16m1_m (vbool16_t mask, _Float16 *base, vuint64m4_t bindex, vfloat16m1_t value, size_t vl) {
+  return vsoxei64_v_f16m1_m (mask, base, bindex, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsoxei64_v_f16m2_m(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
+// CHECK-RV64-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv8f16.nxv8i64.i64(<vscale x 8 x half> [[VALUE:%.*]], <vscale x 8 x half>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vsoxei64_v_f16m2_m (vbool8_t mask, _Float16 *base, vuint64m8_t bindex, vfloat16m2_t value, size_t vl) {
+  return vsoxei64_v_f16m2_m (mask, base, bindex, value, vl);
+}

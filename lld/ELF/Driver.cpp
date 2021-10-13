@@ -1838,12 +1838,15 @@ static void demoteSharedSymbols() {
   llvm::TimeTraceScope timeScope("Demote shared symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!s || s->getFile().isNeeded)
+    if (!((s && !s->getFile().isNeeded) ||
+          (sym->isLazy() && sym->isUsedInRegularObj)))
       continue;
 
-    bool used = s->used;
-    s->replace(Undefined{nullptr, s->getName(), STB_WEAK, s->stOther, s->type});
-    s->used = used;
+    bool used = sym->used;
+    sym->replace(
+        Undefined{nullptr, sym->getName(), STB_WEAK, sym->stOther, sym->type});
+    sym->used = used;
+    sym->versionId = VER_NDX_GLOBAL;
   }
 }
 

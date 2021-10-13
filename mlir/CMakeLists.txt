@@ -95,34 +95,13 @@ option(MLIR_INCLUDE_INTEGRATION_TESTS
 # Requires:
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
-#
-# Version locking
-# ---------------
-# By default, python extensions are version locked to specific Python libraries.
-# This linking mode is somewhat more consistent across platforms and surfaces
-# undefined symbols at link time (vs runtime). It is suitable for development
-# workflows but can be disabled for more flexible deployment by
-# setting -DMLIR_BINDINGS_PYTHON_LOCK_VERSION=OFF
 #-------------------------------------------------------------------------------
 
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
-set(MLIR_BINDINGS_PYTHON_LOCK_VERSION 1 CACHE BOOL
-       "Links to specific python libraries, resolving all symbols.")
-
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
-  find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
-    COMPONENTS Interpreter Development NumPy REQUIRED)
-  message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
-  message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
-  message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
-  mlir_detect_pybind11_install()
-  find_package(pybind11 2.6 CONFIG REQUIRED)
-  message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
-  message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
-                 "suffix = '${PYTHON_MODULE_SUFFIX}', "
-                 "extension = '${PYTHON_MODULE_EXTENSION}")
+  mlir_configure_python_dev_packages()
 endif()
 
 include_directories( "include")

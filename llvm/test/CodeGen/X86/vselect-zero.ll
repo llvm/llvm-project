@@ -142,12 +142,11 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; SSE2-LABEL: vsel_nonzero_constants:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmplepd %xmm0, %xmm1
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movapd %xmm1, %xmm2
-; SSE2-NEXT:    andnpd %xmm0, %xmm2
-; SSE2-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    andnpd %xmm2, %xmm0
+; SSE2-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    orpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vsel_nonzero_constants:

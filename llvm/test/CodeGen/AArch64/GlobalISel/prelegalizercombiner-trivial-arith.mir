@@ -410,3 +410,26 @@ body:             |
     $q0 = COPY %ptr(<2 x p0>)
     RET_ReallyLR implicit $q0
 ...
+---
+name:            i128_or_cst
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: i128_or_cst
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 9223372036854775808
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s128) = G_OR [[LOAD]], [[C]]
+    ; CHECK-NEXT: G_STORE [[OR]](s128), [[COPY]](p0) :: (store (s128), align 4)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %2:_(s128) = G_LOAD %0(p0) :: (load (s128))
+    %4:_(s128) = G_CONSTANT i128 9223372036854775808
+    %5:_(s128) = G_OR %2, %4
+    G_STORE %5(s128), %0(p0) :: (store (s128), align 4)
+    RET_ReallyLR
+
+...

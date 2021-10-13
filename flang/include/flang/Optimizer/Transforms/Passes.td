@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains definitions for passes within the Optimizer/Transforms/
-//  directory.
+// directory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +15,25 @@
 #define FLANG_OPTIMIZER_TRANSFORMS_PASSES
 
 include "mlir/Pass/PassBase.td"
+
+def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
+  let summary = "Convert fir.array, fir.box and fir.rec function result to "
+                "function argument";
+  let description = [{
+    This pass is required before code gen to the LLVM IR dialect,
+    including the pre-cg rewrite pass.
+  }];
+  let constructor = "::fir::createAbstractResultOptPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
+  let options = [
+    Option<"passResultAsBox", "abstract-result-as-box",
+           "bool", /*default=*/"false",
+           "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
+           " of fir.ref<fir.array<T>>.">
+  ];
+}
 
 def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
@@ -70,6 +89,26 @@ def CharacterConversion : Pass<"character-conversion"> {
            "std::string", /*default=*/"std::string{}",
            "Generate runtime calls to a named set of conversion routines. "
            "By default, the conversions may produce unexpected results.">
+  ];
+}
+
+def CFGConversion : FunctionPass<"cfg-conversion"> {
+  let summary = "Convert FIR structured control flow ops to CFG ops.";
+  let description = [{
+    Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
+    plain old test and branch operations. Removing the high-level control
+    structures can enable other optimizations.
+
+    This pass is required before code gen to the LLVM IR dialect.
+  }];
+  let constructor = "::fir::createFirToCfgPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
+  let options = [
+    Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
+           /*default=*/"false",
+           "force the body of a loop to execute at least once">
   ];
 }
 

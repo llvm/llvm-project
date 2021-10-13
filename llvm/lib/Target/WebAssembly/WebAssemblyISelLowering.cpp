@@ -1751,14 +1751,22 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     return SDValue(); // Don't custom lower most intrinsics.
 
   case Intrinsic::wasm_lsda: {
-    EVT VT = Op.getValueType();
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    auto &Context = MF.getMMI().getContext();
-    MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
-                                            Twine(MF.getFunctionNumber()));
-    return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                       DAG.getMCSymbol(S, PtrVT));
+    auto PtrVT = getPointerTy(MF.getDataLayout());
+    const char *SymName = MF.createExternalSymbolName(
+        "GCC_except_table" + std::to_string(MF.getFunctionNumber()));
+    if (isPositionIndependent()) {
+      SDValue Node = DAG.getTargetExternalSymbol(
+          SymName, PtrVT, WebAssemblyII::MO_MEMORY_BASE_REL);
+      const char *BaseName = MF.createExternalSymbolName("__memory_base");
+      SDValue BaseAddr =
+          DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT,
+                      DAG.getTargetExternalSymbol(BaseName, PtrVT));
+      SDValue SymAddr =
+          DAG.getNode(WebAssemblyISD::WrapperREL, DL, PtrVT, Node);
+      return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymAddr);
+    }
+    SDValue Node = DAG.getTargetExternalSymbol(SymName, PtrVT);
+    return DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT, Node);
   }
 
   case Intrinsic::wasm_shuffle: {

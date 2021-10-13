@@ -35,6 +35,7 @@ int main(int, char**)
         t.imbue(std::locale(LOCALE_cs_CZ_ISO8859_2));
         assert(t.transform(F(a), F(a+1)) < t.transform(F(B), F(B+1)));
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
         const wchar_t a[] = L"a";
@@ -44,6 +45,7 @@ int main(int, char**)
         t.imbue(std::locale(LOCALE_cs_CZ_ISO8859_2));
         assert(t.transform(F(a), F(a+1)) < t.transform(F(B), F(B+1)));
     }
+#endif
 
   return 0;
 }

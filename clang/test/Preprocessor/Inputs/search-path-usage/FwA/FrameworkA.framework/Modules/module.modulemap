@@ -1,0 +1,3 @@
+framework module FrameworkA {
+  header "FrameworkA.h"
+}

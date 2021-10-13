@@ -531,6 +531,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   auto &DL = F.getParent()->getDataLayout();
 
   SmallVector<ArgInfo, 8> SplitArgs;
+  SmallVector<std::pair<Register, Register>> BoolArgs;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
@@ -538,6 +539,22 @@ bool AArch64CallLowering::lowerFormalArguments(
 
     ArgInfo OrigArg{VRegs[i], Arg, i};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
+
+    // i1 arguments are zero-extended to i8 by the caller. Emit a
+    // hint to reflect this.
+    if (OrigArg.Ty->isIntegerTy(1)) {
+      assert(OrigArg.Regs.size() == 1 &&
+             MRI.getType(OrigArg.Regs[0]).getSizeInBits() == 1 &&
+             "Unexpected registers used for i1 arg");
+
+      if (!OrigArg.Flags[0].isZExt()) {
+        // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
+        Register OrigReg = OrigArg.Regs[0];
+        Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
+        OrigArg.Regs[0] = WideReg;
+        BoolArgs.push_back({OrigReg, WideReg});
+      }
+    }
 
     if (Arg.hasAttribute(Attribute::SwiftAsync))
       MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
@@ -558,6 +575,18 @@ bool AArch64CallLowering::lowerFormalArguments(
   if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
                                      F.getCallingConv(), F.isVarArg()))
     return false;
+
+  if (!BoolArgs.empty()) {
+    for (auto &KV : BoolArgs) {
+      Register OrigReg = KV.first;
+      Register WideReg = KV.second;
+      LLT WideTy = MRI.getType(WideReg);
+      assert(MRI.getType(OrigReg).getScalarSizeInBits() == 1 &&
+             "Unexpected bit size of a bool arg");
+      MIRBuilder.buildTrunc(
+          OrigReg, MIRBuilder.buildAssertZExt(WideTy, WideReg, 1).getReg(0));
+    }
+  }
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   uint64_t StackOffset = Assigner.StackOffset;
@@ -1051,8 +1080,19 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
-    if (OrigArg.Ty->isIntegerTy(1))
-      OutArgs.back().Flags[0].setZExt();
+    if (OrigArg.Ty->isIntegerTy(1)) {
+      ArgInfo &OutArg = OutArgs.back();
+      assert(OutArg.Regs.size() == 1 &&
+             MRI.getType(OutArg.Regs[0]).getSizeInBits() == 1 &&
+             "Unexpected registers used for i1 arg");
+
+      // We cannot use a ZExt ArgInfo flag here, because it will
+      // zero-extend the argument to i32 instead of just i8.
+      OutArg.Regs[0] =
+          MIRBuilder.buildZExt(LLT::scalar(8), OutArg.Regs[0]).getReg(0);
+      LLVMContext &Ctx = MF.getFunction().getContext();
+      OutArg.Ty = Type::getInt8Ty(Ctx);
+    }
   }
 
   SmallVector<ArgInfo, 8> InArgs;

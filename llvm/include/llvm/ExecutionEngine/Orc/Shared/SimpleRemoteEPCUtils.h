@@ -22,7 +22,6 @@
 #include "llvm/Support/Error.h"
 
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -95,7 +94,7 @@ public:
 
   /// Trigger disconnection from the transport. The implementation should
   /// respond by calling handleDisconnect on the client once disconnection
-  /// is complete.
+  /// is complete. May be called more than once and from different threads.
   virtual void disconnect() = 0;
 };
 

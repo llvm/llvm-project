@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -30,7 +31,11 @@ using namespace mlir::memref;
 Operation *MemRefDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  return builder.create<mlir::ConstantOp>(loc, type, value);
+  if (arith::ConstantOp::isBuildableWith(value, type))
+    return builder.create<arith::ConstantOp>(loc, value, type);
+  if (ConstantOp::isBuildableWith(value, type))
+    return builder.create<ConstantOp>(loc, value, type);
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,9 +142,10 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
       }
       auto dynamicSize = alloc.dynamicSizes()[dynamicDimPos];
       auto *defOp = dynamicSize.getDefiningOp();
-      if (auto constantIndexOp = dyn_cast_or_null<ConstantIndexOp>(defOp)) {
+      if (auto constantIndexOp =
+              dyn_cast_or_null<arith::ConstantIndexOp>(defOp)) {
         // Dynamic shape dimension will be folded.
-        newShapeConstants.push_back(constantIndexOp.getValue());
+        newShapeConstants.push_back(constantIndexOp.value());
       } else {
         // Dynamic shape dimension not folded; copy dynamicSize from old memref.
         newShapeConstants.push_back(-1);
@@ -365,7 +371,7 @@ struct TensorLoadToMemRef : public OpRewritePattern<BufferCastOp> {
       for (int i = 0; i < resultType.getRank(); ++i) {
         if (resultType.getShape()[i] != ShapedType::kDynamicSize)
           continue;
-        auto index = rewriter.createOrFold<ConstantIndexOp>(loc, i);
+        auto index = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
         Value size = rewriter.create<tensor::DimOp>(loc, tensorLoad, index);
         dynamicOperands.push_back(size);
       }
@@ -673,7 +679,7 @@ LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,
 void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   int64_t index) {
   auto loc = result.location;
-  Value indexValue = builder.create<ConstantIndexOp>(loc, index);
+  Value indexValue = builder.create<arith::ConstantIndexOp>(loc, index);
   build(builder, result, source, indexValue);
 }
 
@@ -684,8 +690,8 @@ void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {
-  if (auto constantOp = index().getDefiningOp<ConstantOp>())
-    return constantOp.getValue().cast<IntegerAttr>().getInt();
+  if (auto constantOp = index().getDefiningOp<arith::ConstantOp>())
+    return constantOp.value().cast<IntegerAttr>().getInt();
   return {};
 }
 
@@ -881,7 +887,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     Location loc = dim.getLoc();
     Value load = rewriter.create<LoadOp>(loc, reshape.shape(), dim.index());
     if (load.getType() != dim.getType())
-      load = rewriter.create<IndexCastOp>(loc, dim.getType(), load);
+      load = rewriter.create<arith::IndexCastOp>(loc, dim.getType(), load);
     rewriter.replaceOp(dim, load);
     return success();
   }
@@ -2066,7 +2072,7 @@ static LogicalResult verify(SubViewOp op) {
   return produceSubViewErrorMsg(result, op, expectedType, errMsg);
 }
 
-raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
+raw_ostream &mlir::operator<<(raw_ostream &os, const Range &range) {
   return os << "range " << range.offset << ":" << range.size << ":"
             << range.stride;
 }
@@ -2086,14 +2092,15 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
     Value offset =
         op.isDynamicOffset(idx)
             ? op.getDynamicOffset(idx)
-            : b.create<ConstantIndexOp>(loc, op.getStaticOffset(idx));
-    Value size = op.isDynamicSize(idx)
-                     ? op.getDynamicSize(idx)
-                     : b.create<ConstantIndexOp>(loc, op.getStaticSize(idx));
+            : b.create<arith::ConstantIndexOp>(loc, op.getStaticOffset(idx));
+    Value size =
+        op.isDynamicSize(idx)
+            ? op.getDynamicSize(idx)
+            : b.create<arith::ConstantIndexOp>(loc, op.getStaticSize(idx));
     Value stride =
         op.isDynamicStride(idx)
             ? op.getDynamicStride(idx)
-            : b.create<ConstantIndexOp>(loc, op.getStaticStride(idx));
+            : b.create<arith::ConstantIndexOp>(loc, op.getStaticStride(idx));
     res.emplace_back(Range{offset, size, stride});
   }
   return res;
@@ -2449,9 +2456,10 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
         continue;
       }
       auto *defOp = viewOp.sizes()[dynamicDimPos].getDefiningOp();
-      if (auto constantIndexOp = dyn_cast_or_null<ConstantIndexOp>(defOp)) {
+      if (auto constantIndexOp =
+              dyn_cast_or_null<arith::ConstantIndexOp>(defOp)) {
         // Dynamic shape dimension will be folded.
-        newShapeConstants.push_back(constantIndexOp.getValue());
+        newShapeConstants.push_back(constantIndexOp.value());
       } else {
         // Dynamic shape dimension not folded; copy operand from old memref.
         newShapeConstants.push_back(dimSize);

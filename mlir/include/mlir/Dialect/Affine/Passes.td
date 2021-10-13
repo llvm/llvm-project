@@ -112,7 +112,7 @@ def AffineScalarReplacement : FunctionPass<"affine-scalrep"> {
         affine.for %i1 = 0 to 10 {
           affine.store %cf7, %m[%i0, %i1] : memref<10x10xf32>
           %v0 = affine.load %m[%i0, %i1] : memref<10x10xf32>
-          %v1 = addf %v0, %v0 : f32
+          %v1 = arith.addf %v0, %v0 : f32
         }
       }
       return %m : memref<10x10xf32>
@@ -129,7 +129,7 @@ def AffineScalarReplacement : FunctionPass<"affine-scalrep"> {
         affine.for %arg0 = 0 to 10 {
           affine.for %arg1 = 0 to 10 {
             affine.store %cst, %0[%arg0, %arg1] : memref<10x10xf32>
-            %1 = addf %cst, %cst : f32
+            %1 = arith.addf %cst, %cst : f32
           }
         }
         return %0 : memref<10x10xf32>

@@ -18,7 +18,7 @@ class AbstractConverter;
 /// Generate call to a character comparison for two ssa-values of type
 /// `boxchar`.
 mlir::Value genBoxCharCompare(AbstractConverter &converter, mlir::Location loc,
-                              mlir::CmpIPredicate cmp, mlir::Value lhs,
+                              mlir::arith::CmpIPredicate cmp, mlir::Value lhs,
                               mlir::Value rhs);
 
 /// Generate call to a character comparison op for two unboxed variables. There
@@ -26,9 +26,9 @@ mlir::Value genBoxCharCompare(AbstractConverter &converter, mlir::Location loc,
 /// reference to its buffer (`ref<char<K>>`) and its LEN type parameter (some
 /// integral type).
 mlir::Value genRawCharCompare(AbstractConverter &converter, mlir::Location loc,
-                              mlir::CmpIPredicate cmp, mlir::Value lhsBuff,
-                              mlir::Value lhsLen, mlir::Value rhsBuff,
-                              mlir::Value rhsLen);
+                              mlir::arith::CmpIPredicate cmp,
+                              mlir::Value lhsBuff, mlir::Value lhsLen,
+                              mlir::Value rhsBuff, mlir::Value rhsLen);
 
 } // namespace lower
 } // namespace Fortran

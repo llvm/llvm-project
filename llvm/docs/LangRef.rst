@@ -709,7 +709,7 @@ to over-align the global if the global has an assigned section. In this
 case, the extra alignment could be observable: for example, code could
 assume that the globals are densely packed in their section and try to
 iterate over them as an array, alignment padding would break this
-iteration. The maximum alignment is ``1 << 29``.
+iteration. The maximum alignment is ``1 << 32``.
 
 For global variables declarations, as well as definitions that may be
 replaced at link time (``linkonce``, ``weak``, ``extern_weak`` and ``common``
@@ -2574,28 +2574,33 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>:<pref>:<idx>``
+``p[n]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. The fourth parameter
-    ``<idx>`` is a size of index that used for address calculation. If not
+    ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
+    and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
+    index that used for address calculation. If not
     specified, the default index size is equal to the pointer size. All sizes
     are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^23).
-``i<size>:<abi>:<pref>``
+``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
-``v<size>:<abi>:<pref>``
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
-    ``<size>``.
-``f<size>:<abi>:<pref>``
+    ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
-    targets.
-``a:<abi>:<pref>``
+    targets. The value of ``<size>`` must be in the range [1,2^23).
+    ``<pref>`` is optional and defaults to ``<abi>``.
+``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
+    ``<pref>`` is optional and defaults to ``<abi>``.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
@@ -7471,7 +7476,7 @@ The optional ``FuncFlags`` field looks like:
 
 .. code-block:: text
 
-    funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0)
+    funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0)
 
 If unspecified, flags are assumed to hold the conservative ``false`` value of
 ``0``.
@@ -9736,7 +9741,7 @@ appropriate type to the program. If "NumElements" is specified, it is
 the number of elements allocated, otherwise "NumElements" is defaulted
 to be one. If a constant alignment is specified, the value result of the
 allocation is guaranteed to be aligned to at least that boundary. The
-alignment may not be greater than ``1 << 29``. If not specified, or if
+alignment may not be greater than ``1 << 32``. If not specified, or if
 zero, the target can choose to align the allocation on any convenient
 boundary compatible with the type.
 
@@ -9826,7 +9831,7 @@ alignment for the target. It is the responsibility of the code emitter
 to ensure that the alignment information is correct. Overestimating the
 alignment results in undefined behavior. Underestimating the alignment
 may produce less efficient code. An alignment of 1 is always safe. The
-maximum possible alignment is ``1 << 29``. An alignment value higher
+maximum possible alignment is ``1 << 32``. An alignment value higher
 than the size of the loaded type implies memory up to the alignment
 value bytes can be safely loaded without trapping in the default
 address space. Access of the high bytes can interfere with debugging
@@ -9961,7 +9966,7 @@ alignment for the target. It is the responsibility of the code emitter
 to ensure that the alignment information is correct. Overestimating the
 alignment results in undefined behavior. Underestimating the
 alignment may produce less efficient code. An alignment of 1 is always
-safe. The maximum possible alignment is ``1 << 29``. An alignment
+safe. The maximum possible alignment is ``1 << 32``. An alignment
 value higher than the size of the stored type implies memory up to the
 alignment value bytes can be stored to without trapping in the default
 address space. Storing to the higher bytes however may result in data

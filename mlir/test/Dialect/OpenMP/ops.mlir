@@ -310,12 +310,12 @@ func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 omp.reduction.declare @add_f32 : f32
 init {
 ^bb0(%arg: f32):
-  %0 = constant 0.0 : f32
+  %0 = arith.constant 0.0 : f32
   omp.yield (%0 : f32)
 }
 combiner {
 ^bb1(%arg0: f32, %arg1: f32):
-  %1 = addf %arg0, %arg1 : f32
+  %1 = arith.addf %arg0, %arg1 : f32
   omp.yield (%1 : f32)
 }
 atomic {
@@ -326,12 +326,12 @@ atomic {
 }
 
 func @reduction(%lb : index, %ub : index, %step : index) {
-  %c1 = constant 1 : i32
+  %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
   // CHECK: reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>)
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
   reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
-    %1 = constant 2.0 : f32
+    %1 = arith.constant 2.0 : f32
     // CHECK: omp.reduction %{{.+}}, %{{.+}}
     omp.reduction %1, %0 : !llvm.ptr<f32>
     omp.yield
@@ -345,13 +345,13 @@ omp.reduction.declare @add2_f32 : f32
 // CHECK: init
 init {
 ^bb0(%arg: f32):
-  %0 = constant 0.0 : f32
+  %0 = arith.constant 0.0 : f32
   omp.yield (%0 : f32)
 }
 // CHECK: combiner
 combiner {
 ^bb1(%arg0: f32, %arg1: f32):
-  %1 = addf %arg0, %arg1 : f32
+  %1 = arith.addf %arg0, %arg1 : f32
   omp.yield (%1 : f32)
 }
 // CHECK-NOT: atomic
@@ -361,7 +361,7 @@ func @reduction2(%lb : index, %ub : index, %step : index) {
   // CHECK: reduction
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
   reduction(@add2_f32 -> %0 : memref<1xf32>) {
-    %1 = constant 2.0 : f32
+    %1 = arith.constant 2.0 : f32
     // CHECK: omp.reduction
     omp.reduction %1, %0 : memref<1xf32>
     omp.yield
@@ -375,11 +375,41 @@ omp.critical.declare @mutex
 
 // CHECK-LABEL: omp_critical
 func @omp_critical() -> () {
+  // CHECK: omp.critical
   omp.critical {
     omp.terminator
   }
 
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended)
+  omp.critical(@mutex) hint(uncontended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended)
+  omp.critical(@mutex) hint(contended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(nonspeculative)
   omp.critical(@mutex) hint(nonspeculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended, nonspeculative)
+  omp.critical(@mutex) hint(uncontended, nonspeculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended, nonspeculative)
+  omp.critical(@mutex) hint(nonspeculative, contended) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(speculative)
+  omp.critical(@mutex) hint(speculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(uncontended, speculative)
+  omp.critical(@mutex) hint(uncontended, speculative) {
+    omp.terminator
+  }
+  // CHECK: omp.critical(@{{.*}}) hint(contended, speculative)
+  omp.critical(@mutex) hint(speculative, contended) {
     omp.terminator
   }
   return
