@@ -1433,6 +1433,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 RetType{Ssize_tTy}),
       GetLineSummary);
 
+  // char *getenv(const char *name);
+  addToFunctionSummaryMap(
+      "getenv", Signature(ArgTypes{ConstCharPtrTy}, RetType{CharPtrTy}),
+      Summary(NoEvalCall)
+          .Case({NotNull(Ret)})
+          .Case({NotNull(Ret)->negate()})
+          .ArgConstraint(NotNull(ArgNo(0))));
+
   if (ModelPOSIX) {
 
     // long a64l(const char *str64);
