@@ -213,6 +213,27 @@ static LogicalResult verify(NewOp op) {
   return success();
 }
 
+static LogicalResult verify(InitOp op) {
+  if (!getSparseTensorEncoding(op.result().getType()))
+    return op.emitError("expected a sparse tensor result");
+  RankedTensorType ttp = op.getType().cast<RankedTensorType>();
+  unsigned rank = ttp.getRank();
+  if (rank != op.sizes().size())
+    return op.emitError("unexpected mismatch between tensor rank and sizes: ")
+           << rank << " vs. " << op.sizes().size();
+  auto shape = ttp.getShape();
+  for (unsigned i = 0; i < rank; i++) {
+    if (shape[i] == ShapedType::kDynamicSize)
+      continue;
+    auto constantOp = op.sizes()[i].getDefiningOp<ConstantOp>();
+    if (!constantOp ||
+        constantOp.getValue().cast<IntegerAttr>().getInt() != shape[i])
+      return op.emitError("unexpected mismatch with static dimension size ")
+             << shape[i];
+  }
+  return success();
+}
+
 static LogicalResult verify(ConvertOp op) {
   if (auto tp1 = op.source().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = op.dest().getType().dyn_cast<RankedTensorType>()) {
@@ -221,8 +242,8 @@ static LogicalResult verify(ConvertOp op) {
       auto shape2 = tp2.getShape();
       for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++) {
         if (shape1[d] != shape2[d])
-          return op.emitError()
-                 << "unexpected conversion mismatch in dimension " << d;
+          return op.emitError("unexpected conversion mismatch in dimension ")
+                 << d;
       }
       return success();
     }
@@ -276,7 +297,7 @@ static LogicalResult verify(ToValuesOp op) {
 
 static LogicalResult verify(ToTensorOp op) {
   if (!getSparseTensorEncoding(op.result().getType()))
-    return op.emitError("expected a sparse tensor as result");
+    return op.emitError("expected a sparse tensor result");
   return success();
 }
 
