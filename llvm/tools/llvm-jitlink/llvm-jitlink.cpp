@@ -798,7 +798,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      SimpleRemoteEPC::Setup(), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -883,7 +883,8 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     return SockFD.takeError();
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(), *SockFD, *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      SimpleRemoteEPC::Setup(), *SockFD, *SockFD);
 #endif
 }
 
