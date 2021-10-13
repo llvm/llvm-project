@@ -302,8 +302,8 @@ void __kmp_check_stksize(size_t *val) {
   // if system stack size is too big then limit the size for worker threads
   if (*val > KMP_DEFAULT_STKSIZE * 16) // just a heuristics...
     *val = KMP_DEFAULT_STKSIZE * 16;
-  if (*val < KMP_MIN_STKSIZE)
-    *val = KMP_MIN_STKSIZE;
+  if (*val < __kmp_sys_min_stksize)
+    *val = __kmp_sys_min_stksize;
   if (*val > KMP_MAX_STKSIZE)
     *val = KMP_MAX_STKSIZE; // dead code currently, but may work in future
 #if KMP_OS_DARWIN
