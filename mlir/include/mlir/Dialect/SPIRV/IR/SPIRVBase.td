@@ -3154,7 +3154,7 @@ def SPV_Composite :
 def SPV_Type : AnyTypeOf<[
     SPV_Void, SPV_Bool, SPV_Integer, SPV_Float, SPV_Vector,
     SPV_AnyPtr, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct,
-    SPV_AnyCooperativeMatrix, SPV_AnyMatrix
+    SPV_AnyCooperativeMatrix, SPV_AnyMatrix, SPV_AnySampledImage
   ]>;
 
 def SPV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;

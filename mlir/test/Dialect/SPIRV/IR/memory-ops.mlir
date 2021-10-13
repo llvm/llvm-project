@@ -341,11 +341,15 @@ func @aligned_load_incorrect_attributes() -> () {
 
 spv.module Logical GLSL450 {
   spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.sampled_image<!spv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Unknown>>, UniformConstant>
   // CHECK_LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
     // CHECK: spv.Load "Input" {{%.*}} : f32
     %0 = spv.mlir.addressof @var0 : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
+    %2 = spv.mlir.addressof @var1 : !spv.ptr<!spv.sampled_image<!spv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Unknown>>, UniformConstant>
+    // CHECK: spv.Load "UniformConstant" {{%.*}} : !spv.sampled_image
+    %3 = spv.Load "UniformConstant" %2 : !spv.sampled_image<!spv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Unknown>>
     spv.Return
   }
 }
