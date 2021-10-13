@@ -441,13 +441,6 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
   m_reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
   m_initialized_reflection_ctx = true;
 
-  auto &target = m_process.GetTarget();
-  auto exe_module = target.GetExecutableModule();
-  if (!AddModuleToReflectionContext(exe_module)) {
-    m_reflection_ctx.reset();
-    return;
-  }
-
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
   m_modules_to_add.ForEach([&](const ModuleSP &module_sp) -> bool {
