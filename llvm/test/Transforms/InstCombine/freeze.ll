@@ -374,3 +374,14 @@ define i8* @propagate_drop_gep2(i8* %arg, i64 %unknown) {
   ret i8* %v1.fr
 }
 
+
+define float @propagate_drop_fadd(float %arg) {
+; CHECK-LABEL: @propagate_drop_fadd(
+; CHECK-NEXT:    [[V1:%.*]] = fadd ninf float [[ARG:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze float [[V1]]
+; CHECK-NEXT:    ret float [[V1_FR]]
+;
+  %v1 = fadd ninf float %arg, 2.0
+  %v1.fr = freeze float %v1
+  ret float %v1.fr
+}
