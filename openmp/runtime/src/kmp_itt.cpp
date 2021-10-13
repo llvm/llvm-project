@@ -24,12 +24,9 @@
 #include "ittnotify_config.h"
 __itt_global __kmp_ittapi_clean_global;
 extern __itt_global __kmp_itt__ittapi_global;
-kmp_int32 __kmp_barrier_domain_count;
-kmp_int32 __kmp_region_domain_count;
-__itt_domain *__kmp_itt_barrier_domains[KMP_MAX_FRAME_DOMAINS];
-__itt_domain *__kmp_itt_region_domains[KMP_MAX_FRAME_DOMAINS];
-__itt_domain *__kmp_itt_imbalance_domains[KMP_MAX_FRAME_DOMAINS];
-kmp_int32 __kmp_itt_region_team_size[KMP_MAX_FRAME_DOMAINS];
+
+kmp_itthash_t __kmp_itt_barrier_domains = {{0}, 0};
+kmp_itthash_t __kmp_itt_region_domains = {{0}, 0};
 __itt_domain *metadata_domain = NULL;
 __itt_string_handle *string_handle_imbl = NULL;
 __itt_string_handle *string_handle_loop = NULL;
