@@ -28,7 +28,7 @@ class TestSwiftRewriteClangPaths(TestBase):
         logfile = open(log, "r")
         found = 0
         for line in logfile:
-            if line.startswith(' SwiftASTContext("a.out")::RemapClangImporterOptions() -- remapped'):
+            if line.startswith(' SwiftASTContextForModule("a.out")::RemapClangImporterOptions() -- remapped'):
                 if '/LocalSDK/' in line:
                     found += 1
         self.assertEqual(found, 1)

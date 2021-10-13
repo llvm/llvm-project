@@ -163,15 +163,13 @@ public:
   /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
+protected:
   // Constructors and destructors
   SwiftASTContext(std::string description, llvm::Triple triple,
                   Target *target = nullptr);
+public:
 
   SwiftASTContext(const SwiftASTContext &rhs) = delete;
-
-  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
-    return m_typeref_typesystem;
-  }
 
   ~SwiftASTContext();
 
@@ -187,10 +185,10 @@ public:
   /// this lldb::Module.  The optional target is necessary when
   /// creating a module-specific scratch context.  If \p fallback is
   /// true, then a SwiftASTContextForExpressions is created.
-  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module &module,
-                                           Target *target = nullptr,
-                                           bool fallback = false);
+  static lldb::TypeSystemSP
+  CreateInstance(lldb::LanguageType language, Module &module,
+                 TypeSystemSwiftTypeRef *typeref_typesystem = nullptr,
+                 Target *target = nullptr, bool fallback = false);
   /// Create a SwiftASTContext from a Target.  This context is global
   /// and used for the expression evaluator.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
@@ -203,7 +201,9 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  SwiftASTContext *GetSwiftASTContext() override { return this; }
+  SwiftASTContext *GetSwiftASTContext() const override {
+    return const_cast<SwiftASTContext *>(this);
+  }
 
   Status IsCompatible() override;
 
@@ -281,8 +281,6 @@ public:
   swift::ModuleDecl *GetModule(const FileSpec &module_spec, Status &error);
 
   void CacheModule(swift::ModuleDecl *module);
-
-  Module *GetModule() const override { return m_module; }
 
   // Call this after the search paths are set up, it will find the module given
   // by module, load the module into the AST context, and also load any
@@ -368,8 +366,10 @@ public:
 
   llvm::Triple GetTriple() const;
 
-  bool SetTriple(const llvm::Triple triple,
-                 lldb_private::Module *module = nullptr);
+  bool SetTriple(const llvm::Triple triple, lldb_private::Module *module);
+  void SetTriple(const llvm::Triple triple) override {
+    SetTriple(triple, nullptr);
+  }
 
   /// Condition a triple to be safe for use with Swift.  Swift is
   /// really peculiar about what CPU types it thinks it has standard
@@ -418,9 +418,7 @@ public:
   swift::IRGenOptions &GetIRGenOptions();
   swift::TBDGenOptions &GetTBDGenOptions();
 
-  void ModulesDidLoad(ModuleList &module_list);
-
-  void ClearModuleDependentCaches();
+  void ClearModuleDependentCaches() override;
 
   void LogConfiguration();
 
@@ -846,7 +844,6 @@ protected:
 
   /// Data members.
   /// @{
-  TypeSystemSwiftTypeRef m_typeref_typesystem;
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_up;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
@@ -884,7 +881,6 @@ protected:
   /// Only if this AST belongs to a target, and an expression has been
   /// evaluated will the target's process pointer be filled in
   lldb_private::Process *m_process = nullptr;
-  Module *m_module = nullptr;
   std::string m_platform_sdk_path;
   /// All previously library loads in LoadLibraryUsingPaths with their
   /// respective result (true = loaded, false = failed to load).
@@ -960,6 +956,35 @@ protected:
                                          const llvm::Triple &host);
 };
 
+/// Deprecated.
+class SwiftASTContextForModule : public SwiftASTContext {
+  // LLVM RTTI support
+  static char ID;
+
+public:
+  /// LLVM RTTI support
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SwiftASTContext::isA(ClassID);
+  }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
+  /// \}
+
+  SwiftASTContextForModule(TypeSystemSwiftTypeRef &typeref_typesystem,
+                           std::string description, llvm::Triple triple,
+                           Target *target)
+      : SwiftASTContext(description, triple, target),
+        m_typeref_typesystem(typeref_typesystem) {}
+  virtual ~SwiftASTContextForModule() {}
+
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+    return m_typeref_typesystem;
+  }
+
+private:
+  TypeSystemSwiftTypeRef &m_typeref_typesystem;
+};
+
 class SwiftASTContextForExpressions : public SwiftASTContext {
   // LLVM RTTI support
   static char ID;
@@ -974,8 +999,11 @@ public:
   /// \}
 
   SwiftASTContextForExpressions(std::string description, Target &target);
-
   virtual ~SwiftASTContextForExpressions() {}
+
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+    return m_typeref_typesystem;
+  }
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
@@ -986,7 +1014,10 @@ public:
 
   PersistentExpressionState *GetPersistentExpressionState() override;
 
+  void ModulesDidLoad(ModuleList &module_list);
+
 private:
+  TypeSystemSwiftTypeRef m_typeref_typesystem;
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
 

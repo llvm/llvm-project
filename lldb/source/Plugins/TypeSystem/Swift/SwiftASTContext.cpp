@@ -195,6 +195,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 char SwiftASTContext::ID;
+char SwiftASTContextForModule::ID;
 char SwiftASTContextForExpressions::ID;
 
 CompilerType lldb_private::ToCompilerType(swift::Type qual_type) {
@@ -208,7 +209,7 @@ TypePayloadSwift::TypePayloadSwift(bool is_fixed_value_buffer) {
 }
 
 CompilerType SwiftASTContext::GetCompilerType(ConstString mangled_name) {
-  return m_typeref_typesystem.GetTypeFromMangledTypename(mangled_name);
+  return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(mangled_name);
 }
 
 CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
@@ -224,7 +225,9 @@ swift::Type TypeSystemSwiftTypeRef::GetSwiftType(CompilerType compiler_type) {
   // FIXME: Suboptimal performance, because the ConstString is looked up again.
   ConstString mangled_name(
       reinterpret_cast<const char *>(compiler_type.GetOpaqueQualType()));
-  return ts->m_swift_ast_context->ReconstructType(mangled_name);
+  if (auto *swift_ast_context = ts->GetSwiftASTContext())
+    return swift_ast_context->ReconstructType(mangled_name);
+  return {};
 }
 
 swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
@@ -907,14 +910,14 @@ static std::string GetClangModulesCacheProperty() {
 }
 
 #ifndef NDEBUG
-SwiftASTContext::SwiftASTContext() : m_typeref_typesystem(this) {
+SwiftASTContext::SwiftASTContext() {
   llvm::dbgs() << "Initialized mock SwiftASTContext\n";
 }
 #endif
 
 SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
                                  Target *target)
-    : TypeSystemSwift(), m_typeref_typesystem(this),
+    : TypeSystemSwift(),
       m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   m_description = description;
 
@@ -1643,10 +1646,11 @@ static bool IsDWARFImported(swift::ModuleDecl &module) {
                      });
 }
 
-lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
-                                                   Module &module,
-                                                   Target *target,
-                                                   bool fallback) {
+lldb::TypeSystemSP
+SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
+                                TypeSystemSwiftTypeRef *typeref_typesystem,
+                                Target *target, bool fallback) {
+  assert(((bool)fallback && (bool)target) != (bool)typeref_typesystem);
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -1656,6 +1660,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     ss << "SwiftASTContext";
     if (fallback)
       ss << "ForExpressions";
+    else
+      ss << "ForModule";
     ss << '(' << '"';
     module.GetDescription(ss, eDescriptionLevelBrief);
     ss << '"' << ')';
@@ -1718,9 +1724,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // If there is a target this may be a fallback scratch context.
   assert((!fallback || target) && "fallback context must specify a target");
   std::shared_ptr<SwiftASTContext> swift_ast_sp(
-      fallback ? (new SwiftASTContextForExpressions(m_description, *target))
-               : (new SwiftASTContext(
-                     m_description,
+      fallback ? static_cast<SwiftASTContext *>(
+                     new SwiftASTContextForExpressions(m_description, *target))
+               : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
+                     *typeref_typesystem, m_description,
                      target ? target->GetArchitecture().GetTriple() : triple,
                      target)));
   bool suppress_config_log = false;
@@ -1952,6 +1959,19 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
+static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
+  auto type_system_or_err =
+      module.GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return {};
+  }
+  auto *ts = static_cast<TypeSystemSwift *>(&*type_system_or_err);
+  if (!ts)
+    return {};
+  return ts->GetSwiftASTContext();
+}
+
 /// Scan a newly added lldb::Module for Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
 static void
@@ -2032,16 +2052,7 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   if (!HasSwiftModules(*module_sp))
     return;
 
-  auto type_system_or_err =
-      module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-  if (!type_system_or_err) {
-    llvm::consumeError(type_system_or_err.takeError());
-    return;
-  }
-
-  SwiftASTContext *ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
-
+  SwiftASTContext *ast_context = GetModuleSwiftASTContext(*module_sp);
   if (!ast_context || ast_context->HasFatalErrors() ||
       !ast_context->GetClangImporter()) {
     // Make sure we warn about this module load failure, the one
@@ -2193,11 +2204,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       for (size_t mi = 0; mi != num_images; ++mi) {
         auto module_sp = target.GetImages().GetModuleAtIndex(mi);
         pool.async([=] {
-          auto val_or_err =
-              module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-          if (!val_or_err) {
-            llvm::consumeError(val_or_err.takeError());
-          }
+          GetModuleSwiftASTContext(*module_sp);
         });
       }
       pool.wait();
@@ -2211,15 +2218,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (!HasSwiftModules(*module_sp))
         continue;
 
-      auto type_system_or_err =
-          module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-      if (!type_system_or_err) {
-        llvm::consumeError(type_system_or_err.takeError());
-        continue;
-      }
-
-      auto *module_swift_ast =
-          llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+      SwiftASTContext *module_swift_ast = GetModuleSwiftASTContext(*module_sp);
       if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
           !module_swift_ast->GetClangImporter())
         continue;
@@ -2252,14 +2251,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     auto get_executable_triple = [&]() -> llvm::Triple {
       if (!exe_module_sp)
         return {};
-      auto type_system_or_err =
-          exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-      if (!type_system_or_err) {
-        llvm::consumeError(type_system_or_err.takeError());
-        return {};
-      }
-      auto *exe_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContext>(&type_system_or_err.get());
+      auto *exe_ast_ctx = GetModuleSwiftASTContext(*exe_module_sp);
       if (!exe_ast_ctx)
         return {};
       return exe_ast_ctx->GetLanguageOptions().Target;
@@ -3303,7 +3295,7 @@ public:
                        TypeSystemClang::GetSupportedLanguagesForTypes(),
                        searched_symbol_files, clang_types);
     };
-    if (Module *module = m_swift_ast_ctx.GetModule())
+    if (Module *module = m_swift_ast_ctx.GetTypeSystemSwiftTypeRef().GetModule())
       search(*module);
     else if (TargetSP target_sp = m_swift_ast_ctx.GetTarget().lock()) {
       // In a scratch context, check the module's DWARFImporterDelegates first.
@@ -3314,12 +3306,7 @@ public:
       auto images = target_sp->GetImages();
       for (size_t i = 0; i != images.GetSize(); ++i) {
         auto module_sp = images.GetModuleAtIndex(i);
-        auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-        if (!ts) {
-          llvm::consumeError(ts.takeError());
-          continue;
-        }
-        auto *swift_ast_ctx = static_cast<SwiftASTContext *>(&*ts);
+        auto *swift_ast_ctx = GetModuleSwiftASTContext(*module_sp);
         auto *dwarf_imp = static_cast<SwiftDWARFImporterDelegate *>(
             swift_ast_ctx->GetDWARFImporterDelegate());
         if (!dwarf_imp || dwarf_imp == this)
@@ -4378,7 +4365,7 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   // that look like they might be come from Objective-C (or C) as
   // Clang types. LLDB's Objective-C part is very robust against
   // malformed object pointers, so this isn't very risky.
-  Module *module = GetModule();
+  Module *module = GetTypeSystemSwiftTypeRef().GetModule();
   if (!module)
     return {};
   auto type_system_or_err =
@@ -4843,7 +4830,7 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   if (!mangled_name)
     return {};
   if (llvm::isa<TypeSystemSwiftTypeRef>(ts))
-    return m_typeref_typesystem.GetTypeFromMangledTypename(mangled_name);
+    return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(mangled_name);
   swift::TypeBase *our_type_base =
       m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
   if (our_type_base)
@@ -5132,7 +5119,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   }
 }
 
-void SwiftASTContext::ModulesDidLoad(ModuleList &module_list) {
+void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
   ClearModuleDependentCaches();
 
   // Scan the new modules for Swift contents and try to import it if
@@ -5591,7 +5578,7 @@ SwiftASTContext::GetAllocationStrategy(opaque_compiler_type_t type) {
 
 CompilerType
 SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
-  return m_typeref_typesystem.GetTypeFromMangledTypename(
+  return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(
       GetMangledTypeName(type));
 }
 
@@ -8364,6 +8351,7 @@ SwiftASTContextForExpressions::SwiftASTContextForExpressions(
     std::string description, Target &target)
     : SwiftASTContext(std::move(description),
                       target.GetArchitecture().GetTriple(), &target),
+      m_typeref_typesystem(*this),
       m_persistent_state_up(new SwiftPersistentExpressionState) {}
 
 UserExpression *SwiftASTContextForExpressions::GetUserExpression(
