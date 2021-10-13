@@ -599,13 +599,10 @@ let HasNoMaskedOverloaded = false,
       IntrinsicTypes = {ResultType, Ops[1]->getType()};
       Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
     }],
-    ManualCodegenMask = [{
+    ManualCodegenMask= [{
       // Move mask to right before vl.
-      if (Ops.size() == 4) {
-        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-      } else if (Ops.size() == 5)
-        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
       IntrinsicTypes = {ResultType, Ops[3]->getType()};
       Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
     }] in {
@@ -648,11 +645,8 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
       ManualCodegenMask = [{
       {
         // Move mask to right before vl.
-        if (Ops.size() == 5) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 6)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
@@ -689,11 +683,8 @@ multiclass RVVVLSEBuiltin<list<string> types> {
       }],
       ManualCodegenMask= [{
         // Move mask to right before vl.
-        if (Ops.size() == 5) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 6)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
       }] in {
@@ -713,11 +704,8 @@ multiclass RVVIndexedLoad<string op> {
       }],
       ManualCodegenMask = [{
         // Move mask to right before vl.
-        if (Ops.size() == 5) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 6)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
       }] in {
@@ -755,22 +743,6 @@ let HasMaskedOffOperand = false,
     let IRName = "vsm";
     let HasMask = false;
   }
-}
-
-let HasMaskedOffOperand = false,
-    HasPolicy = false,
-    ManualCodegen = [{
-      // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
-      std::swap(Ops[0], Ops[1]);
-      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
-      IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
-    }],
-    ManualCodegenMask= [{
-      // Builtin: (mask, ptr, value, vl). Intrinsic: (value, ptr, mask, vl)
-      std::swap(Ops[0], Ops[2]);
-      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
-      IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
-    }] in {
   multiclass RVVVSEBuiltin<list<string> types> {
     let Name = NAME # "_v",
         IRName = "vse",
@@ -901,10 +873,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
       Operands.push_back(Ops[2 * NF + 1]);
       Operands.push_back(Ops[NF]);
       Operands.push_back(Ops[2 * NF + 2]);
-      if (Ops.size() == 2 * NF + 4)
-        Operands.push_back(Ops[2 * NF + 3]);
-      else
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -977,10 +946,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       Operands.push_back(Ops[2 * NF + 1]);
       Operands.push_back(Ops[NF]);
       Operands.push_back(Ops[2 * NF + 3]);
-      if (Ops.size() == 2 * NF + 5)
-        Operands.push_back(Ops[2 * NF + 4]);
-      else
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
       Value *NewVL = Ops[2 * NF + 2];
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
@@ -1054,10 +1020,7 @@ multiclass RVVStridedSegLoad<string op> {
       Operands.push_back(Ops[2 * NF + 2]);
       Operands.push_back(Ops[NF]);
       Operands.push_back(Ops[2 * NF + 3]);
-      if (Ops.size() == 2 * NF + 5)
-        Operands.push_back(Ops[2 * NF + 4]);
-      else
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
       assert(Operands.size() == NF + 5);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1124,10 +1087,7 @@ multiclass RVVIndexedSegLoad<string op> {
       Operands.push_back(Ops[2 * NF + 2]);
       Operands.push_back(Ops[NF]);
       Operands.push_back(Ops[2 * NF + 3]);
-      if (Ops.size() == 2 * NF + 5)
-        Operands.push_back(Ops[2 * NF + 4]);
-      else
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
       assert(Operands.size() == NF + 5);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1346,11 +1306,8 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
-        if (Ops.size() == 4) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 5)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           cast<llvm::VectorType>(ResultType)->getElementType(),
@@ -1380,11 +1337,8 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
-        if (Ops.size() == 4) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 5)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           cast<llvm::VectorType>(ResultType)->getElementType(),
@@ -1431,11 +1385,8 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
-        if (Ops.size() == 4) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 5)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
@@ -1467,11 +1418,8 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       }],
       ManualCodegenMask = [{
       {
-        if (Ops.size() == 4) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 5)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
@@ -1506,11 +1454,8 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       }],
       ManualCodegenMask = [{
       {
-        if (Ops.size() == 4) {
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_AGNOSTIC));
-        } else if (Ops.size() == 5)
-          std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),

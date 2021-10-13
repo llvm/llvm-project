@@ -12,6 +12,8 @@
 
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
 #include "../PassDetail.h"
+#include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
+#include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -38,10 +40,13 @@ void ConvertStandardToSPIRVPass::runOnOperation() {
   options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
+  // TODO ArithmeticToSPIRV cannot be applied separately to StandardToSPIRV
   RewritePatternSet patterns(context);
+  arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+  populateMathToSPIRVPatterns(typeConverter, patterns);
   populateStandardToSPIRVPatterns(typeConverter, patterns);
-  populateTensorToSPIRVPatterns(typeConverter,
-                                /*byteCountThreshold=*/64, patterns);
+  populateTensorToSPIRVPatterns(typeConverter, /*byteCountThreshold=*/64,
+                                patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(module, *target, std::move(patterns))))

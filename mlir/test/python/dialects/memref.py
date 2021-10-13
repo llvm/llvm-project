@@ -4,21 +4,26 @@ from mlir.ir import *
 import mlir.dialects.std as std
 import mlir.dialects.memref as memref
 
+
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  return f
+
 
 # CHECK-LABEL: TEST: testSubViewAccessors
+@run
 def testSubViewAccessors():
   ctx = Context()
-  module = Module.parse(r"""
+  module = Module.parse(
+      r"""
     func @f1(%arg0: memref<?x?xf32>) {
-      %0 = constant 0 : index
-      %1 = constant 1 : index
-      %2 = constant 2 : index
-      %3 = constant 3 : index
-      %4 = constant 4 : index
-      %5 = constant 5 : index
+      %0 = arith.constant 0 : index
+      %1 = arith.constant 1 : index
+      %2 = arith.constant 2 : index
+      %3 = arith.constant 3 : index
+      %4 = arith.constant 4 : index
+      %5 = arith.constant 5 : index
       memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
       return
     }
@@ -49,5 +54,20 @@ def testSubViewAccessors():
   print(subview.strides[1])
 
 
-run(testSubViewAccessors)
+# CHECK-LABEL: TEST: testCustomBuidlers
+@run
+def testCustomBuidlers():
+  with Context() as ctx, Location.unknown(ctx):
+    module = Module.parse(r"""
+      func @f1(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) {
+        return
+      }
+    """)
+    func = module.body.operations[0]
+    func_body = func.regions[0].blocks[0]
+    with InsertionPoint.at_block_terminator(func_body):
+      memref.LoadOp(func.arguments[0], func.arguments[1:])
 
+    # CHECK: func @f1(%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+    # CHECK: memref.load %[[ARG0]][%[[ARG1]], %[[ARG2]]]
+    print(module)

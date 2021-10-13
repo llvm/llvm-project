@@ -16,8 +16,8 @@ func @hoist_vector_transfer_pairs(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>, %memref2: memref<?x?xf32>,
     %memref3: memref<?x?xf32>, %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
 
 // CHECK: vector.transfer_read %{{.*}} : memref<?x?xf32>, vector<1xf32>
 // CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args({{.*}}) -> (vector<1xf32>) {
@@ -91,10 +91,10 @@ func @hoist_vector_transfer_pairs_disjoint(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>,
     %memref2: memref<?x?xf32>, %memref3: memref<?x?xf32>, %val: index, %lb : index, %ub : index,
     %step: index, %random_index : index, %cmp: i1) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c3 = constant 3 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 0.0 : f32
 
 // CHECK: vector.transfer_read %[[MEMREF2]]{{.*}} : memref<?x?xf32>, vector<3xf32>
 // CHECK: vector.transfer_read %[[MEMREF2]]{{.*}} : memref<?x?xf32>, vector<3xf32>
@@ -164,8 +164,8 @@ func @hoist_vector_transfer_pairs_tensor(
     %val: index, %lb : index, %ub : index, %step: index) ->
     (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
      tensor<?x?xf32>, tensor<?x?xf32>) {
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
 
 // CHECK: vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<1xf32>
 // CHECK: scf.for {{.*}} iter_args({{.*}}) ->
@@ -249,10 +249,10 @@ func @hoist_vector_transfer_pairs_disjoint_tensor(
     %val: index, %lb : index, %ub : index, %step: index,
     %random_index : index) ->
     (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c3 = constant 3 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 0.0 : f32
 
 // CHECK: vector.transfer_read %[[TENSOR2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
 // CHECK: vector.transfer_read %[[TENSOR2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
@@ -339,8 +339,8 @@ func @hoist_vector_transfer_pairs_tensor_and_slices(
     (
       tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>//, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
     ) {
-  %c0 = constant 0 : index
-  %cst = constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
 
   //      CHECK: scf.for %[[I:.*]] = {{.*}} iter_args(
   // CHECK-SAME:   %[[TENSOR0_ARG:[0-9a-zA-Z]+]] = %[[TENSOR0]],

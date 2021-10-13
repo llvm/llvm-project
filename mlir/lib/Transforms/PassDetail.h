@@ -19,6 +19,10 @@ class AffineDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace arith {
+class ArithmeticDialect;
+} // end namespace arith
+
 namespace memref {
 class MemRefDialect;
 } // end namespace memref

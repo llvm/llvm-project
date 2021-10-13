@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
 
 func @testenterdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -11,7 +11,7 @@ func @testenterdataop(%a: memref<10xf32>) -> () {
 // -----
 
 func @testenterdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+  %ifCond = arith.constant false
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -22,7 +22,7 @@ func @testenterdataop(%a: memref<10xf32>) -> () {
 // -----
 
 func @testexitdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -32,7 +32,7 @@ func @testexitdataop(%a: memref<10xf32>) -> () {
 // -----
 
 func @testexitdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+  %ifCond = arith.constant false
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -43,7 +43,7 @@ func @testexitdataop(%a: memref<10xf32>) -> () {
 // -----
 
 func @testupdateop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+  %ifCond = arith.constant true
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }
@@ -53,7 +53,7 @@ func @testupdateop(%a: memref<10xf32>) -> () {
 // -----
 
 func @testupdateop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+  %ifCond = arith.constant false
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }

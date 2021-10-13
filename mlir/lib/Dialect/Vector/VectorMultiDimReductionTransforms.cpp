@@ -247,15 +247,15 @@ struct TwoDimMultiReductionToElementWise
       switch (multiReductionOp.kind()) {
       case vector::CombiningKind::ADD:
         if (elementType.isIntOrIndex())
-          result = rewriter.create<AddIOp>(loc, operand, result);
+          result = rewriter.create<arith::AddIOp>(loc, operand, result);
         else
-          result = rewriter.create<AddFOp>(loc, operand, result);
+          result = rewriter.create<arith::AddFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MUL:
         if (elementType.isIntOrIndex())
-          result = rewriter.create<MulIOp>(loc, operand, result);
+          result = rewriter.create<arith::MulIOp>(loc, operand, result);
         else
-          result = rewriter.create<MulFOp>(loc, operand, result);
+          result = rewriter.create<arith::MulFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINUI:
         result = rewriter.create<MinUIOp>(loc, operand, result);
@@ -276,13 +276,13 @@ struct TwoDimMultiReductionToElementWise
         result = rewriter.create<MaxFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::AND:
-        result = rewriter.create<AndOp>(loc, operand, result);
+        result = rewriter.create<arith::AndIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::OR:
-        result = rewriter.create<OrOp>(loc, operand, result);
+        result = rewriter.create<arith::OrIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::XOR:
-        result = rewriter.create<XOrOp>(loc, operand, result);
+        result = rewriter.create<arith::XOrIOp>(loc, operand, result);
         break;
       }
     }

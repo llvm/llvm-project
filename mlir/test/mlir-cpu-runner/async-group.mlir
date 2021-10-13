@@ -2,6 +2,7 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
+// RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
@@ -19,8 +20,8 @@
 // UNSUPPORTED: asan
 
 func @main() {
-  %c1 = constant 1 : index
-  %c5 = constant 5 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
 
   %group = async.create_group %c5 : !async.group
 

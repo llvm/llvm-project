@@ -1,7 +1,7 @@
 // RUN: fir-opt --external-name-interop %s | FileCheck %s
 
 func @_QPfoo() {  
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = fir.address_of(@_QBa) : !fir.ref<!fir.array<4xi8>>
   %1 = fir.convert %0 : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
   %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

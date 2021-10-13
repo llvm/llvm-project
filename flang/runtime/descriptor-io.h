@@ -42,22 +42,22 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
 // automatic repetition counts, like "10*3.14159", for list-directed and
 // NAMELIST array output.
 
-template <typename A, Direction DIR>
+template <int KIND, Direction DIR>
 inline bool FormattedIntegerIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
+  using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
   for (std::size_t j{0}; j < numElements; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
-      A &x{ExtractElement<A>(io, descriptor, subscripts)};
+      IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
       if constexpr (DIR == Direction::Output) {
-        if (!EditIntegerOutput(io, *edit, static_cast<std::int64_t>(x))) {
+        if (!EditIntegerOutput<KIND>(io, *edit, x)) {
           return false;
         }
       } else if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-        if (!EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x),
-                static_cast<int>(sizeof(A)))) {
+        if (!EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x), KIND)) {
           return false;
         }
       }
@@ -183,15 +183,16 @@ inline bool FormattedCharacterIO(
   return true;
 }
 
-template <typename A, Direction DIR>
+template <int KIND, Direction DIR>
 inline bool FormattedLogicalIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
   for (std::size_t j{0}; j < numElements; ++j) {
-    A &x{ExtractElement<A>(io, descriptor, subscripts)};
+    IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
     if (listOutput) {
       if (!ListDirectedLogicalOutput(io, *listOutput, x != 0)) {
         return false;
@@ -377,20 +378,15 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     case TypeCategory::Integer:
       switch (kind) {
       case 1:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 1>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<1, DIR>(io, descriptor);
       case 2:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 2>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<2, DIR>(io, descriptor);
       case 4:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 4>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<4, DIR>(io, descriptor);
       case 8:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 8>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<8, DIR>(io, descriptor);
       case 16:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 16>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented INTEGER kind (%d) in descriptor",
@@ -452,17 +448,13 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     case TypeCategory::Logical:
       switch (kind) {
       case 1:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 1>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<1, DIR>(io, descriptor);
       case 2:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 2>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<2, DIR>(io, descriptor);
       case 4:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 4>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<4, DIR>(io, descriptor);
       case 8:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 8>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<8, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented LOGICAL kind (%d) in descriptor",

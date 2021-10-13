@@ -12,7 +12,7 @@ module attributes {
       %0 = "gpu.block_id"() {dimension = "x"} : () -> index
       %1 = memref.load %arg0[%0] : memref<8xf32>
       %2 = memref.load %arg1[%0] : memref<8xf32>
-      %3 = addf %1, %2 : f32
+      %3 = arith.addf %1, %2 : f32
       memref.store %3, %arg2[%0] : memref<8xf32>
       gpu.return
     }
@@ -22,12 +22,12 @@ module attributes {
     %arg0 = memref.alloc() : memref<8xf32>
     %arg1 = memref.alloc() : memref<8xf32>
     %arg2 = memref.alloc() : memref<8xf32>
-    %0 = constant 0 : i32
-    %1 = constant 1 : i32
-    %2 = constant 2 : i32
-    %value0 = constant 0.0 : f32
-    %value1 = constant 1.1 : f32
-    %value2 = constant 2.2 : f32
+    %0 = arith.constant 0 : i32
+    %1 = arith.constant 1 : i32
+    %2 = arith.constant 2 : i32
+    %value0 = arith.constant 0.0 : f32
+    %value1 = arith.constant 1.1 : f32
+    %value2 = arith.constant 2.2 : f32
     %arg3 = memref.cast %arg0 : memref<8xf32> to memref<?xf32>
     %arg4 = memref.cast %arg1 : memref<8xf32> to memref<?xf32>
     %arg5 = memref.cast %arg2 : memref<8xf32> to memref<?xf32>
@@ -35,8 +35,8 @@ module attributes {
     call @fillResource1DFloat(%arg4, %value2) : (memref<?xf32>, f32) -> ()
     call @fillResource1DFloat(%arg5, %value0) : (memref<?xf32>, f32) -> ()
 
-    %cst1 = constant 1 : index
-    %cst8 = constant 8 : index
+    %cst1 = arith.constant 1 : index
+    %cst8 = arith.constant 8 : index
     gpu.launch_func @kernels::@kernel_add
         blocks in (%cst8, %cst1, %cst1) threads in (%cst1, %cst1, %cst1)
         args(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg2 : memref<8xf32>)

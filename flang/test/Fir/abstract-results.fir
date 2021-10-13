@@ -28,9 +28,9 @@ func private @boxfunc(i64) -> !fir.box<!fir.heap<f64>>
 func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
   %buffer = fir.alloca !fir.array<?xf32>, %n
   // Do something with result (res(4) = 42.)
-  %c4 = constant 4 : i64
+  %c4 = arith.constant 4 : i64
   %coor = fir.coordinate_of %buffer, %c4 : (!fir.ref<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
-  %cst = constant 4.200000e+01 : f32
+  %cst = arith.constant 4.200000e+01 : f32
   fir.store %cst to %coor : !fir.ref<f32>
   %res = fir.load %buffer : !fir.ref<!fir.array<?xf32>>
   return %res : !fir.array<?xf32>
@@ -90,19 +90,19 @@ func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
 // CHECK-LABEL: func @call_arrayfunc() {
 // CHECK-BOX-LABEL: func @call_arrayfunc() {
 func @call_arrayfunc() {
-  %c100 = constant 100 : index
+  %c100 = arith.constant 100 : index
   %buffer = fir.alloca !fir.array<?xf32>, %c100
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
   %res = fir.call @arrayfunc_callee(%c100) : (index) -> !fir.array<?xf32>
   fir.save_result %res to %buffer(%shape) : !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>, !fir.shape<1>
   return
 
-  // CHECK: %[[c100:.*]] = constant 100 : index
+  // CHECK: %[[c100:.*]] = arith.constant 100 : index
   // CHECK: %[[buffer:.*]] = fir.alloca !fir.array<?xf32>, %[[c100]]
   // CHECK: fir.call @arrayfunc_callee(%[[buffer]], %[[c100]]) : (!fir.ref<!fir.array<?xf32>>, index) -> ()
   // CHECK-NOT: fir.save_result
 
-  // CHECK-BOX: %[[c100:.*]] = constant 100 : index
+  // CHECK-BOX: %[[c100:.*]] = arith.constant 100 : index
   // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.array<?xf32>, %[[c100]]
   // CHECK-BOX: %[[shape:.*]] = fir.shape %[[c100]] : (index) -> !fir.shape<1>
   // CHECK-BOX: %[[box:.*]] = fir.embox %[[buffer]](%[[shape]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
@@ -114,17 +114,17 @@ func @call_arrayfunc() {
 // CHECK-BOX-LABEL: func @call_derivedfunc() {
 func @call_derivedfunc() {
   %buffer = fir.alloca !fir.type<t{x:f32}>
-  %cst = constant 4.200000e+01 : f32
+  %cst = arith.constant 4.200000e+01 : f32
   %res = fir.call @derivedfunc_callee(%cst) : (f32) -> !fir.type<t{x:f32}>
   fir.save_result %res to %buffer : !fir.type<t{x:f32}>, !fir.ref<!fir.type<t{x:f32}>>
   return
   // CHECK: %[[buffer:.*]] = fir.alloca !fir.type<t{x:f32}>
-  // CHECK: %[[cst:.*]] = constant {{.*}} : f32
+  // CHECK: %[[cst:.*]] = arith.constant {{.*}} : f32
   // CHECK: fir.call @derivedfunc_callee(%[[buffer]], %[[cst]]) : (!fir.ref<!fir.type<t{x:f32}>>, f32) -> ()
   // CHECK-NOT: fir.save_result
 
   // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.type<t{x:f32}>
-  // CHECK-BOX: %[[cst:.*]] = constant {{.*}} : f32
+  // CHECK-BOX: %[[cst:.*]] = arith.constant {{.*}} : f32
   // CHECK-BOX: %[[box:.*]] = fir.embox %[[buffer]] : (!fir.ref<!fir.type<t{x:f32}>>) -> !fir.box<!fir.type<t{x:f32}>>
   // CHECK-BOX: fir.call @derivedfunc_callee(%[[box]], %[[cst]]) : (!fir.box<!fir.type<t{x:f32}>>, f32) -> ()
   // CHECK-BOX-NOT: fir.save_result
@@ -137,19 +137,19 @@ func private @derived_lparams_func() -> !fir.type<t2(l1:i32,l2:i32){x:f32}>
 // CHECK-BOX-LABEL: func @call_derived_lparams_func(
 // CHECK-BOX-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>
 func @call_derived_lparams_func(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) {
-  %l1 = constant 3 : i32
-  %l2 = constant 5 : i32
+  %l1 = arith.constant 3 : i32
+  %l2 = arith.constant 5 : i32
   %res = fir.call @derived_lparams_func() : () -> !fir.type<t2(l1:i32,l2:i32){x:f32}>
   fir.save_result %res to %buffer typeparams %l1, %l2 : !fir.type<t2(l1:i32,l2:i32){x:f32}>, !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>, i32, i32
   return
 
-  // CHECK: %[[l1:.*]] = constant 3 : i32
-  // CHECK: %[[l2:.*]] = constant 5 : i32
+  // CHECK: %[[l1:.*]] = arith.constant 3 : i32
+  // CHECK: %[[l2:.*]] = arith.constant 5 : i32
   // CHECK: fir.call @derived_lparams_func(%[[buffer]]) : (!fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) -> ()
   // CHECK-NOT: fir.save_result
 
-  // CHECK-BOX: %[[l1:.*]] = constant 3 : i32
-  // CHECK-BOX: %[[l2:.*]] = constant 5 : i32
+  // CHECK-BOX: %[[l1:.*]] = arith.constant 3 : i32
+  // CHECK-BOX: %[[l2:.*]] = arith.constant 5 : i32
   // CHECK-BOX: %[[box:.*]] = fir.embox %[[buffer]] typeparams %[[l1]], %[[l2]] : (!fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>, i32, i32) -> !fir.box<!fir.type<t2(l1:i32,l2:i32){x:f32}>>
   // CHECK-BOX: fir.call @derived_lparams_func(%[[box]]) : (!fir.box<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) -> ()
   // CHECK-BOX-NOT: fir.save_result
@@ -177,22 +177,22 @@ func private @chararrayfunc(index, index) -> !fir.array<?x!fir.char<1,?>>
 // CHECK-LABEL: func @call_chararrayfunc() {
 // CHECK-BOX-LABEL: func @call_chararrayfunc() {
 func @call_chararrayfunc() {
-  %c100 = constant 100 : index
-  %c50 = constant 50 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
   %buffer = fir.alloca !fir.array<?x!fir.char<1,?>>(%c100 : index), %c50
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
   %res = fir.call @chararrayfunc(%c100, %c50) : (index, index) -> !fir.array<?x!fir.char<1,?>>
   fir.save_result %res to %buffer(%shape) typeparams %c50 : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
   return
 
-  // CHECK: %[[c100:.*]] = constant 100 : index
-  // CHECK: %[[c50:.*]] = constant 50 : index
+  // CHECK: %[[c100:.*]] = arith.constant 100 : index
+  // CHECK: %[[c50:.*]] = arith.constant 50 : index
   // CHECK: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>(%[[c100]] : index), %[[c50]]
   // CHECK: fir.call @chararrayfunc(%[[buffer]], %[[c100]], %[[c50]]) : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, index, index) -> ()
   // CHECK-NOT: fir.save_result
 
-  // CHECK-BOX: %[[c100:.*]] = constant 100 : index
-  // CHECK-BOX: %[[c50:.*]] = constant 50 : index
+  // CHECK-BOX: %[[c100:.*]] = arith.constant 100 : index
+  // CHECK-BOX: %[[c50:.*]] = arith.constant 50 : index
   // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>(%[[c100]] : index), %[[c50]]
   // CHECK-BOX: %[[shape:.*]] = fir.shape %[[c100]] : (index) -> !fir.shape<1>
   // CHECK-BOX: %[[box:.*]] = fir.embox %[[buffer]](%[[shape]]) typeparams %[[c50]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -228,7 +228,7 @@ func @test_address_of() {
 // CHECK-BOX-LABEL: func @test_indirect_calls(
 // CHECK-BOX-SAME: %[[arg0:.*]]: () -> ()) {
 func @test_indirect_calls(%arg0: () -> ()) {
-  %c100 = constant 100 : index
+  %c100 = arith.constant 100 : index
   %buffer = fir.alloca !fir.array<?xf32>, %c100
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
   %0 = fir.convert %arg0 : (() -> ()) -> ((index) -> !fir.array<?xf32>)
@@ -236,7 +236,7 @@ func @test_indirect_calls(%arg0: () -> ()) {
   fir.save_result %res to %buffer(%shape) : !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>, !fir.shape<1>
   return
 
-  // CHECK: %[[c100:.*]] = constant 100 : index
+  // CHECK: %[[c100:.*]] = arith.constant 100 : index
   // CHECK: %[[buffer:.*]] = fir.alloca !fir.array<?xf32>, %[[c100]]
   // CHECK: %[[shape:.*]] = fir.shape %[[c100]] : (index) -> !fir.shape<1>
   // CHECK: %[[original_conv:.*]] = fir.convert %[[arg0]] : (() -> ()) -> ((index) -> !fir.array<?xf32>)
@@ -244,7 +244,7 @@ func @test_indirect_calls(%arg0: () -> ()) {
   // CHECK: fir.call %[[conv]](%[[buffer]], %c100) : (!fir.ref<!fir.array<?xf32>>, index) -> ()
   // CHECK-NOT: fir.save_result
 
-  // CHECK-BOX: %[[c100:.*]] = constant 100 : index
+  // CHECK-BOX: %[[c100:.*]] = arith.constant 100 : index
   // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.array<?xf32>, %[[c100]]
   // CHECK-BOX: %[[shape:.*]] = fir.shape %[[c100]] : (index) -> !fir.shape<1>
   // CHECK-BOX: %[[original_conv:.*]] = fir.convert %[[arg0]] : (() -> ()) -> ((index) -> !fir.array<?xf32>)

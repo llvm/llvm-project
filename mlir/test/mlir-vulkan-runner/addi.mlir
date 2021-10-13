@@ -14,7 +14,7 @@ module attributes {
       %z = "gpu.block_id"() {dimension = "z"} : () -> index
       %0 = memref.load %arg0[%x] : memref<8xi32>
       %1 = memref.load %arg1[%y, %x] : memref<8x8xi32>
-      %2 = addi %0, %1 : i32
+      %2 = arith.addi %0, %1 : i32
       memref.store %2, %arg2[%z, %y, %x] : memref<8x8x8xi32>
       gpu.return
     }
@@ -24,9 +24,9 @@ module attributes {
     %arg0 = memref.alloc() : memref<8xi32>
     %arg1 = memref.alloc() : memref<8x8xi32>
     %arg2 = memref.alloc() : memref<8x8x8xi32>
-    %value0 = constant 0 : i32
-    %value1 = constant 1 : i32
-    %value2 = constant 2 : i32
+    %value0 = arith.constant 0 : i32
+    %value1 = arith.constant 1 : i32
+    %value2 = arith.constant 2 : i32
     %arg3 = memref.cast %arg0 : memref<8xi32> to memref<?xi32>
     %arg4 = memref.cast %arg1 : memref<8x8xi32> to memref<?x?xi32>
     %arg5 = memref.cast %arg2 : memref<8x8x8xi32> to memref<?x?x?xi32>
@@ -34,8 +34,8 @@ module attributes {
     call @fillResource2DInt(%arg4, %value2) : (memref<?x?xi32>, i32) -> ()
     call @fillResource3DInt(%arg5, %value0) : (memref<?x?x?xi32>, i32) -> ()
 
-    %cst1 = constant 1 : index
-    %cst8 = constant 8 : index
+    %cst1 = arith.constant 1 : index
+    %cst8 = arith.constant 8 : index
     gpu.launch_func @kernels::@kernel_addi
         blocks in (%cst8, %cst8, %cst8) threads in (%cst1, %cst1, %cst1)
         args(%arg0 : memref<8xi32>, %arg1 : memref<8x8xi32>, %arg2 : memref<8x8x8xi32>)

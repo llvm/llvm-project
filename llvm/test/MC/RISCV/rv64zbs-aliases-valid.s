@@ -30,3 +30,31 @@ binv x5, x6, 8
 # CHECK-S-OBJ-NOALIAS: bexti t0, t1, 8
 # CHECK-S-OBJ: bexti t0, t1, 8
 bext x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: lui t0, 174763
+# CHECK-S-OBJ-NOALIAS-NEXT: addiw t0, t0, -1366
+# CHECK-S-OBJ-NOALIAS-NEXT: bseti t0, t0, 31
+# CHECK-S-OBJ: lui t0, 174763
+# CHECK-S-OBJ-NEXT: addiw t0, t0, -1366
+# CHECK-S-OBJ-NEXT: bseti t0, t0, 31
+li x5, 2863311530 # 0xaaaaaaaa
+
+# CHECK-S-OBJ-NOALIAS: lui t0, 873813
+# CHECK-S-OBJ-NOALIAS-NEXT: addiw t0, t0, 1366
+# CHECK-S-OBJ-NOALIAS-NEXT: bclri t0, t0, 31
+# CHECK-S-OBJ: lui t0, 873813
+# CHECK-S-OBJ-NEXT: addiw t0, t0, 1366
+# CHECK-S-OBJ-NEXT: bclri t0, t0, 31
+li x5, -2863311530 # 0xffffffff55555556
+
+# CHECK-S-OBJ-NOALIAS: addi t0, zero, 1365
+# CHECK-S-OBJ-NOALIAS-NEXT: bseti t0, t0, 31
+# CHECK-S-OBJ: addi t0, zero, 1365
+# CHECK-S-OBJ-NEXT: bseti t0, t0, 31
+li x5, 2147485013
+
+# CHECK-S-OBJ-NOALIAS: addi t0, zero, -1365
+# CHECK-S-OBJ-NOALIAS-NEXT: bclri t0, t0, 31
+# CHECK-S-OBJ: addi t0, zero, -1365
+# CHECK-S-OBJ-NEXT: bclri t0, t0, 31
+li x5, -2147485013

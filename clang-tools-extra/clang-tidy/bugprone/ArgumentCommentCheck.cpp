@@ -24,6 +24,8 @@ AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
   if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
     if (D->isStdNamespace())
       return true;
+  if (Node.getLocation().isInvalid())
+    return false;
   return Node.getASTContext().getSourceManager().isInSystemHeader(
       Node.getLocation());
 }

@@ -12,9 +12,9 @@ func @fill_extract_matmul_1234(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -38,9 +38,9 @@ func @fill_extract_matmul_1243(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -63,9 +63,9 @@ func @fill_extract_matmul_1324(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
                         %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -88,9 +88,9 @@ func @fill_extract_matmul_1342(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
                         %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -113,9 +113,9 @@ func @fill_extract_matmul_1423(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
                         %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -139,9 +139,9 @@ func @fill_extract_matmul_1432(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
                         %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -166,9 +166,9 @@ func @fill_extract_matmul_2134(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -192,9 +192,9 @@ func @fill_extract_matmul_2143(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -218,9 +218,9 @@ func @fill_extract_matmul_2314(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -245,9 +245,9 @@ func @fill_extract_matmul_2341(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -271,9 +271,9 @@ func @fill_extract_matmul_2413(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -297,9 +297,9 @@ func @fill_extract_matmul_2431(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -323,9 +323,9 @@ func @fill_extract_matmul_3124(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -349,9 +349,9 @@ func @fill_extract_matmul_3142(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -375,9 +375,9 @@ func @fill_extract_matmul_3214(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -401,9 +401,9 @@ func @fill_extract_matmul_3241(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -427,9 +427,9 @@ func @fill_extract_matmul_3412(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -453,9 +453,9 @@ func @fill_extract_matmul_3421(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -479,9 +479,9 @@ func @fill_extract_matmul_4123(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -506,9 +506,9 @@ func @fill_extract_matmul_4132(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -532,9 +532,9 @@ func @fill_extract_matmul_4213(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -559,9 +559,9 @@ func @fill_extract_matmul_4231(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -586,9 +586,9 @@ func @fill_extract_matmul_4312(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}
@@ -612,9 +612,9 @@ func @fill_extract_matmul_4321(
     %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
   -> tensor<256x256xf32>
 {
-  %c0 = constant 0 : index
-  %cst = constant 0.000000e+00 : f32
-  %cst_0 = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   // CHECK: {__inplace_results_attr__ = ["false"]}

@@ -9,7 +9,7 @@
 // RUN: FileCheck %s
 
 func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
       {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32>, vector<13xf32>
@@ -18,15 +18,15 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
 }
 
 func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
-  %fm42 = constant -42.0: f32
-  %m = constant dense<[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]> : vector<13xi1>
+  %fm42 = arith.constant -42.0: f32
+  %m = arith.constant dense<[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]> : vector<13xi1>
   %f = vector.transfer_read %A[%base], %fm42, %m : memref<?xf32>, vector<13xf32>
   vector.print %f: vector<13xf32>
   return
 }
 
 func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
-  %fm42 = constant -42.0: f32
+  %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
       {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} :
     memref<?xf32>, vector<4xf32>
@@ -35,8 +35,8 @@ func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
 }
 
 func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
-  %fm42 = constant -42.0: f32
-  %m = constant dense<[0, 1, 0, 1]> : vector<4xi1>
+  %fm42 = arith.constant -42.0: f32
+  %m = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
   %f = vector.transfer_read %A[%base], %fm42, %m {in_bounds = [true]}
       : memref<?xf32>, vector<4xf32>
   vector.print %f: vector<4xf32>
@@ -44,7 +44,7 @@ func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
 }
 
 func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
-  %f0 = constant 0.0 : f32
+  %f0 = arith.constant 0.0 : f32
   %vf0 = splat %f0 : vector<4xf32>
   vector.transfer_write %vf0, %A[%base]
       {permutation_map = affine_map<(d0) -> (d0)>} :
@@ -53,16 +53,16 @@ func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
 }
 
 func @entry() {
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c2 = constant 2: index
-  %c3 = constant 3: index
-  %c4 = constant 4: index
-  %c5 = constant 5: index
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c2 = arith.constant 2: index
+  %c3 = arith.constant 3: index
+  %c4 = arith.constant 4: index
+  %c5 = arith.constant 5: index
   %A = memref.alloc(%c5) : memref<?xf32>
   scf.for %i = %c0 to %c5 step %c1 {
-    %i32 = index_cast %i : index to i32
-    %fi = sitofp %i32 : i32 to f32
+    %i32 = arith.index_cast %i : index to i32
+    %fi = arith.sitofp %i32 : i32 to f32
     memref.store %fi, %A[%i] : memref<?xf32>
   }
   // On input, memory contains [[ 0, 1, 2, 3, 4, xxx garbage xxx ]]

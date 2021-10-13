@@ -302,7 +302,7 @@ func @reduce_incorrect_yield(%arg0 : f32) {
   // expected-error@+1 {{incorrect gpu.yield type}}
   %res = "gpu.all_reduce"(%arg0) ({
   ^bb(%lhs : f32, %rhs : f32):
-    %one = constant 1 : i32
+    %one = arith.constant 1 : i32
     "gpu.yield"(%one) : (i32) -> ()
   }) : (f32) -> (f32)
   return
@@ -406,7 +406,7 @@ module {
   gpu.module @gpu_funcs {
     // expected-note @+1 {{return type declared here}}
     gpu.func @kernel() {
-      %0 = constant 0 : index
+      %0 = arith.constant 0 : index
       // expected-error @+1 {{'gpu.return' op expected 0 result operands}}
       gpu.return %0 : index
     }
@@ -419,7 +419,7 @@ module {
   gpu.module @gpu_funcs {
     // expected-error @+1 {{'gpu.func' op expected void return type for kernel function}}
     gpu.func @kernel() -> index kernel {
-      %0 = constant 0 : index
+      %0 = arith.constant 0 : index
       gpu.return
     }
   }
@@ -476,7 +476,7 @@ func @memset_incompatible_shape(%dst : memref<?xf32>, %value : i32) {
 
 func @mmamatrix_invalid_shape(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
-    %i = constant 16 : index
+    %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType must have exactly two dimensions}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16x16xf16, "AOp">
     return
@@ -486,7 +486,7 @@ func @mmamatrix_invalid_shape(){
 
 func @mmamatrix_operand_type(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
-    %i = constant 16 : index
+    %i = arith.constant 16 : index
     // expected-error @+1 {{operand expected to be one of AOp, BOp or COp}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "EOp">
     return
@@ -496,7 +496,7 @@ func @mmamatrix_operand_type(){
 
 func @mmamatrix_invalid_element_type(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
-    %i = constant 16 : index
+    %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType elements must be F16 or F32}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xi32, "AOp">
     return
@@ -508,7 +508,7 @@ func @mmamatrix_invalid_element_type(){
 
 func @mmaLoadOp_identity_layout(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
-    %i = constant 16 : index
+    %i = arith.constant 16 : index
     // expected-error @+1 {{expected identity layout map for source memref}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, #layout_map_col_major, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
@@ -518,7 +518,7 @@ func @mmaLoadOp_identity_layout(){
 
 func @mmaLoadOp_invalid_mem_space(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 5>
-    %i = constant 16 : index
+    %i = arith.constant 16 : index
     // expected-error @+1 {{source memorySpace kGenericMemorySpace, kSharedMemorySpace or kGlobalMemorySpace only allowed}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 5> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
@@ -530,8 +530,8 @@ func @mmaLoadOp_invalid_mem_space(){
 
 func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
     %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
-    %i = constant 16 : index
-    %j = constant 16 : index
+    %i = arith.constant 16 : index
+    %j = arith.constant 16 : index
     // expected-error @+1 {{expected identity layout map for destination memref}}
     gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16,#layout_map_col_major, 3>
     return
@@ -541,8 +541,8 @@ func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
 
 func @wmmaStoreOp_invalid_mem_space(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
     %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 5>
-    %i = constant 16 : index
-    %j = constant 16 : index
+    %i = arith.constant 16 : index
+    %j = arith.constant 16 : index
     // expected-error @+1 {{destination memorySpace of kGenericMemorySpace, kGlobalMemorySpace or kSharedMemorySpace only allowed}}
     gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 5>
     return
@@ -552,8 +552,8 @@ func @wmmaStoreOp_invalid_mem_space(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -
 
 func @wmmaStoreOp_invalid_store_operand(%arg0 : !gpu.mma_matrix<16x16xf16, "AOp">) -> () {
     %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
-    %i = constant 16 : index
-    %j = constant 16 : index
+    %i = arith.constant 16 : index
+    %j = arith.constant 16 : index
     // expected-error @+1 {{expected the operand matrix being stored to have 'COp' operand type}}
     gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "AOp">, memref<32x32xf16, 3>
     return

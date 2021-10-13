@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRArithmetic
   MLIRIR
   MLIRMemRef
   MLIRPass
