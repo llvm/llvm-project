@@ -354,9 +354,9 @@ define i32 @propagate_drop_lshr2(i32 %arg, i32 %unknown) {
 
 define i8* @propagate_drop_gep1(i8* %arg) {
 ; CHECK-LABEL: @propagate_drop_gep1(
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr inbounds i8, i8* [[ARG:%.*]], i64 16
-; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i8* [[V1]]
-; CHECK-NEXT:    ret i8* [[V1_FR]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8* [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG_FR]], i64 16
+; CHECK-NEXT:    ret i8* [[V1]]
 ;
   %v1 = getelementptr inbounds i8, i8* %arg, i64 16
   %v1.fr = freeze i8* %v1

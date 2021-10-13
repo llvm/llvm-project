@@ -635,7 +635,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   if (V->getType()->isPointerTy()) {
     if (RetainedKnowledge RK = getKnowledgeValidInContext(
             V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
-      Known.Zero.setLowBits(Log2_32(RK.ArgValue));
+      Known.Zero.setLowBits(Log2_64(RK.ArgValue));
     }
   }
 
@@ -4959,6 +4959,9 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
     if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(Op))
       if (ExactOp->isExact())
         return true;
+    if (const auto *GEP = dyn_cast<GEPOperator>(Op))
+      if (GEP->isInBounds())
+        return true;
   }
 
   // TODO: this should really be under the ConsiderFlags block, but currently
@@ -5051,10 +5054,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
   case Instruction::ICmp:
   case Instruction::FCmp:
     return false;
-  case Instruction::GetElementPtr: {
-    const auto *GEP = cast<GEPOperator>(Op);
-    return GEP->isInBounds();
-  }
+  case Instruction::GetElementPtr:
+    // inbounds is handled above
+    // TODO: what about inrange on constexpr?
+    return false;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))

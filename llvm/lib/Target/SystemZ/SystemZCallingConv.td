@@ -162,12 +162,14 @@ def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 //===----------------------------------------------------------------------===//
 // z/OS XPLINK64 callee-saved registers
 //===----------------------------------------------------------------------===//
-def CSR_SystemZ_XPLINK64 : CalleeSavedRegs<(add (sequence "R%dD", 8, 15),
-                                                (sequence "F%dD", 8, 15))>;
+// %R7D is volatile by the spec, but it must be saved in the prologue by
+// any non-leaf function and restored in the epilogue for use by the
+// return instruction so it functions exactly like a callee-saved register.
+def CSR_SystemZ_XPLINK64 : CalleeSavedRegs<(add (sequence "R%dD", 7, 15),
+                                                (sequence "F%dD", 15, 8))>;
 
-def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add (sequence "R%dD", 8, 15),
-                                                       (sequence "F%dD", 15, 8),
-                                                       (sequence "V%d", 23, 16))>;
+def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add CSR_SystemZ_XPLINK64,
+                                                   (sequence "V%d", 23, 16))>;
 
 //===----------------------------------------------------------------------===//
 // z/OS XPLINK64 return value calling convention
