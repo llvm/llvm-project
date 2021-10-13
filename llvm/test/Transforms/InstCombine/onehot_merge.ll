@@ -578,11 +578,10 @@ define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32 
 define <2 x i1> @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_splat(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i32> [[K:%.*]], [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = icmp slt <2 x i32> [[T0]], zeroinitializer
 ; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[K]], [[C2:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp slt <2 x i32> [[T2]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[T0]], [[T2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %t0 = shl <2 x i32> %k, %c1
   %t1 = icmp slt <2 x i32> %t0, zeroinitializer
