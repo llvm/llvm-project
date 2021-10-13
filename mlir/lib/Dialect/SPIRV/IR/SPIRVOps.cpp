@@ -497,15 +497,14 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   return success();
 }
 
-template <typename BarrierOp>
-static LogicalResult verifyMemorySemantics(BarrierOp op) {
+static LogicalResult
+verifyMemorySemantics(Operation *op, spirv::MemorySemantics memorySemantics) {
   // According to the SPIR-V specification:
   // "Despite being a mask and allowing multiple bits to be combined, it is
   // invalid for more than one of these four bits to be set: Acquire, Release,
   // AcquireRelease, or SequentiallyConsistent. Requesting both Acquire and
   // Release semantics is done by setting the AcquireRelease bit, not by setting
   // two bits."
-  auto memorySemantics = op.memory_semantics();
   auto atMostOneInSet = spirv::MemorySemantics::Acquire |
                         spirv::MemorySemantics::Release |
                         spirv::MemorySemantics::AcquireRelease |
@@ -514,9 +513,10 @@ static LogicalResult verifyMemorySemantics(BarrierOp op) {
   auto bitCount = llvm::countPopulation(
       static_cast<uint32_t>(memorySemantics & atMostOneInSet));
   if (bitCount > 1) {
-    return op.emitError("expected at most one of these four memory constraints "
-                        "to be set: `Acquire`, `Release`,"
-                        "`AcquireRelease` or `SequentiallyConsistent`");
+    return op->emitError(
+        "expected at most one of these four memory constraints "
+        "to be set: `Acquire`, `Release`,"
+        "`AcquireRelease` or `SequentiallyConsistent`");
   }
   return success();
 }
@@ -771,6 +771,11 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
       return op->emitOpError("expected value to have the same type as the "
                              "pointer operand's pointee type ")
              << elementType << ", but found " << valueType;
+  }
+  auto memorySemantics = static_cast<spirv::MemorySemantics>(
+      op->getAttrOfType<IntegerAttr>(kSemanticsAttrName).getInt());
+  if (failed(verifyMemorySemantics(op, memorySemantics))) {
+    return failure();
   }
   return success();
 }
