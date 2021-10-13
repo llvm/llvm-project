@@ -11,13 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <dlfcn.h>
+#include <libgen.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <libgen.h>
 
-int main(int argc, const char **argv)
-{
-  char *dylib = strcat(dirname(argv[0]),"/UnitTest.xctest/Contents/MacOS/test");
+int main(int argc, const char **argv) {
+  char dylib[PATH_MAX];
+  strlcpy(dylib, dirname(argv[0]), PATH_MAX);
+  strlcat(dylib, "/UnitTest.xctest/Contents/MacOS/test", PATH_MAX);
   void *test_case = dlopen(dylib, RTLD_NOW);
 
   printf("%p\n", test_case); // Set breakpoint here
