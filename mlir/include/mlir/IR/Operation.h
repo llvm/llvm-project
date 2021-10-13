@@ -264,7 +264,9 @@ public:
                                           : MutableArrayRef<OpOperand>();
   }
 
-  OpOperand &getOpOperand(unsigned idx) { return getOpOperands()[idx]; }
+  OpOperand &getOpOperand(unsigned idx) {
+    return getOperandStorage().getOperands()[idx];
+  }
 
   // Support operand type iteration.
   using operand_type_iterator = operand_range::type_iterator;
