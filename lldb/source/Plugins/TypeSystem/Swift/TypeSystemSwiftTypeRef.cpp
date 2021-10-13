@@ -2244,23 +2244,28 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
         return GetPointerByteSize() * 8;
       return clang_type.GetBitSize(exe_scope);
     }
+    if (!exe_scope) {
+      LLDB_LOGF(
+          GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+          "Couldn't compute size of type %s without an execution context.",
+          AsMangledName(type));
+      return {};
+    }
     // The hot code path is to ask the Swift runtime for the size.
-    if (exe_scope)
-      if (auto *runtime =
-              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
-        if (auto result = runtime->GetBitSize({this, type}, exe_scope))
-          return result;
-        // If this is an expression context, perhaps the type was
-        // defined in the expression. In that case we don't have debug
-        // info for it, so defer to SwiftASTContext.
-        if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
-          return ReconstructType({this, type}).GetBitSize(exe_scope);
-        LLDB_LOGF(
-            GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "Couldn't compute size of type %s using SwiftLanguageRuntime.",
-            AsMangledName(type));
-        return {};
-      }
+    if (auto *runtime =
+        SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      if (auto result = runtime->GetBitSize({this, type}, exe_scope))
+        return result;
+      // If this is an expression context, perhaps the type was
+      // defined in the expression. In that case we don't have debug
+      // info for it, so defer to SwiftASTContext.
+      if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
+        return ReconstructType({this, type}).GetBitSize(exe_scope);
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't compute size of type %s using SwiftLanguageRuntime.",
+                AsMangledName(type));
+      return {};
+    }
 
     // If there is no process, we can still try to get the static size
     // information out of DWARF. Because it is stored in the Type
