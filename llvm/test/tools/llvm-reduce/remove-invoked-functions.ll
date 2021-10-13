@@ -6,7 +6,7 @@
 define i32 @maybe_throwing_callee(i32 %arg) {
 ; CHECK-ALL: call void @thrown()
 ; CHECK-INTERESTINGNESS: ret i32
-; CHECK-FINAL: ret i32 undef
+; CHECK-FINAL: ret i32 0
   call void @thrown()
   ret i32 %arg
 }
