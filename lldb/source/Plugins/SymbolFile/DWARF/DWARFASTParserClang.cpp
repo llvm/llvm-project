@@ -2147,10 +2147,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
           return true;
         });
 
-        for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
-                                           pe = delayed_properties.end();
-             pi != pe; ++pi)
-          pi->Finalize();
+        for (DelayedAddObjCClassProperty &property : delayed_properties)
+          property.Finalize();
       }
     }
 
