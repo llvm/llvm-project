@@ -1456,3 +1456,18 @@ define i1 @cmp_overlap(i32 %x) {
   %r = or i1 %isneg, %isnotneg
   ret i1 %r
 }
+
+define <2 x i1> @cmp_overlap_splat(<2 x i5> %x) {
+; CHECK-LABEL: @cmp_overlap_splat(
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i5> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i5> [[X]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp slt <2 x i5> [[NOTSUB]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[ISNEG]], [[ISNOTNEG]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %isneg = icmp slt <2 x i5> %x, zeroinitializer
+  %negx = sub <2 x i5> zeroinitializer, %x
+  %isnotneg = icmp sgt <2 x i5> %negx, <i5 -1, i5 -1>
+  %r = or <2 x i1> %isneg, %isnotneg
+  ret <2 x i1> %r
+}
