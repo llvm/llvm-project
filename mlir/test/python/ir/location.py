@@ -58,6 +58,23 @@ def testName():
 run(testName)
 
 
+# CHECK-LABEL: TEST: testCallSite
+def testCallSite():
+  with Context() as ctx:
+    loc = Location.callsite(
+        Location.file("foo.text", 123, 45), [
+            Location.file("util.foo", 379, 21),
+            Location.file("main.foo", 100, 63)
+        ])
+  ctx = None
+  # CHECK: file str: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+  print("file str:", str(loc))
+  # CHECK: file repr: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+  print("file repr:", repr(loc))
+
+run(testCallSite)
+
+
 # CHECK-LABEL: TEST: testLocationCapsule
 def testLocationCapsule():
   with Context() as ctx:
