@@ -13,6 +13,7 @@ class TestGdbRemoteAttachOrWait(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows # This test is flaky on Windows
     def test_launch_before_attach_with_vAttachOrWait(self):
         exe = '%s_%d' % (self.testMethodName, os.getpid())
         self.build(dictionary={'EXE': exe})
@@ -57,6 +58,7 @@ class TestGdbRemoteAttachOrWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, inferior.pid)
 
+    @skipIfWindows # This test is flaky on Windows
     def test_launch_after_attach_with_vAttachOrWait(self):
         exe = '%s_%d' % (self.testMethodName, os.getpid())
         self.build(dictionary={'EXE': exe})

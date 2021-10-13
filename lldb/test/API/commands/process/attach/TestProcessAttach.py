@@ -101,6 +101,7 @@ class ProcessAttachTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
+    @skipIfWindows # This test is flaky on Windows
     @expectedFailureNetBSD
     def test_attach_to_process_by_id_correct_executable_offset(self):
         """
