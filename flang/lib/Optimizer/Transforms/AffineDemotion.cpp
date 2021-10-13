@@ -5,6 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This transformation is a prototype that demote affine dialects operations
+// after optimizations to FIR loops operations.
+// It is used after the AffinePromotion pass.
+// It is not part of the production pipeline and would need more work in order
+// to be used in production.
+// More information can be found in this presentation:
+// https://slides.com/rajanwalia/deck
+//
+//===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"

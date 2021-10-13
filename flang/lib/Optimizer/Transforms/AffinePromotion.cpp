@@ -5,6 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This transformation is a prototype that promote FIR loops operations
+// to affine dialect operations.
+// It is not part of the production pipeline and would need more work in order
+// to be used in production.
+// More information can be found in this presentation:
+// https://slides.com/rajanwalia/deck
+//
+//===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -31,8 +40,8 @@ struct AffineLoopAnalysis;
 struct AffineIfAnalysis;
 
 /// Stores analysis objects for all loops and if operations inside a function
-///  these analysis are used twice, first for marking operations for rewrite and
-///  second when doing rewrite.
+/// these analysis are used twice, first for marking operations for rewrite and
+/// second when doing rewrite.
 struct AffineFunctionAnalysis {
   explicit AffineFunctionAnalysis(mlir::FuncOp funcOp) {
     for (fir::DoLoopOp op : funcOp.getOps<fir::DoLoopOp>())
