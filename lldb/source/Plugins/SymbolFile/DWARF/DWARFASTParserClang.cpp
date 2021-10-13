@@ -1406,6 +1406,123 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   return nullptr;
 }
 
+void DWARFASTParserClang::ParseInheritance(
+    const DWARFDIE &die, const DWARFDIE &parent_die,
+    const CompilerType class_clang_type, const AccessType default_accessibility,
+    const lldb::ModuleSP &module_sp,
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
+    ClangASTImporter::LayoutInfo &layout_info) {
+
+  TypeSystemClang *ast =
+      llvm::dyn_cast_or_null<TypeSystemClang>(class_clang_type.GetTypeSystem());
+  if (ast == nullptr)
+    return;
+
+  // TODO: implement DW_TAG_inheritance type parsing.
+  DWARFAttributes attributes;
+  const size_t num_attributes = die.GetAttributes(attributes);
+  if (num_attributes == 0)
+    return;
+
+  DWARFFormValue encoding_form;
+  AccessType accessibility = default_accessibility;
+  bool is_virtual = false;
+  bool is_base_of_class = true;
+  off_t member_byte_offset = 0;
+
+  for (uint32_t i = 0; i < num_attributes; ++i) {
+    const dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      switch (attr) {
+      case DW_AT_type:
+        encoding_form = form_value;
+        break;
+      case DW_AT_data_member_location:
+        if (form_value.BlockData()) {
+          Value initialValue(0);
+          Value memberOffset(0);
+          const DWARFDataExtractor &debug_info_data = die.GetData();
+          uint32_t block_length = form_value.Unsigned();
+          uint32_t block_offset =
+              form_value.BlockData() - debug_info_data.GetDataStart();
+          if (DWARFExpression::Evaluate(
+                  nullptr, nullptr, module_sp,
+                  DataExtractor(debug_info_data, block_offset, block_length),
+                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                  memberOffset, nullptr)) {
+            member_byte_offset = memberOffset.ResolveValue(nullptr).UInt();
+          }
+        } else {
+          // With DWARF 3 and later, if the value is an integer constant,
+          // this form value is the offset in bytes from the beginning of
+          // the containing entity.
+          member_byte_offset = form_value.Unsigned();
+        }
+        break;
+
+      case DW_AT_accessibility:
+        accessibility = DW_ACCESS_to_AccessType(form_value.Unsigned());
+        break;
+
+      case DW_AT_virtuality:
+        is_virtual = form_value.Boolean();
+        break;
+
+      default:
+        break;
+      }
+    }
+  }
+
+  Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
+  if (base_class_type == nullptr) {
+    module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
+                           "resolve the base class at 0x%8.8x"
+                           " from enclosing type 0x%8.8x. \nPlease file "
+                           "a bug and attach the file at the start of "
+                           "this error message",
+                           die.GetOffset(),
+                           encoding_form.Reference().GetOffset(),
+                           parent_die.GetOffset());
+    return;
+  }
+
+  CompilerType base_class_clang_type = base_class_type->GetFullCompilerType();
+  assert(base_class_clang_type);
+  if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
+    ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
+    return;
+  }
+  std::unique_ptr<clang::CXXBaseSpecifier> result =
+      ast->CreateBaseClassSpecifier(base_class_clang_type.GetOpaqueQualType(),
+                                    accessibility, is_virtual,
+                                    is_base_of_class);
+  if (!result)
+    return;
+
+  base_classes.push_back(std::move(result));
+
+  if (is_virtual) {
+    // Do not specify any offset for virtual inheritance. The DWARF
+    // produced by clang doesn't give us a constant offset, but gives
+    // us a DWARF expressions that requires an actual object in memory.
+    // the DW_AT_data_member_location for a virtual base class looks
+    // like:
+    //      DW_AT_data_member_location( DW_OP_dup, DW_OP_deref,
+    //      DW_OP_constu(0x00000018), DW_OP_minus, DW_OP_deref,
+    //      DW_OP_plus )
+    // Given this, there is really no valid response we can give to
+    // clang for virtual base class offsets, and this should eventually
+    // be removed from LayoutRecordType() in the external
+    // AST source in clang.
+  } else {
+    layout_info.base_offsets.insert(std::make_pair(
+        ast->GetAsCXXRecordDecl(base_class_clang_type.GetOpaqueQualType()),
+        clang::CharUnits::fromQuantity(member_byte_offset)));
+  }
+}
+
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
     const SymbolContext &sc, const DWARFDIE &die, TypeSP type_sp) {
   if (!type_sp)
@@ -2824,117 +2941,10 @@ bool DWARFASTParserClang::ParseChildMembers(
       member_function_dies.push_back(die);
       break;
 
-    case DW_TAG_inheritance: {
-      // TODO: implement DW_TAG_inheritance type parsing
-      DWARFAttributes attributes;
-      const size_t num_attributes = die.GetAttributes(attributes);
-      if (num_attributes > 0) {
-        DWARFFormValue encoding_form;
-        AccessType accessibility = default_accessibility;
-        bool is_virtual = false;
-        bool is_base_of_class = true;
-        off_t member_byte_offset = 0;
-        uint32_t i;
-        for (i = 0; i < num_attributes; ++i) {
-          const dw_attr_t attr = attributes.AttributeAtIndex(i);
-          DWARFFormValue form_value;
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            switch (attr) {
-            case DW_AT_type:
-              encoding_form = form_value;
-              break;
-            case DW_AT_data_member_location:
-              if (form_value.BlockData()) {
-                Value initialValue(0);
-                Value memberOffset(0);
-                const DWARFDataExtractor &debug_info_data = die.GetData();
-                uint32_t block_length = form_value.Unsigned();
-                uint32_t block_offset =
-                    form_value.BlockData() - debug_info_data.GetDataStart();
-                if (DWARFExpression::Evaluate(
-                        nullptr, nullptr, module_sp,
-                        DataExtractor(debug_info_data, block_offset,
-                                      block_length),
-                        die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                        memberOffset, nullptr)) {
-                  member_byte_offset =
-                      memberOffset.ResolveValue(nullptr).UInt();
-                }
-              } else {
-                // With DWARF 3 and later, if the value is an integer constant,
-                // this form value is the offset in bytes from the beginning of
-                // the containing entity.
-                member_byte_offset = form_value.Unsigned();
-              }
-              break;
-
-            case DW_AT_accessibility:
-              accessibility = DW_ACCESS_to_AccessType(form_value.Unsigned());
-              break;
-
-            case DW_AT_virtuality:
-              is_virtual = form_value.Boolean();
-              break;
-
-            case DW_AT_sibling:
-              break;
-
-            default:
-              break;
-            }
-          }
-        }
-
-        Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
-        if (base_class_type == nullptr) {
-          module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
-                                 "resolve the base class at 0x%8.8x"
-                                 " from enclosing type 0x%8.8x. \nPlease file "
-                                 "a bug and attach the file at the start of "
-                                 "this error message",
-                                 die.GetOffset(),
-                                 encoding_form.Reference().GetOffset(),
-                                 parent_die.GetOffset());
-          break;
-        }
-
-        CompilerType base_class_clang_type =
-            base_class_type->GetFullCompilerType();
-        assert(base_class_clang_type);
-        if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
-          ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
-        } else {
-          std::unique_ptr<clang::CXXBaseSpecifier> result =
-              ast->CreateBaseClassSpecifier(
-                  base_class_clang_type.GetOpaqueQualType(), accessibility,
-                  is_virtual, is_base_of_class);
-          if (!result)
-            break;
-
-          base_classes.push_back(std::move(result));
-
-          if (is_virtual) {
-            // Do not specify any offset for virtual inheritance. The DWARF
-            // produced by clang doesn't give us a constant offset, but gives
-            // us a DWARF expressions that requires an actual object in memory.
-            // the DW_AT_data_member_location for a virtual base class looks
-            // like:
-            //      DW_AT_data_member_location( DW_OP_dup, DW_OP_deref,
-            //      DW_OP_constu(0x00000018), DW_OP_minus, DW_OP_deref,
-            //      DW_OP_plus )
-            // Given this, there is really no valid response we can give to
-            // clang for virtual base class offsets, and this should eventually
-            // be removed from LayoutRecordType() in the external
-            // AST source in clang.
-          } else {
-            layout_info.base_offsets.insert(std::make_pair(
-                ast->GetAsCXXRecordDecl(
-                    base_class_clang_type.GetOpaqueQualType()),
-                clang::CharUnits::fromQuantity(member_byte_offset)));
-          }
-        }
-      }
-    } break;
+    case DW_TAG_inheritance:
+      ParseInheritance(die, parent_die, class_clang_type, default_accessibility,
+                       module_sp, base_classes, layout_info);
+      break;
 
     default:
       break;
