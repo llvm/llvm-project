@@ -1709,6 +1709,30 @@ Error markAllSymbolsLive(LinkGraph &G);
 Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
                                 const Edge &E);
 
+static inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}
+
+template <typename FixerT, typename... FixerTs>
+static void visitEdge(LinkGraph &G, Block *B, Edge &E, FixerT &&Fixer,
+                      FixerTs &&...Fixers) {
+  if (!Fixer.visitEdge(G, B, E))
+    visitEdge(G, B, E, std::forward<FixerTs>(Fixers)...);
+}
+
+/// Visits edges exist in graph by Fixers.
+///
+/// Note: that if a fixer fixes the edge successfully,
+/// the rest of the fixers will not visit this edge.
+template <typename... FixerTs>
+void visitExistingEdges(LinkGraph &G, FixerTs &&...Fixers) {
+  // We're going to be adding new blocks, but we don't want to iterate over
+  // the new ones, so build a worklist.
+  std::vector<Block *> Worklist(G.blocks().begin(), G.blocks().end());
+
+  for (auto *B : Worklist)
+    for (auto &E : B->edges())
+      visitEdge(G, B, E, std::forward<FixerTs>(Fixers)...);
+}
+
 /// Create a LinkGraph from the given object buffer.
 ///
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
