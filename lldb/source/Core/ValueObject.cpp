@@ -935,8 +935,10 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::DataBufferSP &destination) {
-  destination = std::make_shared<DataBufferHeap>(source.GetSize() + 1, 0);
-  memcpy(destination->GetBytes(), source.GetString().data(), source.GetSize());
+  llvm::StringRef src = source.GetString();
+  src.consume_back(llvm::StringRef("\0", 1));
+  destination = std::make_shared<DataBufferHeap>(src.size(), 0);
+  memcpy(destination->GetBytes(), src.data(), src.size());
   return true;
 }
 
@@ -998,8 +1000,8 @@ ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        buffer_sp = std::make_shared<DataBufferHeap>(cstr_len, 0);
-        memcpy(buffer_sp->GetBytes(), cstr, cstr_len);
+        s << llvm::StringRef(cstr, cstr_len);
+        CopyStringDataToBufferSP(s, buffer_sp);
         return {cstr_len, was_capped};
       } else {
         s << "<invalid address>";
@@ -1282,6 +1284,7 @@ bool ValueObject::DumpPrintableRepresentation(
         options.SetQuote('"');
         options.SetSourceSize(buffer_sp->GetByteSize());
         options.SetIsTruncated(read_string.second);
+        options.SetBinaryZeroIsTerminator(custom_format != eFormatVectorOfChar);
         formatters::StringPrinter::ReadBufferAndDumpToStream<
             lldb_private::formatters::StringPrinter::StringElementType::ASCII>(
             options);
