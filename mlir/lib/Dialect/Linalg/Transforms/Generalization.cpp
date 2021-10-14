@@ -50,27 +50,15 @@ GenericOp mlir::linalg::generalizeNamedOp(PatternRewriter &rewriter,
   SmallVector<RankedTensorType> resultTypes = namedOp.getOutputTensorTypes();
   SmallVector<Type> types(resultTypes.begin(), resultTypes.end());
 
-  // Inline the existing region if the named operation has a region attached.
-  if (namedOp->getNumRegions() == 1) {
-    GenericOp genericOp =
-        rewriter.create<GenericOp>(namedOp.getLoc(), types, inputOperands,
-                                   outputOperands, indexingMaps, iterators);
-    rewriter.inlineRegionBefore(namedOp->getRegion(0), genericOp.region(),
-                                genericOp.region().begin());
-    return genericOp;
-  }
-
-  // Otherwise use the region builder to generate a new region.
-  // TODO: Remove this path once all linag operations have a region attached.
-  auto regionBuilder = namedOp.getRegionBuilder();
-  assert(regionBuilder && "expect the operation to have region builder");
-  return rewriter.create<GenericOp>(
-      namedOp.getLoc(), types, inputOperands, outputOperands, indexingMaps,
-      iterators,
-      [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
-        ImplicitLocOpBuilder b(loc, bodyBuilder);
-        regionBuilder(b, *bodyBuilder.getBlock());
-      });
+  // All named ops have a region attached that can be inlined.
+  assert(namedOp->getNumRegions() == 1 &&
+         "expect named op to have one region attached");
+  GenericOp genericOp =
+      rewriter.create<GenericOp>(namedOp.getLoc(), types, inputOperands,
+                                 outputOperands, indexingMaps, iterators);
+  rewriter.inlineRegionBefore(namedOp->getRegion(0), genericOp.region(),
+                              genericOp.region().begin());
+  return genericOp;
 }
 
 namespace {
