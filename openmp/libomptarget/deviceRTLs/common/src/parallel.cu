@@ -354,6 +354,9 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
 
   if (__kmpc_is_spmd_exec_mode()) {
     __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
+#ifdef __AMDGCN__
+    __kmpc_barrier_simple_spmd(ident, 0);
+#endif
     return;
   }
 
