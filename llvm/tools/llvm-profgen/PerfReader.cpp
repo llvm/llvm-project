@@ -12,22 +12,22 @@
 
 #define DEBUG_TYPE "perf-reader"
 
-static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::ReallyHidden,
-                                    cl::init(false), cl::ZeroOrMore,
-                                    cl::desc("Print binary load events."));
-
-cl::opt<bool> SkipSymbolization("skip-symbolization", cl::ReallyHidden,
-                                cl::init(false), cl::ZeroOrMore,
+cl::opt<bool> SkipSymbolization("skip-symbolization", cl::init(false),
+                                cl::ZeroOrMore,
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
                                          "output for CS profile generation."));
-cl::opt<bool> UseOffset("use-offset", cl::ReallyHidden, cl::init(true),
-                        cl::ZeroOrMore,
-                        cl::desc("Work with `--skip-symbolization` to dump the "
-                                 "offset instead of virtual address."));
-cl::opt<bool>
-    IgnoreStackSamples("ignore-stack-samples", cl::ReallyHidden,
-                       cl::init(false), cl::ZeroOrMore,
+
+static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::init(false),
+                                    cl::ZeroOrMore,
+                                    cl::desc("Print binary load events."));
+
+static cl::opt<bool>
+    UseOffset("use-offset", cl::init(true), cl::ZeroOrMore,
+              cl::desc("Work with `--skip-symbolization` to dump the "
+                       "offset instead of virtual address."));
+static cl::opt<bool>
+    IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
 
