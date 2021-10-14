@@ -97,7 +97,8 @@
 /// Sadly, this is separate from just rvalue reference support because GCC
 /// and MSVC implemented this later than everything else. This appears to be
 /// corrected in MSVC 2019 but not MSVC 2017.
-#if __has_feature(cxx_rvalue_references) || LLVM_MSC_PREREQ(1920)
+#if __has_feature(cxx_rvalue_references) || defined(__GNUC__) ||               \
+    LLVM_MSC_PREREQ(1920)
 #define LLVM_HAS_RVALUE_REFERENCE_THIS 1
 #else
 #define LLVM_HAS_RVALUE_REFERENCE_THIS 0
