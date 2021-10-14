@@ -65,11 +65,11 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   if (STI.hasFeature(RISCV::FeatureStdExtZfh))
     Arch += "_zfh0p1";
   if (STI.hasFeature(RISCV::FeatureStdExtZba))
-    Arch += "_zba0p93";
+    Arch += "_zba1p0";
   if (STI.hasFeature(RISCV::FeatureStdExtZbb))
-    Arch += "_zbb0p93";
+    Arch += "_zbb1p0";
   if (STI.hasFeature(RISCV::FeatureStdExtZbc))
-    Arch += "_zbc0p93";
+    Arch += "_zbc1p0";
   if (STI.hasFeature(RISCV::FeatureStdExtZbe))
     Arch += "_zbe0p93";
   if (STI.hasFeature(RISCV::FeatureStdExtZbf))
@@ -81,7 +81,7 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   if (STI.hasFeature(RISCV::FeatureStdExtZbr))
     Arch += "_zbr0p93";
   if (STI.hasFeature(RISCV::FeatureStdExtZbs))
-    Arch += "_zbs0p93";
+    Arch += "_zbs1p0";
   if (STI.hasFeature(RISCV::FeatureStdExtZbt))
     Arch += "_zbt0p93";
   if (STI.hasFeature(RISCV::FeatureStdExtZvamo))
