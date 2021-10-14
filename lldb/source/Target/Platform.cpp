@@ -395,15 +395,6 @@ Platform::Platform(bool is_host)
   LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
 
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-Platform::~Platform() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  LLDB_LOGF(log, "%p Platform::~Platform()", static_cast<void *>(this));
-}
-
 void Platform::GetStatus(Stream &strm) {
   std::string s;
   strm.Printf("  Platform: %s\n", GetPluginName().GetCString());
