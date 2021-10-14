@@ -15,60 +15,59 @@
 <div id="content">
 
 <h1>Building and Installing Polly</h1>
+You can build Polly with <a href="https://cmake.org/">cmake</a> and your preferred geneator (e.g. Ninja, make, Visual Studio, etc.).
 
-<h2> Automatic </h2>
-
-There is a <a href="polly.sh">script</a> available to automatically checkout,
-update, build, and test Polly. This script contains all the commands that are
-subsequently described on this webpage. The automatic installation consists
-of four simple steps:
+<h3 id="source">Get the code</h3>
 
 <pre>
-mkdir polly &amp;&amp; cd polly
-wget https://polly.llvm.org/polly.sh
-chmod +x polly.sh
-./polly.sh
+git clone https://github.com/llvm/llvm-project.git
 </pre>
 
-<h2> Manual </h2>
-<h3 id="source"> Get the code </h3>
+You can also get a shallow clone by running:
 
 <pre>
-git clone https://github.com/llvm/llvm-project.git llvm_git
+git clone --depth 1 https://github.com/llvm/llvm-project.git
 </pre>
+
 <h3 id="build">Build Polly</h3>
 
 <pre>
-mkdir llvm_build && cd llvm_build
-cmake -DLLVM_ENABLE_PROJECTS='polly;clang' ../llvm_git/llvm && make
+mkdir build && cd build
+cmake '-DLLVM_ENABLE_PROJECTS=clang;polly' ../llvm
+cmake --build .
 </pre>
 
-<h3> Test Polly</h3>
+You can also pass arguments to cmake to specify a particular generator (e.g. <code>-G Ninja</code>) or the build type (<code>-DCMAKE_BUILD_TYPE=Release</code>). 
 
-<pre>make check-polly</pre>
+If you just want to play around with Polly, it is recommended to do a Release+Assert build by passing 
+<code>-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON</code>.
 
-<h3>Building Polly Without LLVM</h3>
-It is also possible to build Polly without
-also building LLVM. All you need is an installed version of LLVM or a previous
-build. To configure Polly to use a pre-built LLVM, set the
-<code>-DCMAKE_PREFIX_PATH</code> option:
+<h3>Test Polly</h3>
 
-<pre>cmake -DCMAKE_PREFIX_PATH=${LLVM_PREFIX}/lib/cmake/llvm ../llvm_git/polly</pre>
+To test Polly, you can run
 
-To run unittests, however, you need to have the LLVM source directory around.
-Polly will use the <code>llvm-config</code> of the LLVM you're building against
-to guess the location of the source directory. You may override autodetected
-location by setting the <code>-DLLVM_SOURCE_ROOT</code> option.
+<pre>cmake --build . --target check-polly</pre> 
+
+<h3>Using Polly</h3>
+
+Suppose that you want to compile a program hello.c using Polly.
+
+To compile it with Polly (in the build folder), you can run:
+
+<pre>
+bin/clang -O3 -mllvm -polly hello.c
+</pre>
 
 <h3> Troubleshooting</h3>
 
-<p>If you get an error in one of the python files, your system probably uses python3
-as default python interpreter. This is the case, for instance, under Arch Linux.
-To solve this issue, run <code>cmake</code> again, but with the added argument:
-<code>-DPYTHON_EXECUTABLE=/usr/bin/python2</code> (replace <code>/usr/bin/python2</code>
-with the location of the python2 interpreter under your system).
+<p>
+  If you run out of memory when building with Ninja, try lowering the concurrency of Ninja (e.g. <code> ninja -j 2 </code>).
+  More tips and tricks to building and using LLVM can be found <a href="https://llvm.org/docs/GettingStarted.html#common-problems">here</a>.
+</p>
 
-<pre>cmake -DCMAKE_PREFIX_PATH=${ISL_INSTALL} -DPYTHON_EXECUTABLE=/usr/bin/python2 ${LLVM_SRC}</pre>
+<p>
+For more information on getting started with Polly and LLVM in general, see LLVM's <a href = "https://llvm.org/docs/GettingStarted.html">getting started docs</a>.
+</p>
 
 </div>
 </div>
