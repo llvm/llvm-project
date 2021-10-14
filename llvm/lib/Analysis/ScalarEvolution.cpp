@@ -7681,7 +7681,7 @@ ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
     return !ENT.hasAlwaysTruePredicate();
   };
 
-  if (any_of(ExitNotTaken, PredicateNotAlwaysTrue) || !getConstantMax())
+  if (!getConstantMax() || any_of(ExitNotTaken, PredicateNotAlwaysTrue))
     return SE->getCouldNotCompute();
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
