@@ -183,7 +183,8 @@ protected:
 
   /// Use the reflection context to build a TypeRef object.
   const swift::reflection::TypeRef *
-  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
+  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
+             SwiftASTContext *swift_ast_context);
 
   /// Returned by \ref ForEachSuperClassType. Not every user of \p
   /// ForEachSuperClassType needs all of these. By returning this
