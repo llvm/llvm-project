@@ -2533,7 +2533,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
 
       // If this is already used as a parameter, it is used multiple times (e.g.
       // #define X(A,A.
-      if (llvm::find(Parameters, II) != Parameters.end()) { // C99 6.10.3p6
+      if (llvm::is_contained(Parameters, II)) { // C99 6.10.3p6
         Diag(Tok, diag::err_pp_duplicate_name_in_arg_list) << II;
         return true;
       }

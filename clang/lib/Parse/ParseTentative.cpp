@@ -1103,9 +1103,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
 }
 
 bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
-  return std::find(TentativelyDeclaredIdentifiers.begin(),
-                   TentativelyDeclaredIdentifiers.end(), II)
-      != TentativelyDeclaredIdentifiers.end();
+  return llvm::is_contained(TentativelyDeclaredIdentifiers, II);
 }
 
 namespace {
