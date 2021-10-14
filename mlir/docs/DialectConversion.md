@@ -86,8 +86,8 @@ struct MyTarget : public ConversionTarget {
     /// Mark all operations within the LLVM dialect are legal.
     addLegalDialect<LLVMDialect>();
 
-    /// Mark `std.constant` op is always legal on this target.
-    addLegalOp<ConstantOp>();
+    /// Mark `arith.constant` op is always legal on this target.
+    addLegalOp<arith::ConstantOp>();
 
     //--------------------------------------------------------------------------
     // Marking an operation as dynamically legal.

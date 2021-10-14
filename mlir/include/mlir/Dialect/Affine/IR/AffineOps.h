@@ -54,8 +54,8 @@ bool isTopLevelValue(Value value);
 // memref '%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in
 // memory space 1 at indices [%k + 7, %l], would be specified as follows:
 //
-//   %num_elements = constant 256
-//   %idx = constant 0 : index
+//   %num_elements = arith.constant 256
+//   %idx = arith.constant 0 : index
 //   %tag = alloc() : memref<1xi32, 4>
 //   affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
 //     %num_elements :

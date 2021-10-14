@@ -267,7 +267,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
   if (!srcType)
     return failure();
 
-  // std.constant should only have vector or tenor types.
+  // arith.constant should only have vector or tenor types.
   assert((srcType.isa<VectorType, RankedTensorType>()));
 
   auto dstType = getTypeConverter()->convertType(srcType);
@@ -375,8 +375,8 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // Bool type.
   if (srcType.isInteger(1)) {
-    // std.constant can use 0/1 instead of true/false for i1 values. We need to
-    // handle that here.
+    // arith.constant can use 0/1 instead of true/false for i1 values. We need
+    // to handle that here.
     auto dstAttr = convertBoolAttr(constOp.value(), rewriter);
     if (!dstAttr)
       return failure();

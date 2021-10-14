@@ -281,7 +281,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
     ```mlir
     %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
       ^bb0(%current_value : f32):
-        %c1 = constant 1.0 : f32
+        %c1 = arith.constant 1.0 : f32
         %inc = arith.addf %c1, %current_value : f32
         atomic_yield %inc : f32
     }
@@ -664,15 +664,16 @@ def ConstantOp : Std_Op<"constant",
     Example:
 
     ```mlir
-    // Integer constant
-    %1 = constant 42 : i32
+    // Complex constant
+    %1 = constant [1.0 : f32, 1.0 : f32] : complex<f32>
 
     // Reference to function @myfn.
-    %3 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
+    %2 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
 
     // Equivalent generic forms
-    %1 = "std.constant"() {value = 42 : i32} : () -> i32
-    %3 = "std.constant"() {value = @myfn}
+    %1 = "std.constant"() {value = [1.0 : f32, 1.0 : f32] : complex<f32>}
+       : () -> complex<f32>
+    %2 = "std.constant"() {value = @myfn}
        : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
     ```
 

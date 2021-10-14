@@ -131,7 +131,7 @@ Optional<SmallVector<int64_t, 4>> shapeRatio(VectorType superVectorType,
 /// The following MLIR snippet:
 ///
 /// ```mlir
-///    %cst0 = constant 0 : index
+///    %cst0 = arith.constant 0 : index
 ///    affine.for %i0 = 0 to %0 {
 ///      %a0 = load %arg0[%cst0, %cst0] : memref<?x?xf32>
 ///    }

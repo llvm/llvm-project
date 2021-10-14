@@ -99,10 +99,10 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 //
 // #strided = (i, j)[s0, s1, s2] -> (i * s1 + s0 + j * s2)
 //
-// %c1 = constant 1 : index
-// %c0 = constant 0 : index
-// %c25 = constant 25 : index
-// %c10 = constant 10 : index
+// %c1 = arith.constant 1 : index
+// %c0 = arith.constant 0 : index
+// %c25 = arith.constant 25 : index
+// %c10 = arith.constant 10 : index
 // operand_dim_0 = dim %operand, 0 : memref<50x100xf32>
 // operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
 // scf.for %k = %c0 to operand_dim_0 step %c10 {

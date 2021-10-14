@@ -89,7 +89,7 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
 
     ```mlir
       Before:
-        %c1 = constant 1 : index
+        %c1 = arith.constant 1 : index
         %0 = sparse_tensor.pointers %arg0, %c1
           : tensor<8x8xf32, #sparse_tensor.encoding<{
               dimLevelType = [ "dense", "compressed" ],
@@ -98,7 +98,7 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
             }>> to memref<?xindex>
 
       After:
-        %c1 = constant 1 : index
+        %c1 = arith.constant 1 : index
         %0 = call @sparsePointers(%arg0, %c1) : (!llvm.ptr<i8>, index) -> memref<?xindex>
     ```
   }];

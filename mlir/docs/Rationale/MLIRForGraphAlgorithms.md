@@ -160,7 +160,7 @@ turned into zero:
     return %y: i32
   }
   // CHECK-LABEL: func @test_subi_zero_cfg(%arg0: i32)
-  // CHECK-NEXT: %c0_i32 = constant 0 : i32
+  // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
   // CHECK-NEXT: return %c0
 ```
 

@@ -197,7 +197,7 @@ def AffineForOp : Affine_Op<"for",
      ```mlir
     func @reduce(%buffer: memref<1024xf32>) -> (f32) {
       // Initial sum set to 0.
-      %sum_0 = constant 0.0 : f32
+      %sum_0 = arith.constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
       %sum = affine.for %i = 0 to 10 step 2
           iter_args(%sum_iter = %sum_0) -> (f32) {
@@ -415,7 +415,7 @@ def AffineIfOp : Affine_Op<"if",
           %2 = load %I[%i - 1, %j - 1] : memref<10x10xf32>
           affine.yield %2
         } else {
-          %2 = constant 0.0 : f32
+          %2 = arith.constant 0.0 : f32
           affine.yield %2 : f32
         }
         affine.store %1, %O[%i, %j] : memref<12x12xf32>

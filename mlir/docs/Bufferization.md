@@ -241,7 +241,7 @@ which helps with this in general.
 
     -   Bufferizes only `arith.constant` ops of `tensor` type.
     -   This is an example of setting up the legality so that only a subset of
-        `std.constant` ops get bufferized.
+        `arith.constant` ops get bufferized.
     -   This is an example of a pass that is not split along dialect
         subdivisions.
 

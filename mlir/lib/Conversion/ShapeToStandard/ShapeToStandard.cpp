@@ -436,7 +436,7 @@ namespace {
 ///
 /// becomes
 ///
-/// %c0 = constant 0 : index
+/// %c0 = arith.constant 0 : index
 /// %0 = dim %arg0, %c0 : tensor<?xindex>
 /// %1 = dim %arg1, %c0 : tensor<?xindex>
 /// %2 = arith.cmpi "eq", %0, %1 : index
