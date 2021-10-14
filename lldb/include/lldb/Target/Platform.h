@@ -73,8 +73,6 @@ public:
   /// Default Constructor
   Platform(bool is_host_platform);
 
-  /// Destructor.
-  ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
   ~Platform() override;

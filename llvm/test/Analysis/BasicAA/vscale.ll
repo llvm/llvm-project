@@ -130,7 +130,7 @@ define void @gep_bitcast_2(<vscale x 4 x i32>* %p) {
 ; CHECK-DAG:  MayAlias:     i32* %a, i32* %gep_rec_1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_1
-; CHECK-DAG:  MayAlias:     i32* %gep, i32* %gep_rec_1
+; CHECK-DAG:  NoAlias:      i32* %gep, i32* %gep_rec_1
 define void @gep_recursion_level_1(i32* %a, <vscale x 4 x i32>* %p) {
   %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %p, i64 1, i64 2
   %gep_rec_1 = getelementptr i32, i32* %gep, i64 1
@@ -143,7 +143,7 @@ define void @gep_recursion_level_1(i32* %a, <vscale x 4 x i32>* %p) {
 ; CHECK-DAG:  MayAlias:     i32* %a, i32* %gep_rec_1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_1
-; CHECK-DAG:  MayAlias:     i32* %gep, i32* %gep_rec_1
+; CHECK-DAG:  NoAlias:      i32* %gep, i32* %gep_rec_1
 define void @gep_recursion_level_1_bitcast(i32* %a) {
   %p = bitcast i32* %a to <vscale x 4 x i32>*
   %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %p, i64 1, i64 2
@@ -159,9 +159,9 @@ define void @gep_recursion_level_1_bitcast(i32* %a) {
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_2
-; CHECK-DAG:  MayAlias:     i32* %gep, i32* %gep_rec_1
-; CHECK-DAG:  MayAlias:     i32* %gep, i32* %gep_rec_2
-; CHECK-DAG:  MayAlias:     i32* %gep_rec_1, i32* %gep_rec_2
+; CHECK-DAG:  NoAlias:      i32* %gep, i32* %gep_rec_1
+; CHECK-DAG:  NoAlias:      i32* %gep, i32* %gep_rec_2
+; CHECK-DAG:  NoAlias:      i32* %gep_rec_1, i32* %gep_rec_2
 define void @gep_recursion_level_2(i32* %a, <vscale x 4 x i32>* %p) {
   %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %p, i64 1, i64 2
   %gep_rec_1 = getelementptr i32, i32* %gep, i64 1
@@ -185,27 +185,27 @@ define void @gep_recursion_level_2(i32* %a, <vscale x 4 x i32>* %p) {
 ; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_4
 ; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_5
 ; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %p, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_1
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_2
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_3
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_4
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_5
-; CHECK-DAG: MayAlias:     i32* %gep, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep_rec_1, i32* %gep_rec_2
-; CHECK-DAG: MayAlias:     i32* %gep_rec_1, i32* %gep_rec_3
-; CHECK-DAG: MayAlias:     i32* %gep_rec_1, i32* %gep_rec_4
-; CHECK-DAG: MayAlias:     i32* %gep_rec_1, i32* %gep_rec_5
-; CHECK-DAG: MayAlias:     i32* %gep_rec_1, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep_rec_2, i32* %gep_rec_3
-; CHECK-DAG: MayAlias:     i32* %gep_rec_2, i32* %gep_rec_4
-; CHECK-DAG: MayAlias:     i32* %gep_rec_2, i32* %gep_rec_5
-; CHECK-DAG: MayAlias:     i32* %gep_rec_2, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep_rec_3, i32* %gep_rec_4
-; CHECK-DAG: MayAlias:     i32* %gep_rec_3, i32* %gep_rec_5
-; CHECK-DAG: MayAlias:     i32* %gep_rec_3, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep_rec_4, i32* %gep_rec_5
-; CHECK-DAG: MayAlias:     i32* %gep_rec_4, i32* %gep_rec_6
-; CHECK-DAG: MayAlias:     i32* %gep_rec_5, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_1
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_2
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_3
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_4
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_5
+; CHECK-DAG: NoAlias:      i32* %gep, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep_rec_1, i32* %gep_rec_2
+; CHECK-DAG: NoAlias:      i32* %gep_rec_1, i32* %gep_rec_3
+; CHECK-DAG: NoAlias:      i32* %gep_rec_1, i32* %gep_rec_4
+; CHECK-DAG: NoAlias:      i32* %gep_rec_1, i32* %gep_rec_5
+; CHECK-DAG: NoAlias:      i32* %gep_rec_1, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep_rec_2, i32* %gep_rec_3
+; CHECK-DAG: NoAlias:      i32* %gep_rec_2, i32* %gep_rec_4
+; CHECK-DAG: NoAlias:      i32* %gep_rec_2, i32* %gep_rec_5
+; CHECK-DAG: NoAlias:      i32* %gep_rec_2, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep_rec_3, i32* %gep_rec_4
+; CHECK-DAG: NoAlias:      i32* %gep_rec_3, i32* %gep_rec_5
+; CHECK-DAG: NoAlias:      i32* %gep_rec_3, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep_rec_4, i32* %gep_rec_5
+; CHECK-DAG: NoAlias:      i32* %gep_rec_4, i32* %gep_rec_6
+; CHECK-DAG: NoAlias:      i32* %gep_rec_5, i32* %gep_rec_6
 ; GEP max lookup depth was set to 6.
 define void @gep_recursion_max_lookup_depth_reached(i32* %a, <vscale x 4 x i32>* %p) {
   %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %p, i64 1, i64 2
