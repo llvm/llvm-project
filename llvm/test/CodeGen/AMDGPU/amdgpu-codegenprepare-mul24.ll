@@ -239,6 +239,39 @@ define i64 @smul24_i64_2(i64 %lhs, i64 %rhs) {
   ret i64 %mul
 }
 
+define i64 @smul24_i64_3(i64 %lhs, i64 %rhs) {
+; SI-LABEL: @smul24_i64_3(
+; SI-NEXT:    [[LHS_TRUNC:%.*]] = trunc i64 [[LHS:%.*]] to i16
+; SI-NEXT:    [[LHS24:%.*]] = sext i16 [[LHS_TRUNC]] to i64
+; SI-NEXT:    [[RHS_TRUNC:%.*]] = trunc i64 [[RHS:%.*]] to i17
+; SI-NEXT:    [[RHS24:%.*]] = sext i17 [[RHS_TRUNC]] to i64
+; SI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; SI-NEXT:    ret i64 [[MUL]]
+;
+; VI-LABEL: @smul24_i64_3(
+; VI-NEXT:    [[LHS_TRUNC:%.*]] = trunc i64 [[LHS:%.*]] to i16
+; VI-NEXT:    [[LHS24:%.*]] = sext i16 [[LHS_TRUNC]] to i64
+; VI-NEXT:    [[RHS_TRUNC:%.*]] = trunc i64 [[RHS:%.*]] to i17
+; VI-NEXT:    [[RHS24:%.*]] = sext i17 [[RHS_TRUNC]] to i64
+; VI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; VI-NEXT:    ret i64 [[MUL]]
+;
+; DISABLED-LABEL: @smul24_i64_3(
+; DISABLED-NEXT:    [[LHS_TRUNC:%.*]] = trunc i64 [[LHS:%.*]] to i16
+; DISABLED-NEXT:    [[LHS24:%.*]] = sext i16 [[LHS_TRUNC]] to i64
+; DISABLED-NEXT:    [[RHS_TRUNC:%.*]] = trunc i64 [[RHS:%.*]] to i17
+; DISABLED-NEXT:    [[RHS24:%.*]] = sext i17 [[RHS_TRUNC]] to i64
+; DISABLED-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; DISABLED-NEXT:    ret i64 [[MUL]]
+;
+  %lhs.trunc = trunc i64 %lhs to i16
+  %lhs24 = sext i16 %lhs.trunc to i64
+  %rhs.trunc = trunc i64 %rhs to i17
+  %rhs24 = sext i17 %rhs.trunc to i64
+  %mul = mul i64 %lhs24, %rhs24
+  ret i64 %mul
+}
+
 define i64 @umul24_i64(i64 %lhs, i64 %rhs) {
 ; SI-LABEL: @umul24_i64(
 ; SI-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 16777215
