@@ -899,9 +899,6 @@ void CheckHelper::CheckSubprogram(
     // See comment on the similar check in CheckProcEntity()
     if (details.isDummy()) {
       messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
-    } else if (details.dummyArgs().empty()) {
-      messages_.Say(
-          "An ELEMENTAL subprogram must have at least one dummy argument"_err_en_US);
     } else {
       for (const Symbol *dummy : details.dummyArgs()) {
         if (!dummy) { // C15100
