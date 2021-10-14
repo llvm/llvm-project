@@ -11,7 +11,9 @@
 
 #include <cstdint>
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "llvm/ADT/StringRef.h"
+#endif
 
 // Log Bits specific to logging in lldb
 #define LIBLLDB_LOG_PROCESS (1u << 1)
