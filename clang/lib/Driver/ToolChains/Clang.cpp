@@ -7991,6 +7991,10 @@ void OffloadBundler::ConstructJobMultipleOutputs(
           break;
         }
       }
+      if(GPUArchName.empty() && !Dep.DependentBoundArch.empty()) {
+        GPUArchName = Dep.DependentBoundArch;
+        Triples += "-";
+      }
       Triples += GPUArchName.str();
     }
   }
