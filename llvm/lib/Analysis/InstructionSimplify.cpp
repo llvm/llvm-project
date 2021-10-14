@@ -4977,13 +4977,14 @@ SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (match(Op1, m_NegZeroFP()))
       return Op0;
 
+  // fadd X, 0 ==> X, when we know X is not -0
+  if (canIgnoreSNaN(ExBehavior, FMF))
+    if (match(Op1, m_PosZeroFP()) &&
+        (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+      return Op0;
+
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
-
-  // fadd X, 0 ==> X, when we know X is not -0
-  if (match(Op1, m_PosZeroFP()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
-    return Op0;
 
   // With nnan: -X + X --> 0.0 (and commuted variant)
   // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
