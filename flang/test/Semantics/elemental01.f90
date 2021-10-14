@@ -1,11 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests ELEMENTAL subprogram constraints C15100-15102
 
-!ERROR: An ELEMENTAL subprogram must have at least one dummy argument
-elemental integer function noargs
-  noargs = 1
-end function
-
 !ERROR: An ELEMENTAL subroutine may not have an alternate return dummy argument
 elemental subroutine altret(*)
 end subroutine

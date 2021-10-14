@@ -5165,12 +5165,6 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   // shuffles. We therefore use a lookup table instead, filled according to
   // the instruction sequences that codegen currently generates.
 
-  // We currently support only fully-interleaved groups, with no gaps.
-  // TODO: Support also strided loads (interleaved-groups with gaps).
-  if (Indices.size() && Indices.size() != Factor)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind);
-
   // VecTy for interleave memop is <VF*Factor x Elt>.
   // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
   // VecTy = <12 x i32>.
@@ -5386,6 +5380,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   };
 
   if (Opcode == Instruction::Load) {
+    // FIXME: if we have a partially-interleaved groups, with gaps,
+    //        should we discount the not-demanded indicies?
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
@@ -5393,6 +5389,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   } else {
     assert(Opcode == Instruction::Store &&
            "Expected Store Instruction at this point");
+    assert((!Indices.size() || Indices.size() == Factor) &&
+           "Interleaved store only supports fully-interleaved groups.");
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedStoreTbl, Factor,
                                               ETy.getSimpleVT()))

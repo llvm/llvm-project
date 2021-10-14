@@ -1093,8 +1093,8 @@ $ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse)' -print-ir-before=cse
 
 *** IR Dump Before CSE ***
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
-  %c1_i32_0 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 ```
@@ -1109,7 +1109,7 @@ $ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse)' -print-ir-after=cse
 
 *** IR Dump After CSE ***
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
@@ -1130,7 +1130,7 @@ $ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,cse)' -print-ir-after=cse -
 
 *** IR Dump After CSE ***
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
@@ -1145,7 +1145,7 @@ $ mlir-opt foo.mlir -pass-pipeline='builtin.func(cse,bad-pass)' -print-ir-failur
 
 *** IR Dump After BadPass Failed ***
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
@@ -1165,8 +1165,8 @@ func @bar(%arg0: f32, %arg1: f32) -> f32 {
 }
 
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
-  %c1_i32_0 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 
@@ -1176,7 +1176,7 @@ func @bar(%arg0: f32, %arg1: f32) -> f32 {
 }
 
 func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```

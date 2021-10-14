@@ -78,11 +78,11 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
 
     ```mlir
     // Always returns 4, can be constant folded:
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     %x = tensor.dim %A, %c0 : tensor<4x?xf32>
 
     // Returns the dynamic dimension of %A.
-    %c1 = constant 1 : index
+    %c1 = arith.constant 1 : index
     %y = tensor.dim %A, %c1 : memref<4x?xf32>
 
     // Equivalent generic form:

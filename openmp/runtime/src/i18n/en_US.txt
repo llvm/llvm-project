@@ -360,6 +360,7 @@ OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the d
 OmpNoAllocator               "Allocator %1$s is not available, will use default allocator."
 TopologyGeneric              "%1$s: %2$s (%3$d total cores)"
 AffGranularityBad            "%1$s: granularity setting: %2$s does not exist in topology.  Using granularity=%3$s instead."
+TopologyHybrid               "%1$s: hybrid core type detected: %2$d %3$s cores."
 
 # --- OpenMP errors detected at runtime ---
 #
