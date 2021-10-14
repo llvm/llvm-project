@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target
-#pragma omp teams distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}} expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp teams distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}} expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute firstprivate(da, z)

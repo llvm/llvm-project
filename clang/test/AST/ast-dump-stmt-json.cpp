@@ -2965,7 +2965,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "name": "us",
 // CHECK-NEXT:        "mangledName": "_ZZ17TestUnionInitListvE2us",
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "U[3]"
+// CHECK-NEXT:         "qualType": "U [3]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "init": "c",
 // CHECK-NEXT:        "inner": [
@@ -2985,7 +2985,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "U[3]"
+// CHECK-NEXT:           "qualType": "U [3]"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "array_filler": [
@@ -4392,7 +4392,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "name": "vals",
 // CHECK-NEXT:        "mangledName": "_ZZ13TestIterationvE4vals",
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "int[10]"
+// CHECK-NEXT:         "qualType": "int [10]"
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
@@ -4478,7 +4478,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int[10]"
+// CHECK-NEXT:             "qualType": "int [10]"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -4486,7 +4486,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "vals",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "qualType": "int[10]"
+// CHECK-NEXT:              "qualType": "int [10]"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
 // CHECK-NEXT:           }
@@ -4577,7 +4577,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "int[10]"
+// CHECK-NEXT:               "qualType": "int [10]"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "lvalue",
 // CHECK-NEXT:              "referencedDecl": {
@@ -4699,7 +4699,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "qualType": "int[10]"
+// CHECK-NEXT:                 "qualType": "int [10]"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
 // CHECK-NEXT:                "referencedDecl": {
@@ -6039,7 +6039,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int[10]"
+// CHECK-NEXT:             "qualType": "int [10]"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -6047,7 +6047,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "vals",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "qualType": "int[10]"
+// CHECK-NEXT:              "qualType": "int [10]"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
 // CHECK-NEXT:           }
@@ -6138,7 +6138,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "int[10]"
+// CHECK-NEXT:               "qualType": "int [10]"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "lvalue",
 // CHECK-NEXT:              "referencedDecl": {
@@ -6260,7 +6260,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "qualType": "int[10]"
+// CHECK-NEXT:                 "qualType": "int [10]"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
 // CHECK-NEXT:                "referencedDecl": {

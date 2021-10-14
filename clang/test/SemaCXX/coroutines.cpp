@@ -189,7 +189,7 @@ void coreturn(int n) {
   if (n == 1)
     co_return {4}; // expected-warning {{braces around scalar initializer}}
   if (n == 2)
-    co_return "foo"; // expected-error {{cannot initialize a parameter of type 'int' with an lvalue of type 'const char[4]'}}
+    co_return "foo"; // expected-error {{cannot initialize a parameter of type 'int' with an lvalue of type 'const char [4]'}}
   co_return 42;
 }
 

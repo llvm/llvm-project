@@ -8,7 +8,7 @@ struct EmptyIntMemb {
 };
 // CHECK:       *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyIntMemb
-// CHECK-NEXT:  0 | int[0] FlexArrayMemb
+// CHECK-NEXT:  0 | int [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=4, align=4
 
 struct EmptyLongLongMemb {
@@ -16,7 +16,7 @@ struct EmptyLongLongMemb {
 };
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyLongLongMemb
-// CHECK-NEXT:  0 | long long[0] FlexArrayMemb
+// CHECK-NEXT:  0 | long long [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=4, align=8
 
 struct EmptyAligned2LongLongMemb {
@@ -25,7 +25,7 @@ struct EmptyAligned2LongLongMemb {
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyAligned2LongLongMemb
-// CHECK-NEXT:  0 | long long[0] FlexArrayMemb
+// CHECK-NEXT:  0 | long long [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=4, align=8
 
 struct EmptyAligned8LongLongMemb {
@@ -34,7 +34,7 @@ struct EmptyAligned8LongLongMemb {
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyAligned8LongLongMemb
-// CHECK-NEXT:  0 | long long[0] FlexArrayMemb
+// CHECK-NEXT:  0 | long long [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=8, align=8
 
 #pragma pack(1)
@@ -45,7 +45,7 @@ struct __declspec(align(4)) EmptyPackedAligned4LongLongMemb {
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyPackedAligned4LongLongMemb
-// CHECK-NEXT:  0 | long long[0] FlexArrayMemb
+// CHECK-NEXT:  0 | long long [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=4, align=4
 
 #pragma pack(1)
@@ -56,7 +56,7 @@ struct EmptyPackedAligned8LongLongMemb {
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:  0 | struct EmptyPackedAligned8LongLongMemb
-// CHECK-NEXT:  0 | long long[0] FlexArrayMemb
+// CHECK-NEXT:  0 | long long [0] FlexArrayMemb
 // CHECK-NEXT:    | [sizeof=8, align=8
 
 

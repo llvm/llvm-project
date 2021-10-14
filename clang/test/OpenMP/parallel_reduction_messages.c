@@ -16,7 +16,7 @@ void test(int *p) {
   ;
 #pragma omp parallel reduction(inscan, + : a) // expected-error {{'inscan' modifier can be used only in 'omp for', 'omp simd', 'omp for simd', 'omp parallel for', or 'omp parallel for simd' directive}}
   ;
-#pragma omp parallel reduction(+ : incomplete, ([10])p) // expected-error {{a reduction list item with incomplete type 'int[]'}} expected-error {{expected variable name, array element or array section}}
+#pragma omp parallel reduction(+ : incomplete, ([10])p) // expected-error {{a reduction list item with incomplete type 'int []'}} expected-error {{expected variable name, array element or array section}}
   ;
 }
 

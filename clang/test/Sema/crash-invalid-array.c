@@ -10,7 +10,7 @@ int main()
 
    for(i = 0; i < 10; ++i)
    {
-       p[i][i] = i; // expected-error {{subscript of pointer to incomplete type 'int[]'}}
+       p[i][i] = i; // expected-error {{subscript of pointer to incomplete type 'int []'}}
    }
 }
 

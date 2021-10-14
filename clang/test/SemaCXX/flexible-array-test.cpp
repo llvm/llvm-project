@@ -67,7 +67,7 @@ union B {
 };
 
 class C {
-  char c[]; // expected-error {{flexible array member 'c' with type 'char[]' is not at the end of class}}
+  char c[]; // expected-error {{flexible array member 'c' with type 'char []' is not at the end of class}}
   int s; // expected-note {{next field declaration is here}}
 };
 
@@ -93,7 +93,7 @@ struct NonTrivDtor { ~NonTrivDtor(); };
 // FIXME: It's not clear whether we should disallow examples like this. GCC accepts.
 struct FlexNonTrivDtor {
   int n;
-  NonTrivDtor ntd[]; // expected-error {{flexible array member 'ntd' of type 'NonTrivDtor[]' with non-trivial destruction}}
+  NonTrivDtor ntd[]; // expected-error {{flexible array member 'ntd' of type 'NonTrivDtor []' with non-trivial destruction}}
   ~FlexNonTrivDtor() {
     for (int i = n; i != 0; --i)
       ntd[i-1].~NonTrivDtor();

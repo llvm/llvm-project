@@ -147,7 +147,7 @@ void UnaryExpressions(int *p) {
   // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
-  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int[2]'
+  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int [2]'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 1
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:17> 'int' 2
 

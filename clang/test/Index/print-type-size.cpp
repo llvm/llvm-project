@@ -368,7 +368,7 @@ struct BaseStruct
 namespace NotConstantSize {
 
 void f(int i) {
-// CHECK32: VarDecl=v2:[[@LINE+1]]:8 (Definition) [type=int[i]] [typekind=VariableArray] [sizeof=-4] [alignof=4]
+// CHECK32: VarDecl=v2:[[@LINE+1]]:8 (Definition) [type=int [i]] [typekind=VariableArray] [sizeof=-4] [alignof=4]
    int v2[i];
    {
    struct CS1 {

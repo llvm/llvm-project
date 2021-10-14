@@ -22,7 +22,7 @@ void func() {
 }
 
 int h[]; // expected-warning {{tentative array definition assumed to have one element}}
-int (*i)[] = &h+1; // expected-error {{arithmetic on a pointer to an incomplete type 'int[]'}}
+int (*i)[] = &h+1; // expected-error {{arithmetic on a pointer to an incomplete type 'int []'}}
 
 struct bar j = {1}; // expected-error {{variable has incomplete type 'struct bar'}} \
     expected-note {{forward declaration of 'struct bar'}}

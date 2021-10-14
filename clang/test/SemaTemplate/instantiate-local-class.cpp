@@ -460,7 +460,7 @@ namespace rdar23721638 {
 
   template <typename T> void foo() {
     struct Inner { // expected-note {{in instantiation}}
-      void operator()(T a = "") {} // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
+      void operator()(T a = "") {} // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
     };
     Inner()(); // expected-error {{type 'Inner' does not provide a call operator}}
@@ -468,7 +468,7 @@ namespace rdar23721638 {
   template void foo<A>(); // expected-note 2 {{in instantiation}}
 
   template <typename T> void bar() {
-    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
+    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
     lambda();
   }

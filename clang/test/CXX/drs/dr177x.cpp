@@ -12,8 +12,8 @@ namespace dr1772 { // dr1772: 14
   // CXX11: CXXRecordDecl
   // CXX11: CXXMethodDecl{{.+}} operator() 'void () const'
   // CXX11-NEXT: CompoundStmt
-  // CXX11-NEXT: PredefinedExpr{{.+}} 'const char[11]' lvalue __func__
-  // CXX11-NEXT: StringLiteral{{.+}} 'const char[11]' lvalue "operator()"
+  // CXX11-NEXT: PredefinedExpr{{.+}} 'const char [11]' lvalue __func__
+  // CXX11-NEXT: StringLiteral{{.+}} 'const char [11]' lvalue "operator()"
 
   void func() {
     // CXX11: FunctionDecl{{.+}} func
@@ -23,8 +23,8 @@ namespace dr1772 { // dr1772: 14
   // CXX11: CXXRecordDecl
   // CXX11: CXXMethodDecl{{.+}} operator() 'void () const'
   // CXX11-NEXT: CompoundStmt
-  // CXX11-NEXT: PredefinedExpr{{.+}} 'const char[11]' lvalue __func__
-  // CXX11-NEXT: StringLiteral{{.+}} 'const char[11]' lvalue "operator()"
+  // CXX11-NEXT: PredefinedExpr{{.+}} 'const char [11]' lvalue __func__
+  // CXX11-NEXT: StringLiteral{{.+}} 'const char [11]' lvalue "operator()"
   }
 #endif // __cplusplus >= 201103L
 }

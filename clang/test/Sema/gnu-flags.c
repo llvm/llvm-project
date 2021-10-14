@@ -97,7 +97,7 @@ void statementexp()
 
 
 #if ALL || COMPOUNDLITERALINITIALIZER
-// expected-warning@+4 {{initialization of an array of type 'int[5]' from a compound literal of type 'int[5]' is a GNU extension}}
+// expected-warning@+4 {{initialization of an array of type 'int [5]' from a compound literal of type 'int [5]' is a GNU extension}}
 #endif
 
 typedef int int5[5];

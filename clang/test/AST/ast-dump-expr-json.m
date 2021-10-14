@@ -181,7 +181,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "char[2]"
+// CHECK-NEXT:         "qualType": "char [2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "encodedType": {
@@ -228,7 +228,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "char[3]"
+// CHECK-NEXT:         "qualType": "char [3]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "encodedType": {
@@ -3490,7 +3490,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "qualType": "char[4]"
+// CHECK-NEXT:                 "qualType": "char [4]"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
 // CHECK-NEXT:                "value": "\"key\""
@@ -3698,7 +3698,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "char[4]"
+// CHECK-NEXT:             "qualType": "char [4]"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "value": "\"key\""
@@ -4177,7 +4177,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "qualType": "char[4]"
+// CHECK-NEXT:                 "qualType": "char [4]"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
 // CHECK-NEXT:                "value": "\"key\""
@@ -4420,7 +4420,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "qualType": "char[4]"
+// CHECK-NEXT:                 "qualType": "char [4]"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
 // CHECK-NEXT:                "value": "\"key\""
@@ -4560,7 +4560,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "char[4]"
+// CHECK-NEXT:               "qualType": "char [4]"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "lvalue",
 // CHECK-NEXT:              "value": "\"key\""
@@ -4745,7 +4745,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "qualType": "char[4]"
+// CHECK-NEXT:                   "qualType": "char [4]"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
 // CHECK-NEXT:                  "value": "\"key\""

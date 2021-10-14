@@ -625,8 +625,8 @@ struct S14 {
 };
 #else
 S14 s14;
-// expected-error@second.h:* {{'Method::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int[3]'}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int[2]'}}
+// expected-error@second.h:* {{'Method::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [3]'}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [2]'}}
 #endif
 
 #if defined(FIRST)
@@ -4533,8 +4533,8 @@ int F9(int[1]) { return 0; }
 int F9(int[2]) { return 0; }
 #else
 int I9 = F9(nullptr);
-// expected-error@second.h:* {{'FunctionDecl::F9' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'int *' decayed from 'int[2]'}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with type 'int *' decayed from 'int[1]'}}
+// expected-error@second.h:* {{'FunctionDecl::F9' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'int *' decayed from 'int [2]'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with type 'int *' decayed from 'int [1]'}}
 #endif
 
 #if defined(FIRST)

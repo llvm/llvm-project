@@ -2003,7 +2003,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "int[2]"
+// CHECK-NEXT:           "qualType": "int [2]"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "inner": [

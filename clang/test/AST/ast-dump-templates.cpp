@@ -46,9 +46,9 @@ template <typename ...T> struct A {
 };
 
 // CHECK1-LABEL: template <typename ...T> void f(T ...[3]) {
-// CHECK1-NEXT:    A<T[3]...> a;
+// CHECK1-NEXT:    A<T [3]...> a;
 template <typename ...T> void f(T ...[3]) {
-  A<T[3]...> a;
+  A<T [3]...> a;
 }
 
 namespace test2 {

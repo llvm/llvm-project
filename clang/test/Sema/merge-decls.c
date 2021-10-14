@@ -73,7 +73,7 @@ void test4_f(a)
 
 int test5_f(int (*)[10]);
 int test5_f(int (*x)[]) {
-  return sizeof(*x); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
+  return sizeof(*x); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
 }
 
 void test6_f(int (*a)[11]);

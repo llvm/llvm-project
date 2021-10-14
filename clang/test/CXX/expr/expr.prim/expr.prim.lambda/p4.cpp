@@ -48,5 +48,5 @@ void test_result_type(int N) {
   auto l1 = [] () -> Incomplete { }; // expected-error{{incomplete result type 'Incomplete' in lambda expression}}
 
   typedef int vla[N];
-  auto l2 = [] () -> vla { }; // expected-error{{function cannot return array type 'vla' (aka 'int[N]')}}
+  auto l2 = [] () -> vla { }; // expected-error{{function cannot return array type 'vla' (aka 'int [N]')}}
 }

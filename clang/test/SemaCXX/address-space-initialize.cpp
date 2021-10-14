@@ -17,7 +17,7 @@ int nocv_iarray[10] = { 4 };
 
 
 __attribute__((address_space(9999)))
-int* as_ptr = nocv_iarray; // expected-error{{cannot initialize a variable of type '__attribute__((address_space(9999))) int *' with an lvalue of type '__attribute__((address_space(42))) int[10]'}}
+int* as_ptr = nocv_iarray; // expected-error{{cannot initialize a variable of type '__attribute__((address_space(9999))) int *' with an lvalue of type '__attribute__((address_space(42))) int [10]'}}
 
 
 __attribute__((address_space(42))) int* __attribute__((address_space(42))) ptr_in_same_addr_space = nocv_iarray;

@@ -46,7 +46,7 @@ template void foo3<S2<long>, int, float>();
 template <typename T>
 void foo4() {
   static_assert(S1<T[sizeof(T)], int[4]>::value, "");
-  // expected-error@-1{{static_assert failed due to requirement 'S1<float[4], int[4]>::value'}}
+  // expected-error@-1{{static_assert failed due to requirement 'S1<float [4], int [4]>::value'}}
 };
 template void foo4<float>();
 // expected-note@-1{{in instantiation of function template specialization 'foo4<float>' requested here}}
@@ -94,7 +94,7 @@ void foo6() {
   static_assert(static_cast<const X<typename T::T> *>(nullptr));
   // expected-error@-1{{static_assert failed due to requirement 'static_cast<const X<int> *>(nullptr)'}}
   static_assert((const X<typename T::T>[]){} == nullptr);
-  // expected-error@-1{{static_assert failed due to requirement '(const X<int>[0]){} == nullptr'}}
+  // expected-error@-1{{static_assert failed due to requirement '(const X<int> [0]){} == nullptr'}}
   static_assert(sizeof(X<decltype(X<typename T::T>().X<typename T::T>::~X())>) == 0);
   // expected-error@-1{{static_assert failed due to requirement 'sizeof(X<void>) == 0'}}
   static_assert(constexpr_return_false<typename T::T, typename T::U>());
