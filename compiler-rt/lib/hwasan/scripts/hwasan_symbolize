@@ -200,6 +200,7 @@ if not binary_prefixes:
   if 'ANDROID_PRODUCT_OUT' in os.environ:
     product_out = os.path.join(os.environ['ANDROID_PRODUCT_OUT'], 'symbols')
     binary_prefixes.append(product_out)
+  binary_prefixes.append('/')
 
 for p in binary_prefixes:
   if not os.path.isdir(p):
