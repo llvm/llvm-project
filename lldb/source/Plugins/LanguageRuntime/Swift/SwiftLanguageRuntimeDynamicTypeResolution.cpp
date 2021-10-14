@@ -1872,7 +1872,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   }
 
   const swift::reflection::TypeRef *protocol_typeref =
-      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef());
+      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef(),
+                 tss->GetSwiftASTContext());
   if (!protocol_typeref) {
     if (log)
       log->Printf("Could not get protocol typeref");
@@ -2841,7 +2842,8 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
 
 const swift::reflection::TypeRef *
 SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
-                                     TypeSystemSwiftTypeRef *module_holder) {
+                                     TypeSystemSwiftTypeRef *module_holder,
+                                     SwiftASTContext *swift_ast_context) {
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
@@ -2850,10 +2852,7 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
     return nullptr;
   swift::Demangle::NodePointer node =
       TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          module_holder ? module_holder : &ts->GetTypeSystemSwiftTypeRef(),
-          module_holder ? module_holder->GetSwiftASTContext()
-                        : ts->GetSwiftASTContext(),
-          dem, mangled_name.GetStringRef());
+          module_holder, swift_ast_context, dem, mangled_name.GetStringRef());
   if (!node)
     return nullptr;
 
@@ -2896,8 +2895,8 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   // BindGenericTypeParameters imports the type into the scratch
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
-  const swift::reflection::TypeRef *type_ref =
-      GetTypeRef(type, &ts->GetTypeSystemSwiftTypeRef());
+  const swift::reflection::TypeRef *type_ref = GetTypeRef(
+      type, &ts->GetTypeSystemSwiftTypeRef(), ts->GetSwiftASTContext());
   if (!type_ref)
     return nullptr;
 
