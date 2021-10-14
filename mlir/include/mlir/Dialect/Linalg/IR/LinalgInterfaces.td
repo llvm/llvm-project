@@ -520,16 +520,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         unsigned bbArgNumber = opOperand->getOperandNumber();
-        // Safeguard against the named linalg ops that are manually defined and
-        // that only support buffer semantics: we should not be there.
-        // Such ops have an empty regionBuilder and are not constructed with a
-        // region for now. In the future they are slated to disappear.
-        assert(this->getOperation()->getNumRegions() == 1 && "unexpected "
-               "missing region (calling `payloadUsesValueFromOperand` on "
-               "manually defined named Linalg op?)");
-        Block &block = this->getOperation()->getRegion(0).front();
         // Init tensors have uses.
-        return !block.getArgument(bbArgNumber).use_empty();
+        return !getBlock()->getArgument(bbArgNumber).use_empty();
       }]
     >,
     InterfaceMethod<
@@ -604,8 +596,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        Block &entryBlock = this->getOperation()->getRegion(0).front();
-        return entryBlock.getArguments().take_back(this->getNumOutputs());
+        return getBlock()->getArguments().take_back(this->getNumOutputs());
       }]
     >,
     InterfaceMethod<
@@ -671,6 +662,21 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     //===------------------------------------------------------------------===//
     // Other interface methods.
     //===------------------------------------------------------------------===//
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the single block constituting the body of the operation by
+        calling the getBody method on the concrete operation.
+      }],
+      /*retTy=*/"Block*",
+      /*methodName=*/"getBlock",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // Assume the concrete operation implements the
+        // SingleBlockImplicitTerminator trait.
+        return $_op.getBody();
+      }]
+    >,
     InterfaceMethod<
       /*desc=*/[{
         Return the iterator types attribute within the current operation.
