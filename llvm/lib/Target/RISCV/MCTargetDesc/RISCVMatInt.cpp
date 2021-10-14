@@ -195,16 +195,17 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
-  // Perform the following optimization with the Zbs extension.
-  // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
-  //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
-  //    an int32), then emit (BCLRI r, 31).
-  // 2. For values in range 0x80000000 ~ 0xffffffff, call generateInstSeqImpl
-  //    with Val&~0x80000000 (which is expected to be an int32), then
-  //    emit (BSETI r, 31).
+  // Perform optimization with BCLRI/BSETI in the Zbs extension.
   if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbs]) {
     assert(ActiveFeatures[RISCV::Feature64Bit] &&
            "Expected RV32 to only need 2 instructions");
+
+    // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
+    //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
+    //    an int32), then emit (BCLRI r, 31).
+    // 2. For values in range 0x80000000 ~ 0xffffffff, call generateInstSeqImpl
+    //    with Val&~0x80000000 (which is expected to be an int32), then
+    //    emit (BSETI r, 31).
     int64_t NewVal;
     unsigned Opc;
     if (Val < 0) {
@@ -218,6 +219,32 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       RISCVMatInt::InstSeq TmpSeq;
       generateInstSeqImpl(NewVal, ActiveFeatures, TmpSeq);
       TmpSeq.push_back(RISCVMatInt::Inst(Opc, 31));
+      if (TmpSeq.size() < Res.size())
+        Res = TmpSeq;
+    }
+
+    // Try to use BCLRI for upper 32 bits if the original lower 32 bits are
+    // negative int32, or use BSETI for upper 32 bits if the original lower
+    // 32 bits are positive int32.
+    int32_t Lo = Val;
+    uint32_t Hi = Val >> 32;
+    Opc = 0;
+    RISCVMatInt::InstSeq TmpSeq;
+    generateInstSeqImpl(Lo, ActiveFeatures, TmpSeq);
+    // Check if it is profitable to use BCLRI/BSETI.
+    if (Lo > 0 && TmpSeq.size() + countPopulation(Hi) < Res.size()) {
+      Opc = RISCV::BSETI;
+    } else if (Lo < 0 && TmpSeq.size() + countPopulation(~Hi) < Res.size()) {
+      Opc = RISCV::BCLRI;
+      Hi = ~Hi;
+    }
+    // Search for each bit and build corresponding BCLRI/BSETI.
+    if (Opc > 0) {
+      while (Hi != 0) {
+        unsigned Bit = countTrailingZeros(Hi);
+        TmpSeq.push_back(RISCVMatInt::Inst(Opc, Bit + 32));
+        Hi &= ~(1 << Bit);
+      }
       if (TmpSeq.size() < Res.size())
         Res = TmpSeq;
     }
