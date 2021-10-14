@@ -53,6 +53,23 @@ struct T {
   iterator end();
 };
 
+struct Q {
+  typedef int value_type;
+  struct const_iterator {
+    value_type &operator*();
+    const value_type &operator*() const;
+    const_iterator &operator++();
+    bool operator!=(const const_iterator &other);
+    void insert(value_type);
+    value_type X;
+  };
+  struct iterator {
+    operator const_iterator() const;
+  };
+  iterator begin();
+  iterator end();
+};
+
 struct U {
   struct iterator {
     Val& operator*();
