@@ -20,6 +20,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "AffinePasses.md"]
 
+## `arith` Dialect Passes
+
+[include "ArithmeticPasses.md"]
+
 ## `gpu` Dialect Passes
 
 [include "GPUPasses.md"]

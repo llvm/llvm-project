@@ -809,12 +809,12 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 
     ```mlir
       global @variable : tuple<i32, f32> {
-        %0 = constant 45 : i32
-        %1 = constant 100.0 : f32
+        %0 = arith.constant 45 : i32
+        %1 = arith.constant 100.0 : f32
         %2 = fir.undefined tuple<i32, f32>
-        %3 = constant 0 : index
+        %3 = arith.constant 0 : index
         %4 = fir.insert_value %2, %0, %3 : (tuple<i32, f32>, i32, index) -> tuple<i32, f32>
-        %5 = constant 1 : index
+        %5 = arith.constant 1 : index
         %6 = fir.insert_value %4, %1, %5 : (tuple<i32, f32>, f32, index) -> tuple<i32, f32>
         fir.has_value %6 : tuple<i32, f32>
       }
@@ -840,8 +840,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     by the calling routine. (In Fortran, these are called descriptors.)
 
     ```mlir
-      %c1 = constant 1 : index
-      %c10 = constant 10 : index
+      %c1 = arith.constant 1 : index
+      %c10 = arith.constant 10 : index
       %5 = ... : !fir.ref<!fir.array<10 x i32>>
       %6 = fir.embox %5 : (!fir.ref<!fir.array<10 x i32>>) -> !fir.box<!fir.array<10 x i32>>
     ```
@@ -955,7 +955,7 @@ def fir_EmboxCharOp : fir_Op<"emboxchar", [NoSideEffect]> {
     ```
     ```mlir
       %4 = ...         : !fir.ref<!fir.array<10 x !fir.char<1>>>
-      %5 = constant 10 : i32
+      %5 = arith.constant 10 : i32
       %6 = fir.emboxchar %4, %5 : (!fir.ref<!fir.array<10 x !fir.char<1>>>, i32) -> !fir.boxchar<1>
     ```
 
@@ -1128,7 +1128,7 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
     `dim` is out of bounds.
 
     ```mlir
-      %c1   = constant 0 : i32
+      %c1   = arith.constant 0 : i32
       %52:3 = fir.box_dims %40, %c1 : (!fir.box<!fir.array<*:f64>>, i32) -> (index, index, index)
     ```
 
@@ -1204,7 +1204,7 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoSideEffect]> {
 
     ```mlir
       %r = ... : !fir.ref<i64>
-      %c_100 = constant 100 : index
+      %c_100 = arith.constant 100 : index
       %d = fir.shape %c_100 : (index) -> !fir.shape<1>
       %b = fir.embox %r(%d) : (!fir.ref<i64>, !fir.shape<1>) -> !fir.box<i64>
       %a = fir.box_isarray %b : (!fir.box<i64>) -> i1  // true
@@ -1937,7 +1937,7 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
       %a = ... : !fir.array<10xtuple<i32, f32>>
       %f = ... : f32
       %o = ... : i32
-      %c = constant 1 : i32
+      %c = arith.constant 1 : i32
       %b = fir.insert_value %a, %f, %o, %c : (!fir.array<10x20xtuple<i32, f32>>, f32, i32, i32) -> !fir.array<10x20xtuple<i32, f32>>
     ```
   }];
@@ -1969,7 +1969,7 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
 
     ```mlir
       %a = fir.undefined !fir.array<10x10xf32>
-      %c = constant 3.0 : f32
+      %c = arith.constant 3.0 : f32
       %1 = fir.insert_on_range %a, %c, [0 : index, 7 : index, 0 : index, 2 : index] : (!fir.array<10x10xf32>, f32) -> !fir.array<10x10xf32>
     ```
 
@@ -2074,9 +2074,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
     MLIR's `scf.for`.
 
     ```mlir
-      %l = constant 0 : index
-      %u = constant 9 : index
-      %s = constant 1 : index
+      %l = arith.constant 0 : index
+      %u = arith.constant 9 : index
+      %s = arith.constant 1 : index
       fir.do_loop %i = %l to %u step %s unordered {
         %x = fir.convert %i : (index) -> i32
         %v = fir.call @compute(%x) : (i32) -> f32
@@ -2702,11 +2702,11 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
     ```mlir
       fir.global @_QV_Mquark_Vvarble : tuple<i32, f32> {
-        %1 = constant 1 : i32
-        %2 = constant 2.0 : f32
+        %1 = arith.constant 1 : i32
+        %2 = arith.constant 2.0 : f32
         %3 = fir.undefined tuple<i32, f32>
-        %z = constant 0 : index
-        %o = constant 1 : index
+        %z = arith.constant 0 : index
+        %o = arith.constant 1 : index
         %4 = fir.insert_value %3, %1, %z : (tuple<i32, f32>, i32, index) -> tuple<i32, f32>
         %5 = fir.insert_value %4, %2, %o : (tuple<i32, f32>, f32, index) -> tuple<i32, f32>
         fir.has_value %5 : tuple<i32, f32>

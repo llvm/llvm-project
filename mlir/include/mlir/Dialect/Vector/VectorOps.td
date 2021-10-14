@@ -406,7 +406,7 @@ def Vector_BroadcastOp :
     Example:
 
     ```mlir
-    %0 = constant 0.0 : f32
+    %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
     ```
@@ -495,7 +495,7 @@ def Vector_ExtractElementOp :
     Example:
 
     ```mlir
-    %c = constant 15 : i32
+    %c = arith.constant 15 : i32
     %1 = vector.extractelement %0[%c : i32]: vector<16xf32>
     ```
   }];
@@ -672,8 +672,8 @@ def Vector_InsertElementOp :
     Example:
 
     ```mlir
-    %c = constant 15 : i32
-    %f = constant 0.0f : f32
+    %c = arith.constant 15 : i32
+    %f = arith.constant 0.0f : f32
     %1 = vector.insertelement %f, %0[%c : i32]: vector<16xf32>
     ```
   }];
@@ -1206,7 +1206,7 @@ def Vector_TransferReadOp :
             memref<?x?x?x?xf32>
           store %tmp[%i, %j, %k] : vector<3x4x5xf32>
     }}}
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     %vec = load %view_in_tmp[%c0] : vector<3x4x5xf32>
     ```
 
@@ -1227,7 +1227,7 @@ def Vector_TransferReadOp :
           memref<?x?x?x?xf32>
         store %tmp[%i, 0, %k] : vector<3x4x5xf32>
     }}
-    %c0 = constant 0 : index
+    %c0 = arith.constant 0 : index
     %tmpvec = load %view_in_tmp[%c0] : vector<3x4x5xf32>
     %vec = broadcast %tmpvec, 1 : vector<3x4x5xf32>
     ```
@@ -1249,7 +1249,7 @@ def Vector_TransferReadOp :
     ```mlir
     // Read the slice `%A[%i0, %i1:%i1+256, %i2:%i2+32]` into vector<32x256xf32>
     // and pad with %f0 to handle the boundary case:
-    %f0 = constant 0.0f : f32
+    %f0 = arith.constant 0.0f : f32
     for %i0 = 0 to %0 {
       affine.for %i1 = 0 to %1 step 256 {
         affine.for %i2 = 0 to %2 step 32 {
@@ -2229,7 +2229,7 @@ def Vector_PrintOp :
     Example:
 
     ```mlir
-    %0 = constant 0.0 : f32
+    %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<4xf32>
     vector.print %1 : vector<4xf32>
 

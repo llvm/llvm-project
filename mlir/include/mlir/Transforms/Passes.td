@@ -39,7 +39,7 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
     func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
       %0 = alloc() : memref<10xf32>
       %1 = alloc() : memref<10xf32>
-      %cst = constant 0.000000e+00 : f32
+      %cst = arith.constant 0.000000e+00 : f32
       affine.for %arg2 = 0 to 10 {
         affine.store %cst, %0[%arg2] : memref<10xf32>
         affine.store %cst, %1[%arg2] : memref<10xf32>
@@ -62,7 +62,7 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
     func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
       %0 = alloc() : memref<1xf32>
       %1 = alloc() : memref<1xf32>
-      %cst = constant 0.000000e+00 : f32
+      %cst = arith.constant 0.000000e+00 : f32
       affine.for %arg2 = 0 to 10 {
         affine.store %cst, %0[0] : memref<1xf32>
         affine.store %cst, %1[0] : memref<1xf32>
@@ -164,8 +164,8 @@ def AffinePipelineDataTransfer
       %0 = alloc() : memref<256xf32>
       %1 = alloc() : memref<32xf32, 1>
       %2 = alloc() : memref<1xf32>
-      %c0 = constant 0 : index
-      %c128 = constant 128 : index
+      %c0 = arith.constant 0 : index
+      %c128 = arith.constant 128 : index
       affine.for %i0 = 0 to 8 {
         affine.dma_start %0[%i0], %1[%i0], %2[%c0], %c128 : memref<256xf32>, memref<32xf32, 1>, memref<1xf32>
         affine.dma_wait %2[%c0], %c128 : memref<1xf32>
@@ -182,11 +182,11 @@ def AffinePipelineDataTransfer
     ```mlir
     module {
       func @pipelinedatatransfer() {
-        %c8 = constant 8 : index
-        %c0 = constant 0 : index
+        %c8 = arith.constant 8 : index
+        %c0 = arith.constant 0 : index
         %0 = alloc() : memref<256xf32>
-        %c0_0 = constant 0 : index
-        %c128 = constant 128 : index
+        %c0_0 = arith.constant 0 : index
+        %c128 = arith.constant 128 : index
         %1 = alloc() : memref<2x32xf32, 1>
         %2 = alloc() : memref<2x1xf32>
         affine.dma_start %0[%c0], %1[%c0 mod 2, %c0], %2[%c0 mod 2, symbol(%c0_0)], %c128 : memref<256xf32>, memref<2x32xf32, 1>, memref<2x1xf32>
@@ -558,9 +558,9 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     func @linearize(%arg0: memref<8x8xi32, #linear8>,
                     %arg1: memref<8x8xi32, #linear8>,
                     %arg2: memref<8x8xi32, #linear8>) {
-      %c8 = constant 8 : index
-      %c0 = constant 0 : index
-      %c1 = constant 1 : index
+      %c8 = arith.constant 8 : index
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
       affine.for %arg3 = %c0 to %c8  {
       affine.for %arg4 = %c0 to %c8  {
         affine.for %arg5 = %c0 to %c8 {
@@ -583,8 +583,8 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     func @linearize(%arg0: memref<64xi32>,
                     %arg1: memref<64xi32>,
                     %arg2: memref<64xi32>) {
-    %c8 = constant 8 : index
-    %c0 = constant 0 : index
+    %c8 = arith.constant 8 : index
+    %c0 = arith.constant 0 : index
     affine.for %arg3 = %c0 to %c8 {
       affine.for %arg4 = %c0 to %c8 {
         affine.for %arg5 = %c0 to %c8 {
