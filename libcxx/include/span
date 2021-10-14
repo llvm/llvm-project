@@ -61,7 +61,7 @@ public:
     template <class It, class End>
     constexpr explicit(Extent != dynamic_extent) span(It first, End last);
     template <size_t N>
-        constexpr span(element_type (&arr)[N]) noexcept;
+        constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept;
     template <size_t N>
         constexpr span(array<value_type, N>& arr) noexcept;
     template <size_t N>
@@ -236,7 +236,7 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY constexpr span(element_type (&__arr)[_Extent])          noexcept : __data{__arr} {}
+    _LIBCPP_INLINE_VISIBILITY constexpr span(type_identity_t<element_type> (&__arr)[_Extent]) noexcept : __data{__arr} {}
 
     template <class _OtherElementType,
               enable_if_t<is_convertible_v<_OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
@@ -422,7 +422,7 @@ public:
 
     template <size_t _Sz>
     _LIBCPP_INLINE_VISIBILITY
-    constexpr span(element_type (&__arr)[_Sz])          noexcept : __data{__arr}, __size{_Sz} {}
+    constexpr span(type_identity_t<element_type> (&__arr)[_Sz]) noexcept : __data{__arr}, __size{_Sz} {}
 
     template <class _OtherElementType, size_t _Sz,
               enable_if_t<is_convertible_v<_OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
