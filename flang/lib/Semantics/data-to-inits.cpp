@@ -234,8 +234,8 @@ DataInitializationCompiler::ConvertElement(
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
   }
-  if (std::optional<std::string> chValue{evaluate::GetScalarConstantValue<
-          evaluate::Type<TypeCategory::Character, 1>>(expr)}) {
+  if (std::optional<std::string> chValue{
+          evaluate::GetScalarConstantValue<evaluate::Ascii>(expr)}) {
     // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
     // (most) other Fortran compilers do.  Pad on the right with spaces
     // when short, truncate the right if long.

@@ -237,6 +237,11 @@ def IsTupleTypePred : CPred<"$_self.isa<::mlir::TupleType>()">;
 // Dialect definitions
 //===----------------------------------------------------------------------===//
 
+// "Enum" values for emitAccessorPrefix of Dialect.
+defvar kEmitAccessorPrefix_Raw = 0;      // Don't emit any getter/setter prefix.
+defvar kEmitAccessorPrefix_Prefixed = 1; // Only emit with getter/setter prefix.
+defvar kEmitAccessorPrefix_Both = 2;     // Emit without and with prefix.
+
 class Dialect {
   // The name of the dialect.
   string name = ?;
@@ -290,6 +295,17 @@ class Dialect {
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
+
+  // Whether to emit raw/with no prefix or format changes, or emit with
+  // accessor with prefix only and UpperCamel suffix or to emit accessors with
+  // both.
+  //
+  // If emitting with prefix is specified then the attribute/operand's
+  // name is converted to UpperCamel from snake_case (which would result in
+  // leaving UpperCamel unchanged while also converting lowerCamel to
+  // UpperCamel) and prefixed with `get` or `set` depending on if it is a getter
+  // or setter.
+  int emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 //===----------------------------------------------------------------------===//

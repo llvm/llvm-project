@@ -892,6 +892,7 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
+bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD=
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
