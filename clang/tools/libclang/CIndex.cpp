@@ -9087,7 +9087,7 @@ cxindex::checkForMacroInMacroDefinition(const MacroInfo *MI, const Token &Tok,
     return nullptr;
 
   // Check that the identifier is not one of the macro arguments.
-  if (std::find(MI->param_begin(), MI->param_end(), &II) != MI->param_end())
+  if (llvm::is_contained(MI->params(), &II))
     return nullptr;
 
   MacroDirective *InnerMD = PP.getLocalMacroDirectiveHistory(&II);

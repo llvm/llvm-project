@@ -1120,10 +1120,9 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
     for (const StringRef &CheckerOrPackage : CheckersAndPackages) {
       if (Diags) {
         bool IsChecker = CheckerOrPackage.contains('.');
-        bool IsValidName =
-            IsChecker
-                ? llvm::find(Checkers, CheckerOrPackage) != Checkers.end()
-                : llvm::find(Packages, CheckerOrPackage) != Packages.end();
+        bool IsValidName = IsChecker
+                               ? llvm::is_contained(Checkers, CheckerOrPackage)
+                               : llvm::is_contained(Packages, CheckerOrPackage);
 
         if (!IsValidName)
           Diags->Report(diag::err_unknown_analyzer_checker_or_package)
@@ -2875,7 +2874,7 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
                     llvm::ArrayRef<frontend::IncludeDirGroup> Groups,
                     llvm::Optional<bool> IsFramework,
                     llvm::Optional<bool> IgnoreSysRoot) {
-    return llvm::find(Groups, Entry.Group) != Groups.end() &&
+    return llvm::is_contained(Groups, Entry.Group) &&
            (!IsFramework || (Entry.IsFramework == *IsFramework)) &&
            (!IgnoreSysRoot || (Entry.IgnoreSysRoot == *IgnoreSysRoot));
   };

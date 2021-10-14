@@ -260,7 +260,7 @@ private:
     }
 
     bool isDestinationArgument(unsigned ArgNum) const {
-      return (llvm::find(DstArgs, ArgNum) != DstArgs.end());
+      return llvm::is_contained(DstArgs, ArgNum);
     }
 
     static bool isTaintedOrPointsToTainted(const Expr *E,

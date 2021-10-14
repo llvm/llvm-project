@@ -728,8 +728,7 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
     if (File == ExistingPPOpts.ImplicitPCHInclude)
       continue;
 
-    if (std::find(PPOpts.Includes.begin(), PPOpts.Includes.end(), File)
-          != PPOpts.Includes.end())
+    if (llvm::is_contained(PPOpts.Includes, File))
       continue;
 
     SuggestedPredefines += "#include \"";
@@ -739,9 +738,7 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
 
   for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (std::find(PPOpts.MacroIncludes.begin(), PPOpts.MacroIncludes.end(),
-                  File)
-        != PPOpts.MacroIncludes.end())
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
       continue;
 
     SuggestedPredefines += "#__include_macros \"";

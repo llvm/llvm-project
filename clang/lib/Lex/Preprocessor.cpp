@@ -1383,7 +1383,7 @@ bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value) {
 
 void Preprocessor::addCommentHandler(CommentHandler *Handler) {
   assert(Handler && "NULL comment handler");
-  assert(llvm::find(CommentHandlers, Handler) == CommentHandlers.end() &&
+  assert(!llvm::is_contained(CommentHandlers, Handler) &&
          "Comment handler already registered");
   CommentHandlers.push_back(Handler);
 }

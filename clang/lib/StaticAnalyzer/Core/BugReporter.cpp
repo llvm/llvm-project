@@ -1458,7 +1458,7 @@ static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
         break;
 
       // If the source is in the same context, we're already good.
-      if (llvm::find(SrcContexts, DstContext) != SrcContexts.end())
+      if (llvm::is_contained(SrcContexts, DstContext))
         break;
 
       // Update the subexpression node to point to the context edge.

@@ -60,7 +60,7 @@ void EditedSource::finishedCommit() {
     MacroArgUse ArgUse;
     std::tie(ExpLoc, ArgUse) = ExpArg;
     auto &ArgUses = ExpansionToArgMap[ExpLoc];
-    if (llvm::find(ArgUses, ArgUse) == ArgUses.end())
+    if (!llvm::is_contained(ArgUses, ArgUse))
       ArgUses.push_back(ArgUse);
   }
   CurrCommitMacroArgExps.clear();
