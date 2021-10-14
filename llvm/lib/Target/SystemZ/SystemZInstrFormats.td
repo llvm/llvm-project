@@ -5329,42 +5329,33 @@ multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
 
 // Define an instruction that operates on two fixed-length blocks of memory,
 // and associated pseudo instructions for operating on blocks of any size.
-// The Sequence form uses a straight-line sequence of instructions and
-// the Loop form uses a loop of length-256 instructions followed by
-// another instruction to handle the excess.
-// The LoopVarLen form is for a loop with a non-constant length parameter.
-multiclass MemorySS<string mnemonic, bits<8> opcode,
-                    SDPatternOperator sequence, SDPatternOperator loop> {
+// There are two pseudos for the different cases of when the length is
+// constant or variable. The length operand of a pseudo is actually one less
+// than the intended number of bytes, since the register case needs to use an
+// EXRL with a target instruction that adds one to the length always.
+multiclass MemorySS<string mnemonic, bits<8> opcode, SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length)]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(loop bdaddr12only:$dest, bdaddr12only:$src,
-                             imm64:$length, GR64:$count256)]>;
-    def LoopVarLen : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                         GR64:$length, GR64:$count256),
-                            [(loop bdaddr12only:$dest, bdaddr12only:$src,
-                                   GR64:$length, GR64:$count256)]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     imm64:$length)]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     ADDR64:$length)]>;
   }
 }
 
 // The same, but setting a CC result as comparison operator.
 multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
-                          SDPatternOperator sequence, SDPatternOperator loop> {
+                           SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(set CC, (sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                               imm64:$length))]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length, GR64:$count256))]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           imm64:$length))]>;
   }
 }
 
