@@ -643,11 +643,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = ConvertTypeForMem(ETy);
     if (PointeeType->isVoidTy())
       PointeeType = llvm::Type::getInt8Ty(getLLVMContext());
-
-    unsigned AS = PointeeType->isFunctionTy()
-                      ? getDataLayout().getProgramAddressSpace()
-                      : Context.getTargetAddressSpace(ETy);
-
+    unsigned AS = Context.getTargetAddressSpace(ETy);
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }
@@ -748,7 +744,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = CGM.getLangOpts().OpenCL
                                   ? CGM.getGenericBlockLiteralType()
                                   : ConvertTypeForMem(FTy);
-    unsigned AS = Context.getTargetAddressSpace(FTy);
+    // Block pointers lower to function type. For function type,
+    // getTargetAddressSpace() returns default address space for
+    // function pointer i.e. program address space. Therefore, for block
+    // pointers, it is important to pass qualifiers when calling
+    // getTargetAddressSpace(), to ensure that we get the address space
+    // for data pointers and not function pointers.
+    unsigned AS = Context.getTargetAddressSpace(FTy.getQualifiers());
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }
