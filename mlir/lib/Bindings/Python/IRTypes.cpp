@@ -406,7 +406,7 @@ class PyMemRefLayoutMapList;
 /// Ranked MemRef Type subclass - MemRefType.
 class PyMemRefType : public PyConcreteType<PyMemRefType, PyShapedType> {
 public:
-  static constexpr IsAFunctionTy isaFunction = mlirTypeIsARankedTensor;
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAMemRef;
   static constexpr const char *pyClassName = "MemRefType";
   using PyConcreteType::PyConcreteType;
 
