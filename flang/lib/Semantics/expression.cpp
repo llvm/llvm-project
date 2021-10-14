@@ -130,7 +130,7 @@ public:
   bool IsIntrinsicConcat() const;
 
   bool CheckConformance();
-  bool CheckForNullPointer(const char *where = "as an operand");
+  bool CheckForNullPointer(const char *where = "as an operand here");
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
@@ -165,7 +165,6 @@ private:
   void SayNoMatch(const std::string &, bool isAssignment = false);
   std::string TypeAsFortran(std::size_t);
   bool AnyUntypedOrMissingOperand();
-  bool CheckForUntypedNullPointer();
 
   ExpressionAnalyzer &context_;
   ActualArguments actuals_;
@@ -1727,8 +1726,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                     symbol->name()),
                 *symbol);
           }
-        } else if (IsAllocatable(*symbol) &&
-            std::holds_alternative<NullPointer>(value->u)) {
+        } else if (IsAllocatable(*symbol) && IsBareNullPointer(&*value)) {
           // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE
         } else if (auto symType{DynamicType::From(symbol)}) {
           if (valueType) {
@@ -1877,9 +1875,10 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          sym = ResolveGeneric(*sym, arguments, adjustment);
+          auto pair{ResolveGeneric(*sym, arguments, adjustment)};
+          sym = pair.first;
           if (!sym) {
-            EmitGenericResolutionError(*sc.component.symbol);
+            EmitGenericResolutionError(*sc.component.symbol, pair.second);
             return std::nullopt;
           }
         }
@@ -1914,21 +1913,25 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
 // Can actual be argument associated with dummy?
 static bool CheckCompatibleArgument(bool isElemental,
     const ActualArgument &actual, const characteristics::DummyArgument &dummy) {
+  const auto *expr{actual.UnwrapExpr()};
   return std::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &x) {
-            if (!isElemental && actual.Rank() != x.type.Rank() &&
+            if (x.attrs.test(characteristics::DummyDataObject::Attr::Pointer) &&
+                IsBareNullPointer(expr)) {
+              // NULL() without MOLD= is compatible with any dummy data pointer
+              // but cannot be allowed to lead to ambiguity.
+              return true;
+            } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
                     characteristics::TypeAndShape::Attr::AssumedRank)) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
               return x.type.type().IsTkCompatibleWith(*actualType);
-            } else {
-              return false;
             }
+            return false;
           },
           [&](const characteristics::DummyProcedure &) {
-            const auto *expr{actual.UnwrapExpr()};
             return expr && IsProcedurePointerTarget(*expr);
           },
           [&](const characteristics::AlternateReturn &) {
@@ -1992,11 +1995,16 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
-const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
-    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
-    bool mightBeStructureConstructor) {
+std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
+    const Symbol &symbol, const ActualArguments &actuals,
+    const AdjustActuals &adjustActuals, bool mightBeStructureConstructor) {
   const Symbol *elemental{nullptr}; // matching elemental specific proc
+  const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto &details{symbol.GetUltimate().get<semantics::GenericDetails>()};
+  bool anyBareNullActual{
+      std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
+        return IsBareNullPointer(iter->UnwrapExpr());
+      }) != actuals.end()};
   for (const Symbol &specific : details.specificProcs()) {
     if (!ResolveForward(specific)) {
       continue;
@@ -2011,35 +2019,47 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
         }
       }
       if (semantics::CheckInterfaceForGeneric(
-              *procedure, localActuals, GetFoldingContext())) {
-        if (CheckCompatibleArguments(*procedure, localActuals)) {
-          if (!procedure->IsElemental()) {
-            // takes priority over elemental match
-            return &AccessSpecific(symbol, specific);
+              *procedure, localActuals, GetFoldingContext()) &&
+          CheckCompatibleArguments(*procedure, localActuals)) {
+        if ((procedure->IsElemental() && elemental) ||
+            (!procedure->IsElemental() && nonElemental)) {
+          // 16.9.144(6): a bare NULL() is not allowed as an actual
+          // argument to a generic procedure if the specific procedure
+          // cannot be unambiguously distinguished
+          return {nullptr, true /* due to NULL actuals */};
+        }
+        if (!procedure->IsElemental()) {
+          // takes priority over elemental match
+          nonElemental = &specific;
+          if (!anyBareNullActual) {
+            break; // unambiguous case
           }
+        } else {
           elemental = &specific;
         }
       }
     }
   }
-  if (elemental) {
-    return &AccessSpecific(symbol, *elemental);
+  if (nonElemental) {
+    return {&AccessSpecific(symbol, *nonElemental), false};
+  } else if (elemental) {
+    return {&AccessSpecific(symbol, *elemental), false};
   }
   // Check parent derived type
   if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
     if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
       if (extended->GetUltimate().has<semantics::GenericDetails>()) {
-        if (const Symbol *
-            result{ResolveGeneric(*extended, actuals, adjustActuals, false)}) {
-          return result;
+        auto pair{ResolveGeneric(*extended, actuals, adjustActuals, false)};
+        if (pair.first) {
+          return pair;
         }
       }
     }
   }
   if (mightBeStructureConstructor && details.derivedType()) {
-    return details.derivedType();
+    return {details.derivedType(), false};
   }
-  return nullptr;
+  return {nullptr, false};
 }
 
 const Symbol &ExpressionAnalyzer::AccessSpecific(
@@ -2075,14 +2095,14 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
   }
 }
 
-void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol) {
-  if (semantics::IsGenericDefinedOp(symbol)) {
-    Say("No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US,
-        symbol.name());
-  } else {
-    Say("No specific procedure of generic '%s' matches the actual arguments"_err_en_US,
-        symbol.name());
-  }
+void ExpressionAnalyzer::EmitGenericResolutionError(
+    const Symbol &symbol, bool dueToNullActuals) {
+  Say(dueToNullActuals
+          ? "One or more NULL() actual arguments to the generic procedure '%s' requires a MOLD= for disambiguation"_err_en_US
+          : semantics::IsGenericDefinedOp(symbol)
+          ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
+          : "No specific procedure of generic '%s' matches the actual arguments"_err_en_US,
+      symbol.name());
 }
 
 auto ExpressionAnalyzer::GetCalleeAndArguments(
@@ -2121,10 +2141,13 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     }
   } else {
     CheckForBadRecursion(name.source, ultimate);
+    bool dueToNullActual{false};
     if (ultimate.has<semantics::GenericDetails>()) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
-      symbol = ResolveGeneric(
-          *symbol, arguments, noAdjustment, mightBeStructureConstructor);
+      auto pair{ResolveGeneric(
+          *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
+      symbol = pair.first;
+      dueToNullActual = pair.second;
     }
     if (symbol) {
       if (symbol->GetUltimate().has<semantics::DerivedTypeDetails>()) {
@@ -2152,7 +2175,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
           std::move(specificCall->arguments)};
     } else {
-      EmitGenericResolutionError(*name.symbol);
+      EmitGenericResolutionError(*name.symbol, dueToNullActual);
     }
   }
   return std::nullopt;
@@ -3249,9 +3272,6 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(const char *opr,
     parser::MessageFixedText error, const Symbol **definedOpSymbolPtr,
     bool isUserOp) {
-  if (!CheckForUntypedNullPointer()) {
-    return std::nullopt;
-  }
   if (AnyUntypedOrMissingOperand()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
     return std::nullopt;
@@ -3386,11 +3406,11 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const auto &scope{context_.context().FindScope(source_)};
   if (const Symbol * symbol{scope.FindSymbol(oprName)}) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    if (const Symbol *
-        specific{context_.ResolveGeneric(*symbol, actuals_, noAdjustment)}) {
-      proc = specific;
+    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment)};
+    if (pair.first) {
+      proc = pair.first;
     } else {
-      context_.EmitGenericResolutionError(*symbol);
+      context_.EmitGenericResolutionError(*symbol, pair.second);
     }
   }
   int passedObjectIndex{-1};
@@ -3490,11 +3510,11 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
       [&](const Symbol &proc, ActualArguments &) {
         return passIndex == GetPassIndex(proc);
       }};
-  const Symbol *result{context_.ResolveGeneric(*symbol, actuals_, adjustment)};
-  if (!result) {
-    context_.EmitGenericResolutionError(*symbol);
+  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment)};
+  if (!pair.first) {
+    context_.EmitGenericResolutionError(*symbol, pair.second);
   }
-  return result;
+  return pair.first;
 }
 
 // If there is an implicit conversion between intrinsic types, make it explicit
@@ -3597,29 +3617,13 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
 
 bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() {
   for (const auto &actual : actuals_) {
-    if (!actual || !actual->GetType()) {
+    if (!actual ||
+        (!actual->GetType() && !IsBareNullPointer(actual->UnwrapExpr()))) {
       return true;
     }
   }
   return false;
 }
-
-bool ArgumentAnalyzer::CheckForUntypedNullPointer() {
-  for (const std::optional<ActualArgument> &arg : actuals_) {
-    if (arg) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
-        if (std::holds_alternative<NullPointer>(expr->u)) {
-          context_.Say(source_,
-              "A typeless NULL() pointer is not allowed as an operand"_err_en_US);
-          fatalErrors_ = true;
-          return false;
-        }
-      }
-    }
-  }
-  return true;
-}
-
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
