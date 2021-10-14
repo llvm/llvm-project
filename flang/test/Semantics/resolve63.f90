@@ -172,17 +172,17 @@ contains
     y = -z'1'
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
     y = x + z'1'
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null()
     !ERROR: A NULL() pointer is not allowed as a relational operand
     l = null(px) /= null(px)
-    !ERROR: A NULL() pointer is not allowed as an operand
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null(px)
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = px /= null()
     !ERROR: A NULL() pointer is not allowed as a relational operand
     l = px /= null(px)
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = null() /= null()
   end
 end
@@ -304,17 +304,43 @@ module m7
     j = null(mold=x1) - x1
     j = x1 / x1
     j = x1 / null(mold=x1)
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
     j = null() - null(mold=x1)
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
     j = null(mold=x1) - null()
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
     j = null() - null()
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types untyped and TYPE(t1)
     j = null() / null(mold=x1)
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types TYPE(t1) and untyped
     j = null(mold=x1) / null()
-    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    !ERROR: A NULL() pointer is not allowed as an operand here
     j = null() / null()
   end
+end
+
+! 16.9.144(6)
+module m8
+  interface generic
+    procedure s1, s2
+  end interface
+ contains
+  subroutine s1(ip1, rp1)
+    integer, pointer, intent(in) :: ip1
+    real, pointer, intent(in) :: rp1
+  end subroutine
+  subroutine s2(rp2, ip2)
+    real, pointer, intent(in) :: rp2
+    integer, pointer, intent(in) :: ip2
+  end subroutine
+  subroutine test
+    integer, pointer :: ip
+    real, pointer :: rp
+    call generic(ip, rp) ! ok
+    call generic(ip, null()) ! ok
+    call generic(rp, null()) ! ok
+    call generic(null(), rp) ! ok
+    call generic(null(), ip) ! ok
+    call generic(null(mold=ip), null()) ! ok
+    call generic(null(), null(mold=ip)) ! ok
+    !ERROR: One or more NULL() actual arguments to the generic procedure 'generic' requires a MOLD= for disambiguation
+    call generic(null(), null())
+  end subroutine
 end

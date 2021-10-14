@@ -756,6 +756,10 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
   }
 }
 
+bool IsBareNullPointer(const Expr<SomeType> *expr) {
+  return expr && std::holds_alternative<NullPointer>(expr->u);
+}
+
 // IsNullPointer()
 struct IsNullPointerHelper {
   template <typename A> bool operator()(const A &) const { return false; }

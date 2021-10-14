@@ -2316,14 +2316,11 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
   parser::Message *msg;
   if (scope.sourceRange().Contains(name)) {
     msg = &context_.Say(name,
-        "Generic '%s' may not have specific procedures '%s' and"
-        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        "Generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
         MakeOpName(name), name1, name2);
   } else {
     msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
-        "USE-associated generic '%s' may not have specific procedures '%s' "
-        "and"
-        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
         MakeOpName(name), name1, name2);
   }
   AttachDeclaration(*msg, scope, proc1);
