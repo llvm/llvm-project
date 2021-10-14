@@ -1279,12 +1279,19 @@ struct InsertSliceOpSourceCastInserter final
               getConstantIntValue(insertSliceOp.getMixedSizes()[i]))
         newSrcShape[i] = *constInt;
     }
+
     RankedTensorType newSrcType =
         RankedTensorType::get(newSrcShape, srcType.getElementType());
-    if (srcType == newSrcType)
+    if (srcType == newSrcType ||
+        !preservesStaticInformation(srcType, newSrcType) ||
+        !tensor::CastOp::areCastCompatible(srcType, newSrcType))
       return failure();
 
-    // srcType and newSrcType are different. Insert a cast.
+    // newSrcType is:
+    //   1) Different from srcType.
+    //   2) "More static" than srcType.
+    //   3) Cast-compatible with srcType.
+    // Insert the cast.
     Value cast = rewriter.create<tensor::CastOp>(
         insertSliceOp.getLoc(), newSrcType, insertSliceOp.source());
     rewriter.replaceOpWithNewOp<InsertSliceOp>(

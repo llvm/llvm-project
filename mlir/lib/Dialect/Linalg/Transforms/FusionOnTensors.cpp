@@ -1,4 +1,4 @@
-//===- Fusion.cpp - Implementation of linalg Fusion -----------------------===//
+//===- FusionOnTensors.cpp - Implementation of linalg Fusion --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,8 +35,8 @@ using namespace linalg;
 /// producer is always possible. However, depending on the consumer indexing
 /// map, not all slice elements may be consumed and the tiles may overlap. In
 /// these cases, fusion introduces redundant computation.
-SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
-                                       ArrayRef<int64_t> tiledLoopDims) {
+static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
+                                              ArrayRef<int64_t> tiledLoopDims) {
   // Get the consumer operand indexing map.
   LinalgOp consumerOp = consumerOperand->getOwner();
   AffineMap indexingMap = consumerOp.getTiedIndexingMap(consumerOperand);

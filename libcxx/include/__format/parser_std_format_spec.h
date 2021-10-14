@@ -303,7 +303,7 @@ protected:
     return __r.__ptr;
   }
 
-  void _LIBCPP_HIDE_FROM_ABI constexpr __substitute_width_arg_id(auto __arg) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __substitute_width_arg_id(auto __arg) {
     _LIBCPP_ASSERT(__width_as_arg == 1,
                    "Substitute width called when no substitution is required");
 
@@ -395,7 +395,7 @@ protected:
     return __r.__ptr;
   }
 
-  void _LIBCPP_HIDE_FROM_ABI constexpr __substitute_precision_arg_id(
+  _LIBCPP_HIDE_FROM_ABI constexpr void __substitute_precision_arg_id(
       auto __arg) {
     _LIBCPP_ASSERT(
         __precision_as_arg == 1 && __precision != __format::__number_max,
@@ -576,7 +576,7 @@ private:
   }
 
   /** Processes the parsed std-format-spec based on the parsed display type. */
-  void _LIBCPP_HIDE_FROM_ABI constexpr __process_display_type() {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type() {
     switch (this->__type) {
     case _Flags::_Type::__default:
     case _Flags::_Type::__string:
