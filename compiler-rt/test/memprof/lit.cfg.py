@@ -74,9 +74,6 @@ if config.memprof_dynamic:
   config.substitutions.append( ("%clang_memprof_static ", build_invocation(clang_memprof_static_cflags)) )
   config.substitutions.append( ("%clangxx_memprof_static ", build_invocation(clang_memprof_static_cxxflags)) )
 
-# Some tests uses C++11 features such as lambdas and need to pass -std=c++11.
-config.substitutions.append(("%stdcxx11 ", '-std=c++11 '))
-
 config.substitutions.append( ("%libdl", libdl_flag) )
 
 config.available_features.add('memprof-' + config.bits + '-bits')
