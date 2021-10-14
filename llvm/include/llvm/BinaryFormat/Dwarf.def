@@ -625,6 +625,9 @@ HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
 HANDLE_DW_AT(0x3e0b, LLVM_num_extra_inhabitants, 0, LLVM)
 HANDLE_DW_AT(0x3e0c, LLVM_stmt_sequence, 0, LLVM)
 HANDLE_DW_AT(0x3e0d, LLVM_coro_suspend_idx, 0, LLVM)
+// The DWARF v6 working draft defines DW_AT_alloc_type; use this LLVM-private ID
+// until that is released as an official standard.
+HANDLE_DW_AT(0x3e0e, LLVM_alloc_type, 0, LLVM)
 
 // Apple extensions.
 
