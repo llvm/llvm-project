@@ -106,6 +106,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
+  } else if (name == "lge" || name == "lgt" || name == "lle" || name == "llt") {
+    // Rewrite LGE/LGT/LLE/LLT into ASCII character relations
+    auto *cx0{UnwrapExpr<Expr<SomeCharacter>>(args[0])};
+    auto *cx1{UnwrapExpr<Expr<SomeCharacter>>(args[1])};
+    if (cx0 && cx1) {
+      return Fold(context,
+          ConvertToType<T>(
+              PackageRelation(name == "lge" ? RelationalOperator::GE
+                      : name == "lgt"       ? RelationalOperator::GT
+                      : name == "lle"       ? RelationalOperator::LE
+                                            : RelationalOperator::LT,
+                  ConvertToType<Ascii>(std::move(*cx0)),
+                  ConvertToType<Ascii>(std::move(*cx1)))));
+    }
   } else if (name == "logical") {
     if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
       return Fold(context, ConvertToType<T>(std::move(*expr)));
@@ -126,7 +140,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{true};
   }
   // TODO: btest, dot_product, is_iostat_end,
-  // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,
+  // is_iostat_eor, logical, matmul, out_of_range,
   // parity, transfer
   return Expr<T>{std::move(funcRef)};
 }
