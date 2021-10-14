@@ -167,6 +167,47 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
               UnorderedElementsAre("\"unused.h\"", "\"dir/unused.h\""));
 }
 
+TEST(IncludeCleaner, ScratchBuffer) {
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.Code = R"cpp(
+    #include "macro_spelling_in_scratch_buffer.h"
+
+    using flags::FLAGS_FOO;
+
+    int concat(a, b) = 42;
+    )cpp";
+  // The pasting operator in combination with DEFINE_FLAG will create
+  // ScratchBuffer with `flags::FLAGS_FOO` that will have FileID but not
+  // FileEntry.
+  TU.AdditionalFiles["macro_spelling_in_scratch_buffer.h"] = R"cpp(
+    #define DEFINE_FLAG(X) \
+    namespace flags { \
+    int FLAGS_##X; \
+    } \
+
+    DEFINE_FLAG(FOO)
+
+    #define ab x
+    #define concat(x, y) x##y
+    )cpp";
+  ParsedAST AST = TU.build();
+  auto &SM = AST.getSourceManager();
+  auto &Includes = AST.getIncludeStructure();
+  auto ReferencedFiles = findReferencedFiles(findReferencedLocations(AST), SM);
+  auto Entry = SM.getFileManager().getFile(
+      testPath("macro_spelling_in_scratch_buffer.h"));
+  ASSERT_TRUE(Entry);
+  auto FID = SM.translateFile(*Entry);
+  // No "<scratch space>" FID.
+  EXPECT_THAT(ReferencedFiles, UnorderedElementsAre(FID));
+  // Should not crash due to <scratch space> "files" missing from include
+  // structure.
+  EXPECT_THAT(
+      getUnused(Includes, translateToHeaderIDs(ReferencedFiles, Includes, SM)),
+      ::testing::IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

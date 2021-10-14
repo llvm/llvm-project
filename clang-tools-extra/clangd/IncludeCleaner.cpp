@@ -121,9 +121,15 @@ struct ReferencedFiles {
     if (!Macros.insert(FID).second)
       return;
     const auto &Exp = SM.getSLocEntry(FID).getExpansion();
-    add(Exp.getSpellingLoc());
-    add(Exp.getExpansionLocStart());
-    add(Exp.getExpansionLocEnd());
+    // For token pasting operator in macros, spelling and expansion locations
+    // can be within a temporary buffer that Clang creates (scratch space or
+    // ScratchBuffer). That is not a real file we can include.
+    if (!SM.isWrittenInScratchSpace(Exp.getSpellingLoc()))
+      add(Exp.getSpellingLoc());
+    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocStart()))
+      add(Exp.getExpansionLocStart());
+    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocEnd()))
+      add(Exp.getExpansionLocEnd());
   }
 };
 
