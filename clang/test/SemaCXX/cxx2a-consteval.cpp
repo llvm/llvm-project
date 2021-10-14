@@ -612,3 +612,34 @@ using T = decltype(g(f()));
 static_assert(is_same<long, T>::value);
 
 } // namespace unevaluated
+
+namespace PR50779 {
+struct derp {
+  int b = 0;
+};
+
+constexpr derp d;
+
+struct test {
+  consteval int operator[](int i) const { return {}; }
+  consteval const derp * operator->() const { return &d; }
+  consteval int f() const { return 12; } // expected-note 2{{declared here}}
+};
+
+constexpr test a;
+
+// We previously rejected both of these overloaded operators as taking the
+// address of a consteval function outside of an immediate context, but we
+// accepted direct calls to the overloaded operator. Now we show that we accept
+// both forms.
+constexpr int s = a.operator[](1);
+constexpr int t = a[1];
+constexpr int u = a.operator->()->b;
+constexpr int v = a->b;
+// FIXME: I believe this case should work, but we currently reject.
+constexpr int w = (a.*&test::f)(); // expected-error {{cannot take address of consteval function 'f' outside of an immediate invocation}}
+constexpr int x = a.f();
+
+// Show that we reject when not in an immediate context.
+int w2 = (a.*&test::f)(); // expected-error {{cannot take address of consteval function 'f' outside of an immediate invocation}}
+}
