@@ -1,6 +1,10 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --skip-symbolization
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --skip-symbolization
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
 CHECK: main:669:0
