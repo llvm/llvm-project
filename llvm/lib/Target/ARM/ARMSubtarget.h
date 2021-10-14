@@ -65,6 +65,7 @@ protected:
     CortexA77,
     CortexA78,
     CortexA78C,
+    CortexA710,
     CortexA8,
     CortexA9,
     CortexM3,

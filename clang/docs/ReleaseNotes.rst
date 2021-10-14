@@ -194,6 +194,7 @@ Arm and AArch64 Support in Clang
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A510 (``cortex-a510``)
   - Arm Cortex-X2 (``cortex-x2``)
+  - Arm Cortex-A710 (``cortex-A710``)
 
 - The -mtune flag is no longer ignored for AArch64. It is now possible to
   tune code generation for a particular CPU with -mtune without setting any

@@ -60,6 +60,7 @@ public:
     CortexA77,
     CortexA78,
     CortexA78C,
+    CortexA710,
     CortexR82,
     CortexX1,
     CortexX2,

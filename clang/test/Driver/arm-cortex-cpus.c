@@ -949,6 +949,17 @@
 // CHECK-CORTEX-A78C-MFPU: "-target-feature" "+sha2"
 // CHECK-CORTEX-A78C-MFPU: "-target-feature" "+aes"
 
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a710 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A710 %s
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a710 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A710-MFPU %s
+// CHECK-CORTEX-A710: "-cc1"{{.*}} "-triple" "armv9a-{{.*}} "-target-cpu" "cortex-a710"
+// CHECK-CORTEX-A710-NOT: "-target-feature" "{{[+-]}}sm4"
+// CHECK-CORTEX-A710-NOT: "-target-feature" "{{[+-]}}sha3"
+// CHECK-CORTEX-A710: "-target-feature" "-aes"
+// CHECK-CORTEX-A710-SAME: {{$}}
+// CHECK-CORTEX-A710-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
+// CHECK-CORTEX-A710-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A710-MFPU: "-target-feature" "+aes"
+
 // RUN: %clang -target arm -mcpu=cortex-m23 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8MBASE %s
 // CHECK-CPUV8MBASE:  "-cc1"{{.*}} "-triple" "thumbv8m.base-
 
