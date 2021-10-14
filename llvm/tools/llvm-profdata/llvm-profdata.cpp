@@ -2069,7 +2069,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             bool ShowAllFunctions, bool ShowCS,
                             uint64_t ValueCutoff, bool OnlyListBelow,
                             const std::string &ShowFunction, bool TextFormat,
-                            bool ShowBinaryIds, raw_fd_ostream &OS) {
+                            raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -2251,11 +2251,6 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     OS << "Total count: " << PS->getTotalCount() << "\n";
     PS->printDetailedSummary(OS);
   }
-
-  if (ShowBinaryIds)
-    if (Error E = Reader->printBinaryIds(OS))
-      exitWithError(std::move(E), Filename);
-
   return 0;
 }
 
@@ -2506,8 +2501,6 @@ static int show_main(int argc, const char *argv[]) {
       cl::desc("Show the information of each section in the sample profile. "
                "The flag is only usable when the sample profile is in "
                "extbinary format"));
-  cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
-                              cl::desc("Show binary ids in the profile. "));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -2526,11 +2519,11 @@ static int show_main(int argc, const char *argv[]) {
     WithColor::warning() << "-function argument ignored: showing all functions\n";
 
   if (ProfileKind == instr)
-    return showInstrProfile(
-        Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
-        ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
-        ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, OS);
+    return showInstrProfile(Filename, ShowCounts, TopNFunctions,
+                            ShowIndirectCallTargets, ShowMemOPSizes,
+                            ShowDetailedSummary, DetailedSummaryCutoffs,
+                            ShowAllFunctions, ShowCS, ValueCutoff,
+                            OnlyListBelow, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowDetailedSummary, ShowFunction,

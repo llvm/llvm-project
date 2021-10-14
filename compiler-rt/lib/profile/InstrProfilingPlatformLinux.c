@@ -9,13 +9,9 @@
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
     (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__)
 
-#include <elf.h>
-#include <link.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 
 #define PROF_DATA_START INSTR_PROF_SECT_START(INSTR_PROF_DATA_COMMON)
 #define PROF_DATA_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_COMMON)
@@ -75,109 +71,5 @@ COMPILER_RT_VISIBILITY ValueProfNode *__llvm_profile_end_vnodes(void) {
 }
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = &PROF_VNODES_START;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = &PROF_VNODES_STOP;
-
-static size_t RoundUp(size_t size, size_t align) {
-  return (size + align - 1) & ~(align - 1);
-}
-
-/*
- * Write binary id length and then its data, because binary id does not
- * have a fixed length.
- */
-int WriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
-                     const uint8_t *BinaryIdData) {
-  ProfDataIOVec BinaryIdIOVec[] = {
-      {&BinaryIdLen, sizeof(uint64_t), 1, 0},
-      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0}};
-  if (Writer->Write(Writer, BinaryIdIOVec,
-                    sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
-    return -1;
-
-  /* Successfully wrote binary id, report success. */
-  return 0;
-}
-
-/*
- * Look for the note that has the name "GNU\0" and type NT_GNU_BUILD_ID
- * that contains build id. If build id exists, write binary id.
- *
- * Each note in notes section starts with a struct which includes
- * n_namesz, n_descsz, and n_type members. It is followed by the name
- * (whose length is defined in n_namesz) and then by the descriptor
- * (whose length is defined in n_descsz).
- *
- * Note sections like .note.ABI-tag and .note.gnu.build-id are aligned
- * to 4 bytes, so round n_namesz and n_descsz to the nearest 4 bytes.
- */
-int WriteBinaryIdForNote(ProfDataWriter *Writer, const ElfW(Nhdr) * Note) {
-  int BinaryIdSize = 0;
-
-  const char *NoteName = (const char *)Note + sizeof(ElfW(Nhdr));
-  if (Note->n_type == NT_GNU_BUILD_ID && Note->n_namesz == 4 &&
-      memcmp(NoteName, "GNU\0", 4) == 0) {
-
-    uint64_t BinaryIdLen = Note->n_descsz;
-    const uint8_t *BinaryIdData =
-        (const uint8_t *)(NoteName + RoundUp(Note->n_namesz, 4));
-    if (Writer != NULL &&
-        WriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData) == -1)
-      return -1;
-
-    BinaryIdSize = sizeof(BinaryIdLen) + BinaryIdLen;
-  }
-
-  return BinaryIdSize;
-}
-
-/*
- * Helper function that iterates through notes section and find build ids.
- * If writer is given, write binary ids into profiles.
- * If an error happens while writing, return -1.
- */
-int WriteBinaryIds(ProfDataWriter *Writer, const ElfW(Nhdr) * Note,
-                   const ElfW(Nhdr) * NotesEnd) {
-  int TotalBinaryIdsSize = 0;
-  while (Note < NotesEnd) {
-    int Result = WriteBinaryIdForNote(Writer, Note);
-    if (Result == -1)
-      return -1;
-    TotalBinaryIdsSize += Result;
-
-    /* Calculate the offset of the next note in notes section. */
-    size_t NoteOffset = sizeof(ElfW(Nhdr)) + RoundUp(Note->n_namesz, 4) +
-                        RoundUp(Note->n_descsz, 4);
-    Note = (const ElfW(Nhdr) *)((const char *)(Note) + NoteOffset);
-  }
-
-  return TotalBinaryIdsSize;
-}
-
-/*
- * Write binary ids into profiles if writer is given.
- * Return the total size of binary ids.
- * If an error happens while writing, return -1.
- */
-COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
-  const ElfW(Ehdr) *ElfHeader = &__ehdr_start;
-  const ElfW(Phdr) *ProgramHeader =
-      (const ElfW(Phdr) *)((uintptr_t)ElfHeader + ElfHeader->e_phoff);
-
-  uint32_t I;
-  /* Iterate through entries in the program header. */
-  for (I = 0; I < ElfHeader->e_phnum; I++) {
-    /* Look for the notes section in program header entries. */
-    if (ProgramHeader[I].p_type != PT_NOTE)
-      continue;
-
-    const ElfW(Nhdr) *Note =
-        (const ElfW(Nhdr) *)((uintptr_t)ElfHeader + ProgramHeader[I].p_offset);
-    const ElfW(Nhdr) *NotesEnd =
-        (const ElfW(Nhdr) *)((const char *)(Note) + ProgramHeader[I].p_filesz);
-    return WriteBinaryIds(Writer, Note, NotesEnd);
-  }
-
-  return 0;
-}
 
 #endif

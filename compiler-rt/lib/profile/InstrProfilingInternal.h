@@ -193,10 +193,4 @@ COMPILER_RT_VISIBILITY extern ValueProfNode *CurrentVNode;
 COMPILER_RT_VISIBILITY extern ValueProfNode *EndVNode;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
 
-/*
- * Write binary ids into profiles if writer is given.
- * Return -1 if an error occurs, otherwise, return total size of binary ids.
- */
-int __llvm_write_binary_ids(ProfDataWriter *Writer);
-
 #endif
