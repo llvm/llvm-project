@@ -5,11 +5,11 @@
 ! NOTE: Use `-E` so that the compiler driver stops after the 1st compilation phase, preprocessing. That's all we need.
 
 ! TEST 1: Both input files are processed (output is printed to stdout)
-! RUN: %flang -E -Xflang -test-io %s %S/Inputs/hello-world.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
+! RUN: %flang -E %s %S/Inputs/hello-world.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
 
 ! TEST 2: None of the files is processed (not possible to specify the output file when multiple input files are present)
-! RUN: not %flang -E -Xflang -test-io -o - %S/Inputs/hello-world.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
-! RUN: not %flang -E -Xflang -test-io -o %t %S/Inputs/hello-world.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang -E -o - %S/Inputs/hello-world.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang -E -o %t %S/Inputs/hello-world.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
 
 !----------------------------------------
 ! FLANG FRONTEND DRIVER (flang -fc1)
@@ -36,13 +36,13 @@
 ! FLANG-NEXT:    Integer :: i, j
 ! FLANG-NEXT:    i = 2; j = 3; i= i * j;
 ! FLANG-NEXT:  End Program arithmetic
-! FLANG-NEXT:!This is a test file with a hello world in Fortran
-! FLANG-NEXT:program hello
+
+! FLANG-LABEL: program hello
 ! FLANG-NEXT:  implicit none
 ! FLANG-NEXT:  write(*,*) 'Hello world!'
 ! FLANG-NEXT:end program hello
 
-! TEST 2: `-o` does not work for `flang` when multiple input files are present
+! TEST 2: `-o` does not when multiple input files are present
 ! ERROR: flang-new: error: cannot specify -o when generating multiple output files
 
 ! TEST 3: The output file _was not_ specified - `flang_fc1` will process all
@@ -52,16 +52,14 @@
 ! FC1-OUTPUT1-NEXT:    i = 2; j = 3; i= i * j;
 ! FC1-OUTPUT1-NEXT:  End Program arithmetic
 
-! FC1-OUTPUT2-LABEL:!This is a test file with a hello world in Fortran
-! FC1-OUTPUT2-NEXT:program hello
+! FC1-OUTPUT2-LABEL:program hello
 ! FC1-OUTPUT2-NEXT:  implicit none
 ! FC1-OUTPUT2-NEXT:  write(*,*) 'Hello world!'
 ! FC1-OUTPUT2-NEXT:end program hello
 
 ! TEST 4: The output file _was_ specified - `flang_fc1` will process only
 ! the last input file and generate the corresponding output.
-! FC1-OUTPUT3-LABEL:!This is a test file with a hello world in Fortran
-! FC1-OUTPUT3-NEXT:program hello
+! FC1-OUTPUT3-LABEL:program hello
 ! FC1-OUTPUT3-NEXT:  implicit none
 ! FC1-OUTPUT3-NEXT:  write(*,*) 'Hello world!'
 ! FC1-OUTPUT3-NEXT:end program hello
