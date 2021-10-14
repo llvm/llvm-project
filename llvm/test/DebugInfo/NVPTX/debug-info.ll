@@ -18,10 +18,10 @@
 ; CHECK: .param .u64 {{.+}}
 ; CHECK: )
 ; CHECK: {
-; CHECK: .reg .pred      %p<2>;
-; CHECK: .reg .f32       %f<5>;
-; CHECK: .reg .b32       %r<6>;
-; CHECK: .reg .b64       %rd<8>;
+; CHECK-DAG: .reg .pred      %p<2>;
+; CHECK-DAG: .reg .f32       %f<5>;
+; CHECK-DAG: .reg .b32       %r<6>;
+; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0
 ; CHECK: ld.param.u32    %r{{.+}}, [{{.+}}];
 ; CHECK: .loc [[BUILTUIN_VARS_H:[0-9]+]] 78 180
