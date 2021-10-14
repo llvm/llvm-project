@@ -452,6 +452,10 @@ using TileSizeComputationFunction =
 using PaddingValueComputationFunction =
     std::function<FailureOr<Value>(OpBuilder &, OpOperand &)>;
 
+/// Callback returning true if the pad tensor operation defining the given
+/// OpOperand shall be marked as nofold to enable packing.
+using PaddingNoFoldComputationFunction = std::function<bool(OpOperand &)>;
+
 struct LinalgTilingOptions {
   /// Computation function that returns the tile sizes for each operation.
   /// Delayed construction of constant tile sizes should occur to interoperate
@@ -523,6 +527,18 @@ struct LinalgTilingOptions {
   LinalgTilingOptions &
   setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
     paddingValueComputationFunction = std::move(fun);
+    return *this;
+  }
+
+  /// Callback returning true if the pad tensor operation defining the given
+  /// OpOperand shall be marked as nofold to enable packing. A padding operation
+  /// is only marked nofold if `paddingNoFoldComputationFunction` is set and
+  /// returns true. Otherwise, the nofold attribute is set to false.
+  PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
+
+  LinalgTilingOptions &
+  setPaddingNoFoldComputationFunction(PaddingNoFoldComputationFunction fun) {
+    paddingNoFoldComputationFunction = std::move(fun);
     return *this;
   }
 
@@ -999,6 +1015,7 @@ struct PadTensorOpTransformationPattern : public OpRewritePattern<PadTensorOp> {
 LogicalResult
 rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
                   const PaddingValueComputationFunction &paddingFunc,
+                  const PaddingNoFoldComputationFunction &nofoldFunc,
                   LinalgOp &paddedOp);
 
 using OptimizeCopyFn =
