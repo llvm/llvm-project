@@ -40,13 +40,13 @@
 # CHECK: attribute      5, "rv32i2p0_v0p10"
 
 .attribute arch, "rv32izba"
-# CHECK: attribute      5, "rv32i2p0_zba0p93"
+# CHECK: attribute      5, "rv32i2p0_zba1p0"
 
 .attribute arch, "rv32izbb"
-# CHECK: attribute      5, "rv32i2p0_zbb0p93"
+# CHECK: attribute      5, "rv32i2p0_zbb1p0"
 
 .attribute arch, "rv32izbc"
-# CHECK: attribute      5, "rv32i2p0_zbc0p93"
+# CHECK: attribute      5, "rv32i2p0_zbc1p0"
 
 .attribute arch, "rv32izbe"
 # CHECK: attribute      5, "rv32i2p0_zbe0p93"
@@ -64,7 +64,7 @@
 # CHECK: attribute      5, "rv32i2p0_zbr0p93"
 
 .attribute arch, "rv32izbs"
-# CHECK: attribute      5, "rv32i2p0_zbs0p93"
+# CHECK: attribute      5, "rv32i2p0_zbs1p0"
 
 .attribute arch, "rv32izbt"
 # CHECK: attribute      5, "rv32i2p0_zbt0p93"

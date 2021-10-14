@@ -182,13 +182,13 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   if (HasZba)
-    Builder.defineMacro("__riscv_zba", "93000");
+    Builder.defineMacro("__riscv_zba", "1000000");
 
   if (HasZbb)
-    Builder.defineMacro("__riscv_zbb", "93000");
+    Builder.defineMacro("__riscv_zbb", "1000000");
 
   if (HasZbc)
-    Builder.defineMacro("__riscv_zbc", "93000");
+    Builder.defineMacro("__riscv_zbc", "1000000");
 
   if (HasZbe)
     Builder.defineMacro("__riscv_zbe", "93000");
@@ -206,7 +206,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_zbr", "93000");
 
   if (HasZbs)
-    Builder.defineMacro("__riscv_zbs", "93000");
+    Builder.defineMacro("__riscv_zbs", "1000000");
 
   if (HasZbt)
     Builder.defineMacro("__riscv_zbt", "93000");

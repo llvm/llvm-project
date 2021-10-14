@@ -58,9 +58,10 @@ static StringRef getExtensionType(StringRef Ext) {
 // extension that the compiler currently supports.
 static Optional<RISCVExtensionVersion>
 isExperimentalExtension(StringRef Ext) {
-  if (Ext == "zba" || Ext == "zbb" || Ext == "zbc" || Ext == "zbe" ||
-      Ext == "zbf" || Ext == "zbm" || Ext == "zbp" || Ext == "zbr" ||
-      Ext == "zbs" || Ext == "zbt")
+  if (Ext == "zba" || Ext == "zbb" || Ext == "zbc" || Ext == "zbs")
+    return RISCVExtensionVersion{"1", "0"};
+  if (Ext == "zbe" || Ext == "zbf" || Ext == "zbm" || Ext == "zbp" ||
+      Ext == "zbr" || Ext == "zbt")
     return RISCVExtensionVersion{"0", "93"};
   if (Ext == "v" || Ext == "zvamo" || Ext == "zvlsseg")
     return RISCVExtensionVersion{"0", "10"};
