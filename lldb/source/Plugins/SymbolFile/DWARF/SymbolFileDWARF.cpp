@@ -804,6 +804,16 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
   // This is a normal DWARF file, no address fixups need to happen
   return true;
 }
+
+llvm::VersionTuple SymbolFileDWARF::GetProducerVersion(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  if (dwarf_cu)
+    return dwarf_cu->GetProducerVersion();
+  else
+    return {};
+}
+
 lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);

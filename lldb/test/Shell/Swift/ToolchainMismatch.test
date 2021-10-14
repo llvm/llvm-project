@@ -1,0 +1,38 @@
+# REQUIRES: swift
+
+# Tests that a warning is printed when stopped in a Swift frame
+# compiled by a different Swift compiler than the one embedded in LLDB.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %S/Inputs/main.swift \
+# RUN:          -module-name main -o %t/a.ll -emit-ir
+# RUN: sed -i -e 's/producer: "[^"]*Swift [^"]*"/producer: "Future Swift (swiftlang-9999.8.7.6)"/g' %t/a.ll
+# RUN: %clang_host -c %t/a.ll -o %t/a.o
+# RUN: llvm-dwarfdump -r 0 %t/a.o | grep -q swiftlang-9999
+# RUN: %target-swiftc \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          %t/a.o -o %t/a.out
+# RUN: %lldb %t/a.out -s %s 2>&1 | FileCheck %s
+
+# Sanity check: Swift
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %S/Inputs/main.swift \
+# RUN:          -module-name main -o %t/good.out
+# RUN: %lldb %t/good.out -s %s 2>&1 | FileCheck %s --check-prefix=SANITY
+
+# Sanity check: Clang
+# RUN: %clang_host -g \
+# RUN:          %S/../Driver/Inputs/hello.cpp \
+# RUN:          -o %t/clang.out
+# RUN: %lldb %t/clang.out -s %s 2>&1 | FileCheck %s --check-prefix=SANITY
+
+b main
+run
+quit
+
+# The {{ }} avoids accidentally matching the input script!
+# CHECK: {{a\.out}} was compiled with a Swift compiler from a different toolchain.
+# CHECK: stop reason{{ = }}breakpoint
+# SANITY-NOT: {{a\.out}} was compiled with a Swift compiler from a different toolchain.
+# SANITY: stop reason{{ = }}breakpoint
