@@ -21,3 +21,7 @@ In Polly 14 the following important changes have been incorporated.
   This will agressively try to fuse any loop regardless of
   profitability. The is what users might have expected what
   -polly-opt-fusion=max would do.
+
+- Support for gfortran-generated code has been removed. This includes
+  Fortran Array Descriptors (-polly-detect-fortran-arrays) and the
+  -polly-rewrite-byref-params pass.
