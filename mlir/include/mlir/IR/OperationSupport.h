@@ -383,8 +383,8 @@ public:
   /// Return the name of the dialect this operation is registered to.
   StringRef getDialectNamespace() const;
 
-  /// Return the Dialect this operation is registered to if it is loaded in the
-  /// context, or nullptr if the dialect isn't loaded.
+  /// Return the dialect this operation is registered to if the dialect is
+  /// loaded in the context, or nullptr if the dialect isn't loaded.
   Dialect *getDialect() const {
     if (const auto *abstractOp = getAbstractOperation())
       return &abstractOp->dialect;

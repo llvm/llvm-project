@@ -99,7 +99,7 @@ public:
   MLIRContext *getContext() { return location->getContext(); }
 
   /// Return the dialect this operation is associated with, or nullptr if the
-  /// associated dialect is not registered.
+  /// associated dialect is not loaded.
   Dialect *getDialect() { return getName().getDialect(); }
 
   /// The source location the operation was defined or derived from.

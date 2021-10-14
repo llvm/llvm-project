@@ -26,14 +26,14 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat([
-       LinalgStructuredInterface, ReifyRankedShapedTypeOpInterface], props)> {
+       SingleBlockImplicitTerminator<"YieldOp">,
+       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       LinalgStructuredInterface,
+       ReifyRankedShapedTypeOpInterface], props)> {
   code structuredOpsBaseDecls = [{
     // Return whether the op accesses the iteration indices.
     bool hasIndexSemantics() {
-      Operation *op = this->getOperation();
-      if(op->getNumRegions() == 0 || op->getRegion(0).empty())
-        return false;
-      return !op->getRegion(0).front().getOps<IndexOp>().empty();
+      return !this->getBody()->getOps<IndexOp>().empty();
     }
 
     LogicalResult reifyResultShapes(OpBuilder &b,
@@ -45,9 +45,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
 }
 
 class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
-  : LinalgStructuredBase_Op<mnemonic,
-       !listconcat(props, [
-         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>])> {
+  : LinalgStructuredBase_Op<mnemonic, !listconcat(props, [])> {
   code structuredOpsDecls = structuredOpsBaseDecls # [{
     std::string getLibraryCallName() {
       return generateLibraryCallName(getOperation());
@@ -226,10 +224,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
 
-def GenericOp : LinalgStructuredBase_Op<"generic", [
-    AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
   let description = [{
     Generic Linalg op form where the key properties of the computation are
     specified as attributes. In pretty form, a `linalg.generic` op is written
