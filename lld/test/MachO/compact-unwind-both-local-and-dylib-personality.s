@@ -33,12 +33,13 @@
 # A:      Indirect symbols for (__DATA_CONST,__got)
 # A-NEXT: address                    index name
 # A-DAG:  0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
-# A-DAG:  0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0        
+# A-DAG:  0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
 # A-DAG:  0x[[#%x,PERSONALITY_1:]]  LOCAL
 # A-DAG:  0x[[#%x,PERSONALITY_2:]]  LOCAL
 
 # BC:      Indirect symbols for (__DATA_CONST,__got)
 # BC-NEXT: address                    index name
+# BC-DAG:  0x[[#%x,GXX_PERSONALITY_HI:]] LOCAL
 # BC-DAG:  0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
 # BC-DAG:  0x[[#%x,PERSONALITY_1:]]  LOCAL
 # BC-DAG:  0x[[#%x,PERSONALITY_2:]]  LOCAL
