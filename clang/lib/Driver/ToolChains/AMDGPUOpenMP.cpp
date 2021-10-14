@@ -202,7 +202,7 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
              /* PostClang Link? */ false);
 
   // This will find .a and .bc files that match naming convention.
-  AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
                       SubArchName,
                       /* bitcode SDL?*/ true,
                       /* PostClang Link? */ false);
@@ -250,7 +250,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // for OpenMP, we already did this in clang-build-select-link
   if (JA.getOffloadingDeviceKind() != Action::OFK_OpenMP)
-    AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+    AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
                         SubArchName,
                         /* bitcode SDL?*/ true,
                         /* PostClang Link? */ false);
@@ -282,7 +282,6 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
       });
     }
   }
-
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   auto OutputFileName = getOutputFileName(C, OutputFilePrefix, "-linked", "bc");

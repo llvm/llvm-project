@@ -7,6 +7,7 @@
 // =============================================================================
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -171,8 +172,8 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
     if (!op.ifCond())
       return success();
 
-    auto constOp = op.ifCond().template getDefiningOp<ConstantOp>();
-    if (constOp && constOp.getValue().template cast<IntegerAttr>().getInt())
+    auto constOp = op.ifCond().template getDefiningOp<arith::ConstantOp>();
+    if (constOp && constOp.value().template cast<IntegerAttr>().getInt())
       rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
     else if (constOp)
       rewriter.eraseOp(op);

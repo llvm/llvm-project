@@ -1229,6 +1229,29 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_fixed8u_mul_fp
     %endif
 
+    # OpenMP 5.1 atomics
+    __kmpc_atomic_float10_max              2139
+    __kmpc_atomic_float10_min              2140
+    __kmpc_atomic_float10_max_cpt          2141
+    __kmpc_atomic_float10_min_cpt          2142
+
+    __kmpc_atomic_bool_1_cas               2143
+    __kmpc_atomic_bool_2_cas               2144
+    __kmpc_atomic_bool_4_cas               2145
+    __kmpc_atomic_bool_8_cas               2146
+    __kmpc_atomic_val_1_cas                2147
+    __kmpc_atomic_val_2_cas                2148
+    __kmpc_atomic_val_4_cas                2149
+    __kmpc_atomic_val_8_cas                2150
+    __kmpc_atomic_bool_1_cas_cpt           2151
+    __kmpc_atomic_bool_2_cas_cpt           2152
+    __kmpc_atomic_bool_4_cas_cpt           2153
+    __kmpc_atomic_bool_8_cas_cpt           2154
+    __kmpc_atomic_val_1_cas_cpt            2155
+    __kmpc_atomic_val_2_cas_cpt            2156
+    __kmpc_atomic_val_4_cas_cpt            2157
+    __kmpc_atomic_val_8_cas_cpt            2158
+
 %endif
 
 # end of file #

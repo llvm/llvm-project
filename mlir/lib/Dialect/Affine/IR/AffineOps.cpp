@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -221,7 +222,7 @@ void AffineDialect::initialize() {
 Operation *AffineDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  return builder.create<ConstantOp>(loc, type, value);
+  return builder.create<arith::ConstantOp>(loc, type, value);
 }
 
 /// A utility function to check if a value is defined at the top level of an
@@ -1887,12 +1888,11 @@ static AffineForOp
 buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
                           int64_t step,
                           AffineForOp::BodyBuilderFn bodyBuilderFn) {
-  auto lbConst = lb.getDefiningOp<ConstantIndexOp>();
-  auto ubConst = ub.getDefiningOp<ConstantIndexOp>();
+  auto lbConst = lb.getDefiningOp<arith::ConstantIndexOp>();
+  auto ubConst = ub.getDefiningOp<arith::ConstantIndexOp>();
   if (lbConst && ubConst)
-    return buildAffineLoopFromConstants(builder, loc, lbConst.getValue(),
-                                        ubConst.getValue(), step,
-                                        bodyBuilderFn);
+    return buildAffineLoopFromConstants(builder, loc, lbConst.value(),
+                                        ubConst.value(), step, bodyBuilderFn);
   return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
                                      builder.getDimIdentityMap(), step,
                                      /*iterArgs=*/llvm::None, bodyBuilderFn);

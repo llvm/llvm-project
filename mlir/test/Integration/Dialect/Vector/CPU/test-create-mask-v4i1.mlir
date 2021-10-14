@@ -7,11 +7,11 @@
 //       because the v4i1 vector specifically exposed bugs in the LLVM backend.
 
 func @entry() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c5 = constant 5 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
 
   //
   // 1-D.

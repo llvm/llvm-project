@@ -9,7 +9,7 @@
 func @kernel1(%arg0: memref<2x8xi8>,
               %arg1: memref<2x8xi8>,
 	      %arg2: memref<2x2xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %3 = amx.tile_zero : vector<2x2xi32>
@@ -22,7 +22,7 @@ func @kernel1(%arg0: memref<2x8xi8>,
 func @kernel2(%arg0: memref<2x8xi8>,
               %arg1: memref<2x8xi8>,
 	      %arg2: memref<2x2xi32>) {
-  %0 = constant 0 : index
+  %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %3 = amx.tile_load %arg2[%0, %0] : memref<2x2xi32> into vector<2x2xi32>
@@ -32,20 +32,20 @@ func @kernel2(%arg0: memref<2x8xi8>,
 }
 
 func @entry() -> i32 {
-  %i0 = constant 0: i32
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c2 = constant 2: index
+  %i0 = arith.constant 0: i32
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c2 = arith.constant 2: index
 
   // Set up memory.
   %a = memref.alloc() : memref<2x8xi8>
   %b = memref.alloc() : memref<2x8xi8>
   %c = memref.alloc() : memref<2x2xi32>
 
-  %0 = std.constant dense<[[1 , 2,  3 , 4 , 5,  6,  7,  8],
+  %0 = arith.constant dense<[[1 , 2,  3 , 4 , 5,  6,  7,  8],
                            [9, 10, 11, 12, 13, 14, 15, 16]]> : vector<2x8xi8>
   vector.transfer_write %0, %a[%c0, %c0] : vector<2x8xi8>, memref<2x8xi8>
-  %1 = std.constant dense<[[17, 18, 19, 20, 21, 22, 23, 24],
+  %1 = arith.constant dense<[[17, 18, 19, 20, 21, 22, 23, 24],
                            [25, 26, 27, 28, 29, 30, 31, 32]]> : vector<2x8xi8>
   vector.transfer_write %1, %b[%c0, %c0] : vector<2x8xi8>, memref<2x8xi8>
 

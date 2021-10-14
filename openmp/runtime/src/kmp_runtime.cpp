@@ -6166,6 +6166,31 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
 
 } // __kmp_reap_thread
 
+static void __kmp_itthash_clean(kmp_info_t *th) {
+#if USE_ITT_NOTIFY
+  if (__kmp_itt_region_domains.count > 0) {
+    for (int i = 0; i < KMP_MAX_FRAME_DOMAINS; ++i) {
+      kmp_itthash_entry_t *bucket = __kmp_itt_region_domains.buckets[i];
+      while (bucket) {
+        kmp_itthash_entry_t *next = bucket->next_in_bucket;
+        __kmp_thread_free(th, bucket);
+        bucket = next;
+      }
+    }
+  }
+  if (__kmp_itt_barrier_domains.count > 0) {
+    for (int i = 0; i < KMP_MAX_FRAME_DOMAINS; ++i) {
+      kmp_itthash_entry_t *bucket = __kmp_itt_barrier_domains.buckets[i];
+      while (bucket) {
+        kmp_itthash_entry_t *next = bucket->next_in_bucket;
+        __kmp_thread_free(th, bucket);
+        bucket = next;
+      }
+    }
+  }
+#endif
+}
+
 static void __kmp_internal_end(void) {
   int i;
 
@@ -6352,6 +6377,7 @@ void __kmp_internal_end_library(int gtid_req) {
                   gtid));
         return;
       } else {
+        __kmp_itthash_clean(__kmp_threads[gtid]);
         KA_TRACE(
             10,
             ("__kmp_internal_end_library: unregistering sibling T#%d\n", gtid));

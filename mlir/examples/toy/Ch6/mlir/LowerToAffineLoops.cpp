@@ -16,6 +16,7 @@
 #include "toy/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
@@ -124,8 +125,8 @@ struct BinaryOpLowering : public ConversionPattern {
     return success();
   }
 };
-using AddOpLowering = BinaryOpLowering<toy::AddOp, AddFOp>;
-using MulOpLowering = BinaryOpLowering<toy::MulOp, MulFOp>;
+using AddOpLowering = BinaryOpLowering<toy::AddOp, arith::AddFOp>;
+using MulOpLowering = BinaryOpLowering<toy::MulOp, arith::MulFOp>;
 
 //===----------------------------------------------------------------------===//
 // ToyToAffine RewritePatterns: Constant operations
@@ -154,10 +155,12 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
     if (!valueShape.empty()) {
       for (auto i : llvm::seq<int64_t>(
                0, *std::max_element(valueShape.begin(), valueShape.end())))
-        constantIndices.push_back(rewriter.create<ConstantIndexOp>(loc, i));
+        constantIndices.push_back(
+            rewriter.create<arith::ConstantIndexOp>(loc, i));
     } else {
       // This is the case of a tensor of rank 0.
-      constantIndices.push_back(rewriter.create<ConstantIndexOp>(loc, 0));
+      constantIndices.push_back(
+          rewriter.create<arith::ConstantIndexOp>(loc, 0));
     }
     // The constant operation represents a multi-dimensional constant, so we
     // will need to generate a store for each of the elements. The following
@@ -170,7 +173,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
       // we store the element at the given index.
       if (dimension == valueShape.size()) {
         rewriter.create<AffineStoreOp>(
-            loc, rewriter.create<ConstantOp>(loc, *valueIt++), alloc,
+            loc, rewriter.create<arith::ConstantOp>(loc, *valueIt++), alloc,
             llvm::makeArrayRef(indices));
         return;
       }
@@ -283,9 +286,9 @@ void ToyToAffineLoweringPass::runOnFunction() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine`, `MemRef` and `Standard` dialects.
-  target.addLegalDialect<AffineDialect, memref::MemRefDialect,
-                         StandardOpsDialect>();
+  // `Affine`, `Arithmetic`, `MemRef`, and `Standard` dialects.
+  target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
+                         memref::MemRefDialect, StandardOpsDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

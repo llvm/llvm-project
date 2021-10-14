@@ -252,7 +252,7 @@ void HIPToolChain::addActionsFromClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     const JobAction &JA, Compilation &C, const InputInfoList &Inputs) const {
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibs(C, *getTool(JA.getKind()), JA, Inputs, DriverArgs,
+  AddStaticDeviceLibsLinking(C, *getTool(JA.getKind()), JA, Inputs, DriverArgs,
                       CC1Args, "amdgcn", GpuArch,
                       /* bitcode SDL?*/ true, /* PostClang Link? */ true);
 }

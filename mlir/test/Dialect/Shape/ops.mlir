@@ -17,7 +17,7 @@ func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
 
 // CHECK-LABEL: extent_tensor_num_elements
 func @extent_tensor_num_elements(%shape : tensor<?xindex>) -> index {
-  %init = constant 1 : index
+  %init = arith.constant 1 : index
   %num_elements = shape.reduce(%shape, %init) : tensor<?xindex> -> index {
     ^bb0(%index : index, %extent : index, %acc : index):
       %acc_next = shape.mul %acc, %extent : index, index -> index
@@ -100,7 +100,7 @@ func @test_shape_of(%arg0: tensor<?xf32>) -> tensor<?xindex> {
 func @test_constraints() {
   %0 = shape.const_shape [] : !shape.shape
   %1 = shape.const_shape [1, 2, 3] : !shape.shape
-  %true = constant true
+  %true = arith.constant true
   %w0 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
   %w1 = shape.cstr_eq %0, %1 : !shape.shape, !shape.shape
   %w2 = shape.const_witness true
@@ -206,7 +206,7 @@ func @get_extent_on_shape(%arg : !shape.shape) -> !shape.size {
 }
 
 func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> index {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %result = shape.get_extent %arg, %c0 : tensor<?xindex>, index -> index
   return %result : index
 }

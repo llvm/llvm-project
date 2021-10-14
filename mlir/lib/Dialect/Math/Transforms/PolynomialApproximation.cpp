@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -83,18 +84,16 @@ static Value broadcast(ImplicitLocOpBuilder &builder, Value value, int width) {
 //----------------------------------------------------------------------------//
 
 static Value f32Cst(ImplicitLocOpBuilder &builder, float value) {
-  return builder.create<ConstantOp>(builder.getF32Type(),
-                                    builder.getF32FloatAttr(value));
+  return builder.create<arith::ConstantOp>(builder.getF32FloatAttr(value));
 }
 
 static Value i32Cst(ImplicitLocOpBuilder &builder, int32_t value) {
-  return builder.create<ConstantOp>(builder.getI32Type(),
-                                    builder.getI32IntegerAttr(value));
+  return builder.create<arith::ConstantOp>(builder.getI32IntegerAttr(value));
 }
 
 static Value f32FromBits(ImplicitLocOpBuilder &builder, uint32_t bits) {
   Value i32Value = i32Cst(builder, static_cast<int32_t>(bits));
-  return builder.create<BitcastOp>(builder.getF32Type(), i32Value);
+  return builder.create<arith::BitcastOp>(builder.getF32Type(), i32Value);
 }
 
 //----------------------------------------------------------------------------//
@@ -103,12 +102,12 @@ static Value f32FromBits(ImplicitLocOpBuilder &builder, uint32_t bits) {
 
 static Value min(ImplicitLocOpBuilder &builder, Value a, Value b) {
   return builder.create<SelectOp>(
-      builder.create<CmpFOp>(CmpFPredicate::OLT, a, b), a, b);
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, a, b), a, b);
 }
 
 static Value max(ImplicitLocOpBuilder &builder, Value a, Value b) {
   return builder.create<SelectOp>(
-      builder.create<CmpFOp>(CmpFPredicate::OGT, a, b), a, b);
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, a, b), a, b);
 }
 
 static Value clamp(ImplicitLocOpBuilder &builder, Value value, Value lowerBound,
@@ -137,21 +136,24 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
   Value cstInvMantMask = f32FromBits(builder, ~0x7f800000u);
 
   // Bitcast to i32 for bitwise operations.
-  Value i32Half = builder.create<BitcastOp>(i32, cstHalf);
-  Value i32InvMantMask = builder.create<BitcastOp>(i32, cstInvMantMask);
-  Value i32Arg = builder.create<BitcastOp>(i32Vec, arg);
+  Value i32Half = builder.create<arith::BitcastOp>(i32, cstHalf);
+  Value i32InvMantMask = builder.create<arith::BitcastOp>(i32, cstInvMantMask);
+  Value i32Arg = builder.create<arith::BitcastOp>(i32Vec, arg);
 
   // Compute normalized fraction.
-  Value tmp0 = builder.create<AndOp>(i32Arg, bcast(i32InvMantMask));
-  Value tmp1 = builder.create<OrOp>(tmp0, bcast(i32Half));
-  Value normalizedFraction = builder.create<BitcastOp>(f32Vec, tmp1);
+  Value tmp0 = builder.create<arith::AndIOp>(i32Arg, bcast(i32InvMantMask));
+  Value tmp1 = builder.create<arith::OrIOp>(tmp0, bcast(i32Half));
+  Value normalizedFraction = builder.create<arith::BitcastOp>(f32Vec, tmp1);
 
   // Compute exponent.
-  Value arg0 = is_positive ? arg : builder.create<AbsFOp>(arg);
-  Value biasedExponentBits = builder.create<UnsignedShiftRightOp>(
-      builder.create<BitcastOp>(i32Vec, arg0), bcast(i32Cst(builder, 23)));
-  Value biasedExponent = builder.create<SIToFPOp>(f32Vec, biasedExponentBits);
-  Value exponent = builder.create<SubFOp>(biasedExponent, bcast(cst126f));
+  Value arg0 = is_positive ? arg : builder.create<math::AbsOp>(arg);
+  Value biasedExponentBits = builder.create<arith::ShRUIOp>(
+      builder.create<arith::BitcastOp>(i32Vec, arg0),
+      bcast(i32Cst(builder, 23)));
+  Value biasedExponent =
+      builder.create<arith::SIToFPOp>(f32Vec, biasedExponentBits);
+  Value exponent =
+      builder.create<arith::SubFOp>(biasedExponent, bcast(cst126f));
 
   return {normalizedFraction, exponent};
 }
@@ -172,10 +174,10 @@ static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
   // Set the exponent bias to zero.
   auto bias = bcast(i32Cst(builder, 127));
 
-  Value biasedArg = builder.create<AddIOp>(arg, bias);
+  Value biasedArg = builder.create<arith::AddIOp>(arg, bias);
   Value exp2ValueInt =
-      builder.create<ShiftLeftOp>(biasedArg, exponetBitLocation);
-  Value exp2ValueF32 = builder.create<BitcastOp>(f32Vec, exp2ValueInt);
+      builder.create<arith::ShLIOp>(biasedArg, exponetBitLocation);
+  Value exp2ValueF32 = builder.create<arith::BitcastOp>(f32Vec, exp2ValueInt);
 
   return exp2ValueF32;
 }
@@ -213,8 +215,9 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
 
   // Mask for tiny values that are approximated with `operand`.
   Value tiny = bcast(f32Cst(builder, 0.0004f));
-  Value tinyMask = builder.create<CmpFOp>(
-      CmpFPredicate::OLT, builder.create<AbsFOp>(op.operand()), tiny);
+  Value tinyMask = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::OLT, builder.create<math::AbsOp>(op.operand()),
+      tiny);
 
   // The monomial coefficients of the numerator polynomial (odd).
   Value alpha1 = bcast(f32Cst(builder, 4.89352455891786e-03f));
@@ -232,25 +235,25 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   Value beta6 = bcast(f32Cst(builder, 1.19825839466702e-06f));
 
   // Since the polynomials are odd/even, we need x^2.
-  Value x2 = builder.create<MulFOp>(x, x);
+  Value x2 = builder.create<arith::MulFOp>(x, x);
 
   // Evaluate the numerator polynomial p.
-  Value p = builder.create<FmaFOp>(x2, alpha13, alpha11);
-  p = builder.create<FmaFOp>(x2, p, alpha9);
-  p = builder.create<FmaFOp>(x2, p, alpha7);
-  p = builder.create<FmaFOp>(x2, p, alpha5);
-  p = builder.create<FmaFOp>(x2, p, alpha3);
-  p = builder.create<FmaFOp>(x2, p, alpha1);
-  p = builder.create<MulFOp>(x, p);
+  Value p = builder.create<math::FmaOp>(x2, alpha13, alpha11);
+  p = builder.create<math::FmaOp>(x2, p, alpha9);
+  p = builder.create<math::FmaOp>(x2, p, alpha7);
+  p = builder.create<math::FmaOp>(x2, p, alpha5);
+  p = builder.create<math::FmaOp>(x2, p, alpha3);
+  p = builder.create<math::FmaOp>(x2, p, alpha1);
+  p = builder.create<arith::MulFOp>(x, p);
 
   // Evaluate the denominator polynomial q.
-  Value q = builder.create<FmaFOp>(x2, beta6, beta4);
-  q = builder.create<FmaFOp>(x2, q, beta2);
-  q = builder.create<FmaFOp>(x2, q, beta0);
+  Value q = builder.create<math::FmaOp>(x2, beta6, beta4);
+  q = builder.create<math::FmaOp>(x2, q, beta2);
+  q = builder.create<math::FmaOp>(x2, q, beta0);
 
   // Divide the numerator by the denominator.
-  Value res =
-      builder.create<SelectOp>(tinyMask, x, builder.create<DivFOp>(p, q));
+  Value res = builder.create<SelectOp>(tinyMask, x,
+                                       builder.create<arith::DivFOp>(p, q));
 
   rewriter.replaceOp(op, res);
 
@@ -332,46 +335,47 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   //     e -= 1;
   //     x = x + x - 1.0;
   //   } else { x = x - 1.0; }
-  Value mask = builder.create<CmpFOp>(CmpFPredicate::OLT, x, cstCephesSQRTHF);
+  Value mask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x,
+                                             cstCephesSQRTHF);
   Value tmp = builder.create<SelectOp>(mask, x, cstZero);
 
-  x = builder.create<SubFOp>(x, cstOne);
-  e = builder.create<SubFOp>(e,
-                             builder.create<SelectOp>(mask, cstOne, cstZero));
-  x = builder.create<AddFOp>(x, tmp);
+  x = builder.create<arith::SubFOp>(x, cstOne);
+  e = builder.create<arith::SubFOp>(
+      e, builder.create<SelectOp>(mask, cstOne, cstZero));
+  x = builder.create<arith::AddFOp>(x, tmp);
 
-  Value x2 = builder.create<MulFOp>(x, x);
-  Value x3 = builder.create<MulFOp>(x2, x);
+  Value x2 = builder.create<arith::MulFOp>(x, x);
+  Value x3 = builder.create<arith::MulFOp>(x2, x);
 
   // Evaluate the polynomial approximant of degree 8 in three parts.
   Value y0, y1, y2;
-  y0 = builder.create<FmaFOp>(cstCephesLogP0, x, cstCephesLogP1);
-  y1 = builder.create<FmaFOp>(cstCephesLogP3, x, cstCephesLogP4);
-  y2 = builder.create<FmaFOp>(cstCephesLogP6, x, cstCephesLogP7);
-  y0 = builder.create<FmaFOp>(y0, x, cstCephesLogP2);
-  y1 = builder.create<FmaFOp>(y1, x, cstCephesLogP5);
-  y2 = builder.create<FmaFOp>(y2, x, cstCephesLogP8);
-  y0 = builder.create<FmaFOp>(y0, x3, y1);
-  y0 = builder.create<FmaFOp>(y0, x3, y2);
-  y0 = builder.create<MulFOp>(y0, x3);
+  y0 = builder.create<math::FmaOp>(cstCephesLogP0, x, cstCephesLogP1);
+  y1 = builder.create<math::FmaOp>(cstCephesLogP3, x, cstCephesLogP4);
+  y2 = builder.create<math::FmaOp>(cstCephesLogP6, x, cstCephesLogP7);
+  y0 = builder.create<math::FmaOp>(y0, x, cstCephesLogP2);
+  y1 = builder.create<math::FmaOp>(y1, x, cstCephesLogP5);
+  y2 = builder.create<math::FmaOp>(y2, x, cstCephesLogP8);
+  y0 = builder.create<math::FmaOp>(y0, x3, y1);
+  y0 = builder.create<math::FmaOp>(y0, x3, y2);
+  y0 = builder.create<arith::MulFOp>(y0, x3);
 
-  y0 = builder.create<FmaFOp>(cstNegHalf, x2, y0);
-  x = builder.create<AddFOp>(x, y0);
+  y0 = builder.create<math::FmaOp>(cstNegHalf, x2, y0);
+  x = builder.create<arith::AddFOp>(x, y0);
 
   if (base2) {
     Value cstLog2e = bcast(f32Cst(builder, static_cast<float>(LOG2E_VALUE)));
-    x = builder.create<FmaFOp>(x, cstLog2e, e);
+    x = builder.create<math::FmaOp>(x, cstLog2e, e);
   } else {
     Value cstLn2 = bcast(f32Cst(builder, static_cast<float>(LN2_VALUE)));
-    x = builder.create<FmaFOp>(e, cstLn2, x);
+    x = builder.create<math::FmaOp>(e, cstLn2, x);
   }
 
-  Value invalidMask =
-      builder.create<CmpFOp>(CmpFPredicate::ULT, op.operand(), cstZero);
-  Value zeroMask =
-      builder.create<CmpFOp>(CmpFPredicate::OEQ, op.operand(), cstZero);
-  Value posInfMask =
-      builder.create<CmpFOp>(CmpFPredicate::OEQ, op.operand(), cstPosInf);
+  Value invalidMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::ULT,
+                                                    op.operand(), cstZero);
+  Value zeroMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
+                                                 op.operand(), cstZero);
+  Value posInfMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
+                                                   op.operand(), cstPosInf);
 
   // Filter out invalid values:
   //  • x == 0     -> -INF
@@ -445,14 +449,17 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   //             "logLarge" below.
   Value cstOne = bcast(f32Cst(builder, 1.0f));
   Value x = op.operand();
-  Value u = builder.create<AddFOp>(x, cstOne);
-  Value uSmall = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, cstOne);
+  Value u = builder.create<arith::AddFOp>(x, cstOne);
+  Value uSmall =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
   Value logU = builder.create<math::LogOp>(u);
-  Value uInf = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, logU);
-  Value logLarge = builder.create<MulFOp>(
-      x, builder.create<DivFOp>(logU, builder.create<SubFOp>(u, cstOne)));
-  Value approximation =
-      builder.create<SelectOp>(builder.create<OrOp>(uSmall, uInf), x, logLarge);
+  Value uInf =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, logU);
+  Value logLarge = builder.create<arith::MulFOp>(
+      x, builder.create<arith::DivFOp>(
+             logU, builder.create<arith::SubFOp>(u, cstOne)));
+  Value approximation = builder.create<SelectOp>(
+      builder.create<arith::OrIOp>(uSmall, uInf), x, logLarge);
   rewriter.replaceOp(op, approximation);
   return success();
 }
@@ -489,15 +496,15 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
     return broadcast(builder, value, *width);
   };
   auto fmla = [&](Value a, Value b, Value c) {
-    return builder.create<FmaFOp>(a, b, c);
+    return builder.create<math::FmaOp>(a, b, c);
   };
   auto mul = [&](Value a, Value b) -> Value {
-    return builder.create<MulFOp>(a, b);
+    return builder.create<arith::MulFOp>(a, b);
   };
   auto sub = [&](Value a, Value b) -> Value {
-    return builder.create<SubFOp>(a, b);
+    return builder.create<arith::SubFOp>(a, b);
   };
-  auto floor = [&](Value a) { return builder.create<FloorFOp>(a); };
+  auto floor = [&](Value a) { return builder.create<math::FloorOp>(a); };
 
   Value cstLn2 = bcast(f32Cst(builder, static_cast<float>(LN2_VALUE)));
   Value cstLog2E = bcast(f32Cst(builder, static_cast<float>(LOG2E_VALUE)));
@@ -532,7 +539,7 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   auto i32Vec = broadcast(builder.getI32Type(), *width);
 
   // exp2(k)
-  Value k = builder.create<FPToSIOp>(kF32, i32Vec);
+  Value k = builder.create<arith::FPToSIOp>(kF32, i32Vec);
   Value exp2KValue = exp2I32(builder, k);
 
   // exp(x) = exp(y) * exp2(k)
@@ -553,14 +560,16 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 
   Value kMaxConst = bcast(i32Cst(builder, 127));
   Value kMaxNegConst = bcast(i32Cst(builder, -127));
-  Value rightBound = builder.create<CmpIOp>(CmpIPredicate::sle, k, kMaxConst);
-  Value leftBound = builder.create<CmpIOp>(CmpIPredicate::sge, k, kMaxNegConst);
+  Value rightBound =
+      builder.create<arith::CmpIOp>(arith::CmpIPredicate::sle, k, kMaxConst);
+  Value leftBound =
+      builder.create<arith::CmpIOp>(arith::CmpIPredicate::sge, k, kMaxNegConst);
 
-  Value isNegInfinityX =
-      builder.create<CmpFOp>(CmpFPredicate::OEQ, x, constNegIfinity);
+  Value isNegInfinityX = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::OEQ, x, constNegIfinity);
   Value isPostiveX =
-      builder.create<CmpFOp>(CmpFPredicate::OGT, x, zerof32Const);
-  Value isComputable = builder.create<AndOp>(rightBound, leftBound);
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zerof32Const);
+  Value isComputable = builder.create<arith::AndIOp>(rightBound, leftBound);
 
   expY = builder.create<SelectOp>(
       isComputable, expY,
@@ -607,19 +616,21 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   Value cstNegOne = bcast(f32Cst(builder, -1.0f));
   Value x = op.operand();
   Value u = builder.create<math::ExpOp>(x);
-  Value uEqOne = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, cstOne);
-  Value uMinusOne = builder.create<SubFOp>(u, cstOne);
-  Value uMinusOneEqNegOne =
-      builder.create<CmpFOp>(CmpFPredicate::OEQ, uMinusOne, cstNegOne);
+  Value uEqOne =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
+  Value uMinusOne = builder.create<arith::SubFOp>(u, cstOne);
+  Value uMinusOneEqNegOne = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::OEQ, uMinusOne, cstNegOne);
   // logU = log(u) ~= x
   Value logU = builder.create<math::LogOp>(u);
 
   // Detect exp(x) = +inf; written this way to avoid having to form +inf.
-  Value isInf = builder.create<CmpFOp>(CmpFPredicate::OEQ, logU, u);
+  Value isInf =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, logU, u);
 
   // (u - 1) * (x / ~x)
-  Value expm1 =
-      builder.create<MulFOp>(uMinusOne, builder.create<DivFOp>(x, logU));
+  Value expm1 = builder.create<arith::MulFOp>(
+      uMinusOne, builder.create<arith::DivFOp>(x, logU));
   expm1 = builder.create<SelectOp>(isInf, u, expm1);
   Value approximation = builder.create<SelectOp>(
       uEqOne, x, builder.create<SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
@@ -665,28 +676,28 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
     return broadcast(builder, value, *width);
   };
   auto mul = [&](Value a, Value b) -> Value {
-    return builder.create<MulFOp>(a, b);
+    return builder.create<arith::MulFOp>(a, b);
   };
   auto sub = [&](Value a, Value b) -> Value {
-    return builder.create<SubFOp>(a, b);
+    return builder.create<arith::SubFOp>(a, b);
   };
-  auto floor = [&](Value a) { return builder.create<FloorFOp>(a); };
+  auto floor = [&](Value a) { return builder.create<math::FloorOp>(a); };
 
   auto i32Vec = broadcast(builder.getI32Type(), *width);
   auto fPToSingedInteger = [&](Value a) -> Value {
-    return builder.create<FPToSIOp>(a, i32Vec);
+    return builder.create<arith::FPToSIOp>(a, i32Vec);
   };
 
   auto modulo4 = [&](Value a) -> Value {
-    return builder.create<AndOp>(a, bcast(i32Cst(builder, 3)));
+    return builder.create<arith::AndIOp>(a, bcast(i32Cst(builder, 3)));
   };
 
   auto isEqualTo = [&](Value a, Value b) -> Value {
-    return builder.create<CmpIOp>(CmpIPredicate::eq, a, b);
+    return builder.create<arith::CmpIOp>(arith::CmpIPredicate::eq, a, b);
   };
 
   auto isGreaterThan = [&](Value a, Value b) -> Value {
-    return builder.create<CmpIOp>(CmpIPredicate::sgt, a, b);
+    return builder.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, a, b);
   };
 
   auto select = [&](Value cond, Value t, Value f) -> Value {
@@ -694,10 +705,12 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
   };
 
   auto fmla = [&](Value a, Value b, Value c) {
-    return builder.create<FmaFOp>(a, b, c);
+    return builder.create<math::FmaOp>(a, b, c);
   };
 
-  auto bitwiseOr = [&](Value a, Value b) { return builder.create<OrOp>(a, b); };
+  auto bitwiseOr = [&](Value a, Value b) {
+    return builder.create<arith::OrIOp>(a, b);
+  };
 
   Value twoOverPi = bcast(f32Cst(builder, TWO_OVER_PI));
   Value piOverTwo = bcast(f32Cst(builder, PI_OVER_2));

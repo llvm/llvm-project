@@ -205,8 +205,8 @@ func @mismatch_loop(%cond : i1, %cond2 : i1) {
 
 // CHECK-LABEL: func @mismatch_operand_types(
 func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>) {
-  %c0_i32 = constant 0 : i32
-  %true = constant true
+  %c0_i32 = arith.constant 0 : i32
+  %true = arith.constant true
   br ^bb1
 
 ^bb1:
@@ -230,20 +230,20 @@ func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>
 func private @print(%arg0: i32, %arg1: i32)
 // CHECK-LABEL: @nomerge
 func @nomerge(%arg0: i32, %i: i32) {
-  %c1_i32 = constant 1 : i32
-  %icmp = cmpi slt, %i, %arg0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %icmp = arith.cmpi slt, %i, %arg0 : i32
   cond_br %icmp, ^bb2, ^bb3
 
 ^bb2:  // pred: ^bb1
-  %ip1 = addi %i, %c1_i32 : i32
+  %ip1 = arith.addi %i, %c1_i32 : i32
   br ^bb4(%ip1 : i32)
 
 ^bb7:  // pred: ^bb5
-  %jp1 = addi %j, %c1_i32 : i32
+  %jp1 = arith.addi %j, %c1_i32 : i32
   br ^bb4(%jp1 : i32)
 
 ^bb4(%j: i32):  // 2 preds: ^bb2, ^bb7
-  %jcmp = cmpi slt, %j, %arg0 : i32
+  %jcmp = arith.cmpi slt, %j, %arg0 : i32
 // CHECK-NOT:  call @print(%[[arg1:.+]], %[[arg1]])
   call @print(%j, %ip1) : (i32, i32) -> ()
   cond_br %jcmp, ^bb7, ^bb3

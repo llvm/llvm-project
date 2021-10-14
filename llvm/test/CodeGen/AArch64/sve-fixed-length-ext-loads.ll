@@ -51,14 +51,13 @@ define <16 x i32> @load_zext_v16i16i32(<16 x i16>* %ap) #0 {
   ; Ensure sensible type legalistaion
   ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
   ; VBITS_EQ_256-DAG: ld1h { [[Z0:z[0-9]+]].h }, [[PG]]/z, [x0]
-  ; VBITS_EQ_256-DAG: mov x9, sp
-  ; VBITS_EQ_256-DAG: st1h { [[Z0]].h }, [[PG]], [x9]
-  ; VBITS_EQ_256-DAG: ldp q[[R0:[0-9]+]], q[[R1:[0-9]+]], [sp]
+  ; VBITS_EQ_256-DAG: mov x9, #8
   ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
-  ; VBITS_EQ_256-DAG: uunpklo z[[R0]].s, z[[R0]].h
-  ; VBITS_EQ_256-DAG: uunpklo z[[R1]].s, z[[R1]].h
-  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x8, x9, lsl #2]
-  ; VBITS_EQ_256-DAG: st1w { z[[R0]].s }, [[PG1]], [x8]
+  ; VBITS_EQ_256-DAG: uunpklo [[R0:z[0-9]+]].s, [[Z0]].h
+  ; VBITS_EQ_256-DAG: ext [[Z0]].b, [[Z0]].b, [[Z0]].b, #16
+  ; VBITS_EQ_256-DAG: uunpklo [[R1:z[0-9]+]].s, [[Z0]].h
+  ; VBITS_EQ_256-DAG: st1w { [[R1]].s }, [[PG1]], [x8, x9, lsl #2]
+  ; VBITS_EQ_256-DAG: st1w { [[R0]].s }, [[PG1]], [x8]
   ; VBITS_EQ_256-DAG: ret
   %a = load <16 x i16>, <16 x i16>* %ap
   %val = zext <16 x i16> %a to <16 x i32>
@@ -118,14 +117,13 @@ define <16 x i32> @load_sext_v16i16i32(<16 x i16>* %ap) #0 {
   ; Ensure sensible type legalistaion
   ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
   ; VBITS_EQ_256-DAG: ld1h { [[Z0:z[0-9]+]].h }, [[PG]]/z, [x0]
-  ; VBITS_EQ_256-DAG: mov x9, sp
-  ; VBITS_EQ_256-DAG: st1h { [[Z0]].h }, [[PG]], [x9]
-  ; VBITS_EQ_256-DAG: ldp q[[R0:[0-9]+]], q[[R1:[0-9]+]], [sp]
+  ; VBITS_EQ_256-DAG: mov x9, #8
   ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
-  ; VBITS_EQ_256-DAG: sunpklo z[[R0]].s, z[[R0]].h
-  ; VBITS_EQ_256-DAG: sunpklo z[[R1]].s, z[[R1]].h
-  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x8, x9, lsl #2]
-  ; VBITS_EQ_256-DAG: st1w { z[[R0]].s }, [[PG1]], [x8]
+  ; VBITS_EQ_256-DAG: sunpklo [[R0:z[0-9]+]].s, [[Z0]].h
+  ; VBITS_EQ_256-DAG: ext [[Z0]].b, [[Z0]].b, [[Z0]].b, #16
+  ; VBITS_EQ_256-DAG: sunpklo [[R1:z[0-9]+]].s, [[Z0]].h
+  ; VBITS_EQ_256-DAG: st1w { [[R1]].s }, [[PG1]], [x8, x9, lsl #2]
+  ; VBITS_EQ_256-DAG: st1w { [[R0]].s }, [[PG1]], [x8]
   ; VBITS_EQ_256-DAG: ret
   %a = load <16 x i16>, <16 x i16>* %ap
   %val = sext <16 x i16> %a to <16 x i32>

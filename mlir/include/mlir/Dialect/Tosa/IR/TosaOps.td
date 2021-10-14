@@ -82,6 +82,8 @@ def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
   );
 
   let builders = [Tosa_AvgPool2dOpQuantInfoBuilder];
+
+  let verifier = [{ return verifyAveragePoolOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -4612,8 +4612,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (llvm::find(kBitcodeOptionBlacklist, A->getOption().getID()) !=
-          std::end(kBitcodeOptionBlacklist))
+      if (llvm::is_contained(kBitcodeOptionBlacklist, A->getOption().getID()))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
     // Render the CodeGen options that need to be passed.
@@ -5444,6 +5443,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_O4)) {
       CmdArgs.push_back("-O3");
       D.Diag(diag::warn_O4_is_O3);
+    //  FIXME: This workaround fixes a problem with -O0 with amdgcn openmp
+    //         device code generation. Remove "else if" clause when resolved.
+    } else if (A->getOption().matches(options::OPT_O0) && Triple.isAMDGCN()
+                   && IsOpenMPDevice ) {
+      CmdArgs.push_back("-O1");
     } else {
       A->render(Args, CmdArgs);
     }
@@ -7795,11 +7799,27 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     Triples += Action::GetOffloadKindName(CurKind);
     Triples += '-';
     Triples += CurTC->getTriple().normalize();
-    if ((CurKind == Action::OFK_HIP || CurKind == Action::OFK_OpenMP ||
-         CurKind == Action::OFK_Cuda) &&
-         CurDep->getOffloadingArch()) {
+    if ((CurKind == Action::OFK_HIP || CurKind == Action::OFK_Cuda) &&
+        CurDep->getOffloadingArch()) {
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
+    }
+
+    // TODO: Replace parsing of -march flag. Can be done by storing GPUArch
+    //       with each toolchain.
+    StringRef GPUArchName;
+    if (CurKind == Action::OFK_OpenMP) {
+      // Extract GPUArch from -march argument in TC argument list.
+      for (unsigned ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
+        auto ArchStr = StringRef(TCArgs.getArgString(ArgIndex));
+        auto Arch = ArchStr.startswith_insensitive("-march=");
+        if (Arch) {
+          GPUArchName = ArchStr.substr(7);
+          Triples += "-";
+          break;
+        }
+      }
+      Triples += GPUArchName.str();
     }
   }
   CmdArgs.push_back(TCArgs.MakeArgString(Triples));
@@ -7955,11 +7975,26 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     Triples += '-';
     Triples += Dep.DependentToolChain->getTriple().normalize();
     if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
-         Dep.DependentOffloadKind == Action::OFK_OpenMP ||
          Dep.DependentOffloadKind == Action::OFK_Cuda) &&
         !Dep.DependentBoundArch.empty()) {
       Triples += '-';
       Triples += Dep.DependentBoundArch;
+    }
+    // TODO: Replace parsing of -march flag. Can be done by storing GPUArch
+    //       with each toolchain.
+    StringRef GPUArchName;
+    if (Dep.DependentOffloadKind == Action::OFK_OpenMP) {
+      // Extract GPUArch from -march argument in TC argument list.
+      for (unsigned ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
+        StringRef ArchStr = StringRef(TCArgs.getArgString(ArgIndex));
+        auto Arch = ArchStr.startswith_insensitive("-march=");
+        if (Arch) {
+          GPUArchName = ArchStr.substr(7);
+          Triples += "-";
+          break;
+        }
+      }
+      Triples += GPUArchName.str();
     }
   }
 

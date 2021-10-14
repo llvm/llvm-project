@@ -36,12 +36,12 @@ func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) 
 }
 
 func @main() {
-  %c3 = constant 3 : index
-  %c6 = constant 6 : index
-  %c8 = constant 8 : index
-  %f10 = constant 10.00000e+00 : f32
-  %val = constant 2.00000e+00 : f32
-  %zero = constant 0.00000e+00 : f32
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c8 = arith.constant 8 : index
+  %f10 = arith.constant 10.00000e+00 : f32
+  %val = arith.constant 2.00000e+00 : f32
+  %zero = arith.constant 0.00000e+00 : f32
 
   %filter1D = call @alloc_1d_filled_f32(%c3, %val) : (index, f32) -> (memref<?xf32>)
   %in1D = call @alloc_1d_filled_f32(%c8, %val) : (index, f32) -> (memref<?xf32>)

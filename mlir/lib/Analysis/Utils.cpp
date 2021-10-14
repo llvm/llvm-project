@@ -17,6 +17,7 @@
 #include "mlir/Analysis/PresburgerSet.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -98,8 +99,8 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
     assert(cst->containsId(value) && "value expected to be present");
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
-      if (auto cOp = value.getDefiningOp<ConstantIndexOp>())
-        cst->addBound(FlatAffineConstraints::EQ, value, cOp.getValue());
+      if (auto cOp = value.getDefiningOp<arith::ConstantIndexOp>())
+        cst->addBound(FlatAffineConstraints::EQ, value, cOp.value());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))
         return failure();
@@ -517,8 +518,8 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
       if (auto *op = symbol.getDefiningOp()) {
-        if (auto constOp = dyn_cast<ConstantIndexOp>(op)) {
-          cst.addBound(FlatAffineConstraints::EQ, symbol, constOp.getValue());
+        if (auto constOp = dyn_cast<arith::ConstantIndexOp>(op)) {
+          cst.addBound(FlatAffineConstraints::EQ, symbol, constOp.value());
         }
       }
     }

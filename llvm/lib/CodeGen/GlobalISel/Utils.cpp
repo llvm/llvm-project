@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -581,6 +582,35 @@ Optional<APFloat> llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   }
 
   return None;
+}
+
+Optional<MachineInstr *>
+llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
+                              const Register Op2,
+                              const MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIB) {
+  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  if (!SrcVec1)
+    return None;
+  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  if (!SrcVec2)
+    return None;
+
+  const LLT EltTy = MRI.getType(SrcVec1->getSourceReg(0));
+
+  SmallVector<Register, 16> FoldedElements;
+  for (unsigned Idx = 0, E = SrcVec1->getNumSources(); Idx < E; ++Idx) {
+    auto MaybeCst = ConstantFoldBinOp(Opcode, SrcVec1->getSourceReg(Idx),
+                                      SrcVec2->getSourceReg(Idx), MRI);
+    if (!MaybeCst)
+      return None;
+    auto FoldedCstReg = MIB.buildConstant(EltTy, *MaybeCst).getReg(0);
+    FoldedElements.emplace_back(FoldedCstReg);
+  }
+  // Create the new vector constant.
+  auto CstVec =
+      MIB.buildBuildVector(MRI.getType(SrcVec1->getReg(0)), FoldedElements);
+  return &*CstVec;
 }
 
 bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,

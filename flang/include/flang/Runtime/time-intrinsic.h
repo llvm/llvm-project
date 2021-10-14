@@ -12,8 +12,9 @@
 #ifndef FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 #define FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 
-#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
+#include <cinttypes>
+#include <cstddef>
 
 namespace Fortran::runtime {
 
@@ -27,10 +28,14 @@ double RTNAME(CpuTime)();
 
 // Interface for the SYSTEM_CLOCK intrinsic. We break it up into 3 distinct
 // function calls, one for each of SYSTEM_CLOCK's optional output arguments.
-// Lowering will have to cast the results to whatever type it prefers.
-CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCount)();
-CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountRate)();
-CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountMax)();
+// Lowering converts the results to the types of the actual arguments,
+// including the case of a real argument for COUNT_RATE=..
+// The kind argument to SystemClockCount and SystemClockCountMax is the
+// kind of the integer actual arguments, which are required to be the same
+// when both appear.
+std::int64_t RTNAME(SystemClockCount)(int kind = 8);
+std::int64_t RTNAME(SystemClockCountRate)(int kind = 8);
+std::int64_t RTNAME(SystemClockCountMax)(int kind = 8);
 
 // Interface for DATE_AND_TIME intrinsic.
 void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,

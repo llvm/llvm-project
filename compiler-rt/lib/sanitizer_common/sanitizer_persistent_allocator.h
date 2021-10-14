@@ -24,11 +24,7 @@ template <typename T>
 class PersistentAllocator {
  public:
   T *alloc(uptr count = 1);
-  uptr allocated() const {
-    SpinMutexLock l(&mtx);
-    return atomic_load_relaxed(&mapped_size) +
-           atomic_load_relaxed(&region_pos) - atomic_load_relaxed(&region_end);
-  }
+  uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
 
  private:
   T *tryAlloc(uptr count);
@@ -46,7 +42,8 @@ inline T *PersistentAllocator<T>::tryAlloc(uptr count) {
     uptr cmp = atomic_load(&region_pos, memory_order_acquire);
     uptr end = atomic_load(&region_end, memory_order_acquire);
     uptr size = count * sizeof(T);
-    if (cmp == 0 || cmp + size > end) return nullptr;
+    if (cmp == 0 || cmp + size > end)
+      return nullptr;
     if (atomic_compare_exchange_weak(&region_pos, &cmp, cmp + size,
                                      memory_order_acquire))
       return reinterpret_cast<T *>(cmp);

@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -45,6 +47,10 @@ public:
     unrollFactor = unrollFactorParam;
     loopDepth = loopDepthParam;
     annotateLoop = annotateLoopParam;
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithmeticDialect, StandardOpsDialect>();
   }
 
   void runOnFunction() override {

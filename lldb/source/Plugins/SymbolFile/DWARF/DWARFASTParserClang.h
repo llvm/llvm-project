@@ -212,6 +212,28 @@ private:
                               ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
+
+  /// Parses a DW_TAG_inheritance DIE into a base/super class.
+  ///
+  /// \param die The DW_TAG_inheritance DIE to parse.
+  /// \param parent_die The parent DIE of the given DIE.
+  /// \param class_clang_type The C++/Objective-C class representing parent_die.
+  /// For an Objective-C class this method sets the super class on success. For
+  /// a C++ class this will *not* add the result as a base class.
+  /// \param default_accessibility The default accessibility that is given to
+  /// base classes if they don't have an explicit accessibility set.
+  /// \param module_sp The current Module.
+  /// \param base_classes The list of C++ base classes that will be appended
+  /// with the parsed base class on success.
+  /// \param layout_info The layout information that will be updated for C++
+  /// base classes with the base offset.
+  void ParseInheritance(
+      const DWARFDIE &die, const DWARFDIE &parent_die,
+      const lldb_private::CompilerType class_clang_type,
+      const lldb::AccessType default_accessibility,
+      const lldb::ModuleSP &module_sp,
+      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
+      lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

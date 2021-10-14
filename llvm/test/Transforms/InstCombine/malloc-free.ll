@@ -170,6 +170,78 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+;; Test that nonnull-implying attributes on the parameter are adjusted when the
+;; call is moved, since they may no longer be valid and result in miscompiles if
+;; kept unchanged.
+define void @test_nonnull_free_move(i8* %foo) minsize {
+; CHECK-LABEL: @test_nonnull_free_move(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(i8* [[FOO]])
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool = icmp eq i8* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @free(i8* nonnull %foo)
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
+define void @test_dereferenceable_free_move(i8* %foo) minsize {
+; CHECK-LABEL: @test_dereferenceable_free_move(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(i8* dereferenceable_or_null(4) [[FOO]])
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool = icmp eq i8* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @free(i8* dereferenceable(4) %foo)
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
+define void @test_nonnull_dereferenceable_free_move(i8* %foo) minsize {
+; CHECK-LABEL: @test_nonnull_dereferenceable_free_move(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(i8* dereferenceable_or_null(16) [[FOO]])
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool = icmp eq i8* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @free(i8* nonnull dereferenceable(16) %foo)
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
 ; The next four tests cover the semantics of the nofree attributes.  These
 ; are thought to be legal transforms, but an implementation thereof has
 ; been reverted once due to difficult to isolate fallout.

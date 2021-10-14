@@ -298,8 +298,11 @@ struct TypeInfer {
   /// unchanged.
   bool EnforceAny(TypeSetByHwMode &Out);
   /// Make sure that for each type in \p Small, there exists a larger type
-  /// in \p Big.
-  bool EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big);
+  /// in \p Big. \p SmallIsVT indicates that this is being called for
+  /// SDTCisVTSmallerThanOp. In that case the TypeSetByHwMode is re-created for
+  /// each call and needs special consideration in how we detect changes.
+  bool EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
+                          bool SmallIsVT = false);
   /// 1. Ensure that for each type T in \p Vec, T is a vector type, and that
   ///    for each type U in \p Elem, U is a scalar type.
   /// 2. Ensure that for each (scalar) type U in \p Elem, there exists a

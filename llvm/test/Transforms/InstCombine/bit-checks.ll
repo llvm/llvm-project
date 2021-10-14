@@ -288,6 +288,22 @@ define i32 @main4(i32 %argc) {
   ret i32 %storemerge
 }
 
+define <2 x i32> @main4_splat(<2 x i32> %argc) {
+; CHECK-LABEL: @main4_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARGC:%.*]], <i32 55, i32 55>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 55, i32 55>
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[STOREMERGE]]
+;
+  %and = and <2 x i32> %argc, <i32 7, i32 7>
+  %tobool = icmp eq <2 x i32> %and, <i32 7, i32 7>
+  %and2 = and <2 x i32> %argc, <i32 48, i32 48>
+  %tobool3 = icmp eq <2 x i32> %and2, <i32 48, i32 48>
+  %and.cond = and <2 x i1> %tobool, %tobool3
+  %storemerge = select <2 x i1> %and.cond, <2 x i32> <i32 0, i32 0>, <2 x i32> <i32 1, i32 1>
+  ret <2 x i32> %storemerge
+}
+
 define i32 @main4_logical(i32 %argc) {
 ; CHECK-LABEL: @main4_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 55

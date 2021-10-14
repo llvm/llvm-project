@@ -3145,7 +3145,7 @@ the same purpose. The preprocessor symbols ``__SEG_FS`` and ``__SEG_GS``
 indicate their support.
 
 PowerPC Language Extensions
-------------------------------
+---------------------------
 
 Set the Floating Point Rounding Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

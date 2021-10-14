@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
@@ -50,7 +51,7 @@ LogicalResult shape::getShapeVec(Value input,
   } else if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
     shapeValues = llvm::to_vector<6>(inputOp.shape().getValues<int64_t>());
     return success();
-  } else if (auto inputOp = input.getDefiningOp<ConstantOp>()) {
+  } else if (auto inputOp = input.getDefiningOp<arith::ConstantOp>()) {
     shapeValues = llvm::to_vector<6>(
         inputOp.value().cast<DenseIntElementsAttr>().getValues<int64_t>());
     return success();
@@ -148,8 +149,8 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
   if (type.isa<WitnessType>())
     return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
-  if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type, value);
+  if (arith::ConstantOp::isBuildableWith(value, type))
+    return builder.create<arith::ConstantOp>(loc, type, value);
   return nullptr;
 }
 
@@ -1109,7 +1110,7 @@ void print(OpAsmPrinter &p, FunctionLibraryOp op) {
 Optional<int64_t> GetExtentOp::getConstantDim() {
   if (auto constSizeOp = dim().getDefiningOp<ConstSizeOp>())
     return constSizeOp.value().getLimitedValue();
-  if (auto constantOp = dim().getDefiningOp<ConstantOp>())
+  if (auto constantOp = dim().getDefiningOp<arith::ConstantOp>())
     return constantOp.value().cast<IntegerAttr>().getInt();
   return llvm::None;
 }
@@ -1135,7 +1136,7 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
     build(builder, result, builder.getType<SizeType>(), shape, dim);
   } else {
     Value dim =
-        builder.create<ConstantOp>(loc, builder.getIndexType(), dimAttr);
+        builder.create<arith::ConstantOp>(loc, builder.getIndexType(), dimAttr);
     build(builder, result, builder.getIndexType(), shape, dim);
   }
 }
@@ -1247,7 +1248,8 @@ struct RankShapeOfCanonicalizationPattern
       return failure();
     int64_t rank = rankedTensorType.getRank();
     if (op.getType().isa<IndexType>()) {
-      rewriter.replaceOpWithNewOp<ConstantIndexOp>(op.getOperation(), rank);
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op.getOperation(),
+                                                          rank);
     } else if (op.getType().isa<shape::SizeType>()) {
       rewriter.replaceOpWithNewOp<shape::ConstSizeOp>(op.getOperation(), rank);
     } else {
@@ -1473,7 +1475,8 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor,
+               ExtractFromShapeOfExtentTensor>(context);
 }
 
 LogicalResult mlir::shape::ShapeOfOp::inferReturnTypes(

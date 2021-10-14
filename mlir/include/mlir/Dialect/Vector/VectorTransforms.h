@@ -173,9 +173,9 @@ struct DistributeOps {
 /// canonicalizations pattern to propagate and fold the vector
 /// insert_map/extract_map operations.
 /// Transforms:
-//  %v = addf %a, %b : vector<32xf32>
+//  %v = arith.addf %a, %b : vector<32xf32>
 /// to:
-/// %v = addf %a, %b : vector<32xf32>
+/// %v = arith.addf %a, %b : vector<32xf32>
 /// %ev = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
 /// %nv = vector.insert_map %ev, %id, 32 : vector<1xf32> into vector<32xf32>
 Optional<DistributeOps>

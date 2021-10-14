@@ -16,8 +16,8 @@ func @test_buffer_cast(%arg0: tensor<?xi64>, %arg1: tensor<*xi64>) -> (memref<?x
 // CHECK-LABEL: func @memref_reinterpret_cast
 func @memref_reinterpret_cast(%in: memref<?xf32>)
     -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
-  %c0 = constant 0 : index
-  %c10 = constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
   %out = memref.reinterpret_cast %in to
            offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
            : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
@@ -54,7 +54,7 @@ memref.global "private" constant @memref4 : memref<2xf32>  = uninitialized
 // CHECK-LABEL: func @write_global_memref
 func @write_global_memref() {
   %0 = memref.get_global @memref0 : memref<2xf32>
-  %1 = constant dense<[1.0, 2.0]> : tensor<2xf32>
+  %1 = arith.constant dense<[1.0, 2.0]> : tensor<2xf32>
   memref.tensor_store %1, %0 : memref<2xf32>
   return
 }

@@ -4,9 +4,9 @@
 
 // CHECK-LABEL: func @br_folding(
 func @br_folding() -> i32 {
-  // CHECK-NEXT: %[[CST:.*]] = constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 0 : i32
   // CHECK-NEXT: return %[[CST]] : i32
-  %c0_i32 = constant 0 : i32
+  %c0_i32 = arith.constant 0 : i32
   br ^bb1(%c0_i32 : i32)
 ^bb1(%x : i32):
   return %x : i32
@@ -38,8 +38,8 @@ func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
 func @cond_br_folding(%cond : i1, %a : i32) {
   // CHECK-NEXT: return
 
-  %false_cond = constant false
-  %true_cond = constant true
+  %false_cond = arith.constant false
+  %true_cond = arith.constant true
   cond_br %cond, ^bb1, ^bb2(%a : i32)
 
 ^bb1:
@@ -89,8 +89,8 @@ func @cond_br_same_successor_insert_select(
 func @cond_br_and_br_folding(%a : i32) {
   // CHECK-NEXT: return
 
-  %false_cond = constant false
-  %true_cond = constant true
+  %false_cond = arith.constant false
+  %true_cond = arith.constant true
   cond_br %true_cond, ^bb2, ^bb1(%a : i32)
 
 ^bb1(%x : i32):
@@ -196,7 +196,7 @@ func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOp
   ^bb1:
     // CHECK-NOT: switch
     // CHECK: br ^[[BB2:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
-    %c0_i32 = constant 0 : i32
+    %c0_i32 = arith.constant 0 : i32
     switch %c0_i32 : i32, [
       default: ^bb2(%caseOperand0 : f32),
       -1: ^bb3(%caseOperand1 : f32),
@@ -222,7 +222,7 @@ func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %case
   ^bb1:
     // CHECK-NOT: switch
     // CHECK: br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
-    %c0_i32 = constant 1 : i32
+    %c0_i32 = arith.constant 1 : i32
     switch %c0_i32 : i32, [
       default: ^bb2(%caseOperand0 : f32),
       -1: ^bb3(%caseOperand1 : f32),
@@ -428,7 +428,7 @@ func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
 // CHECK-LABEL: @assert_true
 func @assert_true() {
   // CHECK-NOT: assert
-  %true = constant true
+  %true = arith.constant true
   assert %true, "Computer says no"
   return
 }

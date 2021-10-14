@@ -198,6 +198,7 @@ protected:
   llvm::DenseMap<ImportKey<WasmGlobalType>, uint32_t> importedGlobals;
   llvm::DenseMap<ImportKey<WasmSignature>, uint32_t> importedFunctions;
   llvm::DenseMap<ImportKey<WasmTableType>, uint32_t> importedTables;
+  llvm::DenseMap<ImportKey<WasmSignature>, uint32_t> importedTags;
 };
 
 class FunctionSection : public SyntheticSection {

@@ -920,13 +920,43 @@ class sve_int_pred_pattern_a<bits<3> opc, string asm>
   let Constraints = "$Rdn = $_Rdn";
 }
 
-multiclass sve_int_pred_pattern_a<bits<3> opc, string asm> {
-  def NAME : sve_int_pred_pattern_a<opc, asm>;
+multiclass sve_int_pred_pattern_a<bits<3> opc, string asm,
+                                  SDPatternOperator op,
+                                  SDPatternOperator opcnt> {
+  let Predicates = [HasSVEorStreamingSVE] in {
+    def NAME : sve_int_pred_pattern_a<opc, asm>;
 
-  def : InstAlias<asm # "\t$Rdn, $pattern",
-                  (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, 1), 1>;
-  def : InstAlias<asm # "\t$Rdn",
-                  (!cast<Instruction>(NAME) GPR64:$Rdn, 0b11111, 1), 2>;
+    def : InstAlias<asm # "\t$Rdn, $pattern",
+                    (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, 1), 1>;
+    def : InstAlias<asm # "\t$Rdn",
+                    (!cast<Instruction>(NAME) GPR64:$Rdn, 0b11111, 1), 2>;
+  }
+
+  let Predicates = [HasSVEorStreamingSVE, UseScalarIncVL] in {
+    def : Pat<(i64 (op GPR64:$Rdn, (opcnt sve_pred_enum:$pattern))),
+              (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, 1)>;
+
+    def : Pat<(i64 (op GPR64:$Rdn, (mul (opcnt sve_pred_enum:$pattern), (sve_cnt_mul_imm i32:$imm)))),
+              (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, $imm)>;
+
+    def : Pat<(i64 (op GPR64:$Rdn, (shl (opcnt sve_pred_enum:$pattern), (i64 (sve_cnt_shl_imm i32:$imm))))),
+              (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, $imm)>;
+
+    def : Pat<(i32 (op GPR32:$Rdn, (i32 (trunc (opcnt (sve_pred_enum:$pattern)))))),
+              (i32 (EXTRACT_SUBREG (!cast<Instruction>(NAME) (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                               GPR32:$Rdn, sub_32), sve_pred_enum:$pattern, 1),
+                                    sub_32))>;
+
+    def : Pat<(i32 (op GPR32:$Rdn, (mul (i32 (trunc (opcnt (sve_pred_enum:$pattern)))), (sve_cnt_mul_imm i32:$imm)))),
+              (i32 (EXTRACT_SUBREG (!cast<Instruction>(NAME) (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                               GPR32:$Rdn, sub_32), sve_pred_enum:$pattern, $imm),
+                                    sub_32))>;
+
+    def : Pat<(i32 (op GPR32:$Rdn, (shl (i32 (trunc (opcnt (sve_pred_enum:$pattern)))), (i64 (sve_cnt_shl_imm i32:$imm))))),
+              (i32 (EXTRACT_SUBREG (!cast<Instruction>(NAME) (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                               GPR32:$Rdn, sub_32), sve_pred_enum:$pattern, $imm),
+                                    sub_32))>;
+  }
 }
 
 class sve_int_pred_pattern_b<bits<5> opc, string asm, RegisterOperand dt,

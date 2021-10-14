@@ -98,8 +98,19 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ArithmeticOps.td
+  SOURCES
+    dialects/arith.py
+    dialects/_arith_ops_ext.py
+  DIALECT_NAME arith)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MemRefOps.td
-  SOURCES dialects/memref.py
+  SOURCES
+    dialects/memref.py
+    dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
 
 declare_mlir_dialect_python_bindings(

@@ -31,7 +31,7 @@ TEST(TimeIntrinsics, CpuTime) {
   }
 }
 
-using count_t = CppTypeFor<TypeCategory::Integer, 8>;
+using count_t = std::int64_t;
 
 TEST(TimeIntrinsics, SystemClock) {
   // We can't really test that we get the "right" result for SYSTEM_CLOCK, but
@@ -43,21 +43,46 @@ TEST(TimeIntrinsics, SystemClock) {
   // SYSTEM_CLOCK.
   EXPECT_GT(RTNAME(SystemClockCountRate)(), 0);
 
-  count_t max{RTNAME(SystemClockCountMax)()};
-  EXPECT_GT(max, 0);
+  count_t max1{RTNAME(SystemClockCountMax)(1)};
+  EXPECT_GT(max1, 0);
+  EXPECT_LE(max1, static_cast<count_t>(0x7f));
+  count_t start1{RTNAME(SystemClockCount)(1)};
+  EXPECT_GE(start1, 0);
+  EXPECT_LE(start1, max1);
 
-  count_t start{RTNAME(SystemClockCount)()};
-  EXPECT_GE(start, 0);
-  EXPECT_LE(start, max);
+  count_t max2{RTNAME(SystemClockCountMax)(2)};
+  EXPECT_GT(max2, 0);
+  EXPECT_LE(max2, static_cast<count_t>(0x7fff));
+  count_t start2{RTNAME(SystemClockCount)(2)};
+  EXPECT_GE(start2, 0);
+  EXPECT_LE(start2, max2);
+
+  count_t max4{RTNAME(SystemClockCountMax)(4)};
+  EXPECT_GT(max4, 0);
+  EXPECT_LE(max4, static_cast<count_t>(0x7fffffff));
+  count_t start4{RTNAME(SystemClockCount)(4)};
+  EXPECT_GE(start4, 0);
+  EXPECT_LE(start4, max4);
+
+  count_t max8{RTNAME(SystemClockCountMax)(8)};
+  EXPECT_GT(max8, 0);
+  count_t start8{RTNAME(SystemClockCount)(8)};
+  EXPECT_GE(start8, 0);
+  EXPECT_LT(start8, max8);
+
+  count_t max16{RTNAME(SystemClockCountMax)(16)};
+  EXPECT_GT(max16, 0);
+  count_t start16{RTNAME(SystemClockCount)(16)};
+  EXPECT_GE(start16, 0);
+  EXPECT_LT(start16, max16);
 
   // Loop until we get a different value from SystemClockCount. If we don't get
   // one before we time out, then we should probably look into an implementation
   // for SystemClokcCount with a better timer resolution on this platform.
-  for (count_t end = start; end == start; end = RTNAME(SystemClockCount)()) {
+  for (count_t end{start8}; end == start8; end = RTNAME(SystemClockCount)(8)) {
     EXPECT_GE(end, 0);
-    EXPECT_LE(end, max);
-
-    EXPECT_GE(end, start);
+    EXPECT_LE(end, max8);
+    EXPECT_GE(end, start8);
   }
 }
 

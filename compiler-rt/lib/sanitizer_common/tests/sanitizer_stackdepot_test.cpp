@@ -11,6 +11,13 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <atomic>
+#include <numeric>
+#include <regex>
+#include <sstream>
+#include <string>
+#include <thread>
+
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -65,13 +72,7 @@ TEST(SanitizerCommon, StackDepotSeveral) {
   EXPECT_NE(i1, i2);
 }
 
-#if SANITIZER_WINDOWS
-// CaptureStderr does not work on Windows.
-#define Maybe_StackDepotPrint DISABLED_StackDepotPrint
-#else
-#define Maybe_StackDepotPrint StackDepotPrint
-#endif
-TEST(SanitizerCommon, Maybe_StackDepotPrint) {
+TEST(SanitizerCommon, StackDepotPrint) {
   uptr array1[] = {0x111, 0x222, 0x333, 0x444, 0x777};
   StackTrace s1(array1, ARRAY_SIZE(array1));
   u32 i1 = StackDepotPut(s1);
@@ -79,36 +80,116 @@ TEST(SanitizerCommon, Maybe_StackDepotPrint) {
   StackTrace s2(array2, ARRAY_SIZE(array2));
   u32 i2 = StackDepotPut(s2);
   EXPECT_NE(i1, i2);
-  EXPECT_EXIT((StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-              "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*");
+
+  auto fix_regex = [](const std::string& s) -> std::string {
+    if (!SANITIZER_WINDOWS)
+      return s;
+    return std::regex_replace(s, std::regex("\\.\\*"), ".*\\n.*");
+  };
   EXPECT_EXIT(
       (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-      "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*");
+      fix_regex("Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*"));
+  EXPECT_EXIT(
+      (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
+      fix_regex(
+          "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
 }
 
-TEST(SanitizerCommon, StackDepotReverseMap) {
-  uptr array1[] = {1, 2, 3, 4, 5};
-  uptr array2[] = {7, 1, 3, 0};
-  uptr array3[] = {10, 2, 5, 3};
-  uptr array4[] = {1, 3, 2, 5};
-  u32 ids[4] = {0};
-  StackTrace s1(array1, ARRAY_SIZE(array1));
-  StackTrace s2(array2, ARRAY_SIZE(array2));
-  StackTrace s3(array3, ARRAY_SIZE(array3));
-  StackTrace s4(array4, ARRAY_SIZE(array4));
-  ids[0] = StackDepotPut(s1);
-  ids[1] = StackDepotPut(s2);
-  ids[2] = StackDepotPut(s3);
-  ids[3] = StackDepotPut(s4);
-
-  StackDepotReverseMap map;
-
-  for (uptr i = 0; i < 4; i++) {
-    StackTrace stack = StackDepotGet(ids[i]);
-    StackTrace from_map = map.Get(ids[i]);
-    EXPECT_EQ(stack.size, from_map.size);
-    EXPECT_EQ(stack.trace, from_map.trace);
+TEST(SanitizerCommon, StackDepotPrintNoLock) {
+  u32 n = 2000;
+  std::vector<u32> idx2id(n);
+  for (u32 i = 0; i < n; ++i) {
+    uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
+    StackTrace s(array, ARRAY_SIZE(array));
+    idx2id[i] = StackDepotPut(s);
+  }
+  StackDepotPrintAll();
+  for (u32 i = 0; i < n; ++i) {
+    uptr array[] = {0x111, 0x222, i, 0x444, 0x777};
+    StackTrace s(array, ARRAY_SIZE(array));
+    CHECK_EQ(idx2id[i], StackDepotPut(s));
   }
 }
+
+static struct SanitizerCommonBenchmarkparams {
+  int UniqueStacksPerThread;
+  int RepeatPerThread;
+  int Threads;
+  bool UniqueThreads;
+  bool UseCount;
+} Params[] = {
+    // All traces are unique, very unusual.
+    {10000000, 1, 1},
+    {8000000, 1, 4},
+    {8000000, 1, 16},
+    // Probably most realistic sets.
+    {3000000, 10, 1},
+    {3000000, 10, 4},
+    {3000000, 10, 16},
+    // Update use count as msan/dfsan.
+    {3000000, 10, 1, false, true},
+    {3000000, 10, 4, false, true},
+    {3000000, 10, 16, false, true},
+    // Unrealistic, as above, but traces are unique inside of thread.
+    {4000000, 1, 4, true},
+    {2000000, 1, 16, true},
+    {2000000, 10, 4, true},
+    {500000, 10, 16, true},
+    {1500000, 10, 4, true, true},
+    {800000, 10, 16, true, true},
+};
+
+std::string PrintSanitizerCommonBenchmarkparams(
+    const testing::TestParamInfo<SanitizerCommonBenchmarkparams>& info) {
+  std::stringstream name;
+  name << info.param.UniqueStacksPerThread << "_" << info.param.RepeatPerThread
+       << "_" << info.param.Threads << (info.param.UseCount ? "_UseCount" : "")
+       << (info.param.UniqueThreads ? "_UniqueThreads" : "");
+  return name.str();
+}
+
+class SanitizerCommonBenchmark
+    : public testing::TestWithParam<SanitizerCommonBenchmarkparams> {
+ protected:
+  void Run() {
+    auto Param = GetParam();
+    std::atomic<unsigned int> here = {};
+
+    auto thread = [&](int idx) {
+      here++;
+      while (here < Param.UniqueThreads) std::this_thread::yield();
+
+      std::vector<uptr> frames(64);
+      for (int r = 0; r < Param.RepeatPerThread; ++r) {
+        std::iota(frames.begin(), frames.end(), idx + 1);
+        for (int i = 0; i < Param.UniqueStacksPerThread; ++i) {
+          StackTrace s(frames.data(), frames.size());
+          auto h = StackDepotPut_WithHandle(s);
+          if (Param.UseCount)
+            h.inc_use_count_unsafe();
+          std::next_permutation(frames.begin(), frames.end());
+        };
+      }
+    };
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < Param.Threads; ++i)
+      threads.emplace_back(thread, Param.UniqueThreads * i);
+    for (auto& t : threads) t.join();
+  }
+};
+
+// Test which can be used as a simple benchmark. It's disabled to avoid slowing
+// down check-sanitizer.
+// Usage: Sanitizer-<ARCH>-Test --gtest_also_run_disabled_tests \
+//   '--gtest_filter=*Benchmark*'
+TEST_P(SanitizerCommonBenchmark, DISABLED_Benchmark) {
+  // Call in subprocess to avoid reuse of the depot.
+  EXPECT_EXIT((Run(), exit(0)), ::testing::ExitedWithCode(0), "");
+}
+
+INSTANTIATE_TEST_SUITE_P(SanitizerCommonBenchmarkSuite,
+                         SanitizerCommonBenchmark, testing::ValuesIn(Params),
+                         PrintSanitizerCommonBenchmarkparams);
 
 }  // namespace __sanitizer

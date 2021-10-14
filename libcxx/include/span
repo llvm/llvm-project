@@ -89,7 +89,7 @@ public:
     // [span.obs], span observers
     constexpr size_type size() const noexcept;
     constexpr size_type size_bytes() const noexcept;
-    constexpr bool empty() const noexcept;
+    [[nodiscard]] constexpr bool empty() const noexcept;
 
     // [span.elem], span element access
     constexpr reference operator[](size_type idx) const;
@@ -330,9 +330,9 @@ public:
         return {data() + __offset, __count};
     }
 
-    _LIBCPP_INLINE_VISIBILITY constexpr size_type size()       const noexcept { return _Extent; }
-    _LIBCPP_INLINE_VISIBILITY constexpr size_type size_bytes() const noexcept { return _Extent * sizeof(element_type); }
-    _LIBCPP_INLINE_VISIBILITY constexpr bool empty()           const noexcept { return _Extent == 0; }
+    _LIBCPP_INLINE_VISIBILITY constexpr size_type size()           const noexcept { return _Extent; }
+    _LIBCPP_INLINE_VISIBILITY constexpr size_type size_bytes()     const noexcept { return _Extent * sizeof(element_type); }
+    [[nodiscard]] _LIBCPP_INLINE_VISIBILITY constexpr bool empty() const noexcept { return _Extent == 0; }
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {
@@ -501,9 +501,9 @@ public:
         return {data() + __offset, __count};
     }
 
-    _LIBCPP_INLINE_VISIBILITY constexpr size_type size()       const noexcept { return __size; }
-    _LIBCPP_INLINE_VISIBILITY constexpr size_type size_bytes() const noexcept { return __size * sizeof(element_type); }
-    _LIBCPP_INLINE_VISIBILITY constexpr bool empty()           const noexcept { return __size == 0; }
+    _LIBCPP_INLINE_VISIBILITY constexpr size_type size()           const noexcept { return __size; }
+    _LIBCPP_INLINE_VISIBILITY constexpr size_type size_bytes()     const noexcept { return __size * sizeof(element_type); }
+    [[nodiscard]] _LIBCPP_INLINE_VISIBILITY constexpr bool empty() const noexcept { return __size == 0; }
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {

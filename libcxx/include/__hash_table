@@ -298,7 +298,7 @@ public:
     __hash_iterator(const __hash_iterator& __i)
         : __node_(__i.__node_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY

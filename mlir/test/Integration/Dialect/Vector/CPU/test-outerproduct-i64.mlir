@@ -35,13 +35,13 @@ func @vector_outerproduct_vec_2x3_acc(%x : !vector_type_X,
 }
 
 func @entry() {
-  %i0 = constant 0: i64
-  %i1 = constant 1: i64
-  %i2 = constant 2: i64
-  %i3 = constant 3: i64
-  %i4 = constant 4: i64
-  %i5 = constant 5: i64
-  %i10 = constant 10: i64
+  %i0 = arith.constant 0: i64
+  %i1 = arith.constant 1: i64
+  %i2 = arith.constant 2: i64
+  %i3 = arith.constant 3: i64
+  %i4 = arith.constant 4: i64
+  %i5 = arith.constant 5: i64
+  %i10 = arith.constant 10: i64
 
   // Simple case, splat scalars into vectors, then take outer product.
   %v = call @vector_outerproduct_splat_8x8(%i1, %i2, %i10)

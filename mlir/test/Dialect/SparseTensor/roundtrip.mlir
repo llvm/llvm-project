@@ -13,6 +13,22 @@ func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // -----
 
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_init()
+//   CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+//   CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+//       CHECK: %[[T:.*]] = sparse_tensor.init[%[[C16]], %[[C32]]] : tensor<?x32xf64, #{{.*}}>
+//       CHECK: return %[[T]] : tensor<?x32xf64, #{{.*}}>
+func @sparse_init() -> tensor<?x32xf64, #SparseMatrix> {
+  %d1 = arith.constant 16 : index
+  %d2 = arith.constant 32 : index
+  %0 = sparse_tensor.init [%d1, %d2] : tensor<?x32xf64, #SparseMatrix>
+  return %0 : tensor<?x32xf64, #SparseMatrix>
+}
+
+// -----
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_release(
@@ -56,11 +72,11 @@ func @sparse_convert_3d_from_sparse(%arg0: tensor<8x8x8xf64, #SparseTensor>) -> 
 
 // CHECK-LABEL: func @sparse_pointers(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[C:.*]] = constant 0 : index
+//       CHECK: %[[C:.*]] = arith.constant 0 : index
 //       CHECK: %[[T:.*]] = sparse_tensor.pointers %[[A]], %[[C]] : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
@@ -71,11 +87,11 @@ func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> 
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[C:.*]] = constant 0 : index
+//       CHECK: %[[C:.*]] = arith.constant 0 : index
 //       CHECK: %[[T:.*]] = sparse_tensor.indices %[[A]], %[[C]] : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = constant 0 : index
+  %c = arith.constant 0 : index
   %0 = sparse_tensor.indices %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }

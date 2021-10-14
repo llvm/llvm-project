@@ -1135,9 +1135,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   BasicBlock *NonConstBB = nullptr;
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
-    // If I is a freeze instruction, count undef as a non-constant.
-    if (match(InVal, m_ImmConstant()) &&
-        (!isa<FreezeInst>(I) || isGuaranteedNotToBeUndefOrPoison(InVal)))
+    // For non-freeze, require constant operand
+    // For freeze, require non-undef, non-poison operand
+    if (!isa<FreezeInst>(I) && match(InVal, m_ImmConstant()))
+      continue;
+    if (isa<FreezeInst>(I) && isGuaranteedNotToBeUndefOrPoison(InVal))
       continue;
 
     if (isa<PHINode>(InVal)) return nullptr;  // Itself a phi.
@@ -2812,6 +2814,26 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   }
   assert(FreeInstrBB->size() == 1 &&
          "Only the branch instruction should remain");
+
+  // Now that we've moved the call to free before the NULL check, we have to
+  // remove any attributes on its parameter that imply it's non-null, because
+  // those attributes might have only been valid because of the NULL check, and
+  // we can get miscompiles if we keep them. This is conservative if non-null is
+  // also implied by something other than the NULL check, but it's guaranteed to
+  // be correct, and the conservativeness won't matter in practice, since the
+  // attributes are irrelevant for the call to free itself and the pointer
+  // shouldn't be used after the call.
+  AttributeList Attrs = FI.getAttributes();
+  Attrs = Attrs.removeParamAttribute(FI.getContext(), 0, Attribute::NonNull);
+  Attribute Dereferenceable = Attrs.getParamAttr(0, Attribute::Dereferenceable);
+  if (Dereferenceable.isValid()) {
+    uint64_t Bytes = Dereferenceable.getDereferenceableBytes();
+    Attrs = Attrs.removeParamAttribute(FI.getContext(), 0,
+                                       Attribute::Dereferenceable);
+    Attrs = Attrs.addDereferenceableOrNullParamAttr(FI.getContext(), 0, Bytes);
+  }
+  FI.setAttributes(Attrs);
+
   return &FI;
 }
 
@@ -2925,7 +2947,7 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
 
   auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
     auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
-      return isa<DbgInfoIntrinsic>(BBI) ||
+      return BBI->isDebugOrPseudoInst() ||
              (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
     };
 
@@ -3544,8 +3566,14 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // While we could change the other users of OrigOp to use freeze(OrigOp), that
   // potentially reduces their optimization potential, so let's only do this iff
   // the OrigOp is only used by the freeze.
-  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp) ||
-      canCreateUndefOrPoison(dyn_cast<Operator>(OrigOp)))
+  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp))
+    return nullptr;
+
+  // We can't push the freeze through an instruction which can itself create
+  // poison.  If the only source of new poison is flags, we can simply
+  // strip them (since we know the only use is the freeze and nothing can
+  // benefit from them.)
+  if (canCreateUndefOrPoison(cast<Operator>(OrigOp), /*ConsiderFlags*/ false))
     return nullptr;
 
   // If operand is guaranteed not to be poison, there is no need to add freeze
@@ -3560,6 +3588,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     else
       return nullptr;
   }
+
+  OrigOpInst->dropPoisonGeneratingFlags();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
   if (!MaybePoisonOperand)
