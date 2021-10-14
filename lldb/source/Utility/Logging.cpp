@@ -84,7 +84,13 @@ Log *lldb_private::GetLogIfAnyCategoriesSet(uint32_t mask) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
+
 Log *lldb_private::GetSwiftHealthLog() {
   return g_swift_log_channel.GetLogIfAny(LIBLLDB_SWIFT_LOG_HEALTH);
 }
+
+llvm::StringRef lldb_private::GetSwiftHealthLogData() {
+  return g_swift_log_buffer;
+}
+
 #endif
