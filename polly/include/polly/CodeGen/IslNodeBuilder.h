@@ -78,13 +78,6 @@ public:
 
   void addParameters(__isl_take isl_set *Context);
 
-  /// Create Values which hold the sizes of the outermost dimension of all
-  /// Fortran arrays in the current scop.
-  ///
-  /// @returns False, if a problem occurred and a Fortran array was not
-  /// materialized. True otherwise.
-  bool materializeFortranArrayOutermostDimension();
-
   /// Generate code that evaluates @p Condition at run-time.
   ///
   /// This function is typically called to generate the LLVM-IR for the
