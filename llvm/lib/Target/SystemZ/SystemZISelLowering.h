@@ -117,23 +117,14 @@ enum NodeType : unsigned {
   // MachineMemOperands rather than one.
   MVC,
 
-  // Like MVC, but implemented as a loop that handles X*256 bytes
-  // followed by straight-line code to handle the rest (if any).
-  // The value of X is passed as an additional operand.
-  MVC_LOOP,
-
-  // Similar to MVC and MVC_LOOP, but for logic operations (AND, OR, XOR).
+  // Similar to MVC, but for logic operations (AND, OR, XOR).
   NC,
-  NC_LOOP,
   OC,
-  OC_LOOP,
   XC,
-  XC_LOOP,
 
   // Use CLC to compare two blocks of memory, with the same comments
-  // as for MVC and MVC_LOOP.
+  // as for MVC.
   CLC,
-  CLC_LOOP,
 
   // Use an MVST-based sequence to implement stpcpy().
   STPCPY,
