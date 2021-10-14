@@ -5668,15 +5668,10 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(SUBCARRY);
     OPCODE(GET_CCMASK);
     OPCODE(MVC);
-    OPCODE(MVC_LOOP);
     OPCODE(NC);
-    OPCODE(NC_LOOP);
     OPCODE(OC);
-    OPCODE(OC_LOOP);
     OPCODE(XC);
-    OPCODE(XC_LOOP);
     OPCODE(CLC);
-    OPCODE(CLC_LOOP);
     OPCODE(STPCPY);
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
