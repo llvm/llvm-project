@@ -1569,9 +1569,9 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
       return true;
     }
 #ifdef LLDB_ENABLE_SWIFT
-    if (auto *swift_ast =
-            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
-      swift_ast->SetTriple(new_arch.GetTriple());
+    if (auto *ts =
+            llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err))
+      ts->SetTriple(new_arch.GetTriple());
 #endif // LLDB_ENABLE_SWIFT
     return true;
   }
@@ -1696,8 +1696,8 @@ void Module::ClearModuleDependentCaches() {
   }
 
 #ifdef LLDB_ENABLE_SWIFT
-  if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
-    swift_ast->ClearModuleDependentCaches();
+  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err))
+    ts->ClearModuleDependentCaches();
 #endif // LLDB_ENABLE_SWIFT
 }
 

@@ -1872,7 +1872,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   }
 
   const swift::reflection::TypeRef *protocol_typeref =
-      GetTypeRef(protocol_type, tss->GetSwiftASTContext());
+      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef());
   if (!protocol_typeref) {
     if (log)
       log->Printf("Could not get protocol typeref");
@@ -2841,7 +2841,7 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
 
 const swift::reflection::TypeRef *
 SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
-                                     SwiftASTContext *module_holder) {
+                                     TypeSystemSwiftTypeRef *module_holder) {
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
@@ -2850,8 +2850,10 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
     return nullptr;
   swift::Demangle::NodePointer node =
       TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          module_holder ? module_holder : ts->GetSwiftASTContext(), dem,
-          mangled_name.GetStringRef());
+          module_holder ? module_holder : &ts->GetTypeSystemSwiftTypeRef(),
+          module_holder ? module_holder->GetSwiftASTContext()
+                        : ts->GetSwiftASTContext(),
+          dem, mangled_name.GetStringRef());
   if (!node)
     return nullptr;
 
@@ -2895,7 +2897,7 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
   const swift::reflection::TypeRef *type_ref =
-      GetTypeRef(type, ts->GetSwiftASTContext());
+      GetTypeRef(type, &ts->GetTypeSystemSwiftTypeRef());
   if (!type_ref)
     return nullptr;
 
