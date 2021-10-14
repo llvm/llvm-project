@@ -479,8 +479,6 @@ static bool isElementwise(Operation *op) {
     if (!linalgOp.getTiedIndexingMap(opOperand).isIdentity())
       return false;
   }
-  if (linalgOp->getNumRegions() != 1)
-    return false;
   return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
 }
 
@@ -510,10 +508,7 @@ LogicalResult vectorizeAsLinalgGeneric(
     OpBuilder &b, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
     bool broadcastToMaximalCommonShape = false,
     ArrayRef<CustomVectorizationHook> customVectorizationHooks = {}) {
-  // 1. Fail to vectorize if the operation does not have one non-empty region.
-  if (linalgOp->getNumRegions() != 1 || linalgOp->getRegion(0).empty())
-    return failure();
-  auto &block = linalgOp->getRegion(0).front();
+  Block *block = linalgOp.getBlock();
 
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
@@ -533,7 +528,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   // 3. Turn all BBArgs into vector.transfer_read / load.
   SmallVector<AffineMap> indexings;
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    BlockArgument bbarg = block.getArgument(opOperand->getOperandNumber());
+    BlockArgument bbarg = block->getArgument(opOperand->getOperandNumber());
     if (linalgOp.isScalar(opOperand)) {
       bvm.map(bbarg, opOperand->get());
       continue;
@@ -580,7 +575,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   hooks.push_back(vectorizeIndex);
 
   // 5. Iteratively call `vectorizeOneOp` to each op in the slice.
-  for (Operation &op : block.getOperations()) {
+  for (Operation &op : block->getOperations()) {
     VectorizationResult result = vectorizeOneOp(b, &op, bvm, hooks);
     if (result.status == VectorizationStatus::Failure) {
       LDBG("failed to vectorize: " << op);

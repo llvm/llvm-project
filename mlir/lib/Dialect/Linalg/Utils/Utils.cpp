@@ -768,12 +768,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
 void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
                                     ArrayRef<Value> ivs) {
   if (tiledOp.hasIndexSemantics()) {
-    assert(tiledOp->getNumRegions() == 1 &&
-           tiledOp->getRegion(0).getBlocks().size() == 1 &&
-           "expect producer to have one block.");
-    // Shift all IndexOp results by the tile offset.
-    Block &block = tiledOp->getRegion(0).front();
-    for (IndexOp indexOp : block.getOps<IndexOp>()) {
+    for (IndexOp indexOp : tiledOp.getBlock()->getOps<IndexOp>()) {
       if (ivs[indexOp.dim()] == nullptr)
         continue;
       OpBuilder::InsertionGuard guard(b);

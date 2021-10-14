@@ -149,12 +149,8 @@ static ArrayAttr replaceUnitDims(DenseSet<unsigned> &unitDims,
 static void replaceUnitDimIndexOps(GenericOp genericOp,
                                    const DenseSet<unsigned> &unitDims,
                                    PatternRewriter &rewriter) {
-  assert(genericOp->getNumRegions() == 1 &&
-         genericOp->getRegion(0).getBlocks().size() == 1 &&
-         "expected generic operation to have one block.");
-  Block &block = genericOp->getRegion(0).front();
-
-  for (IndexOp indexOp : llvm::make_early_inc_range(block.getOps<IndexOp>())) {
+  for (IndexOp indexOp :
+       llvm::make_early_inc_range(genericOp.getBody()->getOps<IndexOp>())) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(indexOp);
     if (unitDims.count(indexOp.dim()) != 0) {

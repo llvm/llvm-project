@@ -443,10 +443,7 @@ static const char structuredOpOdsHeaderFormat[] = R"FMT(
 // Op definition for {0}
 //===----------------------------------------------------------------------===//
 
-def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
-  AttrSizedOperandSegments,
-  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-  SingleBlockImplicitTerminator<"YieldOp">],
+def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
   /*extraInterfaces=*/[{2}])> {
     {3}
     let arguments = (ins

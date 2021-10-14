@@ -160,7 +160,7 @@ func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>
 
 func @generic_empty_region(%arg0: memref<f32>) {
   %f0 = arith.constant 0.0: f32
-  // expected-error @+1 {{op expected 1 region with 1 block}}
+  // expected-error @+1 {{op expects region #0 to have 0 or 1 blocks}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
     iterator_types = []}
@@ -177,7 +177,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
 
 func @generic_empty_region(%arg0: memref<f32>) {
   %f0 = arith.constant 0.0: f32
-  // expected-error @+1 {{linalg.generic' op expected 1 region with 1 block}}
+  // expected-error @+1 {{op expects to have 1 region with 1 block}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()> , affine_map<() -> ()> ],
     iterator_types = []}
