@@ -1,3 +1,5 @@
+// XFAIL: !rdar84228670
+
 // rm -rf %t && mkdir %t
 
 // RUN: %clang_cc1 -fmodules -emit-module -fmodule-name=mod %S/Inputs/pch-shared-module/module.modulemap -o %t/mod.pcm
