@@ -226,9 +226,13 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
   }
 }
 
-SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
+SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  SVal SimplifiedVal = SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
+  return SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
+}
+
+SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
   if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol())
     return SimplifiedSym;
   return Sym;
