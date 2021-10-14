@@ -137,8 +137,7 @@ def inferReturnTypes():
     test.register_python_test_dialect(ctx)
     module = Module.create()
     with InsertionPoint(module.body):
-      op = test.InferResultsOp(
-          IntegerType.get_signless(32), IntegerType.get_signless(64))
+      op = test.InferResultsOp()
       dummy = test.DummyOp()
 
     # CHECK: [Type(i32), Type(i64)]
@@ -173,3 +172,38 @@ def inferReturnTypes():
       pass
     else:
       assert False, "not expected dummy op class to implement the interface"
+
+
+# CHECK-LABEL: TEST: resultTypesDefinedByTraits
+@run
+def resultTypesDefinedByTraits():
+  with Context() as ctx, Location.unknown(ctx):
+    test.register_python_test_dialect(ctx)
+    module = Module.create()
+    with InsertionPoint(module.body):
+      inferred = test.InferResultsOp()
+      same = test.SameOperandAndResultTypeOp([inferred.results[0]])
+      # CHECK-COUNT-2: i32
+      print(same.one.type)
+      print(same.two.type)
+
+      first_type_attr = test.FirstAttrDeriveTypeAttrOp(
+          inferred.results[1], TypeAttr.get(IndexType.get()))
+      # CHECK-COUNT-2: index
+      print(first_type_attr.one.type)
+      print(first_type_attr.two.type)
+
+      first_attr = test.FirstAttrDeriveAttrOp(
+          FloatAttr.get(F32Type.get(), 3.14))
+      # CHECK-COUNT-3: f32
+      print(first_attr.one.type)
+      print(first_attr.two.type)
+      print(first_attr.three.type)
+
+      implied = test.InferResultsImpliedOp()
+      # CHECK: i32
+      print(implied.integer.type)
+      # CHECK: f64
+      print(implied.flt.type)
+      # CHECK: index
+      print(implied.index.type)

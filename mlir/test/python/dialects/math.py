@@ -16,7 +16,7 @@ def testMathOps():
     with InsertionPoint(module.body):
       @builtin.FuncOp.from_py_func(F32Type.get())
       def emit_sqrt(arg):
-        return mlir_math.SqrtOp(F32Type.get(), arg)
+        return mlir_math.SqrtOp(arg)
 
     # CHECK-LABEL: func @emit_sqrt(
     # CHECK-SAME:                  %[[ARG:.*]]: f32) {

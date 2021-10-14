@@ -221,7 +221,7 @@ class _BodyBuilder:
     elif expr.scalar_index:
       dim_attr = IntegerAttr.get(
           IntegerType.get_signless(64), expr.scalar_index.dim)
-      return linalg.IndexOp(IndexType.get(), dim_attr).result
+      return linalg.IndexOp(dim_attr).result
     elif expr.scalar_apply:
       try:
         fn = getattr(self, f"_eval_{expr.scalar_apply.fn_name}")
@@ -303,61 +303,61 @@ class _BodyBuilder:
 
   def _eval_add(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return arith.AddFOp(lhs.type, lhs, rhs).result
+      return arith.AddFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return arith.AddIOp(lhs.type, lhs, rhs).result
+      return arith.AddIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operand: {lhs}")
 
   def _eval_exp(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
-      return math.ExpOp(x.type, x).result
+      return math.ExpOp(x).result
     raise NotImplementedError("Unsupported 'exp' operand: {x}")
 
   def _eval_log(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
-      return math.LogOp(x.type, x).result
+      return math.LogOp(x).result
     raise NotImplementedError("Unsupported 'log' operand: {x}")
 
   def _eval_sub(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return arith.SubFOp(lhs.type, lhs, rhs).result
+      return arith.SubFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return arith.SubIOp(lhs.type, lhs, rhs).result
+      return arith.SubIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'sub' operand: {lhs}")
 
   def _eval_mul(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return arith.MulFOp(lhs.type, lhs, rhs).result
+      return arith.MulFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return arith.MulIOp(lhs.type, lhs, rhs).result
+      return arith.MulIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operand: {lhs}")
 
   def _eval_max(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MaxFOp(lhs.type, lhs, rhs).result
+      return std.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MaxSIOp(lhs.type, lhs, rhs).result
+      return std.MaxSIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'max' operand: {lhs}")
 
   def _eval_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MaxFOp(lhs.type, lhs, rhs).result
+      return std.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MaxUIOp(lhs.type, lhs, rhs).result
+      return std.MaxUIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'max_unsigned' operand: {lhs}")
 
   def _eval_min(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MinFOp(lhs.type, lhs, rhs).result
+      return std.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MinSIOp(lhs.type, lhs, rhs).result
+      return std.MinSIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'min' operand: {lhs}")
 
   def _eval_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MinFOp(lhs.type, lhs, rhs).result
+      return std.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MinUIOp(lhs.type, lhs, rhs).result
+      return std.MinUIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
 
 
