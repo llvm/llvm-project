@@ -151,7 +151,6 @@ ELFNixPlatform::Create(ExecutionSession &ES,
 Error ELFNixPlatform::setupJITDylib(JITDylib &JD) {
   return JD.define(
       std::make_unique<DSOHandleMaterializationUnit>(*this, DSOHandleSymbol));
-  return Error::success();
 }
 
 Error ELFNixPlatform::notifyAdding(ResourceTracker &RT,
