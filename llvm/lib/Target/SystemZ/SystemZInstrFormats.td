@@ -5256,6 +5256,16 @@ class RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2>
   let Constraints = "$R1 = $R1src";
 }
 
+class MemsetPseudo<DAGOperand lenop, DAGOperand byteop>
+  : Pseudo<(outs), (ins bdaddr12only:$dest, lenop:$length, byteop:$B),
+           [(z_memset_mvc bdaddr12only:$dest, lenop:$length, byteop:$B)]> {
+  let Defs = [CC];
+  let mayLoad = 1;
+  let mayStore = 1;
+  let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclasses that emit both real and pseudo instructions
 //===----------------------------------------------------------------------===//

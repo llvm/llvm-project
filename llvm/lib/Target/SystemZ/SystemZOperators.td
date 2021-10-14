@@ -102,6 +102,10 @@ def SDT_ZMemMemLengthCC     : SDTypeProfile<1, 3,
                                              SDTCisPtrTy<1>,
                                              SDTCisPtrTy<2>,
                                              SDTCisVT<3, i64>]>;
+def SDT_ZMemsetMVC          : SDTypeProfile<0, 3,
+                                            [SDTCisPtrTy<0>,
+                                             SDTCisVT<1, i64>,
+                                             SDTCisVT<2, i32>]>;
 def SDT_ZString             : SDTypeProfile<1, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -413,6 +417,8 @@ def z_xc                : SDNode<"SystemZISD::XC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_clc               : SDNode<"SystemZISD::CLC", SDT_ZMemMemLengthCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
+def z_memset_mvc        : SDNode<"SystemZISD::MEMSET_MVC", SDT_ZMemsetMVC,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_strcmp            : SDNode<"SystemZISD::STRCMP", SDT_ZStringCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
 def z_stpcpy            : SDNode<"SystemZISD::STPCPY", SDT_ZString,
