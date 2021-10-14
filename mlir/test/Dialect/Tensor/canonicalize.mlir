@@ -559,3 +559,13 @@ func @fold_overlapping_insert(%input : tensor<?x?x?xf32>, %slice1: tensor<4x?x8x
   // CHECK: return %[[INSERT]]
   return %1 : tensor<?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @folding_incorrect_ir_triggers_infinite_loop
+func @folding_incorrect_ir_triggers_infinite_loop(
+  %A : tensor<4x4xf32>, %C : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %rC = tensor.insert_slice %A into %C[0, 0][12345, 67890][1, 1] :
+    tensor<4x4xf32> into tensor<?x?xf32>
+  return %rC: tensor<?x?xf32>
+}
