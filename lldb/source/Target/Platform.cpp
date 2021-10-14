@@ -395,6 +395,8 @@ Platform::Platform(bool is_host)
   LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
 
+Platform::~Platform() = default;
+
 void Platform::GetStatus(Stream &strm) {
   std::string s;
   strm.Printf("  Platform: %s\n", GetPluginName().GetCString());
