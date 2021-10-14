@@ -536,6 +536,68 @@ except ValueError:
   concrete = OpResult(value)
 ```
 
+#### Interfaces
+
+MLIR interfaces are a mechanism to interact with the IR without needing to know
+specific types of operations but only some of their aspects. Operation
+interfaces are available as Python classes with the same name as their C++
+counterparts. Objects of these classes can be constructed from either:
+
+-   an object of the `Operation` class or of any `OpView` subclass; in this
+    case, all interface methods are available;
+-   a subclass of `OpView` and a context; in this case, only the *static*
+    interface methods are available as there is no associated operation.
+
+In both cases, construction of the interface raises a `ValueError` if the
+operation class does not implement the interface in the given context (or, for
+operations, in the context that the operation is defined in). Similarly to
+attributes and types, the MLIR context may be set up by a surrounding context
+manager.
+
+```python
+from mlir.ir import Context, InferTypeOpInterface
+
+with Context():
+  op = <...>
+
+  # Attempt to cast the operation into an interface.
+  try:
+    iface = InferTypeOpInterface(op)
+  except ValueError:
+    print("Operation does not implement InferTypeOpInterface.")
+    raise
+
+  # All methods are available on interface objects constructed from an Operation
+  # or an OpView.
+  iface.someInstanceMethod()
+
+  # An interface object can also be constructed given an OpView subclass. It
+  # also needs a context in which the interface will be looked up. The context
+  # can be provided explicitly or set up by the surrounding context manager.
+  try:
+    iface = InferTypeOpInterface(some_dialect.SomeOp)
+  except ValueError:
+    print("SomeOp does not implement InferTypeOpInterface.")
+    raise
+
+  # Calling an instance method on an interface object constructed from a class
+  # will raise TypeError.
+  try:
+    iface.someInstanceMethod()
+  except TypeError:
+    pass
+
+  # One can still call static interface methods though.
+  iface.inferOpReturnTypes(<...>)
+```
+
+If an interface object was constructed from an `Operation` or an `OpView`, they
+are available as `.operation` and `.opview` properties of the interface object,
+respectively.
+
+Only a subset of operation interfaces are currently provided in Python bindings.
+Attribute and type interfaces are not yet available in Python bindings.
+
 ### Creating IR Objects
 
 Python bindings also support IR creation and manipulation.

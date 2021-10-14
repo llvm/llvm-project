@@ -859,6 +859,7 @@ private:
 void populateIRAffine(pybind11::module &m);
 void populateIRAttributes(pybind11::module &m);
 void populateIRCore(pybind11::module &m);
+void populateIRInterfaces(pybind11::module &m);
 void populateIRTypes(pybind11::module &m);
 
 } // namespace python

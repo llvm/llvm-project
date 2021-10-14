@@ -333,6 +333,7 @@ cc_library(
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir-c/IR.h",
         "include/mlir-c/IntegerSet.h",
+        "include/mlir-c/Interfaces.h",
         "include/mlir-c/Pass.h",
         "include/mlir-c/Registration.h",
         "include/mlir-c/Support.h",
@@ -356,6 +357,20 @@ cc_library(
         ":Pass",
         ":StandardOps",
         ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "CAPIInterfaces",
+    srcs = [
+        "lib/CAPI/Interfaces/Interfaces.cpp",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CAPIIR",
+        ":IR",
+        ":InferTypeOpInterface",
         "//llvm:Support",
     ],
 )
@@ -558,6 +573,7 @@ cc_library(
         "lib/Bindings/Python/IRAffine.cpp",
         "lib/Bindings/Python/IRAttributes.cpp",
         "lib/Bindings/Python/IRCore.cpp",
+        "lib/Bindings/Python/IRInterfaces.cpp",
         "lib/Bindings/Python/IRModule.cpp",
         "lib/Bindings/Python/IRTypes.cpp",
         "lib/Bindings/Python/Pass.cpp",
@@ -581,6 +597,7 @@ cc_library(
         ":CAPIDebug",
         ":CAPIGPU",
         ":CAPIIR",
+        ":CAPIInterfaces",
         ":CAPILinalg",
         ":CAPIRegistration",
         ":CAPISparseTensor",
