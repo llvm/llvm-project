@@ -57,7 +57,7 @@ class Deleted3a { const int a; }; // expected-note {{because field 'a' of const-
                                      expected-warning {{does not declare any constructor}} \
                                      expected-note {{will never be initialized}}
 Deleted3a d3a; // expected-error {{implicitly-deleted default constructor}}
-class Deleted3b { const DefaultedDefCtor1 a[42]; }; // expected-note {{because field 'a' of const-qualified type 'const DefaultedDefCtor1 [42]' would not be initialized}}
+class Deleted3b { const DefaultedDefCtor1 a[42]; }; // expected-note {{because field 'a' of const-qualified type 'const DefaultedDefCtor1[42]' would not be initialized}}
 Deleted3b d3b; // expected-error {{implicitly-deleted default constructor}}
 class Deleted3c { const DefaultedDefCtor2 a; }; // expected-note {{because field 'a' of const-qualified type 'const DefaultedDefCtor2' would not be initialized}}
 Deleted3c d3c; // expected-error {{implicitly-deleted default constructor}}

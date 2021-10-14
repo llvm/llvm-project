@@ -208,7 +208,7 @@ void compound_literal() {
 // CHECK: void compound_literal()
 // CHECK: (CXXConstructExpr, struct Bar)
 // CHECK: (CXXConstructExpr, struct Bar)
-// CHECK: ~Bar [2]() (Temporary object destructor)
+// CHECK: ~Bar[2]() (Temporary object destructor)
 
 Foo elided_return() {
   return get_foo();
@@ -258,17 +258,17 @@ void default_ctor_with_default_arg() {
   DefaultArgInCtor qux[3];
 }
 // CHECK: void default_ctor_with_default_arg()
-// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor [3]
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[3]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
-// CHECK: .~DefaultArgInCtor [3]() (Implicit destructor)
+// CHECK: .~DefaultArgInCtor[3]() (Implicit destructor)
 
 void new_default_ctor_with_default_arg(long count) {
   // Same problems as above.
   new DefaultArgInCtor[count];
 }
 // CHECK: void new_default_ctor_with_default_arg(long count)
-// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor []
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 

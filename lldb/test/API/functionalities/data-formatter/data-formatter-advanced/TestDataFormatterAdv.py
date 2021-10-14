@@ -65,7 +65,7 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary clear")
 
         self.runCmd(
-            "type summary add --summary-string \"${var[]}\" -x \"int \\[[0-9]\\]")
+            "type summary add --summary-string \"${var[]}\" -x \"int\\[[0-9]\\]")
 
         self.expect("frame variable int_array",
                     substrs=['1,2,3,4,5'])
@@ -124,27 +124,27 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary clear")
 
         self.runCmd(
-            'type summary add --summary-string \"${var[0-1]}\" -x \"int \[[0-9]\]\"')
+            'type summary add --summary-string \"${var[0-1]}\" -x \"int\[[0-9]\]\"')
 
         self.expect("frame variable int_array",
                     substrs=['1,2'])
 
         self.runCmd(
-            'type summary add --summary-string \"${var[0-1]}\" "int []"')
+            'type summary add --summary-string \"${var[0-1]}\" "int[]"')
 
         self.expect("frame variable int_array",
                     substrs=['1,2'])
 
         # Test the patterns are matched in reverse-chronological order.
         self.runCmd(
-            'type summary add --summary-string \"${var[2-3]}\" "int []"')
+            'type summary add --summary-string \"${var[2-3]}\" "int[]"')
 
         self.expect("frame variable int_array",
                     substrs=['3,4'])
 
         self.runCmd("type summary clear")
 
-        self.runCmd("type summary add -c -x \"i_am_cool \[[0-9]\]\"")
+        self.runCmd("type summary add -c -x \"i_am_cool\[[0-9]\]\"")
         self.runCmd("type summary add -c i_am_cool")
 
         self.expect(
@@ -199,7 +199,7 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary clear")
 
         self.runCmd(
-            "type summary add --summary-string \"${*var[].x[0-3]%hex} is a bitfield on a set of integers\" -x \"SimpleWithPointers \[[0-9]\]\"")
+            "type summary add --summary-string \"${*var[].x[0-3]%hex} is a bitfield on a set of integers\" -x \"SimpleWithPointers\[[0-9]\]\"")
 
         self.expect(
             "frame variable couple --summary-string \"${*var.sp.x[0-2]} are low bits of integer ${*var.sp.x}. If I pretend it is an array I get ${var.sp.x[0-5]}\"",

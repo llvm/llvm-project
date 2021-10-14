@@ -175,10 +175,10 @@ class TestType(unittest.TestCase):
         self.assertIsNotNone(i)
         self.assertIsNotNone(x)
         self.assertIsNotNone(v)
-        self.assertEqual(c.type.spelling, "int [5]")
-        self.assertEqual(i.type.spelling, "int []")
+        self.assertEqual(c.type.spelling, "int[5]")
+        self.assertEqual(i.type.spelling, "int[]")
         self.assertEqual(x.type.spelling, "int")
-        self.assertEqual(v.type.spelling, "int [x]")
+        self.assertEqual(v.type.spelling, "int[x]")
 
     def test_typekind_spelling(self):
         """Ensure TypeKind.spelling works."""

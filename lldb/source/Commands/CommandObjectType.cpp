@@ -1598,7 +1598,7 @@ static bool FixArrayTypeNameWithRegex(ConstString &type_name) {
     std::string type_name_str(type_name.GetCString());
     type_name_str.resize(type_name_str.length() - 2);
     if (type_name_str.back() != ' ')
-      type_name_str.append(" \\[[0-9]+\\]");
+      type_name_str.append(" ?\\[[0-9]+\\]");
     else
       type_name_str.append("\\[[0-9]+\\]");
     type_name.SetCString(type_name_str.c_str());

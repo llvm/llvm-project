@@ -13,5 +13,5 @@ class TestCase(TestBase):
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
 
         self.expect_expr("myArray", result_type="array<3>", result_children=[
-            ValueCheck(name="Arr", type="int [3]")
+            ValueCheck(name="Arr", type="int[3]")
         ])

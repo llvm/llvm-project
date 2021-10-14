@@ -16,8 +16,8 @@ int array() {
   using X3 = X[3];
   auto [a3, b3, c3] = X3{1, 2, 3};
 
-  auto &[d, e] = arr; // expected-error {{type 'int [3]' decomposes into 3 elements, but only 2 names were provided}}
-  auto &[f, g, h, i] = arr; // expected-error {{type 'int [3]' decomposes into 3 elements, but 4 names were provided}}
+  auto &[d, e] = arr; // expected-error {{type 'int[3]' decomposes into 3 elements, but only 2 names were provided}}
+  auto &[f, g, h, i] = arr; // expected-error {{type 'int[3]' decomposes into 3 elements, but 4 names were provided}}
 
   auto &[r0, r1, r2] = arr;
   const auto &[cr0, cr1, cr2] = arr;

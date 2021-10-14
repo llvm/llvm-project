@@ -23,10 +23,10 @@ int main(int, char**) {
   std::unique_ptr<V[]> p;
   std::unique_ptr<V[]> const& cp = p;
 
-  p->member; // expected-error {{member reference type 'std::unique_ptr<V []>' is not a pointer}}
+  p->member; // expected-error {{member reference type 'std::unique_ptr<V[]>' is not a pointer}}
   // expected-error@-1 {{no member named 'member'}}
 
-  cp->member; // expected-error {{member reference type 'const std::unique_ptr<V []>' is not a pointer}}
+  cp->member; // expected-error {{member reference type 'const std::unique_ptr<V[]>' is not a pointer}}
               // expected-error@-1 {{no member named 'member'}}
 
   return 0;

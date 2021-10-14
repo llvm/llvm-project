@@ -18,9 +18,9 @@ void foo1(wchar_t * t = L"");
 #endif
 
 short *a = L"";
-// expected-error@-1 {{cannot initialize a variable of type 'short *' with an lvalue of type 'const unsigned short [1]'}}
+// expected-error@-1 {{cannot initialize a variable of type 'short *' with an lvalue of type 'const unsigned short[1]'}}
 char *b = L"";
-// expected-error@-1 {{cannot initialize a variable of type 'char *' with an lvalue of type 'const unsigned short [1]'}}
+// expected-error@-1 {{cannot initialize a variable of type 'char *' with an lvalue of type 'const unsigned short[1]'}}
 
 // NOTE: MSVC allows deprecated conversion in conditional expression if at least
 // one of the operand is a string literal but Clang doesn't allow it.

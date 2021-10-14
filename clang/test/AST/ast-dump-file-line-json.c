@@ -137,14 +137,14 @@ int e;
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "__builtin_va_list",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "struct __va_list_tag [1]"
+// CHECK-NEXT:     "qualType": "struct __va_list_tag[1]"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ConstantArrayType",
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "struct __va_list_tag [1]"
+// CHECK-NEXT:       "qualType": "struct __va_list_tag[1]"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "size": 1,
 // CHECK-NEXT:      "inner": [

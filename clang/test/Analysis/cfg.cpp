@@ -116,8 +116,8 @@ void test_deletedtor() {
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
 // CHECK-NEXT:   2: CFGNewAllocator(A *)
-// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A [5])
-// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A [5])
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A[5])
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A[5])
 // CHECK-NEXT:   4: new A {{\[\[}}B1.1]]
 // CHECK-NEXT:   5: A *a = new A [5];
 // CHECK-NEXT:   6: a
@@ -342,8 +342,8 @@ void test_placement_new() {
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: 5
 // CHECK-NEXT:  6: CFGNewAllocator(MyClass *)
-// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass [5])
-// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass [5])
+// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass[5])
+// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass[5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
 // CHECK-NEXT:  Preds (1): B2
@@ -513,7 +513,7 @@ void vla_typedef(int x) {
 // CHECK: [B1]
 // CHECK-NEXT:   1: x
 // CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   3: using VLA = int [x];
+// CHECK-NEXT:   3: using VLA = int[x];
 void vla_typealias(int x) {
   using VLA = int[x];
 }
@@ -538,7 +538,7 @@ void vla_typedef_multi(int x, int y) {
 // CHECK-NEXT:   5: [B1.4] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:   6: typedef VLA VLA1[y];
 // CHECK-NEXT:   7: 3
-// CHECK-NEXT:   8: using VLA2 = VLA1 [3];
+// CHECK-NEXT:   8: using VLA2 = VLA1[3];
 // CHECK-NEXT:   9: 4
 // CHECK-NEXT:  10: VLA2 vla[4];
 void vla_typedefname_multi(int x, int y) {
@@ -557,8 +557,8 @@ void vla_typedefname_multi(int x, int y) {
 // CHECK-NEXT:   5: x
 // CHECK-NEXT:   6: ++[B1.5]
 // CHECK-NEXT:   7: [B1.6] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   8: sizeof(int [++x])
-// CHECK-NEXT:   9: alignof(int [++x])
+// CHECK-NEXT:   8: sizeof(int[++x])
+// CHECK-NEXT:   9: alignof(int[++x])
 // CHECK-NEXT:  10: 0
 // CHECK-NEXT:  11: x
 // CHECK-NEXT:  12: [B1.11] (ImplicitCastExpr, LValueToRValue, int)

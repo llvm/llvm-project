@@ -36,17 +36,17 @@ CHECK_SIZE(C, 16);
 // CHECK-NEXT:            | [sizeof=16, align=16]
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct A
-// CHECK-NEXT:          0 |   struct AlignedStruct [1] a
+// CHECK-NEXT:          0 |   struct AlignedStruct[1] a
 // CHECK-NEXT:            | [sizeof=16, align=16]
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct B
 // CHECK-NEXT:          0 |   char b
-// CHECK-NEXT:         16 |   AlignedInt [1] a
+// CHECK-NEXT:         16 |   AlignedInt[1] a
 // CHECK-NEXT:            | [sizeof=32, align=16]
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct C
 // CHECK-NEXT:          0 |   char b
-// CHECK-NEXT:         16 |   AlignedInt [] a
+// CHECK-NEXT:         16 |   AlignedInt[] a
 // CHECK-NEXT:            | [sizeof=16, align=16]
 
 #pragma pack(pop)

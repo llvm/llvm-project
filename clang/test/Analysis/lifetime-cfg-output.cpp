@@ -84,9 +84,9 @@ void test_const_ref() {
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A [2])
+// CHECK-NEXT:    1:  (CXXConstructExpr, class A[2])
 // CHECK-NEXT:    2: A a[2];
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A [0])
+// CHECK-NEXT:    3:  (CXXConstructExpr, class A[0])
 // CHECK-NEXT:    4: A b[0];
 // lifetime of a ends when its destructors are run
 // CHECK-NEXT:    5: [B1.2] (Lifetime ends)

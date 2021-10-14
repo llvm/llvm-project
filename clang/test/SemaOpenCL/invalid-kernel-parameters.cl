@@ -207,6 +207,6 @@ kernel void array_of_ptr(struct ArrayOfPtr arr) {} // expected-error{{struct ker
 
 struct ArrayOfStruct // expected-note{{within field of type 'ArrayOfStruct' declared here}}
 {
-  struct ArrayOfPtr arr[3]; // expected-note{{within field of type 'struct ArrayOfPtr [3]' declared here}}
+  struct ArrayOfPtr arr[3]; // expected-note{{within field of type 'struct ArrayOfPtr[3]' declared here}}
 };
 kernel void array_of_struct(struct ArrayOfStruct arr) {} // expected-error{{struct kernel parameters may not contain pointers}}

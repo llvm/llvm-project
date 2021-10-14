@@ -24,14 +24,14 @@ using TestContainsErrors = int[sizeof(undef())];
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestContainsErrors",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "int [sizeof (<recovery-expr>(undef))]"
+// CHECK-NEXT:   "qualType": "int[sizeof (<recovery-expr>(undef))]"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "DependentSizedArrayType",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "int [sizeof (<recovery-expr>(undef))]"
+// CHECK-NEXT:     "qualType": "int[sizeof (<recovery-expr>(undef))]"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "containsErrors": true,
 // CHECK-NEXT:    "isDependent": true,

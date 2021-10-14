@@ -14,7 +14,7 @@ void PR16799() {
   const char str[] = "string";
   a(str);
   // CHECK: :15:3: error: invalid operands to binary expression
-  // CHECK:       ('const char [7]' and 'int')
+  // CHECK:       ('const char[7]' and 'int')
   // CHECK:   a(str);
   // CHECK:   ^~~~~~
   // CHECK: :3:11: note: expanded from macro 'a'

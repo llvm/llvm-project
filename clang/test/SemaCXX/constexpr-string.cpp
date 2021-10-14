@@ -661,7 +661,7 @@ namespace MemcpyEtc {
   constexpr int test_address_of_incomplete_array_type() { // expected-error {{never produces a constant}}
     extern int arr[];
     __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0]));
-    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int []'}}
+    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
     return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
   }
   static_assert(test_address_of_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}

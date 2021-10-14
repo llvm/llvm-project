@@ -2,5 +2,5 @@
 
 void f1(int n) {
   typedef int x[n];
-  const x y; // expected-error {{default initialization of an object of const type 'const x' (aka 'const int [n]')}}
+  const x y; // expected-error {{default initialization of an object of const type 'const x' (aka 'const int[n]')}}
 }

@@ -131,7 +131,7 @@ TEST_F(LSPTest, Diagnostics) {
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
                   DiagMessage("Cannot initialize a variable of type 'int' with "
-                              "an lvalue of type 'const char [3]'"))));
+                              "an lvalue of type 'const char[3]'"))));
 
   Client.didClose("foo.cpp");
   EXPECT_THAT(Client.diagnostics("foo.cpp"), llvm::ValueIs(testing::IsEmpty()));

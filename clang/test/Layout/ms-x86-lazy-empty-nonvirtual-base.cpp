@@ -33,7 +33,7 @@ struct AA : B8, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AA{{$}}
 // CHECK-NEXT:    0 |   struct B8 (base)
-// CHECK-NEXT:    0 |     char [5] c
+// CHECK-NEXT:    0 |     char[5] c
 // CHECK-NEXT:   13 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AA vbtable pointer)
 // CHECK-NEXT:   16 |   int a
@@ -42,7 +42,7 @@ struct AA : B8, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=20, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AA{{$}}
 // CHECK-X64-NEXT:    0 |   struct B8 (base)
-// CHECK-X64-NEXT:    0 |     char [5] c
+// CHECK-X64-NEXT:    0 |     char[5] c
 // CHECK-X64-NEXT:   17 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AA vbtable pointer)
 // CHECK-X64-NEXT:   20 |   int a
@@ -57,7 +57,7 @@ struct AB : B8, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AB{{$}}
 // CHECK-NEXT:    0 |   struct B8 (base)
-// CHECK-NEXT:    0 |     char [5] c
+// CHECK-NEXT:    0 |     char[5] c
 // CHECK-NEXT:   13 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AB vbtable pointer)
 // CHECK-NEXT:   14 |   short a
@@ -66,7 +66,7 @@ struct AB : B8, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AB{{$}}
 // CHECK-X64-NEXT:    0 |   struct B8 (base)
-// CHECK-X64-NEXT:    0 |     char [5] c
+// CHECK-X64-NEXT:    0 |     char[5] c
 // CHECK-X64-NEXT:   17 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AB vbtable pointer)
 // CHECK-X64-NEXT:   18 |   short a
@@ -81,7 +81,7 @@ struct AC : B8, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AC{{$}}
 // CHECK-NEXT:    0 |   struct B8 (base)
-// CHECK-NEXT:    0 |     char [5] c
+// CHECK-NEXT:    0 |     char[5] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AC vbtable pointer)
 // CHECK-NEXT:   12 |   char a
@@ -90,7 +90,7 @@ struct AC : B8, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AC{{$}}
 // CHECK-X64-NEXT:    0 |   struct B8 (base)
-// CHECK-X64-NEXT:    0 |     char [5] c
+// CHECK-X64-NEXT:    0 |     char[5] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AC vbtable pointer)
 // CHECK-X64-NEXT:   16 |   char a
@@ -104,7 +104,7 @@ struct AD : B8, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AD{{$}}
 // CHECK-NEXT:    0 |   struct B8 (base)
-// CHECK-NEXT:    0 |     char [5] c
+// CHECK-NEXT:    0 |     char[5] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AD vbtable pointer)
 // CHECK-NEXT:   12 |   struct B0 (virtual base) (empty)
@@ -112,7 +112,7 @@ struct AD : B8, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=12, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AD{{$}}
 // CHECK-X64-NEXT:    0 |   struct B8 (base)
-// CHECK-X64-NEXT:    0 |     char [5] c
+// CHECK-X64-NEXT:    0 |     char[5] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AD vbtable pointer)
 // CHECK-X64-NEXT:   16 |   struct B0 (virtual base) (empty)
@@ -126,7 +126,7 @@ struct AA1 : B9, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AA1{{$}}
 // CHECK-NEXT:    0 |   struct B9 (base)
-// CHECK-NEXT:    0 |     char [6] c
+// CHECK-NEXT:    0 |     char[6] c
 // CHECK-NEXT:   14 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AA1 vbtable pointer)
 // CHECK-NEXT:   16 |   int a
@@ -135,7 +135,7 @@ struct AA1 : B9, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=20, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AA1{{$}}
 // CHECK-X64-NEXT:    0 |   struct B9 (base)
-// CHECK-X64-NEXT:    0 |     char [6] c
+// CHECK-X64-NEXT:    0 |     char[6] c
 // CHECK-X64-NEXT:   18 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AA1 vbtable pointer)
 // CHECK-X64-NEXT:   20 |   int a
@@ -150,7 +150,7 @@ struct AB1 : B9, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AB1{{$}}
 // CHECK-NEXT:    0 |   struct B9 (base)
-// CHECK-NEXT:    0 |     char [6] c
+// CHECK-NEXT:    0 |     char[6] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AB1 vbtable pointer)
 // CHECK-NEXT:   12 |   short a
@@ -159,7 +159,7 @@ struct AB1 : B9, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AB1{{$}}
 // CHECK-X64-NEXT:    0 |   struct B9 (base)
-// CHECK-X64-NEXT:    0 |     char [6] c
+// CHECK-X64-NEXT:    0 |     char[6] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AB1 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   short a
@@ -174,7 +174,7 @@ struct AC1 : B9, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AC1{{$}}
 // CHECK-NEXT:    0 |   struct B9 (base)
-// CHECK-NEXT:    0 |     char [6] c
+// CHECK-NEXT:    0 |     char[6] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AC1 vbtable pointer)
 // CHECK-NEXT:   12 |   char a
@@ -183,7 +183,7 @@ struct AC1 : B9, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AC1{{$}}
 // CHECK-X64-NEXT:    0 |   struct B9 (base)
-// CHECK-X64-NEXT:    0 |     char [6] c
+// CHECK-X64-NEXT:    0 |     char[6] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AC1 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   char a
@@ -197,7 +197,7 @@ struct AD1 : B9, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AD1{{$}}
 // CHECK-NEXT:    0 |   struct B9 (base)
-// CHECK-NEXT:    0 |     char [6] c
+// CHECK-NEXT:    0 |     char[6] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AD1 vbtable pointer)
 // CHECK-NEXT:   12 |   struct B0 (virtual base) (empty)
@@ -205,7 +205,7 @@ struct AD1 : B9, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=12, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AD1{{$}}
 // CHECK-X64-NEXT:    0 |   struct B9 (base)
-// CHECK-X64-NEXT:    0 |     char [6] c
+// CHECK-X64-NEXT:    0 |     char[6] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AD1 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   struct B0 (virtual base) (empty)
@@ -219,7 +219,7 @@ struct AA2 : B10, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AA2{{$}}
 // CHECK-NEXT:    0 |   struct B10 (base)
-// CHECK-NEXT:    0 |     char [7] c
+// CHECK-NEXT:    0 |     char[7] c
 // CHECK-NEXT:   15 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AA2 vbtable pointer)
 // CHECK-NEXT:   16 |   int a
@@ -228,7 +228,7 @@ struct AA2 : B10, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=20, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AA2{{$}}
 // CHECK-X64-NEXT:    0 |   struct B10 (base)
-// CHECK-X64-NEXT:    0 |     char [7] c
+// CHECK-X64-NEXT:    0 |     char[7] c
 // CHECK-X64-NEXT:   19 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AA2 vbtable pointer)
 // CHECK-X64-NEXT:   20 |   int a
@@ -243,7 +243,7 @@ struct AB2 : B10, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AB2{{$}}
 // CHECK-NEXT:    0 |   struct B10 (base)
-// CHECK-NEXT:    0 |     char [7] c
+// CHECK-NEXT:    0 |     char[7] c
 // CHECK-NEXT:   13 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AB2 vbtable pointer)
 // CHECK-NEXT:   14 |   short a
@@ -252,7 +252,7 @@ struct AB2 : B10, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AB2{{$}}
 // CHECK-X64-NEXT:    0 |   struct B10 (base)
-// CHECK-X64-NEXT:    0 |     char [7] c
+// CHECK-X64-NEXT:    0 |     char[7] c
 // CHECK-X64-NEXT:   17 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AB2 vbtable pointer)
 // CHECK-X64-NEXT:   18 |   short a
@@ -267,7 +267,7 @@ struct AC2 : B10, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AC2{{$}}
 // CHECK-NEXT:    0 |   struct B10 (base)
-// CHECK-NEXT:    0 |     char [7] c
+// CHECK-NEXT:    0 |     char[7] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AC2 vbtable pointer)
 // CHECK-NEXT:   12 |   char a
@@ -276,7 +276,7 @@ struct AC2 : B10, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AC2{{$}}
 // CHECK-X64-NEXT:    0 |   struct B10 (base)
-// CHECK-X64-NEXT:    0 |     char [7] c
+// CHECK-X64-NEXT:    0 |     char[7] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AC2 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   char a
@@ -290,7 +290,7 @@ struct AD2 : B10, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AD2{{$}}
 // CHECK-NEXT:    0 |   struct B10 (base)
-// CHECK-NEXT:    0 |     char [7] c
+// CHECK-NEXT:    0 |     char[7] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AD2 vbtable pointer)
 // CHECK-NEXT:   12 |   struct B0 (virtual base) (empty)
@@ -298,7 +298,7 @@ struct AD2 : B10, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=12, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AD2{{$}}
 // CHECK-X64-NEXT:    0 |   struct B10 (base)
-// CHECK-X64-NEXT:    0 |     char [7] c
+// CHECK-X64-NEXT:    0 |     char[7] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AD2 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   struct B0 (virtual base) (empty)
@@ -312,7 +312,7 @@ struct AA3 : B11, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AA3{{$}}
 // CHECK-NEXT:    0 |   struct B11 (base)
-// CHECK-NEXT:    0 |     char [8] c
+// CHECK-NEXT:    0 |     char[8] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AA3 vbtable pointer)
 // CHECK-NEXT:   12 |   int a
@@ -321,7 +321,7 @@ struct AA3 : B11, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AA3{{$}}
 // CHECK-X64-NEXT:    0 |   struct B11 (base)
-// CHECK-X64-NEXT:    0 |     char [8] c
+// CHECK-X64-NEXT:    0 |     char[8] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AA3 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   int a
@@ -336,7 +336,7 @@ struct AB3 : B11, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AB3{{$}}
 // CHECK-NEXT:    0 |   struct B11 (base)
-// CHECK-NEXT:    0 |     char [8] c
+// CHECK-NEXT:    0 |     char[8] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AB3 vbtable pointer)
 // CHECK-NEXT:   12 |   short a
@@ -345,7 +345,7 @@ struct AB3 : B11, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AB3{{$}}
 // CHECK-X64-NEXT:    0 |   struct B11 (base)
-// CHECK-X64-NEXT:    0 |     char [8] c
+// CHECK-X64-NEXT:    0 |     char[8] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AB3 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   short a
@@ -360,7 +360,7 @@ struct AC3 : B11, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AC3{{$}}
 // CHECK-NEXT:    0 |   struct B11 (base)
-// CHECK-NEXT:    0 |     char [8] c
+// CHECK-NEXT:    0 |     char[8] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AC3 vbtable pointer)
 // CHECK-NEXT:   12 |   char a
@@ -369,7 +369,7 @@ struct AC3 : B11, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=16, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AC3{{$}}
 // CHECK-X64-NEXT:    0 |   struct B11 (base)
-// CHECK-X64-NEXT:    0 |     char [8] c
+// CHECK-X64-NEXT:    0 |     char[8] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AC3 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   char a
@@ -383,7 +383,7 @@ struct AD3 : B11, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct AD3{{$}}
 // CHECK-NEXT:    0 |   struct B11 (base)
-// CHECK-NEXT:    0 |     char [8] c
+// CHECK-NEXT:    0 |     char[8] c
 // CHECK-NEXT:   12 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (AD3 vbtable pointer)
 // CHECK-NEXT:   12 |   struct B0 (virtual base) (empty)
@@ -391,7 +391,7 @@ struct AD3 : B11, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=12, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct AD3{{$}}
 // CHECK-X64-NEXT:    0 |   struct B11 (base)
-// CHECK-X64-NEXT:    0 |     char [8] c
+// CHECK-X64-NEXT:    0 |     char[8] c
 // CHECK-X64-NEXT:   16 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (AD3 vbtable pointer)
 // CHECK-X64-NEXT:   16 |   struct B0 (virtual base) (empty)
@@ -507,7 +507,7 @@ struct F : B1, B6, B4, B8, B5, virtual B0 {
 // CHECK-NEXT:    2 |   struct B6 (base) (empty)
 // CHECK-NEXT:    3 |   struct B4 (base) (empty)
 // CHECK-NEXT:    3 |   struct B8 (base)
-// CHECK-NEXT:    3 |     char [5] c
+// CHECK-NEXT:    3 |     char[5] c
 // CHECK-NEXT:   12 |   struct B5 (base) (empty)
 // CHECK-NEXT:    8 |   (F vbtable pointer)
 // CHECK-NEXT:   12 |   int a
@@ -519,7 +519,7 @@ struct F : B1, B6, B4, B8, B5, virtual B0 {
 // CHECK-X64-NEXT:    2 |   struct B6 (base) (empty)
 // CHECK-X64-NEXT:    3 |   struct B4 (base) (empty)
 // CHECK-X64-NEXT:    3 |   struct B8 (base)
-// CHECK-X64-NEXT:    3 |     char [5] c
+// CHECK-X64-NEXT:    3 |     char[5] c
 // CHECK-X64-NEXT:   16 |   struct B5 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (F vbtable pointer)
 // CHECK-X64-NEXT:   16 |   int a
@@ -535,7 +535,7 @@ struct G : B8, B1, virtual B0 {
 
 // CHECK-LABEL:   0 | struct G{{$}}
 // CHECK-NEXT:    0 |   struct B8 (base)
-// CHECK-NEXT:    0 |     char [5] c
+// CHECK-NEXT:    0 |     char[5] c
 // CHECK-NEXT:   21 |   struct B1 (base) (empty)
 // CHECK-NEXT:    8 |   (G vbtable pointer)
 // CHECK-NEXT:   24 |   int a
@@ -545,7 +545,7 @@ struct G : B8, B1, virtual B0 {
 // CHECK-NEXT:      |  nvsize=48, nvalign=16]
 // CHECK-X64-LABEL:   0 | struct G{{$}}
 // CHECK-X64-NEXT:    0 |   struct B8 (base)
-// CHECK-X64-NEXT:    0 |     char [5] c
+// CHECK-X64-NEXT:    0 |     char[5] c
 // CHECK-X64-NEXT:   21 |   struct B1 (base) (empty)
 // CHECK-X64-NEXT:    8 |   (G vbtable pointer)
 // CHECK-X64-NEXT:   24 |   int a
