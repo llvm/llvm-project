@@ -495,8 +495,11 @@
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=512  %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=1024 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=1024 %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512+ -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-SVE-VECTOR-BITS %s
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_BITS [[#VBITS:]]
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_VECTOR_OPERATORS 1
+// CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_BITS
+// CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_VECTOR_OPERATORS
 
 // ================== Check Largse System Extensions (LSE)
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s

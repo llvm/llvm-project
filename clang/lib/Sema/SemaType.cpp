@@ -7889,8 +7889,10 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
     return;
   }
 
-  // Attribute is unsupported if '-msve-vector-bits=<bits>' isn't specified.
-  if (!S.getLangOpts().ArmSveVectorBits) {
+  // Attribute is unsupported if '-msve-vector-bits=<bits>' isn't specified, or
+  // if <bits>+ syntax is used.
+  if (!S.getLangOpts().VScaleMin ||
+      S.getLangOpts().VScaleMin != S.getLangOpts().VScaleMax) {
     S.Diag(Attr.getLoc(), diag::err_attribute_arm_feature_sve_bits_unsupported)
         << Attr;
     Attr.setInvalid();
@@ -7913,9 +7915,9 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
   unsigned VecSize = static_cast<unsigned>(SveVectorSizeInBits.getZExtValue());
 
   // The attribute vector size must match -msve-vector-bits.
-  if (VecSize != S.getLangOpts().ArmSveVectorBits) {
+  if (VecSize != S.getLangOpts().VScaleMin * 128) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_sve_vector_size)
-        << VecSize << S.getLangOpts().ArmSveVectorBits;
+        << VecSize << S.getLangOpts().VScaleMin * 128;
     Attr.setInvalid();
     return;
   }

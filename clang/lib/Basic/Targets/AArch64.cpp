@@ -451,8 +451,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 
-  if (Opts.ArmSveVectorBits) {
-    Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.ArmSveVectorBits));
+  if (Opts.VScaleMin && Opts.VScaleMin == Opts.VScaleMax) {
+    Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.VScaleMin * 128));
     Builder.defineMacro("__ARM_FEATURE_SVE_VECTOR_OPERATORS");
   }
 }
@@ -464,10 +464,9 @@ ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
 
 Optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
-  if (LangOpts.ArmSveVectorBits) {
-    unsigned VScale = LangOpts.ArmSveVectorBits / 128;
-    return std::pair<unsigned, unsigned>(VScale, VScale);
-  }
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(LangOpts.VScaleMin,
+                                         LangOpts.VScaleMax);
   if (hasFeature("sve"))
     return std::pair<unsigned, unsigned>(0, 16);
   return None;

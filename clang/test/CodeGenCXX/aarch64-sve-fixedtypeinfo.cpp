@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=128 \
+// RUN:  -target-feature +sve -target-feature +bf16 -mvscale-min=1 -mvscale-max=1 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-128
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=256 \
+// RUN:  -target-feature +sve -target-feature +bf16 -mvscale-min=2 -mvscale-max=2 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-256
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=512 \
+// RUN:  -target-feature +sve -target-feature +bf16 -mvscale-min=4 -mvscale-max=4 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-512
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=1024 \
+// RUN:  -target-feature +sve -target-feature +bf16 -mvscale-min=8 -mvscale-max=8 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-1024
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=2048 \
+// RUN:  -target-feature +sve -target-feature +bf16 -mvscale-min=16 -mvscale-max=16 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-2048
 
 #define N __ARM_FEATURE_SVE_BITS
