@@ -511,8 +511,19 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
 
   // TODO: Should this try to match mulhi24?
   if (ST->hasMulU24() && isU24(LHS, Size) && isU24(RHS, Size)) {
+    // The 24-bit mul intrinsics yields the low-order 32 bits. The result's bit
+    // width should not exceed 32 if `Size` > 32.
+    if (Size > 32 &&
+        numBitsUnsigned(LHS, Size) + numBitsUnsigned(RHS, Size) > 32) {
+      return false;
+    }
+
     IntrID = Intrinsic::amdgcn_mul_u24;
   } else if (ST->hasMulI24() && isI24(LHS, Size) && isI24(RHS, Size)) {
+    if (Size > 32 && numBitsSigned(LHS, Size) + numBitsSigned(RHS, Size) > 31) {
+      return false;
+    }
+
     IntrID = Intrinsic::amdgcn_mul_i24;
   } else
     return false;
