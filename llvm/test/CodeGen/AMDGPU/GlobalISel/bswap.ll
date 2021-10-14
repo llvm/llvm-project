@@ -392,8 +392,7 @@ define amdgpu_ps i16 @s_bswap_i16(i16 inreg %src) {
 ; GFX7-LABEL: s_bswap_i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_lshl_b32 s1, s0, 8
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    s_lshr_b32 s0, s0, 8
+; GFX7-NEXT:    s_bfe_u32 s0, s0, 0x80008
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -427,8 +426,7 @@ define i16 @v_bswap_i16(i16 %src) {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -459,14 +457,12 @@ define i16 @v_bswap_i16(i16 %src) {
 define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX7-LABEL: s_bswap_v2i16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mov_b32 s3, 0xffff
+; GFX7-NEXT:    s_mov_b32 s3, 0x80008
 ; GFX7-NEXT:    s_lshl_b32 s2, s0, 8
-; GFX7-NEXT:    s_and_b32 s0, s0, s3
-; GFX7-NEXT:    s_lshr_b32 s0, s0, 8
+; GFX7-NEXT:    s_bfe_u32 s0, s0, s3
 ; GFX7-NEXT:    s_or_b32 s0, s0, s2
 ; GFX7-NEXT:    s_lshl_b32 s2, s1, 8
-; GFX7-NEXT:    s_and_b32 s1, s1, s3
-; GFX7-NEXT:    s_lshr_b32 s1, s1, 8
+; GFX7-NEXT:    s_bfe_u32 s1, s1, s3
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    s_bfe_u32 s1, s1, 0x100000
 ; GFX7-NEXT:    s_bfe_u32 s0, s0, 0x100000
@@ -505,8 +501,7 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -541,8 +536,7 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -579,14 +573,11 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; GFX7-LABEL: v_bswap_v2i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 8, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 8, v1
-; GFX7-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; GFX7-NEXT:    v_bfe_u32 v1, v1, 8, 8
 ; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;

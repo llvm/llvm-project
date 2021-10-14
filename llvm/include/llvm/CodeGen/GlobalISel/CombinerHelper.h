@@ -583,6 +583,9 @@ public:
   /// Match: shr (shl x, n), k -> sbfx/ubfx x, pos, width
   bool matchBitfieldExtractFromShr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Match: shr (and x, n), k -> ubfx x, pos, width
+  bool matchBitfieldExtractFromShrAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   // Helpers for reassociation:
   bool matchReassocConstantInnerRHS(GPtrAdd &MI, MachineInstr *RHS,
                                     BuildFnTy &MatchInfo);
