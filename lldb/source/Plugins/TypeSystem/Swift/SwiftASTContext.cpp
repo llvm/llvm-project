@@ -6175,8 +6175,8 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
     swift::CanType swift_bound_type(::GetCanonicalSwiftType(bound_type));
-    if (swift_bound_type->hasTypeParameter()) {
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "GetBitSize: Can't bind type: %s",
+    if (swift_bound_type && swift_bound_type->hasTypeParameter()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Can't bind type: %s",
                  bound_type.GetTypeName().AsCString());
       return {};
     }
@@ -6221,6 +6221,16 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
+
+    // Check that the type has been bound successfully -- and if not,
+    // log the event and bail out to avoid an infinite loop.
+    swift::CanType swift_bound_type(::GetCanonicalSwiftType(bound_type));
+    if (swift_bound_type && swift_bound_type->hasTypeParameter()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Can't bind type: %s",
+                 bound_type.GetTypeName().AsCString());
+      return {};
+    }
+
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetByteStride(exe_scope);
   }
@@ -6254,8 +6264,16 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
-    if (bound_type.GetOpaqueQualType() == type)
+
+    // Check that the type has been bound successfully -- and if not,
+    // log the event and bail out to avoid an infinite loop.
+    swift::CanType swift_bound_type(::GetCanonicalSwiftType(bound_type));
+    if (swift_bound_type && swift_bound_type->hasTypeParameter()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Can't bind type: %s",
+                 bound_type.GetTypeName().AsCString());
       return {};
+
+    }
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetTypeBitAlign(exe_scope);
   }
