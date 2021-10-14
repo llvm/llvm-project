@@ -185,8 +185,7 @@ define void @zeroext_index([256 x i32]* %s, i8* %q) {
 ; CHECK: NoAlias:  i32* %p.01, i32* %p.2
 ; CHECK: MayAlias: i32* %p.02, i32* %p.2
 ; CHECK: NoAlias:  i32* %p.01, i32* %p.3
-; TODO: This can be NoAlias.
-; CHECK: MayAlias: i32* %p.02, i32* %p.3
+; CHECK: NoAlias:  i32* %p.02, i32* %p.3
 define void @multiple(i32* %p, i32* %o1_ptr, i32* %o2_ptr) {
   %o1 = load i32, i32* %o1_ptr, !range !0
   %o2 = load i32, i32* %o2_ptr, !range !0
