@@ -5013,6 +5013,133 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() {
   return !(ST->isAtom());
 }
 
+// Get estimation for interleaved load/store operations and strided load.
+// \p Indices contains indices for strided load.
+// \p Factor - the factor of interleaving.
+// AVX-512 provides 3-src shuffles that significantly reduces the cost.
+InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
+    unsigned Opcode, FixedVectorType *VecTy, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond, bool UseMaskForGaps) {
+
+  if (UseMaskForCond || UseMaskForGaps)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace, CostKind,
+                                             UseMaskForCond, UseMaskForGaps);
+
+  // VecTy for interleave memop is <VF*Factor x Elt>.
+  // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
+  // VecTy = <12 x i32>.
+
+  // Calculate the number of memory operations (NumOfMemOps), required
+  // for load/store the VecTy.
+  MVT LegalVT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
+  unsigned VecTySize = DL.getTypeStoreSize(VecTy);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
+
+  // Get the cost of one memory operation.
+  auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
+                                             LegalVT.getVectorNumElements());
+  InstructionCost MemOpCost = getMemoryOpCost(
+      Opcode, SingleMemOpTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+
+  unsigned VF = VecTy->getNumElements() / Factor;
+  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+
+  if (Opcode == Instruction::Load) {
+    // The tables (AVX512InterleavedLoadTbl and AVX512InterleavedStoreTbl)
+    // contain the cost of the optimized shuffle sequence that the
+    // X86InterleavedAccess pass will generate.
+    // The cost of loads and stores are computed separately from the table.
+
+    // X86InterleavedAccess support only the following interleaved-access group.
+    static const CostTblEntry AVX512InterleavedLoadTbl[] = {
+        {3, MVT::v16i8, 12}, //(load 48i8 and) deinterleave into 3 x 16i8
+        {3, MVT::v32i8, 14}, //(load 96i8 and) deinterleave into 3 x 32i8
+        {3, MVT::v64i8, 22}, //(load 96i8 and) deinterleave into 3 x 32i8
+    };
+
+    if (const auto *Entry =
+            CostTableLookup(AVX512InterleavedLoadTbl, Factor, VT))
+      return NumOfMemOps * MemOpCost + Entry->Cost;
+    //If an entry does not exist, fallback to the default implementation.
+
+    // Kind of shuffle depends on number of loaded values.
+    // If we load the entire data in one register, we can use a 1-src shuffle.
+    // Otherwise, we'll merge 2 sources in each operation.
+    TTI::ShuffleKind ShuffleKind =
+        (NumOfMemOps > 1) ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc;
+
+    InstructionCost ShuffleCost =
+        getShuffleCost(ShuffleKind, SingleMemOpTy, None, 0, nullptr);
+
+    unsigned NumOfLoadsInInterleaveGrp =
+        Indices.size() ? Indices.size() : Factor;
+    auto *ResultTy = FixedVectorType::get(VecTy->getElementType(),
+                                          VecTy->getNumElements() / Factor);
+    InstructionCost NumOfResults =
+        getTLI()->getTypeLegalizationCost(DL, ResultTy).first *
+        NumOfLoadsInInterleaveGrp;
+
+    // About a half of the loads may be folded in shuffles when we have only
+    // one result. If we have more than one result, we do not fold loads at all.
+    unsigned NumOfUnfoldedLoads =
+        NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
+
+    // Get a number of shuffle operations per result.
+    unsigned NumOfShufflesPerResult =
+        std::max((unsigned)1, (unsigned)(NumOfMemOps - 1));
+
+    // The SK_MergeTwoSrc shuffle clobbers one of src operands.
+    // When we have more than one destination, we need additional instructions
+    // to keep sources.
+    InstructionCost NumOfMoves = 0;
+    if (NumOfResults > 1 && ShuffleKind == TTI::SK_PermuteTwoSrc)
+      NumOfMoves = NumOfResults * NumOfShufflesPerResult / 2;
+
+    InstructionCost Cost = NumOfResults * NumOfShufflesPerResult * ShuffleCost +
+                           NumOfUnfoldedLoads * MemOpCost + NumOfMoves;
+
+    return Cost;
+  }
+
+  // Store.
+  assert(Opcode == Instruction::Store &&
+         "Expected Store Instruction at this  point");
+  // X86InterleavedAccess support only the following interleaved-access group.
+  static const CostTblEntry AVX512InterleavedStoreTbl[] = {
+      {3, MVT::v16i8, 12}, // interleave 3 x 16i8 into 48i8 (and store)
+      {3, MVT::v32i8, 14}, // interleave 3 x 32i8 into 96i8 (and store)
+      {3, MVT::v64i8, 26}, // interleave 3 x 64i8 into 96i8 (and store)
+
+      {4, MVT::v8i8, 10},  // interleave 4 x 8i8  into 32i8  (and store)
+      {4, MVT::v16i8, 11}, // interleave 4 x 16i8 into 64i8  (and store)
+      {4, MVT::v32i8, 14}, // interleave 4 x 32i8 into 128i8 (and store)
+      {4, MVT::v64i8, 24}  // interleave 4 x 32i8 into 256i8 (and store)
+  };
+
+  if (const auto *Entry =
+          CostTableLookup(AVX512InterleavedStoreTbl, Factor, VT))
+    return NumOfMemOps * MemOpCost + Entry->Cost;
+  //If an entry does not exist, fallback to the default implementation.
+
+  // There is no strided stores meanwhile. And store can't be folded in
+  // shuffle.
+  unsigned NumOfSources = Factor; // The number of values to be merged.
+  InstructionCost ShuffleCost =
+      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, None, 0, nullptr);
+  unsigned NumOfShufflesPerStore = NumOfSources - 1;
+
+  // The SK_MergeTwoSrc shuffle clobbers one of src operands.
+  // We need additional instructions to keep sources.
+  unsigned NumOfMoves = NumOfMemOps * NumOfShufflesPerStore / 2;
+  InstructionCost Cost =
+      NumOfMemOps * (MemOpCost + NumOfShufflesPerStore * ShuffleCost) +
+      NumOfMoves;
+  return Cost;
+}
+
 // Get estimation for interleaved load/store operations for AVX2.
 // \p Factor is the interleaved-access factor (stride) - number of
 // (interleaved) elements in the group.
@@ -5269,133 +5396,6 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace, CostKind);
-}
-
-// Get estimation for interleaved load/store operations and strided load.
-// \p Indices contains indices for strided load.
-// \p Factor - the factor of interleaving.
-// AVX-512 provides 3-src shuffles that significantly reduces the cost.
-InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
-    unsigned Opcode, FixedVectorType *VecTy, unsigned Factor,
-    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind, bool UseMaskForCond, bool UseMaskForGaps) {
-
-  if (UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind,
-                                             UseMaskForCond, UseMaskForGaps);
-
-  // VecTy for interleave memop is <VF*Factor x Elt>.
-  // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
-  // VecTy = <12 x i32>.
-
-  // Calculate the number of memory operations (NumOfMemOps), required
-  // for load/store the VecTy.
-  MVT LegalVT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
-  unsigned VecTySize = DL.getTypeStoreSize(VecTy);
-  unsigned LegalVTSize = LegalVT.getStoreSize();
-  unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
-
-  // Get the cost of one memory operation.
-  auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
-                                             LegalVT.getVectorNumElements());
-  InstructionCost MemOpCost = getMemoryOpCost(
-      Opcode, SingleMemOpTy, MaybeAlign(Alignment), AddressSpace, CostKind);
-
-  unsigned VF = VecTy->getNumElements() / Factor;
-  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
-
-  if (Opcode == Instruction::Load) {
-    // The tables (AVX512InterleavedLoadTbl and AVX512InterleavedStoreTbl)
-    // contain the cost of the optimized shuffle sequence that the
-    // X86InterleavedAccess pass will generate.
-    // The cost of loads and stores are computed separately from the table.
-
-    // X86InterleavedAccess support only the following interleaved-access group.
-    static const CostTblEntry AVX512InterleavedLoadTbl[] = {
-        {3, MVT::v16i8, 12}, //(load 48i8 and) deinterleave into 3 x 16i8
-        {3, MVT::v32i8, 14}, //(load 96i8 and) deinterleave into 3 x 32i8
-        {3, MVT::v64i8, 22}, //(load 96i8 and) deinterleave into 3 x 32i8
-    };
-
-    if (const auto *Entry =
-            CostTableLookup(AVX512InterleavedLoadTbl, Factor, VT))
-      return NumOfMemOps * MemOpCost + Entry->Cost;
-    //If an entry does not exist, fallback to the default implementation.
-
-    // Kind of shuffle depends on number of loaded values.
-    // If we load the entire data in one register, we can use a 1-src shuffle.
-    // Otherwise, we'll merge 2 sources in each operation.
-    TTI::ShuffleKind ShuffleKind =
-        (NumOfMemOps > 1) ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc;
-
-    InstructionCost ShuffleCost =
-        getShuffleCost(ShuffleKind, SingleMemOpTy, None, 0, nullptr);
-
-    unsigned NumOfLoadsInInterleaveGrp =
-        Indices.size() ? Indices.size() : Factor;
-    auto *ResultTy = FixedVectorType::get(VecTy->getElementType(),
-                                          VecTy->getNumElements() / Factor);
-    InstructionCost NumOfResults =
-        getTLI()->getTypeLegalizationCost(DL, ResultTy).first *
-        NumOfLoadsInInterleaveGrp;
-
-    // About a half of the loads may be folded in shuffles when we have only
-    // one result. If we have more than one result, we do not fold loads at all.
-    unsigned NumOfUnfoldedLoads =
-        NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
-
-    // Get a number of shuffle operations per result.
-    unsigned NumOfShufflesPerResult =
-        std::max((unsigned)1, (unsigned)(NumOfMemOps - 1));
-
-    // The SK_MergeTwoSrc shuffle clobbers one of src operands.
-    // When we have more than one destination, we need additional instructions
-    // to keep sources.
-    InstructionCost NumOfMoves = 0;
-    if (NumOfResults > 1 && ShuffleKind == TTI::SK_PermuteTwoSrc)
-      NumOfMoves = NumOfResults * NumOfShufflesPerResult / 2;
-
-    InstructionCost Cost = NumOfResults * NumOfShufflesPerResult * ShuffleCost +
-                           NumOfUnfoldedLoads * MemOpCost + NumOfMoves;
-
-    return Cost;
-  }
-
-  // Store.
-  assert(Opcode == Instruction::Store &&
-         "Expected Store Instruction at this  point");
-  // X86InterleavedAccess support only the following interleaved-access group.
-  static const CostTblEntry AVX512InterleavedStoreTbl[] = {
-      {3, MVT::v16i8, 12}, // interleave 3 x 16i8 into 48i8 (and store)
-      {3, MVT::v32i8, 14}, // interleave 3 x 32i8 into 96i8 (and store)
-      {3, MVT::v64i8, 26}, // interleave 3 x 64i8 into 96i8 (and store)
-
-      {4, MVT::v8i8, 10},  // interleave 4 x 8i8  into 32i8  (and store)
-      {4, MVT::v16i8, 11}, // interleave 4 x 16i8 into 64i8  (and store)
-      {4, MVT::v32i8, 14}, // interleave 4 x 32i8 into 128i8 (and store)
-      {4, MVT::v64i8, 24}  // interleave 4 x 32i8 into 256i8 (and store)
-  };
-
-  if (const auto *Entry =
-          CostTableLookup(AVX512InterleavedStoreTbl, Factor, VT))
-    return NumOfMemOps * MemOpCost + Entry->Cost;
-  //If an entry does not exist, fallback to the default implementation.
-
-  // There is no strided stores meanwhile. And store can't be folded in
-  // shuffle.
-  unsigned NumOfSources = Factor; // The number of values to be merged.
-  InstructionCost ShuffleCost =
-      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, None, 0, nullptr);
-  unsigned NumOfShufflesPerStore = NumOfSources - 1;
-
-  // The SK_MergeTwoSrc shuffle clobbers one of src operands.
-  // We need additional instructions to keep sources.
-  unsigned NumOfMoves = NumOfMemOps * NumOfShufflesPerStore / 2;
-  InstructionCost Cost =
-      NumOfMemOps * (MemOpCost + NumOfShufflesPerStore * ShuffleCost) +
-      NumOfMoves;
-  return Cost;
 }
 
 InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
