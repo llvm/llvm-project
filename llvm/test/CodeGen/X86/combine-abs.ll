@@ -41,7 +41,7 @@ define i32 @combine_i32_abs_abs(i32 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    cmovll %edi, %eax
+; CHECK-NEXT:    cmovsl %edi, %eax
 ; CHECK-NEXT:    retq
   %n1 = sub i32 zeroinitializer, %a
   %b1 = icmp slt i32 %a, zeroinitializer

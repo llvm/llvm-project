@@ -46,7 +46,7 @@ define i16 @neg_abs_i16(i16 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negw %ax
-; X64-NEXT:    cmovlw %di, %ax
+; X64-NEXT:    cmovsw %di, %ax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -69,7 +69,7 @@ define i32 @neg_abs_i32(i32 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negl %eax
-; X64-NEXT:    cmovll %edi, %eax
+; X64-NEXT:    cmovsl %edi, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    retq
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
@@ -97,7 +97,7 @@ define i64 @neg_abs_i64(i64 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    negq %rax
-; X64-NEXT:    cmovlq %rdi, %rax
+; X64-NEXT:    cmovsq %rdi, %rax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
