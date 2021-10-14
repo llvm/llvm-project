@@ -755,3 +755,24 @@ func @tensor_cast_not_in_place(
   return %r1 : tensor<?xf32>
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// Insertion point cases.
+//===----------------------------------------------------------------------===//
+
+/// These tests just check the produced IR is valid and does not have dominance
+/// errors in the def-use chains.
+
+// CHECK-LABEL: func @dominance_violation_bug_1
+func @dominance_violation_bug_1(%A : tensor<?x?xf32>, %idx : index) -> tensor<?x?xf32> {
+  %f0 = arith.constant 0.0 : f32
+  
+  %sA = tensor.extract_slice %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+  %ssA = tensor.extract_slice %sA[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
+  %FA = linalg.fill(%f0, %ssA) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
+  %rsA = tensor.insert_slice %FA into %sA[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<?x?xf32>
+  %rA = tensor.insert_slice %rsA into %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+
+  return %rA : tensor<?x?xf32>
+}
