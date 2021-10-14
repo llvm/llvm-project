@@ -621,6 +621,15 @@ size_t SymbolFileDWARFDebugMap::GetCompUnitInfosForModule(
   return cu_infos.size();
 }
 
+llvm::VersionTuple
+SymbolFileDWARFDebugMap::GetProducerVersion(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
+  if (oso_dwarf)
+    return oso_dwarf->GetProducerVersion(comp_unit);
+  return {};
+}
+
 lldb::LanguageType
 SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
