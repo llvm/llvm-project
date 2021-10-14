@@ -101,7 +101,10 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
     return "";
   }
 
-  auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
+  if (!ts)
+    return "";
+  auto *ctx = ts->GetSwiftASTContext();
   if (!ctx)
     return "";
   swift::ClangImporter *imp = ctx->GetClangImporter();

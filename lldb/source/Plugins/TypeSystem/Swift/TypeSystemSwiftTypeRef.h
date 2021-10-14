@@ -33,6 +33,7 @@ class Demangler;
 namespace lldb_private {
 class ClangExternalASTSourceCallbacks;
 class SwiftASTContext;
+class SwiftASTContextForExpressions;
 
 /// A Swift TypeSystem that does not own a swift::ASTContext.
 class TypeSystemSwiftTypeRef : public TypeSystemSwift {
@@ -48,11 +49,17 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
   /// \}
 
-  TypeSystemSwiftTypeRef(SwiftASTContext *swift_ast_context);
-  SwiftASTContext *GetSwiftASTContext() override { return m_swift_ast_context; }
+#ifndef NDEBUG
+  /// Provided only for unit tests.
+  TypeSystemSwiftTypeRef() {}
+#endif
+  TypeSystemSwiftTypeRef(Module &module);
+  TypeSystemSwiftTypeRef(SwiftASTContextForExpressions &swift_ast_context);
+  SwiftASTContext *GetSwiftASTContext() const override;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
+  void SetTriple(const llvm::Triple triple) override;
+  void ClearModuleDependentCaches() override;
 
-  Module *GetModule() const override;
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
@@ -89,6 +96,8 @@ public:
       return true;
     return false;
   }
+
+  Module *GetModule() const { return m_module; }
 
   // Tests
 #ifndef NDEBUG
@@ -275,10 +284,9 @@ public:
                     swift::Demangle::NodePointer node);
 
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
-  static swift::Demangle::NodePointer
-  GetCanonicalDemangleTree(SwiftASTContext *module_holder,
-                           swift::Demangle::Demangler &dem,
-                           llvm::StringRef mangled_name);
+  static swift::Demangle::NodePointer GetCanonicalDemangleTree(
+      TypeSystemSwiftTypeRef *module_holder, SwiftASTContext *target_holder,
+      swift::Demangle::Demangler &dem, llvm::StringRef mangled_name);
 
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
@@ -343,7 +351,8 @@ private:
 #endif
 
   /// The sibling SwiftASTContext.
-  SwiftASTContext *m_swift_ast_context = nullptr;
+  mutable lldb::TypeSystemSP m_swift_ast_context_sp;
+  mutable SwiftASTContext *m_swift_ast_context = nullptr;
 
   /// The APINotesManager responsible for each Clang module.
   llvm::DenseMap<clang::Module *,

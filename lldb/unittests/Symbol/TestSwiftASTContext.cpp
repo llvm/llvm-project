@@ -65,6 +65,10 @@ struct SwiftASTContextTester : public SwiftASTContext {
     SwiftASTContextTester() : SwiftASTContext() {}
   #endif
 
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+    return m_typeref_typesystem;
+  }
+
   static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
                                     std::string swift_dir,
                                     std::string swift_stdlib_os_dir,
@@ -79,6 +83,7 @@ struct SwiftASTContextTester : public SwiftASTContext {
                                          const llvm::Triple &host) {
     return SwiftASTContext::GetSwiftStdlibOSDir(target, host);
   }
+  TypeSystemSwiftTypeRef m_typeref_typesystem;
 };
 
 TEST_F(TestSwiftASTContext, ResourceDir) {
@@ -195,7 +200,7 @@ TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {
 #ifndef NDEBUG
   // The mock constructor is only available in asserts mode.
   SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
-  SwiftASTContext context;
+  SwiftASTContextTester context;
   CompilerType t(&context, nullptr);
   EXPECT_FALSE(SwiftASTContext::IsNonTriviallyManagedReferenceType(t, strategy,
                                                                    nullptr));

@@ -23,17 +23,23 @@ using namespace lldb;
 using namespace lldb_private;
 using llvm::StringRef;
 
+TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
+
 /// TypeSystem Plugin functionality.
 /// \{
 static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
                                                    Module *module,
                                                    Target *target,
                                                    const char *extra_options) {
+  if (language != eLanguageTypeSwift)
+    return {};
+
   // This should be called with either a target or a module.
   if (module) {
     assert(!target);
     assert(StringRef(extra_options).empty());
-    return SwiftASTContext::CreateInstance(language, *module);
+    return std::shared_ptr<TypeSystemSwiftTypeRef>(
+        new TypeSystemSwiftTypeRef(*module));
   } else if (target) {
     assert(!module);
     return SwiftASTContext::CreateInstance(language, *target, extra_options);
