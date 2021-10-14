@@ -196,14 +196,14 @@ int a = sizeof(A);
 
 // CHECK:      *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test6::A::B
-// CHECK-NEXT:          0 |   double [3] d
+// CHECK-NEXT:          0 |   double[3] d
 // CHECK-NEXT:            | [sizeof=24, dsize=24, align=4, preferredalign=8,
 // CHECK-NEXT:            |  nvsize=24, nvalign=4, preferrednvalign=8]
 
 // CHECK:      *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test6::A
 // CHECK-NEXT:          0 |   struct test6::A::B b
-// CHECK-NEXT:          0 |     double [3] d
+// CHECK-NEXT:          0 |     double[3] d
 // CHECK-NEXT:            | [sizeof=24, dsize=24, align=4, preferredalign=8,
 // CHECK-NEXT:            |  nvsize=24, nvalign=4, preferrednvalign=8]
 
@@ -220,14 +220,14 @@ int a = sizeof(A);
 
 // CHECK:      *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test7::A::B
-// CHECK-NEXT:          0 |   _Complex long double [3] d
+// CHECK-NEXT:          0 |   _Complex long double[3] d
 // CHECK-NEXT:            | [sizeof=48, dsize=48, align=4, preferredalign=8,
 // CHECK-NEXT:            |  nvsize=48, nvalign=4, preferrednvalign=8]
 
 // CHECK:      *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test7::A
 // CHECK-NEXT:          0 |   struct test7::A::B b
-// CHECK-NEXT:          0 |     _Complex long double [3] d
+// CHECK-NEXT:          0 |     _Complex long double[3] d
 // CHECK-NEXT:            | [sizeof=48, dsize=48, align=4, preferredalign=8,
 // CHECK-NEXT:            |  nvsize=48, nvalign=4, preferrednvalign=8]
 
@@ -284,14 +284,14 @@ int b = sizeof(D);
 
 // CHECK:               0 | struct test9::B
 // CHECK-NEXT:          0 |   struct test9::A (base)
-// CHECK-NEXT:          0 |     char [0] zea
+// CHECK-NEXT:          0 |     char[0] zea
 // CHECK-NEXT:          0 |   double d
 // CHECK-NEXT:            | [sizeof=8, dsize=8, align=4, preferredalign=4,
 // CHECK-NEXT:            |  nvsize=8, nvalign=4, preferrednvalign=4]
 
 // CHECK:               0 | struct test9::D
 // CHECK-NEXT:          0 |   struct test9::A (base)
-// CHECK-NEXT:          0 |     char [0] zea
+// CHECK-NEXT:          0 |     char[0] zea
 // CHECK-NEXT:          0 |   struct test9::C (base)
 // CHECK-NEXT:          0 |     double d
 // CHECK-NEXT:          8 |   char x

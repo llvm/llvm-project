@@ -67,18 +67,18 @@ int main() {
 // C-NEXT: `-FunctionDecl [[ADDR_28:0x[a-z0-9]*]] <line:24:1, line:32:1> line:24:5 main 'int ({{.*}})'
 // C-NEXT:   `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:12, line:32:1>
 // C-NEXT:     |-DeclStmt [[ADDR_30:0x[a-z0-9]*]] <line:26:3, col:12>
-// C-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd [2]'
+// C-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd[2]'
 // C-NEXT:     |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' '='
 // C-NEXT:     | |-ArraySubscriptExpr [[ADDR_33:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:     | | |-ImplicitCastExpr [[ADDR_34:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
-// C-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// C-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // C-NEXT:     | | `-IntegerLiteral [[ADDR_36:0x[a-z0-9]*]] <col:7> 'int' 0
 // C-NEXT:     | `-UnaryOperator [[ADDR_37:0x[a-z0-9]*]] <col:12, col:13> 'int (*)({{.*}})' prefix '&' cannot overflow
 // C-NEXT:     |   `-DeclRefExpr [[ADDR_38:0x[a-z0-9]*]] <col:13> 'int ({{.*}})' Function [[ADDR_0]] 'also_before' 'int ({{.*}})'
 // C-NEXT:     |-BinaryOperator [[ADDR_39:0x[a-z0-9]*]] <line:28:3, col:12> 'fd':'int (*)({{.*}})' '='
 // C-NEXT:     | |-ArraySubscriptExpr [[ADDR_40:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:     | | |-ImplicitCastExpr [[ADDR_41:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
-// C-NEXT:     | | | `-DeclRefExpr [[ADDR_42:0x[a-z0-9]*]] <col:3> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// C-NEXT:     | | | `-DeclRefExpr [[ADDR_42:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // C-NEXT:     | | `-IntegerLiteral [[ADDR_43:0x[a-z0-9]*]] <col:7> 'int' 1
 // C-NEXT:     | `-ImplicitCastExpr [[ADDR_44:0x[a-z0-9]*]] <col:12> 'int (*)({{.*}})' <FunctionToPointerDecay>
 // C-NEXT:     |   `-DeclRefExpr [[ADDR_45:0x[a-z0-9]*]] <col:12> 'int ({{.*}})' Function [[ADDR_17]] 'also_after' 'int ({{.*}})'
@@ -98,7 +98,7 @@ int main() {
 // C-NEXT:         |     `-ParenExpr [[ADDR_59:0x[a-z0-9]*]] <col:10, col:17> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:         |       `-ArraySubscriptExpr [[ADDR_60:0x[a-z0-9]*]] <col:11, col:16> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:         |         |-ImplicitCastExpr [[ADDR_61:0x[a-z0-9]*]] <col:11> 'fd *' <ArrayToPointerDecay>
-// C-NEXT:         |         | `-DeclRefExpr [[ADDR_62:0x[a-z0-9]*]] <col:11> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// C-NEXT:         |         | `-DeclRefExpr [[ADDR_62:0x[a-z0-9]*]] <col:11> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // C-NEXT:         |         `-IntegerLiteral [[ADDR_63:0x[a-z0-9]*]] <col:15> 'int' 0
 // C-NEXT:         `-CallExpr [[ADDR_64:0x[a-z0-9]*]] <line:31:10, col:19> 'int'
 // C-NEXT:           `-ImplicitCastExpr [[ADDR_65:0x[a-z0-9]*]] <col:10, col:17> 'fd':'int (*)({{.*}})' <LValueToRValue>
@@ -106,7 +106,7 @@ int main() {
 // C-NEXT:               `-ArraySubscriptExpr [[ADDR_67:0x[a-z0-9]*]] <col:11, col:16> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:                 |-IntegerLiteral [[ADDR_68:0x[a-z0-9]*]] <col:11> 'int' 1
 // C-NEXT:                 `-ImplicitCastExpr [[ADDR_69:0x[a-z0-9]*]] <col:13> 'fd *' <ArrayToPointerDecay>
-// C-NEXT:                   `-DeclRefExpr [[ADDR_70:0x[a-z0-9]*]] <col:13> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// C-NEXT:                   `-DeclRefExpr [[ADDR_70:0x[a-z0-9]*]] <col:13> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 
 // CXX:      |-FunctionDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, line:7:1> line:5:5 used also_before 'int ({{.*}})'
 // CXX-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:7:1>
@@ -140,18 +140,18 @@ int main() {
 // CXX-NEXT: `-FunctionDecl [[ADDR_28:0x[a-z0-9]*]] <line:24:1, line:32:1> line:24:5 main 'int ({{.*}})'
 // CXX-NEXT:   `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:12, line:32:1>
 // CXX-NEXT:     |-DeclStmt [[ADDR_30:0x[a-z0-9]*]] <line:26:3, col:12>
-// CXX-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd [2]'
+// CXX-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd[2]'
 // CXX-NEXT:     |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' {{.*}}'='
 // CXX-NEXT:     | |-ArraySubscriptExpr [[ADDR_33:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:     | | |-ImplicitCastExpr [[ADDR_34:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
-// CXX-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// CXX-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // CXX-NEXT:     | | `-IntegerLiteral [[ADDR_36:0x[a-z0-9]*]] <col:7> 'int' 0
 // CXX-NEXT:     | `-UnaryOperator [[ADDR_37:0x[a-z0-9]*]] <col:12, col:13> 'int (*)({{.*}})' prefix '&' cannot overflow
 // CXX-NEXT:     |   `-DeclRefExpr [[ADDR_38:0x[a-z0-9]*]] <col:13> 'int ({{.*}})' {{.*}}Function [[ADDR_0]] 'also_before' 'int ({{.*}})'
 // CXX-NEXT:     |-BinaryOperator [[ADDR_39:0x[a-z0-9]*]] <line:28:3, col:12> 'fd':'int (*)({{.*}})' {{.*}}'='
 // CXX-NEXT:     | |-ArraySubscriptExpr [[ADDR_40:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:     | | |-ImplicitCastExpr [[ADDR_41:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
-// CXX-NEXT:     | | | `-DeclRefExpr [[ADDR_42:0x[a-z0-9]*]] <col:3> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// CXX-NEXT:     | | | `-DeclRefExpr [[ADDR_42:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // CXX-NEXT:     | | `-IntegerLiteral [[ADDR_43:0x[a-z0-9]*]] <col:7> 'int' 1
 // CXX-NEXT:     | `-ImplicitCastExpr [[ADDR_44:0x[a-z0-9]*]] <col:12> 'int (*)({{.*}})' <FunctionToPointerDecay>
 // CXX-NEXT:     |   `-DeclRefExpr [[ADDR_45:0x[a-z0-9]*]] <col:12> 'int ({{.*}})' {{.*}}Function [[ADDR_17]] 'also_after' 'int ({{.*}})'
@@ -171,7 +171,7 @@ int main() {
 // CXX-NEXT:         |     `-ParenExpr [[ADDR_59:0x[a-z0-9]*]] <col:10, col:17> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:         |       `-ArraySubscriptExpr [[ADDR_60:0x[a-z0-9]*]] <col:11, col:16> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:         |         |-ImplicitCastExpr [[ADDR_61:0x[a-z0-9]*]] <col:11> 'fd *' <ArrayToPointerDecay>
-// CXX-NEXT:         |         | `-DeclRefExpr [[ADDR_62:0x[a-z0-9]*]] <col:11> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// CXX-NEXT:         |         | `-DeclRefExpr [[ADDR_62:0x[a-z0-9]*]] <col:11> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
 // CXX-NEXT:         |         `-IntegerLiteral [[ADDR_63:0x[a-z0-9]*]] <col:15> 'int' 0
 // CXX-NEXT:         `-CallExpr [[ADDR_64:0x[a-z0-9]*]] <line:31:10, col:19> 'int'
 // CXX-NEXT:           `-ImplicitCastExpr [[ADDR_65:0x[a-z0-9]*]] <col:10, col:17> 'fd':'int (*)({{.*}})' <LValueToRValue>
@@ -179,4 +179,4 @@ int main() {
 // CXX-NEXT:               `-ArraySubscriptExpr [[ADDR_67:0x[a-z0-9]*]] <col:11, col:16> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:                 |-IntegerLiteral [[ADDR_68:0x[a-z0-9]*]] <col:11> 'int' 1
 // CXX-NEXT:                 `-ImplicitCastExpr [[ADDR_69:0x[a-z0-9]*]] <col:13> 'fd *' <ArrayToPointerDecay>
-// CXX-NEXT:                   `-DeclRefExpr [[ADDR_70:0x[a-z0-9]*]] <col:13> 'fd [2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd [2]'
+// CXX-NEXT:                   `-DeclRefExpr [[ADDR_70:0x[a-z0-9]*]] <col:13> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'

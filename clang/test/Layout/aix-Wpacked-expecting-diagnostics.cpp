@@ -22,9 +22,9 @@ int b = sizeof(C);
 
 // CHECK:               0 | struct C
 // CHECK-NEXT:          0 |   struct B (base)
-// CHECK-NEXT:          0 |     char [8] x
+// CHECK-NEXT:          0 |     char[8] x
 // CHECK-NEXT:          8 |   struct A (base)
 // CHECK-NEXT:          8 |     double d
-// CHECK-NEXT:         16 |   char [8] x
+// CHECK-NEXT:         16 |   char[8] x
 // CHECK-NEXT:            | [sizeof=24, dsize=24, align=4, preferredalign=4,
 // CHECK-NEXT:            |  nvsize=24, nvalign=4, preferrednvalign=4]

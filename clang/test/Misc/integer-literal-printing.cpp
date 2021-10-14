@@ -68,12 +68,12 @@ void Function() {
   Function1(Type1<-42>()); // expected-error{{no matching function for call to 'Function1'}}
   Function2(Type2<42>()); // expected-error{{no matching function for call to 'Function2'}}
 
-  struct Type3<boolTy::b, "3"> t3; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type3Helper<(boolTy)false>::Ty' (aka 'boolTy')}}
+  struct Type3<boolTy::b, "3"> t3; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type3Helper<(boolTy)false>::Ty' (aka 'boolTy')}}
 
-  struct Type4<charTy::c, "4"> t4; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type4Helper<(charTy)'\x00'>::Ty' (aka 'charTy')}}
-  struct Type5<scharTy::c, "5"> t5; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type5Helper<(scharTy)'\x00'>::Ty' (aka 'scharTy')}}
-  struct Type6<ucharTy::c, "6"> t6; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type6Helper<(ucharTy)'\x00'>::Ty' (aka 'ucharTy')}}
-  struct Type7<wcharTy::c, "7"> t7; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type7Helper<(wcharTy)L'\x00'>::Ty' (aka 'wcharTy')}}
-  struct Type8<char16Ty::c, "8"> t8; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type8Helper<(char16Ty)u'\x00'>::Ty' (aka 'char16Ty')}}
-  struct Type9<char32Ty::c, "9"> t9; // expected-error{{value of type 'const char [2]' is not implicitly convertible to 'typename Type9Helper<(char32Ty)u'\x00'>::Ty' (aka 'char32Ty')}}
+  struct Type4<charTy::c, "4"> t4; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type4Helper<(charTy)'\x00'>::Ty' (aka 'charTy')}}
+  struct Type5<scharTy::c, "5"> t5; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type5Helper<(scharTy)'\x00'>::Ty' (aka 'scharTy')}}
+  struct Type6<ucharTy::c, "6"> t6; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type6Helper<(ucharTy)'\x00'>::Ty' (aka 'ucharTy')}}
+  struct Type7<wcharTy::c, "7"> t7; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type7Helper<(wcharTy)L'\x00'>::Ty' (aka 'wcharTy')}}
+  struct Type8<char16Ty::c, "8"> t8; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type8Helper<(char16Ty)u'\x00'>::Ty' (aka 'char16Ty')}}
+  struct Type9<char32Ty::c, "9"> t9; // expected-error{{value of type 'const char[2]' is not implicitly convertible to 'typename Type9Helper<(char32Ty)u'\x00'>::Ty' (aka 'char32Ty')}}
 }

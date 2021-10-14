@@ -52,7 +52,7 @@ template<typename T> struct X0 { };
 // argument.
 void inst_with_vla(int N) {
   int array[N]; // expected-warning{{variable length arrays are a C99 feature}}
-  X0<__typeof__(array)> x0a; // expected-error{{variably modified type 'typeof (array)' (aka 'int [N]') cannot be used as a template argument}}
+  X0<__typeof__(array)> x0a; // expected-error{{variably modified type 'typeof (array)' (aka 'int[N]') cannot be used as a template argument}}
 }
 
 template<typename T>
@@ -70,7 +70,7 @@ X1<HasNonConstantValue> x1b; // expected-note{{in instantiation of}}
 // Template argument deduction does not allow deducing a size from a VLA.
 // FIXME: This diagnostic should make it clear that the two 'N's are different entities!
 template<typename T, unsigned N>
-void accept_array(T (&array)[N]); // expected-note{{candidate template ignored: could not match 'T [N]' against 'int [N]'}}
+void accept_array(T (&array)[N]); // expected-note{{candidate template ignored: could not match 'T[N]' against 'int[N]'}}
 
 void test_accept_array(int N) {
   int array[N]; // expected-warning{{variable length arrays are a C99 feature}}

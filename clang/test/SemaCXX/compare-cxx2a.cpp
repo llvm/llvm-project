@@ -351,7 +351,7 @@ void test_array_conv() {
   int arr[5];
   int *ap = arr + 2;
   int arr2[3];
-  (void)(arr <=> arr); // expected-error {{invalid operands to binary expression ('int [5]' and 'int [5]')}}
+  (void)(arr <=> arr); // expected-error {{invalid operands to binary expression ('int[5]' and 'int[5]')}}
   (void)(+arr <=> arr);
 }
 

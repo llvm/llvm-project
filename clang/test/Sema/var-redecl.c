@@ -67,4 +67,4 @@ void f(int x) { // expected-note {{previous definition is here}}
 
 extern int b[];
 void g20() { extern int b[3]; } // expected-note{{previous declaration is here}}
-void g21() { extern int b[4]; } // expected-error{{redeclaration of 'b' with a different type: 'int [4]' vs 'int [3]'}}
+void g21() { extern int b[4]; } // expected-error{{redeclaration of 'b' with a different type: 'int[4]' vs 'int[3]'}}

@@ -154,8 +154,8 @@ namespace ArrayBound {
     static const char kMessage[];
     // Here, kMessage is type-dependent, so we don't diagnose until
     // instantiation.
-    static void g1() { const char (&ref)[4] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char [5]'}}
-    static void g2() { const char (&ref)[5] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char [4]'}}
+    static void g1() { const char (&ref)[4] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char[5]'}}
+    static void g2() { const char (&ref)[5] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char[4]'}}
   };
   template<typename T> const char Bar<T>::kMessage[] = "foo";
   template void Bar<int>::g1();

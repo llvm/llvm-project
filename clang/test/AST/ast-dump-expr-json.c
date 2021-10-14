@@ -4689,7 +4689,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "int [4]"
+// CHECK-NEXT:         "qualType": "int[4]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "inner": [
@@ -4709,7 +4709,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "int [4]"
+// CHECK-NEXT:           "qualType": "int[4]"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "inner": [
@@ -5106,7 +5106,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "char [2]"
+// CHECK-NEXT:         "qualType": "char[2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "value": "\"a\""
@@ -5151,7 +5151,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "int [2]"
+// CHECK-NEXT:         "qualType": "int[2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "value": "L\"a\""
@@ -5196,7 +5196,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "char [2]"
+// CHECK-NEXT:         "qualType": "char[2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "value": "u8\"a\""
@@ -5241,7 +5241,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "unsigned int [2]"
+// CHECK-NEXT:         "qualType": "unsigned int[2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "value": "U\"a\""
@@ -5286,7 +5286,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "unsigned short [2]"
+// CHECK-NEXT:         "qualType": "unsigned short[2]"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
 // CHECK-NEXT:        "value": "u\"a\""

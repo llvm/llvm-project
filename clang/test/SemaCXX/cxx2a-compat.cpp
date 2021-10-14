@@ -34,8 +34,8 @@ string u8str = u8"test" u8"test";
 // expected-warning@-4 {{type of UTF-8 string literal will change}} expected-note@-4 {{remove 'u8' prefix}}
 #else
 // expected-error@-8 {{ISO C++20 does not permit initialization of char array with UTF-8 string literal}}
-// expected-error@-8 {{cannot initialize a variable of type 'const char *' with an lvalue of type 'const char8_t [6]'}}
-// expected-error@-8 {{no viable conversion from 'const char8_t [9]' to 'string'}}
+// expected-error@-8 {{cannot initialize a variable of type 'const char *' with an lvalue of type 'const char8_t[6]'}}
+// expected-error@-8 {{no viable conversion from 'const char8_t[9]' to 'string'}}
 #endif
 
 template<bool b>
