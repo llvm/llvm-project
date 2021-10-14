@@ -123,6 +123,20 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
   return ((plural) ? "unknowns" : "unknown");
 }
 
+const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
+  switch (type) {
+  case KMP_HW_CORE_TYPE_UNKNOWN:
+    return "unknown";
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  case KMP_HW_CORE_TYPE_ATOM:
+    return "Intel Atom(R) processor";
+  case KMP_HW_CORE_TYPE_CORE:
+    return "Intel(R) Core(TM) processor";
+#endif
+  }
+  return "unknown";
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // kmp_hw_thread_t methods
 int kmp_hw_thread_t::compare_ids(const void *a, const void *b) {
@@ -173,6 +187,9 @@ void kmp_hw_thread_t::print() const {
   printf("%4d ", os_id);
   for (int i = 0; i < depth; ++i) {
     printf("%4d ", ids[i]);
+  }
+  if (core_type != KMP_HW_CORE_TYPE_UNKNOWN) {
+    printf(" (%s)", __kmp_hw_get_core_type_string(core_type));
   }
   printf("\n");
 }
@@ -298,12 +315,19 @@ void kmp_topology_t::_set_last_level_cache() {
 void kmp_topology_t::_gather_enumeration_information() {
   int previous_id[KMP_HW_LAST];
   int max[KMP_HW_LAST];
+  int previous_core_id = kmp_hw_thread_t::UNKNOWN_ID;
 
   for (int i = 0; i < depth; ++i) {
     previous_id[i] = kmp_hw_thread_t::UNKNOWN_ID;
     max[i] = 0;
     count[i] = 0;
     ratio[i] = 0;
+  }
+  if (__kmp_is_hybrid_cpu()) {
+    for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
+      core_types_count[i] = 0;
+      core_types[i] = KMP_HW_CORE_TYPE_UNKNOWN;
+    }
   }
   for (int i = 0; i < num_hw_threads; ++i) {
     kmp_hw_thread_t &hw_thread = hw_threads[i];
@@ -325,6 +349,15 @@ void kmp_topology_t::_gather_enumeration_information() {
     }
     for (int layer = 0; layer < depth; ++layer) {
       previous_id[layer] = hw_thread.ids[layer];
+    }
+    // Figure out the number of each core type for hybrid CPUs
+    if (__kmp_is_hybrid_cpu()) {
+      int core_level = get_level(KMP_HW_CORE);
+      if (core_level != -1) {
+        if (hw_thread.ids[core_level] != previous_core_id)
+          _increment_core_type(hw_thread.core_type);
+        previous_core_id = hw_thread.ids[core_level];
+      }
     }
   }
   for (int layer = 0; layer < depth; ++layer) {
@@ -478,6 +511,19 @@ void kmp_topology_t::dump() const {
   }
   printf("\n");
 
+  printf("* core_types:\n");
+  for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
+    if (core_types[i] != KMP_HW_CORE_TYPE_UNKNOWN) {
+      printf("    %d %s core%c\n", core_types_count[i],
+             __kmp_hw_get_core_type_string(core_types[i]),
+             ((core_types_count[i] > 1) ? 's' : ' '));
+    } else {
+      if (i == 0)
+        printf("No hybrid information available\n");
+      break;
+    }
+  }
+
   printf("* equivalent map:\n");
   KMP_FOREACH_HW_TYPE(i) {
     const char *key = __kmp_hw_get_keyword(i);
@@ -571,6 +617,15 @@ void kmp_topology_t::print(const char *env_var) const {
   }
   KMP_INFORM(TopologyGeneric, env_var, buf.str, ncores);
 
+  if (__kmp_is_hybrid_cpu()) {
+    for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
+      if (core_types[i] == KMP_HW_CORE_TYPE_UNKNOWN)
+        break;
+      KMP_INFORM(TopologyHybrid, env_var, core_types_count[i],
+                 __kmp_hw_get_core_type_string(core_types[i]));
+    }
+  }
+
   if (num_hw_threads <= 0) {
     __kmp_str_buf_free(&buf);
     return;
@@ -585,6 +640,9 @@ void kmp_topology_t::print(const char *env_var) const {
       __kmp_str_buf_print(&buf, "%s ", __kmp_hw_get_catalog_string(type));
       __kmp_str_buf_print(&buf, "%d ", hw_threads[i].ids[level]);
     }
+    if (__kmp_is_hybrid_cpu())
+      __kmp_str_buf_print(
+          &buf, "(%s)", __kmp_hw_get_core_type_string(hw_threads[i].core_type));
     KMP_INFORM(OSProcMapToPack, env_var, hw_threads[i].os_id, buf.str);
   }
 
@@ -1782,6 +1840,16 @@ static bool __kmp_affinity_create_apicid_map(kmp_i18n_id_t *const msg_id) {
   return true;
 }
 
+// Hybrid cpu detection using CPUID.1A
+// Thread should be pinned to processor already
+static void __kmp_get_hybrid_info(kmp_hw_core_type_t *type,
+                                  unsigned *native_model_id) {
+  kmp_cpuid buf;
+  __kmp_x86_cpuid(0x1a, 0, &buf);
+  *type = (kmp_hw_core_type_t)__kmp_extract_bits<24, 31>(buf.eax);
+  *native_model_id = __kmp_extract_bits<0, 23>(buf.eax);
+}
+
 // Intel(R) microarchitecture code name Nehalem, Dunnington and later
 // architectures support a newer interface for specifying the x2APIC Ids,
 // based on CPUID.B or CPUID.1F
@@ -2050,6 +2118,13 @@ static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
       if (j > 0) {
         hw_thread.ids[idx] >>= my_levels[j - 1].mask_width;
       }
+    }
+    // Hybrid information
+    if (__kmp_is_hybrid_cpu() && highest_leaf >= 0x1a) {
+      kmp_hw_core_type_t type;
+      unsigned native_model_id;
+      __kmp_get_hybrid_info(&type, &native_model_id);
+      hw_thread.core_type = type;
     }
     hw_thread_index++;
   }

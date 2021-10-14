@@ -598,6 +598,17 @@ class KMPNativeAffinity : public KMPAffinity {
 #endif /* KMP_OS_WINDOWS */
 #endif /* KMP_AFFINITY_SUPPORTED */
 
+typedef enum kmp_hw_core_type_t {
+  KMP_HW_CORE_TYPE_UNKNOWN = 0x0,
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  KMP_HW_CORE_TYPE_ATOM = 0x20,
+  KMP_HW_CORE_TYPE_CORE = 0x40,
+  KMP_HW_MAX_NUM_CORE_TYPES = 3,
+#else
+  KMP_HW_MAX_NUM_CORE_TYPES = 1,
+#endif
+} kmp_hw_core_type_t;
+
 class kmp_hw_thread_t {
 public:
   static const int UNKNOWN_ID = -1;
@@ -607,11 +618,14 @@ public:
   int sub_ids[KMP_HW_LAST];
   bool leader;
   int os_id;
+  kmp_hw_core_type_t core_type;
+
   void print() const;
   void clear() {
     for (int i = 0; i < (int)KMP_HW_LAST; ++i)
       ids[i] = UNKNOWN_ID;
     leader = false;
+    core_type = KMP_HW_CORE_TYPE_UNKNOWN;
   }
 };
 
@@ -636,6 +650,11 @@ class kmp_topology_t {
 
   // Storage containing the absolute number of each topology layer
   int *count;
+
+  // Storage containing the core types and the number of
+  // each core type for hybrid processors
+  kmp_hw_core_type_t core_types[KMP_HW_MAX_NUM_CORE_TYPES];
+  int core_types_count[KMP_HW_MAX_NUM_CORE_TYPES];
 
   // The hardware threads array
   // hw_threads is num_hw_threads long
@@ -674,6 +693,20 @@ class kmp_topology_t {
 
   // Set the last level cache equivalent type
   void _set_last_level_cache();
+
+  // Increments the number of cores of type 'type'
+  void _increment_core_type(kmp_hw_core_type_t type) {
+    for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
+      if (core_types[i] == KMP_HW_CORE_TYPE_UNKNOWN) {
+        core_types[i] = type;
+        core_types_count[i] = 1;
+        break;
+      } else if (core_types[i] == type) {
+        core_types_count[i]++;
+        break;
+      }
+    }
+  }
 
 public:
   // Force use of allocate()/deallocate()

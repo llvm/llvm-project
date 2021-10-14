@@ -248,12 +248,18 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
     }
 #endif
     p->flags.rtm = 0;
+    p->flags.hybrid = 0;
     if (max_arg > 7) {
       /* RTM bit CPUID.07:EBX, bit 11 */
+      /* HYRBID bit CPUID.07:EDX, bit 15 */
       __kmp_x86_cpuid(7, 0, &buf);
       p->flags.rtm = (buf.ebx >> 11) & 1;
+      p->flags.hybrid = (buf.edx >> 15) & 1;
       if (p->flags.rtm) {
         KA_TRACE(trace_level, (" RTM"));
+      }
+      if (p->flags.hybrid) {
+        KA_TRACE(trace_level, (" HYBRID"));
       }
     }
   }

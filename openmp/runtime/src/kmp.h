@@ -1222,7 +1222,8 @@ typedef struct kmp_cpuid {
 typedef struct kmp_cpuinfo_flags_t {
   unsigned sse2 : 1; // 0 if SSE2 instructions are not supported, 1 otherwise.
   unsigned rtm : 1; // 0 if RTM instructions are not supported, 1 otherwise.
-  unsigned reserved : 30; // Ensure size of 32 bits
+  unsigned hybrid : 1;
+  unsigned reserved : 29; // Ensure size of 32 bits
 } kmp_cpuinfo_flags_t;
 
 typedef struct kmp_cpuinfo {
@@ -2984,6 +2985,9 @@ extern int __kmp_storage_map_verbose_specified;
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 extern kmp_cpuinfo_t __kmp_cpuinfo;
+static inline bool __kmp_is_hybrid_cpu() { return __kmp_cpuinfo.flags.hybrid; }
+#else
+static inline bool __kmp_is_hybrid_cpu() { return false; }
 #endif
 
 extern volatile int __kmp_init_serial;
