@@ -12,6 +12,7 @@ add_lldb_library(lldbCommands
   CommandObjectExpression.cpp
   CommandObjectFrame.cpp
   CommandObjectGUI.cpp
+  CommandObjectHealthcheck.cpp
   CommandObjectHelp.cpp
   CommandObjectLanguage.cpp
   CommandObjectLog.cpp
