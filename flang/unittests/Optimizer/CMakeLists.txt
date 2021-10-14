@@ -1,6 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 set(LIBS
+  FIRBuilder
   FIRCodeGen
   FIRDialect
   FIRSupport
@@ -8,6 +9,7 @@ set(LIBS
 )
 
 add_flang_unittest(FlangOptimizerTests
+  Builder/DoLoopHelperTest.cpp
   FIRContextTest.cpp
   InternalNamesTest.cpp
   KindMappingTest.cpp
