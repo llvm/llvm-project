@@ -173,10 +173,7 @@ define i64 @smul24_i64(i64 %lhs, i64 %rhs) {
 ; SI-NEXT:    [[LHS24:%.*]] = ashr i64 [[SHL_LHS]], 40
 ; SI-NEXT:    [[LSHR_RHS:%.*]] = shl i64 [[RHS:%.*]], 40
 ; SI-NEXT:    [[RHS24:%.*]] = ashr i64 [[LHS]], 40
-; SI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
-; SI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
-; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
-; SI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i64
+; SI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
 ; SI-NEXT:    ret i64 [[MUL]]
 ;
 ; VI-LABEL: @smul24_i64(
@@ -184,10 +181,7 @@ define i64 @smul24_i64(i64 %lhs, i64 %rhs) {
 ; VI-NEXT:    [[LHS24:%.*]] = ashr i64 [[SHL_LHS]], 40
 ; VI-NEXT:    [[LSHR_RHS:%.*]] = shl i64 [[RHS:%.*]], 40
 ; VI-NEXT:    [[RHS24:%.*]] = ashr i64 [[LHS]], 40
-; VI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
-; VI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
-; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
-; VI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i64
+; VI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
 ; VI-NEXT:    ret i64 [[MUL]]
 ;
 ; DISABLED-LABEL: @smul24_i64(
@@ -206,23 +200,56 @@ define i64 @smul24_i64(i64 %lhs, i64 %rhs) {
   ret i64 %mul
 }
 
+define i64 @smul24_i64_2(i64 %lhs, i64 %rhs) {
+; SI-LABEL: @smul24_i64_2(
+; SI-NEXT:    [[SHL_LHS:%.*]] = shl i64 [[LHS:%.*]], 49
+; SI-NEXT:    [[LHS24:%.*]] = ashr i64 [[SHL_LHS]], 49
+; SI-NEXT:    [[LSHR_RHS:%.*]] = shl i64 [[RHS:%.*]], 49
+; SI-NEXT:    [[RHS24:%.*]] = ashr i64 [[LHS]], 49
+; SI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
+; SI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
+; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
+; SI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i64
+; SI-NEXT:    ret i64 [[MUL]]
+;
+; VI-LABEL: @smul24_i64_2(
+; VI-NEXT:    [[SHL_LHS:%.*]] = shl i64 [[LHS:%.*]], 49
+; VI-NEXT:    [[LHS24:%.*]] = ashr i64 [[SHL_LHS]], 49
+; VI-NEXT:    [[LSHR_RHS:%.*]] = shl i64 [[RHS:%.*]], 49
+; VI-NEXT:    [[RHS24:%.*]] = ashr i64 [[LHS]], 49
+; VI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
+; VI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
+; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
+; VI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i64
+; VI-NEXT:    ret i64 [[MUL]]
+;
+; DISABLED-LABEL: @smul24_i64_2(
+; DISABLED-NEXT:    [[SHL_LHS:%.*]] = shl i64 [[LHS:%.*]], 49
+; DISABLED-NEXT:    [[LHS24:%.*]] = ashr i64 [[SHL_LHS]], 49
+; DISABLED-NEXT:    [[LSHR_RHS:%.*]] = shl i64 [[RHS:%.*]], 49
+; DISABLED-NEXT:    [[RHS24:%.*]] = ashr i64 [[LHS]], 49
+; DISABLED-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; DISABLED-NEXT:    ret i64 [[MUL]]
+;
+  %shl.lhs = shl i64 %lhs, 49
+  %lhs24 = ashr i64 %shl.lhs, 49
+  %lshr.rhs = shl i64 %rhs, 49
+  %rhs24 = ashr i64 %lhs, 49
+  %mul = mul i64 %lhs24, %rhs24
+  ret i64 %mul
+}
+
 define i64 @umul24_i64(i64 %lhs, i64 %rhs) {
 ; SI-LABEL: @umul24_i64(
 ; SI-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 16777215
 ; SI-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 16777215
-; SI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
-; SI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
-; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
-; SI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i64
+; SI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
 ; SI-NEXT:    ret i64 [[MUL]]
 ;
 ; VI-LABEL: @umul24_i64(
 ; VI-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 16777215
 ; VI-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 16777215
-; VI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
-; VI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
-; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
-; VI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i64
+; VI-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
 ; VI-NEXT:    ret i64 [[MUL]]
 ;
 ; DISABLED-LABEL: @umul24_i64(
@@ -233,6 +260,37 @@ define i64 @umul24_i64(i64 %lhs, i64 %rhs) {
 ;
   %lhs24 = and i64 %lhs, 16777215
   %rhs24 = and i64 %rhs, 16777215
+  %mul = mul i64 %lhs24, %rhs24
+  ret i64 %mul
+}
+
+define i64 @umul24_i64_2(i64 %lhs, i64 %rhs) {
+; SI-LABEL: @umul24_i64_2(
+; SI-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 65535
+; SI-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 65535
+; SI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
+; SI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
+; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
+; SI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i64
+; SI-NEXT:    ret i64 [[MUL]]
+;
+; VI-LABEL: @umul24_i64_2(
+; VI-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 65535
+; VI-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 65535
+; VI-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
+; VI-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
+; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
+; VI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i64
+; VI-NEXT:    ret i64 [[MUL]]
+;
+; DISABLED-LABEL: @umul24_i64_2(
+; DISABLED-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 65535
+; DISABLED-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 65535
+; DISABLED-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; DISABLED-NEXT:    ret i64 [[MUL]]
+;
+  %lhs24 = and i64 %lhs, 65535
+  %rhs24 = and i64 %rhs, 65535
   %mul = mul i64 %lhs24, %rhs24
   ret i64 %mul
 }
@@ -423,10 +481,7 @@ define i33 @smul24_i33(i33 %lhs, i33 %rhs) {
 ; SI-NEXT:    [[LHS24:%.*]] = ashr i33 [[SHL_LHS]], 9
 ; SI-NEXT:    [[LSHR_RHS:%.*]] = shl i33 [[RHS:%.*]], 9
 ; SI-NEXT:    [[RHS24:%.*]] = ashr i33 [[LHS]], 9
-; SI-NEXT:    [[TMP1:%.*]] = trunc i33 [[LHS24]] to i32
-; SI-NEXT:    [[TMP2:%.*]] = trunc i33 [[RHS24]] to i32
-; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
-; SI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i33
+; SI-NEXT:    [[MUL:%.*]] = mul i33 [[LHS24]], [[RHS24]]
 ; SI-NEXT:    ret i33 [[MUL]]
 ;
 ; VI-LABEL: @smul24_i33(
@@ -434,10 +489,7 @@ define i33 @smul24_i33(i33 %lhs, i33 %rhs) {
 ; VI-NEXT:    [[LHS24:%.*]] = ashr i33 [[SHL_LHS]], 9
 ; VI-NEXT:    [[LSHR_RHS:%.*]] = shl i33 [[RHS:%.*]], 9
 ; VI-NEXT:    [[RHS24:%.*]] = ashr i33 [[LHS]], 9
-; VI-NEXT:    [[TMP1:%.*]] = trunc i33 [[LHS24]] to i32
-; VI-NEXT:    [[TMP2:%.*]] = trunc i33 [[RHS24]] to i32
-; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP2]])
-; VI-NEXT:    [[MUL:%.*]] = sext i32 [[TMP3]] to i33
+; VI-NEXT:    [[MUL:%.*]] = mul i33 [[LHS24]], [[RHS24]]
 ; VI-NEXT:    ret i33 [[MUL]]
 ;
 ; DISABLED-LABEL: @smul24_i33(
@@ -460,19 +512,13 @@ define i33 @umul24_i33(i33 %lhs, i33 %rhs) {
 ; SI-LABEL: @umul24_i33(
 ; SI-NEXT:    [[LHS24:%.*]] = and i33 [[LHS:%.*]], 16777215
 ; SI-NEXT:    [[RHS24:%.*]] = and i33 [[RHS:%.*]], 16777215
-; SI-NEXT:    [[TMP1:%.*]] = trunc i33 [[LHS24]] to i32
-; SI-NEXT:    [[TMP2:%.*]] = trunc i33 [[RHS24]] to i32
-; SI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
-; SI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i33
+; SI-NEXT:    [[MUL:%.*]] = mul i33 [[LHS24]], [[RHS24]]
 ; SI-NEXT:    ret i33 [[MUL]]
 ;
 ; VI-LABEL: @umul24_i33(
 ; VI-NEXT:    [[LHS24:%.*]] = and i33 [[LHS:%.*]], 16777215
 ; VI-NEXT:    [[RHS24:%.*]] = and i33 [[RHS:%.*]], 16777215
-; VI-NEXT:    [[TMP1:%.*]] = trunc i33 [[LHS24]] to i32
-; VI-NEXT:    [[TMP2:%.*]] = trunc i33 [[RHS24]] to i32
-; VI-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP2]])
-; VI-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i33
+; VI-NEXT:    [[MUL:%.*]] = mul i33 [[LHS24]], [[RHS24]]
 ; VI-NEXT:    ret i33 [[MUL]]
 ;
 ; DISABLED-LABEL: @umul24_i33(
@@ -551,20 +597,7 @@ define <2 x i33> @smul24_v2i33(<2 x i33> %lhs, <2 x i33> %rhs) {
 ; SI-NEXT:    [[LHS24:%.*]] = ashr <2 x i33> [[SHL_LHS]], <i33 9, i33 9>
 ; SI-NEXT:    [[LSHR_RHS:%.*]] = shl <2 x i33> [[RHS:%.*]], <i33 9, i33 9>
 ; SI-NEXT:    [[RHS24:%.*]] = ashr <2 x i33> [[LHS]], <i33 9, i33 9>
-; SI-NEXT:    [[TMP1:%.*]] = extractelement <2 x i33> [[LHS24]], i64 0
-; SI-NEXT:    [[TMP2:%.*]] = extractelement <2 x i33> [[LHS24]], i64 1
-; SI-NEXT:    [[TMP3:%.*]] = extractelement <2 x i33> [[RHS24]], i64 0
-; SI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i33> [[RHS24]], i64 1
-; SI-NEXT:    [[TMP5:%.*]] = trunc i33 [[TMP1]] to i32
-; SI-NEXT:    [[TMP6:%.*]] = trunc i33 [[TMP3]] to i32
-; SI-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP5]], i32 [[TMP6]])
-; SI-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i33
-; SI-NEXT:    [[TMP9:%.*]] = trunc i33 [[TMP2]] to i32
-; SI-NEXT:    [[TMP10:%.*]] = trunc i33 [[TMP4]] to i32
-; SI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP9]], i32 [[TMP10]])
-; SI-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i33
-; SI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i33> undef, i33 [[TMP8]], i64 0
-; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i33> [[TMP13]], i33 [[TMP12]], i64 1
+; SI-NEXT:    [[MUL:%.*]] = mul <2 x i33> [[LHS24]], [[RHS24]]
 ; SI-NEXT:    ret <2 x i33> [[MUL]]
 ;
 ; VI-LABEL: @smul24_v2i33(
@@ -572,20 +605,7 @@ define <2 x i33> @smul24_v2i33(<2 x i33> %lhs, <2 x i33> %rhs) {
 ; VI-NEXT:    [[LHS24:%.*]] = ashr <2 x i33> [[SHL_LHS]], <i33 9, i33 9>
 ; VI-NEXT:    [[LSHR_RHS:%.*]] = shl <2 x i33> [[RHS:%.*]], <i33 9, i33 9>
 ; VI-NEXT:    [[RHS24:%.*]] = ashr <2 x i33> [[LHS]], <i33 9, i33 9>
-; VI-NEXT:    [[TMP1:%.*]] = extractelement <2 x i33> [[LHS24]], i64 0
-; VI-NEXT:    [[TMP2:%.*]] = extractelement <2 x i33> [[LHS24]], i64 1
-; VI-NEXT:    [[TMP3:%.*]] = extractelement <2 x i33> [[RHS24]], i64 0
-; VI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i33> [[RHS24]], i64 1
-; VI-NEXT:    [[TMP5:%.*]] = trunc i33 [[TMP1]] to i32
-; VI-NEXT:    [[TMP6:%.*]] = trunc i33 [[TMP3]] to i32
-; VI-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP5]], i32 [[TMP6]])
-; VI-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i33
-; VI-NEXT:    [[TMP9:%.*]] = trunc i33 [[TMP2]] to i32
-; VI-NEXT:    [[TMP10:%.*]] = trunc i33 [[TMP4]] to i32
-; VI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP9]], i32 [[TMP10]])
-; VI-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i33
-; VI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i33> undef, i33 [[TMP8]], i64 0
-; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i33> [[TMP13]], i33 [[TMP12]], i64 1
+; VI-NEXT:    [[MUL:%.*]] = mul <2 x i33> [[LHS24]], [[RHS24]]
 ; VI-NEXT:    ret <2 x i33> [[MUL]]
 ;
 ; DISABLED-LABEL: @smul24_v2i33(
