@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -87,6 +88,13 @@ bool Dialect::hasRegionResultAttrVerify() const {
 
 bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
+}
+
+Dialect::EmitPrefix Dialect::getEmitAccessorPrefix() const {
+  int prefix = def->getValueAsInt("emitAccessorPrefix");
+  if (prefix < 0 || prefix > static_cast<int>(EmitPrefix::Both))
+    PrintFatalError(def->getLoc(), "Invalid accessor prefix value");
+  return static_cast<EmitPrefix>(prefix);
 }
 
 bool Dialect::operator==(const Dialect &other) const {
