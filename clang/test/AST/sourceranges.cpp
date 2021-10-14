@@ -13,7 +13,7 @@ enum B {};
 typedef int C;
 }
 
-// CHECK: VarDecl {{0x[0-9a-fA-F]+}} <line:[[@LINE+1]]:1, col:36> col:15 ImplicitConstrArray 'foo::A[2]'
+// CHECK: VarDecl {{0x[0-9a-fA-F]+}} <line:[[@LINE+1]]:1, col:36> col:15 ImplicitConstrArray 'foo::A [2]'
 static foo::A ImplicitConstrArray[2];
 
 int main() {

@@ -126,11 +126,11 @@ void arraysInLambdas() {
   simple(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
   auto nested = [](void *_Nullable [_Nonnull 2]) {};
   nested(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  auto nestedBad = [](int [2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[2]'}}
+  auto nestedBad = [](int [2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
 
   auto withTypedef = [](INTS _Nonnull) {};
   withTypedef(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
+  auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
 }
 
 void testNullabilityCompletenessWithTemplate() {

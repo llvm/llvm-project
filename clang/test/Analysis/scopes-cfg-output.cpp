@@ -34,11 +34,11 @@ extern const bool UV;
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], class A[2])
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], class A [2])
 // CHECK-NEXT:   3: A a[2];
-// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], class A[0])
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], class A [0])
 // CHECK-NEXT:   5: A b[0];
-// CHECK-NEXT:   6: [B1.3].~A[2]() (Implicit destructor)
+// CHECK-NEXT:   6: [B1.3].~A [2]() (Implicit destructor)
 // CHECK-NEXT:   7: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
@@ -810,7 +810,7 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   1: CFGScopeEnd(__end1)
 // CHECK-NEXT:   2: CFGScopeEnd(__begin1)
 // CHECK-NEXT:   3: CFGScopeEnd(__range1)
-// CHECK-NEXT:   4: [B5.3].~A[10]() (Implicit destructor)
+// CHECK-NEXT:   4: [B5.3].~A [10]() (Implicit destructor)
 // CHECK-NEXT:   5: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
@@ -846,7 +846,7 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B5]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], class A[10])
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], class A [10])
 // CHECK-NEXT:   3: A a[10];
 // CHECK-NEXT:   4: a
 // CHECK-NEXT:   5: auto &&__range1 = a;

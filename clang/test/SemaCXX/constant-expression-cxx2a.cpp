@@ -816,15 +816,15 @@ namespace dynamic_alloc {
     S *p = new T[3]{&a, &a, &a}; // expected-note 2{{heap allocation}}
     switch (mode) {
     case 0:
-      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
+      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
       break;
     case 1:
       // FIXME: This diagnosic isn't great; we should mention the cast to S*
       // somewhere in here.
-      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T[3]#0}[0]'}}
+      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T [3]#0}[0]'}}
       break;
     case 2:
-      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
+      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
       break;
     case 3:
       delete[] (T*)p;
@@ -1033,7 +1033,7 @@ namespace delete_random_things {
   struct A { int n; };
   static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new delete_random_things::A#0}.n'}}
   static_assert((delete (new int + 1), true)); // expected-error {{}} expected-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
-  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int [3]#0}[1]'}}
   static_assert((delete &(int&)(int&&)0, true)); // expected-error {{}} expected-note {{delete of pointer '&0' that does not point to a heap-allocated object}} expected-note {{temporary created here}}
 }
 

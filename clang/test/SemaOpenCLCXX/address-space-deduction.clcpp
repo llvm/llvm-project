@@ -51,7 +51,7 @@ struct x2 {
   void foo(x1<T>* xx) {
     m[0] = *xx;
   }
-//CHECK: -FieldDecl {{.*}}  m 'x1<int>[2]'
+//CHECK: -FieldDecl {{.*}}  m 'x1<int> [2]'
   x1<T> m[2];
 };
 

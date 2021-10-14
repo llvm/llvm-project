@@ -8,7 +8,7 @@
 @end
 
 @interface NotLastIvar {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
   int last; // expected-note {{next instance variable declaration is here}}
 }
 @end
@@ -17,28 +17,28 @@
 @interface LastIvarInImpl
 @end
 @implementation LastIvarInImpl {
-  char flexible[]; // expected-warning {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-warning {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
 }
 @end
 
 @interface NotLastIvarInImpl
 @end
 @implementation NotLastIvarInImpl {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
-  // expected-warning@-1 {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
+  // expected-warning@-1 {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
   int last; // expected-note {{next instance variable declaration is here}}
 }
 @end
 
 @implementation NotLastIvarInImplWithoutInterface { // expected-warning {{cannot find interface declaration for 'NotLastIvarInImplWithoutInterface'}}
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
-  // expected-warning@-1 {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
+  // expected-warning@-1 {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
   int last; // expected-note {{next instance variable declaration is here}}
 }
 @end
 
 @interface LastIvarInClass_OtherIvarInImpl {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
 }
 @end
 @implementation LastIvarInClass_OtherIvarInImpl {
@@ -59,21 +59,21 @@ int nonIvar;
 @interface LastIvarInExtension
 @end
 @interface LastIvarInExtension() {
-  char flexible[]; // expected-warning {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-warning {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
 }
 @end
 
 @interface NotLastIvarInExtension
 @end
 @interface NotLastIvarInExtension() {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
-  // expected-warning@-1 {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
+  // expected-warning@-1 {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
   int last; // expected-note {{next instance variable declaration is here}}
 }
 @end
 
 @interface LastIvarInClass_OtherIvarInExtension {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
 }
 @end
 @interface LastIvarInClass_OtherIvarInExtension() {
@@ -91,16 +91,16 @@ int nonIvar;
 // Extension without ivars to test we see through such extensions.
 @end
 @interface LastIvarInExtension_OtherIvarInExtension() {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
-  // expected-warning@-1 {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
+  // expected-warning@-1 {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
 }
 @end
 
 @interface LastIvarInExtension_OtherIvarInImpl
 @end
 @interface LastIvarInExtension_OtherIvarInImpl() {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
-  // expected-warning@-1 {{field 'flexible' with variable sized type 'char[]' is not visible to subclasses and can conflict with their instance variables}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
+  // expected-warning@-1 {{field 'flexible' with variable sized type 'char []' is not visible to subclasses and can conflict with their instance variables}}
 }
 @end
 @implementation LastIvarInExtension_OtherIvarInImpl {
@@ -120,7 +120,7 @@ int nonIvar;
 @interface LastIvarAndProperty {
   char _flexible[];
 }
-@property char flexible[]; // expected-error {{property cannot have array or function type 'char[]'}}
+@property char flexible[]; // expected-error {{property cannot have array or function type 'char []'}}
 @end
 
 // ## Synthesize other instance variables.
@@ -145,7 +145,7 @@ int nonIvar;
 @end
 
 @interface NotLastIvar_ExplicitlyNamedPropertyBackingIvarLast {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
 }
 @property int count;
 @end
@@ -154,7 +154,7 @@ int nonIvar;
 @end
 
 @interface NotLastIvar_ImplicitlyNamedPropertyBackingIvarLast {
-  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char[]' is not at the end of class}}
+  char flexible[]; // expected-error {{flexible array member 'flexible' with type 'char []' is not at the end of class}}
 }
 @property int count; // expected-note {{next synthesized instance variable is here}}
 @end
@@ -244,21 +244,21 @@ struct Packet {
 @end
 
 @interface AddedIvarInInterface : FlexibleArrayMemberBase {
-  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 }
 @end
 
 @interface AddedIvarInImplementation : FlexibleArrayMemberBase
 @end
 @implementation AddedIvarInImplementation {
-  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 }
 @end
 
 @interface AddedIvarInExtension : FlexibleArrayMemberBase
 @end
 @interface AddedIvarInExtension() {
-  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 }
 @end
 
@@ -266,11 +266,11 @@ struct Packet {
 @property int count;
 @end
 @implementation SynthesizedIvar
-@synthesize count; // expected-warning {{field 'count' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+@synthesize count; // expected-warning {{field 'count' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 @end
 
 @interface WarnInSubclassOnlyOnce : FlexibleArrayMemberBase {
-  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 }
 @end
 @interface WarnInSubclassOnlyOnce() {
@@ -283,6 +283,6 @@ struct Packet {
 @end
 
 @interface AddedIvarInSubSubClass : NoIvarAdditions {
-  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char[]' in superclass 'FlexibleArrayMemberBase'}}
+  int last; // expected-warning {{field 'last' can overwrite instance variable 'flexible' with variable sized type 'char []' in superclass 'FlexibleArrayMemberBase'}}
 }
 @end

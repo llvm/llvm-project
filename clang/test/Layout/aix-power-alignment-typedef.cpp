@@ -67,7 +67,7 @@ union U {
 int x = sizeof(U);
 
 // CHECK:          0 | union test4::U
-// CHECK-NEXT:     0 |   test4::Dbl[] DblArr
+// CHECK-NEXT:     0 |   test4::Dbl [] DblArr
 // CHECK-NEXT:     0 |   char x
 // CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
 // CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]

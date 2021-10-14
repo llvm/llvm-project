@@ -650,11 +650,11 @@ struct __declspec(align(4)) EmptyAlignedLongLongMemb {
 };
 
 // CHECK-LABEL:   0 | struct EmptyAlignedLongLongMemb{{$}}
-// CHECK-NEXT:    0 |   long long[0] FlexArrayMemb
+// CHECK-NEXT:    0 |   long long [0] FlexArrayMemb
 // CHECK-NEXT:      | [sizeof=8, align=8
 // CHECK-NEXT:      |  nvsize=0, nvalign=8]
 // CHECK-X64-LABEL:   0 | struct EmptyAlignedLongLongMemb{{$}}
-// CHECK-X64-NEXT:    0 |   long long[0] FlexArrayMemb
+// CHECK-X64-NEXT:    0 |   long long [0] FlexArrayMemb
 // CHECK-X64-NEXT:      | [sizeof=8, align=8
 // CHECK-X64-NEXT:      |  nvsize=0, nvalign=8]
 
@@ -665,11 +665,11 @@ struct __declspec(align(4)) EmptyPackedAlignedLongLongMemb {
 #pragma pack()
 
 // CHECK-LABEL:   0 | struct EmptyPackedAlignedLongLongMemb{{$}}
-// CHECK-NEXT:    0 |   long long[0] FlexArrayMemb
+// CHECK-NEXT:    0 |   long long [0] FlexArrayMemb
 // CHECK-NEXT:      | [sizeof=4, align=4
 // CHECK-NEXT:      |  nvsize=0, nvalign=4]
 // CHECK-X64-LABEL:   0 | struct EmptyPackedAlignedLongLongMemb{{$}}
-// CHECK-X64-NEXT:    0 |   long long[0] FlexArrayMemb
+// CHECK-X64-NEXT:    0 |   long long [0] FlexArrayMemb
 // CHECK-X64-NEXT:      | [sizeof=4, align=4
 // CHECK-X64-NEXT:      |  nvsize=0, nvalign=4]
 

@@ -204,7 +204,7 @@ void backtrace() {
   };
 
   struct B {
-    // expected-note@+1 {{invalid type 'A[10]' is a member of 'B'}}
+    // expected-note@+1 {{invalid type 'A [10]' is a member of 'B'}}
     A as[10];
   };
 

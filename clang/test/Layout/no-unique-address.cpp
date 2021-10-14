@@ -154,7 +154,7 @@ namespace POD {
   // CHECK:          0 | struct POD::B
   // CHECK-NEXT:     0 |   struct POD::A a
   // CHECK-NEXT:     0 |     int n
-  // CHECK-NEXT:     4 |     char[3] c
+  // CHECK-NEXT:     4 |     char [3] c
   // CHECK-NEXT:     8 |   char d
   // CHECK-NEXT:       | [sizeof=12, dsize=12, align=4,
   // CHECK-NEXT:       |  nvsize=12, nvalign=4]
@@ -169,7 +169,7 @@ namespace NonPOD {
   // CHECK:          0 | struct NonPOD::B
   // CHECK-NEXT:     0 |   struct NonPOD::A a
   // CHECK-NEXT:     0 |     int n
-  // CHECK-NEXT:     4 |     char[3] c
+  // CHECK-NEXT:     4 |     char [3] c
   // CHECK-NEXT:     7 |   char d
   // CHECK-NEXT:       | [sizeof=8, dsize=8, align=4,
   // CHECK-NEXT:       |  nvsize=8, nvalign=4]

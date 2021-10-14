@@ -6,7 +6,7 @@ typedef int FOO();
 @interface INTF
 {
 	struct F {} JJ;
-	int arr[];  // expected-error {{flexible array member 'arr' with type 'int[]' is not at the end of class}}
+	int arr[];  // expected-error {{flexible array member 'arr' with type 'int []' is not at the end of class}}
 	struct S IC;  // expected-error {{field has incomplete type}}
 	              // expected-note@-1 {{next instance variable declaration is here}}
 	struct T { // expected-note {{previous definition is here}}

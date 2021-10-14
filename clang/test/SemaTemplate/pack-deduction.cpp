@@ -141,7 +141,7 @@ namespace partial_full_mix {
     // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 3) from outer parameter packs}}
 
     template<typename ...U> static tuple<U...> h(tuple<pair<T, U>..., pair<int, int>>);
-    // expected-note@-1 {{[with U = <int[2]>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 1) from outer parameter packs}}
+    // expected-note@-1 {{[with U = <int [2]>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 1) from outer parameter packs}}
   };
 
   pair<tuple<int, float>, tuple<char, double>> k1 = A<int, float>().f<char>(pair<int, char>(), pair<float, double>());

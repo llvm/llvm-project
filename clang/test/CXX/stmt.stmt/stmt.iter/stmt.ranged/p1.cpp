@@ -121,10 +121,10 @@ void g() {
     ;
 
   extern int incomplete[];
-  for (auto a : incomplete) // expected-error {{cannot use incomplete type 'int[]' as a range}}
+  for (auto a : incomplete) // expected-error {{cannot use incomplete type 'int []' as a range}}
     ;
   extern struct Incomplete also_incomplete[2]; // expected-note 2{{forward declaration}}
-  for (auto &a : also_incomplete) // expected-error {{cannot use incomplete type 'struct Incomplete[2]' as a range}}
+  for (auto &a : also_incomplete) // expected-error {{cannot use incomplete type 'struct Incomplete [2]' as a range}}
     ;
 
   struct VoidBegin {

@@ -28,14 +28,14 @@ void useage(){
 // CHECK: AtomicExpr
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:28> 'int' 5
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:25> 'int' 0
 // CHECK:FunctionDecl 0x{{[0-9a-f]+}} <line:{{.*}}:1, line:{{.*}}:1> line:{{.*}}:6 used pr43370
 // CHECK: AtomicExpr
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:28> 'int' 5
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:25> 'int' 0
 
@@ -43,11 +43,11 @@ void useage(){
 // CHECK: AtomicExpr
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:53> 'int' 3
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:42> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:42> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:56> 'int' 4
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:47> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr
@@ -56,11 +56,11 @@ void useage(){
 // CHECK: AtomicExpr
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:53> 'int' 3
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:42> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:42> 'int [2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int [2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:56> 'int' 4
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:47> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr
