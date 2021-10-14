@@ -58,6 +58,8 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "UndefinedGlobal";
   case wasm::Symbol::UndefinedTableKind:
     return "UndefinedTable";
+  case wasm::Symbol::UndefinedTagKind:
+    return "UndefinedTag";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   case wasm::Symbol::SectionKind:
@@ -113,6 +115,8 @@ WasmSymbolType Symbol::getWasmType() const {
 const WasmSignature *Symbol::getSignature() const {
   if (auto* f = dyn_cast<FunctionSymbol>(this))
     return f->signature;
+  if (auto *t = dyn_cast<TagSymbol>(this))
+    return t->signature;
   if (auto *l = dyn_cast<LazySymbol>(this))
     return l->signature;
   return nullptr;

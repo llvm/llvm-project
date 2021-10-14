@@ -6,10 +6,10 @@
 // Note: To run this test, your CPU must support AMX.
 
 func @print(%arg0: memref<4x32xf32>) {
-  %fu = constant -1.0: f32
-  %c0 = constant 0: index
-  %c1 = constant 1: index
-  %c4 = constant 4: index
+  %fu = arith.constant -1.0: f32
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c4 = arith.constant 4: index
   scf.for %i = %c0 to %c4 step %c1 {
     %0 = vector.transfer_read %arg0[%i, %c0], %fu: memref<4x32xf32>, vector<32xf32>
     vector.print %0 : vector<32xf32>
@@ -18,11 +18,11 @@ func @print(%arg0: memref<4x32xf32>) {
 }
 
 func @kernel(%arg0: memref<4x32xf32>) {
-  %c0  = constant 0: index
-  %c2  = constant 2 : index
-  %c4  = constant 4 : index
-  %c16 = constant 16 : index
-  %c32 = constant 32 : index
+  %c0  = arith.constant 0: index
+  %c2  = arith.constant 2 : index
+  %c4  = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
   scf.for %i = %c0 to %c4 step %c2 {
     scf.for %j = %c0 to %c32 step %c16 {
       %0 = amx.tile_zero : vector<2x16xf32>
@@ -34,11 +34,11 @@ func @kernel(%arg0: memref<4x32xf32>) {
 }
 
 func @entry() -> i32 {
-  %f1  = constant 1.0: f32
-  %c0  = constant 0: index
-  %c1  = constant 1: index
-  %c4  = constant 4 : index
-  %c32 = constant 32 : index
+  %f1  = arith.constant 1.0: f32
+  %c0  = arith.constant 0: index
+  %c1  = arith.constant 1: index
+  %c4  = arith.constant 4 : index
+  %c32 = arith.constant 32 : index
 
   // Set up memory.
   %a = memref.alloc() : memref<4x32xf32>
@@ -77,6 +77,6 @@ func @entry() -> i32 {
   // Release resources.
   memref.dealloc %a : memref<4x32xf32>
 
-  %i0 = constant 0 : i32
+  %i0 = arith.constant 0 : i32
   return %i0 : i32
 }

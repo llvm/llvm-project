@@ -10,6 +10,8 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZFRAMELOWERING_H
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZInstrBuilder.h"
+#include "SystemZMachineFunctionInfo.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/TypeSize.h"
@@ -19,7 +21,6 @@ class SystemZTargetMachine;
 class SystemZSubtarget;
 
 class SystemZFrameLowering : public TargetFrameLowering {
-
 public:
   SystemZFrameLowering(StackDirection D, Align StackAl, int LAO, Align TransAl,
                        bool StackReal);
@@ -86,8 +87,23 @@ public:
 };
 
 class SystemZXPLINKFrameLowering : public SystemZFrameLowering {
+  IndexedMap<unsigned> RegSpillOffsets;
+
 public:
   SystemZXPLINKFrameLowering();
+
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
+
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
+
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
 
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 

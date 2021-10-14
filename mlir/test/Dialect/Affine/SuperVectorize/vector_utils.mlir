@@ -5,34 +5,34 @@
 func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.
   // CHECK-NOT:matched: {{.*}} = memref.alloc{{.*}}
-  // CHECK-NOT:matched: {{.*}} = constant 0{{.*}}
-  // CHECK-NOT:matched: {{.*}} = constant 1{{.*}}
+  // CHECK-NOT:matched: {{.*}} = arith.constant 0{{.*}}
+  // CHECK-NOT:matched: {{.*}} = arith.constant 1{{.*}}
   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-  %c0 = constant 0 : index
-  %cst = constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 1.000000e+00 : f32
 
-  // CHECK:matched: {{.*}} constant dense{{.*}} with shape ratio: 2, 32
-  %cst_1 = constant dense<1.000000e+00> : vector<8x256xf32>
-  // CHECK:matched: {{.*}} constant dense{{.*}} with shape ratio: 1, 3, 7, 2, 1
-  %cst_a = constant dense<1.000000e+00> : vector<1x3x7x8x8xf32>
-  // CHECK-NOT:matched: {{.*}} constant dense{{.*}} with shape ratio: 1, 3, 7, 1{{.*}}
-  %cst_b = constant dense<1.000000e+00> : vector<1x3x7x4x4xf32>
-  // TEST-3x4x5x8:matched: {{.*}} constant dense{{.*}} with shape ratio: 3, 2, 1, 4
-  %cst_c = constant dense<1.000000e+00> : vector<3x4x5x8xf32>
-  // TEST-3x4x4x8-NOT:matched: {{.*}} constant dense{{.*}} with shape ratio{{.*}}
-  %cst_d = constant dense<1.000000e+00> : vector<3x4x4x8xf32>
-  // TEST-3x4x4x8:matched: {{.*}} constant dense{{.*}} with shape ratio: 1, 1, 2, 16
-  %cst_e = constant dense<1.000000e+00> : vector<1x2x10x32xf32>
+  // CHECK:matched: {{.*}} arith.constant dense{{.*}} with shape ratio: 2, 32
+  %cst_1 = arith.constant dense<1.000000e+00> : vector<8x256xf32>
+  // CHECK:matched: {{.*}} arith.constant dense{{.*}} with shape ratio: 1, 3, 7, 2, 1
+  %cst_a = arith.constant dense<1.000000e+00> : vector<1x3x7x8x8xf32>
+  // CHECK-NOT:matched: {{.*}} arith.constant dense{{.*}} with shape ratio: 1, 3, 7, 1{{.*}}
+  %cst_b = arith.constant dense<1.000000e+00> : vector<1x3x7x4x4xf32>
+  // TEST-3x4x5x8:matched: {{.*}} arith.constant dense{{.*}} with shape ratio: 3, 2, 1, 4
+  %cst_c = arith.constant dense<1.000000e+00> : vector<3x4x5x8xf32>
+  // TEST-3x4x4x8-NOT:matched: {{.*}} arith.constant dense{{.*}} with shape ratio{{.*}}
+  %cst_d = arith.constant dense<1.000000e+00> : vector<3x4x4x8xf32>
+  // TEST-3x4x4x8:matched: {{.*}} arith.constant dense{{.*}} with shape ratio: 1, 1, 2, 16
+  %cst_e = arith.constant dense<1.000000e+00> : vector<1x2x10x32xf32>
 
   // Nothing should be matched in this last block.
-  // CHECK-NOT:matched: {{.*}} = constant 7{{.*}}
-  // CHECK-NOT:matched: {{.*}} = constant 42{{.*}}
+  // CHECK-NOT:matched: {{.*}} = arith.constant 7{{.*}}
+  // CHECK-NOT:matched: {{.*}} = arith.constant 42{{.*}}
   // CHECK-NOT:matched: {{.*}} = memref.load{{.*}}
   // CHECK-NOT:matched: return {{.*}}
-  %c7 = constant 7 : index
-  %c42 = constant 42 : index
+  %c7 = arith.constant 7 : index
+  %c42 = arith.constant 42 : index
   %9 = memref.load %2[%c7, %c42] : memref<?x?xf32>
   return %9 : f32
 }

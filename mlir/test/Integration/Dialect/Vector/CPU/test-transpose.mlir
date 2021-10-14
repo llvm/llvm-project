@@ -4,15 +4,15 @@
 // RUN: FileCheck %s
 
 func @entry() {
-  %f0 = constant 0.0: f32
-  %f1 = constant 1.0: f32
-  %f2 = constant 2.0: f32
-  %f3 = constant 3.0: f32
-  %f4 = constant 4.0: f32
-  %f5 = constant 5.0: f32
-  %f6 = constant 6.0: f32
-  %f7 = constant 7.0: f32
-  %f8 = constant 8.0: f32
+  %f0 = arith.constant 0.0: f32
+  %f1 = arith.constant 1.0: f32
+  %f2 = arith.constant 2.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f4 = arith.constant 4.0: f32
+  %f5 = arith.constant 5.0: f32
+  %f6 = arith.constant 6.0: f32
+  %f7 = arith.constant 7.0: f32
+  %f8 = arith.constant 8.0: f32
 
   // Construct test vectors and matrices.
   %0 = vector.broadcast %f1 : f32 to vector<2xf32>
@@ -33,7 +33,7 @@ func @entry() {
   %9 = vector.insert %a, %8[0] : vector<2xf32> into vector<3x2xf32>
   %10 = vector.insert %b, %9[1] : vector<2xf32> into vector<3x2xf32>
   %C = vector.insert %c, %10[2] : vector<2xf32> into vector<3x2xf32>
-  %cst = constant dense<0.000000e+00> : vector<2x4xf32>
+  %cst = arith.constant dense<0.000000e+00> : vector<2x4xf32>
   %11 = vector.insert_strided_slice %A, %cst {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<2x4xf32>
   %D = vector.insert_strided_slice %B, %11 {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<2x4xf32>
 

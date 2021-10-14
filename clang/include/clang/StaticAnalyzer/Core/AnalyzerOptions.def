@@ -328,6 +328,14 @@ ANALYZER_OPTION(
     "holds a single element.",
     false)
 
+ANALYZER_OPTION(
+    bool, ShouldAssumeControlledEnvironment, "assume-controlled-environment",
+    "Whether the analyzed application runs in a controlled environment. "
+    "We will assume that environment variables exist in queries and they hold "
+    "no malicious data. For instance, if this option is enabled, 'getenv()' "
+    "might be modeled by the analyzer to never return NULL.",
+    false)
+
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
 //===----------------------------------------------------------------------===//

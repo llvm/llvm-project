@@ -12,6 +12,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -78,7 +79,7 @@ public:
     Value result = rewriter.create<memref::AllocOp>(op.getLoc(), resultType);
     for (auto element : llvm::enumerate(op.elements())) {
       Value index =
-          rewriter.create<ConstantIndexOp>(op.getLoc(), element.index());
+          rewriter.create<arith::ConstantIndexOp>(op.getLoc(), element.index());
       rewriter.create<memref::StoreOp>(op.getLoc(), element.value(), result,
                                        index);
     }
@@ -106,17 +107,17 @@ public:
 
     // Collect loop bounds.
     int64_t rank = tensorType.getRank();
-    Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
-    Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     SmallVector<Value, 4> lowerBounds(rank, zero);
     SmallVector<Value, 4> steps(rank, one);
     SmallVector<Value, 4> upperBounds;
     int nextDynamicIndex = 0;
     for (int i = 0; i < rank; i++) {
-      Value upperBound =
-          tensorType.isDynamicDim(i)
-              ? adaptor.dynamicExtents()[nextDynamicIndex++]
-              : rewriter.create<ConstantIndexOp>(loc, memrefType.getDimSize(i));
+      Value upperBound = tensorType.isDynamicDim(i)
+                             ? adaptor.dynamicExtents()[nextDynamicIndex++]
+                             : rewriter.create<arith::ConstantIndexOp>(
+                                   loc, memrefType.getDimSize(i));
       upperBounds.push_back(upperBound);
     }
 
@@ -171,7 +172,8 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
                         tensor::FromElementsOp, tensor::GenerateOp>();
     target.addLegalDialect<memref::MemRefDialect>();
-    target.addDynamicallyLegalDialect<StandardOpsDialect>(
+    target.addDynamicallyLegalDialect<arith::ArithmeticDialect,
+                                      StandardOpsDialect>(
         [&](Operation *op) { return typeConverter.isLegal(op); });
     target.addLegalOp<CallOp>();
     target.addLegalOp<ReturnOp>();

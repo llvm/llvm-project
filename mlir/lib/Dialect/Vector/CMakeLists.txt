@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRVector
   MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRDialectUtils
   MLIRIR
   MLIRStandard

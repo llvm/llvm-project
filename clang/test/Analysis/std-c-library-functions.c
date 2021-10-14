@@ -254,3 +254,11 @@ void test_call_by_pointer() {
   f = ispunct;
   clang_analyzer_eval(f('A')); // expected-warning{{FALSE}}
 }
+
+char *getenv(const char *name);
+void test_getenv() {
+  // getenv() bifurcates here.
+  clang_analyzer_eval(getenv("FOO") == 0);
+  // expected-warning@-1 {{TRUE}}
+  // expected-warning@-2 {{FALSE}}
+}

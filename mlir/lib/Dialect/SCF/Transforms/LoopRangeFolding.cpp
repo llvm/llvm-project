@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -45,7 +46,7 @@ void ForLoopRangeFolding::runOnOperation() {
         break;
 
       Operation *user = *indVar.getUsers().begin();
-      if (!isa<AddIOp, MulIOp>(user))
+      if (!isa<arith::AddIOp, arith::MulIOp>(user))
         break;
 
       if (!llvm::all_of(user->getOperands(), canBeFolded))
@@ -59,14 +60,14 @@ void ForLoopRangeFolding::runOnOperation() {
       BlockAndValueMapping stepMap;
       stepMap.map(indVar, op.step());
 
-      if (isa<AddIOp>(user)) {
+      if (isa<arith::AddIOp>(user)) {
         Operation *lbFold = b.clone(*user, lbMap);
         Operation *ubFold = b.clone(*user, ubMap);
 
         op.setLowerBound(lbFold->getResult(0));
         op.setUpperBound(ubFold->getResult(0));
 
-      } else if (isa<MulIOp>(user)) {
+      } else if (isa<arith::MulIOp>(user)) {
         Operation *ubFold = b.clone(*user, ubMap);
         Operation *stepFold = b.clone(*user, stepMap);
 

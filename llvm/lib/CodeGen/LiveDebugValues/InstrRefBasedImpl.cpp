@@ -11,114 +11,48 @@
 /// LiveDebugValues.cpp and VarLocBasedImpl.cpp for more information.
 ///
 /// This pass propagates variable locations between basic blocks, resolving
-/// control flow conflicts between them. The problem is much like SSA
-/// construction, where each DBG_VALUE instruction assigns the *value* that
-/// a variable has, and every instruction where the variable is in scope uses
-/// that variable. The resulting map of instruction-to-value is then translated
-/// into a register (or spill) location for each variable over each instruction.
+/// control flow conflicts between them. The problem is SSA construction, where
+/// each debug instruction assigns the *value* that a variable has, and every
+/// instruction where the variable is in scope uses that variable. The resulting
+/// map of instruction-to-value is then translated into a register (or spill)
+/// location for each variable over each instruction.
 ///
-/// This pass determines which DBG_VALUE dominates which instructions, or if
-/// none do, where values must be merged (like PHI nodes). The added
-/// complication is that because codegen has already finished, a PHI node may
-/// be needed for a variable location to be correct, but no register or spill
-/// slot merges the necessary values. In these circumstances, the variable
-/// location is dropped.
+/// The primary difference from normal SSA construction is that we cannot
+/// _create_ PHI values that contain variable values. CodeGen has already
+/// completed, and we can't alter it just to make debug-info complete. Thus:
+/// we can identify function positions where we would like a PHI value for a
+/// variable, but must search the MachineFunction to see whether such a PHI is
+/// available. If no such PHI exists, the variable location must be dropped.
 ///
-/// What makes this analysis non-trivial is loops: we cannot tell in advance
-/// whether a variable location is live throughout a loop, or whether its
-/// location is clobbered (or redefined by another DBG_VALUE), without
-/// exploring all the way through.
-///
-/// To make this simpler we perform two kinds of analysis. First, we identify
+/// To achieve this, we perform two kinds of analysis. First, we identify
 /// every value defined by every instruction (ignoring those that only move
-/// another value), then compute a map of which values are available for each
-/// instruction. This is stronger than a reaching-def analysis, as we create
-/// PHI values where other values merge.
+/// another value), then re-compute an SSA-form representation of the
+/// MachineFunction, using value propagation to eliminate any un-necessary
+/// PHI values. This gives us a map of every value computed in the function,
+/// and its location within the register file / stack.
 ///
-/// Secondly, for each variable, we effectively re-construct SSA using each
-/// DBG_VALUE as a def. The DBG_VALUEs read a value-number computed by the
-/// first analysis from the location they refer to. We can then compute the
-/// dominance frontiers of where a variable has a value, and create PHI nodes
-/// where they merge.
-/// This isn't precisely SSA-construction though, because the function shape
-/// is pre-defined. If a variable location requires a PHI node, but no
-/// PHI for the relevant values is present in the function (as computed by the
-/// first analysis), the location must be dropped.
+/// Secondly, for each variable we perform the same analysis, where each debug
+/// instruction is considered a def, and every instruction where the variable
+/// is in lexical scope as a use. Value propagation is used again to eliminate
+/// any un-necessary PHIs. This gives us a map of each variable to the value
+/// it should have in a block.
 ///
-/// Once both are complete, we can pass back over all instructions knowing:
-///  * What _value_ each variable should contain, either defined by an
-///    instruction or where control flow merges
-///  * What the location of that value is (if any).
-/// Allowing us to create appropriate live-in DBG_VALUEs, and DBG_VALUEs when
-/// a value moves location. After this pass runs, all variable locations within
-/// a block should be specified by DBG_VALUEs within that block, allowing
-/// DbgEntityHistoryCalculator to focus on individual blocks.
+/// Once both are complete, we have two maps for each block:
+///  * Variables to the values they should have,
+///  * Values to the register / spill slot they are located in.
+/// After which we can marry-up variable values with a location, and emit
+/// DBG_VALUE instructions specifying those locations. Variable locations may
+/// be dropped in this process due to the desired variable value not being
+/// resident in any machine location, or because there is no PHI value in any
+/// location that accurately represents the desired value.  The building of
+/// location lists for each block is left to DbgEntityHistoryCalculator.
 ///
-/// This pass is able to go fast because the size of the first
-/// reaching-definition analysis is proportional to the working-set size of
-/// the function, which the compiler tries to keep small. (It's also
-/// proportional to the number of blocks). Additionally, we repeatedly perform
-/// the second reaching-definition analysis with only the variables and blocks
-/// in a single lexical scope, exploiting their locality.
-///
-/// Determining where PHIs happen is trickier with this approach, and it comes
-/// to a head in the major problem for LiveDebugValues: is a value live-through
-/// a loop, or not? Your garden-variety dataflow analysis aims to build a set of
-/// facts about a function, however this analysis needs to generate new value
-/// numbers at joins.
-///
-/// To do this, consider a lattice of all definition values, from instructions
-/// and from PHIs. Each PHI is characterised by the RPO number of the block it
-/// occurs in. Each value pair A, B can be ordered by RPO(A) < RPO(B):
-/// with non-PHI values at the top, and any PHI value in the last block (by RPO
-/// order) at the bottom.
-///
-/// (Awkwardly: lower-down-the _lattice_ means a greater RPO _number_. Below,
-/// "rank" always refers to the former).
-///
-/// At any join, for each register, we consider:
-///  * All incoming values, and
-///  * The PREVIOUS live-in value at this join.
-/// If all incoming values agree: that's the live-in value. If they do not, the
-/// incoming values are ranked according to the partial order, and the NEXT
-/// LOWEST rank after the PREVIOUS live-in value is picked (multiple values of
-/// the same rank are ignored as conflicting). If there are no candidate values,
-/// or if the rank of the live-in would be lower than the rank of the current
-/// blocks PHIs, create a new PHI value.
-///
-/// Intuitively: if it's not immediately obvious what value a join should result
-/// in, we iteratively descend from instruction-definitions down through PHI
-/// values, getting closer to the current block each time. If the current block
-/// is a loop head, this ordering is effectively searching outer levels of
-/// loops, to find a value that's live-through the current loop.
-///
-/// If there is no value that's live-through this loop, a PHI is created for
-/// this location instead. We can't use a lower-ranked PHI because by definition
-/// it doesn't dominate the current block. We can't create a PHI value any
-/// earlier, because we risk creating a PHI value at a location where values do
-/// not in fact merge, thus misrepresenting the truth, and not making the true
-/// live-through value for variable locations.
-///
-/// This algorithm applies to both calculating the availability of values in
-/// the first analysis, and the location of variables in the second. However
-/// for the second we add an extra dimension of pain: creating a variable
-/// location PHI is only valid if, for each incoming edge,
-///  * There is a value for the variable on the incoming edge, and
-///  * All the edges have that value in the same register.
-/// Or put another way: we can only create a variable-location PHI if there is
-/// a matching machine-location PHI, each input to which is the variables value
-/// in the predecessor block.
-///
-/// To accommodate this difference, each point on the lattice is split in
-/// two: a "proposed" PHI and "definite" PHI. Any PHI that can immediately
-/// have a location determined are "definite" PHIs, and no further work is
-/// needed. Otherwise, a location that all non-backedge predecessors agree
-/// on is picked and propagated as a "proposed" PHI value. If that PHI value
-/// is truly live-through, it'll appear on the loop backedges on the next
-/// dataflow iteration, after which the block live-in moves to be a "definite"
-/// PHI. If it's not truly live-through, the variable value will be downgraded
-/// further as we explore the lattice, or remains "proposed" and is considered
-/// invalid once dataflow completes.
+/// This pass is kept efficient because the size of the first SSA problem
+/// is proportional to the working-set size of the function, which the compiler
+/// tries to keep small. (It's also proportional to the number of blocks).
+/// Additionally, we repeatedly perform the second SSA problem analysis with
+/// only the variables and blocks in a single lexical scope, exploiting their
+/// locality.
 ///
 /// ### Terminology
 ///
@@ -128,15 +62,13 @@
 /// contain the appropriate variable value. A value that is a PHI node is
 /// occasionally called an mphi.
 ///
-/// The first dataflow problem is the "machine value location" problem,
+/// The first SSA problem is the "machine value location" problem,
 /// because we're determining which machine locations contain which values.
 /// The "locations" are constant: what's unknown is what value they contain.
 ///
-/// The second dataflow problem (the one for variables) is the "variable value
+/// The second SSA problem (the one for variables) is the "variable value
 /// problem", because it's determining what values a variable has, rather than
-/// what location those values are placed in. Unfortunately, it's not that
-/// simple, because producing a PHI value always involves picking a location.
-/// This is an imperfection that we just have to accept, at least for now.
+/// what location those values are placed in.
 ///
 /// TODO:
 ///   Overlapping fragments
@@ -153,8 +85,10 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -791,6 +725,9 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
   if (SP) {
     unsigned ID = getLocID(SP, false);
     (void)lookupOrTrackRegister(ID);
+
+    for (MCRegAliasIterator RAI(SP, &TRI, true); RAI.isValid(); ++RAI)
+      SPAliases.insert(*RAI);
   }
 }
 
@@ -818,16 +755,13 @@ LocIdx MLocTracker::trackRegister(unsigned ID) {
 
 void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
                                unsigned InstID) {
-  // Ensure SP exists, so that we don't override it later.
-  Register SP = TLI.getStackPointerRegisterToSaveRestore();
-
   // Def any register we track have that isn't preserved. The regmask
   // terminates the liveness of a register, meaning its value can't be
   // relied upon -- we represent this by giving it a new value.
   for (auto Location : locations()) {
     unsigned ID = LocIdxToLocID[Location.Idx];
     // Don't clobber SP, even if the mask says it's clobbered.
-    if (ID < NumRegs && ID != SP && MO->clobbersPhysReg(ID))
+    if (ID < NumRegs && !SPAliases.count(ID) && MO->clobbersPhysReg(ID))
       defReg(ID, CurBB, InstID);
   }
   Masks.push_back(std::make_pair(MO, InstID));
@@ -1743,12 +1677,11 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
   }
 
   // Compute a bitvector of all the registers that are tracked in this block.
-  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   BitVector UsedRegs(TRI->getNumRegs());
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
-    if (ID >= TRI->getNumRegs() || ID == SP)
+    // Ignore stack slots, and aliases of the stack pointer.
+    if (ID >= TRI->getNumRegs() || MTracker->SPAliases.count(ID))
       continue;
     UsedRegs.set(ID);
   }
@@ -1786,23 +1719,20 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
   }
 }
 
-std::tuple<bool, bool>
-InstrRefBasedLDV::mlocJoin(MachineBasicBlock &MBB,
-                           SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
-                           ValueIDNum **OutLocs, ValueIDNum *InLocs) {
+bool InstrRefBasedLDV::mlocJoin(
+    MachineBasicBlock &MBB, SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
+    ValueIDNum **OutLocs, ValueIDNum *InLocs) {
   LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getNumber() << "\n");
   bool Changed = false;
-  bool DowngradeOccurred = false;
 
-  // Collect predecessors that have been visited. Anything that hasn't been
-  // visited yet is a backedge on the first iteration, and the meet of it's
-  // lattice value for all locations will be unaffected.
+  // Handle value-propagation when control flow merges on entry to a block. For
+  // any location without a PHI already placed, the location has the same value
+  // as its predecessors. If a PHI is placed, test to see whether it's now a
+  // redundant PHI that we can eliminate.
+
   SmallVector<const MachineBasicBlock *, 8> BlockOrders;
-  for (auto Pred : MBB.predecessors()) {
-    if (Visited.count(Pred)) {
-      BlockOrders.push_back(Pred);
-    }
-  }
+  for (auto Pred : MBB.predecessors())
+    BlockOrders.push_back(Pred);
 
   // Visit predecessors in RPOT order.
   auto Cmp = [&](const MachineBasicBlock *A, const MachineBasicBlock *B) {
@@ -1812,83 +1742,160 @@ InstrRefBasedLDV::mlocJoin(MachineBasicBlock &MBB,
 
   // Skip entry block.
   if (BlockOrders.size() == 0)
-    return std::tuple<bool, bool>(false, false);
+    return false;
 
-  // Step through all machine locations, then look at each predecessor and
-  // detect disagreements.
-  unsigned ThisBlockRPO = BBToOrder.find(&MBB)->second;
+  // Step through all machine locations, look at each predecessor and test
+  // whether we can eliminate redundant PHIs.
   for (auto Location : MTracker->locations()) {
     LocIdx Idx = Location.Idx;
+
     // Pick out the first predecessors live-out value for this location. It's
-    // guaranteed to be not a backedge, as we order by RPO.
-    ValueIDNum BaseVal = OutLocs[BlockOrders[0]->getNumber()][Idx.asU64()];
+    // guaranteed to not be a backedge, as we order by RPO.
+    ValueIDNum FirstVal = OutLocs[BlockOrders[0]->getNumber()][Idx.asU64()];
 
-    // Some flags for whether there's a disagreement, and whether it's a
-    // disagreement with a backedge or not.
+    // If we've already eliminated a PHI here, do no further checking, just
+    // propagate the first live-in value into this block.
+    if (InLocs[Idx.asU64()] != ValueIDNum(MBB.getNumber(), 0, Idx)) {
+      if (InLocs[Idx.asU64()] != FirstVal) {
+        InLocs[Idx.asU64()] = FirstVal;
+        Changed |= true;
+      }
+      continue;
+    }
+
+    // We're now examining a PHI to see whether it's un-necessary. Loop around
+    // the other live-in values and test whether they're all the same.
     bool Disagree = false;
-    bool NonBackEdgeDisagree = false;
-
-    // Loop around everything that wasn't 'base'.
     for (unsigned int I = 1; I < BlockOrders.size(); ++I) {
-      auto *MBB = BlockOrders[I];
-      if (BaseVal != OutLocs[MBB->getNumber()][Idx.asU64()]) {
-        // Live-out of a predecessor disagrees with the first predecessor.
-        Disagree = true;
+      const MachineBasicBlock *PredMBB = BlockOrders[I];
+      const ValueIDNum &PredLiveOut =
+          OutLocs[PredMBB->getNumber()][Idx.asU64()];
 
-        // Test whether it's a disagreemnt in the backedges or not.
-        if (BBToOrder.find(MBB)->second < ThisBlockRPO) // might be self b/e
-          NonBackEdgeDisagree = true;
-      }
+      // Incoming values agree, continue trying to eliminate this PHI.
+      if (FirstVal == PredLiveOut)
+        continue;
+
+      // We can also accept a PHI value that feeds back into itself.
+      if (PredLiveOut == ValueIDNum(MBB.getNumber(), 0, Idx))
+        continue;
+
+      // Live-out of a predecessor disagrees with the first predecessor.
+      Disagree = true;
     }
 
-    bool OverRide = false;
-    if (Disagree && !NonBackEdgeDisagree) {
-      // Only the backedges disagree. Consider demoting the livein
-      // lattice value, as per the file level comment. The value we consider
-      // demoting to is the value that the non-backedge predecessors agree on.
-      // The order of values is that non-PHIs are \top, a PHI at this block
-      // \bot, and phis between the two are ordered by their RPO number.
-      // If there's no agreement, or we've already demoted to this PHI value
-      // before, replace with a PHI value at this block.
-
-      // Calculate order numbers: zero means normal def, nonzero means RPO
-      // number.
-      unsigned BaseBlockRPONum = BBNumToRPO[BaseVal.getBlock()] + 1;
-      if (!BaseVal.isPHI())
-        BaseBlockRPONum = 0;
-
-      ValueIDNum &InLocID = InLocs[Idx.asU64()];
-      unsigned InLocRPONum = BBNumToRPO[InLocID.getBlock()] + 1;
-      if (!InLocID.isPHI())
-        InLocRPONum = 0;
-
-      // Should we ignore the disagreeing backedges, and override with the
-      // value the other predecessors agree on (in "base")?
-      unsigned ThisBlockRPONum = BBNumToRPO[MBB.getNumber()] + 1;
-      if (BaseBlockRPONum > InLocRPONum && BaseBlockRPONum < ThisBlockRPONum) {
-        // Override.
-        OverRide = true;
-        DowngradeOccurred = true;
-      }
-    }
-    // else: if we disagree in the non-backedges, then this is definitely
-    // a control flow merge where different values merge. Make it a PHI.
-
-    // Generate a phi...
-    ValueIDNum PHI = {(uint64_t)MBB.getNumber(), 0, Idx};
-    ValueIDNum NewVal = (Disagree && !OverRide) ? PHI : BaseVal;
-    if (InLocs[Idx.asU64()] != NewVal) {
+    // No disagreement? No PHI. Otherwise, leave the PHI in live-ins.
+    if (!Disagree) {
+      InLocs[Idx.asU64()] = FirstVal;
       Changed |= true;
-      InLocs[Idx.asU64()] = NewVal;
     }
   }
 
   // TODO: Reimplement NumInserted and NumRemoved.
-  return std::tuple<bool, bool>(Changed, DowngradeOccurred);
+  return Changed;
 }
 
-void InstrRefBasedLDV::mlocDataflow(
-    ValueIDNum **MInLocs, ValueIDNum **MOutLocs,
+void InstrRefBasedLDV::placeMLocPHIs(MachineFunction &MF,
+                              SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                              ValueIDNum **MInLocs,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
+  // To avoid repeatedly running the PHI placement algorithm, leverage the
+  // fact that a def of register MUST also def its register units. Find the
+  // units for registers, place PHIs for them, and then replicate them for 
+  // aliasing registers. Some inputs that are never def'd (DBG_PHIs of
+  // arguments) don't lead to register units being tracked, just place PHIs for
+  // those registers directly. Do the same for stack slots.
+  SmallSet<Register, 32> RegUnitsToPHIUp;
+  SmallSet<LocIdx, 32> LocsToPHI;
+  for (auto Location : MTracker->locations()) {
+    LocIdx L = Location.Idx;
+    if (MTracker->isSpill(L)) {
+      LocsToPHI.insert(L);
+      continue;
+    }
+
+    Register R = MTracker->LocIdxToLocID[L];
+    SmallSet<Register, 8> FoundRegUnits;
+    bool AnyIllegal = false;
+    for (MCRegUnitIterator RUI(R.asMCReg(), TRI); RUI.isValid(); ++RUI) {
+      for (MCRegUnitRootIterator URoot(*RUI, TRI); URoot.isValid(); ++URoot){
+        if (!MTracker->isRegisterTracked(*URoot)) {
+          // Not all roots were loaded into the tracking map: this register
+          // isn't actually def'd anywhere, we only read from it. Generate PHIs
+          // for this reg, but don't iterate units.
+          AnyIllegal = true;
+        } else {
+          FoundRegUnits.insert(*URoot);
+        }
+      }
+    }
+
+    if (AnyIllegal) {
+      LocsToPHI.insert(L);
+      continue;
+    }
+
+    RegUnitsToPHIUp.insert(FoundRegUnits.begin(), FoundRegUnits.end());
+  }
+
+  // Lambda to fetch PHIs for a given location, and write into the PHIBlocks
+  // collection.
+  SmallVector<MachineBasicBlock *, 32> PHIBlocks;
+  auto CollectPHIsForLoc = [&](LocIdx L) {
+    // Collect the set of defs.
+    SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
+    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
+      MachineBasicBlock *MBB = OrderToBB[I];
+      const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
+      if (TransferFunc.find(L) != TransferFunc.end())
+        DefBlocks.insert(MBB);
+    }
+
+    // The entry block defs the location too: it's the live-in / argument value.
+    // Only insert if there are other defs though; everything is trivially live
+    // through otherwise.
+    if (!DefBlocks.empty())
+      DefBlocks.insert(&*MF.begin());
+
+    // Ask the SSA construction algorithm where we should put PHIs. Clear
+    // anything that might have been hanging around from earlier.
+    PHIBlocks.clear();
+    BlockPHIPlacement(AllBlocks, DefBlocks, PHIBlocks);
+  };
+
+  // For spill slots, and locations with no reg units, just place PHIs.
+  for (LocIdx L : LocsToPHI) {
+    CollectPHIsForLoc(L);
+    // Install those PHI values into the live-in value array.
+    for (const MachineBasicBlock *MBB : PHIBlocks)
+      MInLocs[MBB->getNumber()][L.asU64()] = ValueIDNum(MBB->getNumber(), 0, L);
+  }
+
+  // For reg units, place PHIs, and then place them for any aliasing registers.
+  for (Register R : RegUnitsToPHIUp) {
+    LocIdx L = MTracker->lookupOrTrackRegister(R);
+    CollectPHIsForLoc(L);
+
+    // Install those PHI values into the live-in value array.
+    for (const MachineBasicBlock *MBB : PHIBlocks)
+      MInLocs[MBB->getNumber()][L.asU64()] = ValueIDNum(MBB->getNumber(), 0, L);
+
+    // Now find aliases and install PHIs for those.
+    for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI) {
+      // Super-registers that are "above" the largest register read/written by
+      // the function will alias, but will not be tracked.
+      if (!MTracker->isRegisterTracked(*RAI))
+        continue;
+
+      LocIdx AliasLoc = MTracker->lookupOrTrackRegister(*RAI);
+      for (const MachineBasicBlock *MBB : PHIBlocks)
+        MInLocs[MBB->getNumber()][AliasLoc.asU64()] =
+            ValueIDNum(MBB->getNumber(), 0, AliasLoc);
+    }
+  }
+}
+
+void InstrRefBasedLDV::buildMLocValueMap(
+    MachineFunction &MF, ValueIDNum **MInLocs, ValueIDNum **MOutLocs,
     SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
   std::priority_queue<unsigned int, std::vector<unsigned int>,
                       std::greater<unsigned int>>
@@ -1899,20 +1906,34 @@ void InstrRefBasedLDV::mlocDataflow(
   // but this is probably not worth it.
   SmallPtrSet<MachineBasicBlock *, 16> OnPending, OnWorklist;
 
-  // Initialize worklist with every block to be visited.
+  // Initialize worklist with every block to be visited. Also produce list of
+  // all blocks.
+  SmallPtrSet<MachineBasicBlock *, 32> AllBlocks;
   for (unsigned int I = 0; I < BBToOrder.size(); ++I) {
     Worklist.push(I);
     OnWorklist.insert(OrderToBB[I]);
+    AllBlocks.insert(OrderToBB[I]);
   }
+
+  // Initialize entry block to PHIs. These represent arguments.
+  for (auto Location : MTracker->locations())
+    MInLocs[0][Location.Idx.asU64()] = ValueIDNum(0, 0, Location.Idx);
 
   MTracker->reset();
 
-  // Set inlocs for entry block -- each as a PHI at the entry block. Represents
-  // the incoming value to the function.
-  MTracker->setMPhis(0);
-  for (auto Location : MTracker->locations())
-    MInLocs[0][Location.Idx.asU64()] = Location.Value;
+  // Start by placing PHIs, using the usual SSA constructor algorithm. Consider
+  // any machine-location that isn't live-through a block to be def'd in that
+  // block.
+  placeMLocPHIs(MF, AllBlocks, MInLocs, MLocTransfer);
 
+  // Propagate values to eliminate redundant PHIs. At the same time, this
+  // produces the table of Block x Location => Value for the entry to each
+  // block.
+  // The kind of PHIs we can eliminate are, for example, where one path in a
+  // conditional spills and restores a register, and the register still has
+  // the same value once control flow joins, unbeknowns to the PHI placement
+  // code. Propagating values allows us to identify such un-necessary PHIs and
+  // remove them.
   SmallPtrSet<const MachineBasicBlock *, 16> Visited;
   while (!Worklist.empty() || !Pending.empty()) {
     // Vector for storing the evaluated block transfer function.
@@ -1924,15 +1945,9 @@ void InstrRefBasedLDV::mlocDataflow(
       Worklist.pop();
 
       // Join the values in all predecessor blocks.
-      bool InLocsChanged, DowngradeOccurred;
-      std::tie(InLocsChanged, DowngradeOccurred) =
-          mlocJoin(*MBB, Visited, MOutLocs, MInLocs[CurBB]);
+      bool InLocsChanged;
+      InLocsChanged = mlocJoin(*MBB, Visited, MOutLocs, MInLocs[CurBB]);
       InLocsChanged |= Visited.insert(MBB).second;
-
-      // If a downgrade occurred, book us in for re-examination on the next
-      // iteration.
-      if (DowngradeOccurred && OnPending.insert(MBB).second)
-        Pending.push(BBToOrder[MBB]);
 
       // Don't examine transfer function if we've visited this loc at least
       // once, and inlocs haven't changed.
@@ -1978,8 +1993,8 @@ void InstrRefBasedLDV::mlocDataflow(
         continue;
 
       // All successors should be visited: put any back-edges on the pending
-      // list for the next dataflow iteration, and any other successors to be
-      // visited this iteration, if they're not going to be already.
+      // list for the next pass-through, and any other successors to be
+      // visited this pass, if they're not going to be already.
       for (auto s : MBB->successors()) {
         // Does branching to this successor represent a back-edge?
         if (BBToOrder[s] > BBToOrder[MBB]) {
@@ -2002,8 +2017,57 @@ void InstrRefBasedLDV::mlocDataflow(
     assert(Pending.empty() && "Pending should be empty");
   }
 
-  // Once all the live-ins don't change on mlocJoin(), we've reached a
-  // fixedpoint.
+  // Once all the live-ins don't change on mlocJoin(), we've eliminated all
+  // redundant PHIs.
+}
+
+// Boilerplate for feeding MachineBasicBlocks into IDF calculator. Provide
+// template specialisations for graph traits and a successor enumerator.
+namespace llvm {
+template <> struct GraphTraits<MachineBasicBlock> {
+  using NodeRef = MachineBasicBlock *;
+  using ChildIteratorType = MachineBasicBlock::succ_iterator;
+
+  static NodeRef getEntryNode(MachineBasicBlock *BB) { return BB; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+};
+
+template <> struct GraphTraits<const MachineBasicBlock> {
+  using NodeRef = const MachineBasicBlock *;
+  using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
+
+  static NodeRef getEntryNode(const MachineBasicBlock *BB) { return BB; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+};
+
+using MachineDomTreeBase = DomTreeBase<MachineBasicBlock>::NodeType;
+using MachineDomTreeChildGetter =
+    typename IDFCalculatorDetail::ChildrenGetterTy<MachineDomTreeBase, false>;
+
+namespace IDFCalculatorDetail {
+template <>
+typename MachineDomTreeChildGetter::ChildrenTy
+MachineDomTreeChildGetter::get(const NodeRef &N) {
+  return {N->succ_begin(), N->succ_end()};
+}
+} // namespace IDFCalculatorDetail
+} // namespace llvm
+
+void InstrRefBasedLDV::BlockPHIPlacement(
+    const SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+    const SmallPtrSetImpl<MachineBasicBlock *> &DefBlocks,
+    SmallVectorImpl<MachineBasicBlock *> &PHIBlocks) {
+  // Apply IDF calculator to the designated set of location defs, storing
+  // required PHIs into PHIBlocks. Uses the dominator tree stored in the
+  // InstrRefBasedLDV object.
+  IDFCalculatorDetail::ChildrenGetterTy<MachineDomTreeBase, false> foo;
+  IDFCalculatorBase<MachineDomTreeBase, false> IDF(DomTree->getBase(), foo);
+
+  IDF.setLiveInBlocks(AllBlocks);
+  IDF.setDefiningBlocks(DefBlocks);
+  IDF.calculate(PHIBlocks);
 }
 
 bool InstrRefBasedLDV::vlocDowngradeLattice(
@@ -2756,7 +2820,9 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
-bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
+bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
+                                    MachineDominatorTree *DomTree,
+                                    TargetPassConfig *TPC,
                                     unsigned InputBBLimit,
                                     unsigned InputDbgValLimit) {
   // No subprogram means this function contains no debuginfo.
@@ -2766,6 +2832,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
   this->TPC = TPC;
 
+  this->DomTree = DomTree;
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   TFI = MF.getSubtarget().getFrameLowering();
@@ -2803,6 +2870,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
   ValueIDNum **MInLocs = new ValueIDNum *[MaxNumBlocks];
   unsigned NumLocs = MTracker->getNumLocs();
   for (int i = 0; i < MaxNumBlocks; ++i) {
+    // These all auto-initialize to ValueIDNum::EmptyValue
     MOutLocs[i] = new ValueIDNum[NumLocs];
     MInLocs[i] = new ValueIDNum[NumLocs];
   }
@@ -2811,7 +2879,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
   // storing the computed live-ins / live-outs into the array-of-arrays. We use
   // both live-ins and live-outs for decision making in the variable value
   // dataflow problem.
-  mlocDataflow(MInLocs, MOutLocs, MLocTransfer);
+  buildMLocValueMap(MF, MInLocs, MOutLocs, MLocTransfer);
 
   // Patch up debug phi numbers, turning unknown block-live-in values into
   // either live-through machine values, or PHIs.

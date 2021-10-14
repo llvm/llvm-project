@@ -8,6 +8,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -314,8 +315,9 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect,
-                           StandardOpsDialect, tensor::TensorDialect>();
+    target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
+                           memref::MemRefDialect, StandardOpsDialect,
+                           tensor::TensorDialect>();
     target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
                         tensor::InsertSliceOp, PadTensorOp>();
 

@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 
 #include "../PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -61,7 +62,7 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   if (shape.size() != 1)
     return failure();
 
-  Value result = rewriter.create<ConstantOp>(
+  Value result = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(
                vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
   for (auto i = 0; i < shape.front(); ++i) {
@@ -135,8 +136,8 @@ void ConvertMathToLibmPass::runOnOperation() {
   populateMathToLibmConversionPatterns(patterns, /*benefit=*/1);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<BuiltinDialect, StandardOpsDialect,
-                         vector::VectorDialect>();
+  target.addLegalDialect<arith::ArithmeticDialect, BuiltinDialect,
+                         StandardOpsDialect, vector::VectorDialect>();
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

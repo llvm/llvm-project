@@ -37,13 +37,12 @@ add_mlir_library(MLIRAnalysis
   mlir-headers
 
   LINK_LIBS PUBLIC
-  MLIRAffine
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRInferTypeOpInterface
-  MLIRLinalg
-  MLIRSCF
+  MLIRSideEffectInterfaces
+  MLIRViewLikeInterface
   )
 
 add_mlir_library(MLIRLoopAnalysis

@@ -10,20 +10,20 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
       ins(%lhs, %rhs : memref<2x2xf32>, memref<2x2xf32>)
      outs(%sum : memref<2x2xf32>) {
     ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):   // no predecessors
-      %0 = addf %lhs_in, %rhs_in : f32
+      %0 = arith.addf %lhs_in, %rhs_in : f32
       linalg.yield %0 : f32
   }
   return
 }
 // CHECK-LABEL: @linalg_generic_sum
 // CHECK:   (%[[LHS:.*]]:{{.*}}, %[[RHS:.*]]:{{.*}}, %[[SUM:.*]]:{{.*}})
-// CHECK-DAG: %[[C2:.*]] = constant 2
-// CHECK-DAG: %[[C0:.*]] = constant 0
-// CHECK-DAG: %[[C1:.*]] = constant 1
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1
 // CHECK: scf.parallel (%[[I:.*]], %[[J:.*]]) = {{.*}}
 // CHECK:   %[[LHS_ELEM:.*]] = memref.load %[[LHS]][%[[I]], %[[J]]]
 // CHECK:   %[[RHS_ELEM:.*]] = memref.load %[[RHS]][%[[I]], %[[J]]]
-// CHECK:   %[[SUM:.*]] = addf %[[LHS_ELEM]], %[[RHS_ELEM]] : f32
+// CHECK:   %[[SUM:.*]] = arith.addf %[[LHS_ELEM]], %[[RHS_ELEM]] : f32
 // CHECK:   store %[[SUM]], %{{.*}}[%[[I]], %[[J]]]
 // CHECK:   scf.yield
 
@@ -48,8 +48,8 @@ func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
   return
 }
 // CHECK-LABEL: @lower_outer_parallel
-//   CHECK-DAG: %[[C0:.*]] = constant 0
-//   CHECK-DAG: %[[C1:.*]] = constant 1
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1
 //   CHECK-DAG: %[[D0:.*]] = memref.dim %{{.*}}, %c0
 //   CHECK-DAG: %[[D1:.*]] = memref.dim %{{.*}}, %c1
 //   CHECK-DAG: %[[D2:.*]] = memref.dim %{{.*}}, %c2
@@ -81,8 +81,8 @@ func @lower_mixed_parallel(%A: memref<?x?x?x?x?x?xf32>, %B: memref<?x?x?x?xf32>)
   return
 }
 // CHECK-LABEL: @lower_mixed_parallel
-//   CHECK-DAG: %[[C0:.*]] = constant 0
-//   CHECK-DAG: %[[C1:.*]] = constant 1
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1
 //   CHECK-DAG: %[[D0:.*]] = memref.dim %{{.*}}, %c0
 //   CHECK-DAG: %[[D1:.*]] = memref.dim %{{.*}}, %c1
 //   CHECK-DAG: %[[D2:.*]] = memref.dim %{{.*}}, %c2

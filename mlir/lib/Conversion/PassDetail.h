@@ -23,6 +23,10 @@ namespace acc {
 class OpenACCDialect;
 } // end namespace acc
 
+namespace arith {
+class ArithmeticDialect;
+} // end namespace arith
+
 namespace complex {
 class ComplexDialect;
 } // end namespace complex

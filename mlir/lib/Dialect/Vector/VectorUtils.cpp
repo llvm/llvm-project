@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -315,8 +316,8 @@ bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
   for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].getDefiningOp<ConstantOp>();
-    auto indexB = transferB.indices()[i].getDefiningOp<ConstantOp>();
+    auto indexA = transferA.indices()[i].getDefiningOp<arith::ConstantOp>();
+    auto indexB = transferB.indices()[i].getDefiningOp<arith::ConstantOp>();
     // If any of the indices are dynamic we cannot prove anything.
     if (!indexA || !indexB)
       continue;
@@ -324,15 +325,14 @@ bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,
     if (i < rankOffset) {
       // For leading dimensions, if we can prove that index are different we
       // know we are accessing disjoint slices.
-      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
-          indexB.getValue().cast<IntegerAttr>().getInt())
+      if (indexA.value().cast<IntegerAttr>().getInt() !=
+          indexB.value().cast<IntegerAttr>().getInt())
         return true;
     } else {
       // For this dimension, we slice a part of the memref we need to make sure
       // the intervals accessed don't overlap.
-      int64_t distance =
-          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
-                   indexB.getValue().cast<IntegerAttr>().getInt());
+      int64_t distance = std::abs(indexA.value().cast<IntegerAttr>().getInt() -
+                                  indexB.value().cast<IntegerAttr>().getInt());
       if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
         return true;
     }

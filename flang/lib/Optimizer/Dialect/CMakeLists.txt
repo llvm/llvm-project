@@ -10,6 +10,7 @@ add_flang_library(FIRDialect
 
   LINK_LIBS
   FIRSupport
+  MLIRArithmetic
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

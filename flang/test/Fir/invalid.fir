@@ -18,7 +18,7 @@
 // -----
 
 func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
-  %c10 = constant 10 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
   // expected-error@+1{{op operand #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?x?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
@@ -28,7 +28,7 @@ func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @bad_rebox_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
-  %c10 = constant 10 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
   // expected-error@+1{{op result #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
@@ -38,7 +38,7 @@ func @bad_rebox_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 // -----
 
 func @bad_rebox_3(%arg0: !fir.box<!fir.array<*:f32>>) {
-  %c10 = constant 10 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
   // expected-error@+1{{op box operand must not have unknown rank or type}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<*:f32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
@@ -56,8 +56,8 @@ func @bad_rebox_4(%arg0: !fir.box<!fir.array<?xf32>>) {
 // -----
 
 func @bad_rebox_5(%arg0: !fir.box<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.slice %c1, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   // expected-error@+1{{op slice operand rank must match box operand rank}}
   %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
@@ -67,8 +67,8 @@ func @bad_rebox_5(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 // -----
 
 func @bad_rebox_6(%arg0: !fir.box<!fir.array<?xf32>>) {
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.slice %c1, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   %1 = fir.shift %c1, %c1 : (index, index) -> !fir.shift<2>
   // expected-error@+1{{shape operand and input box ranks must match when there is a slice}}
@@ -79,8 +79,8 @@ func @bad_rebox_6(%arg0: !fir.box<!fir.array<?xf32>>) {
 // -----
 
 func @bad_rebox_7(%arg0: !fir.box<!fir.array<?xf32>>) {
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.slice %c1, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   // expected-error@+1{{shape operand must absent or be a fir.shift when there is a slice}}
@@ -91,8 +91,8 @@ func @bad_rebox_7(%arg0: !fir.box<!fir.array<?xf32>>) {
 // -----
 
 func @bad_rebox_8(%arg0: !fir.box<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   %undef = fir.undefined index
   %0 = fir.slice %c1, %undef, %undef, %c1, %c10, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   // expected-error@+1{{result type rank and rank after applying slice operand must match}}
@@ -103,7 +103,7 @@ func @bad_rebox_8(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 // -----
 
 func @bad_rebox_9(%arg0: !fir.box<!fir.array<?xf32>>) {
-  %c10 = constant 10 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.shift %c10, %c10 : (index, index) -> !fir.shift<2>
   // expected-error@+1{{shape operand and input box ranks must match when the shape is a fir.shift}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
@@ -113,7 +113,7 @@ func @bad_rebox_9(%arg0: !fir.box<!fir.array<?xf32>>) {
 // -----
 
 func @bad_rebox_10(%arg0: !fir.box<!fir.array<?xf32>>) {
-  %c10 = constant 10 : index
+  %c10 = arith.constant 10 : index
   %0 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
   // expected-error@+1{{result type and shape operand ranks must match}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?xf32>>
@@ -123,7 +123,7 @@ func @bad_rebox_10(%arg0: !fir.box<!fir.array<?xf32>>) {
 // -----
 
 func @bad_rebox_11(%arg0: !fir.box<!fir.array<?x?xf32>>) {
-  %c42 = constant 42 : index
+  %c42 = arith.constant 42 : index
   %0 = fir.shape %c42 : (index) -> !fir.shape<1>
   // expected-error@+1{{op input and output element types must match for intrinsic types}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
@@ -133,9 +133,9 @@ func @bad_rebox_11(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 // -----
 
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
-  %c50 = constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
   %shape = fir.shape %c100, %c50 : (index, index) -> !fir.shape<2>
   // expected-error@+1 {{'fir.array_coor' op operand #0 must be any reference or box, but got 'index'}}
   %p = fir.array_coor %c100(%shape) %c1, %c1 : (index, !fir.shape<2>, index, index) -> !fir.ref<f32>
@@ -145,9 +145,9 @@ func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @array_access(%arr : !fir.ref<f32>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
-  %c50 = constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
   %shape = fir.shape %c100, %c50 : (index, index) -> !fir.shape<2>
   // expected-error@+1 {{'fir.array_coor' op must be a reference to an array}}
   %p = fir.array_coor %arr(%shape) %c1, %c1 : (!fir.ref<f32>, !fir.shape<2>, index, index) -> !fir.ref<f32>
@@ -157,13 +157,13 @@ func @array_access(%arr : !fir.ref<f32>) {
 // -----
 
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
-  %c50 = constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
   %shape = fir.shape %c100, %c50 : (index, index) -> !fir.shape<2>
-  %c47 = constant 47 : index
-  %c78 = constant 78 : index
-  %c3 = constant 3 : index
+  %c47 = arith.constant 47 : index
+  %c78 = arith.constant 78 : index
+  %c3 = arith.constant 3 : index
   %slice = fir.slice %c47, %c78, %c3 : (index,index,index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.array_coor' op rank of dimension in slice mismatched}}
   %p = fir.array_coor %arr(%shape)[%slice] %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<1>, index, index) -> !fir.ref<f32>
@@ -173,8 +173,8 @@ func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
   // expected-error@+1 {{'fir.array_coor' op rank of dimension mismatched}}
   %p = fir.array_coor %arr(%shape) %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>, index, index) -> !fir.ref<f32>
@@ -184,8 +184,8 @@ func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
   %shift = fir.shift %c1 : (index) -> !fir.shift<1>
   // expected-error@+1 {{'fir.array_coor' op shift can only be provided with fir.box memref}}
   %p = fir.array_coor %arr(%shift) %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.shift<1>, index, index) -> !fir.ref<f32>
@@ -195,9 +195,9 @@ func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = constant 1 : index
-  %c100 = constant 100 : index
-  %c50 = constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
   %shape = fir.shape %c100, %c50 : (index, index) -> !fir.shape<2>
   // expected-error@+1 {{'fir.array_coor' op number of indices do not match dim rank}}
   %p = fir.array_coor %arr(%shape) %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, index) -> !fir.ref<f32>
@@ -207,7 +207,7 @@ func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
   // expected-error@+1 {{'fir.array_load' op operand #0 must be any reference or box, but got 'index'}}
   %av1 = fir.array_load %c2(%s) : (index, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
@@ -235,7 +235,7 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 // -----
 
 func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
   %shift = fir.shift %c2 : (index) -> !fir.shift<1>
   // expected-error@+1 {{'fir.array_load' op shift can only be provided with fir.box memref}}
   %av1 = fir.array_load %arr1(%shift) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shift<1>) -> !fir.array<?x?xf32>
@@ -245,9 +245,9 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 // -----
 
 func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c47 = constant 47 : index
-  %c78 = constant 78 : index
-  %c3 = constant 3 : index
+  %c47 = arith.constant 47 : index
+  %c78 = arith.constant 78 : index
+  %c3 = arith.constant 3 : index
   %slice = fir.slice %c47, %c78, %c3 : (index,index,index) -> !fir.slice<1>
   %s = fir.shape_shift %m, %n, %o, %p: (index, index, index, index) -> !fir.shapeshift<2>
   // expected-error@+1 {{'fir.array_load' op rank of dimension in slice mismatched}}
@@ -258,7 +258,7 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 // -----
 
 func @test_coordinate_of(%arr : !fir.ref<!fir.array<?x?xf32>>) {
-  %1 = constant 10 : i32
+  %1 = arith.constant 10 : i32
   // expected-error@+1 {{'fir.coordinate_of' op cannot find coordinate with unknown extents}}
   %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.array<?x?xf32>>, i32) -> !fir.ref<f32>
   return
@@ -267,7 +267,7 @@ func @test_coordinate_of(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 // -----
 
 func @test_coordinate_of(%arr : !fir.ref<!fir.array<*:f32>>) {
-  %1 = constant 10 : i32
+  %1 = arith.constant 10 : i32
   // expected-error@+1 {{'fir.coordinate_of' op cannot find coordinate in unknown shape}}
   %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.array<*:f32>>, i32) -> !fir.ref<f32>
   return
@@ -276,7 +276,7 @@ func @test_coordinate_of(%arr : !fir.ref<!fir.array<*:f32>>) {
 // -----
 
 func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
-  %1 = constant 10 : i32
+  %1 = arith.constant 10 : i32
   // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
   %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10>>, i32) -> !fir.ref<f32>
   return
@@ -284,14 +284,14 @@ func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
 
 // -----
 
-%0 = constant 22 : i32
+%0 = arith.constant 22 : i32
 // expected-error@+1 {{'fir.embox' op operand #0 must be any reference, but got 'i32'}}
 %1 = fir.embox %0 : (i32) -> !fir.box<i32>
 
 // -----
 
 func @fun(%0 : !fir.ref<i32>) {
-  %c_100 = constant 100 : index
+  %c_100 = arith.constant 100 : index
   %1 = fir.shape %c_100 : (index) -> !fir.shape<1>
   // expected-error@+1 {{'fir.embox' op shape must not be provided for a scalar}}
   %2 = fir.embox %0(%1) : (!fir.ref<i32>, !fir.shape<1>) -> !fir.box<i32>
@@ -300,7 +300,7 @@ func @fun(%0 : !fir.ref<i32>) {
 // -----
 
 func @fun(%0 : !fir.ref<i32>) {
-  %c_100 = constant 100 : index
+  %c_100 = arith.constant 100 : index
   %1 = fir.slice %c_100, %c_100, %c_100 : (index, index, index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.embox' op operand #1 must be any legal shape type, but got '!fir.slice<1>'}}
   %2 = fir.embox %0(%1) : (!fir.ref<i32>, !fir.slice<1>) -> !fir.box<i32>
@@ -309,7 +309,7 @@ func @fun(%0 : !fir.ref<i32>) {
 // -----
 
 func @fun(%0 : !fir.ref<i32>) {
-  %c_100 = constant 100 : index
+  %c_100 = arith.constant 100 : index
   %1 = fir.shape %c_100 : (index) -> !fir.shape<1>
   // expected-error@+1 {{'fir.embox' op operand #1 must be FIR slice, but got '!fir.shape<1>'}}
   %2 = fir.embox %0[%1] : (!fir.ref<i32>, !fir.shape<1>) -> !fir.box<i32>
@@ -318,7 +318,7 @@ func @fun(%0 : !fir.ref<i32>) {
 // -----
 
 func @fun(%0 : !fir.ref<i32>) {
-  %c_100 = constant 100 : index
+  %c_100 = arith.constant 100 : index
   %1 = fir.slice %c_100, %c_100, %c_100 : (index, index, index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.embox' op slice must not be provided for a scalar}}
   %2 = fir.embox %0[%1] : (!fir.ref<i32>, !fir.slice<1>) -> !fir.box<i32>
@@ -326,11 +326,11 @@ func @fun(%0 : !fir.ref<i32>) {
 
 // -----
 
-%lo = constant 1 : index
-%c1 = constant 1 : index
-%up = constant 10 : index
-%okIn = constant 1 : i1
-%shIn = constant 1 : i16
+%lo = arith.constant 1 : index
+%c1 = arith.constant 1 : index
+%up = arith.constant 10 : index
+%okIn = arith.constant 1 : i1
+%shIn = arith.constant 1 : i16
 // expected-error@+1 {{'fir.iterate_while' op expected body first argument to be an index argument for the induction variable}}
 %v:3 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok = %okIn) iter_args(%sh = %shIn) -> (i16, i1, i16) {
   %shNew = fir.call @bar(%sh) : (i16) -> i16
@@ -340,11 +340,11 @@ func @fun(%0 : !fir.ref<i32>) {
 
 // -----
 
-%lo = constant 1 : index
-%c1 = constant 1 : index
-%up = constant 10 : index
-%okIn = constant 1 : i1
-%shIn = constant 1 : i16
+%lo = arith.constant 1 : index
+%c1 = arith.constant 1 : index
+%up = arith.constant 10 : index
+%okIn = arith.constant 1 : i1
+%shIn = arith.constant 1 : i16
 // expected-error@+1 {{'fir.iterate_while' op expected body second argument to be an index argument for the induction variable}}
 %v:3 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok = %okIn) iter_args(%sh = %shIn) -> (index, f32, i16) {
   %shNew = fir.call @bar(%sh) : (i16) -> i16
@@ -354,26 +354,26 @@ func @fun(%0 : !fir.ref<i32>) {
 
 // -----
 
-%c1 = constant 1 : index
-%c10 = constant 10 : index
+%c1 = arith.constant 1 : index
+%c10 = arith.constant 10 : index
 // expected-error@+1 {{'fir.do_loop' op unordered loop has no final value}}
 fir.do_loop %i = %c1 to %c10 step %c1 unordered -> index {
 }
 
 // -----
 
-%c1 = constant 1 : index
-%c10 = constant 10 : index
+%c1 = arith.constant 1 : index
+%c10 = arith.constant 10 : index
 fir.do_loop %i = %c1 to %c10 step %c1 -> index {
-  %f1 = constant 1.0 : f32
+  %f1 = arith.constant 1.0 : f32
   // expected-error@+1 {{'fir.result' op types mismatch between result op and its parent}}
   fir.result %f1 : f32
 }
 
 // -----
 
-%c1 = constant 1 : index
-%c10 = constant 10 : index
+%c1 = arith.constant 1 : index
+%c10 = arith.constant 10 : index
 // expected-error@+1 {{'fir.result' op parent of result must have same arity}}
 fir.do_loop %i = %c1 to %c10 step %c1 -> index {
 }
@@ -425,7 +425,7 @@ func @ugly_char_convert() {
 // -----
 
 fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
-  %c0_i32 = constant 1 : i32
+  %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
   %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 31 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
@@ -435,7 +435,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
 // -----
 
 fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
-  %c0_i32 = constant 1 : i32
+  %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
   %2 = fir.insert_on_range %0, %c0_i32, [0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
@@ -445,7 +445,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
 // -----
 
 fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
-  %c0_i32 = constant 1 : i32
+  %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op negative range bound}}
   %2 = fir.insert_on_range %0, %c0_i32, [-1 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
@@ -455,7 +455,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
 // -----
 
 fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
-  %c0_i32 = constant 1 : i32
+  %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op empty range}}
   %2 = fir.insert_on_range %0, %c0_i32, [10 : index, 9 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
@@ -575,7 +575,7 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
   %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %c0 = constant 0 : i32
+  %c0 = arith.constant 0 : i32
   // expected-error@+1 {{'fir.array_update' op merged value does not have element type}}
   %av2 = fir.array_update %av1, %c0, %m, %n : (!fir.array<?x?xf32>, i32, index, index) -> !fir.array<?x?xf32>
   return
@@ -596,8 +596,8 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 // -----
 
 func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
-  %i10 = constant 10 : index
-  %j20 = constant 20 : index
+  %i10 = arith.constant 10 : index
+  %j20 = arith.constant 20 : index
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
   %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   // expected-error@+1 {{'fir.array_modify' op number of indices must match array dimension}}

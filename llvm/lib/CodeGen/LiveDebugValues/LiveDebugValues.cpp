@@ -81,6 +81,7 @@ public:
 private:
   LDVImpl *TheImpl;
   TargetPassConfig *TPC;
+  MachineDominatorTree MDT;
 };
 
 char LiveDebugValues::ID = 0;
@@ -97,12 +98,12 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
+  bool InstrRefBased = MF.useDebugInstrRef();
+  // Allow the user to force selection of InstrRef LDV.
+  InstrRefBased |= ForceInstrRefLDV;
+
   if (!TheImpl) {
     TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    bool InstrRefBased = MF.useDebugInstrRef();
-
-    // Allow the user to force selection of InstrRef LDV.
-    InstrRefBased |= ForceInstrRefLDV;
 
     if (InstrRefBased)
       TheImpl = llvm::makeInstrRefBasedLiveDebugValues();
@@ -110,5 +111,12 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
       TheImpl = llvm::makeVarLocBasedLiveDebugValues();
   }
 
-  return TheImpl->ExtendRanges(MF, TPC, InputBBLimit, InputDbgValueLimit);
+  MachineDominatorTree *DomTree = nullptr;
+  if (InstrRefBased) {
+    DomTree = &MDT;
+    MDT.calculate(MF);
+  }
+
+  return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
+                               InputDbgValueLimit);
 }

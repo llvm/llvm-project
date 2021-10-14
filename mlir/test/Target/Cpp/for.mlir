@@ -21,12 +21,12 @@ func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CPP-DECLTOP-NEXT: return;
 
 func @test_for_yield() {
-  %start = constant 0 : index
-  %stop = constant 10 : index
-  %step = constant 1 : index
+  %start = arith.constant 0 : index
+  %stop = arith.constant 10 : index
+  %step = arith.constant 1 : index
 
-  %s0 = constant 0 : i32
-  %p0 = constant 1.0 : f32
+  %s0 = arith.constant 0 : i32
+  %p0 = arith.constant 1.0 : f32
   
   %result:2 = scf.for %iter = %start to %stop step %step iter_args(%si = %s0, %pi = %p0) -> (i32, f32) {
     %sn = emitc.call "add"(%si, %iter) : (i32, index) -> i32

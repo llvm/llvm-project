@@ -13,12 +13,12 @@ func @main() {
   %22 = memref.alloc() : memref<16x16xf32>
   %1 = memref.alloc() : memref<16x16xf32>
 
-  %f1 = constant 1.0e+00 : f16
-  %f0 = constant 0.0e+00 : f32
-  %c0 = constant 0 : index
-  %c16 = constant 16 : index
-  %c32 = constant 32 : index
-  %c1 = constant 1 : index
+  %f1 = arith.constant 1.0e+00 : f16
+  %f0 = arith.constant 0.0e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c1 = arith.constant 1 : index
 
   // Intialize the Input matrix with ones.
   scf.for %arg0 = %c0 to %c16 step %c1 {

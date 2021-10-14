@@ -106,29 +106,4 @@ TEST(SanitizerCommon, StackDepotPrintNoLock) {
   }
 }
 
-TEST(SanitizerCommon, StackDepotReverseMap) {
-  uptr array1[] = {1, 2, 3, 4, 5};
-  uptr array2[] = {7, 1, 3, 0};
-  uptr array3[] = {10, 2, 5, 3};
-  uptr array4[] = {1, 3, 2, 5};
-  u32 ids[4] = {0};
-  StackTrace s1(array1, ARRAY_SIZE(array1));
-  StackTrace s2(array2, ARRAY_SIZE(array2));
-  StackTrace s3(array3, ARRAY_SIZE(array3));
-  StackTrace s4(array4, ARRAY_SIZE(array4));
-  ids[0] = StackDepotPut(s1);
-  ids[1] = StackDepotPut(s2);
-  ids[2] = StackDepotPut(s3);
-  ids[3] = StackDepotPut(s4);
-
-  StackDepotReverseMap map;
-
-  for (uptr i = 0; i < 4; i++) {
-    StackTrace stack = StackDepotGet(ids[i]);
-    StackTrace from_map = map.Get(ids[i]);
-    EXPECT_EQ(stack.size, from_map.size);
-    EXPECT_EQ(stack.trace, from_map.trace);
-  }
-}
-
 }  // namespace __sanitizer

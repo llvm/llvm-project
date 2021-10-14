@@ -96,8 +96,8 @@ func @range(%arg0: index, %arg1: index, %arg2: index) {
 // -----
 
 func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
-  %c0 = constant 0 : index
-  %0 = muli %arg0, %arg0 : index
+  %c0 = arith.constant 0 : index
+  %0 = arith.muli %arg0, %arg0 : index
   %1 = memref.alloc (%0) : memref<?xi8>
   %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
   %3 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
@@ -106,7 +106,7 @@ func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index
   return
 }
 // CHECK-LABEL: func @views
-//  CHECK:  muli %{{.*}}, %{{.*}} : index
+//  CHECK:  arith.muli %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:  memref.alloc(%{{.*}}) : memref<?xi8>
 //  CHECK-NEXT:  range
 //  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
@@ -224,7 +224,7 @@ func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
 
 func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
               %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   linalg.generic #trait_0
        ins(%arg0, %cst : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, f32)
       outs(%arg1 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
@@ -245,7 +245,7 @@ func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
 
 func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
                                 %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  %cst = constant 0.0 : f32
+  %cst = arith.constant 0.0 : f32
   linalg.generic #trait_0
        ins(%arg0, %cst : tensor<?x?xvector<3x4xi4>>, f32)
       outs(%arg1 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
@@ -271,7 +271,7 @@ func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
                    iterator_types = ["parallel", "parallel", "parallel"]}
                   outs(%arg0 : memref<?x?x?xf32>) {
    ^bb0(%arg3: f32):  // no predecessors
-      %cst = constant 0.000000e+00 : f32
+      %cst = arith.constant 0.000000e+00 : f32
       linalg.yield %cst : f32
     }
   return
@@ -303,7 +303,7 @@ func @generic_with_tensor_input_and_output(
       outs(%arg1 : tensor<?x?x?xf32>)
       attrs = {foo = 1} {
     ^bb(%0: vector<3x4xi4>, %1: f32, %2: f32) :
-      %f0 = constant 0.0 : f32
+      %f0 = arith.constant 0.0 : f32
       linalg.yield %f0 : f32
   } -> tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
@@ -323,7 +323,7 @@ func @generic_with_tensor_input_and_output(
 func @generic_with_multiple_tensor_outputs(
     %arg0: tensor<?xi32>, %arg1: tensor<?xi32>, %arg2: i32)
     -> (tensor<i32>, tensor<i32>) {
-  %c0 = constant 0 : index
+  %c0 = arith.constant 0 : index
   %0 = linalg.init_tensor [] : tensor<i32>
   %1 = linalg.fill(%arg2, %0) : i32, tensor<i32> -> tensor<i32>
   %2 = linalg.init_tensor [] : tensor<i32>
@@ -334,10 +334,10 @@ func @generic_with_multiple_tensor_outputs(
     ins(%arg0, %arg1 : tensor<?xi32>, tensor<?xi32>)
     outs(%1, %3 : tensor<i32>, tensor<i32>) {
   ^bb0(%arg3: i32, %arg4: i32, %arg5: i32, %arg6: i32):  // no predecessors
-    %5 = cmpi sge, %arg3, %arg5 : i32
+    %5 = arith.cmpi sge, %arg3, %arg5 : i32
     %6 = select %5, %arg3, %arg5 : i32
-    %7 = cmpi eq, %arg3, %arg5 : i32
-    %8 = cmpi slt, %arg4, %arg6 : i32
+    %7 = arith.cmpi eq, %arg3, %arg5 : i32
+    %8 = arith.cmpi slt, %arg4, %arg6 : i32
     %9 = select %8, %arg4, %arg6 : i32
     %10 = select %5, %arg4, %arg6 : i32
     %11 = select %7, %9, %10 : i32
@@ -506,11 +506,11 @@ func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> 
 
 func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
                  %out: tensor<24x64xi8>) -> tensor<24x64xi8> {
- %c0 = constant 0 : index
- %c1 = constant 1 : index
- %c4 = constant 4 : index
- %c24 = constant 24 : index
- %c64 = constant 64 : index
+ %c0 = arith.constant 0 : index
+ %c1 = arith.constant 1 : index
+ %c4 = arith.constant 4 : index
+ %c24 = arith.constant 24 : index
+ %c64 = arith.constant 64 : index
  %prod = linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
       ins(%lhs_ = %lhs: tensor<24x64xi8>, %rhs_ = %rhs: tensor<24x64xi8>)
       outs(%out_ = %out: tensor<24x64xi8>) {
@@ -525,7 +525,7 @@ func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
         ins(%lhs_sub, %rhs_sub : tensor<?x?xi8>, tensor<?x?xi8>)
         outs(%out_sub : tensor<?x?xi8>) {
       ^bb(%l: i8, %r: i8, %o: i8) :
-        %s = addi %l, %r : i8
+        %s = arith.addi %l, %r : i8
         linalg.yield %s : i8
       } -> tensor<?x?xi8>
 
@@ -558,11 +558,11 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
                            %input_2d: tensor<16x32xf32>,
                            %input_1d: tensor<24xf32>,
                            %output: tensor<24xf32>) -> tensor<24xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c4 = constant 4 : index
-  %c8 = constant 8 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
   %X = tensor.dim %input_3d, %c0 : tensor<16x24x32xf32>
   %Y = tensor.dim %input_3d, %c1 : tensor<16x24x32xf32>
   %Z = tensor.dim %input_3d, %c2 : tensor<16x24x32xf32>
@@ -587,8 +587,8 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
         : tensor<2x4x8xf32>, tensor<2x8xf32>, tensor<4xf32>)
       outs(%sub_out : tensor<4xf32>)  {
     ^bb0(%i3d: f32, %i2d: f32, %i1d: f32, %o: f32):
-      %0 = addf %i3d, %i2d : f32
-      %1 = addf %0, %i1d : f32
+      %0 = arith.addf %i3d, %i2d : f32
+      %1 = arith.addf %0, %i1d : f32
       linalg.yield %1 : f32
     } -> tensor<4xf32>
 
@@ -620,11 +620,11 @@ func @tiled_loop_on_buffers(%input_3d: memref<16x24x32xf32>,
                             %input_2d: memref<16x32xf32>,
                             %input_1d: memref<24xf32>,
                             %output: memref<24xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c4 = constant 4 : index
-  %c8 = constant 8 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
   %X = memref.dim %input_3d, %c0 : memref<16x24x32xf32>
   %Y = memref.dim %input_3d, %c1 : memref<16x24x32xf32>
   %Z = memref.dim %input_3d, %c2 : memref<16x24x32xf32>
@@ -650,8 +650,8 @@ func @tiled_loop_on_buffers(%input_3d: memref<16x24x32xf32>,
           memref<4xf32, #map_3>)
       outs(%sub_out : memref<4xf32, #map_3>)  {
     ^bb0(%i3d: f32, %i2d: f32, %i1d: f32, %o: f32):
-      %0 = addf %i3d, %i2d : f32
-      %1 = addf %0, %i1d : f32
+      %0 = arith.addf %i3d, %i2d : f32
+      %1 = arith.addf %0, %i1d : f32
       linalg.yield %1 : f32
     }
     linalg.yield

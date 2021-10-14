@@ -84,7 +84,7 @@ void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
         getValueFromBundleOpInfo(Assume, Bundles, ABA_Argument));
     if (!CI)
       continue;
-    unsigned Val = CI->getZExtValue();
+    uint64_t Val = CI->getZExtValue();
     auto Lookup = Result.find(Key);
     if (Lookup == Result.end() || !Lookup->second.count(&Assume)) {
       Result[Key][&Assume] = {Val, Val};
@@ -102,7 +102,7 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
-  auto GetArgOr1 = [&](unsigned Idx) -> unsigned {
+  auto GetArgOr1 = [&](unsigned Idx) -> uint64_t {
     if (auto *ConstInt = dyn_cast<ConstantInt>(
             getValueFromBundleOpInfo(Assume, BOI, ABA_Argument + Idx)))
       return ConstInt->getZExtValue();

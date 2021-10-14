@@ -11,8 +11,8 @@ func @multiple_blocks() {
 // -----
 
 func @unsupported_std_op(%arg0: f64) -> f64 {
-  // expected-error@+1 {{'std.absf' op unable to find printer for op}}
-  %0 = absf %arg0 : f64
+  // expected-error@+1 {{'math.abs' op unable to find printer for op}}
+  %0 = math.abs %arg0 : f64
   return %0 : f64
 }
 

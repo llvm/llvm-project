@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
@@ -76,11 +77,11 @@ struct MaskCompressOpConversion
     if (op.src()) {
       src = adaptor.src();
     } else if (op.constant_src()) {
-      src = rewriter.create<ConstantOp>(op.getLoc(), opType,
-                                        op.constant_srcAttr());
+      src = rewriter.create<arith::ConstantOp>(op.getLoc(), opType,
+                                               op.constant_srcAttr());
     } else {
       Attribute zeroAttr = rewriter.getZeroAttr(opType);
-      src = rewriter.create<ConstantOp>(op->getLoc(), opType, zeroAttr);
+      src = rewriter.create<arith::ConstantOp>(op->getLoc(), opType, zeroAttr);
     }
 
     rewriter.replaceOpWithNewOp<MaskCompressIntrOp>(op, opType, adaptor.a(),

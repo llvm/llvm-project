@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -121,27 +122,28 @@ getKindForOp(Operation *reductionOp) {
     return llvm::None;
   return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
              reductionOp)
-      .Case<AddIOp, AddFOp>([&](auto op) { return vector::CombiningKind::ADD; })
-      .Case<AndOp>([&](auto op) { return vector::CombiningKind::AND; })
+      .Case<arith::AddIOp, arith::AddFOp>(
+          [&](auto op) { return vector::CombiningKind::ADD; })
+      .Case<arith::AndIOp>([&](auto op) { return vector::CombiningKind::AND; })
       .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
       .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
       .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
       .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
-      .Case<MulIOp, MulFOp>([&](auto op) { return vector::CombiningKind::MUL; })
-      .Case<OrOp>([&](auto op) { return vector::CombiningKind::OR; })
-      .Case<XOrOp>([&](auto op) { return vector::CombiningKind::XOR; })
+      .Case<arith::MulIOp, arith::MulFOp>(
+          [&](auto op) { return vector::CombiningKind::MUL; })
+      .Case<arith::OrIOp>([&](auto op) { return vector::CombiningKind::OR; })
+      .Case<arith::XOrIOp>([&](auto op) { return vector::CombiningKind::XOR; })
       .Default([&](auto op) { return llvm::None; });
 }
 
 /// Check whether `outputOperand` is a reduction with a single combiner
-/// operation. Return the combiner operation kind of the reduction, if
-/// supported. Return llvm::None, otherwise. Multiple reduction operations would
-/// impose an ordering between reduction dimensions and is currently unsupported
-/// in Linalg. This limitation is motivated by the fact that e.g. min(max(X)) !=
+/// operation. Return the combiner operation of the reduction. Return
+/// nullptr otherwise. Multiple reduction operations would impose an
+/// ordering between reduction dimensions and is currently unsupported in
+/// Linalg. This limitation is motivated by the fact that e.g. min(max(X)) !=
 /// max(min(X))
 // TODO: use in LinalgOp verification, there is a circular dependency atm.
-static llvm::Optional<vector::CombiningKind>
-matchLinalgReduction(OpOperand *outputOperand) {
+static Operation *matchLinalgReduction(OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   unsigned outputPos =
       outputOperand->getOperandNumber() - linalgOp.getNumInputs();
@@ -149,10 +151,10 @@ matchLinalgReduction(OpOperand *outputOperand) {
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(linalgOp.getRegionOutputArgs(), outputPos, combinerOps) ||
       combinerOps.size() != 1)
-    return llvm::None;
+    return nullptr;
 
-  // Return the combiner operation kind, if supported.
-  return getKindForOp(combinerOps[0]);
+  // Return the combiner operation.
+  return combinerOps[0];
 }
 
 /// Broadcast `value` to a vector of `shape` if possible. Return value
@@ -171,11 +173,60 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value,
   return b.createOrFold<vector::BroadcastOp>(loc, targetVectorType, value);
 }
 
+/// Build a vector.transfer_read from `source` at indices set to all `0`.
+/// If source has rank zero, build a `vector<1xt> transfer_read + extract`.
+/// Return the produced value.
+static Value buildVectorRead(OpBuilder &b, Value source, Type readType,
+                             AffineMap map) {
+  Location loc = source.getLoc();
+  auto shapedType = source.getType().cast<ShapedType>();
+  SmallVector<Value> indices(shapedType.getRank(),
+                             b.create<arith::ConstantIndexOp>(loc, 0));
+  if (auto vectorType = readType.dyn_cast<VectorType>())
+    return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
+                                            map);
+  return vector::TransferReadOp::createScalarOp(b, loc, source, indices);
+}
+
+/// Create MultiDimReductionOp to compute the reduction for `reductionOp`. This
+/// assumes that `reductionOp` has tow operands and one of them is the reduction
+/// initial value.
+static Value buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
+                                 Value outputArg,
+                                 const SmallVector<bool> &reductionMask,
+                                 const BlockAndValueMapping &bvm) {
+  auto maybeKind = getKindForOp(reduceOp);
+  assert(maybeKind && "Failed precondition: could not get reduction kind");
+  Value operandToReduce = reduceOp->getOperand(0) == outputArg
+                              ? reduceOp->getOperand(1)
+                              : reduceOp->getOperand(0);
+  Value vec = bvm.lookup(operandToReduce);
+  return b.create<vector::MultiDimReductionOp>(reduceOp->getLoc(), vec,
+                                               reductionMask, *maybeKind);
+}
+
+/// Read the initial value associated to the given `outputOperand`.
+static Value readInitialValue(OpBuilder &b, LinalgOp linalgOp,
+                              OpOperand *outputOperand) {
+  AffineMap map = inversePermutation(
+      reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand)));
+  Type readType;
+  if (linalgOp.getShape(outputOperand).empty()) {
+    readType = getElementTypeOrSelf(outputOperand->get());
+  } else {
+    readType = VectorType::get(map.compose(linalgOp.getShape(outputOperand)),
+                               getElementTypeOrSelf(outputOperand->get()));
+  }
+  Value vectorRead = buildVectorRead(b, outputOperand->get(), readType, map);
+  return vectorRead;
+}
+
 /// Assuming `outputOperand` is an output operand of a LinalgOp, determine
 /// whether a reduction is needed to produce a `targetType` and create that
 /// reduction if it is the case.
 static Value reduceIfNeeded(OpBuilder &b, Type targetType, Value value,
-                            OpOperand *outputOperand) {
+                            OpOperand *outputOperand,
+                            const BlockAndValueMapping &bvm) {
   LDBG("Reduce " << value << " to type " << targetType);
   LDBG("In LinalgOp operand #" << outputOperand->getOperandNumber() << "\n"
                                << *(outputOperand->getOwner()));
@@ -194,10 +245,9 @@ static Value reduceIfNeeded(OpBuilder &b, Type targetType, Value value,
   for (auto s : linalgOp.iterator_types())
     if (isParallelIterator(s))
       exprs.push_back(getAffineDimExpr(pos++, ctx));
-  auto loc = value.getLoc();
 
-  auto maybeKind = matchLinalgReduction(outputOperand);
-  assert(maybeKind && "Failed precondition: could not get reduction kind");
+  Operation *reduceOp = matchLinalgReduction(outputOperand);
+  assert(reduceOp && "Failed precondition: could not math a reduction");
   unsigned idx = 0;
   SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
   for (auto attr : linalgOp.iterator_types()) {
@@ -205,23 +255,24 @@ static Value reduceIfNeeded(OpBuilder &b, Type targetType, Value value,
       reductionMask[idx] = true;
     ++idx;
   }
-  return b.create<vector::MultiDimReductionOp>(loc, value, reductionMask,
-                                               *maybeKind);
-}
+  assert(reduceOp->getNumOperands() == 2 &&
+         "Only support binary reduce op right now");
+  unsigned outputPos =
+      outputOperand->getOperandNumber() - linalgOp.getNumInputs();
+  Value outputArg = linalgOp.getRegionOutputArgs()[outputPos];
+  // Reduce across the iteration space.
+  Value reduce =
+      buildMultiDimReduce(b, reduceOp, outputArg, reductionMask, bvm);
 
-/// Build a vector.transfer_read from `source` at indices set to all `0`.
-/// If source has rank zero, build a `vector<1xt> transfer_read + extract`.
-/// Return the produced value.
-static Value buildVectorRead(OpBuilder &b, Value source, Type readType,
-                             AffineMap map) {
-  Location loc = source.getLoc();
-  auto shapedType = source.getType().cast<ShapedType>();
-  SmallVector<Value> indices(shapedType.getRank(),
-                             b.create<ConstantIndexOp>(loc, 0));
-  if (auto vectorType = readType.dyn_cast<VectorType>())
-    return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
-                                            map);
-  return vector::TransferReadOp::createScalarOp(b, loc, source, indices);
+  // Read the original output value.
+  Value initialValue = readInitialValue(b, linalgOp, outputOperand);
+
+  // Combine the output argument with the reduced value.
+  OperationState state(reduceOp->getLoc(), reduceOp->getName());
+  state.addAttributes(reduceOp->getAttrs());
+  state.addOperands({reduce, initialValue});
+  state.addTypes(initialValue.getType());
+  return b.createOperation(state)->getResult(0);
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -229,7 +280,8 @@ static Value buildVectorRead(OpBuilder &b, Value source, Type readType,
 /// currently being vectorized. If `dest` has null rank, build an memref.store.
 /// Return the produced value or null if no value is produced.
 static Value buildVectorWrite(OpBuilder &b, Value value,
-                              OpOperand *outputOperand) {
+                              OpOperand *outputOperand,
+                              const BlockAndValueMapping &bvm) {
   Operation *write;
   Location loc = value.getLoc();
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
@@ -242,14 +294,14 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     assert(!transposeShape.empty() && "unexpected empty transpose shape");
     vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
-                               b.create<ConstantIndexOp>(loc, 0));
+                               b.create<arith::ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(b, value, vectorType.getShape());
-    value = reduceIfNeeded(b, vectorType, value, outputOperand);
+    value = reduceIfNeeded(b, vectorType, value, outputOperand, bvm);
     write = b.create<vector::TransferWriteOp>(loc, value, outputOperand->get(),
                                               indices, map);
   } else {
-    value =
-        reduceIfNeeded(b, getElementTypeOrSelf(value), value, outputOperand);
+    value = reduceIfNeeded(b, getElementTypeOrSelf(value), value, outputOperand,
+                           bvm);
     write = vector::TransferWriteOp::createScalarOp(
         b, loc, value, outputOperand->get(), ValueRange{});
   }
@@ -284,7 +336,7 @@ vectorizeLinalgYield(OpBuilder &b, Operation *op,
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
     Value newResult = buildVectorWrite(
-        b, vectorValue, linalgOp.getOutputOperand(outputs.index()));
+        b, vectorValue, linalgOp.getOutputOperand(outputs.index()), bvm);
     if (newResult)
       newResults.push_back(newResult);
   }
@@ -306,8 +358,8 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
-  ConstantOp constantOp =
-      b.create<ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
+  auto constantOp =
+      b.create<arith::ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
@@ -363,7 +415,7 @@ vectorizeOneOp(OpBuilder &b, Operation *op, const BlockAndValueMapping &bvm,
 
   // 2. Constant ops don't get vectorized but rather broadcasted at their users.
   // Clone so that the constant is not confined to the linalgOp block .
-  if (isa<ConstantOp>(op))
+  if (isa<arith::ConstantOp, ConstantOp>(op))
     return VectorizationResult{VectorizationStatus::NewOp, b.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
@@ -405,7 +457,8 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
     return false;
   for (Operation &op : r.front()) {
-    if (!(isa<ConstantOp, linalg::YieldOp, linalg::IndexOp>(op) ||
+    if (!(isa<arith::ConstantOp, ConstantOp, linalg::YieldOp, linalg::IndexOp>(
+              op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))
@@ -557,7 +610,7 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
   CustomVectorizationHook vectorizeContraction =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
-    if (!isa<MulIOp, MulFOp>(op))
+    if (!isa<arith::MulIOp, arith::MulFOp>(op))
       return VectorizationResult{VectorizationStatus::Failure, nullptr};
     ArrayRef<int64_t> outShape =
         linalgOp.getShape(linalgOp.getOutputOperand(0));
@@ -571,7 +624,7 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
           outShape);
       vType = VectorType::get(resultShape, op->getResult(0).getType());
     }
-    auto zero = b.create<ConstantOp>(loc, vType, b.getZeroAttr(vType));
+    auto zero = b.create<arith::ConstantOp>(loc, vType, b.getZeroAttr(vType));
     // Indexing maps at the time of vector.transfer_read are adjusted to order
     // vector dimensions in the same order as the canonical linalg op iteration
     // space order.
@@ -611,7 +664,8 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     return failure();
   }
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    if (!matchLinalgReduction(opOperand)) {
+    Operation *reduceOp = matchLinalgReduction(opOperand);
+    if (!reduceOp || !getKindForOp(reduceOp)) {
       LDBG("reduction precondition failed: reduction detection failed");
       return failure();
     }
@@ -680,7 +734,7 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
     if (auto val = o.template dyn_cast<Value>()) {
       result.push_back(val);
     } else {
-      result.push_back(builder.create<ConstantIndexOp>(
+      result.push_back(builder.create<arith::ConstantIndexOp>(
           loc, getIntFromAttr(o.template get<Attribute>())));
     }
   });
@@ -713,8 +767,8 @@ struct GenericPadTensorOpVectorizationPattern
         return failure();
       // Create dummy padding value.
       auto elemType = sourceType.getElementType();
-      padValue = rewriter.create<ConstantOp>(padOp.getLoc(), elemType,
-                                             rewriter.getZeroAttr(elemType));
+      padValue = rewriter.create<arith::ConstantOp>(
+          padOp.getLoc(), elemType, rewriter.getZeroAttr(elemType));
     }
 
     SmallVector<int64_t> vecShape;
@@ -748,7 +802,8 @@ struct GenericPadTensorOpVectorizationPattern
 
     // Generate TransferReadOp.
     SmallVector<Value> readIndices(
-        vecType.getRank(), rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
+        vecType.getRank(),
+        rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
         padOp.getLoc(), vecType, padOp.source(), readIndices, padValue,
         readInBounds);
@@ -1060,7 +1115,7 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
 
     // Generate TransferReadOp: Read entire source tensor and add high padding.
     SmallVector<Value> readIndices(
-        vecRank, rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
+        vecRank, rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
         padOp.getLoc(), vecType, padOp.source(), readIndices, padValue);
 
@@ -1126,7 +1181,8 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   Type elemType = getElementTypeOrSelf(input->get());
 
   auto map = AffineMap::get(rank, 0, mapping, context);
-  SmallVector<Value, 4> zeros(rank, rewriter.create<ConstantIndexOp>(loc, 0));
+  SmallVector<Value, 4> zeros(rank,
+                              rewriter.create<arith::ConstantIndexOp>(loc, 0));
   auto vecType = VectorType::get(vectorDims, elemType);
 
   auto inputVec = rewriter.create<vector::TransferReadOp>(
@@ -1134,8 +1190,8 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   auto kernelVec = rewriter.create<vector::TransferReadOp>(
       loc, vecType, kernel->get(), zeros, map);
 
-  auto acc = rewriter.create<ConstantOp>(loc, elemType,
-                                         rewriter.getZeroAttr(elemType));
+  auto acc = rewriter.create<arith::ConstantOp>(loc, elemType,
+                                                rewriter.getZeroAttr(elemType));
 
   std::array<AffineMap, 3> indexingMaps{
       AffineMap::getMultiDimIdentityMap(numDims, context),
