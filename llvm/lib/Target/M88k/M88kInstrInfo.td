@@ -180,6 +180,23 @@ def uimm32 : PatLeaf<(imm), [{
   return isUInt<32>(Val) && (Val & 0xffff);
 }]>;
 
+// ---------------------------------------------------------------------------//
+// Generic patterns.
+// ---------------------------------------------------------------------------//
+
+multiclass BinaryOpPat<string Inst, SDPatternOperator OpNode> {
+  def : Pat<(OpNode GPR:$rs1, GPR:$rs2),
+            (!cast<InstM88k>(Inst#"rr") GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(OpNode GPR:$rs1, imm32zx16:$imm16),
+            (!cast<InstM88k>(Inst#"ri") GPR:$rs1, imm32zx16:$imm16)>;
+}
+
+class UnaryOpPat<InstM88k Inst, SDPatternOperator OpNode>
+  : Pat<(OpNode GPR:$rs1), (Inst GPR:$rs1)>;
+
+// ---------------------------------------------------------------------------//
+// Logic and bit field instructions.
+// ---------------------------------------------------------------------------//
 
 // Multiclass for logical instructions with immediates.
 // The pattern for "and" is slightly different.
@@ -214,16 +231,12 @@ multiclass LogicImm<bits<2> FuncI, string OpcStr, SDNode OpNode,
 // Multiclass for logical instructions with triadic registers or immediates.
 multiclass Logic<bits<5> FuncR, bits<2> FuncI, string OpcStr, SDNode OpNode,
                  InstrItinClass itin = NoItinerary>
-                 : LogicImm<FuncI, OpcStr, OpNode, itin> {
+  : LogicImm<FuncI, OpcStr, OpNode, itin> {
   let isCommutable = 1 in
-    def rr  : F_LR<FuncR, 0b0,
-                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                   OpcStr,
+    def rr  : F_LR<FuncR, 0b0, OpcStr,
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                    itin>;
-  def rrc : F_LR<FuncR, 0b1,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".c"),
+  def rrc : F_LR<FuncR, 0b1, !strconcat(OpcStr, ".c"),
                  [(set i32:$rd, (OpNode GPROpnd:$rs1, (not GPROpnd:$rs2)))],
                  itin>;
 }
@@ -252,9 +265,7 @@ def : Pat<(i32 imm:$imm),
 // Multiclass for bit-field instructions with triadic registers or immediates.
 multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp,
                  InstrItinClass itin = NoItinerary> {
-  def rr  : F_BR<Func,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 OpcStr,
+  def rr  : F_BR<Func, OpcStr,
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def rwo : F_BI<Func,
@@ -294,46 +305,49 @@ def FF0rr : FindBF<0b111011, "ff0", m88k_ff0>;
 // ctlz = 32 - ff1
 //def : Pat<(ctlz GPR:$rs1, GPR:$rs2), (SUBri (i32 32), (FF1rr GPR:$rs1, GPR:$rs2))>;
 
+// ---------------------------------------------------------------------------//
+// Integer arithmetic instructions.
+// ---------------------------------------------------------------------------//
+
 // Multiclass for arithmetic instructions with triadic registers or immediates.
-multiclass Arith<bits<6> Func, string OpcStr, SDNode OpNode,
-                 InstrItinClass itin = NoItinerary> {
-  def rr  : F_IRC<Func, 0b0, 0b0,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 OpcStr,
-                 [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
-                 itin>;
-  def rrci  : F_IRC<Func, 0b1, 0b0,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".ci"),
-                 [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
-                 itin>;
-  def rrco  : F_IRC<Func, 0b0, 0b1,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".co"),
-                 [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
-                 itin>;
-  def rrcio : F_IRC<Func, 0b1, 0b1,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".cio"),
-                 [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
-                 itin>;
-  def ri  : F_II<Func,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$imm16),
-                 OpcStr,
-                 [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, imm32zx16:$imm16))],
-                 itin>;
+multiclass ArithTri<bits<6> Func, string OpcStr,
+                    InstrItinClass itin = NoItinerary> {
+  def rr : F_IRC<Func, 0b0, 0b0, OpcStr, [], itin>;
+  def ri : F_II<Func, (ins GPROpnd:$rs1, imm32zx16:$imm16),OpcStr, [], itin>;
 }
 
-let isCommutable = 1 in
-defm ADDU : Arith<0b011000, "addu", add>;
-defm SUBU : Arith<0b011001, "subu", sub>;
+// Multiclass for arithmetic instructions with triadic registers or immediates.
+multiclass ArithTriCarry<bits<6> Func, string OpcStr,
+                         InstrItinClass itin = NoItinerary>
+  : ArithTri<Func, OpcStr, itin> {
+  def rrci  : F_IRC<Func, 0b1, 0b0, !strconcat(OpcStr, ".ci"), [], itin>;
+  def rrco  : F_IRC<Func, 0b0, 0b1, !strconcat(OpcStr, ".co"), [], itin>;
+  def rrcio : F_IRC<Func, 0b1, 0b1, !strconcat(OpcStr, ".cio"), [], itin>;
+}
 
-def CMPrr : F_IRC<0b011111, 0b0, 0b0,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 "cmp", [], NoItinerary>;
-def CMPri : F_II<0b011111,
-                 (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$imm16),
-                 "cmp", [], NoItinerary>;
+let isCommutable = 1 in {
+  defm ADDU : ArithTriCarry<0b011000, "addu">;
+  defm MULU : ArithTri<0b011011, "mulu">;
+  defm ADD : ArithTriCarry<0b011100, "add">;
+}
+defm SUBU : ArithTriCarry<0b011001, "subu">;
+defm DIVU : ArithTri<0b011010, "divu">;
+defm SUB : ArithTriCarry<0b011101, "sub">;
+defm DIVS : ArithTri<0b011110, "divs">;
+defm CMP : ArithTri<0b011111, "cmp">;
+
+let Predicates = [IsMC881100] in {
+  def DIVUrrd : F_IRCD<0b011010, "divu.d">;
+  let isCommutable = 1 in
+    def MULUrrd : F_IRCD<0b011011, "mulu.d">;
+}
+
+// TODO Aliases div -> divs, mul -> mulu. Renames from 88100
+
+defm : BinaryOpPat<"MULU", mul>;
+defm : BinaryOpPat<"DIVS", sdiv>; // TODO Correct?
+//def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
+
 
 multiclass SetCCPat<CondCode CC, bits<10> w5o5> {
   def : Pat<(setcc GPR:$lhs, GPR:$rhs, CC),
@@ -458,18 +472,18 @@ def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu R0, tglobaladdr:$dst)>;
 
 
 let isTerminator = 1, isBarrier = 1 in {
-  def JMP : F_JMP<0b11000, 0, (outs), (ins GPROpnd:$rs2),
+  def JMP : F_JMP<0b11000, (outs), (ins GPROpnd:$rs2),
                   "jmp", [(brind GPROpnd:$rs2)]>;
   let hasDelaySlot = 1 in
-    def JMPn : F_JMP<0b11000, 1, (outs), (ins GPROpnd:$rs2),
+    def JMPn : F_JMP<0b11000, (outs), (ins GPROpnd:$rs2),
                      "jmp.n", [(brind GPROpnd:$rs2)]>;
 }
 
 let isCall = 1, isTerminator = 1, isBarrier = 1 in {
-  def JSR : F_JMP<0b11001, 0, (outs), (ins GPROpnd:$rs2),
+  def JSR : F_JMP<0b11001, (outs), (ins GPROpnd:$rs2),
                   "jsr", []>;
   let hasDelaySlot = 1 in
-    def JSRn : F_JMP<0b11001, 1, (outs), (ins GPROpnd:$rs2),
+    def JSRn : F_JMP<0b11001, (outs), (ins GPROpnd:$rs2),
                      "jsr.n", []>;
 }
 
@@ -478,32 +492,32 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {
 }
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
-  def BR : F_BRANCH<0b11000, 0, (outs), (ins brtarget26:$d26), "br",
+  def BR : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br",
                     [(br bb:$d26)]>;
 
   let hasDelaySlot = 1 in
-    def BRn : F_BRANCH<0b11000, 1, (outs), (ins brtarget26:$d26), "br.n",
+    def BRn : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br.n",
                        [(br bb:$d26)]>;
 
-  def BB0 : F_BCOND<0b11010, /*next*/ 0,
+  def BB0 : F_BCOND<0b11010,
                     (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                    "bb0", []>;
-  def BB1 : F_BCOND<0b11011, /*next*/ 0,
+                    "bb0">;
+  def BB1 : F_BCOND<0b11011,
                     (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                    "bb1", []>;
-  def BCOND : F_BCOND<0b11101, /*next*/ 0,
+                    "bb1">;
+  def BCOND : F_BCOND<0b11101,
                       (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                      "bcnd", []>;
+                      "bcnd">;
   let hasDelaySlot = 1 in {
-    def BB0n : F_BCOND<0b11010, /*next*/ 1,
+    def BB0n : F_BCOND<0b11010,
                        (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                       "bb0.n", []>;
-    def BB1n : F_BCOND<0b11011, /*next*/ 1,
+                       "bb0.n">;
+    def BB1n : F_BCOND<0b11011,
                       (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                      "bb1.n", []>;
-    def BCONDn : F_BCOND<0b11101, /*next*/ 1,
+                      "bb1.n">;
+    def BCONDn : F_BCOND<0b11101,
                         (outs), (ins imm32zx5:$m5, GPROpnd:$rs1, brtarget16:$d16),
-                        "bcnd.n", []>;
+                        "bcnd.n">;
   }
 }
 
@@ -548,32 +562,137 @@ defm : BranchPat<SETUGE, setuge, 11>;
 // Alias for no operation.
 def : InstAlias<"nop", (ORrr R0, R0, R0)>;
 
+// ---------------------------------------------------------------------------//
+// Floating point instructions.
+// ---------------------------------------------------------------------------//
+
+// Helper classes to select floating point operands.
+
+class FT<string p, RegisterOperand FReg> {
+  bits<1> regfile = 0;
+  string prec = p;
+  RegisterOperand opnd = FReg;
+}
+
+def FT32 : FT<"s", FPR32Opnd>;
+def FT64 : FT<"d", FPR64Opnd>;
+def FT80 : FT<"x", ?>;
+
+class getFT<int n> {
+  FT ret = !if(!eq(n, 0), FT32, !if(!eq(n, 1), FT64, FT80));
+}
+
 // Multiclass for triadic register floating point instructions.
-multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
-                 InstrItinClass itin = NoItinerary> {
+multiclass FArithG<bits<4> Func, string OpcStr,
+                   InstrItinClass itin = NoItinerary> {
   foreach D = 0-1 in {
-    defvar S1 = D;
-    defvar S2 = D;
-    defvar DPrec = !if(D, "d", "s");
-    defvar DOpnd = !if(D, FPR64Opnd, FPR32Opnd);
-    defvar S1Prec = !if(S1, "d", "s");
-    defvar S1Opnd = !if(S1, FPR64Opnd, FPR32Opnd);
-    defvar S2Prec = !if(S2, "d", "s");
-    defvar S2Opnd = !if(S2, FPR64Opnd, FPR32Opnd);
-    let regfile = 0 in //!cast<M88kRegisterClass>(DOpnd).HWRegFile in
-    def DPrec # S1Prec #S2Prec :
-             F_SFU1<Func, D, S1, S2,
-                    (outs DOpnd:$rd), (ins S1Opnd:$rs1, S2Opnd:$rs2),
-                    !strconcat(OpcStr, ".", DPrec, S1Prec, S2Prec),
-                    [(set DOpnd:$rd, (OpNode S1Opnd:$rs1, S2Opnd:$rs2))],
-                    itin>;
+    foreach S1 = 0-1 in {
+      foreach S2 = 0-1 in {
+        let regfile = 0 in {
+          defvar DPrec = getFT<D>.ret.prec;
+          defvar DOpnd = getFT<D>.ret.opnd;
+          defvar S1Prec = getFT<S1>.ret.prec;
+          defvar S1Opnd = getFT<S1>.ret.opnd;
+          defvar S2Prec = getFT<S2>.ret.prec;
+          defvar S2Opnd = getFT<S2>.ret.opnd;
+          def g # DPrec # S1Prec # S2Prec :
+                  F_SFU1<Func, D, S1, S2,
+                      (outs DOpnd:$rd), (ins S1Opnd:$rs1, S2Opnd:$rs2),
+                      !strconcat(OpcStr, ".", DPrec, S1Prec, S2Prec),
+                          [], itin>;
+        }
+      }
+    }
   }
 }
 
-defm FMUL : FArith<0b0000, "fmul", fmul>;
-defm FADD : FArith<0b0101, "fadd", fadd>;
-defm FSUB : FArith<0b0110, "fsub", fsub>;
-defm FDIV : FArith<0b1110, "fdiv", fdiv>;
+multiclass FArithX<bits<4> Func, string OpcStr,
+                   InstrItinClass itin = NoItinerary> {
+  foreach D = 0-2 in {
+    foreach S1 = 0-2 in {
+      foreach S2 = 0-2 in {
+        let regfile = 1, Predicates = [IsMC881100] in {
+          defvar DPrec = getFT<D>.ret.prec;
+          defvar S1Prec = getFT<S1>.ret.prec;
+          defvar S2Prec = getFT<S2>.ret.prec;
+          def x # DPrec # S1Prec # S2Prec :
+                  F_SFU1<Func, D, S1, S2,
+                      (outs XROpnd:$rd), (ins XROpnd:$rs1, XROpnd:$rs2),
+                      !strconcat(OpcStr, ".", DPrec, S1Prec, S2Prec),
+                          [], itin>;
+        }
+      }
+    }
+  }
+}
+
+multiclass FArith<bits<4> Func, string OpcStr,
+                  InstrItinClass itin = NoItinerary>
+                  : FArithG<Func, OpcStr, itin>, FArithX<Func, OpcStr, itin>;
+
+// Multiclass for dyadic register floating point instructions.
+multiclass FArith2<bits<4> Func, string OpcStr,
+                   InstrItinClass itin = NoItinerary> {
+  foreach D = 0-1 in {
+    foreach S2 = 0-1 in {
+      defvar IsFPR = !and(!ne(D, 2), !ne(S2, 2));
+      if IsFPR then {
+        let regfile = 0 in {
+          defvar DPrec = getFT<D>.ret.prec;
+          defvar DOpnd = getFT<D>.ret.opnd;
+          defvar S2Prec = getFT<S2>.ret.prec;
+          defvar S2Opnd = getFT<S2>.ret.opnd;
+          def DPrec # S2Prec :
+              F_SFU1D<Func, D, 0b00, S2,
+                      (outs DOpnd:$rd), (ins S2Opnd:$rs2),
+                      !strconcat(OpcStr, ".", DPrec, S2Prec),
+                      [], itin>;
+        }
+      }
+    }
+  }
+}
+
+// TODO Why does ftrunc not work?
+multiclass FloatBinPat<string Inst, SDPatternOperator OpNode> {
+  def : Pat<(OpNode FPR32:$rs1, FPR32:$rs2),
+            (!cast<InstM88k>(Inst#"gsss") FPR32:$rs1, FPR32:$rs2)>;
+//  def : Pat<(ftrunc (OpNode (fpextend FPR32:$rs1), FPR64:$rs2)),
+//            (!cast<InstM88k>(Inst#"ssd") FPR32:$rs1, FPR32:$rs2)>;
+  def : Pat<(fpextend (OpNode FPR32:$rs1, FPR32:$rs2)),
+            (!cast<InstM88k>(Inst#"gdss") FPR32:$rs1, FPR32:$rs2)>;
+  def : Pat<(OpNode (fpextend FPR32:$rs1), FPR64:$rs2),
+            (!cast<InstM88k>(Inst#"gdsd") FPR32:$rs1, FPR64:$rs2)>;
+  def : Pat<(OpNode FPR64:$rs1, (fpextend FPR32:$rs2)),
+            (!cast<InstM88k>(Inst#"gdds") FPR64:$rs1, FPR32:$rs2)>;
+  def : Pat<(OpNode FPR64:$rs1, FPR64:$rs2),
+            (!cast<InstM88k>(Inst#"gddd") FPR64:$rs1, FPR64:$rs2)>;
+
+  def : Pat<(OpNode (f32 XR:$rs1), (f32 XR:$rs2)),
+            (!cast<InstM88k>(Inst#"xsss") XR:$rs1, XR:$rs2)>;
+  def : Pat<(OpNode (f64 XR:$rs1), (fpextend (f32 XR:$rs2))),
+            (!cast<InstM88k>(Inst#"gdds") XR:$rs1, XR:$rs2)>;
+  def : Pat<(OpNode (f64 XR:$rs1), (f64 XR:$rs2)),
+            (!cast<InstM88k>(Inst#"xddd") XR:$rs1, XR:$rs2)>;
+  def : Pat<(OpNode (f80 XR:$rs1), (f80 XR:$rs2)),
+            (!cast<InstM88k>(Inst#"xxxx") XR:$rs1, XR:$rs2)>;
+}
+
+defm FMUL : FArith<0b0000, "fmul">;
+defm FADD : FArith<0b0101, "fadd">;
+defm FSUB : FArith<0b0110, "fsub">;
+defm FDIV : FArith<0b1110, "fdiv">;
+
+defm : FloatBinPat<"FMUL", fmul>;
+defm : FloatBinPat<"FADD", fadd>;
+defm : FloatBinPat<"FSUB", fsub>;
+defm : FloatBinPat<"FDIV", fdiv>;
+
+defm FCMP : FArith2<0b0001, "fcvt">;
+defm INT : FArith2<0b1001, "int">;
+defm NINT : FArith2<0b1010, "nint">;
+defm TRNC : FArith2<0b1011, "trnc">;
+defm FSQRT : FArith2<0b1111, "fsqrt">;
 
 let regfile = 1, Predicates = [IsMC881100] in {
 def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
@@ -602,8 +721,12 @@ def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
                      [(set (f64 XROpnd:$rd), FPR64Opnd:$rs2)]>;
 }
 
+// ---------------------------------------------------------------------------//
+// Control register instructions.
+// ---------------------------------------------------------------------------//
+
 let rs1 = 0, rs2 = 0 in
-de FLDCR : F_SFU1CR<0b01001, (outs GPROpnd:$rd), (ins FCROpnd:$fcr),
+def FLDCR : F_SFU1CR<0b01001, (outs GPROpnd:$rd), (ins FCROpnd:$fcr),
                     "fldcr", " $rd, $fcr">;
 
 let rd = 0 in
@@ -612,3 +735,31 @@ def FSTCR : F_SFU1CR2<0b10001, (outs FCROpnd:$fcr), (ins GPROpnd:$rs1),
 
 def FXCR : F_SFU1CR2<0b11001, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, FCROpnd:$fcr),
                      "fxcr", " $rd, $rs1, $fcr">;
+
+// ---------------------------------------------------------------------------//
+// Graphics/vector instructions. 881100 only.
+// ---------------------------------------------------------------------------//
+
+multiclass PArithPixel<bits<5> func, string opc> {
+  def : F_SFU2<func, 0b00, 0b11,
+                  (outs GPR64Opnd:$rd), (ins GPR64Opnd:$rs1, GPR64Opnd:$rs2),
+                  opc>;
+  def b : F_SFU2<func, 0b00, 0b01,
+                  (outs GPR64Opnd:$rd), (ins GPR64Opnd:$rs1, GPR64Opnd:$rs2),
+                  !strconcat(opc, ".b")>;
+  def h : F_SFU2<func, 0b00, 0b10,
+                  (outs GPR64Opnd:$rd), (ins GPR64Opnd:$rs1, GPR64Opnd:$rs2),
+                  !strconcat(opc, ".h")>;
+}
+
+let Predicates = [IsMC881100] in {
+
+def PMUL : F_SFU2<0b00000, 0b00, 0b00,
+                  (outs XROpnd:$rd), (ins FPR32Opnd:$rs1, FPR32Opnd:$rs2),
+                  "pmul">;
+def PCMP : F_SFU2<0b00111, 0b00, 0b11,
+                  (outs XROpnd:$rd), (ins FPR32Opnd:$rs1, FPR32Opnd:$rs2),
+                  "pcmp">;
+defm PADD : PArithPixel<0b00100, "padd">;
+defm PSUB : PArithPixel<0b00110, "psub">;
+}
