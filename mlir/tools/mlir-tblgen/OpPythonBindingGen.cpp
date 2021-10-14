@@ -252,6 +252,12 @@ constexpr const char *attributeDeleterTemplate = R"Py(
     del self.operation.attributes["{1}"]
 )Py";
 
+constexpr const char *regionAccessorTemplate = R"PY(
+  @builtins.property
+  def {0}():
+    return self.regions[{1}]
+)PY";
+
 static llvm::cl::OptionCategory
     clOpPythonBindingCat("Options for -gen-python-op-bindings");
 
@@ -482,10 +488,11 @@ constexpr const char *initTemplate = R"Py(
     operands = []
     results = []
     attributes = {{}
+    regions = None
     {1}
     super().__init__(self.build_generic(
       attributes=attributes, results=results, operands=operands,
-      successors=_ods_successors, loc=loc, ip=ip))
+      successors=_ods_successors, regions=regions, loc=loc, ip=ip))
 )Py";
 
 /// Template for appending a single element to the operand/result list.
@@ -697,6 +704,30 @@ populateBuilderLinesResult(const Operator &op,
   }
 }
 
+/// If the operation has variadic regions, adds a builder argument to specify
+/// the number of those regions and builder lines to forward it to the generic
+/// constructor.
+static void
+populateBuilderRegions(const Operator &op,
+                       llvm::SmallVectorImpl<std::string> &builderArgs,
+                       llvm::SmallVectorImpl<std::string> &builderLines) {
+  if (op.hasNoVariadicRegions())
+    return;
+
+  // This is currently enforced when Operator is constructed.
+  assert(op.getNumVariadicRegions() == 1 &&
+         op.getRegion(op.getNumRegions() - 1).isVariadic() &&
+         "expected the last region to be varidic");
+
+  const NamedRegion &region = op.getRegion(op.getNumRegions() - 1);
+  std::string name =
+      ("num_" + region.name.take_front().lower() + region.name.drop_front())
+          .str();
+  builderArgs.push_back(name);
+  builderLines.push_back(
+      llvm::formatv("regions = {0} + {1}", op.getNumRegions() - 1, name));
+}
+
 /// Emits a default builder constructing an operation from the list of its
 /// result types, followed by a list of its operands.
 static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
@@ -720,6 +751,7 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
       op, llvm::makeArrayRef(builderArgs).drop_front(op.getNumResults()),
       builderLines);
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
+  populateBuilderRegions(op, builderArgs, builderLines);
 
   builderArgs.push_back("*");
   builderArgs.push_back("loc=None");
@@ -767,6 +799,21 @@ static void emitRegionAttributes(const Operator &op, raw_ostream &os) {
                       op.hasNoVariadicRegions() ? "True" : "False");
 }
 
+/// Emits named accessors to regions.
+static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
+  for (auto en : llvm::enumerate(op.getRegions())) {
+    const NamedRegion &region = en.value();
+    if (region.name.empty())
+      continue;
+
+    assert((!region.isVariadic() || en.index() == op.getNumRegions() - 1) &&
+           "expected only the last region to be variadic");
+    os << llvm::formatv(regionAccessorTemplate, sanitizeName(region.name),
+                        std::to_string(en.index()) +
+                            (region.isVariadic() ? ":" : ""));
+  }
+}
+
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op,
                            const AttributeClasses &attributeClasses,
@@ -787,6 +834,7 @@ static void emitOpBindings(const Operator &op,
   emitOperandAccessors(op, os);
   emitAttributeAccessors(op, attributeClasses, os);
   emitResultAccessors(op, os);
+  emitRegionAccessors(op, os);
 }
 
 /// Emits bindings for the dialect specified in the command line, including file

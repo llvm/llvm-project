@@ -153,7 +153,8 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
 /// padded to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
     PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
-    const PaddingValueComputationFunction &paddingFunc, Value &result) {
+    const PaddingValueComputationFunction &paddingFunc,
+    const PaddingNoFoldComputationFunction &nofoldFunc, Value &result) {
   // Can't pad scalars.
   if (opToPad.getShape(opOperand).empty())
     return success();
@@ -181,15 +182,17 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   }
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
+  bool nofold = nofoldFunc ? nofoldFunc(*opOperand) : false;
   result = linalg::PadTensorOp::createPadHighOp(
       staticTensorType, opOperand->get(), paddingValue.getValue(),
-      /*nofold=*/true, opToPad->getLoc(), rewriter);
+      /*nofold=*/nofold, opToPad->getLoc(), rewriter);
   return success();
 }
 
 LogicalResult
 linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
                           const PaddingValueComputationFunction &paddingFunc,
+                          const PaddingNoFoldComputationFunction &nofoldFunc,
                           LinalgOp &paddedOp) {
   Location loc = opToPad->getLoc();
 
@@ -208,7 +211,8 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
     // If padding was requested but the shape cannot be bounded statically then
     // the pattern fails to apply.
     if (failed(padOperandToSmallestStaticBoundingBox(
-            rewriter, opToPad, opOperand, paddingFunc, paddedOperand)))
+            rewriter, opToPad, opOperand, paddingFunc, nofoldFunc,
+            paddedOperand)))
       return failure();
     newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
   }
@@ -341,9 +345,9 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Try to pad on the fly by rewriting res->op as a padded op. If successful,
   // `res.op` is rewritten in static form with padded operands.
   LinalgOp paddedOp;
-  if (succeeded(rewriteAsPaddedOp(rewriter, res->op,
-                                  options.paddingValueComputationFunction,
-                                  paddedOp))) {
+  if (succeeded(rewriteAsPaddedOp(
+          rewriter, res->op, options.paddingValueComputationFunction,
+          options.paddingNoFoldComputationFunction, paddedOp))) {
     filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
     res->op = paddedOp;
     result = *res;
