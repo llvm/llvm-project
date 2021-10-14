@@ -25,7 +25,6 @@
 
 #include "LiveDebugValues.h"
 
-class VLocTracker;
 class TransferTracker;
 
 // Forward dec of unit test class, so that we can peer into the LDV object.
@@ -191,46 +190,50 @@ public:
 /// (DebugVariable specific) dataflow analysis.
 class DbgValue {
 public:
-  union {
-    /// If Kind is Def, the value number that this value is based on.
-    ValueIDNum ID;
-    /// If Kind is Const, the MachineOperand defining this value.
-    MachineOperand MO;
-    /// For a NoVal DbgValue, which block it was generated in.
-    unsigned BlockNo;
-  };
+  /// If Kind is Def, the value number that this value is based on. VPHIs set
+  /// this field to EmptyValue if there is no machine-value for this VPHI, or
+  /// the corresponding machine-value if there is one.
+  ValueIDNum ID;
+  /// If Kind is Const, the MachineOperand defining this value.
+  Optional<MachineOperand> MO;
+  /// For a NoVal or VPHI DbgValue, which block it was generated in.
+  int BlockNo;
+
   /// Qualifiers for the ValueIDNum above.
   DbgValueProperties Properties;
 
   typedef enum {
-    Undef,    // Represents a DBG_VALUE $noreg in the transfer function only.
-    Def,      // This value is defined by an inst, or is a PHI value.
-    Const,    // A constant value contained in the MachineOperand field.
-    Proposed, // This is a tentative PHI value, which may be confirmed or
-              // invalidated later.
-    NoVal     // Empty DbgValue, generated during dataflow. BlockNo stores
-              // which block this was generated in.
+    Undef, // Represents a DBG_VALUE $noreg in the transfer function only.
+    Def,   // This value is defined by an inst, or is a PHI value.
+    Const, // A constant value contained in the MachineOperand field.
+    VPHI,  // Incoming values to BlockNo differ, those values must be joined by
+           // a PHI in this block.
+    NoVal, // Empty DbgValue indicating an unknown value. Used as initializer,
+           // before dominating blocks values are propagated in.
   } KindT;
   /// Discriminator for whether this is a constant or an in-program value.
   KindT Kind;
 
   DbgValue(const ValueIDNum &Val, const DbgValueProperties &Prop, KindT Kind)
-      : ID(Val), Properties(Prop), Kind(Kind) {
-    assert(Kind == Def || Kind == Proposed);
+      : ID(Val), MO(None), BlockNo(0), Properties(Prop), Kind(Kind) {
+    assert(Kind == Def);
   }
 
   DbgValue(unsigned BlockNo, const DbgValueProperties &Prop, KindT Kind)
-      : BlockNo(BlockNo), Properties(Prop), Kind(Kind) {
-    assert(Kind == NoVal);
+      : ID(ValueIDNum::EmptyValue), MO(None), BlockNo(BlockNo),
+        Properties(Prop), Kind(Kind) {
+    assert(Kind == NoVal || Kind == VPHI);
   }
 
   DbgValue(const MachineOperand &MO, const DbgValueProperties &Prop, KindT Kind)
-      : MO(MO), Properties(Prop), Kind(Kind) {
+      : ID(ValueIDNum::EmptyValue), MO(MO), BlockNo(0), Properties(Prop),
+        Kind(Kind) {
     assert(Kind == Const);
   }
 
   DbgValue(const DbgValueProperties &Prop, KindT Kind)
-      : Properties(Prop), Kind(Kind) {
+    : ID(ValueIDNum::EmptyValue), MO(None), BlockNo(0), Properties(Prop),
+      Kind(Kind) {
     assert(Kind == Undef &&
            "Empty DbgValue constructor must pass in Undef kind");
   }
@@ -242,14 +245,16 @@ public:
   bool operator==(const DbgValue &Other) const {
     if (std::tie(Kind, Properties) != std::tie(Other.Kind, Other.Properties))
       return false;
-    else if (Kind == Proposed && ID != Other.ID)
-      return false;
     else if (Kind == Def && ID != Other.ID)
       return false;
     else if (Kind == NoVal && BlockNo != Other.BlockNo)
       return false;
     else if (Kind == Const)
-      return MO.isIdenticalTo(Other.MO);
+      return MO->isIdenticalTo(*Other.MO);
+    else if (Kind == VPHI && BlockNo != Other.BlockNo)
+      return false;
+    else if (Kind == VPHI && ID != Other.ID)
+      return false;
 
     return true;
   }
@@ -553,6 +558,58 @@ public:
                               const DbgValueProperties &Properties);
 };
 
+/// Collection of DBG_VALUEs observed when traversing a block. Records each
+/// variable and the value the DBG_VALUE refers to. Requires the machine value
+/// location dataflow algorithm to have run already, so that values can be
+/// identified.
+class VLocTracker {
+public:
+  /// Map DebugVariable to the latest Value it's defined to have.
+  /// Needs to be a MapVector because we determine order-in-the-input-MIR from
+  /// the order in this container.
+  /// We only retain the last DbgValue in each block for each variable, to
+  /// determine the blocks live-out variable value. The Vars container forms the
+  /// transfer function for this block, as part of the dataflow analysis. The
+  /// movement of values between locations inside of a block is handled at a
+  /// much later stage, in the TransferTracker class.
+  MapVector<DebugVariable, DbgValue> Vars;
+  DenseMap<DebugVariable, const DILocation *> Scopes;
+  MachineBasicBlock *MBB;
+
+public:
+  VLocTracker() {}
+
+  void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
+              Optional<ValueIDNum> ID) {
+    assert(MI.isDebugValue() || MI.isDebugRef());
+    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+                      MI.getDebugLoc()->getInlinedAt());
+    DbgValue Rec = (ID) ? DbgValue(*ID, Properties, DbgValue::Def)
+                        : DbgValue(Properties, DbgValue::Undef);
+
+    // Attempt insertion; overwrite if it's already mapped.
+    auto Result = Vars.insert(std::make_pair(Var, Rec));
+    if (!Result.second)
+      Result.first->second = Rec;
+    Scopes[Var] = MI.getDebugLoc().get();
+  }
+
+  void defVar(const MachineInstr &MI, const MachineOperand &MO) {
+    // Only DBG_VALUEs can define constant-valued variables.
+    assert(MI.isDebugValue());
+    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+                      MI.getDebugLoc()->getInlinedAt());
+    DbgValueProperties Properties(MI);
+    DbgValue Rec = DbgValue(MO, Properties, DbgValue::Const);
+
+    // Attempt insertion; overwrite if it's already mapped.
+    auto Result = Vars.insert(std::make_pair(Var, Rec));
+    if (!Result.second)
+      Result.first->second = Rec;
+    Scopes[Var] = MI.getDebugLoc().get();
+  }
+};
+
 /// Types for recording sets of variable fragments that overlap. For a given
 /// local variable, we record all other fragments of that variable that could
 /// overlap it, to reduce search time.
@@ -563,7 +620,7 @@ using OverlapMap =
 
 // XXX XXX docs
 class InstrRefBasedLDV : public LDVImpl {
-private:
+public:
   friend class ::InstrRefLDVTest;
 
   using FragmentInfo = DIExpression::FragmentInfo;
@@ -592,6 +649,7 @@ private:
   /// Used as the result type for the variable value dataflow problem.
   using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
+private:
   MachineDominatorTree *DomTree;
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
@@ -600,6 +658,10 @@ private:
   BitVector CalleeSavedRegs;
   LexicalScopes LS;
   TargetPassConfig *TPC;
+
+  // An empty DIExpression. Used default / placeholder DbgValueProperties
+  // objects, as we can't have null expressions.
+  const DIExpression *EmptyExpr;
 
   /// Object to track machine locations as we step through a block. Could
   /// probably be a field rather than a pointer, as it's always used.
@@ -627,7 +689,7 @@ private:
 
   // Mapping of blocks to and from their RPOT order.
   DenseMap<unsigned int, MachineBasicBlock *> OrderToBB;
-  DenseMap<MachineBasicBlock *, unsigned int> BBToOrder;
+  DenseMap<const MachineBasicBlock *, unsigned int> BBToOrder;
   DenseMap<unsigned, unsigned> BBNumToRPO;
 
   /// Pair of MachineInstr, and its 1-based offset into the containing block.
@@ -773,69 +835,48 @@ private:
                 ValueIDNum **OutLocs, ValueIDNum *InLocs);
 
   /// Solve the variable value dataflow problem, for a single lexical scope.
-  /// Uses the algorithm from the file comment to resolve control flow joins,
-  /// although there are extra hacks, see vlocJoin. Reads the
-  /// locations of values from the \p MInLocs and \p MOutLocs arrays (see
-  /// buildMLocValueMap) and reads the variable values transfer function from
-  /// \p AllTheVlocs. Live-in and Live-out variable values are stored locally,
-  /// with the live-ins permanently stored to \p Output once the fixedpoint is
-  /// reached.
+  /// Uses the algorithm from the file comment to resolve control flow joins
+  /// using PHI placement and value propagation. Reads the locations of machine
+  /// values from the \p MInLocs and \p MOutLocs arrays (see buildMLocValueMap)
+  /// and reads the variable values transfer function from \p AllTheVlocs.
+  /// Live-in and Live-out variable values are stored locally, with the live-ins
+  /// permanently stored to \p Output once a fixedpoint is reached.
   /// \p VarsWeCareAbout contains a collection of the variables in \p Scope
   /// that we should be tracking.
-  /// \p AssignBlocks contains the set of blocks that aren't in \p Scope, but
-  /// which do contain DBG_VALUEs, which VarLocBasedImpl tracks locations
-  /// through.
-  void vlocDataflow(const LexicalScope *Scope, const DILocation *DILoc,
+  /// \p AssignBlocks contains the set of blocks that aren't in \p DILoc's
+  /// scope, but which do contain DBG_VALUEs, which VarLocBasedImpl tracks
+  /// locations through.
+  void buildVLocValueMap(const DILocation *DILoc,
                     const SmallSet<DebugVariable, 4> &VarsWeCareAbout,
                     SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks,
                     LiveInsT &Output, ValueIDNum **MOutLocs,
                     ValueIDNum **MInLocs,
                     SmallVectorImpl<VLocTracker> &AllTheVLocs);
 
-  /// Compute the live-ins to a block, considering control flow merges according
-  /// to the method in the file comment. Live out and live in variable values
-  /// are stored in \p VLOCOutLocs and \p VLOCInLocs. The live-ins for \p MBB
-  /// are computed and stored into \p VLOCInLocs. \returns true if the live-ins
-  /// are modified.
-  /// \p InLocsT Output argument, storage for calculated live-ins.
-  /// \returns two bools -- the first indicates whether a change
-  /// was made, the second whether a lattice downgrade occurred. If the latter
-  /// is true, revisiting this block is necessary.
-  std::tuple<bool, bool>
-  vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs, LiveIdxT &VLOCInLocs,
-           SmallPtrSet<const MachineBasicBlock *, 16> *VLOCVisited,
-           unsigned BBNum, const SmallSet<DebugVariable, 4> &AllVars,
-           ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
-           SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
-           SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-           DenseMap<DebugVariable, DbgValue> &InLocsT);
-
-  /// Continue exploration of the variable-value lattice, as explained in the
-  /// file-level comment. \p OldLiveInLocation contains the current
-  /// exploration position, from which we need to descend further. \p Values
-  /// contains the set of live-in values, \p CurBlockRPONum the RPO number of
-  /// the current block, and \p CandidateLocations a set of locations that
-  /// should be considered as PHI locations, if we reach the bottom of the
-  /// lattice. \returns true if we should downgrade; the value is the agreeing
-  /// value number in a non-backedge predecessor.
-  bool vlocDowngradeLattice(const MachineBasicBlock &MBB,
-                            const DbgValue &OldLiveInLocation,
-                            const SmallVectorImpl<InValueT> &Values,
-                            unsigned CurBlockRPONum);
+  /// Attempt to eliminate un-necessary PHIs on entry to a block. Examines the
+  /// live-in values coming from predecessors live-outs, and replaces any PHIs
+  /// already present in this blocks live-ins with a live-through value if the
+  /// PHI isn't needed. Live out and live in variable values are stored in
+  /// \p VLOCOutLocs and \p VLOCInLocs. The live-ins for \p MBB are computed and
+  /// stored into \p VLOCInLocs.
+  /// \p InLocsT Output argument, where calculated live-in values are also
+  ///          stored.
+  /// \returns true if any live-ins change value, either from value propagation
+  ///          or PHI elimination.
+  bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
+                LiveIdxT &VLOCInLocs,
+                const SmallSet<DebugVariable, 4> &AllVars,
+                SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
+                SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
+                DenseMap<DebugVariable, DbgValue> &InLocsT);
 
   /// For the given block and live-outs feeding into it, try to find a
-  /// machine location where they all join. If a solution for all predecessors
-  /// can't be found, a location where all non-backedge-predecessors join
-  /// will be returned instead. While this method finds a join location, this
-  /// says nothing as to whether it should be used.
-  /// \returns Pair of value ID if found, and true when the correct value
-  /// is available on all predecessor edges, or false if it's only available
-  /// for non-backedge predecessors.
-  std::tuple<Optional<ValueIDNum>, bool>
-  pickVPHILoc(MachineBasicBlock &MBB, const DebugVariable &Var,
+  /// machine location where all the variable values join together.
+  /// \returns Value ID of a machine PHI if an appropriate one is available.
+  Optional<ValueIDNum>
+  pickVPHILoc(const MachineBasicBlock &MBB, const DebugVariable &Var,
               const LiveIdxT &LiveOuts, ValueIDNum **MOutLocs,
-              ValueIDNum **MInLocs,
-              const SmallVectorImpl<MachineBasicBlock *> &BlockOrders);
+              const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
 
   /// Given the solutions to the two dataflow problems, machine value locations
   /// in \p MInLocs and live-in variable values in \p SavedLiveIns, runs the
