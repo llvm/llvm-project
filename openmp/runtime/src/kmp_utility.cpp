@@ -247,15 +247,15 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
                 i, buf.eax, buf.ebx, buf.ecx, buf.edx));
     }
 #endif
-#if KMP_USE_ADAPTIVE_LOCKS
     p->flags.rtm = 0;
     if (max_arg > 7) {
       /* RTM bit CPUID.07:EBX, bit 11 */
       __kmp_x86_cpuid(7, 0, &buf);
       p->flags.rtm = (buf.ebx >> 11) & 1;
-      KA_TRACE(trace_level, (" RTM"));
+      if (p->flags.rtm) {
+        KA_TRACE(trace_level, (" RTM"));
+      }
     }
-#endif
   }
 
   { // Parse CPU brand string for frequency, saving the string for later.
