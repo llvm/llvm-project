@@ -1403,8 +1403,8 @@ define <2 x i8> @flip_masked_bit_nonuniform(<2 x i8> %A) {
 
 define i8 @ashr_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_bitwidth_mask(
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[NEG_OR_ZERO:%.*]] = and i8 [[SIGN]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG_OR_ZERO:%.*]] = select i1 [[ISNEG]], i8 [[Y:%.*]], i8 0
 ; CHECK-NEXT:    ret i8 [[NEG_OR_ZERO]]
 ;
   %sign = ashr i8 %x, 7
@@ -1415,8 +1415,8 @@ define i8 @ashr_bitwidth_mask(i8 %x, i8 %y) {
 define <2 x i8> @ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
 ; CHECK-LABEL: @ashr_bitwidth_mask_vec_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], <i8 42, i8 2>
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[NEG_OR_ZERO:%.*]] = and <2 x i8> [[Y]], [[SIGN]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEG_OR_ZERO:%.*]] = select <2 x i1> [[ISNEG]], <2 x i8> [[Y]], <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[NEG_OR_ZERO]]
 ;
   %y = mul <2 x i8> %py, <i8 42, i8 2>      ; thwart complexity-based ordering
@@ -1424,6 +1424,8 @@ define <2 x i8> @ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
   %neg_or_zero = and <2 x i8> %y, %sign
   ret <2 x i8> %neg_or_zero
 }
+
+; negative test - extra use
 
 define i8 @ashr_bitwidth_mask_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_bitwidth_mask_use(
@@ -1438,6 +1440,8 @@ define i8 @ashr_bitwidth_mask_use(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+; negative test - wrong shift amount
+
 define i8 @ashr_not_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_not_bitwidth_mask(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 6
@@ -1448,6 +1452,8 @@ define i8 @ashr_not_bitwidth_mask(i8 %x, i8 %y) {
   %r = and i8 %sign, %y
   ret i8 %r
 }
+
+; negative test - wrong shift opcode
 
 define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_bitwidth_mask(

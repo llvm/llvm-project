@@ -100,8 +100,8 @@ define <2 x i1> @test5_zero() {
 
 define i32 @test6(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[A_LOBIT_NEG:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[F:%.*]] = and i32 [[A_LOBIT_NEG]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[F]]
 ;
   %c = icmp sle i32 %a, -1
