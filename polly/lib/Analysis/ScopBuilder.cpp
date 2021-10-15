@@ -129,11 +129,6 @@ static cl::opt<std::string> UserContextStr(
     cl::desc("Provide additional constraints on the context parameters"),
     cl::init(""), cl::cat(PollyCategory));
 
-static cl::opt<bool> DetectFortranArrays(
-    "polly-detect-fortran-arrays",
-    cl::desc("Detect Fortran arrays and use this for code generation"),
-    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
-
 static cl::opt<bool> DetectReductions("polly-detect-reductions",
                                       cl::desc("Detect and exploit reductions"),
                                       cl::Hidden, cl::ZeroOrMore,
@@ -1333,189 +1328,6 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
     ensureValueWrite(Inst);
 }
 
-/// Check that a value is a Fortran Array descriptor.
-///
-/// We check if V has the following structure:
-/// %"struct.array1_real(kind=8)" = type { i8*, i<zz>, i<zz>,
-///                                   [<num> x %struct.descriptor_dimension] }
-///
-///
-/// %struct.descriptor_dimension = type { i<zz>, i<zz>, i<zz> }
-///
-/// 1. V's type name starts with "struct.array"
-/// 2. V's type has layout as shown.
-/// 3. Final member of V's type has name "struct.descriptor_dimension",
-/// 4. "struct.descriptor_dimension" has layout as shown.
-/// 5. Consistent use of i<zz> where <zz> is some fixed integer number.
-///
-/// We are interested in such types since this is the code that dragonegg
-/// generates for Fortran array descriptors.
-///
-/// @param V the Value to be checked.
-///
-/// @returns True if V is a Fortran array descriptor, False otherwise.
-bool isFortranArrayDescriptor(Value *V) {
-  PointerType *PTy = dyn_cast<PointerType>(V->getType());
-
-  if (!PTy)
-    return false;
-
-  Type *Ty = PTy->getElementType();
-  assert(Ty && "Ty expected to be initialized");
-  auto *StructArrTy = dyn_cast<StructType>(Ty);
-
-  if (!(StructArrTy && StructArrTy->hasName()))
-    return false;
-
-  if (!StructArrTy->getName().startswith("struct.array"))
-    return false;
-
-  if (StructArrTy->getNumElements() != 4)
-    return false;
-
-  const ArrayRef<Type *> ArrMemberTys = StructArrTy->elements();
-
-  // i8* match
-  if (ArrMemberTys[0] != Type::getInt8PtrTy(V->getContext()))
-    return false;
-
-  // Get a reference to the int type and check that all the members
-  // share the same int type
-  Type *IntTy = ArrMemberTys[1];
-  if (ArrMemberTys[2] != IntTy)
-    return false;
-
-  // type: [<num> x %struct.descriptor_dimension]
-  ArrayType *DescriptorDimArrayTy = dyn_cast<ArrayType>(ArrMemberTys[3]);
-  if (!DescriptorDimArrayTy)
-    return false;
-
-  // type: %struct.descriptor_dimension := type { ixx, ixx, ixx }
-  StructType *DescriptorDimTy =
-      dyn_cast<StructType>(DescriptorDimArrayTy->getElementType());
-
-  if (!(DescriptorDimTy && DescriptorDimTy->hasName()))
-    return false;
-
-  if (DescriptorDimTy->getName() != "struct.descriptor_dimension")
-    return false;
-
-  if (DescriptorDimTy->getNumElements() != 3)
-    return false;
-
-  for (auto MemberTy : DescriptorDimTy->elements()) {
-    if (MemberTy != IntTy)
-      return false;
-  }
-
-  return true;
-}
-
-Value *ScopBuilder::findFADAllocationVisible(MemAccInst Inst) {
-  // match: 4.1 & 4.2 store/load
-  if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
-    return nullptr;
-
-  // match: 4
-  if (Inst.getAlignment() != 8)
-    return nullptr;
-
-  Value *Address = Inst.getPointerOperand();
-
-  const BitCastInst *Bitcast = nullptr;
-  // [match: 3]
-  if (auto *Slot = dyn_cast<GetElementPtrInst>(Address)) {
-    Value *TypedMem = Slot->getPointerOperand();
-    // match: 2
-    Bitcast = dyn_cast<BitCastInst>(TypedMem);
-  } else {
-    // match: 2
-    Bitcast = dyn_cast<BitCastInst>(Address);
-  }
-
-  if (!Bitcast)
-    return nullptr;
-
-  auto *MallocMem = Bitcast->getOperand(0);
-
-  // match: 1
-  auto *MallocCall = dyn_cast<CallInst>(MallocMem);
-  if (!MallocCall)
-    return nullptr;
-
-  Function *MallocFn = MallocCall->getCalledFunction();
-  if (!(MallocFn && MallocFn->hasName() && MallocFn->getName() == "malloc"))
-    return nullptr;
-
-  // Find all uses the malloc'd memory.
-  // We are looking for a "store" into a struct with the type being the Fortran
-  // descriptor type
-  for (auto user : MallocMem->users()) {
-    /// match: 5
-    auto *MallocStore = dyn_cast<StoreInst>(user);
-    if (!MallocStore)
-      continue;
-
-    auto *DescriptorGEP =
-        dyn_cast<GEPOperator>(MallocStore->getPointerOperand());
-    if (!DescriptorGEP)
-      continue;
-
-    // match: 5
-    auto DescriptorType =
-        dyn_cast<StructType>(DescriptorGEP->getSourceElementType());
-    if (!(DescriptorType && DescriptorType->hasName()))
-      continue;
-
-    Value *Descriptor = dyn_cast<Value>(DescriptorGEP->getPointerOperand());
-
-    if (!Descriptor)
-      continue;
-
-    if (!isFortranArrayDescriptor(Descriptor))
-      continue;
-
-    return Descriptor;
-  }
-
-  return nullptr;
-}
-
-Value *ScopBuilder::findFADAllocationInvisible(MemAccInst Inst) {
-  // match: 3
-  if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
-    return nullptr;
-
-  Value *Slot = Inst.getPointerOperand();
-
-  LoadInst *MemLoad = nullptr;
-  // [match: 2]
-  if (auto *SlotGEP = dyn_cast<GetElementPtrInst>(Slot)) {
-    // match: 1
-    MemLoad = dyn_cast<LoadInst>(SlotGEP->getPointerOperand());
-  } else {
-    // match: 1
-    MemLoad = dyn_cast<LoadInst>(Slot);
-  }
-
-  if (!MemLoad)
-    return nullptr;
-
-  auto *BitcastOperator =
-      dyn_cast<BitCastOperator>(MemLoad->getPointerOperand());
-  if (!BitcastOperator)
-    return nullptr;
-
-  Value *Descriptor = dyn_cast<Value>(BitcastOperator->getOperand(0));
-  if (!Descriptor)
-    return nullptr;
-
-  if (!isFortranArrayDescriptor(Descriptor))
-    return nullptr;
-
-  return Descriptor;
-}
-
 void ScopBuilder::addRecordedAssumptions() {
   for (auto &AS : llvm::reverse(RecordedAssumptions)) {
 
@@ -2350,17 +2162,8 @@ void ScopBuilder::addArrayAccess(ScopStmt *Stmt, MemAccInst MemAccInst,
                                  ArrayRef<const SCEV *> Sizes,
                                  Value *AccessValue) {
   ArrayBasePointers.insert(BaseAddress);
-  auto *MemAccess = addMemoryAccess(Stmt, MemAccInst, AccType, BaseAddress,
-                                    ElementType, IsAffine, AccessValue,
-                                    Subscripts, Sizes, MemoryKind::Array);
-
-  if (!DetectFortranArrays)
-    return;
-
-  if (Value *FAD = findFADAllocationInvisible(MemAccInst))
-    MemAccess->setFortranArrayDescriptor(FAD);
-  else if (Value *FAD = findFADAllocationVisible(MemAccInst))
-    MemAccess->setFortranArrayDescriptor(FAD);
+  addMemoryAccess(Stmt, MemAccInst, AccType, BaseAddress, ElementType, IsAffine,
+                  AccessValue, Subscripts, Sizes, MemoryKind::Array);
 }
 
 /// Check if @p Expr is divisible by @p Size.
@@ -2490,29 +2293,11 @@ void ScopBuilder::foldSizeConstantsToRight() {
   }
 }
 
-void ScopBuilder::markFortranArrays() {
-  for (ScopStmt &Stmt : *scop) {
-    for (MemoryAccess *MemAcc : Stmt) {
-      Value *FAD = MemAcc->getFortranArrayDescriptor();
-      if (!FAD)
-        continue;
-
-      // TODO: const_cast-ing to edit
-      ScopArrayInfo *SAI =
-          const_cast<ScopArrayInfo *>(MemAcc->getLatestScopArrayInfo());
-      assert(SAI && "memory access into a Fortran array does not "
-                    "have an associated ScopArrayInfo");
-      SAI->applyAndSetFAD(FAD);
-    }
-  }
-}
-
 void ScopBuilder::finalizeAccesses() {
   updateAccessDimensionality();
   foldSizeConstantsToRight();
   foldAccessRelations();
   assumeNoOutOfBounds();
-  markFortranArrays();
 }
 
 void ScopBuilder::updateAccessDimensionality() {

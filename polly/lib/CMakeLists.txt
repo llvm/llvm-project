@@ -97,7 +97,6 @@ add_llvm_pass_plugin(Polly
   Transform/ZoneAlgo.cpp
   Transform/Simplify.cpp
   Transform/MaximalStaticExpansion.cpp
-  Transform/RewriteByReferenceParameters.cpp
   Transform/ScopInliner.cpp
   Transform/ManualOptimizer.cpp
   Transform/MatmulOptimizer.cpp

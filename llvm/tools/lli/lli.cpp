@@ -1151,6 +1151,6 @@ Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
   // Return a SimpleRemoteEPC instance connected to our end of the pipes.
   return orc::SimpleRemoteEPC::Create<orc::FDSimpleRemoteEPCTransport>(
       std::make_unique<llvm::orc::InPlaceTaskDispatcher>(),
-      PipeFD[1][0], PipeFD[0][1]);
+      llvm::orc::SimpleRemoteEPC::Setup(), PipeFD[1][0], PipeFD[0][1]);
 #endif
 }

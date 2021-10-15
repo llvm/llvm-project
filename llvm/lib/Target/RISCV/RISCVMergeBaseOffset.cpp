@@ -38,7 +38,6 @@ namespace {
 
 struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   static char ID;
-  const MachineFunction *MF;
   bool runOnMachineFunction(MachineFunction &Fn) override;
   bool detectLuiAddiGlobal(MachineInstr &LUI, MachineInstr *&ADDI);
 

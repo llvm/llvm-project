@@ -94,6 +94,8 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfoList &Inputs,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
+  const llvm::Triple &T(getToolChain().getTriple());
+
   ArgStringList CmdArgs;
 
   assert(Inputs.size() == 1 && "Unexpected number of inputs.");
@@ -112,7 +114,6 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // FIXME: at run-time detect assembler capabilities or rely on version
   // information forwarded by -target-assembler-version.
   if (Args.hasArg(options::OPT_fno_integrated_as)) {
-    const llvm::Triple &T(getToolChain().getTriple());
     if (!(T.isMacOSX() && T.isMacOSXVersionLT(10, 7)))
       CmdArgs.push_back("-Q");
   }
@@ -130,8 +131,7 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   AddMachOArch(Args, CmdArgs);
 
   // Use -force_cpusubtype_ALL on x86 by default.
-  if (getToolChain().getTriple().isX86() ||
-      Args.hasArg(options::OPT_force__cpusubtype__ALL))
+  if (T.isX86() || Args.hasArg(options::OPT_force__cpusubtype__ALL))
     CmdArgs.push_back("-force_cpusubtype_ALL");
 
   if (getToolChain().getArch() != llvm::Triple::x86_64 &&

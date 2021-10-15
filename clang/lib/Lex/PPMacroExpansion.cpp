@@ -426,7 +426,7 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
 
   // If this is a function-like macro invocation, it's safe to trivially expand
   // as long as the identifier is not a macro argument.
-  return std::find(MI->param_begin(), MI->param_end(), II) == MI->param_end();
+  return !llvm::is_contained(MI->params(), II);
 }
 
 /// isNextPPTokenLParen - Determine whether the next preprocessor token to be

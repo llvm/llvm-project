@@ -15,7 +15,6 @@
 #include "polly/Canonicalization.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
-#include "polly/RewriteByReferenceParameters.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -42,7 +41,6 @@ static cl::opt<bool>
 
 void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
   bool UseMemSSA = true;
-  PM.add(polly::createRewriteByrefParamsWrapperPass());
   PM.add(llvm::createPromoteMemoryToRegisterPass());
   PM.add(llvm::createEarlyCSEPass(UseMemSSA));
   PM.add(llvm::createInstructionCombiningPass());
@@ -98,7 +96,6 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
   FunctionPassManager FPM;
 
   bool UseMemSSA = true;
-  FPM.addPass(RewriteByrefParamsPass());
   FPM.addPass(PromotePass());
   FPM.addPass(EarlyCSEPass(UseMemSSA));
   FPM.addPass(InstCombinePass());

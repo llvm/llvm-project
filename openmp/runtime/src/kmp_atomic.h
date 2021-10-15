@@ -578,6 +578,10 @@ void __kmpc_atomic_float8_max(ident_t *id_ref, int gtid, kmp_real64 *lhs,
                               kmp_real64 rhs);
 void __kmpc_atomic_float8_min(ident_t *id_ref, int gtid, kmp_real64 *lhs,
                               kmp_real64 rhs);
+void __kmpc_atomic_float10_max(ident_t *id_ref, int gtid, long double *lhs,
+                               long double rhs);
+void __kmpc_atomic_float10_min(ident_t *id_ref, int gtid, long double *lhs,
+                               long double rhs);
 #if KMP_HAVE_QUAD
 void __kmpc_atomic_float16_max(ident_t *id_ref, int gtid, QUAD_LEGACY *lhs,
                                QUAD_LEGACY rhs);
@@ -1254,6 +1258,12 @@ kmp_real64 __kmpc_atomic_float8_max_cpt(ident_t *id_ref, int gtid,
 kmp_real64 __kmpc_atomic_float8_min_cpt(ident_t *id_ref, int gtid,
                                         kmp_real64 *lhs, kmp_real64 rhs,
                                         int flag);
+long double __kmpc_atomic_float10_max_cpt(ident_t *id_ref, int gtid,
+                                          long double *lhs, long double rhs,
+                                          int flag);
+long double __kmpc_atomic_float10_min_cpt(ident_t *id_ref, int gtid,
+                                          long double *lhs, long double rhs,
+                                          int flag);
 #if KMP_HAVE_QUAD
 QUAD_LEGACY __kmpc_atomic_float16_max_cpt(ident_t *id_ref, int gtid,
                                           QUAD_LEGACY *lhs, QUAD_LEGACY rhs,
@@ -1755,6 +1765,78 @@ long double __kmpc_atomic_float10_div_cpt_rev_fp(ident_t *id_ref, int gtid,
 #endif // KMP_HAVE_QUAD
 
 // End of OpenMP 4.0 capture
+
+// OpenMP 5.1 compare and swap
+/*
+    __kmpc_atomic_bool_1_cas
+    __kmpc_atomic_bool_2_cas
+    __kmpc_atomic_bool_4_cas
+    __kmpc_atomic_bool_8_cas
+    __kmpc_atomic_val_1_cas
+    __kmpc_atomic_val_2_cas
+    __kmpc_atomic_val_4_cas
+    __kmpc_atomic_val_8_cas
+    __kmpc_atomic_bool_1_cas_cpt
+    __kmpc_atomic_bool_2_cas_cpt
+    __kmpc_atomic_bool_4_cas_cpt
+    __kmpc_atomic_bool_8_cas_cpt
+    __kmpc_atomic_val_1_cas_cpt
+    __kmpc_atomic_val_2_cas_cpt
+    __kmpc_atomic_val_4_cas_cpt
+    __kmpc_atomic_val_8_cas_cpt
+*/
+// In all interfaces of CAS (Compare And Swap):
+// r is the boolean result of comparison
+// x is memory location to operate on
+// e is expected (old) value
+// d is desired (new) value
+// pv is pointer to captured value v whose location may coincide with e
+
+// { r = x == e; if(r) { x = d; } }
+// functions return result of comparison
+bool __kmpc_atomic_bool_1_cas(ident_t *loc, int gtid, char *x, char e, char d);
+bool __kmpc_atomic_bool_2_cas(ident_t *loc, int gtid, short *x, short e,
+                              short d);
+bool __kmpc_atomic_bool_4_cas(ident_t *loc, int gtid, kmp_int32 *x, kmp_int32 e,
+                              kmp_int32 d);
+bool __kmpc_atomic_bool_8_cas(ident_t *loc, int gtid, kmp_int64 *x, kmp_int64 e,
+                              kmp_int64 d);
+
+// { v = x; if (x == e) { x = d; } }
+// functions return old value
+char __kmpc_atomic_val_1_cas(ident_t *loc, int gtid, char *x, char e, char d);
+short __kmpc_atomic_val_2_cas(ident_t *loc, int gtid, short *x, short e,
+                              short d);
+kmp_int32 __kmpc_atomic_val_4_cas(ident_t *loc, int gtid, kmp_int32 *x,
+                                  kmp_int32 e, kmp_int32 d);
+kmp_int64 __kmpc_atomic_val_8_cas(ident_t *loc, int gtid, kmp_int64 *x,
+                                  kmp_int64 e, kmp_int64 d);
+
+// { r = x == e; if(r) { x = d; } else { v = x; } }
+// v gets old value if comparison failed, untouched otherwise
+// functions return result of comparison
+bool __kmpc_atomic_bool_1_cas_cpt(ident_t *loc, int gtid, char *x, char e,
+                                  char d, char *pv);
+bool __kmpc_atomic_bool_2_cas_cpt(ident_t *loc, int gtid, short *x, short e,
+                                  short d, short *pv);
+bool __kmpc_atomic_bool_4_cas_cpt(ident_t *loc, int gtid, kmp_int32 *x,
+                                  kmp_int32 e, kmp_int32 d, kmp_int32 *pv);
+bool __kmpc_atomic_bool_8_cas_cpt(ident_t *loc, int gtid, kmp_int64 *x,
+                                  kmp_int64 e, kmp_int64 d, kmp_int64 *pv);
+
+// { if (x == e) { x = d; }; v = x; }
+// v gets old value if comparison failed, new value otherwise
+// functions return old value
+char __kmpc_atomic_val_1_cas_cpt(ident_t *loc, int gtid, char *x, char e,
+                                 char d, char *pv);
+short __kmpc_atomic_val_2_cas_cpt(ident_t *loc, int gtid, short *x, short e,
+                                  short d, short *pv);
+kmp_int32 __kmpc_atomic_val_4_cas_cpt(ident_t *loc, int gtid, kmp_int32 *x,
+                                      kmp_int32 e, kmp_int32 d, kmp_int32 *pv);
+kmp_int64 __kmpc_atomic_val_8_cas_cpt(ident_t *loc, int gtid, kmp_int64 *x,
+                                      kmp_int64 e, kmp_int64 d, kmp_int64 *pv);
+
+// End OpenMP 5.1 compare + capture
 
 #endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 

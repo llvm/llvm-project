@@ -17,32 +17,29 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
-// Decide whether it is best to use a loop or straight-line code for
-// a block operation of Size bytes with source address Src and destination
-// address Dest.  Sequence is the opcode to use for straight-line code
-// (such as MVC) and Loop is the opcode to use for loops (such as MVC_LOOP).
-// Return the chain for the completed operation.
-static SDValue emitMemMem(SelectionDAG &DAG, const SDLoc &DL, unsigned Sequence,
-                          unsigned Loop, SDValue Chain, SDValue Dst,
-                          SDValue Src, uint64_t Size) {
-  EVT PtrVT = Src.getValueType();
-  // The heuristic we use is to prefer loops for anything that would
-  // require 7 or more MVCs.  With these kinds of sizes there isn't
-  // much to choose between straight-line code and looping code,
-  // since the time will be dominated by the MVCs themselves.
-  // However, the loop has 4 or 5 instructions (depending on whether
-  // the base addresses can be proved equal), so there doesn't seem
-  // much point using a loop for 5 * 256 bytes or fewer.  Anything in
-  // the range (5 * 256, 6 * 256) will need another instruction after
-  // the loop, so it doesn't seem worth using a loop then either.
-  // The next value up, 6 * 256, can be implemented in the same
-  // number of straight-line MVCs as 6 * 256 - 1.
-  if (Size > 6 * 256)
-    return DAG.getNode(Loop, DL, MVT::Other, Chain, Dst, Src,
-                       DAG.getConstant(Size, DL, PtrVT),
-                       DAG.getConstant(Size / 256, DL, PtrVT));
-  return DAG.getNode(Sequence, DL, MVT::Other, Chain, Dst, Src,
-                     DAG.getConstant(Size, DL, PtrVT));
+static SDVTList getMemMemVTs(unsigned Op, SelectionDAG &DAG) {
+  return Op == SystemZISD::CLC ? DAG.getVTList(MVT::i32, MVT::Other)
+                               : DAG.getVTList(MVT::Other);
+}
+
+// Emit a mem-mem operation after subtracting one from size, which will be
+// added back during pseudo expansion. As the Reg case emitted here may be
+// converted by DAGCombiner into having an Imm length, they are both emitted
+// the same way.
+static SDValue emitMemMemImm(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
+                             SDValue Chain, SDValue Dst, SDValue Src,
+                             uint64_t Size) {
+  return DAG.getNode(Op, DL, getMemMemVTs(Op, DAG), Chain, Dst, Src,
+                     DAG.getConstant(Size - 1, DL, Src.getValueType()));
+}
+
+static SDValue emitMemMemReg(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
+                             SDValue Chain, SDValue Dst, SDValue Src,
+                             SDValue Size) {
+  SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                                  DAG.getZExtOrTrunc(Size, DL, MVT::i64),
+                                  DAG.getConstant(-1, DL, MVT::i64));
+  return DAG.getNode(Op, DL, getMemMemVTs(Op, DAG), Chain, Dst, Src, LenMinus1);
 }
 
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
@@ -53,9 +50,10 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
     return SDValue();
 
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
-    return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,
-                      Chain, Dst, Src, CSize->getZExtValue());
-  return SDValue();
+    return emitMemMemImm(DAG, DL, SystemZISD::MVC, Chain, Dst, Src,
+                         CSize->getZExtValue());
+
+  return emitMemMemReg(DAG, DL, SystemZISD::MVC, Chain, Dst, Src, Size);
 }
 
 // Handle a memset of 1, 2, 4 or 8 bytes with the operands given by
@@ -127,52 +125,23 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
 
     // Handle the special case of a memset of 0, which can use XC.
     if (CByte && CByte->getZExtValue() == 0)
-      return emitMemMem(DAG, DL, SystemZISD::XC, SystemZISD::XC_LOOP,
-                        Chain, Dst, Dst, Bytes);
+      return emitMemMemImm(DAG, DL, SystemZISD::XC, Chain, Dst, Dst, Bytes);
 
     // Copy the byte to the first location and then use MVC to copy
     // it to the rest.
     Chain = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo, Alignment);
     SDValue DstPlus1 = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
                                    DAG.getConstant(1, DL, PtrVT));
-    return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,
-                      Chain, DstPlus1, Dst, Bytes - 1);
+    return emitMemMemImm(DAG, DL, SystemZISD::MVC, Chain, DstPlus1, Dst,
+                         Bytes - 1);
   }
 
   // Variable length
-  if (CByte && CByte->getZExtValue() == 0) {
+  if (CByte && CByte->getZExtValue() == 0)
     // Handle the special case of a variable length memset of 0 with XC.
-    SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
-                                    DAG.getZExtOrTrunc(Size, DL, MVT::i64),
-                                    DAG.getConstant(-1, DL, MVT::i64));
-    SDValue TripC = DAG.getNode(ISD::SRL, DL, MVT::i64, LenMinus1,
-                                DAG.getConstant(8, DL, MVT::i64));
-    return DAG.getNode(SystemZISD::XC_LOOP, DL, MVT::Other, Chain, Dst, Dst,
-                       LenMinus1, TripC);
-  }
-  return SDValue();
-}
+    return emitMemMemReg(DAG, DL, SystemZISD::XC, Chain, Dst, Dst, Size);
 
-// Use CLC to compare [Src1, Src1 + Size) with [Src2, Src2 + Size),
-// deciding whether to use a loop or straight-line code.
-static SDValue emitCLC(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                       SDValue Src1, SDValue Src2, uint64_t Size) {
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
-  EVT PtrVT = Src1.getValueType();
-  // A two-CLC sequence is a clear win over a loop, not least because it
-  // needs only one branch.  A three-CLC sequence needs the same number
-  // of branches as a loop (i.e. 2), but is shorter.  That brings us to
-  // lengths greater than 768 bytes.  It seems relatively likely that
-  // a difference will be found within the first 768 bytes, so we just
-  // optimize for the smallest number of branch instructions, in order
-  // to avoid polluting the prediction buffer too much.  A loop only ever
-  // needs 2 branches, whereas a straight-line sequence would need 3 or more.
-  if (Size > 3 * 256)
-    return DAG.getNode(SystemZISD::CLC_LOOP, DL, VTs, Chain, Src1, Src2,
-                       DAG.getConstant(Size, DL, PtrVT),
-                       DAG.getConstant(Size / 256, DL, PtrVT));
-  return DAG.getNode(SystemZISD::CLC, DL, VTs, Chain, Src1, Src2,
-                     DAG.getConstant(Size, DL, PtrVT));
+  return SDValue();
 }
 
 // Convert the current CC value into an integer that is 0 if CC == 0,
@@ -193,15 +162,16 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemcmp(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
     SDValue Src2, SDValue Size, MachinePointerInfo Op1PtrInfo,
     MachinePointerInfo Op2PtrInfo) const {
+  SDValue CCReg;
+  // Swap operands to invert CC == 1 vs. CC == 2 cases.
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size)) {
     uint64_t Bytes = CSize->getZExtValue();
     assert(Bytes > 0 && "Caller should have handled 0-size case");
-    // Swap operands to invert CC == 1 vs. CC == 2 cases.
-    SDValue CCReg = emitCLC(DAG, DL, Chain, Src2, Src1, Bytes);
-    Chain = CCReg.getValue(1);
-    return std::make_pair(addIPMSequence(DL, CCReg, DAG), Chain);
-  }
-  return std::make_pair(SDValue(), SDValue());
+    CCReg = emitMemMemImm(DAG, DL, SystemZISD::CLC, Chain, Src2, Src1, Bytes);
+  } else
+    CCReg = emitMemMemReg(DAG, DL, SystemZISD::CLC, Chain, Src2, Src1, Size);
+  Chain = CCReg.getValue(1);
+  return std::make_pair(addIPMSequence(DL, CCReg, DAG), Chain);
 }
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(

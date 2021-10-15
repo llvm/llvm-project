@@ -180,9 +180,9 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-SimpleRemoteEPC::createMemoryManager() {
+SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  if (auto Err = getBootstrapSymbols(
+  if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
            {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
@@ -190,12 +190,11 @@ SimpleRemoteEPC::createMemoryManager() {
             rt::SimpleExecutorMemoryManagerDeallocateWrapperName}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, SAs);
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
 }
 
 Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
-SimpleRemoteEPC::createMemoryAccess() {
-
+SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
   return nullptr;
 }
 
@@ -260,7 +259,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup() {
+Error SimpleRemoteEPC::setup(Setup S) {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -322,13 +321,21 @@ Error SimpleRemoteEPC::setup() {
   else
     return DM.takeError();
 
-  if (auto MemMgr = createMemoryManager()) {
+  // Set a default CreateMemoryManager if none is specified.
+  if (!S.CreateMemoryManager)
+    S.CreateMemoryManager = createDefaultMemoryManager;
+
+  if (auto MemMgr = S.CreateMemoryManager(*this)) {
     OwnedMemMgr = std::move(*MemMgr);
     this->MemMgr = OwnedMemMgr.get();
   } else
     return MemMgr.takeError();
 
-  if (auto MemAccess = createMemoryAccess()) {
+  // Set a default CreateMemoryAccess if none is specified.
+  if (!S.CreateMemoryAccess)
+    S.CreateMemoryAccess = createDefaultMemoryAccess;
+
+  if (auto MemAccess = S.CreateMemoryAccess(*this)) {
     OwnedMemAccess = std::move(*MemAccess);
     this->MemAccess = OwnedMemAccess.get();
   } else

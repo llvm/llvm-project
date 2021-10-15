@@ -1972,8 +1972,6 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     MemoryLocation KillingLoc = *MaybeKillingLoc;
     assert(KillingLoc.Ptr && "KillingLoc should not be null");
     const Value *KillingUndObj = getUnderlyingObject(KillingLoc.Ptr);
-
-    MemoryAccess *Current = KillingDef;
     LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by "
                       << *KillingDef << " (" << *KillingI << ")\n");
 
@@ -1988,7 +1986,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     bool IsMemTerm = State.isMemTerminatorInst(KillingI);
     // Check if MemoryAccesses in the worklist are killed by KillingDef.
     for (unsigned I = 0; I < ToCheck.size(); I++) {
-      Current = ToCheck[I];
+      MemoryAccess *Current = ToCheck[I];
       if (State.SkipStores.count(Current))
         continue;
 
