@@ -63,14 +63,14 @@ void __invoke_if_not(std::true_type, _Fp)
 }
 
 template <typename _F1, typename _F2>
-typename std::result_of<_F1()>::type
+typename std::invoke_result<_F1()>::type
 __invoke_if_else(std::true_type, _F1 __f1, _F2)
 {
     return __f1();
 }
 
 template <typename _F1, typename _F2>
-typename std::result_of<_F2()>::type
+typename std::invoke_result<_F2()>::type
 __invoke_if_else(std::false_type, _F1, _F2 __f2)
 {
     return __f2();

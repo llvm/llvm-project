@@ -15,3 +15,7 @@ D: Created the initial implementation.
 N: Thomas Rodgers
 E: trodgers@redhat.com
 D: Identifier name transformation for inclusion in a Standard C++ library.
+
+N: Christopher Nelson
+E: nadiasvertex@gmail.com
+D: Add support for an OpenMP backend.
