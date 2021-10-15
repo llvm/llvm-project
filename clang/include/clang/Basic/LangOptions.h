@@ -576,9 +576,6 @@ public:
   /// host code generation.
   std::string OMPHostIRFile;
 
-  /// Name of the CIR file to output to disk.
-  std::string CIRFile;
-
   /// The user provided compilation unit ID, if non-empty. This is used to
   /// externalize static variables which is needed to support accessing static
   /// device variables in host code for single source offloading languages

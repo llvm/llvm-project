@@ -26,6 +26,19 @@ The ``-fcir-output`` and ``-fcir-output=<file>`` flags can be used
 to output the generated CIR (currently needs to be combined with
 ``-fcir-warnings`` to work).
 
+Additionally, clang can run it's full compilation pipeline with
+the CIR phase inserted between clang and llvm. Passing
+``-fclangir`` to ``clang -cc1`` will opt in to clang generating
+CIR which is lowered to LLVMIR and continued through the
+backend. (WIP -- the backend is not yet functional).
+
+A new flag ``-emit-cir`` can be used in combination with
+``-fclangir`` to emit pristine CIR right out of the CIRGen phase.
+
+Adding flags to select between different levels of lowerings
+between MLIR dialects (e.g.to STD/Affine/SCF) are a WIP.
+
+
 Implementation Notes
 ====================
 

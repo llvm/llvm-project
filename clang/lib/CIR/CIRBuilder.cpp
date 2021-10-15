@@ -29,6 +29,7 @@
 #include "mlir/IR/Verifier.h"
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
@@ -68,8 +69,6 @@ using llvm::ScopedHashTableScope;
 using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
-
-CIRContext::CIRContext(clang::ASTContext &AC) : astCtx(AC) { Init(); }
 
 CIRCodeGenFunction::CIRCodeGenFunction() = default;
 TypeEvaluationKind CIRCodeGenFunction::getEvaluationKind(QualType type) {
@@ -546,33 +545,26 @@ public:
 };
 } // namespace cir
 
+CIRContext::CIRContext() {}
+
+CIRContext::CIRContext(std::unique_ptr<raw_pwrite_stream> os)
+    : outStream(std::move(os)) {}
+
 CIRContext::~CIRContext() {
   // Run module verifier before shutdown.
   builder->verifyModule();
-
-  if (cirOut) {
-    // FIXME: pick a more verbose level.
-    builder->getModule()->print(cirOut->os());
-    cirOut->keep();
-  }
 }
 
-void CIRContext::Init() {
+void CIRContext::Initialize(clang::ASTContext &astCtx) {
   using namespace llvm;
+
+  this->astCtx = &astCtx;
 
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
   mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
   builder = std::make_unique<CIRBuildImpl>(*mlirCtx.get(), astCtx);
-
-  std::error_code EC;
-  StringRef outFile = astCtx.getLangOpts().CIRFile;
-  if (outFile.empty())
-    return;
-  cirOut = std::make_unique<ToolOutputFile>(outFile, EC, sys::fs::OF_None);
-  if (EC)
-    report_fatal_error("Failed to open " + outFile + ": " + EC.message());
 }
 
 bool CIRContext::EmitFunction(const FunctionDecl *FD) {
@@ -580,4 +572,19 @@ bool CIRContext::EmitFunction(const FunctionDecl *FD) {
   auto func = builder->buildCIR(&CCGF, FD);
   assert(func && "should emit function");
   return true;
+}
+
+bool CIRContext::HandleTopLevelDecl(clang::DeclGroupRef D) {
+  for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
+    auto *FD = cast<clang::FunctionDecl>(*I);
+    assert(FD && "We can't handle anything else yet");
+    EmitFunction(FD);
+  }
+
+  return true;
+}
+
+void CIRContext::HandleTranslationUnit(ASTContext &C) {
+  if (outStream)
+    builder->getModule()->print(*outStream);
 }
