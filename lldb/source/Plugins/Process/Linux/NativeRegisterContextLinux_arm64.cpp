@@ -65,7 +65,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 #if LLDB_HAVE_USER_SVE_HEADER
     struct user_sve_header sve_header;
 #else
-    struct user_sve_header sve_header {};
+    struct sve_header {};
 #endif
     struct iovec ioVec;
     ioVec.iov_base = &sve_header;
