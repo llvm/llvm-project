@@ -63,8 +63,10 @@ namespace {
 class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
-                const DominatorTree &DT, AAResults &AA, AssumptionCache &AC)
-      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC) {}
+                const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
+                bool ScalarizationOnly)
+      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC),
+        ScalarizationOnly(ScalarizationOnly) {}
 
   bool run();
 
@@ -75,6 +77,11 @@ private:
   const DominatorTree &DT;
   AAResults &AA;
   AssumptionCache &AC;
+
+  /// If true only perform scalarization combines and do not introduce new
+  /// vector operations.
+  bool ScalarizationOnly;
+
   InstructionWorklist Worklist;
 
   bool vectorizeLoadInsert(Instruction &I);
@@ -1063,11 +1070,13 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
-    MadeChange |= vectorizeLoadInsert(I);
-    MadeChange |= foldExtractExtract(I);
-    MadeChange |= foldBitcastShuf(I);
+    if (!ScalarizationOnly) {
+      MadeChange |= vectorizeLoadInsert(I);
+      MadeChange |= foldExtractExtract(I);
+      MadeChange |= foldBitcastShuf(I);
+      MadeChange |= foldExtractedCmps(I);
+    }
     MadeChange |= scalarizeBinopOrCmp(I);
-    MadeChange |= foldExtractedCmps(I);
     MadeChange |= scalarizeLoadExtract(I);
     MadeChange |= foldSingleElementStore(I);
   };
@@ -1129,7 +1138,7 @@ public:
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    VectorCombine Combiner(F, TTI, DT, AA, AC);
+    VectorCombine Combiner(F, TTI, DT, AA, AC, false);
     return Combiner.run();
   }
 };
@@ -1153,7 +1162,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  VectorCombine Combiner(F, TTI, DT, AA, AC);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, ScalarizationOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
