@@ -111,13 +111,17 @@ testing::AssertionResult rangeContains(const ConstantRange &CR, const APInt &N,
 // Elems under the given PreferenceFn. The preference function should return
 // true if the first range argument is strictly preferred to the second one.
 static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
-                      PreferFn PreferenceFn, ArrayRef<ConstantRange> Inputs) {
+                      PreferFn PreferenceFn, ArrayRef<ConstantRange> Inputs,
+                      bool CheckOptimality = true) {
   unsigned BitWidth = CR.getBitWidth();
 
   // Check conservative correctness.
   for (unsigned Elem : Elems.set_bits()) {
     EXPECT_TRUE(rangeContains(CR, APInt(BitWidth, Elem), Inputs));
   }
+
+  if (!CheckOptimality)
+    return;
 
   // Make sure we have at least one element for the code below.
   if (Elems.none()) {
@@ -182,9 +186,23 @@ using BinaryRangeFn = llvm::function_ref<ConstantRange(const ConstantRange &,
                                                        const ConstantRange &)>;
 using BinaryIntFn = llvm::function_ref<Optional<APInt>(const APInt &,
                                                        const APInt &)>;
+using BinaryCheckFn = llvm::function_ref<bool(const ConstantRange &,
+                                              const ConstantRange &)>;
 
+static bool CheckAll(const ConstantRange &, const ConstantRange &) {
+  return true;
+}
+
+static bool CheckSingleElementsOnly(const ConstantRange &CR1,
+                                    const ConstantRange &CR2) {
+  return CR1.isSingleElement() && CR2.isSingleElement();
+}
+
+// CheckFn determines whether optimality is checked for a given range pair.
+// Correctness is always checked.
 static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
-                                   PreferFn PreferenceFn = PreferSmallest) {
+                                   PreferFn PreferenceFn = PreferSmallest,
+                                   BinaryCheckFn CheckFn = CheckAll) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(
       Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -195,23 +213,8 @@ static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
               Elems.set(ResultN->getZExtValue());
           });
         });
-        TestRange(RangeFn(CR1, CR2), Elems, PreferenceFn, {CR1, CR2});
-      });
-}
-
-static void TestBinaryOpExhaustiveCorrectnessOnly(BinaryRangeFn RangeFn,
-                                                  BinaryIntFn IntFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(
-      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
-        ConstantRange ResultCR = RangeFn(CR1, CR2);
-        ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-            if (Optional<APInt> ResultN = IntFn(N1, N2)) {
-              EXPECT_TRUE(rangeContains(ResultCR, *ResultN, {CR1, CR2}));
-            }
-          });
-        });
+        TestRange(RangeFn(CR1, CR2), Elems, PreferenceFn, {CR1, CR2},
+                  CheckFn(CR1, CR2));
       });
 }
 
@@ -1303,7 +1306,7 @@ TEST_F(ConstantRangeTest, URem) {
                 .urem(ConstantRange(APInt(16, 10))),
             ConstantRange(APInt(16, 0), APInt(16, 10)));
 
-  TestBinaryOpExhaustiveCorrectnessOnly(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.urem(CR2);
       },
@@ -1311,7 +1314,9 @@ TEST_F(ConstantRangeTest, URem) {
         if (N2.isZero())
           return None;
         return N1.urem(N2);
-      });
+      },
+      PreferSmallest,
+      CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, SRem) {
@@ -1377,7 +1382,7 @@ TEST_F(ConstantRangeTest, SRem) {
                 .srem(ConstantRange(APInt(16, 10))),
             ConstantRange(APInt(16, 0), APInt(16, 10)));
 
-  TestBinaryOpExhaustiveCorrectnessOnly(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.srem(CR2);
       },
@@ -1385,7 +1390,9 @@ TEST_F(ConstantRangeTest, SRem) {
         if (N2.isZero())
           return None;
         return N1.srem(N2);
-      });
+      },
+      PreferSmallest,
+      CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, Shl) {
@@ -1393,7 +1400,8 @@ TEST_F(ConstantRangeTest, Shl) {
   ConstantRange WrapNullMax(APInt(16, 0x1), APInt(16, 0x0));
   EXPECT_EQ(Full.shl(Full), Full);
   EXPECT_EQ(Full.shl(Empty), Empty);
-  EXPECT_EQ(Full.shl(One), Full);    // TODO: [0, (-1 << 0xa) + 1)
+  EXPECT_EQ(Full.shl(One), ConstantRange(APInt(16, 0),
+                                         APInt(16, 0xfc00) + 1));
   EXPECT_EQ(Full.shl(Some), Full);   // TODO: [0, (-1 << 0xa) + 1)
   EXPECT_EQ(Full.shl(Wrap), Full);
   EXPECT_EQ(Empty.shl(Empty), Empty);
@@ -1411,6 +1419,21 @@ TEST_F(ConstantRangeTest, Shl) {
       Some2.shl(ConstantRange(APInt(16, 0x1))),
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shl(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return None;
+        return N1.shl(N2);
+      },
+      PreferSmallestUnsigned,
+      [](const ConstantRange &, const ConstantRange &CR2) {
+        // We currently only produce precise results for single element RHS.
+        return CR2.isSingleElement();
+      });
 }
 
 TEST_F(ConstantRangeTest, Lshr) {
