@@ -32,6 +32,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::NetBSD &ToolChain =
     static_cast<const toolchains::NetBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple &Triple = ToolChain.getTriple();
 
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
@@ -48,8 +49,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::thumbeb: {
     StringRef MArch, MCPU;
     arm::getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
-    std::string Arch =
-        arm::getARMTargetCPU(MCPU, MArch, ToolChain.getTriple());
+    std::string Arch = arm::getARMTargetCPU(MCPU, MArch, Triple);
     CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch));
     break;
   }
@@ -60,7 +60,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::mips64el: {
     StringRef CPUName;
     StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, ToolChain.getTriple(), CPUName, ABIName);
+    mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
 
     CmdArgs.push_back("-march");
     CmdArgs.push_back(CPUName.data());
@@ -68,7 +68,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
-    if (ToolChain.getTriple().isLittleEndian())
+    if (Triple.isLittleEndian())
       CmdArgs.push_back("-EL");
     else
       CmdArgs.push_back("-EB");
@@ -80,18 +80,16 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
-    std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
-    CmdArgs.push_back(
-        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    std::string CPU = getCPUName(D, Args, Triple);
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
     AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
-    CmdArgs.push_back(
-        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    std::string CPU = getCPUName(D, Args, Triple);
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
     AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
@@ -122,6 +120,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::NetBSD &ToolChain =
     static_cast<const toolchains::NetBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple &Triple = ToolChain.getTriple();
+
   ArgStringList CmdArgs;
 
   if (!D.SysRoot.empty())
@@ -156,7 +156,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     CmdArgs.push_back("-m");
-    switch (ToolChain.getTriple().getEnvironment()) {
+    switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
     case llvm::Triple::GNUEABI:
       CmdArgs.push_back("armelf_nbsd_eabi");
@@ -174,7 +174,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::thumbeb:
     arm::appendBE8LinkFlag(Args, CmdArgs, ToolChain.getEffectiveTriple());
     CmdArgs.push_back("-m");
-    switch (ToolChain.getTriple().getEnvironment()) {
+    switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
     case llvm::Triple::GNUEABI:
       CmdArgs.push_back("armelfb_nbsd_eabi");
@@ -271,7 +271,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   unsigned Major, Minor, Micro;
-  ToolChain.getTriple().getOSVersion(Major, Minor, Micro);
+  Triple.getOSVersion(Major, Minor, Micro);
   bool useLibgcc = true;
   if (Major >= 7 || Major == 0) {
     switch (ToolChain.getArch()) {
