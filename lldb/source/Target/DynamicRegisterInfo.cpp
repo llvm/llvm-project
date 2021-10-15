@@ -395,6 +395,10 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
       m_value_regs_map[local_regnum] = std::move(reg.value_regs);
     if (!reg.invalidate_regs.empty())
       m_invalidate_regs_map[local_regnum] = std::move(reg.invalidate_regs);
+    if (reg.value_reg_offset != 0) {
+      assert(reg.value_regs.size() == 1);
+      m_value_reg_offset_map[local_regnum] = reg.value_reg_offset;
+    }
 
     struct RegisterInfo reg_info {
       reg.name.AsCString(), reg.alt_name.AsCString(), reg.byte_size,
@@ -679,8 +683,12 @@ void DynamicRegisterInfo::ConfigureOffsets() {
       // as that of their corresponding primary register in value_regs list.
       if (reg.byte_offset == LLDB_INVALID_INDEX32) {
         uint32_t value_regnum = reg.value_regs[0];
-        if (value_regnum != LLDB_INVALID_INDEX32)
+        if (value_regnum != LLDB_INVALID_INDEX32) {
           reg.byte_offset = GetRegisterInfoAtIndex(value_regnum)->byte_offset;
+          auto it = m_value_reg_offset_map.find(reg.kinds[eRegisterKindLLDB]);
+          if (it != m_value_reg_offset_map.end())
+            reg.byte_offset += it->second;
+        }
       }
     }
 
