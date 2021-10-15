@@ -64,7 +64,8 @@ class TestSwiftDedupMacros(TestBase):
                 space_with_space += 1
             if "-UNDEBUG" in line:
                 ndebug += 1
-        self.assertEqual(debug, 1)
-        self.assertEqual(space, 1)
+        # One extra in SwiftASTContextPerModule.
+        self.assertEqual(debug, 1+1)
+        self.assertEqual(space, 1+1)
         self.assertEqual(space_with_space, 0)
-        self.assertEqual(ndebug, 1)
+        self.assertEqual(ndebug, 1+1)
