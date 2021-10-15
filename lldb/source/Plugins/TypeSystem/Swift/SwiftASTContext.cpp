@@ -1663,8 +1663,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(Module)");
 
   auto logError = [&](const char *message) {
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Failed to create module context - %s",
-               message);
+    HEALTH_LOG_PRINTF("Failed to create module context - %s", message);
   };
 
   ArchSpec arch = module.GetArchitecture();
