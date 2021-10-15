@@ -78,6 +78,7 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case CortexA53:
   case CortexA55:
+  case CortexA510:
     PrefFunctionLogAlignment = 4;
     break;
   case CortexA57:
