@@ -107,12 +107,16 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ;
 ; X86-POPCNT-LABEL: cnt16:
 ; X86-POPCNT:       # %bb.0:
-; X86-POPCNT-NEXT:    popcntw {{[0-9]+}}(%esp), %ax
+; X86-POPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt16:
 ; X64-POPCNT:       # %bb.0:
-; X64-POPCNT-NEXT:    popcntw %di, %ax
+; X64-POPCNT-NEXT:    movzwl %di, %eax
+; X64-POPCNT-NEXT:    popcntl %eax, %eax
+; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   ret i16 %cnt
@@ -1564,14 +1568,13 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ;
 ; X86-POPCNT-LABEL: popcount_i16_zext:
 ; X86-POPCNT:       # %bb.0:
-; X86-POPCNT-NEXT:    popcntw {{[0-9]+}}(%esp), %ax
-; X86-POPCNT-NEXT:    movzwl %ax, %eax
+; X86-POPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: popcount_i16_zext:
 ; X64-POPCNT:       # %bb.0:
-; X64-POPCNT-NEXT:    popcntw %di, %ax
-; X64-POPCNT-NEXT:    movzwl %ax, %eax
+; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   %z = zext i16 %cnt to i32
