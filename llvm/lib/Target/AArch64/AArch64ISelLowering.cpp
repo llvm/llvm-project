@@ -3430,30 +3430,54 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (DstVT.isScalableVector())
     return SDValue();
 
-  // TODO: Saturate to SatWidth explicitly.
-  if (SatWidth != DstElementWidth)
-    return SDValue();
-
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
-  // In the absence of FP16 support, promote f16 to f32, like
-  // LowerVectorFP_TO_INT().
-  if (SrcElementVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+  // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  if (SrcElementVT == MVT::f16 &&
+      (!Subtarget->hasFullFP16() || DstElementWidth > 16)) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
-                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal),
-                       Op.getOperand(1));
-  }
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal);
+    SrcVT = F32VT;
+    SrcElementVT = MVT::f32;
+    SrcElementWidth = 32;
+  } else if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
+             SrcElementVT != MVT::f16)
+    return SDValue();
 
+  SDLoc DL(Op);
   // Cases that we can emit directly.
-  if ((SrcElementWidth == DstElementWidth) &&
-      (SrcElementVT == MVT::f64 || SrcElementVT == MVT::f32 ||
-       (SrcElementVT == MVT::f16 && Subtarget->hasFullFP16()))) {
-    return Op;
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                       DAG.getValueType(DstVT.getScalarType()));
+
+  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
+  // result. This is only valid if the legal cvt is larger than the saturate
+  // width. For double, as we don't have MIN/MAX, it can be simpler to scalarize
+  // (at least until sqxtn is selected).
+  if (SrcElementWidth < SatWidth || SrcElementVT == MVT::f64)
+    return SDValue();
+
+  EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
+  SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
+                                  DAG.getValueType(IntVT.getScalarType()));
+  SDValue Sat;
+  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    SDValue MinC = DAG.getConstant(
+        APInt::getSignedMaxValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
+    SDValue MaxC = DAG.getConstant(
+        APInt::getSignedMinValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
+  } else {
+    SDValue MinC = DAG.getConstant(
+        APInt::getAllOnesValue(SatWidth).zextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
   }
 
-  // For all other cases, fall back on the expanded form.
-  return SDValue();
+  return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
 
 SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
