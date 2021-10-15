@@ -419,6 +419,11 @@ public:
   Value *VisitExpr(Expr *S);
 
   Value *VisitConstantExpr(ConstantExpr *E) {
+    // A constant expression of type 'void' generates no code and produces no
+    // value.
+    if (E->getType()->isVoidType())
+      return nullptr;
+
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       if (E->isGLValue())
         return CGF.Builder.CreateLoad(Address(

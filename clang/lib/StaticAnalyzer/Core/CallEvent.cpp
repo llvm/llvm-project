@@ -1039,12 +1039,12 @@ const PseudoObjectExpr *ObjCMethodCall::getContainingPseudoObjectExpr() const {
 
 static const Expr *
 getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
-  const Expr *Syntactic = POE->getSyntacticForm();
+  const Expr *Syntactic = POE->getSyntacticForm()->IgnoreParens();
 
   // This handles the funny case of assigning to the result of a getter.
   // This can happen if the getter returns a non-const reference.
   if (const auto *BO = dyn_cast<BinaryOperator>(Syntactic))
-    Syntactic = BO->getLHS();
+    Syntactic = BO->getLHS()->IgnoreParens();
 
   return Syntactic;
 }
