@@ -214,6 +214,7 @@ Clang-Tidy Checks
    `llvmlibc-implementation-in-namespace <llvmlibc-implementation-in-namespace.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc-restrict-system-libc-headers.html>`_, "Yes"
    `misc-definitions-in-headers <misc-definitions-in-headers.html>`_, "Yes"
+   `misc-homoglyph <misc-homoglyph.html>`_,
    `misc-misleading-bidirectional <misc-misleading-bidirectional.html>`_,
    `misc-misleading-identifier <misc-misleading-identifier.html>`_,
    `misc-misplaced-const <misc-misplaced-const.html>`_,

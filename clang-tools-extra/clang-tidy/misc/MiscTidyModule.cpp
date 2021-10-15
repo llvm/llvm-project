@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "DefinitionsInHeadersCheck.h"
+#include "Homoglyph.h"
 #include "MisleadingBidirectional.h"
 #include "MisleadingIdentifier.h"
 #include "MisplacedConstCheck.h"
@@ -37,6 +38,7 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<MisleadingBidirectionalCheck>(
         "misc-misleading-bidirectional");
+    CheckFactories.registerCheck<Homoglyph>("misc-homoglyph");
     CheckFactories.registerCheck<MisleadingIdentifierCheck>(
         "misc-misleading-identifier");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
