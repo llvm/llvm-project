@@ -11,36 +11,36 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_regs(self):
         """Test grabbing various x86_64 registers from gdbserver."""
-        reg_data = [
-            "0102030405060708",  # rcx
-            "1112131415161718",  # rdx
-            "2122232425262728",  # rsi
-            "3132333435363738",  # rdi
-            "4142434445464748",  # rbp
-            "5152535455565758",  # rsp
-            "6162636465666768",  # r8
-            "7172737475767778",  # r9
-            "8182838485868788",  # rip
-            "91929394",  # eflags
-            "0102030405060708090a",  # st0
-            "1112131415161718191a",  # st1
-        ] + 6 * [
-            "2122232425262728292a"  # st2..st7
-        ] + [
-            "8182838485868788898a8b8c8d8e8f90",  # xmm0
-            "9192939495969798999a9b9c9d9e9fa0",  # xmm1
-        ] + 14 * [
-            "a1a2a3a4a5a6a7a8a9aaabacadaeafb0",  # xmm2..xmm15
-        ] + [
-            "00000000",  # mxcsr
-        ] + [
-            "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0",  # ymm0h
-            "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0",  # ymm1h
-        ] + 14 * [
-            "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0",  # ymm2h..ymm15h
-        ]
-
         class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "0102030405060708"  # rcx
+                "1112131415161718"  # rdx
+                "2122232425262728"  # rsi
+                "3132333435363738"  # rdi
+                "4142434445464748"  # rbp
+                "5152535455565758"  # rsp
+                "6162636465666768"  # r8
+                "7172737475767778"  # r9
+                "8182838485868788"  # rip
+                "91929394"  # eflags
+                "0102030405060708090a"  # st0
+                "1112131415161718191a"  # st1
+            ) + 6 * (
+                "2122232425262728292a"  # st2..st7
+            ) + (
+                "8182838485868788898a8b8c8d8e8f90"  # xmm0
+                "9192939495969798999a9b9c9d9e9fa0"  # xmm1
+            ) + 14 * (
+                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # xmm2..xmm15
+            ) + (
+                "00000000"  # mxcsr
+            ) + (
+                "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
+                "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
+            ) + 14 * (
+                "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0"  # ymm2h..ymm15h
+            )
+
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
                     return """<?xml version="1.0"?>
@@ -113,9 +113,10 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                 return ""
 
             def readRegisters(self):
-                return "".join(reg_data)
+                return self.reg_data
 
             def writeRegisters(self, reg_hex):
+                self.reg_data = reg_hex
                 return "OK"
 
             def haltReason(self):
@@ -169,22 +170,16 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         # test writing into pseudo-registers
         self.runCmd("register write ecx 0xfffefdfc")
-        reg_data[0] = "fcfdfeff05060708"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read rcx",
                    ["rcx = 0x08070605fffefdfc"])
 
         self.runCmd("register write cx 0xfbfa")
-        reg_data[0] = "fafbfeff05060708"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read ecx",
                    ["ecx = 0xfffefbfa"])
         self.match("register read rcx",
                    ["rcx = 0x08070605fffefbfa"])
 
         self.runCmd("register write ch 0xf9")
-        reg_data[0] = "faf9feff05060708"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read cx",
                    ["cx = 0xf9fa"])
         self.match("register read ecx",
@@ -193,8 +188,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["rcx = 0x08070605fffef9fa"])
 
         self.runCmd("register write cl 0xf8")
-        reg_data[0] = "f8f9feff05060708"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read cx",
                    ["cx = 0xf9f8"])
         self.match("register read ecx",
@@ -203,8 +196,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["rcx = 0x08070605fffef9f8"])
 
         self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
-        reg_data[10] = "f8f9fafbfcfdfeff090a"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read st0",
                    ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
 
@@ -213,36 +204,36 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs(self):
         """Test grabbing various i386 registers from gdbserver."""
-        reg_data = [
-            "01020304",  # eax
-            "11121314",  # ecx
-            "21222324",  # edx
-            "31323334",  # ebx
-            "41424344",  # esp
-            "51525354",  # ebp
-            "61626364",  # esi
-            "71727374",  # edi
-            "81828384",  # eip
-            "91929394",  # eflags
-            "0102030405060708090a",  # st0
-            "1112131415161718191a",  # st1
-        ] + 6 * [
-            "2122232425262728292a"  # st2..st7
-        ] + [
-            "8182838485868788898a8b8c8d8e8f90",  # xmm0
-            "9192939495969798999a9b9c9d9e9fa0",  # xmm1
-        ] + 6 * [
-            "a1a2a3a4a5a6a7a8a9aaabacadaeafb0",  # xmm2..xmm7
-        ] + [
-            "00000000",  # mxcsr
-        ] + [
-            "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0",  # ymm0h
-            "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0",  # ymm1h
-        ] + 6 * [
-            "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0",  # ymm2h..ymm7h
-        ]
-
         class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "01020304"  # eax
+                "11121314"  # ecx
+                "21222324"  # edx
+                "31323334"  # ebx
+                "41424344"  # esp
+                "51525354"  # ebp
+                "61626364"  # esi
+                "71727374"  # edi
+                "81828384"  # eip
+                "91929394"  # eflags
+                "0102030405060708090a"  # st0
+                "1112131415161718191a"  # st1
+            ) + 6 * (
+                "2122232425262728292a"  # st2..st7
+            ) + (
+                "8182838485868788898a8b8c8d8e8f90"  # xmm0
+                "9192939495969798999a9b9c9d9e9fa0"  # xmm1
+            ) + 6 * (
+                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # xmm2..xmm7
+            ) + (
+                "00000000"  # mxcsr
+            ) + (
+                "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
+                "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
+            ) + 6 * (
+                "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0"  # ymm2h..ymm7h
+            )
+
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
                     return """<?xml version="1.0"?>
@@ -299,9 +290,10 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                 return ""
 
             def readRegisters(self):
-                return "".join(reg_data)
+                return self.reg_data
 
             def writeRegisters(self, reg_hex):
+                self.reg_data = reg_hex
                 return "OK"
 
             def haltReason(self):
@@ -350,30 +342,22 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         # test writing into pseudo-registers
         self.runCmd("register write cx 0xfbfa")
-        reg_data[1] = "fafb1314"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read ecx",
                    ["ecx = 0x1413fbfa"])
 
         self.runCmd("register write ch 0xf9")
-        reg_data[1] = "faf91314"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read cx",
                    ["cx = 0xf9fa"])
         self.match("register read ecx",
                    ["ecx = 0x1413f9fa"])
 
         self.runCmd("register write cl 0xf8")
-        reg_data[1] = "f8f91314"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read cx",
                    ["cx = 0xf9f8"])
         self.match("register read ecx",
                    ["ecx = 0x1413f9f8"])
 
         self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
-        reg_data[10] = "f8f9fafbfcfdfeff090a"
-        self.assertPacketLogContains(["G" + "".join(reg_data)])
         self.match("register read st0",
                    ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
 
