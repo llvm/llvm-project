@@ -116,14 +116,16 @@ class SparseCompiler:
 
   def __init__(self, options: str):
     pipeline = (
+        f'builtin.func(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),'
         f'sparsification{{{options}}},'
         f'sparse-tensor-conversion,'
-        f'builtin.func(convert-linalg-to-loops,convert-vector-to-scf),'
+        f'builtin.func(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),'
         f'convert-scf-to-std,'
         f'func-bufferize,'
         f'tensor-constant-bufferize,'
         f'builtin.func(tensor-bufferize,std-bufferize,finalizing-bufferize),'
         f'convert-vector-to-llvm{{reassociate-fp-reductions=1 enable-index-optimizations=1}},'
+        f'lower-affine,'
         f'convert-memref-to-llvm,'
         f'convert-std-to-llvm,'
         f'reconcile-unrealized-casts')
@@ -134,7 +136,7 @@ class SparseCompiler:
 
 
 # CHECK-LABEL: TEST: testSpMM
-# CHECK: Passed 72 tests
+# CHECK: Passed 8 tests
 @run
 def testSpMM():
   # Obtain path to runtime support library.
@@ -143,8 +145,10 @@ def testSpMM():
 
   with ir.Context() as ctx, ir.Location.unknown():
     count = 0
-    # Fixed compiler optimization strategy.
-    # TODO: explore state space here too
+    # Loop over various ways to compile and annotate the SpMM kernel with
+    # a *single* sparse tensor. Note that we deliberate do not exhaustively
+    # search the full state space to reduce runtime of the test. It is
+    # straightforward to adapt the code below to explore more combinations.
     par = 0
     vec = 0
     vl = 1
@@ -152,9 +156,6 @@ def testSpMM():
     opt = (f'parallelization-strategy={par} '
            f'vectorization-strategy={vec} '
            f'vl={vl} enable-simd-index32={e}')
-    # Exhaustive loop over various ways to annotate a kernel with
-    # a *single* sparse tensor. Even this subset already gives
-    # quite a large state space!
     levels = [[st.DimLevelType.dense, st.DimLevelType.dense],
               [st.DimLevelType.dense, st.DimLevelType.compressed],
               [st.DimLevelType.compressed, st.DimLevelType.dense],
@@ -163,7 +164,7 @@ def testSpMM():
         ir.AffineMap.get_permutation([0, 1]),
         ir.AffineMap.get_permutation([1, 0])
     ]
-    bitwidths = [0, 8, 32]
+    bitwidths = [0]
     for level in levels:
       for ordering in orderings:
         for pwidth in bitwidths:
