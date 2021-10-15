@@ -562,7 +562,7 @@ steps:
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
+    command: "libcxx/utils/ci/run-buildbot apple-system"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -576,7 +576,7 @@ steps:
 
   # Test back-deployment to older Apple platforms
   - label: "Apple back-deployment macosx10.9"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
+    command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -590,7 +590,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Apple back-deployment macosx10.15"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.15"
+    command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15"
     artifact_paths:
       - "**/test-results.xml"
     agents:
