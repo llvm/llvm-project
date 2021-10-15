@@ -1400,7 +1400,8 @@ TEST_F(ConstantRangeTest, Shl) {
   ConstantRange WrapNullMax(APInt(16, 0x1), APInt(16, 0x0));
   EXPECT_EQ(Full.shl(Full), Full);
   EXPECT_EQ(Full.shl(Empty), Empty);
-  EXPECT_EQ(Full.shl(One), Full);    // TODO: [0, (-1 << 0xa) + 1)
+  EXPECT_EQ(Full.shl(One), ConstantRange(APInt(16, 0),
+                                         APInt(16, 0xfc00) + 1));
   EXPECT_EQ(Full.shl(Some), Full);   // TODO: [0, (-1 << 0xa) + 1)
   EXPECT_EQ(Full.shl(Wrap), Full);
   EXPECT_EQ(Empty.shl(Empty), Empty);
@@ -1418,6 +1419,21 @@ TEST_F(ConstantRangeTest, Shl) {
       Some2.shl(ConstantRange(APInt(16, 0x1))),
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shl(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return None;
+        return N1.shl(N2);
+      },
+      PreferSmallestUnsigned,
+      [](const ConstantRange &, const ConstantRange &CR2) {
+        // We currently only produce precise results for single element RHS.
+        return CR2.isSingleElement();
+      });
 }
 
 TEST_F(ConstantRangeTest, Lshr) {
