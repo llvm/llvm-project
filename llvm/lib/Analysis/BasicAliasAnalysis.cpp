@@ -265,35 +265,37 @@ void EarliestEscapeInfo::removeInstruction(Instruction *I) {
 
 namespace {
 /// Represents zext(sext(V)).
-struct ExtendedValue {
+struct CastedValue {
   const Value *V;
-  unsigned ZExtBits;
-  unsigned SExtBits;
+  unsigned ZExtBits = 0;
+  unsigned SExtBits = 0;
 
-  explicit ExtendedValue(const Value *V, unsigned ZExtBits = 0,
-                         unsigned SExtBits = 0)
+  explicit CastedValue(const Value *V) : V(V) {}
+  explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits)
       : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits) {}
 
   unsigned getBitWidth() const {
     return V->getType()->getPrimitiveSizeInBits() + ZExtBits + SExtBits;
   }
 
-  ExtendedValue withValue(const Value *NewV) const {
-    return ExtendedValue(NewV, ZExtBits, SExtBits);
+  CastedValue withValue(const Value *NewV) const {
+    return CastedValue(NewV, ZExtBits, SExtBits);
   }
 
-  ExtendedValue withZExtOfValue(const Value *NewV) const {
+  /// Replace V with zext(NewV)
+  CastedValue withZExtOfValue(const Value *NewV) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
-    return ExtendedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0);
+    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0);
   }
 
-  ExtendedValue withSExtOfValue(const Value *NewV) const {
+  /// Replace V with sext(NewV)
+  CastedValue withSExtOfValue(const Value *NewV) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     // zext(sext(sext(NewV)))
-    return ExtendedValue(NewV, ZExtBits, SExtBits + ExtendBy);
+    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy);
   }
 
   APInt evaluateWith(APInt N) const {
@@ -326,25 +328,25 @@ struct ExtendedValue {
     return (!ZExtBits || NUW) && (!SExtBits || NSW);
   }
 
-  bool hasSameExtensionsAs(const ExtendedValue &Other) const {
+  bool hasSameCastsAs(const CastedValue &Other) const {
     return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits;
   }
 };
 
 /// Represents zext(sext(V)) * Scale + Offset.
 struct LinearExpression {
-  ExtendedValue Val;
+  CastedValue Val;
   APInt Scale;
   APInt Offset;
 
   /// True if all operations in this expression are NSW.
   bool IsNSW;
 
-  LinearExpression(const ExtendedValue &Val, const APInt &Scale,
+  LinearExpression(const CastedValue &Val, const APInt &Scale,
                    const APInt &Offset, bool IsNSW)
       : Val(Val), Scale(Scale), Offset(Offset), IsNSW(IsNSW) {}
 
-  LinearExpression(const ExtendedValue &Val) : Val(Val), IsNSW(true) {
+  LinearExpression(const CastedValue &Val) : Val(Val), IsNSW(true) {
     unsigned BitWidth = Val.getBitWidth();
     Scale = APInt(BitWidth, 1);
     Offset = APInt(BitWidth, 0);
@@ -355,7 +357,7 @@ struct LinearExpression {
 /// Analyzes the specified value as a linear expression: "A*V + B", where A and
 /// B are constant integers.
 static LinearExpression GetLinearExpression(
-    const ExtendedValue &Val,  const DataLayout &DL, unsigned Depth,
+    const CastedValue &Val,  const DataLayout &DL, unsigned Depth,
     AssumptionCache *AC, DominatorTree *DT) {
   // Limit our recursion depth.
   if (Depth == 6)
@@ -462,7 +464,7 @@ namespace {
 // A linear transformation of a Value; this class represents
 // ZExt(SExt(V, SExtBits), ZExtBits) * Scale.
 struct VariableGEPIndex {
-  ExtendedValue Val;
+  CastedValue Val;
   APInt Scale;
 
   // Context instruction to use when querying information about this index.
@@ -637,7 +639,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = PointerSize > Width ? PointerSize - Width : 0;
       LinearExpression LE = GetLinearExpression(
-          ExtendedValue(Index, 0, SExtBits), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits), DL, 0, AC, DT);
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
@@ -653,7 +655,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       APInt ScaledOffset = LE.Offset.sextOrTrunc(MaxPointerSize)
                            .smul_ov(Scale, Overflow);
       if (Overflow) {
-        LE = LinearExpression(ExtendedValue(Index, 0, SExtBits));
+        LE = LinearExpression(CastedValue(Index, 0, SExtBits));
       } else {
         Decomposed.Offset += ScaledOffset;
         Scale *= LE.Scale.sextOrTrunc(MaxPointerSize);
@@ -665,7 +667,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       // This also ensures that 'x' only appears in the index list once.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
         if (Decomposed.VarIndices[i].Val.V == LE.Val.V &&
-            Decomposed.VarIndices[i].Val.hasSameExtensionsAs(LE.Val)) {
+            Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
@@ -1309,7 +1311,7 @@ AliasResult BasicAAResult::aliasGEP(
         const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
         const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
         if (Var0.Scale == -Var1.Scale &&
-            Var0.Val.hasSameExtensionsAs(Var1.Val) && VisitedPhiBBs.empty() &&
+            Var0.Val.hasSameCastsAs(Var1.Val) && VisitedPhiBBs.empty() &&
             isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
                             DT))
           MinAbsVarIndex = Var0.Scale.abs();
@@ -1798,7 +1800,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
     for (auto I : enumerate(DestGEP.VarIndices)) {
       VariableGEPIndex &Dest = I.value();
       if (!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V) ||
-          !Dest.Val.hasSameExtensionsAs(Src.Val))
+          !Dest.Val.hasSameCastsAs(Src.Val))
         continue;
 
       // If we found it, subtract off Scale V's from the entry in Dest.  If it
@@ -1833,7 +1835,7 @@ bool BasicAAResult::constantOffsetHeuristic(
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (!Var0.Val.hasSameExtensionsAs(Var1.Val) || Var0.Scale != -Var1.Scale ||
+  if (!Var0.Val.hasSameCastsAs(Var1.Val) || Var0.Scale != -Var1.Scale ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
@@ -1842,10 +1844,10 @@ bool BasicAAResult::constantOffsetHeuristic(
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
 
   LinearExpression E0 =
-      GetLinearExpression(ExtendedValue(Var0.Val.V), DL, 0, AC, DT);
+      GetLinearExpression(CastedValue(Var0.Val.V), DL, 0, AC, DT);
   LinearExpression E1 =
-      GetLinearExpression(ExtendedValue(Var1.Val.V), DL, 0, AC, DT);
-  if (E0.Scale != E1.Scale || !E0.Val.hasSameExtensionsAs(E1.Val) ||
+      GetLinearExpression(CastedValue(Var1.Val.V), DL, 0, AC, DT);
+  if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
       !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V))
     return false;
 
