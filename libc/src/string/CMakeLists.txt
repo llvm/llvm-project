@@ -57,6 +57,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  stpcpy
+  SRCS
+    stpcpy.cpp
+  HDRS
+    stpcpy.h
+  DEPENDS
+    .mempcpy
+    .string_utils
+)
+
+add_entrypoint_object(
+  stpncpy
+  SRCS
+    stpncpy.cpp
+  HDRS
+    stpncpy.h
+  DEPENDS
+    .bzero
+)
+
+add_entrypoint_object(
   strcat
   SRCS
     strcat.cpp
