@@ -51,3 +51,9 @@ void test_if_2() { "foo"if; } // expected-error {{no matching literal operator f
 template<typename T> void dependent_member_template() {
   T().template operator""_foo<int>(); // expected-error {{'operator""_foo' following the 'template' keyword cannot refer to a dependent template}}
 }
+
+namespace PR51142 {
+// This code previously crashed due to a null template parameter declaration.
+template<typename T> // expected-error {{template parameter list for literal operator must be either 'char...' or 'typename T, T...'}}
+constexpr auto operator ""_l();
+}
