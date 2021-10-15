@@ -101,6 +101,9 @@ public:
   // None. Otherwise, returns the contents of that code block.
   Optional<StringRef> getParserCode() const;
 
+  // Returns the custom assembly format, if one was specified.
+  Optional<StringRef> getAssemblyFormat() const;
+
   // Returns true if the accessors based on the parameters should be generated.
   bool genAccessors() const;
 
@@ -198,6 +201,15 @@ public:
 
   // Get the C++ accessor type of this parameter.
   StringRef getCppAccessorType() const;
+
+  // Get the C++ storage type of this parameter.
+  StringRef getCppStorageType() const;
+
+  // Get an optional C++ parameter parser.
+  Optional<StringRef> getParser() const;
+
+  // Get an optional C++ parameter printer.
+  Optional<StringRef> getPrinter() const;
 
   // Get a description of this parameter for documentation purposes.
   Optional<StringRef> getSummary() const;

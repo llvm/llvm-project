@@ -132,6 +132,10 @@ Optional<StringRef> AttrOrTypeDef::getParserCode() const {
   return def->getValueAsOptionalString("parser");
 }
 
+Optional<StringRef> AttrOrTypeDef::getAssemblyFormat() const {
+  return def->getValueAsOptionalString("assemblyFormat");
+}
+
 bool AttrOrTypeDef::genAccessors() const {
   return def->getValueAsBit("genAccessors");
 }
@@ -217,6 +221,32 @@ StringRef AttrOrTypeParameter::getCppAccessorType() const {
       return *type;
   }
   return getCppType();
+}
+
+StringRef AttrOrTypeParameter::getCppStorageType() const {
+  if (auto *param = dyn_cast<llvm::DefInit>(def->getArg(index))) {
+    if (auto type = param->getDef()->getValueAsOptionalString("cppStorageType"))
+      return *type;
+  }
+  return getCppType();
+}
+
+Optional<StringRef> AttrOrTypeParameter::getParser() const {
+  auto *parameterType = def->getArg(index);
+  if (auto *param = dyn_cast<llvm::DefInit>(parameterType)) {
+    if (auto parser = param->getDef()->getValueAsOptionalString("parser"))
+      return *parser;
+  }
+  return {};
+}
+
+Optional<StringRef> AttrOrTypeParameter::getPrinter() const {
+  auto *parameterType = def->getArg(index);
+  if (auto *param = dyn_cast<llvm::DefInit>(parameterType)) {
+    if (auto printer = param->getDef()->getValueAsOptionalString("printer"))
+      return *printer;
+  }
+  return {};
 }
 
 Optional<StringRef> AttrOrTypeParameter::getSummary() const {
