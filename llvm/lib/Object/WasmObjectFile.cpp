@@ -391,6 +391,14 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       }
       break;
     }
+    case wasm::WASM_DYLINK_IMPORT_INFO: {
+      uint32_t Count = readVaruint32(Ctx);
+      while (Count--) {
+        DylinkInfo.ImportInfo.push_back(
+            {readString(Ctx), readString(Ctx), readVaruint32(Ctx)});
+      }
+      break;
+    }
     default:
       LLVM_DEBUG(dbgs() << "unknown dylink.0 sub-section: " << Type << "\n");
       Ctx.Ptr += Size;
