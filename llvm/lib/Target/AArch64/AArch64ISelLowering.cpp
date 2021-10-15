@@ -9515,8 +9515,11 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
   } else if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
     // The lane is incremented by the index of the extract.
     // Example: dup v2f32 (extract v4f32 X, 2), 1 --> dup v4f32 X, 3
-    Lane += V.getConstantOperandVal(1);
-    V = V.getOperand(0);
+    auto VecVT = V.getOperand(0).getValueType();
+    if (VecVT.isFixedLengthVector() && VecVT.getFixedSizeInBits() <= 128) {
+      Lane += V.getConstantOperandVal(1);
+      V = V.getOperand(0);
+    }
   } else if (V.getOpcode() == ISD::CONCAT_VECTORS) {
     // The lane is decremented if we are splatting from the 2nd operand.
     // Example: dup v4i32 (concat v2i32 X, v2i32 Y), 3 --> dup v4i32 Y, 1
