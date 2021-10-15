@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -triple x86_64-windows-msvc -gcodeview -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 
 // FIXME: llvm.org/pr51221, the APSInt leaks
 // UNSUPPORTED: asan
