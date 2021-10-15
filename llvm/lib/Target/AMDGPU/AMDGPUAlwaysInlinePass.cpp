@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -90,9 +91,13 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
 
   SmallPtrSet<Function *, 8> FuncsToAlwaysInline;
   SmallPtrSet<Function *, 8> FuncsToNoInline;
+  Triple TT(M.getTargetTriple());
 
   for (GlobalAlias &A : M.aliases()) {
     if (Function* F = dyn_cast<Function>(A.getAliasee())) {
+      if (TT.getArch() == Triple::amdgcn &&
+          A.getLinkage() != GlobalValue::InternalLinkage)
+        continue;
       A.replaceAllUsesWith(F);
       AliasesToRemove.push_back(&A);
     }
