@@ -1941,8 +1941,8 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
 void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
-    OS << "TARGET_HEADER_BUILTIN(__builtin_arm_mve_" << Int.fullName()
-       << ", \"\", \"n\", \"arm_mve.h\", ALL_LANGUAGES, \"\")\n";
+    OS << "BUILTIN(__builtin_arm_mve_" << Int.fullName()
+       << ", \"\", \"n\")\n";
   }
 
   std::set<std::string> ShortNamesSeen;
@@ -2151,8 +2151,8 @@ void CdeEmitter::EmitBuiltinDef(raw_ostream &OS) {
     if (kv.second->headerOnly())
       continue;
     const ACLEIntrinsic &Int = *kv.second;
-    OS << "TARGET_HEADER_BUILTIN(__builtin_arm_cde_" << Int.fullName()
-       << ", \"\", \"ncU\", \"arm_cde.h\", ALL_LANGUAGES, \"\")\n";
+    OS << "BUILTIN(__builtin_arm_cde_" << Int.fullName()
+       << ", \"\", \"ncU\")\n";
   }
 }
 
