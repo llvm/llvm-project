@@ -28,4 +28,4 @@ void test2() {
 }
 void test2_helper(int x, int y) {
 }
-// CHECK: invoke void @test2_helper(i32 5, i32 6)
+// CHECK: invoke void @test2_helper(i32 noundef 5, i32 noundef 6)

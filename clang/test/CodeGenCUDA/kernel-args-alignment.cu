@@ -36,5 +36,5 @@ static_assert(alignof(S) == 8, "Unexpected alignment.");
 // HOST-OLD: call i32 @cudaSetupArgument({{[^,]*}}, i64 8, i64 24)
 
 // DEVICE-LABEL: @_Z6kernelc1SPi
-// DEVICE-SAME: i8{{[^,]*}}, %struct.S* byval(%struct.S) align 8{{[^,]*}}, i32*
+// DEVICE-SAME: i8{{[^,]*}}, %struct.S* noundef byval(%struct.S) align 8{{[^,]*}}, i32*
 __global__ void kernel(char a, S s, int *b) {}

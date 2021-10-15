@@ -162,7 +162,7 @@ struct v7 func_v7(struct v7 x) { return x; }
 // CHECK: define{{.*}} [8 x <4 x i32>] @func_v8([8 x <4 x i32>] %x.coerce)
 struct v8 func_v8(struct v8 x) { return x; }
 
-// CHECK: define{{.*}} void @func_v9(%struct.v9* noalias sret(%struct.v9) align 16 %agg.result, %struct.v9* byval(%struct.v9) align 16 %x)
+// CHECK: define{{.*}} void @func_v9(%struct.v9* noalias sret(%struct.v9) align 16 %agg.result, %struct.v9* noundef byval(%struct.v9) align 16 %x)
 struct v9 func_v9(struct v9 x) { return x; }
 
 // CHECK: define{{.*}} [2 x <4 x i32>] @func_vab([2 x <4 x i32>] %x.coerce)
@@ -220,7 +220,7 @@ struct v8 global_v8;
 void call_v8(void) { global_v8 = func_v8(global_v8); }
 
 // CHECK-LABEL: @call_v9
-// CHECK: call void @func_v9(%struct.v9* sret(%struct.v9) align 16 %{{[^ ]+}}, %struct.v9* byval(%struct.v9) align 16 @global_v9)
+// CHECK: call void @func_v9(%struct.v9* sret(%struct.v9) align 16 %{{[^ ]+}}, %struct.v9* noundef byval(%struct.v9) align 16 @global_v9)
 struct v9 global_v9;
 void call_v9(void) { global_v9 = func_v9(global_v9); }
 
@@ -279,7 +279,7 @@ struct v3f7 func_v3f7(struct v3f7 x) { return x; }
 // CHECK: define{{.*}} [8 x <4 x float>] @func_v3f8([8 x <4 x float>] %x.coerce)
 struct v3f8 func_v3f8(struct v3f8 x) { return x; }
 
-// CHECK: define{{.*}} void @func_v3f9(%struct.v3f9* noalias sret(%struct.v3f9) align 16 %agg.result, %struct.v3f9* byval(%struct.v3f9) align 16 %x)
+// CHECK: define{{.*}} void @func_v3f9(%struct.v3f9* noalias sret(%struct.v3f9) align 16 %agg.result, %struct.v3f9* noundef byval(%struct.v3f9) align 16 %x)
 struct v3f9 func_v3f9(struct v3f9 x) { return x; }
 
 // CHECK: define{{.*}} [2 x <4 x float>] @func_v3fab([2 x <4 x float>] %x.coerce)
@@ -337,7 +337,7 @@ struct v3f8 global_v3f8;
 void call_v3f8(void) { global_v3f8 = func_v3f8(global_v3f8); }
 
 // CHECK-LABEL: @call_v3f9
-// CHECK: call void @func_v3f9(%struct.v3f9* sret(%struct.v3f9) align 16 %{{[^ ]+}}, %struct.v3f9* byval(%struct.v3f9) align 16 @global_v3f9)
+// CHECK: call void @func_v3f9(%struct.v3f9* sret(%struct.v3f9) align 16 %{{[^ ]+}}, %struct.v3f9* noundef byval(%struct.v3f9) align 16 @global_v3f9)
 struct v3f9 global_v3f9;
 void call_v3f9(void) { global_v3f9 = func_v3f9(global_v3f9); }
 

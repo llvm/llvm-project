@@ -145,7 +145,7 @@ int fint(void) { return ftemplate<int>(); }
 #endif
 
 // CHECK1-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -209,7 +209,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -224,7 +224,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -327,7 +327,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -391,7 +391,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -406,7 +406,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -507,7 +507,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -571,7 +571,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -586,7 +586,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -768,7 +768,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK1-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -781,7 +781,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -897,7 +897,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK1-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK1-SAME: () #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -937,7 +937,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK1-SAME: (i64 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -947,7 +947,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1043,7 +1043,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1107,7 +1107,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1122,7 +1122,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1225,7 +1225,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1289,7 +1289,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1304,7 +1304,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1405,7 +1405,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1469,7 +1469,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1484,7 +1484,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1666,7 +1666,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK2-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -1679,7 +1679,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1795,7 +1795,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK2-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK2-SAME: () #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK2-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -1835,7 +1835,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK2-SAME: (i64 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -1845,7 +1845,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1941,7 +1941,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2005,7 +2005,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2020,7 +2020,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2119,7 +2119,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2183,7 +2183,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2198,7 +2198,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2295,7 +2295,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2359,7 +2359,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2374,7 +2374,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2552,7 +2552,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK3-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2565,7 +2565,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2681,7 +2681,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK3-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK3-SAME: () #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK3-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -2721,7 +2721,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK3-SAME: (i32 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -2731,7 +2731,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2827,7 +2827,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2891,7 +2891,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -2906,7 +2906,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3005,7 +3005,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -3069,7 +3069,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -3084,7 +3084,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3181,7 +3181,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -3245,7 +3245,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -3260,7 +3260,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3438,7 +3438,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK4-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3451,7 +3451,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3567,7 +3567,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK4-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK4-SAME: () #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK4-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -3607,7 +3607,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK4-SAME: (i32 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -3617,7 +3617,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3713,7 +3713,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3777,7 +3777,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3792,7 +3792,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3895,7 +3895,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3959,7 +3959,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3974,7 +3974,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4075,7 +4075,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4139,7 +4139,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4154,7 +4154,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4336,7 +4336,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK5-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -4349,7 +4349,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4496,7 +4496,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK5-SAME: () #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK5-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK5-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -4536,7 +4536,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK5-SAME: (i64 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -4546,7 +4546,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4642,7 +4642,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4706,7 +4706,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4721,7 +4721,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4824,7 +4824,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4888,7 +4888,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -4903,7 +4903,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5004,7 +5004,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -5068,7 +5068,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -5083,7 +5083,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5265,7 +5265,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK6-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -5278,7 +5278,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5425,7 +5425,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK6-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK6-SAME: () #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
-// CHECK6-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK6-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK6-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -5465,7 +5465,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK6-SAME: (i64 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -5475,7 +5475,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5571,7 +5571,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -5635,7 +5635,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -5650,7 +5650,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5749,7 +5749,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -5813,7 +5813,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -5828,7 +5828,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5925,7 +5925,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -5989,7 +5989,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK7-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK7-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6004,7 +6004,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6182,7 +6182,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK7-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6195,7 +6195,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6342,7 +6342,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK7-SAME: () #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
-// CHECK7-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK7-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK7-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -6382,7 +6382,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK7-SAME: (i32 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -6392,7 +6392,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6488,7 +6488,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6552,7 +6552,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6567,7 +6567,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6666,7 +6666,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6730,7 +6730,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6745,7 +6745,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6842,7 +6842,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6906,7 +6906,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK8-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK8-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -6921,7 +6921,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -7099,7 +7099,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK8-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7112,7 +7112,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -7259,7 +7259,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK8-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK8-SAME: () #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK8-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK8-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -7299,7 +7299,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK8-SAME: (i32 [[AA:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -7309,7 +7309,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -7405,7 +7405,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK9-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK9-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK9-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -7473,7 +7473,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK9-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK9-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -7539,7 +7539,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK9-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK9-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -7687,7 +7687,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK9-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK9-SAME: () #[[ATTR0]] {
 // CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK9-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK9-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -7730,7 +7730,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK10-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK10-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK10-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -7798,7 +7798,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK10-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK10-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -7864,7 +7864,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK10-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK10-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -8012,7 +8012,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK10-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK10-SAME: () #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
-// CHECK10-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK10-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK10-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -8055,7 +8055,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK11-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK11-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK11-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8119,7 +8119,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK11-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK11-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8181,7 +8181,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK11-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK11-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8325,7 +8325,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK11-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK11-SAME: () #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
-// CHECK11-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK11-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK11-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -8368,7 +8368,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK12-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK12-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK12-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8432,7 +8432,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK12-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK12-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8494,7 +8494,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK12-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK12-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -8638,7 +8638,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK12-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK12-SAME: () #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
-// CHECK12-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK12-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK12-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -8681,7 +8681,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK13-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK13-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK13-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -8749,7 +8749,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK13-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK13-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -8815,7 +8815,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK13-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK13-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -8994,7 +8994,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK13-SAME: () #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
-// CHECK13-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK13-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK13-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -9037,7 +9037,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK14-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK14-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK14-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK14-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -9105,7 +9105,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK14-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK14-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK14-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK14-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -9171,7 +9171,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK14-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK14-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK14-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK14-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -9350,7 +9350,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK14-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK14-SAME: () #[[ATTR0]] {
 // CHECK14-NEXT:  entry:
-// CHECK14-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK14-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK14-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -9393,7 +9393,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK15-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK15-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK15-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -9457,7 +9457,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK15-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK15-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK15-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -9519,7 +9519,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK15-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK15-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK15-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -9694,7 +9694,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK15-SAME: () #[[ATTR0]] {
 // CHECK15-NEXT:  entry:
-// CHECK15-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK15-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK15-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -9737,7 +9737,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK16-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK16-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK16-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK16-NEXT:  entry:
 // CHECK16-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK16-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -9801,7 +9801,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK16-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK16-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK16-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK16-NEXT:  entry:
 // CHECK16-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK16-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -9863,7 +9863,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK16-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK16-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK16-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK16-NEXT:  entry:
 // CHECK16-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK16-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -10038,7 +10038,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK16-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK16-SAME: () #[[ATTR0]] {
 // CHECK16-NEXT:  entry:
-// CHECK16-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK16-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK16-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -10081,7 +10081,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK17-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK17-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10096,7 +10096,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10199,7 +10199,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK17-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10214,7 +10214,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10315,7 +10315,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK17-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10330,7 +10330,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10448,7 +10448,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK17-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -10461,7 +10461,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10575,7 +10575,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK17-SAME: (i64 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -10585,7 +10585,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10674,7 +10674,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK18-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK18-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK18-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10689,7 +10689,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10792,7 +10792,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK18-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK18-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10807,7 +10807,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -10908,7 +10908,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK18-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK18-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -10923,7 +10923,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -11041,7 +11041,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK18-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK18-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -11054,7 +11054,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -11168,7 +11168,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK18-SAME: (i64 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK18-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -11178,7 +11178,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -11267,7 +11267,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK19-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK19-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -11282,7 +11282,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK19-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11381,7 +11381,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK19-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -11396,7 +11396,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK19-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11493,7 +11493,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK19-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -11508,7 +11508,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK19-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11622,7 +11622,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK19-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -11635,7 +11635,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK19-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11749,7 +11749,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK19-SAME: (i32 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -11759,7 +11759,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK19-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11848,7 +11848,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK20-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK20-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK20-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -11863,7 +11863,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK20-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK20-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11962,7 +11962,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK20-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK20-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -11977,7 +11977,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK20-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK20-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12074,7 +12074,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK20-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK20-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -12089,7 +12089,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK20-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK20-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12203,7 +12203,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK20-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK20-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -12216,7 +12216,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK20-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK20-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12330,7 +12330,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK20-SAME: (i32 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK20-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -12340,7 +12340,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK20-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK20-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK20-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK20-NEXT:  entry:
 // CHECK20-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK20-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12429,7 +12429,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK21-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK21-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -12444,7 +12444,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -12547,7 +12547,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK21-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -12562,7 +12562,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -12663,7 +12663,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK21-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -12678,7 +12678,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -12796,7 +12796,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK21-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -12809,7 +12809,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -12954,7 +12954,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK21-SAME: (i64 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK21-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -12964,7 +12964,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13053,7 +13053,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK22-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK22-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK22-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -13068,7 +13068,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13171,7 +13171,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK22-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK22-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -13186,7 +13186,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13287,7 +13287,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK22-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK22-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -13302,7 +13302,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 8 dereferenceable(8) [[A:%.*]], float** nonnull align 8 dereferenceable(8) [[B:%.*]], float** nonnull align 8 dereferenceable(8) [[C:%.*]], float** nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[A:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[C:%.*]], float** noundef nonnull align 8 dereferenceable(8) [[D:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13420,7 +13420,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK22-SAME: (i64 [[I:%.*]], i64 [[A:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK22-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -13433,7 +13433,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13578,7 +13578,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK22-SAME: (i64 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK22-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -13588,7 +13588,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -13677,7 +13677,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK23-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK23-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -13692,7 +13692,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK23-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK23-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13791,7 +13791,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK23-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -13806,7 +13806,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK23-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK23-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13903,7 +13903,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK23-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -13918,7 +13918,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK23-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK23-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14032,7 +14032,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK23-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -14045,7 +14045,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK23-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK23-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14190,7 +14190,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK23-SAME: (i32 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK23-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -14200,7 +14200,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK23-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
 // CHECK23-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK23-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14289,7 +14289,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK24-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK24-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK24-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -14304,7 +14304,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK24-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK24-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14403,7 +14403,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK24-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK24-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -14418,7 +14418,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK24-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK24-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14515,7 +14515,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK24-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK24-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -14530,7 +14530,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK24-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], float** nonnull align 4 dereferenceable(4) [[A:%.*]], float** nonnull align 4 dereferenceable(4) [[B:%.*]], float** nonnull align 4 dereferenceable(4) [[C:%.*]], float** nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[A:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[B:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[C:%.*]], float** noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK24-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14644,7 +14644,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK24-SAME: (i32 [[I:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK24-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -14657,7 +14657,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK24-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i8* nonnull align 1 dereferenceable(1) [[I:%.*]], i8* nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[I:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK24-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14802,7 +14802,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK24-SAME: (i32 [[AA:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK24-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -14812,7 +14812,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK24-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK24-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i16* nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
+// CHECK24-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[AA:%.*]]) #[[ATTR0]] {
 // CHECK24-NEXT:  entry:
 // CHECK24-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK24-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14901,7 +14901,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK25-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK25-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK25-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -14969,7 +14969,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK25-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK25-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK25-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -15035,7 +15035,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK25-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK25-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK25-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -15183,7 +15183,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK25-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK25-SAME: () #[[ATTR0]] {
 // CHECK25-NEXT:  entry:
-// CHECK25-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK25-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK25-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -15226,7 +15226,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK26-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK26-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK26-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK26-NEXT:  entry:
 // CHECK26-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK26-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -15294,7 +15294,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK26-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK26-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK26-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK26-NEXT:  entry:
 // CHECK26-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK26-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -15360,7 +15360,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK26-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK26-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK26-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK26-NEXT:  entry:
 // CHECK26-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK26-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -15508,7 +15508,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK26-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK26-SAME: () #[[ATTR0]] {
 // CHECK26-NEXT:  entry:
-// CHECK26-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK26-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK26-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -15551,7 +15551,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK27-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK27-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK27-NEXT:  entry:
 // CHECK27-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK27-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -15615,7 +15615,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK27-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK27-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK27-NEXT:  entry:
 // CHECK27-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK27-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -15677,7 +15677,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK27-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK27-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK27-NEXT:  entry:
 // CHECK27-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK27-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -15821,7 +15821,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK27-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK27-SAME: () #[[ATTR0]] {
 // CHECK27-NEXT:  entry:
-// CHECK27-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK27-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK27-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -15864,7 +15864,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK28-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK28-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK28-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK28-NEXT:  entry:
 // CHECK28-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK28-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -15928,7 +15928,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK28-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK28-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK28-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK28-NEXT:  entry:
 // CHECK28-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK28-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -15990,7 +15990,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK28-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK28-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK28-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK28-NEXT:  entry:
 // CHECK28-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK28-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -16134,7 +16134,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK28-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK28-SAME: () #[[ATTR0]] {
 // CHECK28-NEXT:  entry:
-// CHECK28-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK28-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK28-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -16177,7 +16177,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK29-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK29-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK29-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16245,7 +16245,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK29-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK29-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK29-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16311,7 +16311,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK29-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK29-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK29-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16490,7 +16490,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK29-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK29-SAME: () #[[ATTR0]] {
 // CHECK29-NEXT:  entry:
-// CHECK29-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK29-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK29-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -16533,7 +16533,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK30-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK30-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK30-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK30-NEXT:  entry:
 // CHECK30-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK30-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16601,7 +16601,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK30-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK30-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK30-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK30-NEXT:  entry:
 // CHECK30-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK30-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16667,7 +16667,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK30-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK30-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK30-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK30-NEXT:  entry:
 // CHECK30-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK30-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -16846,7 +16846,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK30-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK30-SAME: () #[[ATTR0]] {
 // CHECK30-NEXT:  entry:
-// CHECK30-NEXT:    [[CALL:%.*]] = call signext i32 @_Z9ftemplateIiET_v()
+// CHECK30-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z9ftemplateIiET_v()
 // CHECK30-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -16889,7 +16889,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK31-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK31-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK31-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK31-NEXT:  entry:
 // CHECK31-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK31-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -16953,7 +16953,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK31-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK31-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK31-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK31-NEXT:  entry:
 // CHECK31-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK31-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -17015,7 +17015,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK31-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK31-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK31-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK31-NEXT:  entry:
 // CHECK31-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK31-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -17190,7 +17190,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK31-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK31-SAME: () #[[ATTR0]] {
 // CHECK31-NEXT:  entry:
-// CHECK31-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK31-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK31-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -17233,7 +17233,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK32-LABEL: define {{[^@]+}}@_Z23without_schedule_clausePfS_S_S_
-// CHECK32-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK32-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK32-NEXT:  entry:
 // CHECK32-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK32-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -17297,7 +17297,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK32-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK32-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK32-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK32-NEXT:  entry:
 // CHECK32-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK32-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -17359,7 +17359,7 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK32-LABEL: define {{[^@]+}}@_Z14static_chunkedPfS_S_S_
-// CHECK32-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK32-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK32-NEXT:  entry:
 // CHECK32-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 4
 // CHECK32-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 4
@@ -17534,7 +17534,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK32-LABEL: define {{[^@]+}}@_Z4fintv
 // CHECK32-SAME: () #[[ATTR0]] {
 // CHECK32-NEXT:  entry:
-// CHECK32-NEXT:    [[CALL:%.*]] = call i32 @_Z9ftemplateIiET_v()
+// CHECK32-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z9ftemplateIiET_v()
 // CHECK32-NEXT:    ret i32 [[CALL]]
 //
 //

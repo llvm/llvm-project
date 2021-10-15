@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 char *var_var(char *base, unsigned long offset) {
-  // CHECK: define{{.*}} i8* @var_var(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK: define{{.*}} i8* @var_var(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -76,7 +76,7 @@ char *var_var(char *base, unsigned long offset) {
 }
 
 char *var_zero(char *base) {
-  // CHECK:                             define{{.*}} i8* @var_zero(i8* %[[BASE:.*]])
+  // CHECK:                             define{{.*}} i8* @var_zero(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                        [[ENTRY:.*]]:
   // CHECK-NEXT:                          %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                          store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -103,7 +103,7 @@ char *var_zero(char *base) {
 }
 
 char *var_one(char *base) {
-  // CHECK:                           define{{.*}} i8* @var_one(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @var_one(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -131,7 +131,7 @@ char *var_one(char *base) {
 }
 
 char *var_allones(char *base) {
-  // CHECK:                           define{{.*}} i8* @var_allones(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @var_allones(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -161,7 +161,7 @@ char *var_allones(char *base) {
 //------------------------------------------------------------------------------
 
 char *nullptr_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @nullptr_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @nullptr_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8
@@ -247,7 +247,7 @@ char *nullptr_allones_BAD() {
 //------------------------------------------------------------------------------
 
 char *one_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @one_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @one_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8
@@ -333,7 +333,7 @@ char *one_allones_BAD() {
 //------------------------------------------------------------------------------
 
 char *allones_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @allones_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @allones_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8

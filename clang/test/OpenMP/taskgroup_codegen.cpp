@@ -86,7 +86,7 @@ void parallel_taskgroup() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -174,7 +174,7 @@ void parallel_taskgroup() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -206,14 +206,14 @@ void parallel_taskgroup() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_Z3foov
-// DEBUG1-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
+// DEBUG1-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void @_Z8mayThrowv(), !dbg [[DBG9:![0-9]+]]
-// DEBUG1-NEXT:    ret void, !dbg [[DBG10:![0-9]+]]
+// DEBUG1-NEXT:    call void @_Z8mayThrowv(), !dbg [[DBG10:![0-9]+]]
+// DEBUG1-NEXT:    ret void, !dbg [[DBG11:![0-9]+]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@main
-// DEBUG1-SAME: () #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG11:![0-9]+]] {
+// DEBUG1-SAME: () #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG12:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // DEBUG1-NEXT:    [[A:%.*]] = alloca i8, align 1
@@ -221,30 +221,30 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // DEBUG1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]]), !dbg [[DBG12:![0-9]+]]
-// DEBUG1-NEXT:    store i8 2, i8* [[A]], align 1, !dbg [[DBG13:![0-9]+]]
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]]), !dbg [[DBG14:![0-9]+]]
-// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[TMP0]]), !dbg [[DBG15:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]]), !dbg [[DBG13:![0-9]+]]
+// DEBUG1-NEXT:    store i8 2, i8* [[A]], align 1, !dbg [[DBG14:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]]), !dbg [[DBG15:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[TMP0]]), !dbg [[DBG16:![0-9]+]]
 // DEBUG1-NEXT:    invoke void @_Z3foov()
-// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG16:![0-9]+]]
+// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG17:![0-9]+]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG16]]
-// DEBUG1-NEXT:    [[TMP1:%.*]] = load i8, i8* [[A]], align 1, !dbg [[DBG17:![0-9]+]]
-// DEBUG1-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32, !dbg [[DBG17]]
-// DEBUG1-NEXT:    ret i32 [[CONV]], !dbg [[DBG18:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG17]]
+// DEBUG1-NEXT:    [[TMP1:%.*]] = load i8, i8* [[A]], align 1, !dbg [[DBG18:![0-9]+]]
+// DEBUG1-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32, !dbg [[DBG18]]
+// DEBUG1-NEXT:    ret i32 [[CONV]], !dbg [[DBG19:![0-9]+]]
 // DEBUG1:       lpad:
 // DEBUG1-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32 }
-// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG19:![0-9]+]]
-// DEBUG1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0, !dbg [[DBG19]]
-// DEBUG1-NEXT:    store i8* [[TMP3]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG19]]
-// DEBUG1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 1, !dbg [[DBG19]]
-// DEBUG1-NEXT:    store i32 [[TMP4]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG19]]
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG16]]
-// DEBUG1-NEXT:    br label [[TERMINATE_HANDLER:%.*]], !dbg [[DBG16]]
+// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG20:![0-9]+]]
+// DEBUG1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0, !dbg [[DBG20]]
+// DEBUG1-NEXT:    store i8* [[TMP3]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG20]]
+// DEBUG1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 1, !dbg [[DBG20]]
+// DEBUG1-NEXT:    store i32 [[TMP4]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG20]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG17]]
+// DEBUG1-NEXT:    br label [[TERMINATE_HANDLER:%.*]], !dbg [[DBG17]]
 // DEBUG1:       terminate.handler:
-// DEBUG1-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG16]]
-// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR8:[0-9]+]], !dbg [[DBG16]]
-// DEBUG1-NEXT:    unreachable, !dbg [[DBG16]]
+// DEBUG1-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG17]]
+// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR8:[0-9]+]], !dbg [[DBG17]]
+// DEBUG1-NEXT:    unreachable, !dbg [[DBG17]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@__clang_call_terminate
@@ -255,14 +255,14 @@ void parallel_taskgroup() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv
-// DEBUG1-SAME: () #[[ATTR6:[0-9]+]] !dbg [[DBG20:![0-9]+]] {
+// DEBUG1-SAME: () #[[ATTR6:[0-9]+]] !dbg [[DBG21:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB7:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg [[DBG21:![0-9]+]]
-// DEBUG1-NEXT:    ret void, !dbg [[DBG22:![0-9]+]]
+// DEBUG1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB7:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg [[DBG22:![0-9]+]]
+// DEBUG1-NEXT:    ret void, !dbg [[DBG23:![0-9]+]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@.omp_outlined.
-// DEBUG1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG23:![0-9]+]] {
+// DEBUG1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG24:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // DEBUG1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -270,25 +270,25 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // DEBUG1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // DEBUG1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// DEBUG1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG24:![0-9]+]]
-// DEBUG1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4, !dbg [[DBG24]]
-// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB5:[0-9]+]], i32 [[TMP1]]), !dbg [[DBG24]]
+// DEBUG1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG25:![0-9]+]]
+// DEBUG1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4, !dbg [[DBG25]]
+// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB5:[0-9]+]], i32 [[TMP1]]), !dbg [[DBG25]]
 // DEBUG1-NEXT:    invoke void @_Z3foov()
-// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG25:![0-9]+]]
+// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG26:![0-9]+]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG25]]
-// DEBUG1-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG26]]
+// DEBUG1-NEXT:    ret void, !dbg [[DBG27:![0-9]+]]
 // DEBUG1:       lpad:
 // DEBUG1-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32 }
-// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG27:![0-9]+]]
-// DEBUG1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0, !dbg [[DBG27]]
-// DEBUG1-NEXT:    store i8* [[TMP3]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG27]]
-// DEBUG1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 1, !dbg [[DBG27]]
-// DEBUG1-NEXT:    store i32 [[TMP4]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG27]]
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG25]]
-// DEBUG1-NEXT:    br label [[TERMINATE_HANDLER:%.*]], !dbg [[DBG25]]
+// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG28:![0-9]+]]
+// DEBUG1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0, !dbg [[DBG28]]
+// DEBUG1-NEXT:    store i8* [[TMP3]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG28]]
+// DEBUG1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 1, !dbg [[DBG28]]
+// DEBUG1-NEXT:    store i32 [[TMP4]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG28]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG26]]
+// DEBUG1-NEXT:    br label [[TERMINATE_HANDLER:%.*]], !dbg [[DBG26]]
 // DEBUG1:       terminate.handler:
-// DEBUG1-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG25]]
-// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR8]], !dbg [[DBG25]]
-// DEBUG1-NEXT:    unreachable, !dbg [[DBG25]]
+// DEBUG1-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG26]]
+// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR8]], !dbg [[DBG26]]
+// DEBUG1-NEXT:    unreachable, !dbg [[DBG26]]
 //

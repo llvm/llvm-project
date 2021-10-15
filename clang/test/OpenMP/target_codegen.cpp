@@ -392,8 +392,8 @@ int foo(int n) {
 
 // CHECK:       define internal void [[HVT0]]()
 
-// CHECK: define internal void [[HVT0_:@.+]](i[[SZ]]* {{%[^,]+}}, i[[SZ]] {{%[^,]+}})
-// CHECK: define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
+// CHECK: define internal void [[HVT0_:@.+]](i[[SZ]]* noundef {{%[^,]+}}, i[[SZ]] noundef {{%[^,]+}})
+// CHECK: define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias noundef %1)
 // CHECK-DAG: [[RET:%.+]] = call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 [[DEVICE:%.+]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SIZE:%.+]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i8** null, i32 0, i8* null, i32 0, i8* null)
 // CHECK-DAG: [[DEVICE]] = sext i32 [[DEV:%.+]] to i64
 // CHECK-DAG: [[DEV]] = load i32, i32* [[DEVADDR:%.+]], align
@@ -421,7 +421,7 @@ int foo(int n) {
 // CHECK-NEXT: br label %[[END]]
 // CHECK: [[END]]
 
-// CHECK:       define internal void [[HVT1]](i[[SZ]] %{{.+}})
+// CHECK:       define internal void [[HVT1]](i[[SZ]] noundef %{{.+}})
 // Create stack storage and store argument in there.
 // CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
@@ -429,7 +429,7 @@ int foo(int n) {
 // CHECK-64:    load i32, i32* [[AA_CADDR]], align
 // CHECK-32:    load i32, i32* [[AA_ADDR]], align
 
-// CHECK:       define internal void [[HVT2]](i[[SZ]] %{{.+}})
+// CHECK:       define internal void [[HVT2]](i[[SZ]] noundef %{{.+}})
 // Create stack storage and store argument in there.
 // CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
@@ -740,7 +740,7 @@ int bar(int n){
 
 // CHECK:       [[IFEND]]
 
-// OMP45: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] %{{.+}})
+// OMP45: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] noundef %{{.+}})
 
 // OMP45: define {{.*}}@{{.*}}zee{{.*}}
 
@@ -839,7 +839,7 @@ int bar(int n){
 // CHECK-DAG:   load i16, i16* [[REF_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 
-// OMP50: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] %{{.+}})
+// OMP50: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] noundef %{{.+}})
 
 // OMP50: define {{.*}}@{{.*}}zee{{.*}}
 

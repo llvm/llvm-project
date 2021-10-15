@@ -87,7 +87,7 @@ void f15_1() {
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 134215708
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, 941621216
 // CHECK: %[[R1:.*]] = insertvalue [2 x i32] %[[R0]], i32 %cmse.clear1, 1
-// CHECK: call {{.*}} void %[[FN]](i32 0, i32 1, i32 2, [2 x i32] %[[R1]])
+// CHECK: call {{.*}} void %[[FN]](i32 noundef 0, i32 noundef 1, i32 noundef 2, [2 x i32] %[[R1]])
 
 // LE: 11111111 ........ 11111111 11111111 1111.... ...11111 ........ .111111.
 // LE: 0xff00fffff01f007e/9079291968726434047

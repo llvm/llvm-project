@@ -39,7 +39,7 @@ void may_throw();
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(
 void f() {
-  // CHECK: call noalias nonnull i8* @_Znwm(i64
+  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64
 
   // If promise constructor throws, check that we free the memory.
 
@@ -79,11 +79,11 @@ void f() {
   // CHECK: [[Cleanup]]:
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvEE12promise_typeD1Ev(
   // CHECK: %[[Mem0:.+]] = call i8* @llvm.coro.free(
-  // CHECK: call void @_ZdlPv(i8* %[[Mem0]]
+  // CHECK: call void @_ZdlPv(i8* noundef %[[Mem0]]
 
   // CHECK: [[Dealloc]]:
   // CHECK:   %[[Mem:.+]] = call i8* @llvm.coro.free(
-  // CHECK:   call void @_ZdlPv(i8* %[[Mem]])
+  // CHECK:   call void @_ZdlPv(i8* noundef %[[Mem]])
 
   co_return;
 }

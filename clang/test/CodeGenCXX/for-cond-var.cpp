@@ -18,7 +18,7 @@ void f(int);
 // CHECK: define {{.*}} void @_Z7PR49585v(
 void PR49585() {
   for (
-      // CHECK: call void @_Z1fi(i32 1)
+      // CHECK: call void @_Z1fi(i32 noundef 1)
       // CHECK: br label %[[for_cond:.*]]
       f(1);
 
@@ -38,20 +38,20 @@ void PR49585() {
     // CHECK: br i1 {{.*}}, label %[[if_then:.*]], label %[[if_end:.*]]
     if (cond()) {
       // CHECK: [[if_then]]:
-      // CHECK: call {{.*}} @_Z1fi(i32 3)
+      // CHECK: call {{.*}} @_Z1fi(i32 noundef 3)
       // CHECK: br label %[[for_inc:.*]]
       f(3);
       continue;
     }
 
     // CHECK: [[if_end]]:
-    // CHECK: call {{.*}} @_Z1fi(i32 4)
+    // CHECK: call {{.*}} @_Z1fi(i32 noundef 4)
     // CHECK: br label %[[for_inc]]
     f(4);
   }
 
   // CHECK: [[for_inc]]:
-  // CHECK: call void @_Z1fi(i32 2)
+  // CHECK: call void @_Z1fi(i32 noundef 2)
   // CHECK: store
   // CHECK: br label %[[cleanup]]
 
@@ -72,7 +72,7 @@ void PR49585() {
 // CHECK: define {{.*}} void @_Z13PR49585_breakv(
 void PR49585_break() {
   for (
-      // CHECK: call void @_Z1fi(i32 1)
+      // CHECK: call void @_Z1fi(i32 noundef 1)
       // CHECK: br label %[[for_cond:.*]]
       f(1);
 
@@ -92,7 +92,7 @@ void PR49585_break() {
     // CHECK: br i1 {{.*}}, label %[[if_then:.*]], label %[[if_end:.*]]
     if (cond()) {
       // CHECK: [[if_then]]:
-      // CHECK: call {{.*}} @_Z1fi(i32 3)
+      // CHECK: call {{.*}} @_Z1fi(i32 noundef 3)
       // CHECK: store
       // CHECK: br label %[[cleanup:.*]]
       f(3);
@@ -100,13 +100,13 @@ void PR49585_break() {
     }
 
     // CHECK: [[if_end]]:
-    // CHECK: call {{.*}} @_Z1fi(i32 4)
+    // CHECK: call {{.*}} @_Z1fi(i32 noundef 4)
     // CHECK: br label %[[for_inc]]
     f(4);
   }
 
   // CHECK: [[for_inc]]:
-  // CHECK: call void @_Z1fi(i32 2)
+  // CHECK: call void @_Z1fi(i32 noundef 2)
   // CHECK: store
   // CHECK: br label %[[cleanup]]
 

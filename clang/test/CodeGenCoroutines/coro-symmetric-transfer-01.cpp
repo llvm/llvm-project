@@ -57,7 +57,7 @@ detached_task foo() {
 // CHECK:         %[[CALL:.+]] = call i8* @_ZN13detached_task12promise_type13final_awaiter13await_suspendENSt12experimental13coroutines_v116coroutine_handleIS0_EE(
 // CHECK:         %[[HDL_CAST2:.+]] = getelementptr inbounds %"struct.std::experimental::coroutines_v1::coroutine_handle.0", %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[HDL]], i32 0, i32 0
 // CHECK:         store i8* %[[CALL]], i8** %[[HDL_CAST2]], align 8
-// CHECK:         %[[HDL_TRANSFER:.+]] = call i8* @_ZNKSt12experimental13coroutines_v116coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* nonnull align 8 dereferenceable(8) %[[HDL]])
+// CHECK:         %[[HDL_TRANSFER:.+]] = call noundef i8* @_ZNKSt12experimental13coroutines_v116coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* noundef %[[HDL]])
 // CHECK:         %[[HDL_CAST3:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[HDL]] to i8*
 // CHECK:         call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HDL_CAST3]])
 // CHECK:         call void @llvm.coro.resume(i8* %[[HDL_TRANSFER]])

@@ -496,7 +496,7 @@ void foo(int a){
 // CK0: {{.+}} = add nsw i32 [[VAL]], 1
 // CK0: }
 
-// CK0: define internal void [[OUTLINED:@.+]](i32 {{.*}}{{[^,]+}}, [[ANON_T]]* noalias [[CTXARG:%.+]])
+// CK0: define internal void [[OUTLINED:@.+]](i32 {{.*}}{{[^,]+}}, [[ANON_T]]* noalias noundef [[CTXARG:%.+]])
 // CK0-DAG: call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZEGEP:%[0-9]+]], {{.+}}[[NWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i8* null, i32 0, i8* null)
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
@@ -515,7 +515,7 @@ void foo(int a){
 // CK0-DAG: store [[ANON_T]]* [[CTXARG]], [[ANON_T]]** [[CTXADDR]], align
 // CK0: }
 
-// CK0: define internal {{.*}}i32 [[TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
+// CK0: define internal {{.*}}i32 [[TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias noundef %1)
 // CK0: store [[KMP_TASK_T_WITH_PRIVATES]]* %1, [[KMP_TASK_T_WITH_PRIVATES]]** [[ADDR:%.+]], align
 // CK0: [[TASK_T_WITH_PRIVATES:%.+]] = load [[KMP_TASK_T_WITH_PRIVATES]]*, [[KMP_TASK_T_WITH_PRIVATES]]** [[ADDR]], align
 // CK0: [[TASKGEP:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], [[KMP_TASK_T_WITH_PRIVATES]]* [[TASK_T_WITH_PRIVATES]], i32 0, i32 0
@@ -528,7 +528,7 @@ void foo(int a){
 // CK0: call void [[OUTLINED]](i32 {{%.+}}, i32* {{%.+}}, i8* [[PRIVATES]], {{.+}}, i8* [[TASK_WITH_PRIVATES]], [[ANON_T]]* [[ANON]])
 // CK0: }
 
-// CK0: define internal void [[OUTLINE_1:@.+]](i32 {{.*}}%.global_tid.{{.+}}, [[ANON_T_0]]* noalias [[CTXARG:%.+]])
+// CK0: define internal void [[OUTLINE_1:@.+]](i32 {{.*}}%.global_tid.{{.+}}, [[ANON_T_0]]* noalias noundef [[CTXARG:%.+]])
 // CK0-DAG: call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], i64* [[SIZEGEP:%[0-9]+]], {{.+}}[[TEAMNWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i32 0, i32 0, i8* null, i32 0, i8* null)
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
@@ -547,7 +547,7 @@ void foo(int a){
 // CK0-DAG: store [[ANON_T_0]]* [[CTXARG]], [[ANON_T_0]]** [[CTXADDR]], align
 // CK0: }
 
-// CK0: define internal {{.*}}i32 [[TASK_ENTRY_1]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES_1]]* noalias %1)
+// CK0: define internal {{.*}}i32 [[TASK_ENTRY_1]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES_1]]* noalias noundef %1)
 // CK0: store [[KMP_TASK_T_WITH_PRIVATES_1]]* %1, [[KMP_TASK_T_WITH_PRIVATES_1]]** [[ADDR:%.+]], align
 // CK0: [[TASK_T_WITH_PRIVATES:%.+]] = load [[KMP_TASK_T_WITH_PRIVATES_1]]*, [[KMP_TASK_T_WITH_PRIVATES_1]]** [[ADDR]], align
 // CK0: [[TASKGEP:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES_1]], [[KMP_TASK_T_WITH_PRIVATES_1]]* [[TASK_T_WITH_PRIVATES]], i32 0, i32 0
@@ -560,7 +560,7 @@ void foo(int a){
 // CK0: call void [[OUTLINE_1]](i32 {{%.+}}, i32* {{%.+}}, i8* [[PRIVATES]], {{.+}}, i8* [[TASK_WITH_PRIVATES]], [[ANON_T_0]]* [[ANON]])
 // CK0: }
 
-// CK0: define internal void [[OMP_OUTLINED_16:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
+// CK0: define internal void [[OMP_OUTLINED_16:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias noundef %{{[^,]+}}, i8* noalias noundef %{{[^,]+}}
 // CK0-DAG: call void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EDNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -575,12 +575,12 @@ void foo(int a){
 // CK0: ret void
 // CK0: }
 
-// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_18]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_4]]* noalias %{{[^,]+}})
+// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_18]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_4]]* noalias noundef %{{[^,]+}})
 // CK0:   call void [[OMP_OUTLINED_16]]
 // CK0:   ret i32 0
 // CK0: }
 
-// CK0: define internal void [[OMP_OUTLINED_23:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
+// CK0: define internal void [[OMP_OUTLINED_23:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias noundef %{{[^,]+}}, i8* noalias noundef %{{[^,]+}}
 // CK0-DAG: call void @__tgt_target_data_end_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EXDNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -594,12 +594,12 @@ void foo(int a){
 // CK0-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
 // CK0: }
 
-// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_25]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_7]]* noalias %{{[^,]+}})
+// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_25]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_7]]* noalias noundef %{{[^,]+}})
 // CK0:   call void [[OMP_OUTLINED_23]]
 // CK0:   ret i32 0
 // CK0: }
 
-// CK0: define internal void [[OMP_OUTLINED_32:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
+// CK0: define internal void [[OMP_OUTLINED_32:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias noundef %{{[^,]+}}, i8* noalias noundef %{{[^,]+}}
 // CK0-DAG: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[FNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -613,7 +613,7 @@ void foo(int a){
 // CK0-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
 // CK0: }
 
-// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_34]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_10]]* noalias %{{[^,]+}})
+// CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_34]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_10]]* noalias noundef %{{[^,]+}})
 // CK0:   call void [[OMP_OUTLINED_32]]
 // CK0:   ret i32 0
 // CK0: }

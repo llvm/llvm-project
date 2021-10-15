@@ -13,7 +13,7 @@ struct S {
 void test() {
   // Check that InstantiateUsedMemberDefinition::S<int>::f() is defined
   // as a result of the S class template implicit instantiation
-  // CHECK: define linkonce_odr i32 @_ZN31InstantiateUsedMemberDefinition1SIiE1fEv
+  // CHECK: define linkonce_odr noundef i32 @_ZN31InstantiateUsedMemberDefinition1SIiE1fEv
   S<int> inst;
 }
 } // namespace InstantiateUsedMemberDefinition

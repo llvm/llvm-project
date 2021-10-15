@@ -48,16 +48,16 @@ struct C : A, virtual B {};
 struct T {};
 T *foo3() { return dynamic_cast<T *>((C *)0); }
 // __RTDynamicCast should not be marked dllimport.
-// MSVC-LABEL: define dso_local %struct.T* @"?foo3@@YAPEAUT@@XZ"
+// MSVC-LABEL: define dso_local noundef %struct.T* @"?foo3@@YAPEAUT@@XZ"
 // MSVC: call i8* @__RTDynamicCast({{.*}})
 // MSVC: declare dso_local i8* @__RTDynamicCast(i8*, i32, i8*, i8*, i32)
 
 // Again, imported
-// ITANIUM-LABEL: define dso_local %struct.T* @_Z4foo3v()
+// ITANIUM-LABEL: define dso_local noundef %struct.T* @_Z4foo3v()
 // ITANIUM: call i8* @__dynamic_cast({{.*}})
 // ITANIUM: declare dllimport i8* @__dynamic_cast({{.*}})
 
 // Not imported
-// GNU-LABEL: define dso_local %struct.T* @_Z4foo3v()
+// GNU-LABEL: define dso_local noundef %struct.T* @_Z4foo3v()
 // GNU: call i8* @__dynamic_cast({{.*}})
 // GNU: declare dso_local i8* @__dynamic_cast({{.*}})

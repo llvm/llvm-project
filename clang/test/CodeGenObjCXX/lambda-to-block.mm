@@ -40,18 +40,18 @@ void hasLambda(Copyable x) {
 // CHECK: define internal void @[[COPY_HELPER1]]
 
 // CHECK: define{{.*}} void @_Z17testHelperMerging8Copyable(
-// CHECK: %[[CALL:.*]] = call void ()* @[[CONV_FUNC0:.*]](%[[CLASS_ANON_1]]*
-// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* %[[CALL]])
-// CHECK: %[[CALL1:.*]] = call void ()* @[[CONV_FUNC0]](%[[CLASS_ANON_1]]*
-// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* %[[CALL1]])
-// CHECK: %[[CALL2:.*]] = call void ()* @[[CONV_FUNC1:.*]](%[[CLASS_ANON_2]]*
-// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* %[[CALL2]])
+// CHECK: %[[CALL:.*]] = call noundef void ()* @[[CONV_FUNC0:.*]](%[[CLASS_ANON_1]]*
+// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* noundef %[[CALL]])
+// CHECK: %[[CALL1:.*]] = call noundef void ()* @[[CONV_FUNC0]](%[[CLASS_ANON_1]]*
+// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* noundef %[[CALL1]])
+// CHECK: %[[CALL2:.*]] = call noundef void ()* @[[CONV_FUNC1:.*]](%[[CLASS_ANON_2]]*
+// CHECK: call void @_Z10takesBlockU13block_pointerFvvE(void ()* noundef %[[CALL2]])
 
-// CHECK: define internal void ()* @[[CONV_FUNC0]](
+// CHECK: define internal noundef void ()* @[[CONV_FUNC0]](
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, %[[CLASS_ANON_1]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, %[[CLASS_ANON_1]] }>* %{{.*}}, i32 0, i32 4
 // CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i8* }* @[[BLOCK_DESC2]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
-// CHECK: define internal void ()* @[[CONV_FUNC1]](
+// CHECK: define internal noundef void ()* @[[CONV_FUNC1]](
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, %[[CLASS_ANON_2]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, %[[CLASS_ANON_2]] }>* %{{.*}}, i32 0, i32 4
 // CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i8* }* @[[BLOCK_DESC3]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
