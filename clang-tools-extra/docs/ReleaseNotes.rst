@@ -139,6 +139,10 @@ New checks
   Future libc++ will remove the extension (`D120996
   <https://reviews.llvm.org/D120996>`).
 
+- New :doc:`misc-confusable-identifiers <clang-tidy/checks/misc-confusable-identifiers` check.
+
+  Detects confusable Unicode identifiers.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
