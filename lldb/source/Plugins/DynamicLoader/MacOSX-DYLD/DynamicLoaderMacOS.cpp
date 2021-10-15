@@ -350,7 +350,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
       LazyBool skip_prologue = eLazyBoolNo;
       FileSpecList *source_files = nullptr;
       FileSpecList dyld_filelist;
-      dyld_filelist.Append(dyld_sp->GetObjectFile()->GetFileSpec());
+      dyld_filelist.Append(dyld_sp->GetFileSpec());
 
       Breakpoint *breakpoint =
           m_process->GetTarget()
