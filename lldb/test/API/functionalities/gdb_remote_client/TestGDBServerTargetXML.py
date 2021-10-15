@@ -569,6 +569,148 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
+    def test_x86_64_no_duplicate_subregs(self):
+        """Test that duplicate subregisters are not added (on x86_64)."""
+        class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "0102030405060708"  # rcx
+                "1112131415161718"  # rdx
+                "2122232425262728"  # rsi
+                "3132333435363738"  # rdi
+                "4142434445464748"  # rbp
+                "5152535455565758"  # rsp
+                "6162636465666768"  # r8
+                "7172737475767778"  # r9
+                "8182838485868788"  # rip
+                "91929394"  # eflags
+            )
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return """<?xml version="1.0"?>
+                        <!DOCTYPE feature SYSTEM "gdb-target.dtd">
+                        <target>
+                          <architecture>i386:x86-64</architecture>
+                          <osabi>GNU/Linux</osabi>
+                          <feature name="org.gnu.gdb.i386.core">
+                            <reg name="rcx" bitsize="64" type="int64" regnum="2"/>
+                            <reg name="rdx" bitsize="64" type="int64" regnum="3"/>
+                            <reg name="rsi" bitsize="64" type="int64" regnum="4"/>
+                            <reg name="rdi" bitsize="64" type="int64" regnum="5"/>
+                            <reg name="rbp" bitsize="64" type="data_ptr" regnum="6"/>
+                            <reg name="rsp" bitsize="64" type="data_ptr" regnum="7"/>
+                            <reg name="r8" bitsize="64" type="int64" regnum="8"/>
+                            <reg name="r9" bitsize="64" type="int64" regnum="9"/>
+                            <reg name="rip" bitsize="64" type="code_ptr" regnum="16"/>
+                            <reg name="eflags" bitsize="32" type="i386_eflags" regnum="17"/>
+                            <reg name="ecx" bitsize="32" type="int" regnum="18" value_regnums="2"/>
+                          </feature>
+                        </target>""", False
+                else:
+                    return None, False
+
+            def readRegister(self, regnum):
+                return ""
+
+            def readRegisters(self):
+                return self.reg_data
+
+            def haltReason(self):
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("basic_eh_frame.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        self.match("register read rcx",
+                   ["rcx = 0x0807060504030201"])
+        # ecx is supplied via target.xml
+        self.match("register read ecx",
+                   ["ecx = 0x04030201"])
+        self.match("register read rdx",
+                   ["rdx = 0x1817161514131211"])
+        # edx should not be added
+        self.match("register read edx",
+                   ["error: Invalid register name 'edx'."],
+                   error=True)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
+    def test_i386_no_duplicate_subregs(self):
+        """Test that duplicate subregisters are not added (on i386)."""
+        class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "01020304"  # eax
+                "11121314"  # ecx
+                "21222324"  # edx
+                "31323334"  # ebx
+                "41424344"  # esp
+                "51525354"  # ebp
+                "61626364"  # esi
+                "71727374"  # edi
+                "81828384"  # eip
+                "91929394"  # eflags
+            )
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return """<?xml version="1.0"?>
+                        <!DOCTYPE feature SYSTEM "gdb-target.dtd">
+                        <target>
+                          <architecture>i386</architecture>
+                          <osabi>GNU/Linux</osabi>
+                          <feature name="org.gnu.gdb.i386.core">
+                            <reg name="eax" bitsize="32" type="int32" regnum="0"/>
+                            <reg name="ecx" bitsize="32" type="int32" regnum="1"/>
+                            <reg name="edx" bitsize="32" type="int32" regnum="2"/>
+                            <reg name="ebx" bitsize="32" type="int32" regnum="3"/>
+                            <reg name="esp" bitsize="32" type="data_ptr" regnum="4"/>
+                            <reg name="ebp" bitsize="32" type="data_ptr" regnum="5"/>
+                            <reg name="esi" bitsize="32" type="int32" regnum="6"/>
+                            <reg name="edi" bitsize="32" type="int32" regnum="7"/>
+                            <reg name="eip" bitsize="32" type="code_ptr" regnum="8"/>
+                            <reg name="eflags" bitsize="32" type="i386_eflags" regnum="9"/>
+                            <reg name="ax" bitsize="16" type="int" regnum="10" value_regnums="0"/>
+                          </feature>
+                        </target>""", False
+                else:
+                    return None, False
+
+            def readRegister(self, regnum):
+                return ""
+
+            def readRegisters(self):
+                return self.reg_data
+
+            def haltReason(self):
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("basic_eh_frame-i386.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        self.match("register read eax",
+                   ["eax = 0x04030201"])
+        # cx is supplied via target.xml
+        self.match("register read ax",
+                   ["ax = 0x0201"])
+        self.match("register read ecx",
+                   ["ecx = 0x14131211"])
+        # dx should not be added
+        self.match("register read cx",
+                   ["error: Invalid register name 'cx'."],
+                   error=True)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_no_duplicate_subregs(self):
         """Test that duplicate subregisters are not added."""
