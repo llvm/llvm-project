@@ -95,7 +95,17 @@ bool PreferSmallestNonFullSigned(const ConstantRange &CR1,
   return PreferSmallestSigned(CR1, CR2);
 }
 
+testing::AssertionResult rangeContains(const ConstantRange &CR, const APInt &N,
+                                       ArrayRef<ConstantRange> Inputs) {
+  if (CR.contains(N))
+    return testing::AssertionSuccess();
 
+  testing::AssertionResult Result = testing::AssertionFailure();
+  Result << CR << " does not contain " << N << " for inputs: ";
+  for (const ConstantRange &Input : Inputs)
+    Result << Input << ", ";
+  return Result;
+}
 
 // Check whether constant range CR is an optimal approximation of the set
 // Elems under the given PreferenceFn. The preference function should return
@@ -106,7 +116,7 @@ static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
 
   // Check conservative correctness.
   for (unsigned Elem : Elems.set_bits()) {
-    EXPECT_TRUE(CR.contains(APInt(BitWidth, Elem)));
+    EXPECT_TRUE(rangeContains(CR, APInt(BitWidth, Elem), Inputs));
   }
 
   // Make sure we have at least one element for the code below.
@@ -198,7 +208,7 @@ static void TestBinaryOpExhaustiveCorrectnessOnly(BinaryRangeFn RangeFn,
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
             if (Optional<APInt> ResultN = IntFn(N1, N2)) {
-              EXPECT_TRUE(ResultCR.contains(*ResultN));
+              EXPECT_TRUE(rangeContains(ResultCR, *ResultN, {CR1, CR2}));
             }
           });
         });
