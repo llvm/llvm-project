@@ -3472,24 +3472,44 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   uint64_t DstWidth = DstVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // TODO: Saturate to SatWidth explicitly.
-  if (SatWidth != DstWidth)
+  // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal);
+    SrcVT = MVT::f32;
+  } else if (SrcVT != MVT::f64 && SrcVT != MVT::f32 && SrcVT != MVT::f16)
     return SDValue();
 
-  // In the absence of FP16 support, promote f16 to f32, like LowerFP_TO_INT().
-  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
-                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal),
-                       Op.getOperand(1));
-
+  SDLoc DL(Op);
   // Cases that we can emit directly.
   if ((SrcVT == MVT::f64 || SrcVT == MVT::f32 ||
        (SrcVT == MVT::f16 && Subtarget->hasFullFP16())) &&
-      (DstVT == MVT::i64 || DstVT == MVT::i32))
-    return Op;
+      DstVT == SatVT && (DstVT == MVT::i64 || DstVT == MVT::i32))
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                       DAG.getValueType(DstVT));
 
-  // For all other cases, fall back on the expanded form.
-  return SDValue();
+  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
+  // result. This is only valid if the legal cvt is larger than the saturate
+  // width.
+  if (DstWidth < SatWidth)
+    return SDValue();
+
+  SDValue NativeCvt =
+      DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, DAG.getValueType(DstVT));
+  SDValue Sat;
+  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    SDValue MinC = DAG.getConstant(
+        APInt::getSignedMaxValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+    SDValue Min = DAG.getNode(ISD::SMIN, DL, DstVT, NativeCvt, MinC);
+    SDValue MaxC = DAG.getConstant(
+        APInt::getSignedMinValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+    Sat = DAG.getNode(ISD::SMAX, DL, DstVT, Min, MaxC);
+  } else {
+    SDValue MinC = DAG.getConstant(
+        APInt::getAllOnesValue(SatWidth).zextOrSelf(DstWidth), DL, DstVT);
+    Sat = DAG.getNode(ISD::UMIN, DL, DstVT, NativeCvt, MinC);
+  }
+
+  return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
 
 SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
