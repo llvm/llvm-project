@@ -1923,7 +1923,7 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      unsigned Reg, uint64_t Value) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
-  unsigned Opcode;
+  unsigned Opcode = 0;
   if (isInt<16>(Value))
     Opcode = SystemZ::LGHI;
   else if (SystemZ::isImmLL(Value))
@@ -1931,11 +1931,23 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
   else if (SystemZ::isImmLH(Value)) {
     Opcode = SystemZ::LLILH;
     Value >>= 16;
-  } else {
-    assert(isInt<32>(Value) && "Huge values not handled yet");
-    Opcode = SystemZ::LGFI;
   }
-  BuildMI(MBB, MBBI, DL, get(Opcode), Reg).addImm(Value);
+  else if (isInt<32>(Value))
+    Opcode = SystemZ::LGFI;
+  if (Opcode) {
+    BuildMI(MBB, MBBI, DL, get(Opcode), Reg).addImm(Value);
+    return;
+  }
+
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  assert (MRI.isSSA() &&  "Huge values only handled before reg-alloc .");
+  Register Reg0 = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
+  Register Reg1 = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
+  BuildMI(MBB, MBBI, DL, get(SystemZ::IMPLICIT_DEF), Reg0);
+  BuildMI(MBB, MBBI, DL, get(SystemZ::IIHF64), Reg1)
+    .addReg(Reg0).addImm(Value >> 32);
+  BuildMI(MBB, MBBI, DL, get(SystemZ::IILF64), Reg)
+    .addReg(Reg1).addImm(Value & ((uint64_t(1) << 32) - 1));
 }
 
 bool SystemZInstrInfo::verifyInstruction(const MachineInstr &MI,
