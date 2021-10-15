@@ -3538,6 +3538,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   registerIDERequestFunctions(m_ast_context_ap->evaluator);
   registerParseRequestFunctions(m_ast_context_ap->evaluator);
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
+  registerClangImporterRequestFunctions(m_ast_context_ap->evaluator);
   registerSILGenRequestFunctions(m_ast_context_ap->evaluator);
   registerSILOptimizerRequestFunctions(m_ast_context_ap->evaluator);
   registerTBDGenRequestFunctions(m_ast_context_ap->evaluator);
