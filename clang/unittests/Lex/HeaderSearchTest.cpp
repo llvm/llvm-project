@@ -18,6 +18,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -47,7 +48,8 @@ protected:
   }
 
   void addHeaderMap(llvm::StringRef Filename,
-                    std::unique_ptr<llvm::MemoryBuffer> Buf) {
+                    std::unique_ptr<llvm::MemoryBuffer> Buf,
+                    bool isAngled = false) {
     VFS->addFile(Filename, 0, std::move(Buf), /*User=*/None, /*Group=*/None,
                  llvm::sys::fs::file_type::regular_file);
     auto FE = FileMgr.getFile(Filename, true);
@@ -58,7 +60,7 @@ protected:
     HMap = HeaderMap::Create(*FE, FileMgr);
     auto DL =
         DirectoryLookup(HMap.get(), SrcMgr::C_User, /*isFramework=*/false);
-    Search.AddSearchPath(DL, /*isAngled=*/false);
+    Search.AddSearchPath(DL, isAngled);
   }
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
@@ -177,6 +179,49 @@ TEST_F(HeaderSearchTest, HeaderMapReverseLookup) {
                                                    /*WorkingDir=*/"",
                                                    /*MainFile=*/""),
             "d.h");
+}
+
+TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
+  typedef NullTerminatedFile<test::HMapFileMock<4, 128>, char> FileTy;
+  FileTy File;
+  File.init();
+
+  std::string HeaderDirName = "/tmp/Sources/Foo/Headers/";
+  std::string HeaderName = "Foo.h";
+#ifdef _WIN32
+  // Force header path to be absolute on windows.
+  // As headermap content should represent absolute locations.
+  HeaderDirName = "C:" + HeaderDirName;
+#endif /*_WIN32*/
+
+  test::HMapFileMockMaker<FileTy> Maker(File);
+  auto a = Maker.addString("Foo/Foo.h");
+  auto b = Maker.addString(HeaderDirName);
+  auto c = Maker.addString(HeaderName);
+  Maker.addBucket("Foo/Foo.h", a, b, c);
+  addHeaderMap("product-headers.hmap", File.getBuffer(), /*isAngled=*/true);
+
+  VFS->addFile(
+      HeaderDirName + HeaderName, 0,
+      llvm::MemoryBuffer::getMemBufferCopy("", HeaderDirName + HeaderName),
+      /*User=*/None, /*Group=*/None, llvm::sys::fs::file_type::regular_file);
+
+  bool IsMapped = false;
+  const DirectoryLookup *CurDir = nullptr;
+  auto FoundFile = Search.LookupFile(
+      "Foo/Foo.h", SourceLocation(), /*isAngled=*/true, /*FromDir=*/nullptr,
+      CurDir, /*Includers=*/{}, /*SearchPath=*/nullptr,
+      /*RelativePath=*/nullptr, /*RequestingModule=*/nullptr,
+      /*SuggestedModule=*/nullptr, &IsMapped,
+      /*IsFrameworkFound=*/nullptr);
+
+  EXPECT_TRUE(FoundFile.hasValue());
+  EXPECT_TRUE(IsMapped);
+  auto &FE = FoundFile.getValue();
+  auto FI = Search.getExistingFileInfo(FE);
+  EXPECT_TRUE(FI);
+  EXPECT_TRUE(FI->IsValid);
+  EXPECT_EQ(FI->Framework.str(), "Foo");
 }
 
 } // namespace

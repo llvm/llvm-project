@@ -1005,13 +1005,13 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
 
     // If this file is found in a header map and uses the framework style of
     // includes, then this header is part of a framework we're building.
-    if (CurDir->isIndexHeaderMap()) {
+    if (CurDir->isHeaderMap() && isAngled) {
       size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos) {
+      if (SlashPos != StringRef::npos)
+        HFI.Framework =
+            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
+      if (CurDir->isIndexHeaderMap())
         HFI.IndexHeaderMapHeader = 1;
-        HFI.Framework = getUniqueFrameworkName(StringRef(Filename.begin(),
-                                                         SlashPos));
-      }
     }
 
     if (checkMSVCHeaderSearch(Diags, MSFE ? &MSFE->getFileEntry() : nullptr,
