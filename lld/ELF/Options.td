@@ -314,7 +314,7 @@ defm orphan_handling:
   Eq<"orphan-handling", "Control how orphan sections are handled when linker script used">;
 
 defm pack_dyn_relocs:
-  Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
+  EEq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
 
 defm use_android_relr_tags: BB<"use-android-relr-tags",

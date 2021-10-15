@@ -6,6 +6,10 @@
 // RUN: ld.lld -pie --pack-dyn-relocs=none %t.a32.o %t.a32.so -o %t2.a32
 // RUN: llvm-readobj -r %t2.a32 | FileCheck --check-prefix=UNPACKED32 %s
 
+// RUN: not ld.lld --pack-dyn-relocs=invalid %t.a32.o %t.a32.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+// UNKNOWN: unknown --pack-dyn-relocs format: invalid
+
 /// Unpacked should have the relative relocations in their natural order.
 /// UNPACKED32:          Section ({{.+}}) .rel.dyn {
 // UNPACKED32-NEXT:     0x30324 R_ARM_RELATIVE -
