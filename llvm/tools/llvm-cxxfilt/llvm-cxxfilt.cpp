@@ -65,34 +65,27 @@ static void error(const Twine &Message) {
 }
 
 static std::string demangle(const std::string &Mangled) {
-  int Status;
-  std::string Prefix;
-
   const char *DecoratedStr = Mangled.c_str();
   if (StripUnderscore)
     if (DecoratedStr[0] == '_')
       ++DecoratedStr;
-  size_t DecoratedLength = strlen(DecoratedStr);
 
+  std::string Result;
+  if (nonMicrosoftDemangle(DecoratedStr, Result))
+    return Result;
+
+  std::string Prefix;
   char *Undecorated = nullptr;
 
-  if (Types ||
-      ((DecoratedLength >= 2 && strncmp(DecoratedStr, "_Z", 2) == 0) ||
-       (DecoratedLength >= 4 && strncmp(DecoratedStr, "___Z", 4) == 0)))
-    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, &Status);
+  if (Types)
+    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, nullptr);
 
-  if (!Undecorated &&
-      (DecoratedLength > 6 && strncmp(DecoratedStr, "__imp_", 6) == 0)) {
+  if (!Undecorated && strncmp(DecoratedStr, "__imp_", 6) == 0) {
     Prefix = "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, &Status);
+    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, nullptr);
   }
 
-  if (!Undecorated &&
-      (DecoratedLength >= 2 && strncmp(DecoratedStr, "_R", 2) == 0)) {
-    Undecorated = rustDemangle(DecoratedStr, nullptr, nullptr, &Status);
-  }
-
-  std::string Result(Undecorated ? Prefix + Undecorated : Mangled);
+  Result = Undecorated ? Prefix + Undecorated : Mangled;
   free(Undecorated);
   return Result;
 }
