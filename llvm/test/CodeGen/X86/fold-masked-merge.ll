@@ -8,11 +8,10 @@
 define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 ; NOBMI-LABEL: masked_merge0:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movl %edi, %eax
-; NOBMI-NEXT:    andl %edi, %esi
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    andl %edx, %eax
-; NOBMI-NEXT:    orl %esi, %eax
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    andl %edi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge0:
@@ -54,14 +53,22 @@ define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 }
 
 define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
-; CHECK-LABEL: masked_merge2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    andb %dil, %sil
-; CHECK-NEXT:    orb %sil, %al
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: masked_merge2:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    xorb %sil, %al
+; NOBMI-NEXT:    andb %dil, %al
+; NOBMI-NEXT:    xorb %sil, %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: masked_merge2:
+; BMI:       # %bb.0:
+; BMI-NEXT:    movl %edi, %eax
+; BMI-NEXT:    notb %al
+; BMI-NEXT:    andb %sil, %al
+; BMI-NEXT:    andb %dil, %sil
+; BMI-NEXT:    orb %sil, %al
+; BMI-NEXT:    retq
   %not = xor i8 %a0, -1
   %and0 = and i8 %not, %a1
   %and1 = and i8 %a1, %a0
@@ -72,13 +79,12 @@ define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
 define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 ; NOBMI-LABEL: masked_merge3:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movq %rdi, %rax
-; NOBMI-NEXT:    notq %rsi
+; NOBMI-NEXT:    movq %rsi, %rax
 ; NOBMI-NEXT:    notq %rdx
-; NOBMI-NEXT:    andq %rdi, %rsi
+; NOBMI-NEXT:    xorq %rdx, %rax
 ; NOBMI-NEXT:    notq %rax
-; NOBMI-NEXT:    andq %rdx, %rax
-; NOBMI-NEXT:    orq %rsi, %rax
+; NOBMI-NEXT:    andq %rdi, %rax
+; NOBMI-NEXT:    xorq %rdx, %rax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge3:
