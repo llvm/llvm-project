@@ -1,6 +1,5 @@
-; RUN: llc -O1 -verify-machineinstrs < %s
-target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-unknown-linux-gnu"
+; RUN: llc -O1 -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu < %s
+; RUN: llc -O1 -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s
 
 ; Function Attrs: uwtable
 define fastcc void @_Crash_Fn() unnamed_addr #0 {

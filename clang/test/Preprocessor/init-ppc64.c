@@ -811,6 +811,7 @@
 // PPC64-AIX:#define __SIG_ATOMIC_WIDTH__ 32
 // PPC64-AIX:#define __SIZEOF_DOUBLE__ 8
 // PPC64-AIX:#define __SIZEOF_FLOAT__ 4
+// PPC64-AIX:#define __SIZEOF_INT128__ 16
 // PPC64-AIX:#define __SIZEOF_INT__ 4
 // PPC64-AIX:#define __SIZEOF_LONG_DOUBLE__ 8
 // PPC64-AIX:#define __SIZEOF_LONG_LONG__ 8
