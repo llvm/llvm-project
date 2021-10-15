@@ -631,8 +631,6 @@ const char *PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
 // showRegistersWithPrefix - This method determines whether registers
 // should be number-only or include the prefix.
 bool PPCInstPrinter::showRegistersWithPrefix() const {
-  if (TT.getOS() == Triple::AIX)
-    return false;
   return FullRegNamesWithPercent || FullRegNames;
 }
 
