@@ -6139,7 +6139,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (Values.empty())
       return;
 
-    if (std::count(Values.begin(), Values.end(), nullptr))
+    if (llvm::is_contained(Values, nullptr))
       return;
 
     bool IsVariadic = DI.hasArgList();
