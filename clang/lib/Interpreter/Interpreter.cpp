@@ -113,6 +113,10 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts());
 
+  // Don't clear the AST before backend codegen since we do codegen multiple
+  // times, reusing the same AST.
+  Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
+
   return std::move(Clang);
 }
 
