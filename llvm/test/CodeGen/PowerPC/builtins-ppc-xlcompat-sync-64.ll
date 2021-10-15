@@ -14,7 +14,7 @@ define dso_local i64 @test_builtin_ppc_popcntb_i64(i64 %a) local_unnamed_addr {
 ;
 ; CHECK-AIX-LABEL: test_builtin_ppc_popcntb_i64:
 ; CHECK-AIX:       # %bb.0: # %entry
-; CHECK-AIX-NEXT:    popcntb 3, 3
+; CHECK-AIX-NEXT:    popcntb r3, r3
 ; CHECK-AIX-NEXT:    blr
 entry:
   %popcntb = tail call i64 @llvm.ppc.popcntb.i64.i64(i64 %a)
@@ -32,8 +32,8 @@ define dso_local void @test_builtin_ppc_eieio() {
 ;
 ; CHECK-AIX-LABEL: test_builtin_ppc_eieio:
 ; CHECK-AIX:       # %bb.0: # %entry
-; CHECK-AIX-NEXT:    ori 2, 2, 0
-; CHECK-AIX-NEXT:    ori 2, 2, 0
+; CHECK-AIX-NEXT:    ori r2, r2, 0
+; CHECK-AIX-NEXT:    ori r2, r2, 0
 ; CHECK-AIX-NEXT:    eieio
 ; CHECK-AIX-NEXT:    blr
 entry:
@@ -52,8 +52,8 @@ define dso_local void @test_builtin_ppc_iospace_eieio() {
 ;
 ; CHECK-AIX-LABEL: test_builtin_ppc_iospace_eieio:
 ; CHECK-AIX:       # %bb.0: # %entry
-; CHECK-AIX-NEXT:    ori 2, 2, 0
-; CHECK-AIX-NEXT:    ori 2, 2, 0
+; CHECK-AIX-NEXT:    ori r2, r2, 0
+; CHECK-AIX-NEXT:    ori r2, r2, 0
 ; CHECK-AIX-NEXT:    eieio
 ; CHECK-AIX-NEXT:    blr
 entry:
@@ -103,8 +103,8 @@ define dso_local void @test_builtin_ppc_icbt() {
 ;
 ; CHECK-AIX-LABEL: test_builtin_ppc_icbt:
 ; CHECK-AIX:       # %bb.0: # %entry
-; CHECK-AIX-NEXT:    ld 3, -8(1)
-; CHECK-AIX-NEXT:    icbt 0, 0, 3
+; CHECK-AIX-NEXT:    ld r3, -8(r1)
+; CHECK-AIX-NEXT:    icbt 0, 0, r3
 ; CHECK-AIX-NEXT:    blr
 entry:
   %a = alloca i8*, align 8
