@@ -361,3 +361,10 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_infer_type
 %ignored_res7 = test.format_infer_type
+
+//===----------------------------------------------------------------------===//
+// Check DefaultValuedStrAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.has_str_value
+test.has_str_value {}

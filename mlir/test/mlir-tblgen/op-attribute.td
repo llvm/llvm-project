@@ -337,7 +337,7 @@ def DOp : NS_Op<"d_op", []> {
     SomeI32Enum:$enum_attr,
     DefaultValuedAttr<I32Attr, "42">:$dv_i32_attr,
     DefaultValuedAttr<F64Attr, "8.">:$dv_f64_attr,
-    DefaultValuedAttr<StrAttr, "abc">:$dv_str_attr,
+    DefaultValuedStrAttr<StrAttr, "abc">:$dv_str_attr,
     DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr,
     DefaultValuedAttr<SomeI32Enum, "::SomeI32Enum::case5">:$dv_enum_attr
   );
@@ -377,7 +377,7 @@ def EOp : NS_Op<"e_op", []> {
     F64Attr:$f64_attr,
     DefaultValuedAttr<F64Attr, "8.">:$dv_f64_attr,
     StrAttr:$str_attr,
-    DefaultValuedAttr<StrAttr, "abc">:$dv_str_attr,
+    DefaultValuedStrAttr<StrAttr, "abc">:$dv_str_attr,
     BoolAttr:$bool_attr,
     DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr,
     SomeI32Enum:$enum_attr,
