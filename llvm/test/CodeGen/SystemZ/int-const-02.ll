@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 declare void @foo(i64, i64, i64, i64)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1 immarg)
 
 ; Check 0.
 define i64 @f1() {
@@ -300,3 +301,28 @@ define i64 @f32(i64 *%ptr) {
   ret i64 3944173009226982604
 }
 
+; Check that huge constants can be loaded during isel pseudo expansion. This
+; is the iteration count loaded into a register after dividing by 256.
+define void @f33(i8* %Src, i8* %Dst)  {
+; CHECK-LABEL: f33:
+; CHECK: iihf    %r0, 1
+; CHECK: iilf    %r0, 1
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Src, i8* %Dst, i64 1099511628032, i1 false)
+  ret void
+}
+
+define void @f34(i8* %Src, i8* %Dst)  {
+; CHECK-LABEL: f34:
+; CHECK: iihf    %r0, 2
+; CHECK: iilf    %r0, 0
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Src, i8* %Dst, i64 2199023255552, i1 false)
+  ret void
+}
+
+define void @f35(i8* %Src, i8* %Dst)  {
+; CHECK-LABEL: f35:
+; CHECK: iihf    %r0, 8388607
+; CHECK: iilf    %r0, 4294967295
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Src, i8* %Dst, i64 9223372036854775800, i1 false)
+  ret void
+}
