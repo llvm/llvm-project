@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
-class IntrinsicInst;
 class AssumptionCache;
 class DominatorTree;
 
@@ -78,7 +77,7 @@ struct MinMax {
 /// (=knowledge) that is encoded in them. How the value range is interpreted
 /// depends on the RetainedKnowledgeKey that was used to get this out of the
 /// RetainedKnowledgeMap.
-using Assume2KnowledgeMap = DenseMap<IntrinsicInst *, MinMax>;
+using Assume2KnowledgeMap = DenseMap<AssumeInst *, MinMax>;
 
 using RetainedKnowledgeMap =
     DenseMap<RetainedKnowledgeKey, Assume2KnowledgeMap>;
