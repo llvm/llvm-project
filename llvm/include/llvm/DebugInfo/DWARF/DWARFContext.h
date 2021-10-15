@@ -373,8 +373,7 @@ public:
     return {2, 4, 8};
   }
   static bool isAddressSizeSupported(unsigned AddressSize) {
-    return llvm::any_of(getSupportedAddressSizes(),
-                        [=](auto Elem) { return Elem == AddressSize; });
+    return llvm::is_contained(getSupportedAddressSizes(), AddressSize);
   }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);

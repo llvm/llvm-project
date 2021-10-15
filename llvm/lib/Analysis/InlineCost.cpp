@@ -545,6 +545,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   // sense that it's not weighted by profile counts at all.
   int ColdSize = 0;
 
+  // Whether inlining is decided by cost-threshold analysis.
+  bool DecidedByCostThreshold = false;
+
   // Whether inlining is decided by cost-benefit analysis.
   bool DecidedByCostBenefit = false;
 
@@ -914,14 +917,24 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         return InlineResult::failure("Cost over threshold.");
     }
 
-    if (IgnoreThreshold || Cost < std::max(1, Threshold))
+    if (IgnoreThreshold)
       return InlineResult::success();
-    return InlineResult::failure("Cost over threshold.");
+
+    DecidedByCostThreshold = true;
+    return Cost < std::max(1, Threshold)
+               ? InlineResult::success()
+               : InlineResult::failure("Cost over threshold.");
   }
+
   bool shouldStop() override {
+    if (IgnoreThreshold || ComputeFullInlineCost)
+      return false;
     // Bail out the moment we cross the threshold. This means we'll under-count
     // the cost, but only when undercounting doesn't matter.
-    return !IgnoreThreshold && Cost >= Threshold && !ComputeFullInlineCost;
+    if (Cost < Threshold)
+      return false;
+    DecidedByCostThreshold = true;
+    return true;
   }
 
   void onLoadEliminationOpportunity() override {
@@ -1013,6 +1026,7 @@ public:
   int getCost() const { return Cost; }
   Optional<CostBenefitPair> getCostBenefitPair() { return CostBenefit; }
   bool wasDecidedByCostBenefit() const { return DecidedByCostBenefit; }
+  bool wasDecidedByCostThreshold() const { return DecidedByCostThreshold; }
 };
 
 class InlineCostFeaturesAnalyzer final : public CallAnalyzer {
@@ -2934,13 +2948,13 @@ InlineCost llvm::getInlineCost(
       return InlineCost::getNever("cost over benefit", CA.getCostBenefitPair());
   }
 
-  // Check if there was a reason to force inlining or no inlining.
-  if (!ShouldInline.isSuccess() && CA.getCost() < CA.getThreshold())
-    return InlineCost::getNever(ShouldInline.getFailureReason());
-  if (ShouldInline.isSuccess() && CA.getCost() >= CA.getThreshold())
-    return InlineCost::getAlways("empty function");
+  if (CA.wasDecidedByCostThreshold())
+    return InlineCost::get(CA.getCost(), CA.getThreshold());
 
-  return llvm::InlineCost::get(CA.getCost(), CA.getThreshold());
+  // No details on how the decision was made, simply return always or never.
+  return ShouldInline.isSuccess()
+             ? InlineCost::getAlways("empty function")
+             : InlineCost::getNever(ShouldInline.getFailureReason());
 }
 
 InlineResult llvm::isInlineViable(Function &F) {

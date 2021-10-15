@@ -52940,13 +52940,13 @@ static bool matchAsm(StringRef S, ArrayRef<const char *> Pieces) {
 static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
 
   if (AsmPieces.size() == 3 || AsmPieces.size() == 4) {
-    if (std::count(AsmPieces.begin(), AsmPieces.end(), "~{cc}") &&
-        std::count(AsmPieces.begin(), AsmPieces.end(), "~{flags}") &&
-        std::count(AsmPieces.begin(), AsmPieces.end(), "~{fpsr}")) {
+    if (llvm::is_contained(AsmPieces, "~{cc}") &&
+        llvm::is_contained(AsmPieces, "~{flags}") &&
+        llvm::is_contained(AsmPieces, "~{fpsr}")) {
 
       if (AsmPieces.size() == 3)
         return true;
-      else if (std::count(AsmPieces.begin(), AsmPieces.end(), "~{dirflag}"))
+      else if (llvm::is_contained(AsmPieces, "~{dirflag}"))
         return true;
     }
   }

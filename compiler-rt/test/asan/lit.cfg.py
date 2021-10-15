@@ -167,14 +167,6 @@ if platform.system() == 'Windows':
   config.substitutions.append( ("%asan_cxx_lib", base_lib % "_cxx") )
   config.substitutions.append( ("%asan_dll_thunk", base_lib % "_dll_thunk") )
 
-if platform.system() == 'Windows':
-  # Don't use -std=c++11 on Windows, as the driver will detect the appropriate
-  # default needed to use with the STL.
-  config.substitutions.append(("%stdcxx11 ", ""))
-else:
-  # Some tests uses C++11 features such as lambdas and need to pass -std=c++11.
-  config.substitutions.append(("%stdcxx11 ", "-std=c++11 "))
-
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
   get_required_attr(config, "compiler_rt_src_root"), "lib", "asan")
