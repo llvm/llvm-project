@@ -2662,7 +2662,7 @@ SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
 
   // If CTPOP is legal, use it. Otherwise use shifts and xor.
   SDValue Result;
-  if (TLI.isOperationLegal(ISD::CTPOP, VT)) {
+  if (TLI.isOperationLegalOrPromote(ISD::CTPOP, VT)) {
     Result = DAG.getNode(ISD::CTPOP, dl, VT, Op);
   } else {
     Result = Op;
