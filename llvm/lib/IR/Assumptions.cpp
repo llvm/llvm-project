@@ -25,9 +25,7 @@ bool hasAssumption(const Attribute &A,
   SmallVector<StringRef, 8> Strings;
   A.getValueAsString().split(Strings, ",");
 
-  return llvm::any_of(Strings, [=](StringRef Assumption) {
-    return Assumption == AssumptionStr;
-  });
+  return llvm::is_contained(Strings, AssumptionStr);
 }
 } // namespace
 

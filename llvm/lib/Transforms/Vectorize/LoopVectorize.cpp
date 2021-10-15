@@ -4292,8 +4292,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR,
   // and thus no phis which needed updated.
   if (!Cost->requiresScalarEpilogue(VF))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (any_of(LCSSAPhi.incoming_values(),
-                 [Phi](Value *V) { return V == Phi; }))
+      if (llvm::is_contained(LCSSAPhi.incoming_values(), Phi))
         LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
 }
 
@@ -4451,8 +4450,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // fixFirstOrderRecurrence for a more complete explaination of the logic.
   if (!Cost->requiresScalarEpilogue(VF))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (any_of(LCSSAPhi.incoming_values(),
-                 [LoopExitInst](Value *V) { return V == LoopExitInst; }))
+      if (llvm::is_contained(LCSSAPhi.incoming_values(), LoopExitInst))
         LCSSAPhi.addIncoming(ReducedPartRdx, LoopMiddleBlock);
 
   // Fix the scalar loop reduction variable with the incoming reduction sum
