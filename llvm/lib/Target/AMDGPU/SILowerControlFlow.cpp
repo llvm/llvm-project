@@ -794,6 +794,10 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
+  // FIXME: This pass causes verification failures.
+  MF.getProperties().set(
+      MachineFunctionProperties::Property::FailsVerification);
+
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();

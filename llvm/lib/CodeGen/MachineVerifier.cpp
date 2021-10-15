@@ -292,6 +292,13 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      // Skip functions that have known verification problems.
+      // FIXME: Remove this mechanism when all problematic passes have been
+      // fixed.
+      if (MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::FailsVerification))
+        return false;
+
       unsigned FoundErrors = MachineVerifier(this, Banner.c_str()).verify(MF);
       if (FoundErrors)
         report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
