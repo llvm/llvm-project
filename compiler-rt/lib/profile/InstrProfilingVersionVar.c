@@ -14,4 +14,5 @@
  * user has not specified one. Set this up by moving the runtime's copy of this
  * symbol to an object file within the archive.
  */
-COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
+COMPILER_RT_VISIBILITY COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR =
+    INSTR_PROF_RAW_VERSION;
