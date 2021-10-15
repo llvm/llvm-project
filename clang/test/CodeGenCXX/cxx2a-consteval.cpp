@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
-// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o - | FileCheck -check-prefix=EVAL-FN %s
+// RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
+//
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
@@ -242,4 +243,11 @@ consteval int test_UserConvOverload_helper_ceval(int a) { return a; }
 //
 int test_UserConvOverload_ceval() {
   return test_UserConvOverload_helper_ceval(UserConv());
+}
+
+consteval void void_test() {}
+void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call
+  // EVAL-FN-NOT: call
+  void_test();
+  // EVAL-FN: {{^}}}
 }
