@@ -13,5 +13,10 @@
 
 .insn q  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:7: error: invalid instruction format
 
+# Invalid immediate
+.insn i  0x99,  0, a0, 4(a1) # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [0, 127]
+.insn r  0x33,  8,  0, a0, a1, a2 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 7]
+.insn r4 0x43,  0,  4, fa0, fa1, fa2, fa3 # CHECK: :[[@LINE]]:21: error: immediate must be an integer in the range [0, 3]
+
 # Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_i  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:1: error: unknown directive

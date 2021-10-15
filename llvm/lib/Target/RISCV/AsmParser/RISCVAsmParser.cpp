@@ -1074,8 +1074,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm2:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
+  case Match_InvalidUImm3:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidUImm7:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
   case Match_InvalidSImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
                                       (1 << 4) - 1);
