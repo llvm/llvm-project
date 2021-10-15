@@ -56,6 +56,22 @@ void test_builtin_ppc_rlwnm() {
   unsigned int res = __builtin_ppc_rlwnm(ui, 31, 0x1FF);
 }
 
+void test_builtin_ppc_rlwnm2(unsigned int shift) {
+  // CHECK-LABEL: test_builtin_ppc_rlwnm2
+  // CHECK:       %shift.addr = alloca i32, align 4
+  // CHECK-NEXT:  %res = alloca i32, align 4
+  // CHECK-NEXT:  store i32 %shift, i32* %shift.addr, align 4
+  // CHECK-NEXT:  [[RA:%[0-9]+]] = load i32, i32* @ui, align 4
+  // CHECK-NEXT:  [[RB:%[0-9]+]] = load i32, i32* %shift.addr, align 4
+  // CHECK-NEXT:  [[RC:%[0-9]+]] = call i32 @llvm.fshl.i32(i32 [[RA]], i32 [[RA]], i32 [[RB]])
+  // CHECK-NEXT:  [[RD:%[0-9]+]] = and i32 [[RC]], 511
+  // CHECK-NEXT:  store i32 [[RD]], i32* %res, align 4
+  // CHECK-NEXT:  ret void
+
+  /*mask = 0x1FF = 511*/
+  unsigned int res = __builtin_ppc_rlwnm(ui, shift, 0x1FF);
+}
+
 // CHECK-LABEL: @testrotatel4(
 // CHECK:         [[TMP:%.*]] = call i32 @llvm.fshl.i32(i32 {{%.*}}, i32 {{%.*}}, i32 {{%.*}})
 // CHECK-NEXT:    ret i32 [[TMP]]

@@ -2303,7 +2303,7 @@ def TestLinalgConvOpNotLinalgOp : TEST_Op<"conv_op_not_linalg_op", [
 }
 
 def TestLinalgConvOp :
-  TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments,
+  TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments, SingleBlock,
       LinalgStructuredInterface, LinalgConvolutionOpInterface]> {
 
   let arguments = (ins Variadic<AnyType>:$inputs,

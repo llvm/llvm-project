@@ -15,6 +15,18 @@ define i1 @test1(i32 %a, i32 %b) {
   ret i1 %or.cond
 }
 
+define <2 x i1> @test1_splat(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @test1_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %1 = icmp slt <2 x i32> %a, zeroinitializer
+  %2 = icmp slt <2 x i32> %b, zeroinitializer
+  %or.cond = or <2 x i1> %1, %2
+  ret <2 x i1> %or.cond
+}
+
 define i1 @test1_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 0

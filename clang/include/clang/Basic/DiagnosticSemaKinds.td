@@ -10817,6 +10817,10 @@ def err_omp_unroll_full_variable_trip_count : Error<
 def note_omp_directive_here : Note<"'%0' directive found here">;
 def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
+def err_omp_adjust_arg_multiple_clauses : Error<
+  "'adjust_arg' argument %0 used in multiple clauses">;
+def err_omp_clause_requires_dispatch_construct : Error<
+  "'%0' clause requires 'dispatch' context selector">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

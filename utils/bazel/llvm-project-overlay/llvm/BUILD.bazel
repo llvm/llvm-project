@@ -187,7 +187,6 @@ cc_library(
     hdrs = glob([
         "include/llvm/Support/**/*.h",
         "include/llvm/ADT/*.h",
-        "include/llvm/MC/*.h",  # TODO(maskray): Fix the layering issue.
     ]) + [
         "include/llvm-c/Core.h",
         "include/llvm-c/DataTypes.h",
@@ -452,6 +451,11 @@ cc_library(
     srcs = glob([
         "utils/TableGen/*.cpp",
         "utils/TableGen/GlobalISel/*.cpp",
+
+        # Some tablegen sources include headers from MC, so these have to be
+        # listed here. MC uses headers produced by tablegen, so it cannot be a
+        # regular dependency.
+        "include/llvm/MC/*.h",
 
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find

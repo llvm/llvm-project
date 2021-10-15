@@ -190,7 +190,9 @@ bool SystemZRegisterInfo::getRegAllocationHints(
 
 const MCPhysReg *
 SystemZXPLINK64Registers::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return CSR_SystemZ_XPLINK64_SaveList;
+  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+  return Subtarget.hasVector() ? CSR_SystemZ_XPLINK64_Vector_SaveList
+                               : CSR_SystemZ_XPLINK64_SaveList;
 }
 
 const MCPhysReg *
@@ -211,7 +213,9 @@ SystemZELFRegisters::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 SystemZXPLINK64Registers::getCallPreservedMask(const MachineFunction &MF,
                                                CallingConv::ID CC) const {
-  return CSR_SystemZ_XPLINK64_RegMask;
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  return Subtarget.hasVector() ? CSR_SystemZ_XPLINK64_Vector_RegMask
+                               : CSR_SystemZ_XPLINK64_RegMask;
 }
 
 const uint32_t *

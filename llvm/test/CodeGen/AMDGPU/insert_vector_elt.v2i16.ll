@@ -2045,11 +2045,12 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ;
 ; GFX11-LABEL: v_insertelement_v4i16_dynamic_vgpr:
 ; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x10
 ; GFX11-NEXT:    global_load_b32 v2, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x10
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0xffff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[6:7]

@@ -1,8 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-// REQUIRES: noasserts
-
-// expected-error @below {{op created with unregistered dialect}}
+// expected-error @below {{operation being parsed with an unregistered dialect}}
 "unregistered_dialect.op"() : () -> ()
 
 // -----

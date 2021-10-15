@@ -578,7 +578,7 @@ static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
 /// 4. Create AffineApplyOp to apply the new maps. The output of AffineApplyOp
 /// is used in dynamicSizes of new AllocOp.
 ///   %0 = dim %arg0, %c1 : memref<4x?xf32>
-///   %c4 = constant 4 : index
+///   %c4 = arith.constant 4 : index
 ///   %1 = affine.apply #map1(%c4, %0)
 ///   %2 = affine.apply #map2(%c4, %0)
 static void createNewDynamicSizes(MemRefType oldMemRefType,

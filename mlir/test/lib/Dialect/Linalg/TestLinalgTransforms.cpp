@@ -113,6 +113,10 @@ struct TestLinalgTransforms
       *this, "padded-operands",
       llvm::cl::desc("Operands to pad when test-tile-pattern"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> nofoldOperands{
+      *this, "nofold-operands",
+      llvm::cl::desc("Operands to set nofold when test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
       llvm::cl::desc("Loops to be peeled when test-tile-pattern"),
@@ -581,6 +585,7 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
 static void applyTilePattern(FuncOp funcOp, std::string loopType,
                              ArrayRef<int64_t> tileSizes,
                              ArrayRef<int64_t> paddedOperands,
+                             ArrayRef<int64_t> nofoldOperands,
                              ArrayRef<int64_t> peeledLoops,
                              bool scalarizeDynamicDims) {
   MLIRContext *context = funcOp.getContext();
@@ -608,7 +613,13 @@ static void applyTilePattern(FuncOp funcOp, std::string loopType,
         return failure();
       return getNeutralOfLinalgOp(b, opOperand);
     };
+    auto nofoldFunc = [&](OpOperand &opOperand) {
+      if (llvm::count(nofoldOperands, opOperand.getOperandNumber()) != 0)
+        return true;
+      return false;
+    };
     linalgTilingOptions.setPaddingValueComputationFunction(paddingFunc);
+    linalgTilingOptions.setPaddingNoFoldComputationFunction(nofoldFunc);
   }
   tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulOp>,
                     linalg::LinalgTilingPattern<linalg::GenericOp>>(
@@ -743,9 +754,11 @@ void TestLinalgTransforms::runOnFunction() {
                                         skipPartial);
   if (testTilePattern)
     return applyTilePattern(getFunction(), loopType, tileSizes, paddedOperands,
-                            peeledLoops, /*scalarizeDynamicDims=*/false);
+                            nofoldOperands, peeledLoops,
+                            /*scalarizeDynamicDims=*/false);
   if (testTileScalarizeDynamicDims)
     return applyTilePattern(getFunction(), loopType, tileSizes, paddedOperands,
+                            nofoldOperands,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {

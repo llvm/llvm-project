@@ -795,7 +795,8 @@ bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
 }
 
 bool MSVCToolChain::isPICDefault() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 bool MSVCToolChain::isPIEDefault() const {
@@ -803,7 +804,8 @@ bool MSVCToolChain::isPIEDefault() const {
 }
 
 bool MSVCToolChain::isPICDefaultForced() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 void MSVCToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,

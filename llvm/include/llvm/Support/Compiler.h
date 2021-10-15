@@ -97,7 +97,8 @@
 /// Sadly, this is separate from just rvalue reference support because GCC
 /// and MSVC implemented this later than everything else. This appears to be
 /// corrected in MSVC 2019 but not MSVC 2017.
-#if __has_feature(cxx_rvalue_references) || LLVM_MSC_PREREQ(1920)
+#if __has_feature(cxx_rvalue_references) || defined(__GNUC__) ||               \
+    LLVM_MSC_PREREQ(1920)
 #define LLVM_HAS_RVALUE_REFERENCE_THIS 1
 #else
 #define LLVM_HAS_RVALUE_REFERENCE_THIS 0
@@ -553,6 +554,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #elif defined(_MSC_VER) && defined(_CPPUNWIND)
 #define LLVM_ENABLE_EXCEPTIONS 1
+#endif
+
+/// \macro LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
+/// Disable the profile instrument for a function.
+#if __has_attribute(no_profile_instrument_function)
+#define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION                                    \
+  __attribute__((no_profile_instrument_function))
+#else
+#define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
 #endif
 
 #endif
