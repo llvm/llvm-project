@@ -119,9 +119,6 @@ public:
   virtual void SetTriple(const llvm::Triple triple) = 0;
   virtual void ClearModuleDependentCaches() = 0;
 
-  virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
-  virtual void SetCachedType(ConstString mangled,
-                             const lldb::TypeSP &type_sp) = 0;
   virtual bool IsImportedType(lldb::opaque_compiler_type_t type,
                               CompilerType *original_type) = 0;
   virtual CompilerType GetErrorType() = 0;
