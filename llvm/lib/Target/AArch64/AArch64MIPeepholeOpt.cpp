@@ -127,11 +127,16 @@ bool AArch64MIPeepholeOpt::visitAND(
 
   // Check whether AND's operand is MOV with immediate.
   MachineInstr *MovMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  if (!MovMI)
+    return false;
+
   MachineInstr *SubregToRegMI = nullptr;
   // If it is SUBREG_TO_REG, check its operand.
   if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
     SubregToRegMI = MovMI;
     MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(2).getReg());
+    if (!MovMI)
+      return false;
   }
 
   if (MovMI->getOpcode() != AArch64::MOVi32imm &&
@@ -165,6 +170,7 @@ bool AArch64MIPeepholeOpt::visitAND(
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   Register NewTmpReg = MRI->createVirtualRegister(ANDImmRC);
+  Register NewDstReg = MRI->createVirtualRegister(ANDImmRC);
   unsigned Opcode = (RegSize == 32) ? AArch64::ANDWri : AArch64::ANDXri;
 
   MRI->constrainRegClass(NewTmpReg, MRI->getRegClass(SrcReg));
@@ -172,10 +178,15 @@ bool AArch64MIPeepholeOpt::visitAND(
       .addReg(SrcReg)
       .addImm(Imm1Enc);
 
-  MRI->constrainRegClass(DstReg, ANDImmRC);
-  BuildMI(*MBB, MI, DL, TII->get(Opcode), DstReg)
+  MRI->constrainRegClass(NewDstReg, MRI->getRegClass(DstReg));
+  BuildMI(*MBB, MI, DL, TII->get(Opcode), NewDstReg)
       .addReg(NewTmpReg)
       .addImm(Imm2Enc);
+
+  MRI->replaceRegWith(DstReg, NewDstReg);
+  // replaceRegWith changes MI's definition register. Keep it for SSA form until
+  // deleting MI.
+  MI.getOperand(0).setReg(DstReg);
 
   ToBeRemoved.insert(&MI);
   if (SubregToRegMI)
