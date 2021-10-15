@@ -634,6 +634,22 @@ def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    FeatureFuseAddress,
                                    ]>;
 
+def ProcA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
+                                   "Cortex-A510 ARM processors", [
+                                   HasV9_0aOps,
+                                   FeatureNEON,
+                                   FeaturePerfMon,
+                                   FeatureMatMulInt8,
+                                   FeatureBF16,
+                                   FeatureAM,
+                                   FeatureMTE,
+                                   FeatureETE,
+                                   FeatureSVE2BitPerm,
+                                   FeatureFP16FML,
+                                   FeatureFuseAES,
+                                   FeaturePostRAScheduler
+                                   ]>;
+
 def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
                                    FeatureBalanceFPOps,
@@ -1190,6 +1206,7 @@ def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA55Model, [ProcA55]>;
+def : ProcessorModel<"cortex-a510", CortexA55Model, [ProcA510]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
 def : ProcessorModel<"cortex-a65", CortexA53Model, [ProcA65]>;
 def : ProcessorModel<"cortex-a65ae", CortexA53Model, [ProcA65]>;
