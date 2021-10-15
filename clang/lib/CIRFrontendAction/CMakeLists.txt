@@ -8,9 +8,8 @@ include_directories( ${CMAKE_BINARY_DIR}/tools/mlir/include )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
-add_clang_library(clangCIR
-  CIRBuilder.cpp
-  CIRGenTypes.cpp
+add_clang_library(clangCIRFrontendAction
+  CIRGenAction.cpp
 
   DEPENDS
   MLIRCIROpsIncGen
@@ -19,6 +18,8 @@ add_clang_library(clangCIR
   clangAST
   clangBasic
   clangLex
+  clangFrontend
+  clangCIR
   ${dialect_libs}
   MLIRCIR
   MLIRAnalysis

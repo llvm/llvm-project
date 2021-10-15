@@ -9,6 +9,7 @@ set(link_libs
   clangDriver
   clangExtractAPI
   clangFrontend
+  clangCIRFrontendAction
   clangRewriteFrontend
   )
 

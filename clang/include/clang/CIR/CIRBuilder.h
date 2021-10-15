@@ -14,6 +14,7 @@
 #ifndef CLANG_CIRBUILDER_H_
 #define CLANG_CIRBUILDER_H_
 
+#include "clang/AST/ASTConsumer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <memory>
 
@@ -24,6 +25,7 @@ class OwningModuleRef;
 
 namespace clang {
 class ASTContext;
+class DeclGroupRef;
 class FunctionDecl;
 } // namespace clang
 
@@ -31,19 +33,23 @@ namespace cir {
 class CIRBuildImpl;
 class CIRGenTypes;
 
-class CIRContext {
+class CIRContext : public clang::ASTConsumer {
 public:
+  CIRContext();
+  CIRContext(std::unique_ptr<llvm::raw_pwrite_stream> os);
   ~CIRContext();
-  CIRContext(clang::ASTContext &AC);
-  void Init();
+  void Initialize(clang::ASTContext &Context) override;
   bool EmitFunction(const clang::FunctionDecl *FD);
 
+  bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
+  void HandleTranslationUnit(clang::ASTContext &Ctx) override;
+
 private:
+  std::unique_ptr<llvm::raw_pwrite_stream> outStream;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRBuildImpl> builder;
-  std::unique_ptr<llvm::ToolOutputFile> cirOut;
 
-  clang::ASTContext &astCtx;
+  clang::ASTContext *astCtx;
 };
 
 } // namespace cir

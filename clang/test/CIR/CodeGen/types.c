@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -fcir-warnings %s -fcir-output=%t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -triple x86_64-unknown-linux-gnu -fsyntax-only -fcir-warnings %s -fcir-output=%t.cpp.cir
+// RUN: %clang_cc1 -x c++ -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cpp.cir
 // RUN: FileCheck --input-file=%t.cpp.cir --check-prefix=CHECK-CPP %s
-// XFAIL: *
 
 int t0(int i) { return i; }
 unsigned int t1(unsigned int i) { return i; }
