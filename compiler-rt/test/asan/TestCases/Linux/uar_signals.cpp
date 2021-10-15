@@ -65,9 +65,9 @@ int main(int argc, char **argv) {
   EnableSigprof(SignalHandler);
 
   for (auto Thread : {&FastThread, &SlowThread}) {
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 100; i++) {
       fprintf(stderr, ".");
-      const int kNumThread = sizeof(void*) == 8 ? 32 : 8;
+      const int kNumThread = 8;
       pthread_t t[kNumThread];
       for (int i = 0; i < kNumThread; i++)
         pthread_create(&t[i], 0, Thread, 0);
