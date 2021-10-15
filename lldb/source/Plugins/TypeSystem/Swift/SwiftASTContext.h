@@ -18,7 +18,6 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 #include "lldb/Core/SwiftForward.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Utility/Either.h"
 #include "llvm/ADT/SmallVector.h"
@@ -340,9 +339,6 @@ public:
 
   // Retrieve the Swift.AnyObject type.
   CompilerType GetAnyObjectType();
-
-  // Get a function type that returns nothing and take no parameters
-  CompilerType GetVoidFunctionType();
 
   /// Import and Swiftify a Clang type.
   /// \return Returns an invalid type if unsuccessful.
@@ -761,10 +757,6 @@ public:
 
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
 
-  lldb::TypeSP GetCachedType(ConstString mangled) override;
-
-  void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
-
   /// Retrieves the modules that need to be implicitly imported in a given
   /// execution scope. This includes the modules imported by both the compile
   /// unit as well as any imports from previous expression evaluations.
@@ -858,7 +850,6 @@ protected:
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
-  std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
   /// A collection of (not necessarily fatal) error messages that
   /// should be printed by Process::PrintWarningCantLoadSwift().
   std::vector<std::string> m_module_import_warnings;
@@ -910,9 +901,6 @@ protected:
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;
-
-  typedef ThreadSafeDenseMap<const char *, lldb::TypeSP> SwiftTypeMap;
-  SwiftTypeMap m_swift_type_map;
 
   /// @}
 

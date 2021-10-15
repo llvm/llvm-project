@@ -19,11 +19,11 @@
 class DWARFDebugInfoEntry;
 class DWARFDIECollection;
 
-namespace lldb_private { class SwiftASTContext; }
+namespace lldb_private { class TypeSystemSwiftTypeRef; }
 
 class DWARFASTParserSwift : public DWARFASTParser {
 public:
-  DWARFASTParserSwift(lldb_private::SwiftASTContext &ast);
+  DWARFASTParserSwift(lldb_private::TypeSystemSwiftTypeRef &swift_typesystem);
 
   virtual ~DWARFASTParserSwift();
 
@@ -56,7 +56,7 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
 protected:
-  lldb_private::SwiftASTContext &m_ast;
+  lldb_private::TypeSystemSwiftTypeRef &m_swift_typesystem;
 };
 
 #endif // SymbolFileDWARF_DWARFASTParserSwift_h_

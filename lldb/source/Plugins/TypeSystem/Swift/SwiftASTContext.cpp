@@ -130,7 +130,6 @@
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
-#include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #define VALID_OR_RETURN(value)                                                 \
@@ -4514,20 +4513,6 @@ CompilerType SwiftASTContext::GetAnyObjectType() {
   return ToCompilerType({ast->getAnyObjectType()});
 }
 
-CompilerType SwiftASTContext::GetVoidFunctionType() {
-  VALID_OR_RETURN(CompilerType());
-
-  if (!m_void_function_type) {
-    swift::ASTContext *ast = GetASTContext();
-    swift::Type empty_tuple_type(swift::TupleType::getEmpty(*ast));
-    // FIXME: Verify ExtInfo state is correct, not working by accident.
-    swift::FunctionType::ExtInfo info;
-    m_void_function_type =
-        ToCompilerType({swift::FunctionType::get({}, empty_tuple_type, info)});
-  }
-  return m_void_function_type;
-}
-
 static CompilerType ValueDeclToType(swift::ValueDecl *decl,
                                     swift::ASTContext *ast) {
   if (decl) {
@@ -8332,23 +8317,8 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
     s->Printf("<could not resolve type>");
 }
 
-TypeSP SwiftASTContext::GetCachedType(ConstString mangled) {
-  TypeSP type_sp;
-  if (m_swift_type_map.Lookup(mangled.GetCString(), type_sp))
-    return type_sp;
-  else
-    return TypeSP();
-}
-
-void SwiftASTContext::SetCachedType(ConstString mangled,
-                                    const TypeSP &type_sp) {
-  m_swift_type_map.Insert(mangled.GetCString(), type_sp);
-}
-
 DWARFASTParser *SwiftASTContext::GetDWARFParser() {
-  if (!m_dwarf_ast_parser_ap)
-    m_dwarf_ast_parser_ap.reset(new DWARFASTParserSwift(*this));
-  return m_dwarf_ast_parser_ap.get();
+  return GetTypeSystemSwiftTypeRef().GetDWARFParser();
 }
 
 std::vector<lldb::DataBufferSP> &
