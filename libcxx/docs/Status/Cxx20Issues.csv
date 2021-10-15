@@ -179,7 +179,7 @@
 "`3256 <https://wg21.link/LWG3256>`__","Feature testing macro for ``constexpr``\  algorithms","Belfast","|Complete|","13.0"
 "`3273 <https://wg21.link/LWG3273>`__","Specify ``weekday_indexed``\  to range of ``[0, 7]``\ ","Belfast","",""
 "`3070 <https://wg21.link/LWG3070>`__","``path::lexically_relative``\  causes surprising results if a filename can also be a  *root-name*","Belfast","",""
-"`3266 <https://wg21.link/LWG3266>`__","``to_chars(bool)``\  should be deleted","Belfast","",""
+"`3266 <https://wg21.link/LWG3266>`__","``to_chars(bool)``\  should be deleted","Belfast","|Complete|","14.0"
 "`3272 <https://wg21.link/LWG3272>`__","``%I%p``\  should parse/format ``duration``\  since midnight","Belfast","","","|chrono| |format|"
 "`3259 <https://wg21.link/LWG3259>`__","The definition of *constexpr iterators* should be adjusted","Belfast","",""
 "`3103 <https://wg21.link/LWG3103>`__","Errors in taking subview of ``span``\  should be ill-formed where possible","Belfast","",""

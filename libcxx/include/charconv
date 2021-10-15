@@ -31,6 +31,8 @@ namespace std {
 
   to_chars_result to_chars(char* first, char* last, see below value,
                            int base = 10);
+  to_chars_result to_chars(char* first, char* last, bool value,
+                           int base = 10) = delete;
 
   to_chars_result to_chars(char* first, char* last, float value);
   to_chars_result to_chars(char* first, char* last, double value);
