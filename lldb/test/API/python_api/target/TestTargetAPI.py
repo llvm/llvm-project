@@ -207,7 +207,7 @@ class TargetAPITestCase(TestBase):
         return data_section
 
     def find_global_variables(self, exe_name):
-        """Exercise SBTaget.FindGlobalVariables() API."""
+        """Exercise SBTarget.FindGlobalVariables() API."""
         exe = self.getBuildArtifact(exe_name)
 
         # Create a target by the debugger.
@@ -272,7 +272,7 @@ class TargetAPITestCase(TestBase):
             list[0].GetCompileUnit().GetFileSpec().GetFilename(), source_name)
 
     def find_functions(self, exe_name):
-        """Exercise SBTaget.FindFunctions() API."""
+        """Exercise SBTarget.FindFunctions() API."""
         exe = self.getBuildArtifact(exe_name)
 
         # Create a target by the debugger.
@@ -292,7 +292,7 @@ class TargetAPITestCase(TestBase):
             self.assertEqual(sc.GetSymbol().GetName(), 'c')
 
     def get_description(self):
-        """Exercise SBTaget.GetDescription() API."""
+        """Exercise SBTarget.GetDescription() API."""
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
@@ -321,7 +321,7 @@ class TargetAPITestCase(TestBase):
     @skipIfRemote
     @no_debug_info_test
     def test_launch_new_process_and_redirect_stdout(self):
-        """Exercise SBTaget.Launch() API with redirected stdout."""
+        """Exercise SBTarget.Launch() API with redirected stdout."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
@@ -380,7 +380,7 @@ class TargetAPITestCase(TestBase):
                     substrs=["a(1)", "b(2)", "a(3)"])
 
     def resolve_symbol_context_with_address(self):
-        """Exercise SBTaget.ResolveSymbolContextForAddress() API."""
+        """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.

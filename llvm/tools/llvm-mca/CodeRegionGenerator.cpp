@@ -114,7 +114,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
 
   // Need to initialize an MCTargetStreamer otherwise
   // certain asm directives will cause a segfault.
-  // Using nulls() so that anything emitted by the MCTagetStreamer
+  // Using nulls() so that anything emitted by the MCTargetStreamer
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);
