@@ -287,10 +287,6 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 // return value.
 bool Status::Success() const { return m_code == 0; }
 
-bool Status::WasInterrupted() const {
-  return (m_type == eErrorTypePOSIX && m_code == EINTR);
-}
-
 void llvm::format_provider<lldb_private::Status>::format(
     const lldb_private::Status &error, llvm::raw_ostream &OS,
     llvm::StringRef Options) {
