@@ -2269,6 +2269,11 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                               .addReg(DestReg)
                               .addReg(SrcReg)
                               .addReg(RISCV::X0));
+    } else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
+               Inst.Opc == RISCV::SH3ADD) {
+      emitToStreamer(
+          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
+                   SrcReg));
     } else {
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
