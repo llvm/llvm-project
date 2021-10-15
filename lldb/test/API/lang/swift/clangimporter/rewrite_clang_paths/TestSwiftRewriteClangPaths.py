@@ -87,6 +87,8 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.expect("fr var foo", comment, substrs=["x", "23"])
             self.expect("fr var bar", comment, substrs=["y", "42"])
             self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+        else:
+            self.expect("p foo", error=True)
 
         # Scan through the types log.
         errs = 0
