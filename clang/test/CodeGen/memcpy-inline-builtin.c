@@ -61,7 +61,7 @@ void *foo(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, i64* [[C_ADDR]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call i8* [[TMP2]](i8* [[TMP3]], i8* [[TMP4]], i64 [[TMP5]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i8* [[TMP2]](i8* noundef [[TMP3]], i8* noundef [[TMP4]], i64 noundef [[TMP5]])
 // CHECK-NEXT:    ret void
 //
 void bar(void *a, const void *b, size_t c) {

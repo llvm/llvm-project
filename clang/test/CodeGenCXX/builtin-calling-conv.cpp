@@ -27,27 +27,27 @@ void user() {
 }
 
 // LINUX: define{{.*}} void @_Z4userv()
-// LINUX: call noalias nonnull i8* @_Znwm
+// LINUX: call noalias noundef nonnull i8* @_Znwm
 // LINUX: call float @atan2f
 // LINUX: call void @_Z3foov
-// LINUX: declare nonnull i8* @_Znwm(i64)
-// LINUX: declare float @atan2f(float, float)
+// LINUX: declare noundef nonnull i8* @_Znwm(i64 noundef)
+// LINUX: declare float @atan2f(float noundef, float noundef)
 // LINUX: declare void @_Z3foov()
 
 // SPIR: define{{.*}} spir_func void @_Z4userv()
-// SPIR: call spir_func noalias nonnull i8* @_Znwj
+// SPIR: call spir_func noalias noundef nonnull i8* @_Znwj
 // SPIR: call spir_func float @atan2f
 // SPIR: call spir_func void @_Z3foov
-// SPIR: declare spir_func nonnull i8* @_Znwj(i32)
-// SPIR: declare spir_func float @atan2f(float, float)
+// SPIR: declare spir_func noundef nonnull i8* @_Znwj(i32 noundef)
+// SPIR: declare spir_func float @atan2f(float noundef, float noundef)
 // SPIR: declare spir_func void @_Z3foov()
 
 // Note: Windows /G options should not change the platform default calling
 // convention of builtins.
 // WIN32: define dso_local x86_stdcallcc void @"?user@@YGXXZ"()
-// WIN32: call noalias nonnull i8* @"??2@YAPAXI@Z"
+// WIN32: call noalias noundef nonnull i8* @"??2@YAPAXI@Z"
 // WIN32: call float @atan2f
 // WIN32: call x86_stdcallcc void @"?foo@@YGXXZ"
-// WIN32: declare dso_local nonnull i8* @"??2@YAPAXI@Z"(
-// WIN32: declare dso_local float @atan2f(float, float)
+// WIN32: declare dso_local noundef nonnull i8* @"??2@YAPAXI@Z"(
+// WIN32: declare dso_local float @atan2f(float noundef, float noundef)
 // WIN32: declare dso_local x86_stdcallcc void @"?foo@@YGXXZ"()

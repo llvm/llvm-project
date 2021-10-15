@@ -20,7 +20,7 @@ public:
     int f1() final { return 2; }
 };
 
-// CHECK-LABEL: define hidden i32 @_Z3foov
+// CHECK-LABEL: define hidden noundef i32 @_Z3foov
 int foo() {
     B b;
     return static_cast<A2*>(&b)->f2();

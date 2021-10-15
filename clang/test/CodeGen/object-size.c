@@ -1,5 +1,5 @@
-// RUN: %clang_cc1           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -disable-noundef-analysis           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -disable-noundef-analysis -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
 
 #ifndef DYNAMIC
 #define OBJECT_SIZE_BUILTIN __builtin_object_size

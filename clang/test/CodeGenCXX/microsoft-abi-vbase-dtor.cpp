@@ -13,7 +13,7 @@ struct HasCompleteDtor : virtual DefaultedDtor {
 };
 void useCompleteDtor(HasCompleteDtor *p) { delete p; }
 
-// CHECK-LABEL: define dso_local void @"?useCompleteDtor@@YAXPEAUHasCompleteDtor@@@Z"(%struct.HasCompleteDtor* %p)
+// CHECK-LABEL: define dso_local void @"?useCompleteDtor@@YAXPEAUHasCompleteDtor@@@Z"(%struct.HasCompleteDtor* noundef %p)
 // CHECK: call void @"??_DHasCompleteDtor@@QEAAXXZ"({{.*}})
 
 // CHECK-LABEL: define linkonce_odr dso_local void @"??_DHasCompleteDtor@@QEAAXXZ"(%struct.HasCompleteDtor* {{[^,]*}} %this)

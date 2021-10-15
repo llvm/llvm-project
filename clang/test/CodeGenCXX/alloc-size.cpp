@@ -14,12 +14,12 @@ template <typename T, int N> int callCalloc();
 
 // CHECK-LABEL: define{{.*}} i32 @_ZN9templates6testItEv()
 int testIt() {
-  // CHECK: call i32 @_ZN9templates10callMallocINS_6MyTypeEEEiv
-  // CHECK: call i32 @_ZN9templates10callCallocINS_6MyTypeELi4EEEiv
+  // CHECK: call noundef i32 @_ZN9templates10callMallocINS_6MyTypeEEEiv
+  // CHECK: call noundef i32 @_ZN9templates10callCallocINS_6MyTypeELi4EEEiv
   return callMalloc<MyType>() + callCalloc<MyType, 4>();
 }
 
-// CHECK-LABEL: define linkonce_odr i32
+// CHECK-LABEL: define linkonce_odr noundef i32
 // @_ZN9templates10callMallocINS_6MyTypeEEEiv
 template <typename T> int callMalloc() {
   static_assert(sizeof(T) == 16, "");
@@ -27,7 +27,7 @@ template <typename T> int callMalloc() {
   return __builtin_object_size(my_malloc(sizeof(T)), 0);
 }
 
-// CHECK-LABEL: define linkonce_odr i32
+// CHECK-LABEL: define linkonce_odr noundef i32
 // @_ZN9templates10callCallocINS_6MyTypeELi4EEEiv
 template <typename T, int N> int callCalloc() {
   static_assert(sizeof(T) * N == 64, "");
@@ -59,7 +59,7 @@ template <typename T, size_t M>
 void *dependent_calloc2(size_t NT = sizeof(T), size_t MT = M)
     __attribute__((alloc_size(1, 2)));
 
-// CHECK-LABEL: define{{.*}} i32 @_ZN20templated_alloc_size6testItEv
+// CHECK-LABEL: define{{.*}} noundef i32 @_ZN20templated_alloc_size6testItEv
 int testIt() {
   // 122 = 4 + 5*4 + 6 + 7*8 + 4*9
   // CHECK: ret i32 122
@@ -79,7 +79,7 @@ struct Foo {
 
 void *my_malloc(const Foo &, int N) __attribute__((alloc_size(2)));
 
-// CHECK-LABEL: define{{.*}} i32 @_ZN24alloc_size_with_cleanups6testItEv
+// CHECK-LABEL: define{{.*}} noundef i32 @_ZN24alloc_size_with_cleanups6testItEv
 int testIt() {
   int *const p = (int *)my_malloc(Foo{}, 3);
   // CHECK: ret i32 3
@@ -93,13 +93,13 @@ public:
   void *my_calloc(int N, int M) __attribute__((alloc_size(2, 3)));
 };
 
-// CHECK-LABEL: define{{.*}} i32 @_Z16callMemberMallocv
+// CHECK-LABEL: define{{.*}} noundef i32 @_Z16callMemberMallocv
 int callMemberMalloc() {
   // CHECK: ret i32 16
   return __builtin_object_size(C().my_malloc(16), 0);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @_Z16callMemberCallocv
+// CHECK-LABEL: define{{.*}} noundef i32 @_Z16callMemberCallocv
 int callMemberCalloc() {
   // CHECK: ret i32 32
   return __builtin_object_size(C().my_calloc(16, 2), 0);

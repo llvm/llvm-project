@@ -14,7 +14,7 @@ struct A {
 // FIXME: There should be copy elision here.
 // CHECK-LABEL: define{{.*}} void @_Z4testI1AET_v
 // CHECK:       call void @_ZN1AC1Ev
-// CHECK-NEXT:  call i32 @_ZN1AcviEv
+// CHECK-NEXT:  call noundef i32 @_ZN1AcviEv
 // CHECK-NEXT:  call void @_ZN1AC1Ei
 // CHECK-NEXT:  call void @llvm.lifetime.end
 template A test<A>();

@@ -17,7 +17,7 @@ __attribute((naked, always_inline)) void t2() {
 
 // Make sure not to generate prolog or epilog for naked functions.
 __attribute((naked)) void t3(int x) {
-// CHECK: define{{.*}} void @t3(i32 %0)
+// CHECK: define{{.*}} void @t3(i32 noundef %0)
 // CHECK-NOT: alloca
 // CHECK-NOT: store
 // CHECK: unreachable

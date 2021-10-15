@@ -7,12 +7,12 @@ void releaseObject(__attribute__((ns_consumed)) id);
 // CHECK-LABEL: define{{.*}} void @_Z10sanityTestv
 void sanityTest() {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
-  // CHECK-NEXT: [[OBJ1:%.*]] = call i8* @_Z11makeObject1v()
+  // CHECK-NEXT: [[OBJ1:%.*]] = call noundef i8* @_Z11makeObject1v()
   // CHECK-NEXT: store i8* [[OBJ1]], i8** [[X]], align 8
   id x = makeObject1();
 
-  // CHECK-NEXT: [[OBJ2:%.*]] = call i8* @_Z11makeObject2v()
-  // CHECK-NEXT: call void @_Z13releaseObjectP11objc_object(i8* [[OBJ2]])
+  // CHECK-NEXT: [[OBJ2:%.*]] = call noundef i8* @_Z11makeObject2v()
+  // CHECK-NEXT: call void @_Z13releaseObjectP11objc_object(i8* noundef [[OBJ2]])
   releaseObject(makeObject2());
 
   // CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
@@ -31,16 +31,16 @@ void releaseObjectT(__attribute__((ns_consumed)) T);
 // CHECK-LABEL: define{{.*}} void @_Z12templateTestv
 void templateTest() {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
-  // CHECK-NEXT: [[OBJ1:%.*]] = call i8* @_Z12makeObjectT1IU8__strongP11objc_objectET_v()
+  // CHECK-NEXT: [[OBJ1:%.*]] = call noundef i8* @_Z12makeObjectT1IU8__strongP11objc_objectET_v()
   // CHECK-NEXT: store i8* [[OBJ1]], i8** [[X]], align 8
   id x = makeObjectT1<id>();
 
-  // CHECK-NEXT: [[OBJ2:%.*]] = call i8* @_Z12makeObjectT2IU8__strongP11objc_objectET_v()
-  // CHECK-NEXT: call void @_Z13releaseObjectP11objc_object(i8* [[OBJ2]])
+  // CHECK-NEXT: [[OBJ2:%.*]] = call noundef i8* @_Z12makeObjectT2IU8__strongP11objc_objectET_v()
+  // CHECK-NEXT: call void @_Z13releaseObjectP11objc_object(i8* noundef [[OBJ2]])
   releaseObject(makeObjectT2<id>());
 
-  // CHECK-NEXT: [[OBJ3:%.*]] = call i8* @_Z11makeObject1v()
-  // CHECK-NEXT: call void @_Z14releaseObjectTIU8__strongP11objc_objectEvT_(i8* [[OBJ3]])
+  // CHECK-NEXT: [[OBJ3:%.*]] = call noundef i8* @_Z11makeObject1v()
+  // CHECK-NEXT: call void @_Z14releaseObjectTIU8__strongP11objc_objectEvT_(i8* noundef [[OBJ3]])
   releaseObjectT(makeObject1());
 
   // CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
@@ -65,5 +65,5 @@ ForwardConsumed::ForwardConsumed(__attribute__((ns_consumed)) id x) {}
 // CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
 // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]],
 // CHECK-NEXT: store i8* null, i8** [[X]],
-// CHECK-NEXT: call void @_ZN15ForwardConsumedC2EP11objc_object({{.*}}, i8* [[T0]])
+// CHECK-NEXT: call void @_ZN15ForwardConsumedC2EP11objc_object({{.*}}, i8* noundef [[T0]])
 // CHECK:      call void @llvm.objc.storeStrong(i8** [[X]], i8* null)

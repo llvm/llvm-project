@@ -55,42 +55,42 @@ int main() {
 }
 
 #ifdef WINDOWS
-// WIN32: define dso_local i32 @wmain
-// WIN64: define dso_local i32 @wmain
+// WIN32: define dso_local noundef i32 @wmain
+// WIN64: define dso_local noundef i32 @wmain
 int wmain() {
   return 1;
 }
-// WIN32: define dso_local x86_stdcallcc i32 @WinMain
-// WIN64: define dso_local i32 @WinMain
+// WIN32: define dso_local x86_stdcallcc noundef i32 @WinMain
+// WIN64: define dso_local noundef i32 @WinMain
 int WinMain() {
   return 1;
 }
-// WIN32: define dso_local x86_stdcallcc i32 @wWinMain
-// WIN64: define dso_local i32 @wWinMain
+// WIN32: define dso_local x86_stdcallcc noundef i32 @wWinMain
+// WIN64: define dso_local noundef i32 @wWinMain
 int wWinMain() {
   return 1;
 }
-// WIN32: define dso_local x86_stdcallcc i32 @DllMain
-// WIN64: define dso_local i32 @DllMain
+// WIN32: define dso_local x86_stdcallcc noundef i32 @DllMain
+// WIN64: define dso_local noundef i32 @DllMain
 int DllMain() {
   return 1;
 }
 #endif // Windows
 
 #ifdef EXPLICITCC
-// EXPLICITCC: define dso_local x86_fastcallcc i32 @wmain
+// EXPLICITCC: define dso_local x86_fastcallcc noundef i32 @wmain
 int __fastcall wmain() {
   return 1;
 }
-// EXPLICITCC: define dso_local x86_fastcallcc i32 @WinMain
+// EXPLICITCC: define dso_local x86_fastcallcc noundef i32 @WinMain
 int __fastcall WinMain() {
   return 1;
 }
-// EXPLICITCC: define dso_local x86_fastcallcc i32 @wWinMain
+// EXPLICITCC: define dso_local x86_fastcallcc noundef i32 @wWinMain
 int __fastcall wWinMain() {
   return 1;
 }
-// EXPLICITCC: define dso_local x86_fastcallcc i32 @DllMain
+// EXPLICITCC: define dso_local x86_fastcallcc noundef i32 @DllMain
 int __fastcall DllMain() {
   return 1;
 }
