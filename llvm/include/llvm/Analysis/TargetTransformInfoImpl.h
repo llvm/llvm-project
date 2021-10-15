@@ -24,6 +24,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
+#include <utility>
 
 using namespace llvm::PatternMatch;
 
@@ -109,6 +110,11 @@ public:
   };
 
   unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const {
+    return std::make_pair(nullptr, -1);
+  }
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {

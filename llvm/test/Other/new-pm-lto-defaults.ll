@@ -51,6 +51,7 @@
 ; CHECK-O-NEXT: Running analysis: AAManager
 ; CHECK-O-NEXT: Running analysis: BasicAA
 ; CHECK-O1-NEXT: Running analysis: AssumptionAnalysis on foo
+; CHECK-O1-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O1-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
 ; CHECK-O-NEXT: Running analysis: TypeBasedAA

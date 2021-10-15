@@ -268,6 +268,11 @@ unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
 }
 
+std::pair<const Value *, unsigned>
+TargetTransformInfo::getPredicatedAddrSpace(const Value *V) const {
+  return TTIImpl->getPredicatedAddrSpace(V);
+}
+
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);

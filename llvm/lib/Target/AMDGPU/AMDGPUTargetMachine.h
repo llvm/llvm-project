@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetMachine.h"
+#include <utility>
 
 namespace llvm {
 
@@ -63,6 +64,9 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const override;
 };
 
 //===----------------------------------------------------------------------===//

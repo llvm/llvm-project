@@ -47,11 +47,11 @@
 ; CHECK-O: Running pass: PromotePass
 ; CHECK-O: Running analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
+; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running pass: DeadArgumentEliminationPass
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
-; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running analysis: ScopedNoAliasAA on main

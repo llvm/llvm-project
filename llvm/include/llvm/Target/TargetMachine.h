@@ -25,6 +25,7 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -318,6 +319,18 @@ public:
   /// values only prepared on the host side and could assume certain
   /// properties.
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
+
+  /// If the specified predicate checks whether a generic pointer falls within
+  /// a specified address space, return that generic pointer and the address
+  /// space being queried.
+  ///
+  /// Such predicates could be specified in @llvm.assume intrinsics for the
+  /// optimizer to assume that the given generic pointer always falls within
+  /// the address space based on that predicate.
+  virtual std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const {
+    return std::make_pair(nullptr, -1);
+  }
 
   /// Get a \c TargetIRAnalysis appropriate for the target.
   ///
