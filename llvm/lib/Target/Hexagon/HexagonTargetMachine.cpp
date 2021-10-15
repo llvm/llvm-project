@@ -447,11 +447,11 @@ void HexagonPassConfig::addPreEmitPass() {
   }
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
-  addPass(createHexagonPacketizer(NoOpt), false);
+  addPass(createHexagonPacketizer(NoOpt));
 
   if (EnableVectorPrint)
-    addPass(createHexagonVectorPrint(), false);
+    addPass(createHexagonVectorPrint());
 
   // Add CFI instructions if necessary.
-  addPass(createHexagonCallFrameInformation(), false);
+  addPass(createHexagonCallFrameInformation());
 }

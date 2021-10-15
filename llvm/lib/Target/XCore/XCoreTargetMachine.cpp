@@ -99,7 +99,7 @@ bool XCorePassConfig::addInstSelector() {
 }
 
 void XCorePassConfig::addPreEmitPass() {
-  addPass(createXCoreFrameToArgsOffsetEliminationPass(), false);
+  addPass(createXCoreFrameToArgsOffsetEliminationPass());
 }
 
 // Force static initialization.
