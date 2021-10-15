@@ -366,6 +366,18 @@ static void outputXML(const Replacements &Replaces,
   outs() << "</replacements>\n";
 }
 
+class ClangFormatDiagConsumer : public DiagnosticConsumer {
+  virtual void anchor() {}
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+
+    SmallVector<char, 16> vec;
+    Info.FormatDiagnostic(vec);
+    errs() << "clang-format error:" << vec << "\n";
+  }
+};
+
 // Returns true on error.
 static bool format(StringRef FileName) {
   if (!OutputXML && Inplace && FileName == "-") {
@@ -477,9 +489,12 @@ static bool format(StringRef FileName) {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    ClangFormatDiagConsumer IgnoreDiagnostics;
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-        new DiagnosticOptions);
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,
                                    InMemoryFileSystem.get());
