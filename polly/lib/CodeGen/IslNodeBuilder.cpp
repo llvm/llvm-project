@@ -146,24 +146,6 @@ isl::ast_expr IslNodeBuilder::getUpperBound(isl::ast_node_for For,
   return Cond.get_op_arg(1);
 }
 
-/// Return true if a return value of Predicate is true for the value represented
-/// by passed isl_ast_expr_int.
-static bool checkIslAstExprInt(__isl_take isl_ast_expr *Expr,
-                               isl_bool (*Predicate)(__isl_keep isl_val *)) {
-  if (isl_ast_expr_get_type(Expr) != isl_ast_expr_int) {
-    isl_ast_expr_free(Expr);
-    return false;
-  }
-  auto ExprVal = isl_ast_expr_get_val(Expr);
-  isl_ast_expr_free(Expr);
-  if (Predicate(ExprVal) != isl_bool_true) {
-    isl_val_free(ExprVal);
-    return false;
-  }
-  isl_val_free(ExprVal);
-  return true;
-}
-
 int IslNodeBuilder::getNumberOfIterations(isl::ast_node_for For) {
   assert(isl_ast_node_get_type(For.get()) == isl_ast_node_for);
   isl::ast_node Body = For.body();
@@ -187,14 +169,14 @@ int IslNodeBuilder::getNumberOfIterations(isl::ast_node_for For) {
   }
 
   isl::ast_expr Init = For.init();
-  if (!checkIslAstExprInt(Init.release(), isl_val_is_zero))
+  if (!Init.isa<isl::ast_expr_int>() || !Init.val().is_zero())
     return -1;
   isl::ast_expr Inc = For.inc();
-  if (!checkIslAstExprInt(Inc.release(), isl_val_is_one))
+  if (!Inc.isa<isl::ast_expr_int>() || !Inc.val().is_one())
     return -1;
   CmpInst::Predicate Predicate;
   isl::ast_expr UB = getUpperBound(For, Predicate);
-  if (isl_ast_expr_get_type(UB.get()) != isl_ast_expr_int)
+  if (!UB.isa<isl::ast_expr_int>())
     return -1;
   isl::val UpVal = UB.get_val();
   int NumberIterations = UpVal.get_num_si();
