@@ -422,6 +422,16 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let MemoryVT = i16;
 }
 
+def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
 def atomic_load_32_#as : PatFrag<(ops node:$ptr), (atomic_load_32 node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i32;
