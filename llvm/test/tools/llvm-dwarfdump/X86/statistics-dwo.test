@@ -69,7 +69,7 @@ RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
 # }
 #
 
-CHECK:      "version": 8,
+CHECK:      "version": 9,
 CHECK:      "#functions": 3,
 CHECK:      "#functions with location": 3,
 CHECK:      "#inlined functions": 7,

@@ -1,8 +1,7 @@
 # RUN: yaml2obj %s | llvm-dwarfdump --statistics - | FileCheck %s
 
-## Check that coverage for variable locations which do not cover the parent
-## scope is tracked separately in "sum_all_variables(#bytes in any scope
-## covered by DW_AT_location)".
+## Check that we are covering the situation when
+## sum of bytes in scope is a huge (uint64_t) number.
 ##
 ## The yaml represents this DWARF:
 ##
@@ -12,31 +11,19 @@
 ##
 ##   DW_TAG_subprogram
 ##     DW_AT_low_pc	(0x0000000000000000)
-##     DW_AT_high_pc	(0x000000000000000b)
-##
-##     DW_TAG_lexical_block
-##       DW_AT_ranges	(0x00000000
-##          [0x0000000000000000, 0x0000000000000003)
-##          [0x0000000000000005, 0x0000000000000008))
-##
-##       // #bytes in parent scope: 6
-##       // #bytes in any scope covered by DW_AT_location: 6
-##       // #bytes in parent scope covered by DW_AT_location: 4
-##       DW_TAG_variable
-##         DW_AT_location	(0x00000000:
-##            [0x0000000000000000, 0x0000000000000006): DW_OP_reg5 RDI)
-##
-##       // #bytes in parent scope: 6
-##       // #bytes in any scope covered by DW_AT_location: 2
-##       // #bytes in parent scope covered by DW_AT_location: 0
+##     DW_AT_high_pc	(0x00000000ffffffff)
 ##       DW_TAG_variable
 ##         DW_AT_location	(0x00000023:
 ##            [0x0000000000000003, 0x0000000000000005): DW_OP_reg2 RCX)
+##   DW_TAG_subprogram
+##     DW_AT_low_pc    (0x0000000000000000)
+##     DW_AT_high_pc   (0x00000000ffffffff)
+##     DW_TAG_variable
+##       DW_AT_location        (0x00000023:
+##             [0x0000000000000003, 0x0000000000000005): DW_OP_reg2 RCX)
 
 # CHECK: "version": 9,
-# CHECK: "sum_all_variables(#bytes in parent scope)": 12,
-# CHECK: "sum_all_variables(#bytes in any scope covered by DW_AT_location)": 8
-# CHECK: "sum_all_variables(#bytes in parent scope covered by DW_AT_location)": 4
+# CHECK: "sum_all_variables(#bytes in parent scope)": 8589934590
 
 --- !ELF
 FileHeader:
@@ -73,12 +60,6 @@ DWARF:
           - Attribute: DW_AT_high_pc
             Form:      DW_FORM_data4
       - Code:     3
-        Tag:      DW_TAG_lexical_block
-        Children: DW_CHILDREN_yes
-        Attributes:
-          - Attribute: DW_AT_ranges
-            Form:      DW_FORM_sec_offset
-      - Code:     4
         Tag:      DW_TAG_variable
         Children: DW_CHILDREN_no
         Attributes:
@@ -95,16 +76,17 @@ DWARF:
         - AbbrCode: 2 ## DW_TAG_subprogram
           Values:
             - Value: 0x00 ## DW_AT_low_pc
-            - Value: 0x0b ## DW_AT_high_pc
-        - AbbrCode: 3 ## DW_TAG_lexical_block
-          Values:
-            - Value: 0x00 ## DW_AT_ranges
-        - AbbrCode: 4 ## DW_TAG_variable
-          Values:
-            - Value: 0x00 ## DW_AT_sec_offset
-        - AbbrCode: 4 ## DW_TAG_variable
+            - Value: 0xFFFFFFFF ## DW_AT_high_pc
+        - AbbrCode: 3 ## DW_TAG_variable
           Values:
             - Value: 0x23 ## DW_AT_sec_offset
         - AbbrCode: 0 ## NULL
+        - AbbrCode: 2 ## DW_TAG_subprogram
+          Values:
+            - Value: 0x00 ## DW_AT_low_pc
+            - Value: 0xFFFFFFFF ## DW_AT_high_pc
+        - AbbrCode: 3 ## DW_TAG_variable
+          Values:
+            - Value: 0x23 ## DW_AT_sec_offset
         - AbbrCode: 0 ## NULL
         - AbbrCode: 0 ## NULL
