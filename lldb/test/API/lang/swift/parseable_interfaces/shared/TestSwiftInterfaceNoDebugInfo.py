@@ -59,6 +59,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         lldbutil.run_to_source_breakpoint(
            self, "break here", lldb.SBFileSpec("main.swift"),
            exe_name=self.getBuildArtifact("main"))
+        self.expect("expr 1")
 
         # Check the prebuilt cache path in the log output
         prefix = 'Using prebuilt Swift module cache path: '
