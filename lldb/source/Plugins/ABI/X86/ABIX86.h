@@ -17,6 +17,10 @@ public:
   static void Initialize();
   static void Terminate();
 
+protected:
+  void AugmentRegisterInfo(
+      std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
+
 private:
   using lldb_private::MCBasedABI::MCBasedABI;
 };
