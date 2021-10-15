@@ -8580,10 +8580,8 @@ private:
       if (!C)
         continue;
       MapKind Kind = Other;
-      if (!C->getMapTypeModifiers().empty() &&
-          llvm::any_of(C->getMapTypeModifiers(), [](OpenMPMapModifierKind K) {
-            return K == OMPC_MAP_MODIFIER_present;
-          }))
+      if (llvm::is_contained(C->getMapTypeModifiers(),
+                             OMPC_MAP_MODIFIER_present))
         Kind = Present;
       else if (C->getMapType() == OMPC_MAP_alloc)
         Kind = Allocs;
@@ -8602,10 +8600,8 @@ private:
       if (!C)
         continue;
       MapKind Kind = Other;
-      if (!C->getMotionModifiers().empty() &&
-          llvm::any_of(C->getMotionModifiers(), [](OpenMPMotionModifierKind K) {
-            return K == OMPC_MOTION_MODIFIER_present;
-          }))
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_present))
         Kind = Present;
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
@@ -8620,10 +8616,8 @@ private:
       if (!C)
         continue;
       MapKind Kind = Other;
-      if (!C->getMotionModifiers().empty() &&
-          llvm::any_of(C->getMotionModifiers(), [](OpenMPMotionModifierKind K) {
-            return K == OMPC_MOTION_MODIFIER_present;
-          }))
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_present))
         Kind = Present;
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
@@ -9191,18 +9185,13 @@ public:
                                              const MapData &RHS) {
       ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
       OpenMPMapClauseKind MapType = std::get<1>(RHS);
-      bool HasPresent = !MapModifiers.empty() &&
-                        llvm::any_of(MapModifiers, [](OpenMPMapModifierKind K) {
-                          return K == clang::OMPC_MAP_MODIFIER_present;
-                        });
+      bool HasPresent =
+          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
       bool HasAllocs = MapType == OMPC_MAP_alloc;
       MapModifiers = std::get<2>(RHS);
       MapType = std::get<1>(LHS);
       bool HasPresentR =
-          !MapModifiers.empty() &&
-          llvm::any_of(MapModifiers, [](OpenMPMapModifierKind K) {
-            return K == clang::OMPC_MAP_MODIFIER_present;
-          });
+          llvm::is_contained(MapModifiers, clang::OMPC_MAP_MODIFIER_present);
       bool HasAllocsR = MapType == OMPC_MAP_alloc;
       return (HasPresent && !HasPresentR) || (HasAllocs && !HasAllocsR);
     });

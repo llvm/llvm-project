@@ -2249,11 +2249,7 @@ public:
 
   bool matchesNode(const T &Node) const override {
     Optional<StringRef> OptOpName = getOpName(Node);
-    if (!OptOpName)
-      return false;
-    return llvm::any_of(Names, [OpName = *OptOpName](const std::string &Name) {
-      return Name == OpName;
-    });
+    return OptOpName && llvm::is_contained(Names, *OptOpName);
   }
 
 private:
