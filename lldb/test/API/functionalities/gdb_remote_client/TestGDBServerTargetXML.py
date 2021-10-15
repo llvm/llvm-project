@@ -582,3 +582,97 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.runCmd("register write v31 '{0x00 0x00 0x00 0x43 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'")
         self.match("register read s31",
                    ["s31 = 128"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_no_duplicate_subregs(self):
+        """Test that duplicate subregisters are not added."""
+        class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                "0102030405060708"  # x0
+                "1112131415161718"  # x1
+            ) + 27 * (
+                "2122232425262728"  # x2..x28
+            ) + (
+                "3132333435363738"  # x29 (fp)
+                "4142434445464748"  # x30 (lr)
+                "5152535455565758"  # x31 (sp)
+                "6162636465666768"  # pc
+                "71727374"  # cpsr
+            )
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return """<?xml version="1.0"?>
+                        <!DOCTYPE feature SYSTEM "gdb-target.dtd">
+                        <target>
+                          <architecture>aarch64</architecture>
+                          <feature name="org.gnu.gdb.aarch64.core">
+                            <reg name="x0" bitsize="64" type="int" regnum="0"/>
+                            <reg name="x1" bitsize="64" type="int" regnum="1"/>
+                            <reg name="x2" bitsize="64" type="int" regnum="2"/>
+                            <reg name="x3" bitsize="64" type="int" regnum="3"/>
+                            <reg name="x4" bitsize="64" type="int" regnum="4"/>
+                            <reg name="x5" bitsize="64" type="int" regnum="5"/>
+                            <reg name="x6" bitsize="64" type="int" regnum="6"/>
+                            <reg name="x7" bitsize="64" type="int" regnum="7"/>
+                            <reg name="x8" bitsize="64" type="int" regnum="8"/>
+                            <reg name="x9" bitsize="64" type="int" regnum="9"/>
+                            <reg name="x10" bitsize="64" type="int" regnum="10"/>
+                            <reg name="x11" bitsize="64" type="int" regnum="11"/>
+                            <reg name="x12" bitsize="64" type="int" regnum="12"/>
+                            <reg name="x13" bitsize="64" type="int" regnum="13"/>
+                            <reg name="x14" bitsize="64" type="int" regnum="14"/>
+                            <reg name="x15" bitsize="64" type="int" regnum="15"/>
+                            <reg name="x16" bitsize="64" type="int" regnum="16"/>
+                            <reg name="x17" bitsize="64" type="int" regnum="17"/>
+                            <reg name="x18" bitsize="64" type="int" regnum="18"/>
+                            <reg name="x19" bitsize="64" type="int" regnum="19"/>
+                            <reg name="x20" bitsize="64" type="int" regnum="20"/>
+                            <reg name="x21" bitsize="64" type="int" regnum="21"/>
+                            <reg name="x22" bitsize="64" type="int" regnum="22"/>
+                            <reg name="x23" bitsize="64" type="int" regnum="23"/>
+                            <reg name="x24" bitsize="64" type="int" regnum="24"/>
+                            <reg name="x25" bitsize="64" type="int" regnum="25"/>
+                            <reg name="x26" bitsize="64" type="int" regnum="26"/>
+                            <reg name="x27" bitsize="64" type="int" regnum="27"/>
+                            <reg name="x28" bitsize="64" type="int" regnum="28"/>
+                            <reg name="x29" bitsize="64" type="int" regnum="29"/>
+                            <reg name="x30" bitsize="64" type="int" regnum="30"/>
+                            <reg name="sp" bitsize="64" type="data_ptr" regnum="31"/>
+                            <reg name="pc" bitsize="64" type="code_ptr" regnum="32"/>
+                            <reg name="cpsr" bitsize="32" type="cpsr_flags" regnum="33"/>
+                            <reg name="w0" bitsize="32" type="int" regnum="34" value_regnums="0"/>
+                          </feature>
+                        </target>""", False
+                else:
+                    return None, False
+
+            def readRegister(self, regnum):
+                return ""
+
+            def readRegisters(self):
+                return self.reg_data
+
+            def haltReason(self):
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("basic_eh_frame-aarch64.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        self.match("register read x0",
+                   ["x0 = 0x0807060504030201"])
+        # w0 comes from target.xml
+        self.match("register read w0",
+                   ["w0 = 0x04030201"])
+        self.match("register read x1",
+                   ["x1 = 0x1817161514131211"])
+        # w1 should not be added
+        self.match("register read w1",
+                   ["error: Invalid register name 'w1'."],
+                   error=True)
