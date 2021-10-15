@@ -238,9 +238,9 @@ struct ComparisonSetup : public ParameterBatch {
     return getMemcmpSizeDistributions();
   }
 
-  inline int Call(ParameterType Parameter, MemcmpFunction Memcmp) {
-    return Memcmp(LhsBuffer + Parameter.OffsetBytes,
-                  RhsBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  inline int Call(ParameterType Parameter, MemcmpOrBcmpFunction MemcmpOrBcmp) {
+    return MemcmpOrBcmp(LhsBuffer + Parameter.OffsetBytes,
+                        RhsBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
   }
 
 private:

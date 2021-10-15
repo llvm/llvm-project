@@ -15,7 +15,7 @@ using llvm::Twine;
 using llvm::libc_benchmarks::BzeroConfiguration;
 using llvm::libc_benchmarks::ComparisonSetup;
 using llvm::libc_benchmarks::CopySetup;
-using llvm::libc_benchmarks::MemcmpConfiguration;
+using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemorySizeDistribution;
 using llvm::libc_benchmarks::MemsetConfiguration;
@@ -94,12 +94,12 @@ extern llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations();
 BENCHMARK_MEMORY_FUNCTION(BM_Memcpy, CopySetup, MemcpyConfiguration,
                           getMemcpyConfigurations());
 
-extern llvm::ArrayRef<MemcmpConfiguration> getMemcmpConfigurations();
-BENCHMARK_MEMORY_FUNCTION(BM_Memcmp, ComparisonSetup, MemcmpConfiguration,
+extern llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations();
+BENCHMARK_MEMORY_FUNCTION(BM_Memcmp, ComparisonSetup, MemcmpOrBcmpConfiguration,
                           getMemcmpConfigurations());
 
-extern llvm::ArrayRef<MemcmpConfiguration> getBcmpConfigurations();
-BENCHMARK_MEMORY_FUNCTION(BM_Bcmp, ComparisonSetup, MemcmpConfiguration,
+extern llvm::ArrayRef<MemcmpOrBcmpConfiguration> getBcmpConfigurations();
+BENCHMARK_MEMORY_FUNCTION(BM_Bcmp, ComparisonSetup, MemcmpOrBcmpConfiguration,
                           getBcmpConfigurations());
 
 extern llvm::ArrayRef<MemsetConfiguration> getMemsetConfigurations();
