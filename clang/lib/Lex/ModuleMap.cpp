@@ -989,9 +989,8 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
           // We're allowed to infer for this directory, but make sure it's okay
           // to infer this particular module.
           StringRef Name = llvm::sys::path::stem(FrameworkDirName);
-          canInfer = std::find(inferred->second.ExcludedModules.begin(),
-                               inferred->second.ExcludedModules.end(),
-                               Name) == inferred->second.ExcludedModules.end();
+          canInfer =
+              !llvm::is_contained(inferred->second.ExcludedModules, Name);
 
           Attrs.IsSystem |= inferred->second.Attrs.IsSystem;
           Attrs.IsExternC |= inferred->second.Attrs.IsExternC;

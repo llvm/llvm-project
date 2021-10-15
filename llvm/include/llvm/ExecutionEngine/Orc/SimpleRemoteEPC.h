@@ -31,10 +31,24 @@ namespace orc {
 class SimpleRemoteEPC : public ExecutorProcessControl,
                         public SimpleRemoteEPCTransportClient {
 public:
+  /// A setup object containing callbacks to construct a memory manager and
+  /// memory access object. Both are optional. If not specified,
+  /// EPCGenericJITLinkMemoryManager and EPCGenericMemoryAccess will be used.
+  struct Setup {
+    using CreateMemoryManagerFn =
+        Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
+            SimpleRemoteEPC &);
+    using CreateMemoryAccessFn =
+        Expected<std::unique_ptr<MemoryAccess>>(SimpleRemoteEPC &);
+
+    unique_function<CreateMemoryManagerFn> CreateMemoryManager;
+    unique_function<CreateMemoryAccessFn> CreateMemoryAccess;
+  };
+
   /// Create a SimpleRemoteEPC using the given transport type and args.
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
-  Create(std::unique_ptr<TaskDispatcher> D,
+  Create(std::unique_ptr<TaskDispatcher> D, Setup S,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
         new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
@@ -44,7 +58,7 @@ public:
     if (!T)
       return T.takeError();
     SREPC->T = std::move(*T);
-    if (auto Err = SREPC->setup())
+    if (auto Err = SREPC->setup(std::move(S)))
       return joinErrors(std::move(Err), SREPC->disconnect());
     return std::move(SREPC);
   }
@@ -75,22 +89,22 @@ public:
 
   void handleDisconnect(Error Err) override;
 
-protected:
-  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-  createMemoryManager();
-  virtual Expected<std::unique_ptr<MemoryAccess>> createMemoryAccess();
-
 private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
                   std::unique_ptr<TaskDispatcher> D)
     : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
+
+  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
+  static Expected<std::unique_ptr<MemoryAccess>>
+  createDefaultMemoryAccess(SimpleRemoteEPC &SREPC);
 
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     SimpleRemoteEPCArgBytesVector ArgBytes);
-  Error setup();
+  Error setup(Setup S);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);
