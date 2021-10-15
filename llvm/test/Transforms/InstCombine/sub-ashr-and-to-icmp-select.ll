@@ -131,8 +131,8 @@ define i32 @sub_ashr_and_i32_extra_use_sub(i32 %x, i32 %y, i32* %p) {
 ; CHECK-LABEL: @sub_ashr_and_i32_extra_use_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[SUB]], 0
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ISNEG]], i32 [[X]], i32 0
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 %y, %x
