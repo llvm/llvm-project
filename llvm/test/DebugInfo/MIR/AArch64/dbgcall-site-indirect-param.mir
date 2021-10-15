@@ -21,15 +21,15 @@
 
 # After w0 is clobbered, we should get an indirect parameter entry value for "f".
 
-# DWARF-LABEL: DW_TAG_subprogram
-# DWARF:       DW_AT_name ("baz")
-
-# DWARF-LABEL: DW_TAG_subprogram
-# DWARF-LABEL: DW_TAG_formal_parameter
+# DWARF: DW_TAG_subprogram
+# DWARF: DW_TAG_formal_parameter
 # DWARF-NEXT: DW_AT_location
 # DWARF-NEXT: [0x0000000000000000, 0x0000000000000010): DW_OP_breg0 W0+0
 # DWARF-NEXT: [0x0000000000000010, 0x000000000000001c): DW_OP_entry_value(DW_OP_reg0 W0))
 # DWARF-NEXT: DW_AT_name    ("f")
+
+# DWARF: DW_TAG_subprogram
+# DWARF:       DW_AT_name ("baz")
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -56,10 +56,9 @@
   !llvm.module.flags = !{!8, !9, !10, !11}
   !llvm.ident = !{!12}
 
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None, sysroot: "/")
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, sysroot: "/")
   !1 = !DIFile(filename: "indirect.c", directory: "/tmp/fatptr")
   !2 = !{}
-  !3 = !{!4}
   !4 = !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !7}
