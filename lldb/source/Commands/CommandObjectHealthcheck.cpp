@@ -19,9 +19,9 @@ using namespace lldb_private;
 
 CommandObjectHealthcheck::CommandObjectHealthcheck(
     CommandInterpreter &interpreter)
-    : CommandObjectParsed(interpreter, "healthcheck",
+    : CommandObjectParsed(interpreter, "swift-healthcheck",
                           "Show the LLDB debugger health check diagnostics.",
-                          "healthcheck") {}
+                          "swift-healthcheck") {}
 
 bool CommandObjectHealthcheck::DoExecute(Args &args,
                                          CommandReturnObject &result) {
