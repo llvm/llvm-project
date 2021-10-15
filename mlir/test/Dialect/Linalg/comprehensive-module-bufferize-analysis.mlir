@@ -912,3 +912,104 @@ func @interleaved_extract_insert_slice_chain_2(
 
   return %15 : tensor<62x90xf32>
 }
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @reading_scf_for
+func @reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                      %s: index, %v: vector<5xf32>) -> (tensor<?xf32>, vector<5xf32>) {
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+
+  // Write to %t1.
+  // CHECK:      vector.transfer_write
+  // CHECK-SAME: __inplace_results_attr__ = ["false"]
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
+
+  // Read the old value of %t1 inside the loop via an alias.
+  // CHECK:      scf.for
+  %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
+    // CHECK:      tensor.extract_slice
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
+
+    // Read from %t1 via alias %e.
+    %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
+    scf.yield %e, %v2 : tensor<?xf32>, vector<5xf32>
+  }
+  // CHECK: __inplace_results_attr__ = ["true", "none"]
+
+  // Use %t3 in some way without reading it, so that it does not get DCE'd.
+  // CHECK:      linalg.generic
+  // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %o = linalg.generic #trait outs (%t3 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        linalg.yield %cst : f32
+    } -> (tensor<?xf32>)
+
+  return %o, %v3 : tensor<?xf32>, vector<5xf32>
+}
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @non_reading_scf_for
+func @non_reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                          %s: index, %v: vector<5xf32>) -> (tensor<?xf32>, vector<5xf32>) {
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+
+  // Write to %t1.
+  // CHECK:      vector.transfer_write
+  // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
+
+  // This loop does not read from %t1. It only writes to it.
+  // CHECK:      scf.for
+  %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
+    // CHECK:      tensor.extract_slice
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
+
+    // Write to %t1 via alias. (Overwrite %t3.)
+    // CHECK:      linalg.generic
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %o2 = linalg.generic #trait outs (%e : tensor<?xf32>) {
+        ^bb(%0: f32) :
+          linalg.yield %cst : f32
+      } -> (tensor<?xf32>)
+
+    // Read overwritten value. This is not a read of %t1.
+    %v2 = vector.transfer_read %o2[%s], %cst : tensor<?xf32>, vector<5xf32>
+    scf.yield %o2, %v2 : tensor<?xf32>, vector<5xf32>
+  }
+
+  // Use %t3 in some way without reading it, so that it does not get DCE'd.
+    // CHECK:      linalg.generic
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %o = linalg.generic #trait outs (%t3 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        linalg.yield %cst : f32
+    } -> (tensor<?xf32>)
+
+  return %o, %v3 : tensor<?xf32>, vector<5xf32>
+}

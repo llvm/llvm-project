@@ -612,6 +612,31 @@ static OpResult getAliasingOpResult(OpOperand &opOperand) {
           [&](Operation *op) { return getInplaceableOpResult(opOperand); });
 }
 
+// Predeclaration of function.
+static bool bufferizesToMemoryRead(OpOperand &opOperand);
+
+/// scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
+/// matching bbArg may.
+static bool bufferizesToMemoryRead(scf::ForOp forOp, OpOperand &opOperand) {
+  SmallVector<OpOperand *> workingSet;
+  for (OpOperand &use : forOp.getRegionIterArgForOpOperand(opOperand).getUses())
+    workingSet.push_back(&use);
+
+  while (!workingSet.empty()) {
+    OpOperand *uMaybeReading = workingSet.pop_back_val();
+    // Skip over all ExtractSliceOps. These do not read by themselves but just
+    // add a new alias.
+    if (auto extractSliceOp =
+            dyn_cast<ExtractSliceOp>(uMaybeReading->getOwner()))
+      for (OpOperand &use : extractSliceOp.result().getUses())
+        workingSet.push_back(&use);
+    if (bufferizesToMemoryRead(*uMaybeReading))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if `opOperand` bufferizes to a memory read.
 static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // Unknown op that returns a tensor. The inplace analysis does not support
@@ -622,15 +647,8 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // may.
   if (isa<ExtractSliceOp>(opOperand.getOwner()))
     return false;
-  // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
-  // matching bbArg may.
-  if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner())) {
-    for (OpOperand &use :
-         forOp.getRegionIterArgForOpOperand(opOperand).getUses())
-      if (bufferizesToMemoryRead(use))
-        return true;
-    return false;
-  }
+  if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner()))
+    return bufferizesToMemoryRead(forOp, opOperand);
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
   if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
