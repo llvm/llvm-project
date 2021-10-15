@@ -87,8 +87,8 @@ def help : FF<"help", "Display this help">;
 def version : FF<"version", "Display the version">;
 
 // Ignored for GNU readelf compatibility.
-def : F<"W", "Ignored for GNU readelf compatibility">;
-def : FF<"wide", "Ignored for GNU readelf compatibility">;
+def wide : FF<"wide", "Ignored for GNU readelf compatibility">;
+def : F<"W", "Ignored for GNU readelf compatibility">, Alias<wide>;
 
 // Traditional llvm-readobj Aliases.
 def : Flag<["--"], "dt">, Alias<dyn_syms>, HelpText<"Alias for --dyn-syms">;
