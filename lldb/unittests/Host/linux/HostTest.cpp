@@ -9,7 +9,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Process.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
