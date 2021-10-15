@@ -19,10 +19,13 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
+
+class PatternRewriter;
 
 /// Tests whether the given maps describe a row major matmul. The test is
 /// permutation-invariant. Note that this only checks the affine maps from an
@@ -131,6 +134,60 @@ inline StringRef toString(IteratorType t) {
   }
   llvm_unreachable("Unsupported IteratorType");
 }
+
+/// Helper StructuredGenerator class to manipulate and rewrite ops with
+/// `StructuredOpInterface`. This is templated for now because VectorOps do not
+/// yet implement the StructuredOpInterface itself.
+template <typename StructuredOpInterface>
+class StructuredGenerator {
+public:
+  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+
+  struct IteratorType {
+    IteratorType(StringRef strRef) : strRef(strRef) {}
+    bool isOfType(Attribute attr) const {
+      auto sAttr = attr.dyn_cast<StringAttr>();
+      return sAttr && sAttr.getValue() == strRef;
+    }
+    StringRef strRef;
+  };
+  struct Par : public IteratorType {
+    Par() : IteratorType(getParallelIteratorTypeName()) {}
+  };
+  struct Red : public IteratorType {
+    Red() : IteratorType(getReductionIteratorTypeName()) {}
+  };
+  struct Win : public IteratorType {
+    Win() : IteratorType(getWindowIteratorTypeName()) {}
+  };
+
+  StructuredGenerator(PatternRewriter &rewriter, StructuredOpInterface op)
+      : rewriter(rewriter), ctx(op.getContext()), loc(op.getLoc()),
+        iterators(op.iterator_types()), maps(op.getIndexingMaps()), op(op) {}
+
+  bool iters(ArrayRef<IteratorType> its) {
+    if (its.size() != iterators.size())
+      return false;
+    for (int i = 0, e = its.size(); i != e; ++i) {
+      if (!its[i].isOfType(iterators[i]))
+        return false;
+    }
+    return true;
+  }
+
+  bool layout(MapList l) {
+    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    return maps == infer(l);
+  }
+
+protected:
+  PatternRewriter &rewriter;
+  MLIRContext *ctx;
+  Location loc;
+  ArrayAttr iterators;
+  SmallVector<AffineMap, 4> maps;
+  Operation *op;
+};
 
 } // end namespace mlir
 
