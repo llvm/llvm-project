@@ -3012,7 +3012,7 @@ public:
 
 } // namespace
 
-void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
+void mlir::tosa::populateTosaToLinalgConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<
       // clang-format off

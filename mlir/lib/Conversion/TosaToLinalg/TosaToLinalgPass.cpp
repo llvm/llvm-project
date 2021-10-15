@@ -30,8 +30,7 @@
 using namespace mlir;
 
 namespace {
-struct TosaToLinalgOnTensors
-    : public TosaToLinalgOnTensorsBase<TosaToLinalgOnTensors> {
+struct TosaToLinalg : public TosaToLinalgBase<TosaToLinalg> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, linalg::LinalgDialect,
@@ -55,18 +54,18 @@ public:
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FuncOp func = getFunction();
-    mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(&patterns);
+    mlir::tosa::populateTosaToLinalgConversionPatterns(&patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToLinalgOnTensors() {
-  return std::make_unique<TosaToLinalgOnTensors>();
+std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
+  return std::make_unique<TosaToLinalg>();
 }
 
-void mlir::tosa::addTosaToLinalgOnTensorsPasses(OpPassManager &pm) {
+void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm) {
   pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalgOnTensors());
+  pm.addNestedPass<FuncOp>(createTosaToLinalg());
 }
