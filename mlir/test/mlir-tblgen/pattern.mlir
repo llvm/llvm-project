@@ -583,3 +583,13 @@ func @returnTypeAndLocation(%arg0 : i32) -> i1 {
   // CHECK: "test.two_to_one"(%0, %1) : (i32, i32) -> i1
   return %0 : i1
 }
+
+//===----------------------------------------------------------------------===//
+// Test that patterns can create ConstantStrAttr
+//===----------------------------------------------------------------------===//
+
+func @testConstantStrAttr() -> () {
+  // CHECK: test.has_str_value {value = "foo"}
+  test.no_str_value {value = "bar"}
+  return
+}

@@ -1710,12 +1710,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
     std::string defaultValue;
     if (attrParamKind == AttrParamKind::UnwrappedValue &&
         i >= defaultValuedAttrStartIndex) {
-      bool isString = attr.getReturnType() == "::llvm::StringRef";
-      if (isString)
-        defaultValue.append("\"");
       defaultValue += attr.getDefaultValue();
-      if (isString)
-        defaultValue.append("\"");
     }
     paramList.emplace_back(type, namedAttr.name, defaultValue, properties);
   }

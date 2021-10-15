@@ -50,6 +50,13 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 };
 } // end namespace llvm
 
+static std::string escapeString(StringRef value) {
+  std::string ret;
+  llvm::raw_string_ostream os(ret);
+  llvm::printEscapedString(value, os);
+  return os.str();
+}
+
 //===----------------------------------------------------------------------===//
 // PatternEmitter
 //===----------------------------------------------------------------------===//
@@ -189,7 +196,7 @@ private:
 
   // Returns the C++ expression to construct a constant attribute of the given
   // `value` for the given attribute kind `attr`.
-  std::string handleConstantAttr(Attribute attr, StringRef value);
+  std::string handleConstantAttr(Attribute attr, const Twine &value);
 
   // Returns the C++ expression to build an argument from the given DAG `leaf`.
   // `patArgName` is used to bound the argument to the source pattern.
@@ -313,7 +320,7 @@ PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
 }
 
 std::string PatternEmitter::handleConstantAttr(Attribute attr,
-                                               StringRef value) {
+                                               const Twine &value) {
   if (!attr.isConstBuildable())
     PrintFatalError(loc, "Attribute " + attr.getAttrDefName() +
                              " does not have the 'constBuilderCall' field");
@@ -492,7 +499,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
         formatv("\"operand {0} of native code call '{1}' failed to satisfy "
                 "constraint: "
                 "'{2}'\"",
-                i, tree.getNativeCodeTemplate(), constraint.getSummary()));
+                i, tree.getNativeCodeTemplate(),
+                escapeString(constraint.getSummary())));
   }
 
   LLVM_DEBUG(llvm::dbgs() << "done emitting match for native code call\n");
@@ -630,7 +638,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
           formatv("\"operand {0} of op '{1}' failed to satisfy constraint: "
                   "'{2}'\"",
                   operand - op.operand_begin(), op.getOperationName(),
-                  constraint.getSummary()));
+                  escapeString(constraint.getSummary())));
     }
   }
 
@@ -694,9 +702,9 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
         opName,
         tgfmt(matcher.getConditionTemplate(), &fmtCtx.withSelf("tblgen_attr")),
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
-                "{2}\"",
+                "'{2}'\"",
                 op.getOperationName(), namedAttr->name,
-                matcher.getAsConstraint().getSummary()));
+                escapeString(matcher.getAsConstraint().getSummary())));
   }
 
   // Capture the value
@@ -740,8 +748,8 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       emitMatchCheck(
           opName, tgfmt(condition, &fmtCtx.withSelf(self.str())),
-          formatv("\"value entity '{0}' failed to satisfy constraint: {1}\"",
-                  entities.front(), constraint.getSummary()));
+          formatv("\"value entity '{0}' failed to satisfy constraint: '{1}'\"",
+                  entities.front(), escapeString(constraint.getSummary())));
 
     } else if (isa<AttrConstraint>(constraint)) {
       PrintFatalError(
@@ -765,9 +773,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
                      tgfmt(condition, &fmtCtx.withSelf(self), names[0],
                            names[1], names[2], names[3]),
                      formatv("\"entities '{0}' failed to satisfy constraint: "
-                             "{1}\"",
+                             "'{1}'\"",
                              llvm::join(entities, ", "),
-                             constraint.getSummary()));
+                             escapeString(constraint.getSummary())));
     }
   }
 
@@ -1103,7 +1111,7 @@ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
   if (leaf.isEnumAttrCase()) {
     auto enumCase = leaf.getAsEnumAttrCase();
     if (enumCase.isStrCase())
-      return handleConstantAttr(enumCase, enumCase.getSymbol());
+      return handleConstantAttr(enumCase, "\"" + enumCase.getSymbol() + "\"");
     // This is an enum case backed by an IntegerAttr. We need to get its value
     // to build the constant.
     std::string val = std::to_string(enumCase.getValue());
