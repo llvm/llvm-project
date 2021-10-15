@@ -14,7 +14,7 @@ RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | F
 
 SWITCHES-LABEL: Counters:
 SWITCHES-NEXT:   switches:
-SWITCHES-NEXT:     Hash: 0x0099a0c98383683e
+SWITCHES-NEXT:     Hash: 0xa50a07f391ae4be5
 SWITCHES-NEXT:     Counters: 19
 SWITCHES-NEXT:     Function count: 1
 SWITCHES-LABEL: Functions shown: 1

@@ -14,7 +14,6 @@
 #include <stdio.h>
 
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 
 static const __llvm_profile_data *DataFirst = NULL;
 static const __llvm_profile_data *DataLast = NULL;
@@ -97,9 +96,5 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
 
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
-
-COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  return 0;
-}
 
 #endif

@@ -10,7 +10,6 @@
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 
 #if defined(__APPLE__)
 /* Use linker magic to find the bounds of the Data section. */
@@ -68,9 +67,4 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = &VNodesStart;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = &VNodesEnd;
-
-COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  return 0;
-}
-
 #endif
