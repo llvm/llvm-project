@@ -177,6 +177,12 @@ X86 Support in Clang
 
 - Support for ``AVX512-FP16`` instructions has been added.
 
+Arm and AArch64 Support in Clang
+--------------------------------
+
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm Cortex-A510 (``cortex-a510``)
+
 Internal API Changes
 --------------------
 

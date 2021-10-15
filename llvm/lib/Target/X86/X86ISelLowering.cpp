@@ -431,6 +431,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::PARITY, MVT::i64, Custom);
   if (Subtarget.hasPOPCNT()) {
     setOperationPromotedToType(ISD::CTPOP, MVT::i8, MVT::i32);
+    // popcntw is longer to encode than popcntl and also has a false dependency
+    // on the dest that popcntl hasn't had since Cannon Lake.
+    setOperationPromotedToType(ISD::CTPOP, MVT::i16, MVT::i32);
   } else {
     setOperationAction(ISD::CTPOP          , MVT::i8   , Expand);
     setOperationAction(ISD::CTPOP          , MVT::i16  , Expand);

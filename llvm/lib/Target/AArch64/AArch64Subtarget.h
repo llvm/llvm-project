@@ -50,6 +50,7 @@ public:
     CortexA35,
     CortexA53,
     CortexA55,
+    CortexA510,
     CortexA57,
     CortexA65,
     CortexA72,

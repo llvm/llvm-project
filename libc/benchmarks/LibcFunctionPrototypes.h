@@ -26,9 +26,9 @@ struct BzeroConfiguration {
   llvm::StringRef Name;
 };
 
-using MemcmpFunction = int (*)(const void *, const void *, size_t);
-struct MemcmpConfiguration {
-  MemcmpFunction Function;
+using MemcmpOrBcmpFunction = int (*)(const void *, const void *, size_t);
+struct MemcmpOrBcmpConfiguration {
+  MemcmpOrBcmpFunction Function;
   llvm::StringRef Name;
 };
 

@@ -16,7 +16,7 @@ math(EXPR VERSION_PATCH "(${PARALLELSTL_VERSION_SOURCE} % 10)")
 
 project(ParallelSTL VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} LANGUAGES CXX)
 
-set(PSTL_PARALLEL_BACKEND "serial" CACHE STRING "Threading backend to use. Valid choices are 'serial' and 'tbb'. The default is 'serial'.")
+set(PSTL_PARALLEL_BACKEND "serial" CACHE STRING "Threading backend to use. Valid choices are 'serial', 'omp', and 'tbb'. The default is 'serial'.")
 set(PSTL_HIDE_FROM_ABI_PER_TU OFF CACHE BOOL "Whether to constrain ABI-unstable symbols to each translation unit (basically, mark them with C's static keyword).")
 set(_PSTL_HIDE_FROM_ABI_PER_TU ${PSTL_HIDE_FROM_ABI_PER_TU}) # For __pstl_config_site
 
@@ -43,6 +43,10 @@ elseif (PSTL_PARALLEL_BACKEND STREQUAL "tbb")
     message(STATUS "Parallel STL uses TBB ${TBB_VERSION} (interface version: ${TBB_INTERFACE_VERSION})")
     target_link_libraries(ParallelSTL INTERFACE TBB::tbb)
     set(_PSTL_PAR_BACKEND_TBB ON)
+elseif (PSTL_PARALLEL_BACKEND STREQUAL "omp")
+    message(STATUS "Parallel STL uses the omp backend")
+    target_compile_options(ParallelSTL INTERFACE "-fopenmp=libomp")
+    set(_PSTL_PAR_BACKEND_OPENMP ON)
 else()
     message(FATAL_ERROR "Requested unknown Parallel STL backend '${PSTL_PARALLEL_BACKEND}'.")
 endif()

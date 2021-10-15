@@ -31,7 +31,7 @@ function(define_linker_script target)
   set(link_libraries)
   if (interface_libs)
     foreach(lib IN LISTS interface_libs)
-      if ("${lib}" STREQUAL "cxx-headers")
+      if ("${lib}" MATCHES "cxx-headers|ParallelSTL")
         continue()
       endif()
       # If ${lib} is not a target, we use a dummy target which we know will
