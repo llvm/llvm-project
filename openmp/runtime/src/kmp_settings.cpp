@@ -3213,6 +3213,47 @@ static void __kmp_stg_print_topology_method(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_topology_method
 
+// KMP_TEAMS_PROC_BIND
+struct kmp_proc_bind_info_t {
+  const char *name;
+  kmp_proc_bind_t proc_bind;
+};
+static kmp_proc_bind_info_t proc_bind_table[] = {
+    {"spread", proc_bind_spread},
+    {"true", proc_bind_spread},
+    {"close", proc_bind_close},
+    // teams-bind = false means "replicate the primary thread's affinity"
+    {"false", proc_bind_primary},
+    {"primary", proc_bind_primary}};
+static void __kmp_stg_parse_teams_proc_bind(char const *name, char const *value,
+                                            void *data) {
+  int valid;
+  const char *end;
+  valid = 0;
+  for (size_t i = 0; i < sizeof(proc_bind_table) / sizeof(proc_bind_table[0]);
+       ++i) {
+    if (__kmp_match_str(proc_bind_table[i].name, value, &end)) {
+      __kmp_teams_proc_bind = proc_bind_table[i].proc_bind;
+      valid = 1;
+      break;
+    }
+  }
+  if (!valid) {
+    KMP_WARNING(StgInvalidValue, name, value);
+  }
+}
+static void __kmp_stg_print_teams_proc_bind(kmp_str_buf_t *buffer,
+                                            char const *name, void *data) {
+  const char *value = KMP_I18N_STR(NotDefined);
+  for (size_t i = 0; i < sizeof(proc_bind_table) / sizeof(proc_bind_table[0]);
+       ++i) {
+    if (__kmp_teams_proc_bind == proc_bind_table[i].proc_bind) {
+      value = proc_bind_table[i].name;
+      break;
+    }
+  }
+  __kmp_stg_print_str(buffer, name, value);
+}
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 // OMP_PROC_BIND / bind-var is functional on all 4.0 builds, including OS X*
@@ -5318,6 +5359,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif /* KMP_GOMP_COMPAT */
     {"OMP_PROC_BIND", __kmp_stg_parse_proc_bind, __kmp_stg_print_proc_bind,
      NULL, 0, 0},
+    {"KMP_TEAMS_PROC_BIND", __kmp_stg_parse_teams_proc_bind,
+     __kmp_stg_print_teams_proc_bind, NULL, 0, 0},
     {"OMP_PLACES", __kmp_stg_parse_places, __kmp_stg_print_places, NULL, 0, 0},
     {"KMP_TOPOLOGY_METHOD", __kmp_stg_parse_topology_method,
      __kmp_stg_print_topology_method, NULL, 0, 0},

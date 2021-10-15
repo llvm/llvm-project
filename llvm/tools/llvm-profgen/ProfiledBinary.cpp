@@ -22,21 +22,26 @@
 using namespace llvm;
 using namespace sampleprof;
 
-cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only", cl::ReallyHidden,
-                                  cl::init(false), cl::ZeroOrMore,
+cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only", cl::init(false),
+                                  cl::ZeroOrMore,
                                   cl::desc("Print disassembled code."));
 
-cl::opt<bool> ShowSourceLocations("show-source-locations", cl::ReallyHidden,
-                                  cl::init(false), cl::ZeroOrMore,
+cl::opt<bool> ShowSourceLocations("show-source-locations", cl::init(false),
+                                  cl::ZeroOrMore,
                                   cl::desc("Print source locations."));
 
-cl::opt<bool> ShowCanonicalFnName("show-canonical-fname", cl::ReallyHidden,
-                                  cl::init(false), cl::ZeroOrMore,
-                                  cl::desc("Print canonical function name."));
+static cl::opt<bool>
+    ShowCanonicalFnName("show-canonical-fname", cl::init(false), cl::ZeroOrMore,
+                        cl::desc("Print canonical function name."));
 
-cl::opt<bool> ShowPseudoProbe(
-    "show-pseudo-probe", cl::ReallyHidden, cl::init(false), cl::ZeroOrMore,
+static cl::opt<bool> ShowPseudoProbe(
+    "show-pseudo-probe", cl::init(false), cl::ZeroOrMore,
     cl::desc("Print pseudo probe section and disassembled info."));
+
+static cl::opt<bool> UseDwarfCorrelation(
+    "use-dwarf-correlation", cl::init(false), cl::ZeroOrMore,
+    cl::desc("Use dwarf for profile correlation even when binary contains "
+             "pseudo probe."));
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
@@ -271,6 +276,9 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFObjectFileBase *O
 }
 
 void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+  if (UseDwarfCorrelation)
+    return;
+
   StringRef FileName = Obj->getFileName();
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
        SI != SE; ++SI) {

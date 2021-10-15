@@ -71,3 +71,4 @@ def testCustomBuidlers():
     # CHECK: func @f1(%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
     # CHECK: memref.load %[[ARG0]][%[[ARG1]], %[[ARG2]]]
     print(module)
+    assert module.operation.verify()

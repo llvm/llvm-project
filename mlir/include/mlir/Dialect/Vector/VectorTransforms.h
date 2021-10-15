@@ -276,7 +276,7 @@ private:
 /// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to an output-size-unrolled sequence:
 /// ```
-///    %out = constant ... : vector<MxNxelt_type>
+///    %out = arith.constant ... : vector<MxNxelt_type>
 ///    %bt = vector.transpose %b, [1, 0]
 ///    %aRow0 = vector.extract %a[0]
 ///    %btRow0 = vector.extract %bt[0]

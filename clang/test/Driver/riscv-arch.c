@@ -387,20 +387,20 @@
 // RV32-EXPERIMENTAL-ZBB-NOFLAG: error: invalid arch name 'rv32izbb'
 // RV32-EXPERIMENTAL-ZBB-NOFLAG: requires '-menable-experimental-extensions'
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb0p93 -menable-experimental-extensions -### %s \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb1p0 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB %s
 // RV32-EXPERIMENTAL-ZBB: "-target-feature" "+experimental-zbb"
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb0p93_zbp0p93 -menable-experimental-extensions -### %s \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb1p0_zbp0p93 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB-ZBP %s
 // RV32-EXPERIMENTAL-ZBB-ZBP: "-target-feature" "+experimental-zbb"
 // RV32-EXPERIMENTAL-ZBB-ZBP: "-target-feature" "+experimental-zbp"
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb0p93zbp0p93 -menable-experimental-extensions -### %s \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izbb1p0zbp0p93 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE %s
-// RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE: error: invalid arch name 'rv32izbb0p93zbp0p93', multi-character extensions must be separated by underscores
+// RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE: error: invalid arch name 'rv32izbb1p0zbp0p93', multi-character extensions must be separated by underscores
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32izba0p93 -menable-experimental-extensions -### %s \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izba1p0 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBA %s
 // RV32-EXPERIMENTAL-ZBA: "-target-feature" "+experimental-zba"
 

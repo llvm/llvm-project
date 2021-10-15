@@ -68,7 +68,7 @@ LogicalResult hoistAffineIfOp(AffineIfOp ifOp, bool *folded = nullptr);
 ///    affine.for %arg2 = 0 to 64 {
 ///      affine.for %arg3 = 0 to 128 step 8 {
 ///        affine.for %arg4 = 0 to 512 step 4 {
-///          %cst = constant 0.000000e+00 : f32
+///          %cst = arith.constant 0.000000e+00 : f32
 ///          %0 = vector.transfer_read %arg0[%arg2, %arg3, %arg4], %cst : ...
 ///          vector.transfer_write %0, %arg1[%arg2, %arg3, %arg4] : ...
 ///        }
