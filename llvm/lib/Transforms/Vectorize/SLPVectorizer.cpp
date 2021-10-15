@@ -5669,17 +5669,18 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
 
             // block:
             // %phi = phi <2 x > { .., %entry} {%shuffle, %block}
-            // %2 = shuffle <2 x > %phi, %poison, <4 x > <0, 0, 1, 1>
+            // %2 = shuffle <2 x > %phi, poison, <4 x > <1, 1, 0, 0>
             // ... (use %2)
-            // %shuffle = shuffle <2 x> %2, poison, <2 x> {0, 2}
+            // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
             // br %block
-            SmallVector<int> UniqueIdxs;
+            SmallVector<int> UniqueIdxs(VF, UndefMaskElem);
             SmallSet<int, 4> UsedIdxs;
             int Pos = 0;
             int Sz = VL.size();
             for (int Idx : E->ReuseShuffleIndices) {
-              if (Idx != Sz && UsedIdxs.insert(Idx).second)
-                UniqueIdxs.emplace_back(Pos);
+              if (Idx != Sz && Idx != UndefMaskElem &&
+                  UsedIdxs.insert(Idx).second)
+                UniqueIdxs[Idx] = Pos;
               ++Pos;
             }
             assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
