@@ -41,7 +41,9 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   // lldb_private::PluginInterface Methods
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // lldb_private::OperatingSystem Methods
   bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,

@@ -45,8 +45,9 @@ public:
   size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
   size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
-  // lldb_private::Process overrides
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;

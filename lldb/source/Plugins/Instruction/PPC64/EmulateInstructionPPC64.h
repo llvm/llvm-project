@@ -44,7 +44,9 @@ public:
     return false;
   }
 
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   bool SetTargetTriple(const ArchSpec &arch) override;
 

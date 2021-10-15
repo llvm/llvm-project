@@ -10,6 +10,8 @@
 #define LLDB_TARGET_TRACE_EXPORTER_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 

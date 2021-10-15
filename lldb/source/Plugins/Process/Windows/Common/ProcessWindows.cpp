@@ -142,12 +142,6 @@ size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
   return 0;
 }
 
-// ProcessInterface protocol.
-
-lldb_private::ConstString ProcessWindows::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
     return Status("Hardware breakpoints are not supported.");

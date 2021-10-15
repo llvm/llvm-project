@@ -107,7 +107,9 @@ public:
   CreateObjectChecker(std::string, ExecutionContext &exe_ctx) override;
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V1;

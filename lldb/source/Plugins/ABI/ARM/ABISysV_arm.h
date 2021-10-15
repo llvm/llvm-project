@@ -75,7 +75,9 @@ public:
 
   // PluginInterface protocol
 
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   lldb::ValueObjectSP

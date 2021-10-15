@@ -1619,7 +1619,7 @@ ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
 }
 
 llvm::VersionTuple PlatformDarwin::GetOSVersion(Process *process) {
-  if (process && strstr(GetPluginName().GetCString(), "-simulator")) {
+  if (process && GetPluginName().contains("-simulator")) {
     lldb_private::ProcessInstanceInfo proc_info;
     if (Host::GetProcessInfo(process->GetID(), proc_info)) {
       const Environment &env = proc_info.GetEnvironment();

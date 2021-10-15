@@ -800,8 +800,9 @@ protected:
     // Get the plugin for the process.
     auto plugin_sp =
         process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
-    if (!plugin_sp || (plugin_sp->GetPluginName() !=
-                       StructuredDataDarwinLog::GetStaticPluginName())) {
+    if (!plugin_sp ||
+        (plugin_sp->GetPluginName() !=
+         StructuredDataDarwinLog::GetStaticPluginName().GetStringRef())) {
       result.AppendError("failed to get StructuredDataPlugin for "
                          "the process");
     }
@@ -1052,15 +1053,6 @@ void StructuredDataDarwinLog::Terminate() {
 ConstString StructuredDataDarwinLog::GetStaticPluginName() {
   static ConstString s_plugin_name("darwin-log");
   return s_plugin_name;
-}
-
-#pragma mark -
-#pragma mark PluginInterface API
-
-// PluginInterface API
-
-ConstString StructuredDataDarwinLog::GetPluginName() {
-  return GetStaticPluginName();
 }
 
 #pragma mark -

@@ -117,8 +117,8 @@ protected:
                 json_file.GetDirectory().AsCString())) {
       lldb::TraceSP trace_sp = traceOrErr.get();
       if (m_options.m_verbose && trace_sp)
-        result.AppendMessageWithFormat("loading trace with plugin %s\n",
-                                       trace_sp->GetPluginName().AsCString());
+        result.AppendMessageWithFormatv("loading trace with plugin {0}\n",
+                                        trace_sp->GetPluginName());
     } else
       return end_with_failure(traceOrErr.takeError());
 

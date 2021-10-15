@@ -604,11 +604,3 @@ ConstString ABISysV_arc::GetPluginNameStatic() {
   static ConstString g_name("sysv-arc");
   return g_name;
 }
-
-//------------------------------------------------------------------
-// PluginInterface protocol
-//------------------------------------------------------------------
-
-ConstString ABISysV_arc::GetPluginName() {
-  return GetPluginNameStatic();
-}

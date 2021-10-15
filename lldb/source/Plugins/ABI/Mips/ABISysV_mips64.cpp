@@ -1167,9 +1167,3 @@ lldb_private::ConstString ABISysV_mips64::GetPluginNameStatic() {
   static ConstString g_name("sysv-mips64");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_mips64::GetPluginName() {
-  return GetPluginNameStatic();
-}

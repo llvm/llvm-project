@@ -29,8 +29,8 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
 
   lldb_private::HistoryThreads GetHistoryThreads(lldb::addr_t address) override;

@@ -1066,11 +1066,6 @@ lldb_private::ConstString AppleObjCRuntimeV2::GetPluginNameStatic() {
   return g_name;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString AppleObjCRuntimeV2::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 BreakpointResolverSP
 AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp) {
@@ -2302,13 +2297,9 @@ static bool DoesProcessHaveSharedCache(Process &process) {
   if (!platform_sp)
     return true; // this should not happen
 
-  ConstString platform_plugin_name = platform_sp->GetPluginName();
-  if (platform_plugin_name) {
-    llvm::StringRef platform_plugin_name_sr =
-        platform_plugin_name.GetStringRef();
-    if (platform_plugin_name_sr.endswith("-simulator"))
-      return false;
-  }
+  llvm::StringRef platform_plugin_name_sr = platform_sp->GetPluginName();
+  if (platform_plugin_name_sr.endswith("-simulator"))
+    return false;
 
   return true;
 }

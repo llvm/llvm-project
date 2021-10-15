@@ -140,11 +140,6 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   return m_register_info_up.get();
 }
 
-// PluginInterface protocol
-ConstString OperatingSystemPython::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
                                              ThreadList &core_thread_list,
                                              ThreadList &new_thread_list) {

@@ -300,9 +300,9 @@ const lldb::UnixSignalsSP &PlatformPOSIX::GetRemoteUnixSignals() {
 Status PlatformPOSIX::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't connect to the host platform '%s', always connected",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "can't connect to the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (!m_remote_platform_sp)
       m_remote_platform_sp =
@@ -344,9 +344,9 @@ Status PlatformPOSIX::DisconnectRemote() {
   Status error;
 
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't disconnect from the host platform '%s', always connected",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "can't disconnect from the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (m_remote_platform_sp)
       error = m_remote_platform_sp->DisconnectRemote();

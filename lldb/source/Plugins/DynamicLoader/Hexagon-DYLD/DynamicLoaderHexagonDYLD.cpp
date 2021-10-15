@@ -78,10 +78,6 @@ void DynamicLoaderHexagonDYLD::Initialize() {
 
 void DynamicLoaderHexagonDYLD::Terminate() {}
 
-lldb_private::ConstString DynamicLoaderHexagonDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 lldb_private::ConstString DynamicLoaderHexagonDYLD::GetPluginNameStatic() {
   static ConstString g_name("hexagon-dyld");
   return g_name;

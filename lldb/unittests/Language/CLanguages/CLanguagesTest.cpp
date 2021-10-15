@@ -17,13 +17,13 @@
 
 using namespace lldb_private;
 
-/// Returns the name of the LLDB plugin for the given language or a null
-/// ConstString if there is no fitting plugin.
-static ConstString GetPluginName(lldb::LanguageType language) {
+/// Returns the name of the LLDB plugin for the given language or an empty
+/// string if there is no fitting plugin.
+static llvm::StringRef GetPluginName(lldb::LanguageType language) {
   Language *language_plugin = Language::FindPlugin(language);
   if (language_plugin)
     return language_plugin->GetPluginName();
-  return ConstString();
+  return "";
 }
 
 TEST(CLanguages, LookupCLanguagesByLanguageType) {

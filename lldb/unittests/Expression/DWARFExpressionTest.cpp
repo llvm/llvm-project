@@ -309,7 +309,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
 
   struct MockProcess : Process {
     using Process::Process;
-    ConstString GetPluginName() override { return ConstString("mock process"); }
+    llvm::StringRef GetPluginName() override { return "mock process"; }
     bool CanDebug(lldb::TargetSP target,
                   bool plugin_specified_by_name) override {
       return false;

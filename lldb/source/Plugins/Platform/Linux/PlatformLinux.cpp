@@ -89,10 +89,6 @@ const char *PlatformLinux::GetPluginDescriptionStatic(bool is_host) {
     return "Remote Linux user platform plug-in.";
 }
 
-ConstString PlatformLinux::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformLinux::Initialize() {
   PlatformPOSIX::Initialize();
 

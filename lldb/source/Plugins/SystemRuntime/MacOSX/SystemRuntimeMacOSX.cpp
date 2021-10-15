@@ -992,8 +992,3 @@ lldb_private::ConstString SystemRuntimeMacOSX::GetPluginNameStatic() {
 const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
   return "System runtime plugin for Mac OS X native libraries.";
 }
-
-// PluginInterface protocol
-lldb_private::ConstString SystemRuntimeMacOSX::GetPluginName() {
-  return GetPluginNameStatic();
-}

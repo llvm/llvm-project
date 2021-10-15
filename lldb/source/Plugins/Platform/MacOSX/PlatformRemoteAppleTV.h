@@ -34,8 +34,8 @@ public:
   static const char *GetDescriptionStatic();
 
   // lldb_private::PluginInterface functions
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
 
   // lldb_private::Platform functions

@@ -59,7 +59,9 @@ public:
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   llvm::MachO::fat_header m_header;

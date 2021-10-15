@@ -1133,8 +1133,7 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
 
   if (idx == 0) {
     PlatformSP host_platform_sp(Platform::GetHostPlatform());
-    platform_dict->AddStringItem(
-        name_str, host_platform_sp->GetPluginName().GetStringRef());
+    platform_dict->AddStringItem(name_str, host_platform_sp->GetPluginName());
     platform_dict->AddStringItem(
         desc_str, llvm::StringRef(host_platform_sp->GetDescription()));
   } else if (idx > 0) {

@@ -88,10 +88,6 @@ const char *PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
     return "Remote OpenBSD user platform plug-in.";
 }
 
-ConstString PlatformOpenBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformOpenBSD::Initialize() {
   Platform::Initialize();
 

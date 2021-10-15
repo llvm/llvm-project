@@ -117,10 +117,6 @@ const char *PlatformWindows::GetPluginDescriptionStatic(bool is_host) {
                  : "Remote Windows user platform plug-in.";
 }
 
-lldb_private::ConstString PlatformWindows::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformWindows::Initialize() {
   Platform::Initialize();
 
@@ -154,9 +150,9 @@ PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {}
 Status PlatformWindows::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't connect to the host platform '%s', always connected",
-        GetPluginName().AsCString());
+    error.SetErrorStringWithFormatv(
+        "can't connect to the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (!m_remote_platform_sp)
       m_remote_platform_sp =
@@ -185,9 +181,9 @@ Status PlatformWindows::DisconnectRemote() {
   Status error;
 
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't disconnect from the host platform '%s', always connected",
-        GetPluginName().AsCString());
+    error.SetErrorStringWithFormatv(
+        "can't disconnect from the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (m_remote_platform_sp)
       error = m_remote_platform_sp->DisconnectRemote();

@@ -174,10 +174,6 @@ void DynamicLoaderWindowsDYLD::DidLaunch() {
 
 Status DynamicLoaderWindowsDYLD::CanLoadImage() { return Status(); }
 
-ConstString DynamicLoaderWindowsDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 ThreadPlanSP
 DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
                                                        bool stop) {

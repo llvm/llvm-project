@@ -292,7 +292,9 @@ public:
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   class Locker : public ScriptInterpreterLocker {
   public:

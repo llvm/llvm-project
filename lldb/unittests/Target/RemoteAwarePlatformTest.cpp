@@ -25,7 +25,7 @@ public:
   using RemoteAwarePlatform::RemoteAwarePlatform;
 
   MOCK_METHOD0(GetDescription, const char *());
-  MOCK_METHOD0(GetPluginName, ConstString());
+  MOCK_METHOD0(GetPluginName, llvm::StringRef());
   MOCK_METHOD2(GetSupportedArchitectureAtIndex, bool(uint32_t, ArchSpec &));
   MOCK_METHOD4(Attach,
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));
@@ -41,7 +41,7 @@ public:
   using Platform::Platform;
 
   MOCK_METHOD0(GetDescription, const char *());
-  MOCK_METHOD0(GetPluginName, ConstString());
+  MOCK_METHOD0(GetPluginName, llvm::StringRef());
   MOCK_METHOD2(GetSupportedArchitectureAtIndex, bool(uint32_t, ArchSpec &));
   MOCK_METHOD4(Attach,
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));

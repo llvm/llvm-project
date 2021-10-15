@@ -35,8 +35,8 @@ public:
   }
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
 
   static lldb_private::ObjectFile *

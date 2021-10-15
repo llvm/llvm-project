@@ -46,7 +46,9 @@ public:
     return false;
   }
 
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   bool SetTargetTriple(const lldb_private::ArchSpec &arch) override;
 

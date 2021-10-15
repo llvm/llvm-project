@@ -44,8 +44,6 @@ ConstString TraceExporterCTF::GetPluginNameStatic() {
   return g_name;
 }
 
-ConstString TraceExporterCTF::GetPluginName() { return GetPluginNameStatic(); }
-
 Expected<TraceExporterUP> TraceExporterCTF::CreateInstance() {
   return std::make_unique<TraceExporterCTF>();
 }

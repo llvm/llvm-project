@@ -144,6 +144,3 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
   return symbol_vendor;
 }
-
-// PluginInterface protocol
-ConstString SymbolVendorELF::GetPluginName() { return GetPluginNameStatic(); }

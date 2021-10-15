@@ -60,7 +60,9 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // Process Control
   lldb_private::Status DoDestroy() override;
@@ -69,9 +71,8 @@ public:
 
   lldb_private::Status WillResume() override {
     lldb_private::Status error;
-    error.SetErrorStringWithFormat(
-        "error: %s does not support resuming processes",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support resuming processes", GetPluginName());
     return error;
   }
 

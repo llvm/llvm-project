@@ -633,11 +633,6 @@ size_t ObjectFileELF::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ObjectFileELF::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 // ObjectFile protocol
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,

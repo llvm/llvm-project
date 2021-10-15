@@ -82,10 +82,6 @@ const char *PlatformNetBSD::GetPluginDescriptionStatic(bool is_host) {
     return "Remote NetBSD user platform plug-in.";
 }
 
-ConstString PlatformNetBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformNetBSD::Initialize() {
   PlatformPOSIX::Initialize();
 

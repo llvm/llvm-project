@@ -56,7 +56,9 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 private:
   // Call CreateInstance to get an instance of this class

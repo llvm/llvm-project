@@ -62,7 +62,7 @@ public:
                           ThreadList &new_thread_list) override {
     return false;
   }
-  ConstString GetPluginName() override { return ConstString("Dummy"); }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
 };
 } // namespace
 

@@ -44,7 +44,9 @@ public:
   lldb_private::Status CanLoadImage() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 private:
   void LoadAllImagesAtFileAddresses();

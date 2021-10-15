@@ -432,10 +432,6 @@ const char *JITLoaderGDB::GetPluginDescriptionStatic() {
          "interface.";
 }
 
-lldb_private::ConstString JITLoaderGDB::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 void JITLoaderGDB::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,

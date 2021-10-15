@@ -35,7 +35,9 @@ public:
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // JITLoader interface
   void DidAttach() override;

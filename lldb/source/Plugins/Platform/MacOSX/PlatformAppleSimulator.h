@@ -46,7 +46,9 @@ public:
 
   virtual ~PlatformAppleSimulator();
 
-  lldb_private::ConstString GetPluginName() override { return m_plugin_name; }
+  llvm::StringRef GetPluginName() override {
+    return m_plugin_name.GetStringRef();
+  }
   const char *GetDescription() override { return m_description; }
 
   lldb_private::Status

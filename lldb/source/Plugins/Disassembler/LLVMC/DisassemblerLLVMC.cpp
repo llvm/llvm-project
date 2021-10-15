@@ -1461,6 +1461,3 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
   *name = nullptr;
   return nullptr;
 }
-
-// PluginInterface protocol
-ConstString DisassemblerLLVMC::GetPluginName() { return GetPluginNameStatic(); }

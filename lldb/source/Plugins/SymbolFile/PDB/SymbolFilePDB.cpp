@@ -1713,11 +1713,6 @@ SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
   return clang_type_system->CreateDeclContext(namespace_decl);
 }
 
-lldb_private::ConstString SymbolFilePDB::GetPluginName() {
-  static ConstString g_name("pdb");
-  return g_name;
-}
-
 IPDBSession &SymbolFilePDB::GetPDBSession() { return *m_session_up; }
 
 const IPDBSession &SymbolFilePDB::GetPDBSession() const {

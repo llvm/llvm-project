@@ -50,7 +50,9 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 private:
   UnwindAssembly_x86(const lldb_private::ArchSpec &arch);

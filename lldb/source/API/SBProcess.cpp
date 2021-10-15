@@ -88,7 +88,7 @@ const char *SBProcess::GetPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return process_sp->GetPluginName().GetCString();
+    return ConstString(process_sp->GetPluginName()).GetCString();
   }
   return "<Unknown>";
 }
@@ -98,7 +98,7 @@ const char *SBProcess::GetShortPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return process_sp->GetPluginName().GetCString();
+    return ConstString(process_sp->GetPluginName()).GetCString();
   }
   return "<Unknown>";
 }

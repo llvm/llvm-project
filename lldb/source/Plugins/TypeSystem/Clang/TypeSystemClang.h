@@ -138,7 +138,9 @@ public:
   void Finalize() override;
 
   // PluginInterface functions
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   static ConstString GetPluginNameStatic();
 

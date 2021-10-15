@@ -31,7 +31,9 @@ public:
                  lldb_private::Stream *feedback_strm);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H

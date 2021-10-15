@@ -134,7 +134,9 @@ public:
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 };
 
 } // namespace lldb_private

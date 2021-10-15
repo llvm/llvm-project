@@ -198,11 +198,6 @@ ConstString EmulateInstructionMIPS::GetPluginNameStatic() {
   return g_plugin_name;
 }
 
-lldb_private::ConstString EmulateInstructionMIPS::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionMIPS");
-  return g_plugin_name;
-}
-
 const char *EmulateInstructionMIPS::GetPluginDescriptionStatic() {
   return "Emulate instructions for the MIPS32 architecture.";
 }

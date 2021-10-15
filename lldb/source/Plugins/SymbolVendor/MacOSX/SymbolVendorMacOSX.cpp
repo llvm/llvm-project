@@ -310,8 +310,3 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   }
   return symbol_vendor;
 }
-
-// PluginInterface protocol
-ConstString SymbolVendorMacOSX::GetPluginName() {
-  return GetPluginNameStatic();
-}

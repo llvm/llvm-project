@@ -38,7 +38,3 @@ ArchitectureAArch64::Create(const ArchSpec &arch) {
   }
   return std::unique_ptr<Architecture>(new ArchitectureAArch64());
 }
-
-ConstString ArchitectureAArch64::GetPluginName() {
-  return GetPluginNameStatic();
-}
