@@ -240,8 +240,11 @@ static LogicalResult verify(ConvertOp op) {
       assert(tp1.getRank() == tp2.getRank());
       auto shape1 = tp1.getShape();
       auto shape2 = tp2.getShape();
+      // Accept size matches between the source and the destination type
+      // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
+      // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
       for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++) {
-        if (shape1[d] != shape2[d])
+        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamicSize)
           return op.emitError("unexpected conversion mismatch in dimension ")
                  << d;
       }

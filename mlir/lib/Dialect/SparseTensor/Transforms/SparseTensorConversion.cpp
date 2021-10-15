@@ -99,7 +99,7 @@ inline static Value constantZero(ConversionPatternRewriter &rewriter,
 
 /// Generates a constant of `index` type.
 inline static Value constantIndex(ConversionPatternRewriter &rewriter,
-                                  Location loc, unsigned i) {
+                                  Location loc, int64_t i) {
   return rewriter.create<arith::ConstantIndexOp>(loc, i);
 }
 
@@ -144,6 +144,70 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name,
   return result;
 }
 
+/// Generates dimension size call.
+static Value genDimSizeCall(ConversionPatternRewriter &rewriter, Operation *op,
+                            SparseTensorEncodingAttr &enc, Value src,
+                            int64_t idx) {
+  // Permute the index according to an optional dimension ordering.
+  if (AffineMap p = enc.getDimOrdering())
+    idx = p.getPermutedPosition(idx);
+  // Generate the call.
+  Location loc = op->getLoc();
+  StringRef name = "sparseDimSize";
+  SmallVector<Value, 2> params;
+  params.push_back(src);
+  params.push_back(constantIndex(rewriter, loc, idx));
+  Type iTp = rewriter.getIndexType();
+  auto fn = getFunc(op, name, iTp, params);
+  return rewriter.create<CallOp>(loc, iTp, fn, params).getResult(0);
+}
+
+/// Generates a call into the "swiss army knife" method of the sparse runtime
+/// support library for materializing sparse tensors into the computation.
+static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
+                        ArrayRef<Value> params) {
+  Location loc = op->getLoc();
+  StringRef name = "newSparseTensor";
+  Type pTp = LLVM::LLVMPointerType::get(rewriter.getI8Type());
+  auto fn = getFunc(op, name, pTp, params, /*emitCInterface=*/true);
+  auto call = rewriter.create<CallOp>(loc, pTp, fn, params);
+  return call.getResult(0);
+}
+
+/// Populates given sizes array from type.
+static void sizesFromType(ConversionPatternRewriter &rewriter,
+                          SmallVector<Value, 4> &sizes, Location loc,
+                          ShapedType stp) {
+  auto shape = stp.getShape();
+  for (unsigned i = 0, rank = stp.getRank(); i < rank; i++) {
+    uint64_t s = shape[i] == ShapedType::kDynamicSize ? 0 : shape[i];
+    sizes.push_back(constantIndex(rewriter, loc, s));
+  }
+}
+
+/// Populates given sizes array from source.
+static void sizesFromSrc(ConversionPatternRewriter &rewriter,
+                         SmallVector<Value, 4> &sizes, Location loc,
+                         Value src) {
+  ShapedType stp = src.getType().cast<ShapedType>();
+  for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
+    sizes.push_back(linalg::createOrFoldDimOp(rewriter, loc, src, i));
+}
+
+/// Populates given sizes array from type (for static sizes) and from
+/// an already converted into opague pointer source (for dynamic sizes).
+static void sizesFromPtr(ConversionPatternRewriter &rewriter,
+                         SmallVector<Value, 4> &sizes, Operation *op,
+                         SparseTensorEncodingAttr &enc, ShapedType stp,
+                         Value src) {
+  auto shape = stp.getShape();
+  for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
+    if (shape[i] == ShapedType::kDynamicSize)
+      sizes.push_back(genDimSizeCall(rewriter, op, enc, src, i));
+    else
+      sizes.push_back(constantIndex(rewriter, op->getLoc(), shape[i]));
+}
+
 /// Generates a temporary buffer of the given size and type.
 static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
                        unsigned sz, Type tp) {
@@ -152,7 +216,7 @@ static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
   return rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{a});
 }
 
-/// Fills a temporary buffer of the given type with arguments.
+/// Generates a temporary buffer of the given type and given contents.
 static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
                        ArrayRef<Value> values) {
   unsigned sz = values.size();
@@ -165,36 +229,28 @@ static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
   return buffer;
 }
 
-/// Generates a call into the "swiss army knife" method of the sparse runtime
-/// support library for materializing sparse tensors into the computation. The
-/// method returns the call value and assigns the permutation to 'perm'.
-static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
-                        SparseTensorEncodingAttr &enc, uint32_t action,
-                        Value &perm, ValueRange szs, Value ptr = Value()) {
+/// Populates parameters required to call the "swiss army knife" method of the
+/// sparse runtime support library for materializing sparse tensors into the
+/// computation.
+static void newParams(ConversionPatternRewriter &rewriter,
+                      SmallVector<Value, 8> &params, Operation *op,
+                      SparseTensorEncodingAttr &enc, uint32_t action,
+                      ValueRange szs, Value ptr = Value()) {
   Location loc = op->getLoc();
-  ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
-  SmallVector<Value, 8> params;
-  // Sparsity annotations in tensor constant form.
-  SmallVector<Value, 4> attrs;
   ArrayRef<SparseTensorEncodingAttr::DimLevelType> dlt = enc.getDimLevelType();
   unsigned sz = dlt.size();
+  // Sparsity annotations.
+  SmallVector<Value, 4> attrs;
   for (unsigned i = 0; i < sz; i++)
     attrs.push_back(constantI8(rewriter, loc, getDimLevelTypeEncoding(dlt[i])));
   params.push_back(genBuffer(rewriter, loc, attrs));
-  // Dimension sizes array of the enveloping *dense* tensor. Useful for either
+  // Dimension sizes array of the enveloping tensor. Useful for either
   // verification of external data, or for construction of internal data.
-  auto shape = resType.getShape();
+  // The index type is casted to I64 for API consistency.
+  Type iTp = rewriter.getI64Type();
   SmallVector<Value, 4> sizes;
-  if (szs.size() > 0) {
-    for (Value s : szs)
-      sizes.push_back(
-          rewriter.create<arith::IndexCastOp>(loc, s, rewriter.getI64Type()));
-  } else {
-    for (unsigned i = 0; i < sz; i++) {
-      uint64_t s = shape[i] == ShapedType::kDynamicSize ? 0 : shape[i];
-      sizes.push_back(constantI64(rewriter, loc, s));
-    }
-  }
+  for (Value s : szs)
+    sizes.push_back(rewriter.create<arith::IndexCastOp>(loc, s, iTp));
   params.push_back(genBuffer(rewriter, loc, sizes));
   // Dimension order permutation array. This is the "identity" permutation by
   // default, or otherwise the "reverse" permutation of a given ordering, so
@@ -207,9 +263,9 @@ static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
     for (unsigned i = 0; i < sz; i++)
       rev[i] = constantI64(rewriter, loc, i);
   }
-  perm = genBuffer(rewriter, loc, rev);
-  params.push_back(perm);
+  params.push_back(genBuffer(rewriter, loc, rev));
   // Secondary and primary types encoding.
+  ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
   unsigned secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
   unsigned secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
   unsigned primary = getPrimaryTypeEncoding(resType.getElementType());
@@ -223,12 +279,6 @@ static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
     ptr = rewriter.create<LLVM::NullOp>(loc, pTp);
   params.push_back(constantI32(rewriter, loc, action));
   params.push_back(ptr);
-  // Generate the call to create new tensor.
-  StringRef name = "newSparseTensor";
-  auto call = rewriter.create<CallOp>(
-      loc, pTp, getFunc(op, name, pTp, params, /*emitCInterface=*/true),
-      params);
-  return call.getResult(0);
 }
 
 /// Generates the comparison `v != 0` where `v` is of numeric type `t`.
@@ -299,9 +349,8 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
   params.push_back(ind);
   params.push_back(perm);
   Type pTp = LLVM::LLVMPointerType::get(rewriter.getI8Type());
-  rewriter.create<CallOp>(
-      loc, pTp, getFunc(op, name, pTp, params, /*emitCInterface=*/true),
-      params);
+  auto fn = getFunc(op, name, pTp, params, /*emitCInterface=*/true);
+  rewriter.create<CallOp>(loc, pTp, fn, params);
 }
 
 /// If the tensor is a sparse constant, generates and returns the pair of
@@ -362,24 +411,17 @@ public:
   LogicalResult
   matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type resType = op.getType();
+    // Only rewrite annotated DimOp with constant index.
     auto enc = getSparseTensorEncoding(op.source().getType());
     if (!enc)
       return failure();
-    // Permute the dim index.
     Optional<int64_t> index = op.getConstantIndex();
     if (!index.hasValue())
       return failure();
-    int64_t idx = index.getValue();
-    if (AffineMap p = enc.getDimOrdering())
-      idx = p.getPermutedPosition(idx);
     // Generate the call.
-    StringRef name = "sparseDimSize";
-    SmallVector<Value, 2> params;
-    params.push_back(adaptor.getOperands()[0]);
-    params.push_back(constantIndex(rewriter, op.getLoc(), idx));
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, resType, getFunc(op, name, resType, params), params);
+    Value src = adaptor.getOperands()[0];
+    int64_t idx = index.getValue();
+    rewriter.replaceOp(op, genDimSizeCall(rewriter, op, enc, src, idx));
     return success();
   }
 };
@@ -394,9 +436,14 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
     auto enc = getSparseTensorEncoding(resType);
     if (!enc)
       return failure();
-    Value perm;
-    rewriter.replaceOp(op, genNewCall(rewriter, op, enc, kFromFile, perm, {},
-                                      adaptor.getOperands()[0]));
+    // Generate the call to construct tensor from ptr. The sizes are
+    // inferred from the result type of the new operator.
+    SmallVector<Value, 4> sizes;
+    SmallVector<Value, 8> params;
+    sizesFromType(rewriter, sizes, op.getLoc(), resType.cast<ShapedType>());
+    Value ptr = adaptor.getOperands()[0];
+    newParams(rewriter, params, op, enc, kFromFile, sizes, ptr);
+    rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
   }
 };
@@ -411,9 +458,11 @@ class SparseTensorInitConverter : public OpConversionPattern<InitOp> {
     auto enc = getSparseTensorEncoding(resType);
     if (!enc)
       return failure();
-    Value perm;
-    rewriter.replaceOp(
-        op, genNewCall(rewriter, op, enc, kEmpty, perm, adaptor.getOperands()));
+    // Generate the call to construct empty tensor. The sizes are
+    // explicitly defined by the arguments to the init operator.
+    SmallVector<Value, 8> params;
+    newParams(rewriter, params, op, enc, kEmpty, adaptor.getOperands());
+    rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
   }
 };
@@ -424,10 +473,12 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
   LogicalResult
   matchAndRewrite(ConvertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
     Type resType = op.getType();
+    Type srcType = op.source().getType();
     auto encDst = getSparseTensorEncoding(resType);
-    auto encSrc = getSparseTensorEncoding(op.source().getType());
-    auto src = adaptor.getOperands()[0];
+    auto encSrc = getSparseTensorEncoding(srcType);
+    Value src = adaptor.getOperands()[0];
     if (encDst && encSrc) {
       // This is a sparse => sparse conversion, which is handled as follows:
       //   t = src->toCOO();         ; src to COO in dst order
@@ -435,10 +486,15 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       // Using the coordinate scheme as an intermediate does not always
       // yield the fastest conversion but avoids the need for a full
       // O(N^2) conversion matrix.
-      Value perm;
-      Value coo = genNewCall(rewriter, op, encDst, kToCOO, perm, {}, src);
-      rewriter.replaceOp(
-          op, genNewCall(rewriter, op, encDst, kFromCOO, perm, {}, coo));
+      SmallVector<Value, 4> sizes;
+      SmallVector<Value, 8> params;
+      sizesFromPtr(rewriter, sizes, op, encSrc, srcType.cast<ShapedType>(),
+                   src);
+      newParams(rewriter, params, op, encDst, kToCOO, sizes, src);
+      Value coo = genNewCall(rewriter, op, params);
+      params[6] = constantI32(rewriter, loc, kFromCOO);
+      params[7] = coo;
+      rewriter.replaceOp(op, genNewCall(rewriter, op, params));
       return success();
     }
     if (!encDst || encSrc) {
@@ -471,12 +527,15 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     // Also note that the code below only generates the "new" ops and
     // the loop-nest per se; whereas the entire body of the innermost
     // loop is generated by genAddElt().
-    Location loc = op->getLoc();
-    ShapedType shape = resType.cast<ShapedType>();
-    Value perm;
-    Value ptr = genNewCall(rewriter, op, encDst, kEmptyCOO, perm, {});
-    Value ind =
-        genAlloca(rewriter, loc, shape.getRank(), rewriter.getIndexType());
+    ShapedType stp = resType.cast<ShapedType>();
+    unsigned rank = stp.getRank();
+    SmallVector<Value, 4> sizes;
+    SmallVector<Value, 8> params;
+    sizesFromSrc(rewriter, sizes, loc, src);
+    newParams(rewriter, params, op, encDst, kEmptyCOO, sizes);
+    Value ptr = genNewCall(rewriter, op, params);
+    Value ind = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+    Value perm = params[2];
     SmallVector<Value> lo;
     SmallVector<Value> hi;
     SmallVector<Value> st;
@@ -493,14 +552,13 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, values, 0));
       st.push_back(one);
     } else {
-      for (unsigned i = 0, rank = shape.getRank(); i < rank; i++) {
+      for (unsigned i = 0; i < rank; i++) {
         lo.push_back(zero);
         hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, src, i));
         st.push_back(one);
       }
     }
-    Type eltType = shape.getElementType();
-    unsigned rank = shape.getRank();
+    Type eltType = stp.getElementType();
     scf::buildLoopNest(
         rewriter, op.getLoc(), lo, hi, st, {},
         [&](OpBuilder &builder, Location loc, ValueRange ivs,
@@ -514,8 +572,10 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
           genAddEltCall(rewriter, op, eltType, ptr, val, ind, perm);
           return {};
         });
-    rewriter.replaceOp(
-        op, genNewCall(rewriter, op, encDst, kFromCOO, perm, {}, ptr));
+    // Final call to construct sparse tensor storage.
+    params[6] = constantI32(rewriter, loc, kFromCOO);
+    params[7] = ptr;
+    rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
   }
 };
@@ -529,9 +589,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     StringRef name = "delSparseTensor";
     TypeRange none;
-    rewriter.create<CallOp>(op.getLoc(), none,
-                            getFunc(op, name, none, adaptor.getOperands()),
-                            adaptor.getOperands());
+    auto fn = getFunc(op, name, none, adaptor.getOperands());
+    rewriter.create<CallOp>(op.getLoc(), none, fn, adaptor.getOperands());
     rewriter.eraseOp(op);
     return success();
   }
@@ -560,11 +619,9 @@ public:
       name = "sparsePointers8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
-                                        getFunc(op, name, resType,
-                                                adaptor.getOperands(),
-                                                /*emitCInterface=*/true),
-                                        adaptor.getOperands());
+    auto fn = getFunc(op, name, resType, adaptor.getOperands(),
+                      /*emitCInterface=*/true);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType, fn, adaptor.getOperands());
     return success();
   }
 };
@@ -591,11 +648,9 @@ public:
       name = "sparseIndices8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
-                                        getFunc(op, name, resType,
-                                                adaptor.getOperands(),
-                                                /*emitCInterface=*/true),
-                                        adaptor.getOperands());
+    auto fn = getFunc(op, name, resType, adaptor.getOperands(),
+                      /*emitCInterface=*/true);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType, fn, adaptor.getOperands());
     return success();
   }
 };
@@ -624,11 +679,9 @@ public:
       name = "sparseValuesI8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
-                                        getFunc(op, name, resType,
-                                                adaptor.getOperands(),
-                                                /*emitCInterface=*/true),
-                                        adaptor.getOperands());
+    auto fn = getFunc(op, name, resType, adaptor.getOperands(),
+                      /*emitCInterface=*/true);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType, fn, adaptor.getOperands());
     return success();
   }
 };
