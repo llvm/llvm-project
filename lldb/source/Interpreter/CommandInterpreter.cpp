@@ -513,7 +513,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);
   REGISTER_COMMAND_OBJECT("help", CommandObjectHelp);
 #ifdef LLDB_ENABLE_SWIFT
-  REGISTER_COMMAND_OBJECT("healthcheck", CommandObjectHealthcheck);
+  REGISTER_COMMAND_OBJECT("swift-healthcheck", CommandObjectHealthcheck);
 #endif
   REGISTER_COMMAND_OBJECT("log", CommandObjectLog);
   REGISTER_COMMAND_OBJECT("memory", CommandObjectMemory);
