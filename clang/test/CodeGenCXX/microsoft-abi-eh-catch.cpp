@@ -57,7 +57,7 @@ extern "C" void catch_int() {
 // WIN64: %[[e_i8:[^ ]*]] = bitcast i32* %[[e_addr]] to i8*
 // WIN64-NOT: lifetime.start
 // WIN64: call void @handle_exception
-// WIN64-SAME: (i8* %[[e_i8]])
+// WIN64-SAME: (i8* noundef %[[e_i8]])
 // WIN64-NOT: lifetime.end
 // WIN64: catchret
 
@@ -98,7 +98,7 @@ extern "C" void catch_a_byval() {
 // WIN64: %[[e_addr:[^ ]*]] = alloca %struct.A
 // WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"??_R0?AUA@@@8", i32 0, %struct.A* %[[e_addr]]]
 // WIN64: %[[e_i8:[^ ]*]] = bitcast %struct.A* %[[e_addr]] to i8*
-// WIN64: call void @handle_exception(i8* %[[e_i8]])
+// WIN64: call void @handle_exception(i8* noundef %[[e_i8]])
 // WIN64: catchret
 
 extern "C" void catch_a_ref() {
@@ -114,7 +114,7 @@ extern "C" void catch_a_ref() {
 // WIN64: catchpad within %{{[^ ]*}} [%rtti.TypeDescriptor7* @"??_R0?AUA@@@8", i32 8, %struct.A** %[[e_addr]]]
 // WIN64: %[[eptr:[^ ]*]] = load %struct.A*, %struct.A** %[[e_addr]]
 // WIN64: %[[eptr_i8:[^ ]*]] = bitcast %struct.A* %[[eptr]] to i8*
-// WIN64: call void @handle_exception(i8* %[[eptr_i8]])
+// WIN64: call void @handle_exception(i8* noundef %[[eptr_i8]])
 // WIN64: catchret
 
 extern "C" void fn_with_exc_spec() throw(int) {

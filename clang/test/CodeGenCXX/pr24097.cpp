@@ -17,4 +17,4 @@ void bar() {
 }
 
 // Test that it is not hidden
-// CHECK: define available_externally zeroext i1 @_ZThn8_N17SyncMessageFilter4SendEv
+// CHECK: define available_externally noundef zeroext i1 @_ZThn8_N17SyncMessageFilter4SendEv

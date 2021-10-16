@@ -11,49 +11,49 @@ struct Foo {
 
 int gi = 0;
 
-// CHECK-LABEL: define{{.*}} i32 @ObjectSize0(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @ObjectSize0(i8* noundef %{{.*}}, i64 noundef %0)
 int ObjectSize0(void *const p PS(0)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 0);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize0(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize0(i8* noundef %{{.*}}, i64 noundef %0)
 int DynamicObjectSize0(void *const p PDS(0)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_dynamic_object_size(p, 0);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @ObjectSize1(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @ObjectSize1(i8* noundef %{{.*}}, i64 noundef %0)
 int ObjectSize1(void *const p PS(1)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 1);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize1(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize1(i8* noundef %{{.*}}, i64 noundef %0)
 int DynamicObjectSize1(void *const p PDS(1)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_dynamic_object_size(p, 1);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @ObjectSize2(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @ObjectSize2(i8* noundef %{{.*}}, i64 noundef %0)
 int ObjectSize2(void *const p PS(2)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 2);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize2(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize2(i8* noundef %{{.*}}, i64 noundef %0)
 int DynamicObjectSize2(void *const p PDS(2)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 2);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @ObjectSize3(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @ObjectSize3(i8* noundef %{{.*}}, i64 noundef %0)
 int ObjectSize3(void *const p PS(3)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 3);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize3(i8* %{{.*}}, i64 %0)
+// CHECK-LABEL: define{{.*}} i32 @DynamicObjectSize3(i8* noundef %{{.*}}, i64 noundef %0)
 int DynamicObjectSize3(void *const p PDS(3)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 3);
@@ -65,46 +65,46 @@ void *malloc(unsigned long) __attribute__((alloc_size(1)));
 void test1(unsigned long sz) {
   struct Foo t[10];
 
-  // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @ObjectSize0(i8* noundef %{{.*}}, i64 noundef 360)
   gi = ObjectSize0(&t[1]);
-  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @ObjectSize1(i8* noundef %{{.*}}, i64 noundef 360)
   gi = ObjectSize1(&t[1]);
-  // CHECK: call i32 @ObjectSize2(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @ObjectSize2(i8* noundef %{{.*}}, i64 noundef 360)
   gi = ObjectSize2(&t[1]);
-  // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @ObjectSize3(i8* noundef %{{.*}}, i64 noundef 360)
   gi = ObjectSize3(&t[1]);
 
-  // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @ObjectSize0(i8* noundef %{{.*}}, i64 noundef 356)
   gi = ObjectSize0(&t[1].t[1]);
-  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @ObjectSize1(i8* noundef %{{.*}}, i64 noundef 36)
   gi = ObjectSize1(&t[1].t[1]);
-  // CHECK: call i32 @ObjectSize2(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @ObjectSize2(i8* noundef %{{.*}}, i64 noundef 356)
   gi = ObjectSize2(&t[1].t[1]);
-  // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @ObjectSize3(i8* noundef %{{.*}}, i64 noundef 36)
   gi = ObjectSize3(&t[1].t[1]);
 
   char *ptr = (char *)malloc(sz);
 
   // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8({{.*}}, i1 false, i1 true, i1 true)
-  // CHECK: call i32 @DynamicObjectSize0(i8* %{{.*}}, i64 [[REG]])
+  // CHECK: call i32 @DynamicObjectSize0(i8* noundef %{{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize0(ptr);
 
   // CHECK: [[WITH_OFFSET:%.*]] = getelementptr
   // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[WITH_OFFSET]], i1 false, i1 true, i1 true)
-  // CHECK: call i32 @DynamicObjectSize0(i8* {{.*}}, i64 [[REG]])
+  // CHECK: call i32 @DynamicObjectSize0(i8* noundef {{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize0(ptr+10);
 
   // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8({{.*}}, i1 true, i1 true, i1 true)
-  // CHECK: call i32 @DynamicObjectSize2(i8* {{.*}}, i64 [[REG]])
+  // CHECK: call i32 @DynamicObjectSize2(i8* noundef {{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize2(ptr);
 }
 
 // CHECK-LABEL: define{{.*}} void @test2
 void test2(struct Foo *t) {
   // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
-  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 [[VAR]])
+  // CHECK: call i32 @ObjectSize1(i8* noundef %{{.*}}, i64 noundef [[VAR]])
   gi = ObjectSize1(&t->t[1]);
-  // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @ObjectSize3(i8* noundef %{{.*}}, i64 noundef 36)
   gi = ObjectSize3(&t->t[1]);
 }
 
@@ -191,47 +191,47 @@ int NoViableOverloadObjectSize3(void *const p PS(3))
 void test3() {
   struct Foo t[10];
 
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* noundef %{{.*}}, i64 noundef 360)
   gi = NoViableOverloadObjectSize0(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* noundef %{{.*}}, i64 noundef 360)
   gi = NoViableOverloadObjectSize1(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* noundef %{{.*}}, i64 noundef 360)
   gi = NoViableOverloadObjectSize2(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* noundef %{{.*}}, i64 noundef 360)
   gi = NoViableOverloadObjectSize3(&t[1]);
 
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* noundef %{{.*}}, i64 noundef 356)
   gi = NoViableOverloadObjectSize0(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* noundef %{{.*}}, i64 noundef 36)
   gi = NoViableOverloadObjectSize1(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* noundef %{{.*}}, i64 noundef 356)
   gi = NoViableOverloadObjectSize2(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* noundef %{{.*}}, i64 noundef 36)
   gi = NoViableOverloadObjectSize3(&t[1].t[1]);
 
-  // CHECK: call i32 @_Z34NoViableOverloadDynamicObjectSize0PvU25pass_dynamic_object_size0(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @_Z34NoViableOverloadDynamicObjectSize0PvU25pass_dynamic_object_size0(i8* noundef %{{.*}}, i64 noundef 360)
   gi = NoViableOverloadDynamicObjectSize0(&t[1]);
 }
 
 // CHECK-LABEL: define{{.*}} void @test4
 void test4(struct Foo *t) {
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   gi = NoViableOverloadObjectSize0(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   gi = NoViableOverloadObjectSize1(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   gi = NoViableOverloadObjectSize2(&t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* %{{.*}}, i64 0)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* noundef %{{.*}}, i64 noundef 0)
   gi = NoViableOverloadObjectSize3(&t[1]);
 
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   gi = NoViableOverloadObjectSize0(&t[1].t[1]);
   // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 [[VAR]])
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* noundef %{{.*}}, i64 noundef [[VAR]])
   gi = NoViableOverloadObjectSize1(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   gi = NoViableOverloadObjectSize2(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* noundef %{{.*}}, i64 noundef 36)
   gi = NoViableOverloadObjectSize3(&t[1].t[1]);
 }
 
@@ -247,34 +247,34 @@ void test5() {
 
 // CHECK-LABEL: define{{.*}} i32 @IndirectObjectSize0
 int IndirectObjectSize0(void *const p PS(0)) {
-  // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @ObjectSize0(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize0(p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @IndirectObjectSize1
 int IndirectObjectSize1(void *const p PS(1)) {
-  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @ObjectSize1(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize1(p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @IndirectObjectSize2
 int IndirectObjectSize2(void *const p PS(2)) {
-  // CHECK: call i32 @ObjectSize2(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @ObjectSize2(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize2(p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @IndirectObjectSize3
 int IndirectObjectSize3(void *const p PS(3)) {
-  // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @ObjectSize3(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize3(p);
 }
 
 int IndirectDynamicObjectSize0(void *const p PDS(0)) {
-  // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK: call i32 @ObjectSize0(i8* noundef %{{.*}}, i64 noundef %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize0(p);
 }
@@ -321,31 +321,31 @@ int AsmObjectSize3(void *const p PS(3)) __asm__("Identity");
 void test7() {
   struct Foo t[10];
 
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 360)
   gi = AsmObjectSize0(&t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 360)
   gi = AsmObjectSize1(&t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 360)
   gi = AsmObjectSize2(&t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 360)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 360)
   gi = AsmObjectSize3(&t[1]);
 
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 356)
   gi = AsmObjectSize0(&t[1].t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 36)
   gi = AsmObjectSize1(&t[1].t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 356)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 356)
   gi = AsmObjectSize2(&t[1].t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 36)
   gi = AsmObjectSize3(&t[1].t[1]);
 }
 
 // CHECK-LABEL: define{{.*}} void @test8
 void test8(struct Foo *t) {
   // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 [[VAR]])
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef [[VAR]])
   gi = AsmObjectSize1(&t[1].t[1]);
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 36)
+  // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 36)
   gi = AsmObjectSize3(&t[1].t[1]);
 }
 
@@ -363,7 +363,7 @@ void test9(void *const p __attribute__((pass_object_size(0)))) {
   DifferingObjectSize0(p);
   DifferingObjectSize1(p);
 
-  // CHECK: call void @DifferingObjectSize3(i8* %{{.*}}, i64 0)
+  // CHECK: call void @DifferingObjectSize3(i8* noundef %{{.*}}, i64 noundef 0)
   DifferingObjectSize3(p);
 }
 
@@ -377,7 +377,7 @@ void test10(void *const p __attribute__((pass_object_size(1)))) {
   // CHECK-NOT: @llvm.objectsize
   DifferingObjectSize1(p);
 
-  // CHECK: call void @DifferingObjectSize3(i8* %{{.*}}, i64 0)
+  // CHECK: call void @DifferingObjectSize3(i8* noundef %{{.*}}, i64 noundef 0)
   DifferingObjectSize3(p);
 }
 
@@ -391,7 +391,7 @@ void test11(void *const p __attribute__((pass_object_size(2)))) {
   // CHECK-NOT: @llvm.objectsize
   DifferingObjectSize2(p);
 
-  // CHECK: call void @DifferingObjectSize3(i8* %{{.*}}, i64 0)
+  // CHECK: call void @DifferingObjectSize3(i8* noundef %{{.*}}, i64 noundef 0)
   DifferingObjectSize3(p);
 }
 
@@ -481,7 +481,7 @@ void test17(char *C) {
   // CHECK-NOT: 65535
   // CHECK: @llvm.objectsize.i64.p0i8(i8* [[PTR:%[^,]+]],
   // CHECK-NOT: 65535
-  // CHECK: call i32 @ObjectSize0(i8* [[PTR]]
+  // CHECK: call i32 @ObjectSize0(i8* noundef [[PTR]]
   ObjectSize0(C + ({ int a = 65535; a; }));
 }
 

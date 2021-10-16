@@ -27,8 +27,8 @@ int hst(double i) { return 1; }
 int base();
 
 // HOST-LABEL: define{{.*}} void @foo()
-// HOST: call i32 @hst(double -1.000000e+00)
-// HOST: call i32 @hst(double -2.000000e+00)
+// HOST: call i32 @hst(double noundef -1.000000e+00)
+// HOST: call i32 @hst(double noundef -2.000000e+00)
 // HOST: call void [[OFFL:@.+_foo_l36]]()
 void foo() {
   base(-1);
@@ -41,12 +41,12 @@ void foo() {
 }
 
 // HOST: define {{.*}}void [[OFFL]]()
-// HOST: call i32 @hst(double -3.000000e+00)
-// HOST: call i32 @dev(double -4.000000e+00)
+// HOST: call i32 @hst(double noundef -3.000000e+00)
+// HOST: call i32 @dev(double noundef -4.000000e+00)
 
 // GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l36()
-// GPU: call i32 @dev(double -3.000000e+00)
-// GPU: call i32 @dev(double -4.000000e+00)
+// GPU: call i32 @dev(double noundef -3.000000e+00)
+// GPU: call i32 @dev(double noundef -4.000000e+00)
 
 // GPU-NOT: @base
 // GPU: define {{.*}}i32 @dev(double

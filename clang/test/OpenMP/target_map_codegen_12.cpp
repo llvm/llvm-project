@@ -86,7 +86,7 @@ void implicit_maps_variable_length_array (int a){
   }
 }
 
-// CK13: define internal void [[KERNEL]](i[[sz]] [[VLA0:%.+]], i[[sz]] [[VLA1:%.+]], double* {{.*}}[[ARG:%.+]])
+// CK13: define internal void [[KERNEL]](i[[sz]] noundef [[VLA0:%.+]], i[[sz]] noundef [[VLA1:%.+]], double* {{.*}}[[ARG:%.+]])
 // CK13: [[ADDR0:%.+]] = alloca i[[sz]],
 // CK13: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK13: [[ADDR2:%.+]] = alloca double*,

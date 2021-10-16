@@ -33,7 +33,7 @@ struct S {
   int a, b;
 };
 
-// CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
+// CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* noundef {{.+}}, float* noundef {{.+}}, float* noundef {{.+}}, float* noundef {{.+}})
 void simple(float *a, float *b, float *c, float *d) {
   S s, *p;
 #ifdef OMP5
@@ -342,7 +342,7 @@ int templ1(T a, T *z) {
 }
 
 // Instatiation templ1<float,2>
-// CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float {{.+}}, float* {{.+}})
+// CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float noundef {{.+}}, float* noundef {{.+}})
 // CHECK: store i64 0, i64* [[T1_OMP_IV:[^,]+]]
 // ...
 // CHECK: [[IV:%.+]] = load i64, i64* [[T1_OMP_IV]]{{.*}}!llvm.access.group
@@ -619,7 +619,7 @@ void widened(float *a, float *b, float *c, float *d) {
 // CHECK: ret void
 }
 
-// CHECK-LABEL: define {{.*void}} @{{.*}}linear{{.*}}(float* {{.+}})
+// CHECK-LABEL: define {{.*void}} @{{.*}}linear{{.*}}(float* noundef {{.+}})
 void linear(float *a) {
   // CHECK: [[VAL_ADDR:%.+]] = alloca i64,
   // CHECK: [[K_ADDR:%.+]] = alloca i64*,
@@ -805,7 +805,7 @@ void parallel_simd(float *a) {
 #pragma omp parallel
 #pragma omp simd
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
-  // TERM_DEBUG:     invoke i32 {{.*}}bar{{.*}}()
+  // TERM_DEBUG:     invoke noundef i32 {{.*}}bar{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:[^,]+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     [[TERM_LPAD]]

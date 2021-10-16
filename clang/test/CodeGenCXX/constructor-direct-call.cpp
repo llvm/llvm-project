@@ -25,11 +25,11 @@ public:
 void f2() {
   // CHECK:  %var = alloca %class.Test2, align 4
   // CHECK32-NEXT:  call x86_thiscallcc void @_ZN5Test2C1Ev(%class.Test2* {{[^,]*}} %var)
-  // CHECK64-NEXT:  %call = call %class.Test2* @"??0Test2@@QEAA@XZ"(%class.Test2* {{[^,]*}} %var)
+  // CHECK64-NEXT:  %call = call noundef %class.Test2* @"??0Test2@@QEAA@XZ"(%class.Test2* {{[^,]*}} %var)
   Test2 var;
 
   // CHECK32-NEXT:  call x86_thiscallcc void @_ZN5Test2C1Ev(%class.Test2* {{[^,]*}} %var)
-  // CHECK64-NEXT:  %call1 = call %class.Test2* @"??0Test2@@QEAA@XZ"(%class.Test2* {{[^,]*}} %var)
+  // CHECK64-NEXT:  %call1 = call noundef %class.Test2* @"??0Test2@@QEAA@XZ"(%class.Test2* {{[^,]*}} %var)
   var.Test2::Test2();
 
   // CHECK32:  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %{{.*}}, i8* align 4 %{{.*}}, i32 8, i1 false)
@@ -51,18 +51,18 @@ public:
 
 void f3() {
   // CHECK32: call x86_thiscallcc void @_ZN5Test3C1Ev(%class.Test3* {{[^,]*}} %var)
-  // CHECK64: %call = call %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var)
+  // CHECK64: %call = call noundef %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var)
   Test3 var;
 
   // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1Ev(%class.Test3* {{[^,]*}} %var2)
-  // CHECK64-NEXT: %call1 = call %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var2)
+  // CHECK64-NEXT: %call1 = call noundef %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var2)
   Test3 var2;
 
   // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1Ev(%class.Test3* {{[^,]*}} %var)
-  // CHECK64-NEXT: %call2 = call %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var)
+  // CHECK64-NEXT: %call2 = call noundef %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* {{[^,]*}} %var)
   var.Test3::Test3();
 
-  // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1ERKS_(%class.Test3* {{[^,]*}} %var, %class.Test3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
-  // CHECK64-NEXT: %call3 = call %class.Test3* @"??0Test3@@QEAA@AEBV0@@Z"(%class.Test3* {{[^,]*}} %var, %class.Test3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
+  // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1ERKS_(%class.Test3* {{[^,]*}} %var, %class.Test3* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
+  // CHECK64-NEXT: %call3 = call noundef %class.Test3* @"??0Test3@@QEAA@AEBV0@@Z"(%class.Test3* {{[^,]*}} %var, %class.Test3* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
   var.Test3::Test3(var2);
 }

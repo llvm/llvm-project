@@ -12,7 +12,7 @@ namespace test0 {
     return -1;
   }
 
-  // CHECK: call i32 (...) @_ZN5test05test1Ez(i32 0)
+  // CHECK: call noundef i32 (...) @_ZN5test05test1Ez(i32 noundef 0)
   void test() {
     test1(0);
   }

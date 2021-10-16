@@ -61,7 +61,7 @@ extern "C" void f0(global_new_delete_tag) {
 
   // CHECK: [[AllocBB]]:
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[MEM:.+]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[SIZE]])
   // CHECK: br label %[[InitBB]]
 
   // CHECK: [[InitBB]]:
@@ -73,7 +73,7 @@ extern "C" void f0(global_new_delete_tag) {
   // CHECK: br i1 %[[NeedDealloc]], label %[[FreeBB:.+]], label %[[Afterwards:.+]]
 
   // CHECK: [[FreeBB]]:
-  // CHECK: call void @_ZdlPv(i8* %[[MEM]])
+  // CHECK: call void @_ZdlPv(i8* noundef %[[MEM]])
   // CHECK: br label %[[Afterwards]]
 
   // CHECK: [[Afterwards]]:
@@ -98,11 +98,11 @@ struct std::experimental::coroutine_traits<void, promise_new_tag> {
 extern "C" void f1(promise_new_tag ) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv15promise_new_tagEE12promise_typenwEm(i64 %[[SIZE]])
+  // CHECK: call noundef i8* @_ZNSt12experimental16coroutine_traitsIJv15promise_new_tagEE12promise_typenwEm(i64 noundef %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
-  // CHECK: call void @_ZdlPv(i8* %[[MEM]])
+  // CHECK: call void @_ZdlPv(i8* noundef %[[MEM]])
   co_return;
 }
 
@@ -130,7 +130,7 @@ extern "C" void f1a(promise_matching_placement_new_tag, int x, float y , double 
   // CHECK: %[[INT:.+]] = load i32, i32* %x.addr, align 4
   // CHECK: %[[FLOAT:.+]] = load float, float* %y.addr, align 4
   // CHECK: %[[DOUBLE:.+]] = load double, double* %z.addr, align 8
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv34promise_matching_placement_new_tagifdEE12promise_typenwEmS1_ifd(i64 %[[SIZE]], i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
+  // CHECK: call noundef i8* @_ZNSt12experimental16coroutine_traitsIJv34promise_matching_placement_new_tagifdEE12promise_typenwEmS1_ifd(i64 noundef %[[SIZE]], i32 noundef %[[INT]], float noundef %[[FLOAT]], double noundef %[[DOUBLE]])
   co_return;
 }
 
@@ -156,7 +156,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_global_placeme
 // within the scope of the promise type's class.
 // CHECK-LABEL: f1b(
 extern "C" void f1b(promise_matching_global_placement_new_tag, dummy *) {
-  // CHECK: call noalias nonnull i8* @_Znwm(i64
+  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64
   co_return;
 }
 
@@ -177,11 +177,11 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
 extern "C" void f2(promise_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv18promise_delete_tagEE12promise_typedlEPv(i8* %[[MEM]])
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv18promise_delete_tagEE12promise_typedlEPv(i8* noundef %[[MEM]])
   co_return;
 }
 
@@ -202,12 +202,12 @@ struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
 extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: %[[SIZE2:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* %[[MEM]], i64 %[[SIZE2]])
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* noundef %[[MEM]], i64 noundef %[[SIZE2]])
   co_return;
 }
 
@@ -230,17 +230,17 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[Gro:.+]] = alloca i32
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call noalias i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* nonnull align 1 dereferenceable(1) @_ZStL7nothrow)
+  // CHECK: %[[MEM:.+]] = call noalias noundef i8* @_ZnwmRKSt9nothrow_t(i64 noundef %[[SIZE]], %"struct.std::nothrow_t"* noundef nonnull align 1 dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 
   // CHECK: [[ERRBB]]:
-  // CHECK:   %[[FailRet:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv(
+  // CHECK:   %[[FailRet:.+]] = call noundef i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv(
   // CHECK:   store i32 %[[FailRet]], i32* %[[RetVal]]
   // CHECK:   br label %[[RetBB:.+]]
 
   // CHECK: [[OKBB]]:
-  // CHECK:   %[[OkRet:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type17get_return_objectEv(
+  // CHECK:   %[[OkRet:.+]] = call noundef i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type17get_return_objectEv(
   // CHECK:   store i32 %[[OkRet]], i32* %[[Gro]]
 
   // CHECK: %[[Tmp1:.*]] = load i32, i32* %[[Gro]]

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - | FileCheck %s -check-prefixes=SHARED,C
+// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -disable-noundef-analysis -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - | FileCheck %s -check-prefixes=SHARED,C
 
 typedef signed char BOOL;
 

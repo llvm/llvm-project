@@ -5,7 +5,7 @@
 extern "C" int printf(...);
 
 void test0() {
-// CHECK: call i32 (...) @printf({{.*}}, i8* inttoptr (i64 3735928559 to i8*))
+// CHECK: call i32 (...) @printf({{.*}}, i8* noundef inttoptr (i64 3735928559 to i8*))
     printf("%p\n", (void *)0xdeadbeef ? : (void *)0xaaaaaa);
 }
 
@@ -81,9 +81,9 @@ namespace test3 {
     // CHECK:      [[X:%.*]] = alloca [[B:%.*]]*,
     // CHECK:      store [[B]]* {{%.*}}, [[B]]** [[X]]
     // CHECK-NEXT: [[T0:%.*]] = load [[B]]*, [[B]]** [[X]]
-    // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[T0]])
+    // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[T0]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* {{[^,]*}} [[RESULT:%.*]], [[B]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T0]])
+    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* {{[^,]*}} [[RESULT:%.*]], [[B]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T0]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31BC1Ev([[B]]* {{[^,]*}} [[RESULT]])
     // CHECK-NEXT: br label
@@ -95,9 +95,9 @@ namespace test3 {
     // CHECK-LABEL:    define{{.*}} void @_ZN5test35test1Ev(
     // CHECK:      [[TEMP:%.*]] = alloca [[B]],
     // CHECK:      call  void @_ZN5test312test1_helperEv([[B]]* sret([[B]]) align 1 [[TEMP]])
-    // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[TEMP]])
+    // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* {{[^,]*}} [[RESULT:%.*]], [[B]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* {{[^,]*}} [[RESULT:%.*]], [[B]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31BC1Ev([[B]]* {{[^,]*}} [[RESULT]])
     // CHECK-NEXT: br label
@@ -113,7 +113,7 @@ namespace test3 {
     // CHECK:      [[X:%.*]] = alloca [[B]]*,
     // CHECK:      store [[B]]* {{%.*}}, [[B]]** [[X]]
     // CHECK-NEXT: [[T0:%.*]] = load [[B]]*, [[B]]** [[X]]
-    // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[T0]])
+    // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[T0]])
     // CHECK-NEXT: br i1 [[BOOL]]
     // CHECK:      call void @_ZN5test31BcvNS_1AEEv([[A:%.*]]* sret([[A]]) align 1 [[RESULT:%.*]], [[B]]* {{[^,]*}} [[T0]])
     // CHECK-NEXT: br label
@@ -127,7 +127,7 @@ namespace test3 {
     // CHECK-LABEL:    define{{.*}} void @_ZN5test35test3Ev(
     // CHECK:      [[TEMP:%.*]] = alloca [[B]],
     // CHECK:      call  void @_ZN5test312test3_helperEv([[B]]* sret([[B]]) align 1 [[TEMP]])
-    // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[TEMP]])
+    // CHECK-NEXT: [[BOOL:%.*]] = call noundef zeroext i1 @_ZN5test31BcvbEv([[B]]* {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br i1 [[BOOL]]
     // CHECK:      call void @_ZN5test31BcvNS_1AEEv([[A]]* sret([[A]]) align 1 [[RESULT:%.*]], [[B]]* {{[^,]*}} [[TEMP]])
     // CHECK-NEXT: br label

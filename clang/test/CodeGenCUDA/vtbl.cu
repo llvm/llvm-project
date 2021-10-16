@@ -3,7 +3,7 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: define {{.*}}@_ZN1AC2Ev(%struct.A* nonnull align 8 dereferenceable(8) %this)
+// CHECK-LABEL: define {{.*}}@_ZN1AC2Ev(%struct.A* noundef %this)
 // CHECK: store %struct.A* %this, %struct.A** %this.addr.ascast
 // CHECK: %this1 = load %struct.A*, %struct.A** %this.addr.ascast
 // CHECK: %[[VTFIELD:.*]] = bitcast %struct.A* %this1 to i32 (...)* addrspace(1)**
