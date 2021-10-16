@@ -26,10 +26,12 @@ namespace __sanitizer {
 
 class StackDepotTest : public testing::Test {
  protected:
+  void SetUp() override { StackDepotTestOnlyUnmap(); }
   void TearDown() override {
     StackDepotStats stack_depot_stats = StackDepotGetStats();
     Printf("StackDepot: %zd ids; %zdM allocated\n",
            stack_depot_stats.n_uniq_ids, stack_depot_stats.allocated >> 20);
+    StackDepotTestOnlyUnmap();
   }
 };
 
@@ -159,43 +161,37 @@ static std::string PrintStackDepotBenchmarkParams(
 
 class StackDepotBenchmark
     : public StackDepotTest,
-      public testing::WithParamInterface<StackDepotBenchmarkParams> {
- protected:
-  void Run() {
-    auto Param = GetParam();
-    std::atomic<unsigned int> here = {};
-
-    auto thread = [&](int idx) {
-      here++;
-      while (here < Param.UniqueThreads) std::this_thread::yield();
-
-      std::vector<uptr> frames(64);
-      for (int r = 0; r < Param.RepeatPerThread; ++r) {
-        std::iota(frames.begin(), frames.end(), idx + 1);
-        for (int i = 0; i < Param.UniqueStacksPerThread; ++i) {
-          StackTrace s(frames.data(), frames.size());
-          auto h = StackDepotPut_WithHandle(s);
-          if (Param.UseCount)
-            h.inc_use_count_unsafe();
-          std::next_permutation(frames.begin(), frames.end());
-        };
-      }
-    };
-
-    std::vector<std::thread> threads;
-    for (int i = 0; i < Param.Threads; ++i)
-      threads.emplace_back(thread, Param.UniqueThreads * i);
-    for (auto& t : threads) t.join();
-  }
-};
+      public testing::WithParamInterface<StackDepotBenchmarkParams> {};
 
 // Test which can be used as a simple benchmark. It's disabled to avoid slowing
 // down check-sanitizer.
 // Usage: Sanitizer-<ARCH>-Test --gtest_also_run_disabled_tests \
 //   '--gtest_filter=*Benchmark*'
 TEST_P(StackDepotBenchmark, DISABLED_Benchmark) {
-  // Call in subprocess to avoid reuse of the depot.
-  EXPECT_EXIT((Run(), exit(0)), ::testing::ExitedWithCode(0), "");
+  auto Param = GetParam();
+  std::atomic<unsigned int> here = {};
+
+  auto thread = [&](int idx) {
+    here++;
+    while (here < Param.UniqueThreads) std::this_thread::yield();
+
+    std::vector<uptr> frames(64);
+    for (int r = 0; r < Param.RepeatPerThread; ++r) {
+      std::iota(frames.begin(), frames.end(), idx + 1);
+      for (int i = 0; i < Param.UniqueStacksPerThread; ++i) {
+        StackTrace s(frames.data(), frames.size());
+        auto h = StackDepotPut_WithHandle(s);
+        if (Param.UseCount)
+          h.inc_use_count_unsafe();
+        std::next_permutation(frames.begin(), frames.end());
+      };
+    }
+  };
+
+  std::vector<std::thread> threads;
+  for (int i = 0; i < Param.Threads; ++i)
+    threads.emplace_back(thread, Param.UniqueThreads * i);
+  for (auto& t : threads) t.join();
 }
 
 INSTANTIATE_TEST_SUITE_P(StackDepotBenchmarkSuite, StackDepotBenchmark,

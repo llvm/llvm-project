@@ -43,6 +43,8 @@ void StackDepotLockAll();
 void StackDepotUnlockAll();
 void StackDepotPrintAll();
 
+void StackDepotTestOnlyUnmap();
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_STACKDEPOT_H

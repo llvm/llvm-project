@@ -56,6 +56,11 @@ class StackDepotBase {
   void UnlockAll();
   void PrintAll();
 
+  void TestOnlyUnmap() {
+    nodes.TestOnlyUnmap();
+    internal_memset(this, 0, sizeof(*this));
+  }
+
  private:
   friend Node;
   u32 find(u32 s, args_type args, hash_type hash) const;
