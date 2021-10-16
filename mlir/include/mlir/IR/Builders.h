@@ -451,7 +451,7 @@ public:
   createOrFold(Location location, Args &&...args) {
     auto op = create<OpTy>(location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;
-    tryFold(op.getOperation(), unused);
+    (void)tryFold(op.getOperation(), unused);
 
     // Folding cannot remove a zero-result operation, so for convenience we
     // continue to return it.
