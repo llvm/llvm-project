@@ -3422,30 +3422,54 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (DstVT.isScalableVector())
     return SDValue();
 
-  // TODO: Saturate to SatWidth explicitly.
-  if (SatWidth != DstElementWidth)
-    return SDValue();
-
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
-  // In the absence of FP16 support, promote f16 to f32, like
-  // LowerVectorFP_TO_INT().
-  if (SrcElementVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+  // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  if (SrcElementVT == MVT::f16 &&
+      (!Subtarget->hasFullFP16() || DstElementWidth > 16)) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
-                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal),
-                       Op.getOperand(1));
-  }
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal);
+    SrcVT = F32VT;
+    SrcElementVT = MVT::f32;
+    SrcElementWidth = 32;
+  } else if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
+             SrcElementVT != MVT::f16)
+    return SDValue();
 
+  SDLoc DL(Op);
   // Cases that we can emit directly.
-  if ((SrcElementWidth == DstElementWidth) &&
-      (SrcElementVT == MVT::f64 || SrcElementVT == MVT::f32 ||
-       (SrcElementVT == MVT::f16 && Subtarget->hasFullFP16()))) {
-    return Op;
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                       DAG.getValueType(DstVT.getScalarType()));
+
+  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
+  // result. This is only valid if the legal cvt is larger than the saturate
+  // width. For double, as we don't have MIN/MAX, it can be simpler to scalarize
+  // (at least until sqxtn is selected).
+  if (SrcElementWidth < SatWidth || SrcElementVT == MVT::f64)
+    return SDValue();
+
+  EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
+  SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
+                                  DAG.getValueType(IntVT.getScalarType()));
+  SDValue Sat;
+  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    SDValue MinC = DAG.getConstant(
+        APInt::getSignedMaxValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
+    SDValue MaxC = DAG.getConstant(
+        APInt::getSignedMinValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
+  } else {
+    SDValue MinC = DAG.getConstant(
+        APInt::getAllOnesValue(SatWidth).zextOrSelf(SrcElementWidth), DL,
+        IntVT);
+    Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
   }
 
-  // For all other cases, fall back on the expanded form.
-  return SDValue();
+  return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
 
 SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
@@ -3464,24 +3488,44 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   uint64_t DstWidth = DstVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // TODO: Saturate to SatWidth explicitly.
-  if (SatWidth != DstWidth)
+  // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal);
+    SrcVT = MVT::f32;
+  } else if (SrcVT != MVT::f64 && SrcVT != MVT::f32 && SrcVT != MVT::f16)
     return SDValue();
 
-  // In the absence of FP16 support, promote f16 to f32, like LowerFP_TO_INT().
-  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
-                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal),
-                       Op.getOperand(1));
-
+  SDLoc DL(Op);
   // Cases that we can emit directly.
   if ((SrcVT == MVT::f64 || SrcVT == MVT::f32 ||
        (SrcVT == MVT::f16 && Subtarget->hasFullFP16())) &&
-      (DstVT == MVT::i64 || DstVT == MVT::i32))
-    return Op;
+      DstVT == SatVT && (DstVT == MVT::i64 || DstVT == MVT::i32))
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                       DAG.getValueType(DstVT));
 
-  // For all other cases, fall back on the expanded form.
-  return SDValue();
+  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
+  // result. This is only valid if the legal cvt is larger than the saturate
+  // width.
+  if (DstWidth < SatWidth)
+    return SDValue();
+
+  SDValue NativeCvt =
+      DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, DAG.getValueType(DstVT));
+  SDValue Sat;
+  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    SDValue MinC = DAG.getConstant(
+        APInt::getSignedMaxValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+    SDValue Min = DAG.getNode(ISD::SMIN, DL, DstVT, NativeCvt, MinC);
+    SDValue MaxC = DAG.getConstant(
+        APInt::getSignedMinValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+    Sat = DAG.getNode(ISD::SMAX, DL, DstVT, Min, MaxC);
+  } else {
+    SDValue MinC = DAG.getConstant(
+        APInt::getAllOnesValue(SatWidth).zextOrSelf(DstWidth), DL, DstVT);
+    Sat = DAG.getNode(ISD::UMIN, DL, DstVT, NativeCvt, MinC);
+  }
+
+  return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
 
 SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
@@ -9515,8 +9559,11 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
   } else if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
     // The lane is incremented by the index of the extract.
     // Example: dup v2f32 (extract v4f32 X, 2), 1 --> dup v4f32 X, 3
-    Lane += V.getConstantOperandVal(1);
-    V = V.getOperand(0);
+    auto VecVT = V.getOperand(0).getValueType();
+    if (VecVT.isFixedLengthVector() && VecVT.getFixedSizeInBits() <= 128) {
+      Lane += V.getConstantOperandVal(1);
+      V = V.getOperand(0);
+    }
   } else if (V.getOpcode() == ISD::CONCAT_VECTORS) {
     // The lane is decremented if we are splatting from the 2nd operand.
     // Example: dup v4i32 (concat v2i32 X, v2i32 Y), 3 --> dup v4i32 Y, 1

@@ -113,6 +113,10 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts());
 
+  // Don't clear the AST before backend codegen since we do codegen multiple
+  // times, reusing the same AST.
+  Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
+
   return std::move(Clang);
 }
 
@@ -144,7 +148,6 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   // driver to construct.
   ClangArgv.push_back("<<< inputs >>>");
 
-  CompilerInvocation Invocation;
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());

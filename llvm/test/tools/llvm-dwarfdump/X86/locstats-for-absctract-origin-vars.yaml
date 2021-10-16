@@ -120,7 +120,7 @@
 ##    DW_TAG_subprogram
 ##        DW_AT_abstract_origin (0x000000f0)
 
-# CHECK: "version": 8,
+# CHECK: "version": 9,
 # CHECK: "#variables processed by location statistics": 17,
 # CHECK: "#variables with 0% of parent scope covered by DW_AT_location": 13,
 # CHECK: "#variables with 100% of parent scope covered by DW_AT_location": 4,

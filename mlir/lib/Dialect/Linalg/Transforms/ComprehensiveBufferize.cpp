@@ -612,6 +612,31 @@ static OpResult getAliasingOpResult(OpOperand &opOperand) {
           [&](Operation *op) { return getInplaceableOpResult(opOperand); });
 }
 
+// Predeclaration of function.
+static bool bufferizesToMemoryRead(OpOperand &opOperand);
+
+/// scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
+/// matching bbArg may.
+static bool bufferizesToMemoryRead(scf::ForOp forOp, OpOperand &opOperand) {
+  SmallVector<OpOperand *> workingSet;
+  for (OpOperand &use : forOp.getRegionIterArgForOpOperand(opOperand).getUses())
+    workingSet.push_back(&use);
+
+  while (!workingSet.empty()) {
+    OpOperand *uMaybeReading = workingSet.pop_back_val();
+    // Skip over all ExtractSliceOps. These do not read by themselves but just
+    // add a new alias.
+    if (auto extractSliceOp =
+            dyn_cast<ExtractSliceOp>(uMaybeReading->getOwner()))
+      for (OpOperand &use : extractSliceOp.result().getUses())
+        workingSet.push_back(&use);
+    if (bufferizesToMemoryRead(*uMaybeReading))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if `opOperand` bufferizes to a memory read.
 static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // Unknown op that returns a tensor. The inplace analysis does not support
@@ -622,15 +647,8 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // may.
   if (isa<ExtractSliceOp>(opOperand.getOwner()))
     return false;
-  // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
-  // matching bbArg may.
-  if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner())) {
-    for (OpOperand &use :
-         forOp.getRegionIterArgForOpOperand(opOperand).getUses())
-      if (bufferizesToMemoryRead(use))
-        return true;
-    return false;
-  }
+  if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner()))
+    return bufferizesToMemoryRead(forOp, opOperand);
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
   if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
@@ -816,69 +834,198 @@ void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
   setInPlaceOpResult(result, InPlaceSpec::False);
 }
 
-/// Return true if it is possible to find an inplace write W among `usesWrite`
-/// and a read R among `usesRead`, such that W and R interfere.
-bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
-    Operation *opToBufferize, DenseSet<OpOperand *> &usesRead,
-    DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo) const {
+/// Starting from `value`, follow the use-def chain in reverse, always selecting
+/// the corresponding aliasing OpOperand. Try to find and return a Value for
+/// which `condition` evaluates to true for the aliasing OpOperand. Return an
+/// empty Value if no such Value was found. If `returnLast`, return the last
+/// Value (at the end of the chain), even if it does not satisfy the condition.
+static Value
+findValueInReverseUseDefChain(Value value,
+                              std::function<bool(OpOperand &)> condition,
+                              bool returnLast = false) {
+  while (value.isa<OpResult>()) {
+    auto opResult = value.cast<OpResult>();
+    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
+    assert(opOperands.size() <= 1 && "more than 1 OpOperand not supported yet");
+    if (opOperands.empty())
+      // No aliasing OpOperand. This could be an unsupported op or an op without
+      // a tensor arg such as InitTensorOp. This is the end of the chain.
+      return returnLast ? value : Value();
+    OpOperand *opOperand = opOperands.front();
+    if (condition(*opOperand))
+      return value;
+    value = opOperand->get();
+  }
+  // Value is a BlockArgument. Reached the end of the chain.
+  return returnLast ? value : Value();
+}
+
+/// Find the Value (result) of the last preceding write of a given Value.
+///
+/// Note: Unknown ops are handled conservatively and assumed to be writes.
+/// Furthermore, BlockArguments are also assumed to be writes. There is no
+/// analysis across block boundaries.
+static Value findLastPrecedingWrite(Value value) {
+  return findValueInReverseUseDefChain(value, bufferizesToMemoryWrite, true);
+}
+
+/// Return true if `value` is originating from an ExtractSliceOp that matches
+/// the given InsertSliceOp.
+bool BufferizationAliasInfo::hasMatchingExtractSliceOp(
+    Value value, InsertSliceOp insertOp) const {
+  return static_cast<bool>(
+      findValueInReverseUseDefChain(value, [&](OpOperand &opOperand) {
+        if (auto extractOp = dyn_cast<ExtractSliceOp>(opOperand.getOwner()))
+          if (areEquivalentExtractSliceOps(extractOp, insertOp))
+            return true;
+        return false;
+      }));
+}
+
+/// Given sets of uses and writes, return true if there is a RaW conflict under
+/// the assumption that all given reads/writes alias the same buffer and that
+/// all given writes bufferize inplace.
+///
+/// A conflict is: According to SSA use-def chains, a read R is supposed to read
+/// the result of a write W1. But because of bufferization decisions, R actually
+/// reads another write W2.
+bool BufferizationAliasInfo::hasReadAfterWriteInterference(
+    const DenseSet<OpOperand *> &usesRead,
+    const DenseSet<OpOperand *> &usesWrite,
+    const DominanceInfo &domInfo) const {
+
   for (OpOperand *uRead : usesRead) {
-    Operation *aliasingReadOp = uRead->getOwner();
-    LDBG("----++++aliasRead -> #"
-         << uRead->getOperandNumber()
-         << " in: " << printOperationInfo(aliasingReadOp) << '\n');
-    for (OpOperand *uWrite : usesWrite) {
-      // The same operand may both read and write.
-      // Don't consider self-use of the same operand for interference.
-      // Multiple different uses within the same op is fair game though.
-      if (uWrite == uRead)
+    Operation *readingOp = uRead->getOwner();
+
+    // Find most recent write of uRead by following the SSA use-def chain. E.g.:
+    //
+    // %0 = "writing_op"(%t) : tensor<?x32> -> tensor<?xf32>
+    // %1 = "aliasing_op"(%0) : tensor<?x32> -> tensor<?xf32>
+    // %2 = "reading_op"(%1) : : tensor<?x32> -> not_a_tensor_type
+    //
+    // In the above example, if uRead is the OpOperand of reading_op, lastWrite
+    // is %0. Note that operations that create an alias but do not write (such
+    // as ExtractSliceOp) are skipped.
+    // TODO: With branches this should probably be a list of Values.
+    Value lastWrite = findLastPrecedingWrite(uRead->get());
+
+    // Look for conflicting memory writes. Potential conflicts are writes to an
+    // alias that have been decided to bufferize inplace.
+    for (OpOperand *uConflictingWrite : usesWrite) {
+      // Throughout this loop, check for multiple requirements that have to be
+      // met for uConflictingWrite to be an actual conflict.
+      Operation *conflictingWritingOp = uConflictingWrite->getOwner();
+
+      // Print some debug info.
+      LDBG("Found potential conflict:\n");
+      LDBG("READ = #" << uRead->getOperandNumber() << " of "
+                      << printOperationInfo(readingOp) << "\n");
+      LDBG("WRITE = #" << printValueInfo(lastWrite) << "\n");
+      LDBG("CONFLICTING WRITE = #"
+           << uConflictingWrite->getOperandNumber() << " of "
+           << printOperationInfo(conflictingWritingOp) << "\n");
+
+      // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
+      // write is not visible when reading.
+      if (domInfo.properlyDominates(readingOp, conflictingWritingOp))
         continue;
 
-      Operation *aliasingWriteOp = uWrite->getOwner();
-      LDBG("----    aliasWrite -> #"
-           << uWrite->getOperandNumber()
-           << " in: " << printOperationInfo(aliasingWriteOp) << '\n');
-      // If the candidate write is the one that produces the read value (in the
-      // SSA def-use sense), this is not considered an interference.
-      if (getInplaceableOpResult(*uWrite) == uRead->get())
-        continue;
-      // If aliasingReadOp properly dominates aliasingWriteOp, the read cannot
-      // be affected by the write: there is no interference.
-      if (domInfo.properlyDominates(aliasingReadOp, aliasingWriteOp))
-        continue;
-      // At this point, aliasingWriteOp properly dominates aliasingReadOp or
-      // there is no clear dominance and we need to be conservative.
-      LDBG("---->found RaW interference between:\n");
-      LDBG("       OpToBufferize -> " << printOperationInfo(opToBufferize)
-                                      << '\n');
-      LDBG("       Interfering write -> #"
-           << uWrite->getOperandNumber() << ":"
-           << printOperationInfo(aliasingWriteOp) << '\n');
-      LDBG("       Target read -> #" << uRead->getOperandNumber() << ":"
-                                     << printOperationInfo(aliasingReadOp)
-                                     << '\n');
-      LDBG("---->opportunity to clobber RaW interference\n");
-      if (isClobberedWriteBeforeRead(opToBufferize, *uRead, *uWrite, domInfo)) {
-        LDBG("---->clobbered! -> skip\n");
-        continue;
+      // No conflict if the conflicting write happens before the last write.
+      if (Operation *writingOp = lastWrite.getDefiningOp()) {
+        if (domInfo.properlyDominates(conflictingWritingOp, writingOp))
+          // conflictingWritingOp happens before writingOp. No conflict.
+          continue;
+      } else {
+        auto bbArg = lastWrite.cast<BlockArgument>();
+        Block *block = bbArg.getOwner();
+        if (!block->findAncestorOpInBlock(*conflictingWritingOp))
+          // conflictingWritingOp happens outside of the block. No
+          // conflict.
+          continue;
       }
-      LDBG("---->not clobbered -> found an interference\n");
+
+      // No conflict if the conflicting write and the last write are the same
+      // use.
+      if (getAliasingOpResult(*uConflictingWrite) == lastWrite)
+        continue;
+
+      // No conflict is the same use is the read and the conflicting write. A
+      // use cannot conflict with itself.
+      if (uConflictingWrite == uRead)
+        continue;
+
+      // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
+      // uRead is an InsertSliceOp...
+      if (auto insertSliceOp = dyn_cast<InsertSliceOp>(readingOp)) {
+        // As an example, consider the following IR.
+        //
+        // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace= [true] }
+        // %1 = linalg.fill %cst, %0 {inplace= [true] }
+        // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+        //     {inplace= [true] }
+
+        // TODO: Use insertSliceOp.getDestOpOperand etc. when available.
+        if (uRead == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+            hasMatchingExtractSliceOp(uConflictingWrite->get(), insertSliceOp))
+          // Case 1: The main insight is that InsertSliceOp reads only part of
+          // the destination tensor. The overwritten area is not read. If
+          // uConflictingWrite writes into exactly the memory location that is
+          // being read by uRead, this is not a conflict.
+          //
+          // In the above example:
+          // uRead             = OpOperand 1 (%t) of tensor.insert_slice
+          // uConflictingWrite = OpOperand 1 (%0) of linalg.fill
+          //
+          // The read of %t does not conflict with the write of the FillOp
+          // (same aliases!) because the area that the FillOp operates on is
+          // exactly the one that is *not* read via %t.
+          continue;
+
+        if (uRead == &insertSliceOp->getOpOperand(0) /*source*/ &&
+            uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+            hasMatchingExtractSliceOp(uRead->get(), insertSliceOp))
+          // Case 2: The read of the source tensor and the write to the dest
+          // tensor via an InsertSliceOp is not a conflict if the read is
+          // reading exactly that part of an equivalent tensor that the
+          // InsertSliceOp is writing.
+          //
+          // In the above example:
+          // uRead             = OpOperand 0 (%1) of tensor.insert_slice
+          // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+          continue;
+      }
+
+      // All requirements are met. Conflict found!
+      LDBG("CONFLICT CONFIRMED!\n\n");
       return true;
     }
   }
-  LDBG("----No interference found\n");
+
+  LDBG("NOT A CONFLICT!\n\n");
   return false;
 }
 
-/// Return true if it is possible to find an inplace write W among the uses of
-/// aliasInfo[result], and a read R among the uses of aliasInfo[result],
-/// such that W and R interfere.
-/// Such a (W, R) pair is an interference to the inplace bufferization of
-/// opResult when:
-///   1. R is not known to properly dominate W (i.e. the effects of the write
-///      may be visible from R).
-///   2. one cannot find an intermediate clobbering write `C` to W, such that
-///      C interleaved between W and R (i.e. W -> C -> R where -> denotes
-///      dominance).
+/// Return true if bufferizing result inplace would create a conflict. A read R
+/// and a write W of the same alias set is a conflict if inplace bufferization
+/// of W changes the value read by R to a value different from the one that
+/// would be expected by tracing back R's origin through SSA use-def chains.
+/// A conflict can only be introduced by a new alias and/or an inplace
+/// bufferization decision.
+///
+/// Example:
+/// %0 = tensor.extract_slice %t[...][...][1, 1] {inplace?}
+/// %1 = vector.transfer_write %v1, %t {inplace} : vector<5xf32>, tensor<?xf32>
+/// %e = tensor.extract_slice %1
+/// %2 = vector.transfer_write %v2, %0 {inplace} : vector<6xf32>, tensor<?xf32>
+/// %3 = vector.transfer_read %e, %cst : tensor<?xf32>, vector<7xf32>
+///
+/// In the above example, the two TransferWriteOps have already been decided to
+/// bufferize inplace. Bufferizing the ExtractSliceOp inplace would create a
+/// conflict because:
+/// * According to SSA use-def chains, we expect to read the result of %1.
+/// * However, adding an alias {%0, %t} would mean that the second
+///   TransferWriteOp overwrites the first one. Therefore, the TransferReadOp
+///   would no longer be reading the result of %1.
 bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
     OpOperand &operand, OpResult result, const DominanceInfo &domInfo) const {
 #ifndef NDEBUG
@@ -887,93 +1034,34 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
          "operand and result do not match");
 #endif // NDEBUG
 
-  Operation *opToBufferize = result.getDefiningOp();
-  Value opResult = result;
-  Value opOperand = operand.get();
-
-  LDBG("----Start wouldCreateReadAfterWriteInterference\n");
-  LDBG("--------consider all aliases to root read: "
-       << printValueInfo(opOperand) << "\n");
-  LDBG("--------consider all aliases to root write: "
-       << printValueInfo(opResult) << "\n");
-
-  /// Helper function to iterate on aliases of `root` and capture the reads.
+  // Helper function to iterate on aliases of `root` and capture the reads.
   auto getAliasingReads = [&](DenseSet<OpOperand *> &res, Value root) {
-    for (Value alias : getAliases(root)) {
-      for (auto &use : alias.getUses()) {
+    for (Value alias : getAliases(root))
+      for (auto &use : alias.getUses())
         // Read to a value that aliases root.
-        if (bufferizesToMemoryRead(use)) {
-          LDBG("------------bufferizesToMemoryRead: "
-               << use.getOwner()->getName().getStringRef() << "\n");
+        if (bufferizesToMemoryRead(use))
           res.insert(&use);
-        }
-      }
-    }
   };
 
-  /// Helper function to iterate on aliases of `root` and capture the writes.
+  // Helper function to iterate on aliases of `root` and capture the writes.
   auto getAliasingInplaceWrites = [&](DenseSet<OpOperand *> &res, Value root) {
-    for (Value alias : getAliases(root)) {
-      for (auto &use : alias.getUses()) {
+    for (Value alias : getAliases(root))
+      for (auto &use : alias.getUses())
         // Inplace write to a value that aliases root.
-        if (isInplaceMemoryWrite(use)) {
-          LDBG("------------bufferizesToMemoryWrite: "
-               << use.getOwner()->getName().getStringRef() << "\n");
+        if (isInplaceMemoryWrite(use))
           res.insert(&use);
-        }
-      }
-    }
   };
 
-  // Check if we can find any interference between reads to aliases[`opOperand`]
-  // and writes to aliases[`opResult`]. This handles the case:
-  //
-  // ```
-  //  %0 = op_to_bufferize_maybe_inplace(%1)
-  //  %2 = some_alias(%0)
-  //  inplace_write(%2)
-  //  %3 = some_alias(%1)
-  //  read(%3)
-  // ```
+  // Collect reads and writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesRead, usesWrite;
-  LDBG("--------\n");
-  LDBG("--------Test reads(opOperand) vs writes(opResult)\n");
-  getAliasingReads(usesRead, opOperand);
-  getAliasingInplaceWrites(usesWrite, opResult);
-  // Additionally, `result` is not yet bufferized and we need to check for
-  // interferences as if it were bufferized inplace: add `operand` if it is a
-  // write. This handles the case:
-  //
-  // ```
-  //  %0 = op_to_bufferize_maybe_inplace(%1)
-  //  %2 = some_alias(%1)
-  //  read(%2)
-  // ```
+  getAliasingReads(usesRead, operand.get());
+  getAliasingReads(usesRead, result);
+  getAliasingInplaceWrites(usesWrite, operand.get());
+  getAliasingInplaceWrites(usesWrite, result);
   if (bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
-  if (wouldCreateReadAfterWriteInterference(opToBufferize, usesRead, usesWrite,
-                                            domInfo))
-    return true;
 
-  // Check if we can find any interference between writes to
-  // aliases[`opOperand`] and reads to aliases[`opResult`]. This handles the
-  // case:
-  //
-  // ```
-  //  %0 = op_to_bufferize_maybe_inplace(%1)
-  //  %2 = some_alias(%1)
-  //  inplace_write(%2)
-  //  %3 = some_alias(%0)
-  //  read(%3)
-  // ```
-  LDBG("--------\n");
-  LDBG("--------Test reads(opResult) vs writes(opOperand)\n");
-  usesRead.clear();
-  usesWrite.clear();
-  getAliasingReads(usesRead, opResult);
-  getAliasingInplaceWrites(usesWrite, opOperand);
-  return wouldCreateReadAfterWriteInterference(opToBufferize, usesRead,
-                                               usesWrite, domInfo);
+  return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo);
 }
 
 /// Return true if bufferizing `opOperand` inplace with `opResult` would create
@@ -1105,123 +1193,10 @@ bool BufferizationAliasInfo::areEquivalentExtractSliceOps(
     return false;
   if (!sameOffsetsSizesAndStrides(st, sti, isEqualConstantIntOrValue))
     return false;
+  // TODO: Is the following needed?
   if (!equivalentInfo.isEquivalent(st.result(), sti.source()))
     return false;
   return true;
-}
-
-/// Return true if there is a `candidateOp` that would write to memory after
-/// bufferization and such that:
-///   1. The written buffer is equivalent to either `aliasingRead` or
-///      `aliasingWrite` under the inPlace bufferization decisions taken
-///      so far.
-///   2. `aliasingWrite` properly dominates `candidateOp`.
-///   3. `candidateOp` properly dominates `aliasingReadOp`.
-// TODO: richer clobbering analysis with container-containee relationship
-// instead of equivalence.
-bool BufferizationAliasInfo::existsInterleavedValueClobber(
-    OpOperand &aliasingRead, OpOperand &aliasingWrite,
-    const DominanceInfo &domInfo) const {
-  Operation *aliasingReadOp = aliasingRead.getOwner();
-  Operation *aliasingWriteOp = aliasingWrite.getOwner();
-  assert(!domInfo.properlyDominates(aliasingReadOp, aliasingWriteOp) &&
-         "Unexpected aliasingReadOp properly dominates aliasingWriteOp");
-
-  for (Value valueToClobber : {aliasingRead.get(), aliasingWrite.get()}) {
-    auto leaderIt = equivalentInfo.findLeader(valueToClobber);
-    for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
-         ++mit) {
-      Operation *candidateOp = mit->v.getDefiningOp();
-      if (!candidateOp)
-        continue;
-      SmallVector<OpOperand *> operands =
-          getAliasingOpOperand(mit->v.cast<OpResult>());
-      assert(operands.size() <= 1 && "more than 1 OpOperand not supported yet");
-      // TODO: Should we check for isInplaceMemoryWrite instead?
-      if (operands.empty() || !bufferizesToMemoryWrite(*operands.front()))
-        continue;
-      LDBG("---->clobbering candidate: " << printOperationInfo(candidateOp)
-                                         << '\n');
-      if (domInfo.properlyDominates(aliasingWriteOp, candidateOp) &&
-          domInfo.properlyDominates(candidateOp, aliasingReadOp))
-        return true;
-    }
-  }
-  return false;
-}
-
-/// Return true if there is a write that:
-///   1. Properly dominates aliasingReadOp.
-///   2. Is properly dominated by aliasingWriteOp.
-///   3. Clobbers the write that would be interfering with the read.
-///
-bool BufferizationAliasInfo::isClobberedWriteBeforeRead(
-    Operation *opToBufferize, OpOperand &aliasingRead, OpOperand &aliasingWrite,
-    const DominanceInfo &domInfo) const {
-  Operation *aliasingReadOp = aliasingRead.getOwner();
-  Operation *aliasingWriteOp = aliasingWrite.getOwner();
-  assert(!domInfo.properlyDominates(aliasingReadOp, aliasingWriteOp) &&
-         "Unexpected aliasingReadOp properly dominates aliasingWriteOp");
-
-  // Bail if the write does not dominate the read: it may clobber but only on
-  // a strict subset of paths, which is not enough for safety.
-  if (!domInfo.dominates(aliasingWriteOp, aliasingReadOp)) {
-    LDBG("---->no clobbering: write does not dominate read\n");
-    return false;
-  }
-
-  // The case `opToBufferize` isa ExtractSliceOp is important enough that we
-  // look for it specifically. The key information to discover is whether the
-  // aliasing read or write come from a matching InsertSliceOp.
-  // Such a pattern is introduced by tiling and is the key inplace condition
-  // not to miss.
-  if (auto extractSliceOp = dyn_cast<ExtractSliceOp>(opToBufferize)) {
-    if (auto insertSliceOp = dyn_cast<InsertSliceOp>(aliasingReadOp)) {
-      // %1 = extract_slice %0[%offset_sizes_and_strides_1]
-      //
-      // ... // 0 or more of inplace compute that reduces to: %X is an
-      //     // aliasingWrite equivalent to %1.
-      // %W = inplace_write(%1)
-      //
-      // // aliasingRead %Y in insert_slice
-      // ... = insert_slice %W into %R[%offset_sizes_and_strides_1]
-      if (aliasingRead.get() == insertSliceOp.dest() &&
-          // TODO: This is currently too restrictive and misses clobberings.
-          // When available, use container-containee analysis: the condition
-          // should be that the `aliasingWrite` is contained within
-          // `insertSliceOp.source()`.
-          equivalentInfo.isEquivalent(aliasingWrite.get(),
-                                      insertSliceOp.source()) &&
-          areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp)) {
-        LDBG("---->clobbering matching extract_slice/insert_slice\n");
-        return true;
-      }
-      // %1 = extract_slice %0[%offset_sizes_and_strides_1]
-      //
-      // ... // bunch of inplace ops that reduce to %X, equivalent to %1.
-      // %X = inplace_write(%1)
-      //
-      // // aliasingRead %X in insert_slice
-      // // aliasingWrite %Y in insert_slice
-      // ... = insert_slice %X into %Y[%offset_sizes_and_strides_1]
-      if (aliasingReadOp == aliasingWriteOp) {
-        assert(aliasingRead.get() == insertSliceOp.source() &&
-               "expected read to source of insert_slice");
-        assert(aliasingWrite.get() == insertSliceOp.dest() &&
-               "expected write to dest of insert_slice");
-        if (areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp)) {
-          LDBG("---->clobbering matching extract_slice/insert_slice\n");
-          return true;
-        }
-      }
-    }
-  }
-
-  // General case: look for a properly interleaved clobber of either exactly
-  // `aliasingRead` or `aliasingWrite`.
-  // TODO: Relax this to inclusion instead of double inclusion (a.k.a
-  // equivalence). We will need to compute container-containee relationship.
-  return existsInterleavedValueClobber(aliasingRead, aliasingWrite, domInfo);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2030,6 +2005,7 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
   //   - The result is not inplace. This is the case where the whole tensor is
   //     cloned and the clone needs to be updated.
   auto inPlace = getInPlace(insertSliceOp->getResult(0));
+  // TODO: Is this necessary?
   if (!aliasInfo.isSourceEquivalentToAMatchingInplaceExtractSliceOp(
           insertSliceOp) ||
       inPlace != InPlaceSpec::True) {

@@ -2371,9 +2371,13 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
 
   // Find new register class to use.
   MachineOperand FalseReg = MI.getOperand(Invert ? 2 : 1);
+  MachineOperand TrueReg = MI.getOperand(Invert ? 1 : 2);
   Register DestReg = MI.getOperand(0).getReg();
-  const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
-  if (!MRI.constrainRegClass(DestReg, PreviousClass))
+  const TargetRegisterClass *FalseClass = MRI.getRegClass(FalseReg.getReg());
+  const TargetRegisterClass *TrueClass = MRI.getRegClass(TrueReg.getReg());
+  if (!MRI.constrainRegClass(DestReg, FalseClass))
+    return nullptr;
+  if (!MRI.constrainRegClass(DestReg, TrueClass))
     return nullptr;
 
   // Create a new predicated version of DefMI.

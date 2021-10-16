@@ -5,7 +5,7 @@
 define dso_local i32 @test_builtin_ppc_popcntb_i32(i32 %a) local_unnamed_addr {
 ; CHECK-LABEL: test_builtin_ppc_popcntb_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    popcntb 3, 3
+; CHECK-NEXT:    popcntb r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %popcntb = tail call i32 @llvm.ppc.popcntb.i32.i32(i32 %a)
@@ -16,8 +16,8 @@ declare i32 @llvm.ppc.popcntb.i32.i32(i32)
 define dso_local void @test_builtin_ppc_eieio() {
 ; CHECK-LABEL: test_builtin_ppc_eieio:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori 2, 2, 0
-; CHECK-NEXT:    ori 2, 2, 0
+; CHECK-NEXT:    ori r2, r2, 0
+; CHECK-NEXT:    ori r2, r2, 0
 ; CHECK-NEXT:    eieio
 ; CHECK-NEXT:    blr
 entry:
@@ -29,8 +29,8 @@ declare void @llvm.ppc.eieio()
 define dso_local void @test_builtin_ppc_iospace_eieio() {
 ; CHECK-LABEL: test_builtin_ppc_iospace_eieio:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori 2, 2, 0
-; CHECK-NEXT:    ori 2, 2, 0
+; CHECK-NEXT:    ori r2, r2, 0
+; CHECK-NEXT:    ori r2, r2, 0
 ; CHECK-NEXT:    eieio
 ; CHECK-NEXT:    blr
 entry:

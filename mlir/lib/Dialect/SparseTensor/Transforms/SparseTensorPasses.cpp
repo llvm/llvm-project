@@ -97,8 +97,8 @@ struct SparseTensorConversionPass
     RewritePatternSet patterns(ctx);
     SparseTensorTypeConverter converter;
     ConversionTarget target(*ctx);
-    target.addIllegalOp<NewOp, ConvertOp, ToPointersOp, ToIndicesOp, ToValuesOp,
-                        ToTensorOp>();
+    target.addIllegalOp<ConvertOp, NewOp, ToIndicesOp, ToPointersOp, ToTensorOp,
+                        ToValuesOp>();
     // All dynamic rules below accept new function, call, return, and dimop
     // operations as legal output of the rewriting provided that all sparse
     // tensor types have been fully rewritten.
@@ -114,11 +114,10 @@ struct SparseTensorConversionPass
     });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
-    target.addLegalOp<arith::ConstantOp, ConstantOp, arith::IndexCastOp,
-                      tensor::CastOp, tensor::ExtractOp, arith::CmpFOp,
-                      arith::CmpIOp>();
-    target.addLegalDialect<scf::SCFDialect, LLVM::LLVMDialect,
-                           memref::MemRefDialect>();
+    target.addLegalOp<arith::CmpFOp, arith::CmpIOp, arith::ConstantOp,
+                      arith::IndexCastOp, tensor::CastOp, tensor::ExtractOp>();
+    target.addLegalDialect<LLVM::LLVMDialect, memref::MemRefDialect,
+                           scf::SCFDialect>();
     // Populate with rules and apply rewriting rules.
     populateFuncOpTypeConversionPattern(patterns, converter);
     populateCallOpTypeConversionPattern(patterns, converter);
