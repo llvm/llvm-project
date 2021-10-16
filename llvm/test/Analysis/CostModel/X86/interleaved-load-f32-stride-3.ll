@@ -16,19 +16,22 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SSE2: LV: Found an estimated cost of 9 for VF 2 For instruction:   %v0 = load float, float* %in0, align 4
 ; SSE2: LV: Found an estimated cost of 21 for VF 4 For instruction:   %v0 = load float, float* %in0, align 4
 ; SSE2: LV: Found an estimated cost of 42 for VF 8 For instruction:   %v0 = load float, float* %in0, align 4
+; SSE2: LV: Found an estimated cost of 84 for VF 16 For instruction:   %v0 = load float, float* %in0, align 4
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 12 for VF 2 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 24 for VF 4 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 57 for VF 8 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 114 for VF 16 For instruction:   %v0 = load float, float* %in0, align 4
+; AVX1: LV: Found an estimated cost of 228 for VF 32 For instruction:   %v0 = load float, float* %in0, align 4
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 6 for VF 2 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 5 for VF 4 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 10 for VF 8 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX2: LV: Found an estimated cost of 20 for VF 16 For instruction:   %v0 = load float, float* %in0, align 4
-;
+; AVX2: LV: Found an estimated cost of 228 for VF 32 For instruction:   %v0 = load float, float* %in0, align 4
+
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX512: LV: Found an estimated cost of 4 for VF 2 For instruction:   %v0 = load float, float* %in0, align 4
 ; AVX512: LV: Found an estimated cost of 4 for VF 4 For instruction:   %v0 = load float, float* %in0, align 4

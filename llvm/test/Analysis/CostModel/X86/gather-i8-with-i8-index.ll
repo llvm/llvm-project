@@ -17,30 +17,30 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE2: LV: Found an estimated cost of 29 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE2: LV: Found an estimated cost of 59 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE2: LV: Found an estimated cost of 119 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE2: LV: Found an estimated cost of 239 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE2: LV: Found an estimated cost of 25 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE2: LV: Found an estimated cost of 51 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE2: LV: Found an estimated cost of 103 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE2: LV: Found an estimated cost of 207 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
 ;
 ; SSE42: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE42: LV: Found an estimated cost of 29 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE42: LV: Found an estimated cost of 59 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE42: LV: Found an estimated cost of 119 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
-; SSE42: LV: Found an estimated cost of 239 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE42: LV: Found an estimated cost of 25 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE42: LV: Found an estimated cost of 51 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE42: LV: Found an estimated cost of 103 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
+; SSE42: LV: Found an estimated cost of 207 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX1: LV: Found an estimated cost of 26 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX1: LV: Found an estimated cost of 54 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX1: LV: Found an estimated cost of 108 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX1: LV: Found an estimated cost of 216 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX1: LV: Found an estimated cost of 434 for VF 32 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX1: LV: Found an estimated cost of 24 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX1: LV: Found an estimated cost of 48 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX1: LV: Found an estimated cost of 96 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX1: LV: Found an estimated cost of 192 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX1: LV: Found an estimated cost of 386 for VF 32 For instruction:   %valB = load i8, i8* %inB, align 1
 ;
 ; AVX2-SLOWGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 54 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 108 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 216 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 434 for VF 32 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 24 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 48 for VF 4 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 96 for VF 8 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 192 for VF 16 For instruction:   %valB = load i8, i8* %inB, align 1
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 386 for VF 32 For instruction:   %valB = load i8, i8* %inB, align 1
 ;
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i8, i8* %inB, align 1
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   %valB = load i8, i8* %inB, align 1

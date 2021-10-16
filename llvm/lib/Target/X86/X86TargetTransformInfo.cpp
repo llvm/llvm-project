@@ -3422,7 +3422,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Index == -1U && (Opcode == Instruction::ExtractElement ||
                        Opcode == Instruction::InsertElement)) {
     // TODO: On some SSE41+ targets, we expand to cmp+splat+select patterns:
-    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0. 
+    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0.
 
     // TODO: Move this to BasicTTIImpl.h? We'd need better gep + index handling.
     assert(isa<FixedVectorType>(Val) && "Fixed vector type expected");
@@ -4878,11 +4878,15 @@ bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
   return isLegalMaskedExpandLoad(DataTy);
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+bool X86TTIImpl::supportsGather() const {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
-  if (!(ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2())))
+  return ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2());
+}
+
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+  if (!supportsGather())
     return false;
 
   // This function is called now in two cases: from the Loop Vectorizer
@@ -5004,6 +5008,14 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.LoadSizes.push_back(2);
   Options.LoadSizes.push_back(1);
   return Options;
+}
+
+bool X86TTIImpl::prefersVectorizedAddressing() const {
+  return supportsGather();
+}
+
+bool X86TTIImpl::supportsEfficientVectorElementLoadStore() const {
+  return false;
 }
 
 bool X86TTIImpl::enableInterleavedAccessVectorization() {
