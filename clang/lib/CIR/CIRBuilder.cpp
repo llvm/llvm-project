@@ -148,7 +148,6 @@ public:
   CIRBuildImpl &operator=(CIRBuildImpl &) = delete;
   ~CIRBuildImpl() = default;
 
-  // FIXME: instead of mlir::Value, hold a RawAddress here.
   using SymTableTy = llvm::ScopedHashTable<const Decl *, mlir::Value>;
   using SymTableScopeTy = ScopedHashTableScope<const Decl *, mlir::Value>;
 
@@ -189,23 +188,21 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(const Decl *var, QualType T, mlir::Value value,
-                              mlir::Location loc) {
+  mlir::LogicalResult declare(const Decl *var, QualType T, mlir::Location loc,
+                              mlir::Value &addr, bool IsParam = false) {
     const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
     assert(namedVar && "Needs a named decl");
 
     if (symbolTable.count(var))
       return mlir::failure();
 
-    // TODO: track "constant"
     auto localVarTy = getCIRType(T);
     auto localVarPtrTy =
         mlir::cir::PointerType::get(builder.getContext(), localVarTy);
 
     auto localVarAddr = builder.create<mlir::cir::AllocaOp>(
         loc, /*addr type*/ localVarPtrTy, /*var type*/ localVarTy,
-        /*initial_value*/ mlir::UnitAttr::get(builder.getContext()),
-        /*constant*/ false);
+        IsParam ? InitStyle::paraminit : InitStyle::uninitialized);
 
     auto *parentBlock = localVarAddr->getBlock();
     localVarAddr->moveBefore(&parentBlock->front());
@@ -213,6 +210,7 @@ private:
     // Insert into the symbol table, allocate some stack space in the
     // function entry block.
     symbolTable.insert(var, localVarAddr);
+    addr = localVarAddr;
 
     return mlir::success();
   }
@@ -221,6 +219,170 @@ public:
   mlir::ModuleOp getModule() { return theModule; }
   mlir::OpBuilder &getBuilder() { return builder; }
 
+  class RawAddress {
+    mlir::Value Pointer;
+    CharUnits Alignment;
+
+  public:
+    RawAddress(mlir::Value pointer, CharUnits alignment)
+        : Pointer(pointer), Alignment(alignment) {
+      assert((!alignment.isZero() || pointer == nullptr) &&
+             "creating valid address with invalid alignment");
+    }
+
+    static RawAddress invalid() { return RawAddress(nullptr, CharUnits()); }
+    bool isValid() const { return Pointer != nullptr; }
+
+    mlir::Value getPointer() const {
+      // assert(isValid());
+      return Pointer;
+    }
+
+    /// Return the alignment of this pointer.
+    CharUnits getAlignment() const {
+      // assert(isValid());
+      return Alignment;
+    }
+  };
+
+  class LValue {
+    enum {
+      Simple,       // This is a normal l-value, use getAddress().
+      VectorElt,    // This is a vector element l-value (V[i]), use getVector*
+      BitField,     // This is a bitfield l-value, use getBitfield*.
+      ExtVectorElt, // This is an extended vector subset, use getExtVectorComp
+      GlobalReg,    // This is a register l-value, use getGlobalReg()
+      MatrixElt     // This is a matrix element, use getVector*
+    } LVType;
+    QualType Type;
+
+  private:
+    void Initialize(CharUnits Alignment, QualType Type,
+                    LValueBaseInfo BaseInfo) {
+      // assert((!Alignment.isZero()) && // || Type->isIncompleteType()) &&
+      //       "initializing l-value with zero alignment!");
+      this->Type = Type;
+      // This flag shows if a nontemporal load/stores should be used when
+      // accessing this lvalue.
+      const unsigned MaxAlign = 1U << 31;
+      this->Alignment = Alignment.getQuantity() <= MaxAlign
+                            ? Alignment.getQuantity()
+                            : MaxAlign;
+      assert(this->Alignment == Alignment.getQuantity() &&
+             "Alignment exceeds allowed max!");
+      this->BaseInfo = BaseInfo;
+    }
+
+    // The alignment to use when accessing this lvalue. (For vector elements,
+    // this is the alignment of the whole vector)
+    unsigned Alignment;
+    mlir::Value V;
+    LValueBaseInfo BaseInfo;
+
+  public:
+    bool isSimple() const { return LVType == Simple; }
+    bool isVectorElt() const { return LVType == VectorElt; }
+    bool isBitField() const { return LVType == BitField; }
+    bool isExtVectorElt() const { return LVType == ExtVectorElt; }
+    bool isGlobalReg() const { return LVType == GlobalReg; }
+    bool isMatrixElt() const { return LVType == MatrixElt; }
+
+    QualType getType() const { return Type; }
+
+    mlir::Value getPointer() const { return V; }
+
+    CharUnits getAlignment() const {
+      return CharUnits::fromQuantity(Alignment);
+    }
+
+    RawAddress getAddress() const {
+      return RawAddress(getPointer(), getAlignment());
+    }
+
+    LValueBaseInfo getBaseInfo() const { return BaseInfo; }
+    void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
+
+    static LValue makeAddr(RawAddress address, QualType T,
+                           AlignmentSource Source = AlignmentSource::Type) {
+      LValue R;
+      R.V = address.getPointer();
+      R.Initialize(address.getAlignment(), T, LValueBaseInfo(Source));
+      R.LVType = Simple;
+      return R;
+    }
+  };
+
+  /// This trivial value class is used to represent the result of an
+  /// expression that is evaluated.  It can be one of three things: either a
+  /// simple MLIR SSA value, a pair of SSA values for complex numbers, or the
+  /// address of an aggregate value in memory.
+  class RValue {
+    enum Flavor { Scalar, Complex, Aggregate };
+
+    // The shift to make to an aggregate's alignment to make it look
+    // like a pointer.
+    enum { AggAlignShift = 4 };
+
+    // Stores first value and flavor.
+    llvm::PointerIntPair<mlir::Value, 2, Flavor> V1;
+    // Stores second value and volatility.
+    llvm::PointerIntPair<mlir::Value, 1, bool> V2;
+
+  public:
+    bool isScalar() const { return V1.getInt() == Scalar; }
+    bool isComplex() const { return V1.getInt() == Complex; }
+    bool isAggregate() const { return V1.getInt() == Aggregate; }
+
+    bool isVolatileQualified() const { return V2.getInt(); }
+
+    /// getScalarVal() - Return the Value* of this scalar value.
+    mlir::Value getScalarVal() const {
+      assert(isScalar() && "Not a scalar!");
+      return V1.getPointer();
+    }
+
+    /// getComplexVal - Return the real/imag components of this complex value.
+    ///
+    std::pair<mlir::Value, mlir::Value> getComplexVal() const {
+      assert(0 && "not implemented");
+      return {};
+    }
+
+    /// getAggregateAddr() - Return the Value* of the address of the
+    /// aggregate.
+    RawAddress getAggregateAddress() const {
+      assert(0 && "not implemented");
+      return RawAddress::invalid();
+    }
+
+    static RValue getIgnored() {
+      // FIXME: should we make this a more explicit state?
+      return get(nullptr);
+    }
+
+    static RValue get(mlir::Value V) {
+      RValue ER;
+      ER.V1.setPointer(V);
+      ER.V1.setInt(Scalar);
+      ER.V2.setInt(false);
+      return ER;
+    }
+    static RValue getComplex(mlir::Value V1, mlir::Value V2) {
+      assert(0 && "not implemented");
+      return RValue{};
+    }
+    static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &C) {
+      assert(0 && "not implemented");
+      return RValue{};
+    }
+    // FIXME: Aggregate rvalues need to retain information about whether they
+    // are volatile or not.  Remove default to find all places that probably
+    // get this wrong.
+    static RValue getAggregate(RawAddress addr, bool isVolatile = false) {
+      assert(0 && "not implemented");
+      return RValue{};
+    }
+  };
   class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
     LLVM_ATTRIBUTE_UNUSED CIRCodeGenFunction &CGF;
     CIRBuildImpl &Builder;
@@ -234,75 +396,6 @@ public:
     mlir::Value Visit(Expr *E) {
       return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
     }
-
-    class RawAddress {
-      mlir::Value Pointer;
-      CharUnits Alignment;
-
-    public:
-      RawAddress(mlir::Value pointer, CharUnits alignment)
-          : Pointer(pointer), Alignment(alignment) {
-        assert((!alignment.isZero() || pointer == nullptr) &&
-               "creating valid address with invalid alignment");
-      }
-
-      static RawAddress invalid() { return RawAddress(nullptr, CharUnits()); }
-      bool isValid() const { return Pointer != nullptr; }
-
-      mlir::Value getPointer() const {
-        // assert(isValid());
-        return Pointer;
-      }
-
-      /// Return the alignment of this pointer.
-      CharUnits getAlignment() const {
-        // assert(isValid());
-        return Alignment;
-      }
-    };
-    class LValue {
-    private:
-      void Initialize(CharUnits Alignment, LValueBaseInfo BaseInfo) {
-        // assert((!Alignment.isZero()) && // || Type->isIncompleteType()) &&
-        //       "initializing l-value with zero alignment!");
-
-        const unsigned MaxAlign = 1U << 31;
-        this->Alignment = Alignment.getQuantity() <= MaxAlign
-                              ? Alignment.getQuantity()
-                              : MaxAlign;
-        assert(this->Alignment == Alignment.getQuantity() &&
-               "Alignment exceeds allowed max!");
-        this->BaseInfo = BaseInfo;
-      }
-
-      // The alignment to use when accessing this lvalue. (For vector elements,
-      // this is the alignment of the whole vector)
-      unsigned Alignment;
-      mlir::Value V;
-      LValueBaseInfo BaseInfo;
-
-    public:
-      mlir::Value getPointer() const { return V; }
-
-      CharUnits getAlignment() const {
-        return CharUnits::fromQuantity(Alignment);
-      }
-
-      RawAddress getAddress() const {
-        return RawAddress(getPointer(), getAlignment());
-      }
-
-      LValueBaseInfo getBaseInfo() const { return BaseInfo; }
-      void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
-
-      static LValue makeAddr(RawAddress address,
-                             AlignmentSource Source = AlignmentSource::Type) {
-        LValue R;
-        R.V = address.getPointer();
-        R.Initialize(address.getAlignment(), LValueBaseInfo(Source));
-        return R;
-      }
-    };
 
     LValue EmitDeclRefLValue(const DeclRefExpr *E) {
       const NamedDecl *ND = E->getDecl();
@@ -325,7 +418,7 @@ public:
         assert(V && "Name lookup must succeed");
 
         LValue LV = LValue::makeAddr(RawAddress(V, CharUnits::fromQuantity(4)),
-                                     AlignmentSource::Decl);
+                                     VD->getType(), AlignmentSource::Decl);
         return LV;
       }
 
@@ -342,7 +435,7 @@ public:
             << E->getStmtClassName() << "'";
         break;
       }
-      return LValue::makeAddr(RawAddress::invalid());
+      return LValue::makeAddr(RawAddress::invalid(), E->getType());
     }
 
     /// Emits the address of the l-value, then loads and returns the result.
@@ -392,7 +485,499 @@ public:
       // return llvm::UndefValue::get(CGF.ConvertType(E->getType()));
       return nullptr;
     }
+
+    // Leaves.
+    mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
+      mlir::Type Ty = Builder.getCIRType(E->getType());
+      return Builder.builder.create<mlir::cir::ConstantOp>(
+          Builder.getLoc(E->getExprLoc()), Ty,
+          Builder.builder.getIntegerAttr(Ty, E->getValue()));
+    }
   };
+
+  struct AutoVarEmission {
+    const VarDecl *Variable;
+    /// The address of the alloca for languages with explicit address space
+    /// (e.g. OpenCL) or alloca casted to generic pointer for address space
+    /// agnostic languages (e.g. C++). Invalid if the variable was emitted
+    /// as a global constant.
+    RawAddress Addr;
+
+    /// True if the variable is of aggregate type and has a constant
+    /// initializer.
+    bool IsConstantAggregate;
+
+    struct Invalid {};
+    AutoVarEmission(Invalid) : Variable(nullptr), Addr(RawAddress::invalid()) {}
+
+    AutoVarEmission(const VarDecl &variable)
+        : Variable(&variable), Addr(RawAddress::invalid()),
+          IsConstantAggregate(false) {}
+
+    static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
+    /// Returns the raw, allocated address, which is not necessarily
+    /// the address of the object itself. It is casted to default
+    /// address space for address space agnostic languages.
+    RawAddress getAllocatedAddress() const { return Addr; }
+  };
+
+  /// Determine whether an object of this type can be emitted
+  /// as a constant.
+  ///
+  /// If ExcludeCtor is true, the duration when the object's constructor runs
+  /// will not be considered. The caller will need to verify that the object is
+  /// not written to during its construction.
+  /// FIXME: in LLVM codegen path this is part of CGM, which doesn't seem
+  /// like necessary, since (1) it doesn't use CGM at all and (2) is AST type
+  /// query specific.
+  bool isTypeConstant(QualType Ty, bool ExcludeCtor) {
+    if (!Ty.isConstant(astCtx) && !Ty->isReferenceType())
+      return false;
+
+    if (astCtx.getLangOpts().CPlusPlus) {
+      if (const CXXRecordDecl *Record =
+              astCtx.getBaseElementType(Ty)->getAsCXXRecordDecl())
+        return ExcludeCtor && !Record->hasMutableFields() &&
+               Record->hasTrivialDestructor();
+    }
+
+    return true;
+  }
+
+  /// Emit the alloca and debug information for a
+  /// local variable.  Does not emit initialization or destruction.
+  AutoVarEmission buildAutoVarAlloca(const VarDecl &D) {
+    QualType Ty = D.getType();
+    // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
+    //        getLangOpts().OpenCL))
+    assert(Ty.getAddressSpace() == LangAS::Default);
+
+    assert(!D.isEscapingByref() && "not implemented");
+    assert(!Ty->isVariablyModifiedType() && "not implemented");
+    assert(!astCtx.getLangOpts().OpenMP && // !CGM.getLangOpts().OpenMPIRBuilder
+           "not implemented");
+    bool NRVO = astCtx.getLangOpts().ElideConstructors && D.isNRVOVariable();
+    assert(!NRVO && "not implemented");
+    assert(Ty->isConstantSizeType() && "not implemented");
+    assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
+
+    AutoVarEmission emission(D);
+    CharUnits alignment = astCtx.getDeclAlign(&D);
+    // TODO: debug info
+    // TODO: use CXXABI
+
+    // If this value is an array or struct with a statically determinable
+    // constant initializer, there are optimizations we can do.
+    //
+    // TODO: We should constant-evaluate the initializer of any variable,
+    // as long as it is initialized by a constant expression. Currently,
+    // isConstantInitializer produces wrong answers for structs with
+    // reference or bitfield members, and a few other cases, and checking
+    // for POD-ness protects us from some of these.
+    if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
+        (D.isConstexpr() ||
+         ((Ty.isPODType(astCtx) ||
+           astCtx.getBaseElementType(Ty)->isObjCObjectPointerType()) &&
+          D.getInit()->isConstantInitializer(astCtx, false)))) {
+
+      // If the variable's a const type, and it's neither an NRVO
+      // candidate nor a __block variable and has no mutable members,
+      // emit it as a global instead.
+      // Exception is if a variable is located in non-constant address space
+      // in OpenCL.
+      // TODO: deal with CGM.getCodeGenOpts().MergeAllConstants
+      // TODO: perhaps we don't need this at all at CIR since this can
+      // be done as part of lowering down to LLVM.
+      if ((!astCtx.getLangOpts().OpenCL ||
+           Ty.getAddressSpace() == LangAS::opencl_constant) &&
+          (!NRVO && !D.isEscapingByref() && isTypeConstant(Ty, true)))
+        assert(0 && "not implemented");
+
+      // Otherwise, tell the initialization code that we're in this case.
+      emission.IsConstantAggregate = true;
+    }
+
+    // TODO: track source location range...
+    mlir::Value addr;
+    if (failed(declare(&D, Ty, getLoc(D.getSourceRange().getBegin()), addr))) {
+      theModule.emitError("Cannot declare variable");
+      return emission;
+    }
+
+    // TODO: what about emitting lifetime markers for MSVC catch parameters?
+    // TODO: something like @llvm.lifetime.start/end here? revisit this later.
+    emission.Addr = RawAddress{addr, alignment};
+    return emission;
+  }
+
+  /// Determine whether the given initializer is trivial in the sense
+  /// that it requires no code to be generated.
+  bool isTrivialInitializer(const Expr *Init) {
+    if (!Init)
+      return true;
+
+    if (const CXXConstructExpr *Construct = dyn_cast<CXXConstructExpr>(Init))
+      if (CXXConstructorDecl *Constructor = Construct->getConstructor())
+        if (Constructor->isTrivial() && Constructor->isDefaultConstructor() &&
+            !Construct->requiresZeroInitialization())
+          return true;
+
+    return false;
+  }
+
+  // TODO: this can also be abstrated into common AST helpers
+  bool hasBooleanRepresentation(QualType Ty) {
+    if (Ty->isBooleanType())
+      return true;
+
+    if (const EnumType *ET = Ty->getAs<EnumType>())
+      return ET->getDecl()->getIntegerType()->isBooleanType();
+
+    if (const AtomicType *AT = Ty->getAs<AtomicType>())
+      return hasBooleanRepresentation(AT->getValueType());
+
+    return false;
+  }
+
+  mlir::Value buildToMemory(mlir::Value Value, QualType Ty) {
+    // Bool has a different representation in memory than in registers.
+    if (hasBooleanRepresentation(Ty))
+      assert(0 && "not implemented");
+    return Value;
+  }
+
+  void buildStoreOfScalar(mlir::Value value, LValue lvalue, const Decl *D,
+                          bool isInit) {
+    // TODO: constant matrix type, volatile, non temporal, TBAA
+    buildStoreOfScalar(value, lvalue.getAddress(), false, lvalue.getType(),
+                       lvalue.getBaseInfo(), D, isInit, false);
+  }
+
+  void buildStoreOfScalar(mlir::Value Value, RawAddress Addr, bool Volatile,
+                          QualType Ty, LValueBaseInfo BaseInfo, const Decl *D,
+                          bool isInit, bool isNontemporal) {
+    // TODO: PreserveVec3Type
+    // TODO: LValueIsSuitableForInlineAtomic ?
+    // TODO: TBAA
+    Value = buildToMemory(Value, Ty);
+    if (Ty->isAtomicType() || isNontemporal) {
+      assert(0 && "not implemented");
+    }
+
+    // Update the alloca with more info on initialization.
+    auto SrcAlloca = dyn_cast_or_null<mlir::cir::AllocaOp>(
+        Addr.getPointer().getDefiningOp());
+    if (isInit) {
+      InitStyle IS;
+      const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+      assert(VD && "VarDecl expected");
+      if (VD->hasInit()) {
+        switch (VD->getInitStyle()) {
+        case VarDecl::ParenListInit:
+          llvm_unreachable("NYI");
+        case VarDecl::CInit:
+          IS = InitStyle::cinit;
+          break;
+        case VarDecl::CallInit:
+          IS = InitStyle::callinit;
+          break;
+        case VarDecl::ListInit:
+          IS = InitStyle::listinit;
+          break;
+        }
+        SrcAlloca.setInitAttr(InitStyleAttr::get(builder.getContext(), IS));
+      }
+    }
+    assert(SrcAlloca && "find a better way to retrieve source location");
+    builder.create<mlir::cir::StoreOp>(SrcAlloca.getLoc(), Value,
+                                       Addr.getPointer());
+  }
+
+  /// Store the specified rvalue into the specified
+  /// lvalue, where both are guaranteed to the have the same type, and that type
+  /// is 'Ty'.
+  void buldStoreThroughLValue(RValue Src, LValue Dst, const Decl *D,
+                              bool isInit) {
+    assert(Dst.isSimple() && "only implemented simple");
+    // TODO: ObjC lifetime.
+    assert(Src.isScalar() && "Can't emit an agg store with this method");
+    buildStoreOfScalar(Src.getScalarVal(), Dst, D, isInit);
+  }
+
+  void buildScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue) {
+    // TODO: this is where a lot of ObjC lifetime stuff would be done.
+    mlir::Value value = buildScalarExpr(init);
+    buldStoreThroughLValue(RValue::get(value), lvalue, D, true);
+    return;
+  }
+
+  /// Emit an expression as an initializer for an object (variable, field, etc.)
+  /// at the given location.  The expression is not necessarily the normal
+  /// initializer for the object, and the address is not necessarily
+  /// its normal location.
+  ///
+  /// \param init the initializing expression
+  /// \param D the object to act as if we're initializing
+  /// \param lvalue the lvalue to initialize
+  void buildExprAsInit(const Expr *init, const ValueDecl *D, LValue lvalue) {
+    QualType type = D->getType();
+
+    if (type->isReferenceType()) {
+      assert(0 && "not implemented");
+      return;
+    }
+    switch (CIRCodeGenFunction::getEvaluationKind(type)) {
+    case TEK_Scalar:
+      buildScalarInit(init, D, lvalue);
+      return;
+    case TEK_Complex: {
+      assert(0 && "not implemented");
+      return;
+    }
+    case TEK_Aggregate:
+      assert(0 && "not implemented");
+      return;
+    }
+    llvm_unreachable("bad evaluation kind");
+  }
+
+  void buildAutoVarInit(const AutoVarEmission &emission) {
+    assert(emission.Variable && "emission was not valid!");
+
+    const VarDecl &D = *emission.Variable;
+    QualType type = D.getType();
+
+    // If this local has an initializer, emit it now.
+    const Expr *Init = D.getInit();
+
+    // TODO: in LLVM codegen if we are at an unreachable point, the initializer
+    // isn't emitted unless it contains a label. What we want for CIR?
+    assert(builder.getInsertionBlock());
+
+    // Initialize the variable here if it doesn't have a initializer and it is a
+    // C struct that is non-trivial to initialize or an array containing such a
+    // struct.
+    if (!Init && type.isNonTrivialToPrimitiveDefaultInitialize() ==
+                     QualType::PDIK_Struct) {
+      assert(0 && "not implemented");
+      return;
+    }
+
+    const RawAddress Loc = emission.Addr;
+
+    // Note: constexpr already initializes everything correctly.
+    LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
+        (D.isConstexpr()
+             ? LangOptions::TrivialAutoVarInitKind::Uninitialized
+             : (D.getAttr<UninitializedAttr>()
+                    ? LangOptions::TrivialAutoVarInitKind::Uninitialized
+                    : astCtx.getLangOpts().getTrivialAutoVarInit()));
+
+    auto initializeWhatIsTechnicallyUninitialized = [&](RawAddress Loc) {
+      if (trivialAutoVarInit ==
+          LangOptions::TrivialAutoVarInitKind::Uninitialized)
+        return;
+
+      assert(0 && "unimplemented");
+    };
+
+    if (isTrivialInitializer(Init))
+      return initializeWhatIsTechnicallyUninitialized(Loc);
+
+    if (emission.IsConstantAggregate ||
+        D.mightBeUsableInConstantExpressions(astCtx)) {
+      assert(0 && "not implemented");
+    }
+
+    initializeWhatIsTechnicallyUninitialized(Loc);
+    LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
+    return buildExprAsInit(Init, &D, lv);
+  }
+
+  void buildAutoVarCleanups(const AutoVarEmission &emission) {
+    assert(emission.Variable && "emission was not valid!");
+
+    // TODO: in LLVM codegen if we are at an unreachable point codgen
+    // is ignored. What we want for CIR?
+    assert(builder.getInsertionBlock());
+    const VarDecl &D = *emission.Variable;
+
+    // Check the type for a cleanup.
+    // TODO: something like emitAutoVarTypeCleanup
+    if (QualType::DestructionKind dtorKind = D.needsDestruction(astCtx))
+      assert(0 && "not implemented");
+
+    // In GC mode, honor objc_precise_lifetime.
+    if (astCtx.getLangOpts().getGC() != LangOptions::NonGC &&
+        D.hasAttr<ObjCPreciseLifetimeAttr>())
+      assert(0 && "not implemented");
+
+    // Handle the cleanup attribute.
+    if (const CleanupAttr *CA = D.getAttr<CleanupAttr>())
+      assert(0 && "not implemented");
+
+    // TODO: handle block variable
+  }
+
+  /// Emit code and set up symbol table for a variable declaration with auto,
+  /// register, or no storage class specifier. These turn into simple stack
+  /// objects, globals depending on target.
+  void buildAutoVarDecl(const VarDecl &D) {
+    AutoVarEmission emission = buildAutoVarAlloca(D);
+    buildAutoVarInit(emission);
+    buildAutoVarCleanups(emission);
+  }
+
+  /// This method handles emission of any variable declaration
+  /// inside a function, including static vars etc.
+  void buildVarDecl(const VarDecl &D) {
+    if (D.hasExternalStorage()) {
+      assert(0 && "should we just returns is there something to track?");
+      // Don't emit it now, allow it to be emitted lazily on its first use.
+      return;
+    }
+
+    // Some function-scope variable does not have static storage but still
+    // needs to be emitted like a static variable, e.g. a function-scope
+    // variable in constant address space in OpenCL.
+    if (D.getStorageDuration() != SD_Automatic)
+      assert(0 && "not implemented");
+
+    if (D.getType().getAddressSpace() == LangAS::opencl_local)
+      assert(0 && "not implemented");
+
+    assert(D.hasLocalStorage());
+    return buildAutoVarDecl(D);
+  }
+
+  void buildDecl(const Decl &D) {
+    switch (D.getKind()) {
+    case Decl::TopLevelStmt:
+    case Decl::ImplicitConceptSpecialization:
+    case Decl::HLSLBuffer:
+    case Decl::UnnamedGlobalConstant:
+      llvm_unreachable("NYI");
+    case Decl::BuiltinTemplate:
+    case Decl::TranslationUnit:
+    case Decl::ExternCContext:
+    case Decl::Namespace:
+    case Decl::UnresolvedUsingTypename:
+    case Decl::ClassTemplateSpecialization:
+    case Decl::ClassTemplatePartialSpecialization:
+    case Decl::VarTemplateSpecialization:
+    case Decl::VarTemplatePartialSpecialization:
+    case Decl::TemplateTypeParm:
+    case Decl::UnresolvedUsingValue:
+    case Decl::NonTypeTemplateParm:
+    case Decl::CXXDeductionGuide:
+    case Decl::CXXMethod:
+    case Decl::CXXConstructor:
+    case Decl::CXXDestructor:
+    case Decl::CXXConversion:
+    case Decl::Field:
+    case Decl::MSProperty:
+    case Decl::IndirectField:
+    case Decl::ObjCIvar:
+    case Decl::ObjCAtDefsField:
+    case Decl::ParmVar:
+    case Decl::ImplicitParam:
+    case Decl::ClassTemplate:
+    case Decl::VarTemplate:
+    case Decl::FunctionTemplate:
+    case Decl::TypeAliasTemplate:
+    case Decl::TemplateTemplateParm:
+    case Decl::ObjCMethod:
+    case Decl::ObjCCategory:
+    case Decl::ObjCProtocol:
+    case Decl::ObjCInterface:
+    case Decl::ObjCCategoryImpl:
+    case Decl::ObjCImplementation:
+    case Decl::ObjCProperty:
+    case Decl::ObjCCompatibleAlias:
+    case Decl::PragmaComment:
+    case Decl::PragmaDetectMismatch:
+    case Decl::AccessSpec:
+    case Decl::LinkageSpec:
+    case Decl::Export:
+    case Decl::ObjCPropertyImpl:
+    case Decl::FileScopeAsm:
+    case Decl::Friend:
+    case Decl::FriendTemplate:
+    case Decl::Block:
+    case Decl::Captured:
+    case Decl::UsingShadow:
+    case Decl::ConstructorUsingShadow:
+    case Decl::ObjCTypeParam:
+    case Decl::Binding:
+    case Decl::UnresolvedUsingIfExists:
+      llvm_unreachable("Declaration should not be in declstmts!");
+    case Decl::Record:    // struct/union/class X;
+    case Decl::CXXRecord: // struct/union/class X; [C++]
+      assert(0 && "Not implemented");
+      return;
+    case Decl::Enum: // enum X;
+      assert(0 && "Not implemented");
+      return;
+    case Decl::Function:     // void X();
+    case Decl::EnumConstant: // enum ? { X = ? }
+    case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
+    case Decl::Label:        // __label__ x;
+    case Decl::Import:
+    case Decl::MSGuid: // __declspec(uuid("..."))
+    case Decl::TemplateParamObject:
+    case Decl::OMPThreadPrivate:
+    case Decl::OMPAllocate:
+    case Decl::OMPCapturedExpr:
+    case Decl::OMPRequires:
+    case Decl::Empty:
+    case Decl::Concept:
+    case Decl::LifetimeExtendedTemporary:
+    case Decl::RequiresExprBody:
+      // None of these decls require codegen support.
+      return;
+
+    case Decl::NamespaceAlias:
+      assert(0 && "Not implemented");
+      return;
+    case Decl::Using: // using X; [C++]
+      assert(0 && "Not implemented");
+      return;
+    case Decl::UsingEnum: // using enum X; [C++]
+      assert(0 && "Not implemented");
+      return;
+    case Decl::UsingPack:
+      assert(0 && "Not implemented");
+      return;
+    case Decl::UsingDirective: // using namespace X; [C++]
+      assert(0 && "Not implemented");
+      return;
+    case Decl::Var:
+    case Decl::Decomposition: {
+      const VarDecl &VD = cast<VarDecl>(D);
+      assert(VD.isLocalVarDecl() &&
+             "Should not see file-scope variables inside a function!");
+      buildVarDecl(VD);
+      if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
+        assert(0 && "Not implemented");
+
+      // FIXME: add this
+      // if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
+      //   for (auto *B : DD->bindings())
+      //     if (auto *HD = B->getHoldingVar())
+      //       EmitVarDecl(*HD);
+      return;
+    }
+
+    case Decl::OMPDeclareReduction:
+    case Decl::OMPDeclareMapper:
+      assert(0 && "Not implemented");
+
+    case Decl::Typedef:     // typedef int X;
+    case Decl::TypeAlias: { // using X = int; [C++0x]
+      assert(0 && "Not implemented");
+    }
+    }
+  }
 
   /// Emit the computation of the specified expression of scalar type,
   /// ignoring the result.
@@ -438,6 +1023,18 @@ public:
     return mlir::success();
   }
 
+  mlir::LogicalResult buildDeclStmt(const DeclStmt &S) {
+    if (!builder.getInsertionBlock())
+      theModule.emitError(
+          "Seems like this is unreachable code, what should we do?");
+
+    for (const auto *I : S.decls()) {
+      buildDecl(*I);
+    }
+
+    return mlir::success();
+  }
+
   mlir::LogicalResult buildCompoundStmt(const CompoundStmt &S) {
     // Create a scope in the symbol table to hold variable declarations local
     // to this compound statement.
@@ -455,6 +1052,8 @@ public:
       llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                    << "' not implemented\n";
       return mlir::failure();
+    case Stmt::DeclStmtClass:
+      return buildDeclStmt(cast<DeclStmt>(*S));
     case Stmt::CompoundStmtClass:
       return buildCompoundStmt(cast<CompoundStmt>(*S));
     case Stmt::ReturnStmtClass:
@@ -504,12 +1103,13 @@ public:
          llvm::zip(FD->parameters(), entryBlock.getArguments())) {
       auto *paramVar = std::get<0>(nameValue);
       auto paramVal = std::get<1>(nameValue);
-      if (failed(declare(paramVar, paramVar->getType(), paramVal,
-                         getLoc(paramVar->getSourceRange().getBegin()))))
+      mlir::Value addr;
+      if (failed(declare(paramVar, paramVar->getType(),
+                         getLoc(paramVar->getSourceRange().getBegin()), addr,
+                         true /*param*/)))
         return nullptr;
       // Store params in local storage. FIXME: is this really needed
       // at this level of representation?
-      mlir::Value addr = symbolTable.lookup(paramVar);
       builder.create<mlir::cir::StoreOp>(loc, paramVal, addr);
     }
 
