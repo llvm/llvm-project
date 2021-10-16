@@ -187,11 +187,26 @@ private:
     }
   };
 
+  /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
+  /// list of delayed Objective-C properties.
+  ///
+  /// Note: The delayed property needs to be finalized to actually create the
+  /// property declarations in the module AST.
+  ///
+  /// \param die The DW_TAG_APPLE_property DIE that will be parsed.
+  /// \param parent_die The parent DIE.
+  /// \param class_clang_type The Objective-C class that will contain the
+  /// created property.
+  /// \param delayed_properties The list of delayed properties that the result
+  /// will be appended to.
+  void ParseObjCProperty(const DWARFDIE &die, const DWARFDIE &parent_die,
+                         const lldb_private::CompilerType &class_clang_type,
+                         DelayedPropertyList &delayed_properties);
+
   void
   ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
                     lldb::AccessType default_accessibility,
-                    DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
