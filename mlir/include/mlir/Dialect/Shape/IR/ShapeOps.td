@@ -55,6 +55,8 @@ def Shape_AddOp : Shape_Op<"add",
     // InferTypeOpInterface
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
+
+  let hasFolder = 1;
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
