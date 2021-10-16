@@ -13,13 +13,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i64, i64* %in0, align 8
-; SSE2: LV: Found an estimated cost of 14 for VF 2 For instruction:   %v0 = load i64, i64* %in0, align 8
+; SSE2: LV: Found an estimated cost of 4 for VF 2 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; SSE2: LV: Found an estimated cost of 28 for VF 4 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; SSE2: LV: Found an estimated cost of 56 for VF 8 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; SSE2: LV: Found an estimated cost of 112 for VF 16 For instruction:   %v0 = load i64, i64* %in0, align 8
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i64, i64* %in0, align 8
-; AVX1: LV: Found an estimated cost of 11 for VF 2 For instruction:   %v0 = load i64, i64* %in0, align 8
+; AVX1: LV: Found an estimated cost of 3 for VF 2 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; AVX1: LV: Found an estimated cost of 26 for VF 4 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; AVX1: LV: Found an estimated cost of 52 for VF 8 For instruction:   %v0 = load i64, i64* %in0, align 8
 ; AVX1: LV: Found an estimated cost of 104 for VF 16 For instruction:   %v0 = load i64, i64* %in0, align 8
