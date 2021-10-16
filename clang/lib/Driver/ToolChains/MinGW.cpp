@@ -369,9 +369,9 @@ void toolchains::MinGW::findGccLibDir() {
   }
 }
 
-llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
+static llvm::ErrorOr<std::string> findGcc(const llvm::Triple &T) {
   llvm::SmallVector<llvm::SmallString<32>, 2> Gccs;
-  Gccs.emplace_back(getTriple().getArchName());
+  Gccs.emplace_back(T.getArchName());
   Gccs[0] += "-w64-mingw32-gcc";
   Gccs.emplace_back("mingw32-gcc");
   // Please do not add "gcc" here
@@ -381,13 +381,14 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
-llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
+static llvm::ErrorOr<std::string>
+findClangRelativeSysroot(const Driver &D, const llvm::Triple &T,
+                         std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 2> Subdirs;
-  Subdirs.emplace_back(getTriple().str());
-  Subdirs.emplace_back(getTriple().getArchName());
+  Subdirs.emplace_back(T.str());
+  Subdirs.emplace_back(T.getArchName());
   Subdirs[1] += "-w64-mingw32";
-  StringRef ClangRoot =
-      llvm::sys::path::parent_path(getDriver().getInstalledDir());
+  StringRef ClangRoot = llvm::sys::path::parent_path(D.getInstalledDir());
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
@@ -404,13 +405,16 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
+  // The sequence for detecting a sysroot here should be kept in sync with
+  // the testTriple function below.
   if (getDriver().SysRoot.size())
     Base = getDriver().SysRoot;
   // Look for <clang-bin>/../<triplet>; if found, use <clang-bin>/.. as the
   // base as it could still be a base for a gcc setup with libgcc.
-  else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot())
+  else if (llvm::ErrorOr<std::string> TargetSubdir =
+               findClangRelativeSysroot(getDriver(), getTriple(), SubdirName))
     Base = std::string(llvm::sys::path::parent_path(TargetSubdir.get()));
-  else if (llvm::ErrorOr<std::string> GPPName = findGcc())
+  else if (llvm::ErrorOr<std::string> GPPName = findGcc(getTriple()))
     Base = std::string(llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get())));
   else
@@ -624,4 +628,56 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     }
     break;
   }
+}
+
+static bool testTriple(const Driver &D, const llvm::Triple &Triple,
+                       const ArgList &Args) {
+  // If an explicit sysroot is set, that will be used and we shouldn't try to
+  // detect anything else.
+  std::string SubdirName;
+  if (D.SysRoot.size())
+    return true;
+  if (llvm::ErrorOr<std::string> TargetSubdir =
+          findClangRelativeSysroot(D, Triple, SubdirName))
+    return true;
+  if (llvm::ErrorOr<std::string> GPPName = findGcc(Triple))
+    return true;
+  // If we neither found a colocated sysroot or a matching gcc executable,
+  // conclude that we can't know if this is the correct spelling of the triple.
+  return false;
+}
+
+static llvm::Triple adjustTriple(const Driver &D, const llvm::Triple &Triple,
+                                 const ArgList &Args) {
+  // First test if the original triple can find a sysroot with the triple
+  // name.
+  if (testTriple(D, Triple, Args))
+    return Triple;
+  llvm::SmallVector<llvm::StringRef, 3> Archs;
+  // If not, test a couple other possible arch names that might be what was
+  // intended.
+  if (Triple.getArch() == llvm::Triple::x86) {
+    Archs.emplace_back("i386");
+    Archs.emplace_back("i586");
+    Archs.emplace_back("i686");
+  } else if (Triple.getArch() == llvm::Triple::arm ||
+             Triple.getArch() == llvm::Triple::thumb) {
+    Archs.emplace_back("armv7");
+  }
+  for (auto A : Archs) {
+    llvm::Triple TestTriple(Triple);
+    TestTriple.setArchName(A);
+    if (testTriple(D, TestTriple, Args))
+      return TestTriple;
+  }
+  // If none was found, just proceed with the original value.
+  return Triple;
+}
+
+void toolchains::MinGW::fixTripleArch(const Driver &D, llvm::Triple &Triple,
+                                      const ArgList &Args) {
+  if (Triple.getArch() == llvm::Triple::x86 ||
+      Triple.getArch() == llvm::Triple::arm ||
+      Triple.getArch() == llvm::Triple::thumb)
+    Triple = adjustTriple(D, Triple, Args);
 }
