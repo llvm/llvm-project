@@ -1020,6 +1020,19 @@ func @shape_eq_do_not_fold(%a : !shape.shape) -> i1 {
 
 // -----
 
+// Fold `add` for constant sizes.
+// CHECK-LABEL: @fold_add_size
+func @fold_add_size() -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 5
+  // CHECK: return %[[RESULT]] : !shape.size
+  %c2 = shape.const_size 2
+  %c3 = shape.const_size 3
+  %result = shape.add %c2, %c3 : !shape.size, !shape.size -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
 // Fold `mul` for constant sizes.
 // CHECK-LABEL: @fold_mul_size
 func @fold_mul_size() -> !shape.size {
