@@ -13,14 +13,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; SSE2: LV: Found an estimated cost of 14 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; SSE2: LV: Found an estimated cost of 30 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; SSE2: LV: Found an estimated cost of 3 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; SSE2: LV: Found an estimated cost of 4 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; SSE2: LV: Found an estimated cost of 60 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; SSE2: LV: Found an estimated cost of 120 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 9 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
-; AVX1: LV: Found an estimated cost of 21 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 3 for VF 2 For instruction:   %v0 = load i32, i32* %in0, align 4
+; AVX1: LV: Found an estimated cost of 3 for VF 4 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 46 for VF 8 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 92 for VF 16 For instruction:   %v0 = load i32, i32* %in0, align 4
 ; AVX1: LV: Found an estimated cost of 184 for VF 32 For instruction:   %v0 = load i32, i32* %in0, align 4
