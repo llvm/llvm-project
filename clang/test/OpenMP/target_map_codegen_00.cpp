@@ -93,7 +93,7 @@ void implicit_maps_integer (int a){
   }
 }
 
-// CK1: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK1: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK1: [[ADDR:%.+]] = alloca i[[sz]],
 // CK1: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK1-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to i32*

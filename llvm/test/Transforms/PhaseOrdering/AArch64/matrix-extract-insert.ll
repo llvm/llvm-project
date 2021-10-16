@@ -305,3 +305,36 @@ declare void @llvm.assume(i1 noundef) #2
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
 
 ; Function Attrs: nounwind ssp uwtable mustprogress
+
+define <4 x float> @reverse_hadd_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @reverse_hadd_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x float> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[TMP9]]
+;
+  %vecext = extractelement <4 x float> %a, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 1
+  %add = fadd float %vecext, %vecext1
+  %vecinit = insertelement <4 x float> undef, float %add, i32 0
+  %vecext2 = extractelement <4 x float> %a, i32 2
+  %vecext3 = extractelement <4 x float> %a, i32 3
+  %add4 = fadd float %vecext2, %vecext3
+  %vecinit5 = insertelement <4 x float> %vecinit, float %add4, i32 1
+  %vecext6 = extractelement <4 x float> %b, i32 0
+  %vecext7 = extractelement <4 x float> %b, i32 1
+  %add8 = fadd float %vecext6, %vecext7
+  %vecinit9 = insertelement <4 x float> %vecinit5, float %add8, i32 2
+  %vecext10 = extractelement <4 x float> %b, i32 2
+  %vecext11 = extractelement <4 x float> %b, i32 3
+  %add12 = fadd float %vecext10, %vecext11
+  %vecinit13 = insertelement <4 x float> %vecinit9, float %add12, i32 3
+  %shuffle = shufflevector <4 x float> %vecinit13, <4 x float> %a, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x float> %shuffle
+}

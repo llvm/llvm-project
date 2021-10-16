@@ -60,7 +60,7 @@ unsigned test_addc(unsigned x, unsigned y, unsigned carryin, unsigned *z) {
 unsigned long test_addcl(unsigned long x, unsigned long y,
                          unsigned long carryin, unsigned long *z) {
   // long is i32 on i686, i64 on x86_64.
-  // CHECK: @test_addcl([[UL:i32|i64]] %x
+  // CHECK: @test_addcl([[UL:i32|i64]] noundef %x
   // CHECK: %{{.+}} = {{.*}} call { [[UL]], i1 } @llvm.uadd.with.overflow.[[UL]]([[UL]] %x, [[UL]] %y)
   // CHECK: %{{.+}} = extractvalue { [[UL]], i1 } %{{.+}}, 1
   // CHECK: %{{.+}} = extractvalue { [[UL]], i1 } %{{.+}}, 0
@@ -152,7 +152,7 @@ unsigned test_subc(unsigned x, unsigned y, unsigned carryin, unsigned *z) {
 
 unsigned long test_subcl(unsigned long x, unsigned long y,
                          unsigned long carryin, unsigned long *z) {
-  // CHECK: @test_subcl([[UL:i32|i64]] %x
+  // CHECK: @test_subcl([[UL:i32|i64]] noundef %x
   // CHECK: %{{.+}} = {{.*}} call { [[UL]], i1 } @llvm.usub.with.overflow.[[UL]]([[UL]] %x, [[UL]] %y)
   // CHECK: %{{.+}} = extractvalue { [[UL]], i1 } %{{.+}}, 1
   // CHECK: %{{.+}} = extractvalue { [[UL]], i1 } %{{.+}}, 0

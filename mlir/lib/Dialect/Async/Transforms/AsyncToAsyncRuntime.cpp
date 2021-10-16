@@ -61,7 +61,7 @@ struct CoroMachinery {
   // each yielded value.
   //
   //   %token, %result = async.execute -> !async.value<T> {
-  //     %0 = constant ... : T
+  //     %0 = arith.constant ... : T
   //     async.yield %0 : T
   //   }
   Value asyncToken; // token representing completion of the async region

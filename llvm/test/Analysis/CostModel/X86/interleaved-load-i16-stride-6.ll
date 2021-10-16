@@ -16,18 +16,21 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SSE2: LV: Found an estimated cost of 26 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; SSE2: LV: Found an estimated cost of 51 for VF 4 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; SSE2: LV: Found an estimated cost of 102 for VF 8 For instruction:   %v0 = load i16, i16* %in0, align 2
+; SSE2: LV: Found an estimated cost of 204 for VF 16 For instruction:   %v0 = load i16, i16* %in0, align 2
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX1: LV: Found an estimated cost of 31 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX1: LV: Found an estimated cost of 58 for VF 4 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX1: LV: Found an estimated cost of 123 for VF 8 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX1: LV: Found an estimated cost of 258 for VF 16 For instruction:   %v0 = load i16, i16* %in0, align 2
+; AVX1: LV: Found an estimated cost of 516 for VF 32 For instruction:   %v0 = load i16, i16* %in0, align 2
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX2: LV: Found an estimated cost of 16 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX2: LV: Found an estimated cost of 11 for VF 4 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX2: LV: Found an estimated cost of 42 for VF 8 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX2: LV: Found an estimated cost of 112 for VF 16 For instruction:   %v0 = load i16, i16* %in0, align 2
+; AVX2: LV: Found an estimated cost of 516 for VF 32 For instruction:   %v0 = load i16, i16* %in0, align 2
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; AVX512: LV: Found an estimated cost of 13 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2

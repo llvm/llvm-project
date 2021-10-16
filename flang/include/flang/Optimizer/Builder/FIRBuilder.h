@@ -33,10 +33,10 @@ namespace fir {
 class FirOpBuilder : public mlir::OpBuilder {
 public:
   explicit FirOpBuilder(mlir::Operation *op, const fir::KindMapping &kindMap)
-      : OpBuilder{op}, kindMap{kindMap} {}
+      : OpBuilder{op} {}
   explicit FirOpBuilder(mlir::OpBuilder &builder,
                         const fir::KindMapping &kindMap)
-      : OpBuilder{builder}, kindMap{kindMap} {}
+      : OpBuilder{builder} {}
 
   /// Create an integer constant of type \p type and value \p i.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
@@ -50,9 +50,6 @@ public:
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
     return createConvert(loc, getIndexType(), val);
   }
-
-private:
-  const KindMapping &kindMap;
 };
 
 } // namespace fir

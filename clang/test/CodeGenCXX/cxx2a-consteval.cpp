@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
-// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o - | FileCheck -check-prefix=EVAL-FN %s
+// RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
+//
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
@@ -223,12 +224,19 @@ int test_UserConv() {
   return UserConv();
 }
 
+// EVAL-FN-LABEL: @_Z28test_UserConvOverload_helperi(
+// EVAL-FN-NEXT:  entry:
+// EVAL-FN-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// EVAL-FN-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
+// EVAL-FN-NEXT:    ret i32 [[TMP0]]
+//
 int test_UserConvOverload_helper(int a) { return a; }
 
 // EVAL-FN-LABEL: @_Z21test_UserConvOverloadv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    %call = call i32 @_Z28test_UserConvOverload_helperi(i32 42)
-// EVAL-FN-NEXT:    ret i32 %call
+// EVAL-FN-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z28test_UserConvOverload_helperi(i32 noundef 42)
+// EVAL-FN-NEXT:    ret i32 [[CALL]]
 //
 int test_UserConvOverload() {
   return test_UserConvOverload_helper(UserConv());
@@ -242,4 +250,11 @@ consteval int test_UserConvOverload_helper_ceval(int a) { return a; }
 //
 int test_UserConvOverload_ceval() {
   return test_UserConvOverload_helper_ceval(UserConv());
+}
+
+consteval void void_test() {}
+void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call
+  // EVAL-FN-NOT: call
+  void_test();
+  // EVAL-FN: {{^}}}
 }

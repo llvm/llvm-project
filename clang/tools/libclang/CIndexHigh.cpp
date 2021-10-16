@@ -109,14 +109,14 @@ struct FindFileIdRefVisitData {
 
 private:
   bool isOverriddingMethod(const Decl *D) const {
-    if (llvm::find(TopMethods, D) != TopMethods.end())
+    if (llvm::is_contained(TopMethods, D))
       return true;
 
     TopMethodsTy methods;
     getTopOverriddenMethods(TU, D, methods);
     for (TopMethodsTy::iterator
            I = methods.begin(), E = methods.end(); I != E; ++I) {
-      if (llvm::find(TopMethods, *I) != TopMethods.end())
+      if (llvm::is_contained(TopMethods, *I))
         return true;
     }
 

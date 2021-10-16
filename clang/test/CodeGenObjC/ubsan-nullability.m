@@ -1,6 +1,6 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
-// RUN: %clang_cc1 -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
 
 // CHECK: [[NONNULL_RV_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 100, i32 6
 // CHECK: [[NONNULL_ARG_LOC:@.*]] = private unnamed_addr global {{.*}} i32 204, i32 15 {{.*}} i32 190, i32 23

@@ -11,7 +11,7 @@
 // Floats are passed in FPRs, so argument 'i' will be passed zero-extended
 // because it will be passed in a GPR.
 
-// CHECK: define{{.*}} void @f_fpr_tracking(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, i8 zeroext %i)
+// CHECK: define{{.*}} void @f_fpr_tracking(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, float noundef %h, i8 noundef zeroext %i)
 void f_fpr_tracking(float a, float b, float c, float d, float e, float f,
                     float g, float h, uint8_t i) {}
 
@@ -70,7 +70,7 @@ struct float_float_s f_ret_float_float_s() {
   return (struct float_float_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} void @f_float_float_s_arg_insufficient_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, i64 %h.coerce)
+// CHECK: define{{.*}} void @f_float_float_s_arg_insufficient_fprs(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, i64 %h.coerce)
 void f_float_float_s_arg_insufficient_fprs(float a, float b, float c, float d,
     float e, float f, float g, struct float_float_s h) {}
 
@@ -136,18 +136,18 @@ struct float_int8_zbf_s f_ret_float_int8_zbf_s() {
   return (struct float_int8_zbf_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_float_int8_s_arg_insufficient_gprs(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e, i32 signext %f, i32 signext %g, i32 signext %h, i64 %i.coerce)
+// CHECK: define{{.*}} void @f_float_int8_s_arg_insufficient_gprs(i32 noundef signext %a, i32 noundef signext %b, i32 noundef signext %c, i32 noundef signext %d, i32 noundef signext %e, i32 noundef signext %f, i32 noundef signext %g, i32 noundef signext %h, i64 %i.coerce)
 void f_float_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
                                           int f, int g, int h, struct float_int8_s i) {}
 
-// CHECK: define{{.*}} void @f_struct_float_int8_insufficient_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, i64 %i.coerce)
+// CHECK: define{{.*}} void @f_struct_float_int8_insufficient_fprs(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, float noundef %h, i64 %i.coerce)
 void f_struct_float_int8_insufficient_fprs(float a, float b, float c, float d,
                                            float e, float f, float g, float h, struct float_int8_s i) {}
 
 // Complex floating-point values or structs containing a single complex
 // floating-point value should be passed as if it were an fp+fp struct.
 
-// CHECK: define{{.*}} void @f_floatcomplex(float %a.coerce0, float %a.coerce1)
+// CHECK: define{{.*}} void @f_floatcomplex(float noundef %a.coerce0, float noundef %a.coerce1)
 void f_floatcomplex(float __complex__ a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatcomplex()
@@ -168,7 +168,7 @@ struct floatcomplex_s f_ret_floatcomplex_s() {
 // Complex floating-point values or structs containing a single complex
 // floating-point value should be passed in GPRs if no two FPRs is available.
 
-// CHECK: define{{.*}} void @f_floatcomplex_insufficient_fprs1(float %a.coerce0, float %a.coerce1, float %b.coerce0, float %b.coerce1, float %c.coerce0, float %c.coerce1, float %d.coerce0, float %d.coerce1, i64 %e.coerce)
+// CHECK: define{{.*}} void @f_floatcomplex_insufficient_fprs1(float noundef %a.coerce0, float noundef %a.coerce1, float noundef %b.coerce0, float noundef %b.coerce1, float noundef %c.coerce0, float noundef %c.coerce1, float noundef %d.coerce0, float noundef %d.coerce1, i64 noundef %e.coerce)
 void f_floatcomplex_insufficient_fprs1(float __complex__ a, float __complex__ b,
                                        float __complex__ c, float __complex__ d,
                                        float __complex__ e) {}
@@ -181,13 +181,13 @@ void f_floatcomplex_s_arg_insufficient_fprs1(struct floatcomplex_s a,
                                              struct floatcomplex_s d,
                                              struct floatcomplex_s e) {}
 
-// CHECK: define{{.*}} void @f_floatcomplex_insufficient_fprs2(float %a, float %b.coerce0, float %b.coerce1, float %c.coerce0, float %c.coerce1, float %d.coerce0, float %d.coerce1, i64 %e.coerce)
+// CHECK: define{{.*}} void @f_floatcomplex_insufficient_fprs2(float noundef %a, float noundef %b.coerce0, float noundef %b.coerce1, float noundef %c.coerce0, float noundef %c.coerce1, float noundef %d.coerce0, float noundef %d.coerce1, i64 noundef %e.coerce)
 void f_floatcomplex_insufficient_fprs2(float a,
                                        float __complex__ b, float __complex__ c,
                                        float __complex__ d, float __complex__ e) {}
 
 
-// CHECK: define{{.*}} void @f_floatcomplex_s_arg_insufficient_fprs2(float %a, float %0, float %1, float %2, float %3, float %4, float %5, i64 %e.coerce)
+// CHECK: define{{.*}} void @f_floatcomplex_s_arg_insufficient_fprs2(float noundef %a, float %0, float %1, float %2, float %3, float %4, float %5, i64 %e.coerce)
 void f_floatcomplex_s_arg_insufficient_fprs2(float a,
                                              struct floatcomplex_s b,
                                              struct floatcomplex_s c,

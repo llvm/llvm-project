@@ -77,15 +77,9 @@ void mlir::linalg::interchangeGenericOp(PatternRewriter &rewriter,
 
   // 4. Transform the index operations by applying the permutation map.
   if (genericOp.hasIndexSemantics()) {
-    // TODO: Remove the assertion and add a getBody() method to LinalgOp
-    // interface once every LinalgOp has a body.
-    assert(genericOp->getNumRegions() == 1 &&
-           genericOp->getRegion(0).getBlocks().size() == 1 &&
-           "expected generic operation to have one block.");
-    Block &block = genericOp->getRegion(0).front();
     OpBuilder::InsertionGuard guard(rewriter);
     for (IndexOp indexOp :
-         llvm::make_early_inc_range(block.getOps<IndexOp>())) {
+         llvm::make_early_inc_range(genericOp.getBody()->getOps<IndexOp>())) {
       rewriter.setInsertionPoint(indexOp);
       SmallVector<Value> allIndices;
       allIndices.reserve(genericOp.getNumLoops());

@@ -1369,7 +1369,7 @@ llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
   QualType RetType;
   if (auto *Call = dyn_cast<CallExpr>(Inner))
-    RetType = Call->getCallReturnType(CGF->getContext());
+    RetType = Call->getCallReturnType(CGM.getContext());
   else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
     RetType = Ctor->getType();
   llvm::Constant *Res =
@@ -1714,6 +1714,8 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
 
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
                                                 QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
   Expr::EvalResult Result;
 
   bool Success = false;

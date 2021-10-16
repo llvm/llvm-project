@@ -23,7 +23,7 @@ void calleeWeak(Weak);
 // ARM64: call void @__destructor_8_w8(i8** %[[V1]])
 // ARM64: ret void
 
-// ARM64: define linkonce_odr hidden void @__default_constructor_8_w8(i8** %[[DST:.*]])
+// ARM64: define linkonce_odr hidden void @__default_constructor_8_w8(i8** noundef %[[DST:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
 // ARM64: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
@@ -33,7 +33,7 @@ void calleeWeak(Weak);
 // ARM64: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
 // ARM64: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 
-// ARM64: define linkonce_odr hidden void @__destructor_8_w8(i8** %[[DST:.*]])
+// ARM64: define linkonce_odr hidden void @__destructor_8_w8(i8** noundef %[[DST:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
 // ARM64: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
@@ -50,11 +50,11 @@ void test_constructor_destructor_Weak(void) {
   Weak t;
 }
 
-// ARM64: define{{.*}} void @test_copy_constructor_Weak(%[[STRUCT_WEAK]]* %{{.*}})
+// ARM64: define{{.*}} void @test_copy_constructor_Weak(%[[STRUCT_WEAK]]* noundef %{{.*}})
 // ARM64: call void @__copy_constructor_8_8_t0w4_w8(i8** %{{.*}}, i8** %{{.*}})
 // ARM64: call void @__destructor_8_w8(i8** %{{.*}})
 
-// ARM64: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// ARM64: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_w8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -77,10 +77,10 @@ void test_copy_constructor_Weak(Weak *s) {
   Weak t = *s;
 }
 
-// ARM64: define{{.*}} void @test_copy_assignment_Weak(%[[STRUCT_WEAK]]* %{{.*}}, %[[STRUCT_WEAK]]* %{{.*}})
+// ARM64: define{{.*}} void @test_copy_assignment_Weak(%[[STRUCT_WEAK]]* noundef %{{.*}}, %[[STRUCT_WEAK]]* noundef %{{.*}})
 // ARM64: call void @__copy_assignment_8_8_t0w4_w8(i8** %{{.*}}, i8** %{{.*}})
 
-// ARM64: define linkonce_odr hidden void @__copy_assignment_8_8_t0w4_w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// ARM64: define linkonce_odr hidden void @__copy_assignment_8_8_t0w4_w8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -105,10 +105,10 @@ void test_copy_assignment_Weak(Weak *d, Weak *s) {
   *d = *s;
 }
 
-// ARM64: define internal void @__Block_byref_object_copy_(i8* %0, i8* %1)
+// ARM64: define internal void @__Block_byref_object_copy_(i8* noundef %0, i8* noundef %1)
 // ARM64: call void @__move_constructor_8_8_t0w4_w8(i8** %{{.*}}, i8** %{{.*}})
 
-// ARM64: define linkonce_odr hidden void @__move_constructor_8_8_t0w4_w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// ARM64: define linkonce_odr hidden void @__move_constructor_8_8_t0w4_w8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -132,10 +132,10 @@ void test_move_constructor_Weak(void) {
   BlockTy b = ^{ (void)t; };
 }
 
-// ARM64: define{{.*}} void @test_move_assignment_Weak(%[[STRUCT_WEAK]]* %{{.*}})
+// ARM64: define{{.*}} void @test_move_assignment_Weak(%[[STRUCT_WEAK]]* noundef %{{.*}})
 // ARM64: call void @__move_assignment_8_8_t0w4_w8(i8** %{{.*}}, i8** %{{.*}})
 
-// ARM64: define linkonce_odr hidden void @__move_assignment_8_8_t0w4_w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// ARM64: define linkonce_odr hidden void @__move_assignment_8_8_t0w4_w8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // ARM64: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // ARM64: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // ARM64: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -161,14 +161,14 @@ void test_move_assignment_Weak(Weak *p) {
   *p = getWeak();
 }
 
-// COMMON: define{{.*}} void @test_parameter_Weak(%[[STRUCT_WEAK]]* %[[A:.*]])
+// COMMON: define{{.*}} void @test_parameter_Weak(%[[STRUCT_WEAK]]* noundef %[[A:.*]])
 // COMMON: %[[V0:.*]] = bitcast %[[STRUCT_WEAK]]* %[[A]] to i8**
 // COMMON: call void @__destructor_{{.*}}(i8** %[[V0]])
 
 void test_parameter_Weak(Weak a) {
 }
 
-// COMMON: define{{.*}} void @test_argument_Weak(%[[STRUCT_WEAK]]* %[[A:.*]])
+// COMMON: define{{.*}} void @test_argument_Weak(%[[STRUCT_WEAK]]* noundef %[[A:.*]])
 // COMMON: %[[A_ADDR:.*]] = alloca %[[STRUCT_WEAK]]*
 // COMMON: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]]
 // COMMON: store %[[STRUCT_WEAK]]* %[[A]], %[[STRUCT_WEAK]]** %[[A_ADDR]]
@@ -176,14 +176,14 @@ void test_parameter_Weak(Weak a) {
 // COMMON: %[[V1:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_TMP]] to i8**
 // COMMON: %[[V2:.*]] = bitcast %[[STRUCT_WEAK]]* %[[V0]] to i8**
 // COMMON: call void @__copy_constructor_{{.*}}(i8** %[[V1]], i8** %[[V2]])
-// COMMON: call void @calleeWeak(%[[STRUCT_WEAK]]* %[[AGG_TMP]])
+// COMMON: call void @calleeWeak(%[[STRUCT_WEAK]]* noundef %[[AGG_TMP]])
 // COMMON-NEXT: ret
 
 void test_argument_Weak(Weak *a) {
   calleeWeak(*a);
 }
 
-// COMMON: define{{.*}} void @test_return_Weak(%[[STRUCT_WEAK]]* noalias sret(%[[STRUCT_WEAK]]) align {{.*}} %[[AGG_RESULT:.*]], %[[STRUCT_WEAK]]* %[[A:.*]])
+// COMMON: define{{.*}} void @test_return_Weak(%[[STRUCT_WEAK]]* noalias sret(%[[STRUCT_WEAK]]) align {{.*}} %[[AGG_RESULT:.*]], %[[STRUCT_WEAK]]* noundef %[[A:.*]])
 // COMMON: %[[A_ADDR:.*]] = alloca %[[STRUCT_WEAK]]*
 // COMMON: store %[[STRUCT_WEAK]]* %[[A]], %[[STRUCT_WEAK]]** %[[A_ADDR]]
 // COMMON: %[[V0:.*]] = load %[[STRUCT_WEAK]]*, %[[STRUCT_WEAK]]** %[[A_ADDR]]
@@ -200,7 +200,7 @@ Weak test_return_Weak(Weak *a) {
 // COMMON: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]]
 // COMMON: br i1
 
-// COMMON: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_WEAK]]*)*)({{.*}}, %[[STRUCT_WEAK]]* %[[AGG_TMP]])
+// COMMON: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_WEAK]]*)*)({{.*}}, %[[STRUCT_WEAK]]* noundef %[[AGG_TMP]])
 // COMMON: br
 
 // COMMON: %[[V6:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_TMP]] to i8**

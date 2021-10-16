@@ -1074,8 +1074,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm2:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
+  case Match_InvalidUImm3:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidUImm7:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
   case Match_InvalidSImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
                                       (1 << 4) - 1);
@@ -2184,11 +2190,11 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
       if (getFeatureBits(RISCV::FeatureStdExtZfh))
         formalArchStr = (Twine(formalArchStr) + "_zfh0p1").str();
       if (getFeatureBits(RISCV::FeatureStdExtZba))
-        formalArchStr = (Twine(formalArchStr) + "_zba0p93").str();
+        formalArchStr = (Twine(formalArchStr) + "_zba1p0").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbb))
-        formalArchStr = (Twine(formalArchStr) + "_zbb0p93").str();
+        formalArchStr = (Twine(formalArchStr) + "_zbb1p0").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbc))
-        formalArchStr = (Twine(formalArchStr) + "_zbc0p93").str();
+        formalArchStr = (Twine(formalArchStr) + "_zbc1p0").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbe))
         formalArchStr = (Twine(formalArchStr) + "_zbe0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbf))
@@ -2200,7 +2206,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
       if (getFeatureBits(RISCV::FeatureStdExtZbr))
         formalArchStr = (Twine(formalArchStr) + "_zbr0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbs))
-        formalArchStr = (Twine(formalArchStr) + "_zbs0p93").str();
+        formalArchStr = (Twine(formalArchStr) + "_zbs1p0").str();
       if (getFeatureBits(RISCV::FeatureStdExtZbt))
         formalArchStr = (Twine(formalArchStr) + "_zbt0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtZvamo))
@@ -2269,6 +2275,11 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                               .addReg(DestReg)
                               .addReg(SrcReg)
                               .addReg(RISCV::X0));
+    } else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
+               Inst.Opc == RISCV::SH3ADD) {
+      emitToStreamer(
+          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
+                   SrcReg));
     } else {
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(

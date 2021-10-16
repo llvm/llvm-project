@@ -14,10 +14,10 @@ void t1() {
   delete [] new int [3];
 }
 
-// CHECK: declare nonnull i8* @_Znwm(i64) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPv(i8*) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
-// CHECK: declare nonnull i8* @_Znam(i64) [[ATTR_NOBUILTIN]]
-// CHECK: declare void @_ZdaPv(i8*) [[ATTR_NOBUILTIN_NOUNWIND]]
+// CHECK: declare noundef nonnull i8* @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
+// CHECK: declare void @_ZdlPv(i8* noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare noundef nonnull i8* @_Znam(i64 noundef) [[ATTR_NOBUILTIN]]
+// CHECK: declare void @_ZdaPv(i8* noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
 
 namespace std {
   struct nothrow_t {};
@@ -127,15 +127,15 @@ struct B { int a; };
 struct Bmemptr { int Bmemptr::* memptr; int a; };
 
 void t11(int n) {
-  // CHECK: call noalias nonnull i8* @_Znwm
+  // CHECK: call noalias noundef nonnull i8* @_Znwm
   // CHECK: call void @llvm.memset.p0i8.i64(
   B* b = new B();
 
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK: {{call void.*llvm.memset.p0i8.i64.*i8 0, i64 %}}
   B *b2 = new B[n]();
 
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
   // CHECK: br
   Bmemptr *b_memptr = new Bmemptr[n]();
@@ -148,11 +148,11 @@ struct Empty { };
 // We don't need to initialize an empty class.
 // CHECK-LABEL: define{{.*}} void @_Z3t12v
 void t12() {
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK-NOT: br
   (void)new Empty[10];
 
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK-NOT: br
   (void)new Empty[10]();
 
@@ -162,11 +162,11 @@ void t12() {
 // Zero-initialization
 // CHECK-LABEL: define{{.*}} void @_Z3t13i
 void t13(int n) {
-  // CHECK: call noalias nonnull i8* @_Znwm
+  // CHECK: call noalias noundef nonnull i8* @_Znwm
   // CHECK: store i32 0, i32*
   (void)new int();
 
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK: {{call void.*llvm.memset.p0i8.i64.*i8 0, i64 %}}
   (void)new int[n]();
 
@@ -182,16 +182,16 @@ struct Alloc{
 };
 
 void f() {
-  // CHECK: call i8* @_ZN5AllocnaEm(i64 808)
+  // CHECK: call noundef i8* @_ZN5AllocnaEm(i64 noundef 808)
   // CHECK: store i64 200
   // CHECK: call void @_ZN5AllocD1Ev(
   // CHECK: call void @_ZN5AllocdaEPv(i8*
   delete[] new Alloc[10][20];
-  // CHECK: [[P:%.*]] = call nonnull i8* @_ZN5AllocnaEmRKSt9nothrow_t(i64 808, {{.*}}) [[ATTR_NOUNWIND:#[^ ]*]]
+  // CHECK: [[P:%.*]] = call noundef nonnull i8* @_ZN5AllocnaEmRKSt9nothrow_t(i64 noundef 808, {{.*}}) [[ATTR_NOUNWIND:#[^ ]*]]
   // CHECK-NOT: icmp eq i8* [[P]], null
   // CHECK: store i64 200
   delete[] new (nothrow) Alloc[10][20];
-  // CHECK: call noalias nonnull i8* @_Znwm
+  // CHECK: call noalias noundef nonnull i8* @_Znwm
   // CHECK: call void @_ZdlPv(i8*
   delete new bool;
   // CHECK: ret void
@@ -212,7 +212,7 @@ namespace test15 {
 
   // CHECK-LABEL:    define{{.*}} void @_ZN6test156test0bEPv(
   // CHECK:      [[P0:%.*]] = load i8*, i8**
-  // CHECK:      [[P:%.*]] = call i8* @_ZnwmPvb(i64 1, i8* [[P0]]
+  // CHECK:      [[P:%.*]] = call noundef i8* @_ZnwmPvb(i64 noundef 1, i8* noundef [[P0]]
   // CHECK-NEXT: icmp eq i8* [[P]], null
   // CHECK-NEXT: br i1
   // CHECK:      [[T0:%.*]] = bitcast i8* [[P]] to [[A:%.*]]*
@@ -239,7 +239,7 @@ namespace test15 {
 
   // CHECK-LABEL:    define{{.*}} void @_ZN6test156test1bEPv(
   // CHECK:      [[P0:%.*]] = load i8*, i8**
-  // CHECK:      [[P:%.*]] = call i8* @_ZnamPvb(i64 13, i8* [[P0]]
+  // CHECK:      [[P:%.*]] = call noundef i8* @_ZnamPvb(i64 noundef 13, i8* noundef [[P0]]
   // CHECK-NEXT: icmp eq i8* [[P]], null
   // CHECK-NEXT: br i1
   // CHECK:      [[AFTER_COOKIE:%.*]] = getelementptr inbounds i8, i8* [[P]], i64 8
@@ -277,7 +277,7 @@ namespace PR10197 {
   // CHECK-LABEL: define weak_odr void @_ZN7PR101971fIiEEvv()
   template<typename T>
   void f() {
-    // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+    // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
     // CHECK-NEXT: [[CASTED:%.*]] = bitcast i8* [[CALL]] to
     new T;
     // CHECK-NEXT: ret void
@@ -299,7 +299,7 @@ namespace PR11757 {
   struct X { X(); X(const X&); };
   X* a(X* x) { return new X(X()); }
   // CHECK: define {{.*}} @_ZN7PR117571aEPNS_1XE
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK-NEXT: [[CASTED:%.*]] = bitcast i8* [[CALL]] to
   // CHECK-NEXT: call void @_ZN7PR117571XC1Ev({{.*}}* {{[^,]*}} [[CASTED]])
   // CHECK-NEXT: ret {{.*}} [[CASTED]]
@@ -309,7 +309,7 @@ namespace PR13380 {
   struct A { A() {} };
   struct B : public A { int x; };
   // CHECK-LABEL: define{{.*}} i8* @_ZN7PR133801fEv
-  // CHECK: call noalias nonnull i8* @_Znam(
+  // CHECK: call noalias noundef nonnull i8* @_Znam(
   // CHECK: call void @llvm.memset.p0i8
   // CHECK-NEXT: call void @_ZN7PR133801BC1Ev
   void* f() { return new B[2](); }
@@ -323,40 +323,40 @@ namespace N3664 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN5N36641fEv
   void f() {
-    // CHECK: call noalias nonnull i8* @_Znwm(i64 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
+    // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
     int *p = new int; // expected-note {{allocated with 'new' here}}
     // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
     delete p;
 
-    // CHECK: call noalias nonnull i8* @_Znam(i64 12) [[ATTR_BUILTIN_NEW]]
+    // CHECK: call noalias noundef nonnull i8* @_Znam(i64 noundef 12) [[ATTR_BUILTIN_NEW]]
     int *q = new int[3];
     // CHECK: call void @_ZdaPv({{.*}}) [[ATTR_BUILTIN_DELETE]]
     delete[] p; // expected-warning {{'delete[]' applied to a pointer that was allocated with 'new'; did you mean 'delete'?}}
 
-    // CHECK: call noalias i8* @_ZnamRKSt9nothrow_t(i64 3, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
+    // CHECK: call noalias noundef i8* @_ZnamRKSt9nothrow_t(i64 noundef 3, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
     (void) new (nothrow) S[3];
 
-    // CHECK: call i8* @_Znwm15MyPlacementType(i64 4){{$}}
+    // CHECK: call noundef i8* @_Znwm15MyPlacementType(i64 noundef 4){{$}}
     (void) new (mpt) int;
   }
 
-  // CHECK: declare i8* @_ZnamRKSt9nothrow_t(i64, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
+  // CHECK: declare noundef i8* @_ZnamRKSt9nothrow_t(i64 noundef, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
 
   // CHECK-LABEL: define{{.*}} void @_ZN5N36641gEv
   void g() {
     // It's OK for there to be attributes here, so long as we don't have a
     // 'builtin' attribute.
-    // CHECK: call noalias nonnull i8* @_Znwm(i64 4) {{#[^ ]*}}{{$}}
+    // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 4) {{#[^ ]*}}{{$}}
     int *p = (int*)operator new(4);
     // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_NOUNWIND:#[^ ]*]]
     operator delete(p);
 
-    // CHECK: call noalias nonnull i8* @_Znam(i64 12) {{#[^ ]*}}{{$}}
+    // CHECK: call noalias noundef nonnull i8* @_Znam(i64 noundef 12) {{#[^ ]*}}{{$}}
     int *q = (int*)operator new[](12);
     // CHECK: call void @_ZdaPv({{.*}}) [[ATTR_NOUNWIND]]
     operator delete [](p);
 
-    // CHECK: call noalias i8* @_ZnamRKSt9nothrow_t(i64 3, {{.*}}) [[ATTR_NOUNWIND_ALLOCSIZE:#[^ ]*]]
+    // CHECK: call noalias noundef i8* @_ZnamRKSt9nothrow_t(i64 noundef 3, {{.*}}) [[ATTR_NOUNWIND_ALLOCSIZE:#[^ ]*]]
     (void) operator new[](3, nothrow);
   }
 }
@@ -364,7 +364,7 @@ namespace N3664 {
 namespace builtins {
   // CHECK-LABEL: define{{.*}} void @_ZN8builtins1fEv
   void f() {
-    // CHECK: call noalias nonnull i8* @_Znwm(i64 4) [[ATTR_BUILTIN_NEW]]
+    // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW]]
     // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_BUILTIN_DELETE]]
     __builtin_operator_delete(__builtin_operator_new(4));
   }

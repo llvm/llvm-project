@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-to-linalg-on-tensors %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-to-linalg %s -verify-diagnostics -o -| FileCheck %s
 
 // CHECK: #[[$MAP0:.*]] = affine_map<() -> ()>
 
@@ -286,6 +286,15 @@ func @test_simple_i16(%arg0: tensor<1xi16>) -> () {
   // CHECK: arith.muli
   %0 = "tosa.mul"(%arg0, %arg0) {shift = 0 : i32} : (tensor<1xi16>, tensor<1xi16>) -> tensor<1xi32>
 
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_simple_ui8
+func @test_simple_ui8(%arg0: tensor<1xui8>) -> () {
+  // CHECK: arith.uitofp
+  %0 = "tosa.cast"(%arg0) : (tensor<1xui8>) -> tensor<1xf32>
   return
 }
 

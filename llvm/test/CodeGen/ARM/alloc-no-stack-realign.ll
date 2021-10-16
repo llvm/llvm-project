@@ -3,80 +3,57 @@
 ; rdar://12713765
 ; When realign-stack is set to false, make sure we are not creating stack
 ; objects that are assumed to be 64-byte aligned.
-@T3_retval = common global <16 x float> zeroinitializer, align 16
 
 define void @test1(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwind ssp "no-realign-stack" {
-entry:
 ; CHECK-LABEL: test1:
-; CHECK: ldr     r[[R1:[0-9]+]], [pc, r[[R1]]]
-; CHECK: mov     r[[R2:[0-9]+]], r[[R1]]
-; CHECK: vld1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]!
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: add     r[[R3:[0-9]+]], r[[R1]], #32
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: add     r[[R3:[0-9]+]], r[[R1]], #48
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: mov     r[[R2:[0-9]+]], sp
-; CHECK: add     r[[R3:[0-9]+]], r[[R2]], #48
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: add     r[[R4:[0-9]+]], r[[R2]], #32
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R4]]:128]
-; CHECK: mov     r[[R5:[0-9]+]], r[[R2]]
-; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R5]]:128]!
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R5]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R5]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R4]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: add     r[[R1:[0-9]+]], r0, #48
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: add     r[[R1:[0-9]+]], r0, #32
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]!
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]
+; CHECK: mov r[[PTR:[0-9]+]], r{{[0-9]+}}
+; CHECK: mov r[[NOTALIGNED:[0-9]+]], sp
+; CHECK: add r[[NOTALIGNED]], r[[NOTALIGNED]], #32
+; CHECK: add r[[PTR]], r[[PTR]], #32
+; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[NOTALIGNED]]:128]
+; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[PTR]]:128]
+; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[PTR]]:128]
+; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[NOTALIGNED]]:128]
+entry:
  %retval = alloca <16 x float>, align 64
- %0 = load <16 x float>, <16 x float>* @T3_retval, align 16
- store <16 x float> %0, <16 x float>* %retval
- %1 = load <16 x float>, <16 x float>* %retval
- store <16 x float> %1, <16 x float>* %agg.result, align 16
+ %a1 = bitcast <16 x float>* %retval to float*
+ %a2 = getelementptr inbounds float, float* %a1, i64 8
+ %a3 = bitcast float* %a2 to <4 x float>*
+
+ %b1 = bitcast <16 x float>* %agg.result to float*
+ %b2 = getelementptr inbounds float, float* %b1, i64 8
+ %b3 = bitcast float* %b2 to <4 x float>*
+
+ %0 = load <4 x float>, <4 x float>* %a3, align 16
+ %1 = load <4 x float>, <4 x float>* %b3, align 16
+ store <4 x float> %0, <4 x float>* %b3, align 16
+ store <4 x float> %1, <4 x float>* %a3, align 16
  ret void
 }
 
 define void @test2(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwind ssp {
-entry:
 ; CHECK-LABEL: test2:
-; CHECK: ldr     r[[R1:[0-9]+]], [pc, r[[R1]]]
-; CHECK: add     r[[R2:[0-9]+]], r[[R1]], #48
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: add     r[[R2:[0-9]+]], r[[R1]], #32
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: vld1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]!
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: mov     r[[R1:[0-9]+]], sp
-; CHECK: orr     r[[R2:[0-9]+]], r[[R1]], #16
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: mov     r[[R3:[0-9]+]], #32
-; CHECK: mov     r[[R9:[0-9]+]], r[[R1]]
-; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R9]]:128], r[[R3]]
-; CHECK: mov     r[[R3:[0-9]+]], r[[R9]]
-; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]!
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R9]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R3]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
-; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: add     r[[R1:[0-9]+]], r0, #48
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: add     r[[R1:[0-9]+]], r0, #32
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
-; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]!
-; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]
+; CHECK: mov r[[PTR:[0-9]+]], r{{[0-9]+}}
+; CHECK: mov r[[ALIGNED:[0-9]+]], sp
+; CHECK: orr r[[ALIGNED]], r[[ALIGNED]], #32
+; CHECK: add r[[PTR]], r[[PTR]], #32
+; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[ALIGNED]]:128]
+; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[PTR]]:128]
+; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[PTR]]:128]
+; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[ALIGNED]]:128]
+entry:
+ %retval = alloca <16 x float>, align 64
+ %a1 = bitcast <16 x float>* %retval to float*
+ %a2 = getelementptr inbounds float, float* %a1, i64 8
+ %a3 = bitcast float* %a2 to <4 x float>*
 
+ %b1 = bitcast <16 x float>* %agg.result to float*
+ %b2 = getelementptr inbounds float, float* %b1, i64 8
+ %b3 = bitcast float* %b2 to <4 x float>*
 
-%retval = alloca <16 x float>, align 64
- %0 = load <16 x float>, <16 x float>* @T3_retval, align 16
- store <16 x float> %0, <16 x float>* %retval
- %1 = load <16 x float>, <16 x float>* %retval
- store <16 x float> %1, <16 x float>* %agg.result, align 16
+ %0 = load <4 x float>, <4 x float>* %a3, align 16
+ %1 = load <4 x float>, <4 x float>* %b3, align 16
+ store <4 x float> %0, <4 x float>* %b3, align 16
+ store <4 x float> %1, <4 x float>* %a3, align 16
  ret void
 }

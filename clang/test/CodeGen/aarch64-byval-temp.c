@@ -32,12 +32,12 @@ void example() {
 // CHECK-O0-NEXT: %[[dst:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[l]] to i8*
 // CHECK-O0-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[src]], i8* align 8 %[[dst]], i64 64, i1 false)
 // Finally, call using a pointer to the temporary stack space.
-// CHECK-O0-NEXT: call void @pass_large(%struct.large* %[[byvaltemp]])
+// CHECK-O0-NEXT: call void @pass_large(%struct.large* noundef %[[byvaltemp]])
 // Now, do the same for the second call, using the second temporary alloca.
 // CHECK-O0-NEXT: %[[src:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[byvaltemp1]] to i8*
 // CHECK-O0-NEXT: %[[dst:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[l]] to i8*
 // CHECK-O0-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[src]], i8* align 8 %[[dst]], i64 64, i1 false)
-// CHECK-O0-NEXT: call void @pass_large(%struct.large* %[[byvaltemp1]])
+// CHECK-O0-NEXT: call void @pass_large(%struct.large* noundef %[[byvaltemp1]])
 // CHECK-O0-NEXT: ret void
 //
 // At O3, we should have lifetime markers to help the optimizer re-use the temporary allocas.
@@ -67,7 +67,7 @@ void example() {
 // CHECK-O3-NEXT: %[[dst:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[l]] to i8*
 // CHECK-O3-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[src]], i8* align 8 %[[dst]], i64 64, i1 false)
 // Finally, call using a pointer to the temporary stack space.
-// CHECK-O3-NEXT: call void @pass_large(%struct.large* %[[byvaltemp]])
+// CHECK-O3-NEXT: call void @pass_large(%struct.large* noundef %[[byvaltemp]])
 //
 // The lifetime of the temporary used to pass a pointer to the struct ends here.
 // CHECK-O3-NEXT: %[[bitcastbyvaltemp:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[byvaltemp]] to i8*
@@ -79,7 +79,7 @@ void example() {
 // CHECK-O3-NEXT: %[[src:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[byvaltemp1]] to i8*
 // CHECK-O3-NEXT: %[[dst:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[l]] to i8*
 // CHECK-O3-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[src]], i8* align 8 %[[dst]], i64 64, i1 false)
-// CHECK-O3-NEXT: call void @pass_large(%struct.large* %[[byvaltemp1]])
+// CHECK-O3-NEXT: call void @pass_large(%struct.large* noundef %[[byvaltemp1]])
 // CHECK-O3-NEXT: %[[bitcastbyvaltemp:[0-9A-Za-z-]+]] = bitcast %struct.large* %[[byvaltemp1]] to i8*
 // CHECK-O3-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* %[[bitcastbyvaltemp]])
 //

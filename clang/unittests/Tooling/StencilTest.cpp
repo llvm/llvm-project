@@ -201,6 +201,58 @@ TEST_F(StencilTest, IfBoundOpUnbound) {
   testExpr(Id, "3;", ifBound("other", cat("5"), cat("7")), "7");
 }
 
+static auto selectMatcher() {
+  // The `anything` matcher is not bound, to test for none of the cases
+  // matching.
+  return expr(anyOf(integerLiteral().bind("int"), cxxBoolLiteral().bind("bool"),
+                    floatLiteral().bind("float"), anything()));
+}
+
+static auto selectStencil() {
+  return selectBound({
+      {"int", cat("I")},
+      {"bool", cat("B")},
+      {"bool", cat("redundant")},
+      {"float", cat("F")},
+  });
+}
+
+TEST_F(StencilTest, SelectBoundChooseDetectedMatch) {
+  std::string Input = "3;";
+  auto StmtMatch = matchStmt(Input, selectMatcher());
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(selectStencil()->eval(StmtMatch->Result),
+                       HasValue(std::string("I")));
+}
+
+TEST_F(StencilTest, SelectBoundChooseFirst) {
+  std::string Input = "true;";
+  auto StmtMatch = matchStmt(Input, selectMatcher());
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(selectStencil()->eval(StmtMatch->Result),
+                       HasValue(std::string("B")));
+}
+
+TEST_F(StencilTest, SelectBoundDiesOnExhaustedCases) {
+  std::string Input = "\"string\";";
+  auto StmtMatch = matchStmt(Input, selectMatcher());
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(
+      selectStencil()->eval(StmtMatch->Result),
+      Failed<StringError>(testing::Property(
+          &StringError::getMessage,
+          AllOf(HasSubstr("selectBound failed"), HasSubstr("no default")))));
+}
+
+TEST_F(StencilTest, SelectBoundSucceedsWithDefault) {
+  std::string Input = "\"string\";";
+  auto StmtMatch = matchStmt(Input, selectMatcher());
+  ASSERT_TRUE(StmtMatch);
+  auto Stencil = selectBound({{"int", cat("I")}}, cat("D"));
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
+                       HasValue(std::string("D")));
+}
+
 TEST_F(StencilTest, ExpressionOpNoParens) {
   StringRef Id = "id";
   testExpr(Id, "3;", expression(Id), "3");
@@ -671,6 +723,28 @@ TEST(StencilToStringTest, IfBoundOp) {
   auto S = ifBound("Id", cat("trueText"), access("exprId", "memberData"));
   StringRef Expected =
       R"repr(ifBound("Id", "trueText", access("exprId", "memberData")))repr";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SelectBoundOp) {
+  auto S = selectBound({
+      {"int", cat("I")},
+      {"float", cat("F")},
+  });
+  StringRef Expected = R"repr(selectBound({{"int", "I"}, {"float", "F"}}))repr";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SelectBoundOpWithOneCase) {
+  auto S = selectBound({{"int", cat("I")}});
+  StringRef Expected = R"repr(selectBound({{"int", "I"}}))repr";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SelectBoundOpWithDefault) {
+  auto S = selectBound({{"int", cat("I")}, {"float", cat("F")}}, cat("D"));
+  StringRef Expected =
+      R"cc(selectBound({{"int", "I"}, {"float", "F"}}, "D"))cc";
   EXPECT_EQ(S->toString(), Expected);
 }
 

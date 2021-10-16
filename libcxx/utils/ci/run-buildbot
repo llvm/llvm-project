@@ -113,6 +113,13 @@ function generate-cmake-libcxx-win() {
           "${@}"
 }
 
+function generate-cmake-aix() {
+    generate-cmake-base \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+          "${@}"
+}
+
 function check-runtimes() {
     echo "--- Installing libc++, libc++abi and libunwind to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
@@ -370,14 +377,25 @@ generic-no-wide-characters)
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in"
     check-runtimes
 ;;
-x86_64-apple-system)
+apple-system)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-shared.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-shared.cfg.in"
-    check-runtimes
+
+    sdk_root="$(xcrun --sdk macosx --show-sdk-path)"
+    arch="$(uname -m)"
+
+    ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
+        --llvm-root ${MONOREPO_ROOT}                            \
+        --build-dir ${BUILD_DIR}                                \
+        --install-dir ${INSTALL_DIR}                            \
+        --symbols-dir "${BUILD_DIR}/symbols"                    \
+        --sdk "macosx"                                          \
+        --architectures "${arch}"                               \
+        --version "999.99"
+
+    # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
+    xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi
 ;;
-x86_64-apple-system-backdeployment-*)
+apple-system-backdeployment-*)
     clean
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
@@ -388,14 +406,15 @@ x86_64-apple-system-backdeployment-*)
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
     fi
 
-    DEPLOYMENT_TARGET="${BUILDER#x86_64-apple-system-backdeployment-}"
+    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-}"
 
     # TODO: On Apple platforms, we never produce libc++abi.1.dylib, always libc++abi.dylib.
     #       Fix that in the build so that the tests stop searching for @rpath/libc++abi.1.dylib.
     cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
        "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
 
-    PARAMS="target_triple=x86_64-apple-macosx${DEPLOYMENT_TARGET}"
+    arch="$(uname -m)"
+    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
@@ -563,6 +582,17 @@ windows-static)
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+aix)
+    export CC=ibm-clang
+    export CXX=ibm-clang++_r
+    clean
+    generate-cmake-aix -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
+                   -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in"
+    # TODO: use check-runtimes once libunwind builds cleanly on AIX.
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx check-cxxabi
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.

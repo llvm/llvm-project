@@ -6,7 +6,7 @@ void f(void *p) {
   c = p;
 }
 
-// CHECK-LABEL: @_Z1fPv(i8* %p)
+// CHECK-LABEL: @_Z1fPv(i8* noundef %p)
 // CHECK-NOT: call i8** @_ZTWL1c()
 // CHECK: call arm_aapcs_vfpcc i8** @_ZTWL1c()
 

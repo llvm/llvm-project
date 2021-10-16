@@ -62,7 +62,7 @@ void implicit_maps_parameter (int a){
   }
 }
 
-// CK3: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK3: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK3: [[ADDR:%.+]] = alloca i[[sz]],
 // CK3: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK3-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to i32*

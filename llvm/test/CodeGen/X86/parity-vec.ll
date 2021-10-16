@@ -18,7 +18,7 @@ define i1 @canonical_parity(<16 x i1> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psllw $7, %xmm0
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
-; CHECK-NEXT:    popcntw %ax, %ax
+; CHECK-NEXT:    popcntl %eax, %eax
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -33,8 +33,8 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psllw $7, %xmm0
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
-; CHECK-NEXT:    popcntw %ax, %ax
-; CHECK-NEXT:    # kill: def $al killed $al killed $ax
+; CHECK-NEXT:    popcntl %eax, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
   %i2 = call i16 @llvm.ctpop.i16(i16 %i1)
@@ -62,7 +62,7 @@ define i1 @canonical_nonparity(<16 x i1> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psllw $7, %xmm0
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
-; CHECK-NEXT:    popcntw %ax, %ax
+; CHECK-NEXT:    popcntl %eax, %eax
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -77,7 +77,7 @@ define i1 @canonical_nonparity_noncanonical_pred(<16 x i1> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psllw $7, %xmm0
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
-; CHECK-NEXT:    popcntw %ax, %ax
+; CHECK-NEXT:    popcntl %eax, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    xorb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax

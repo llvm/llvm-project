@@ -127,6 +127,7 @@ Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
 Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
+DragonFlyBSD       amd64                 GCC, Clang
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
 NetBSD             x86\ :sup:`1`         GCC, Clang
@@ -467,8 +468,16 @@ corresponding to the review you wish to send, up-to-date with the upstream
 can start `a Phabricator review <Phabricator.html>`_ (or use ``git show`` or
 ``git format-patch`` to output the diff, and attach it to an email message).
 
-However, using the "Arcanist" tool is often easier. After `installing
-arcanist`_, you can upload the latest commit using:
+However, using the "Arcanist" tool is often easier. After `installing arcanist`_, you
+will also need to apply a fix to your arcanist repo in order to submit a patch:
+
+.. code-block:: console
+
+  % cd arcanist
+  % git fetch https://github.com/rashkov/arcanist update_cacerts
+  % git cherry-pick e3659d43d8911e91739f3b0c5935598bceb859aa
+
+Once this is all done, you can upload the latest commit using:
 
 .. code-block:: console
 

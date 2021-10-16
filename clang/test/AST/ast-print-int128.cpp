@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ast-print -std=c++20 %s -o - -triple x86_64-linux | FileCheck %s
+// RUN: %clang_cc1 -ast-print -std=c++20 %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s
 
 template <bool>
 struct enable_if {

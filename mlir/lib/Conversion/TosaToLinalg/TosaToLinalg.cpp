@@ -567,11 +567,6 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       return rewriter.create<arith::ExtUIOp>(loc, resultTypes, args,
                                              mlir::None);
 
-    // All other si-to-fp conversions should be handled by SIToFP.
-    if (arith::SIToFPOp::areCastCompatible(srcTy, dstTy))
-      return rewriter.create<arith::SIToFPOp>(loc, resultTypes, args,
-                                              mlir::None);
-
     // Unsigned integers need an unrealized cast so that they can be passed
     // to UIToFP.
     if (srcTy.isUnsignedInteger() && dstTy.isa<FloatType>()) {
@@ -584,6 +579,11 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       return rewriter.create<arith::UIToFPOp>(loc, resultTypes[0],
                                               unrealizedCast);
     }
+
+    // All other si-to-fp conversions should be handled by SIToFP.
+    if (arith::SIToFPOp::areCastCompatible(srcTy, dstTy))
+      return rewriter.create<arith::SIToFPOp>(loc, resultTypes, args,
+                                              mlir::None);
 
     // Casting to boolean, floats need to only be checked as not-equal to zero.
     if (srcTy.isa<FloatType>() && dstTy.isInteger(1)) {
@@ -3012,7 +3012,7 @@ public:
 
 } // namespace
 
-void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
+void mlir::tosa::populateTosaToLinalgConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<
       // clang-format off

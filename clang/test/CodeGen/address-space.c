@@ -14,7 +14,7 @@ int a __attribute__((address_space(0)));
 // CHECK: load i32, i32 addrspace(1)* @foo
 int test1() { return foo; }
 
-// CHECK-LABEL: define{{.*}} i32 @test2(i32 %i)
+// CHECK-LABEL: define{{.*}} i32 @test2(i32 noundef %i)
 // CHECK: load i32, i32 addrspace(1)*
 // CHECK-NEXT: ret i32
 int test2(int i) { return ban[i]; }

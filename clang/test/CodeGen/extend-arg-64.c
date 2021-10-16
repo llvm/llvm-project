@@ -16,6 +16,12 @@
 // RUN:                     %s -emit-llvm -o - | FileCheck %s \
 // RUN:    --implicit-check-not "ext {{.*}}to i64"
 
+// The option isn't supported on ppc, no effect
+// RUN: %clang_cc1 -DD128 -triple powerpc64-ibm-aix-xcoff -fextend-arguments=64 \
+// RUN:                     %s -emit-llvm -o - | FileCheck %s \
+// RUN:    --implicit-check-not "ext {{.*}}to i64"
+
+
 int vararg(int, ...);
 void knr();
 
@@ -53,7 +59,7 @@ int test() {
 
   // CHECKEXT:  [[TAG_s8:%.*]] = load i8, i8* @s8
   // CHECKEXT: [[CONV_s8:%.*]] = sext i8 [[TAG_s8]] to i64
-  // CHECKEXT: call{{.*}} @vararg(i32 %0, i64 [[CONV_u32]], i64 [[CONV_s32]], i64 [[CONV_u16]], i64 [[CONV_s16]], i64 [[CONV_u8]], i64 [[CONV_s8]]
+  // CHECKEXT: call{{.*}} @vararg(i32 noundef %0, i64 noundef [[CONV_u32]], i64 noundef [[CONV_s32]], i64 noundef [[CONV_u16]], i64 noundef [[CONV_s16]], i64 noundef [[CONV_u8]], i64 noundef [[CONV_s8]]
 
   int sum = 0;
   sum = vararg(sum, u32, s32, u16, s16, u8, s8);

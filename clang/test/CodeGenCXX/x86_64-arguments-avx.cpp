@@ -56,6 +56,6 @@ union U {
   __attribute__((__vector_size__(32))) float f1;
   int f2;
 };
-// CHECK: define{{.*}} i32 @_ZN5test31fENS_1UE({{.*}}* byval({{.*}}) align 32
+// CHECK: define{{.*}} i32 @_ZN5test31fENS_1UE({{.*}}* noundef byval({{.*}}) align 32
 int f(U u) { return u.f2; }
 }

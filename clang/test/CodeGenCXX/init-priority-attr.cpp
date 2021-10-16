@@ -33,17 +33,17 @@ A C::a = A();
 // CHECK:  { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_init_priority_attr.cpp, i8* null }]
 
 // CHECK: _GLOBAL__I_000200()
-// CHECK: _Z3fooi(i32 3)
+// CHECK: _Z3fooi(i32 noundef 3)
 // CHECK-NEXT: ret void
 
 // CHECK: _GLOBAL__I_000300()
-// CHECK: _Z3fooi(i32 2)
-// CHECK-NEXT: _Z3fooi(i32 1)
+// CHECK: _Z3fooi(i32 noundef 2)
+// CHECK-NEXT: _Z3fooi(i32 noundef 1)
 // CHECK-NEXT: ret void
 
 // CHECK: _GLOBAL__sub_I_init_priority_attr.cpp()
-// CHECK: _Z3fooi(i32 1)
-// CHECK-NEXT: _Z3fooi(i32 4)
+// CHECK: _Z3fooi(i32 noundef 1)
+// CHECK-NEXT: _Z3fooi(i32 noundef 4)
 // CHECK-NEXT: ret void
 
 C c;

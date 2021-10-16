@@ -9,4 +9,4 @@ void a(int,int,int,int,int,int,__complex__ char);
 void b(__complex__ char *y) { a(0,0,0,0,0,0,*y); }
 // CHECK-LABEL: define{{.*}} void @b
 // CHECK: alloca { i8, i8 }*, align 8
-// CHECK: call void @a(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i16 {{.*}})
+// CHECK: call void @a(i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 0, i16 {{.*}})

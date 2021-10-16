@@ -39,17 +39,11 @@
 # CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg8 R8)
 # CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+3)
 
-# CHECK-DWARF5: [[getValue_SP:.*]]: DW_TAG_subprogram
-# CHECK-DWARF5-NEXT: DW_AT_name      ("getVal")
-
-# CHECK-DWARF5: [[foo_SP:.*]]: DW_TAG_subprogram
-# CHECK-DWARF5-NEXT: DW_AT_name      ("foo")
-
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP]])
+# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP:.*]])
 #
 # CHECK-DWARF5: DW_TAG_call_site
-# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP]])
+# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP:.*]])
 # CHECK-DWARF5:   DW_AT_call_return_pc {{.*}}
 # CHECK-DWARF5-EMPTY:
 # CHECK-DWARF5:         DW_TAG_call_site_parameter
@@ -70,6 +64,12 @@
 # CHECK-DWARF5:         DW_TAG_call_site_parameter
 # CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg8 R8)
 # CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_breg14 R14+3)
+
+# CHECK-DWARF5: [[getValue_SP]]: DW_TAG_subprogram
+# CHECK-DWARF5-NEXT: DW_AT_name      ("getVal")
+
+# CHECK-DWARF5: [[foo_SP]]: DW_TAG_subprogram
+# CHECK-DWARF5-NEXT: DW_AT_name      ("foo")
 
 --- |
   ; ModuleID = 'test.c'
@@ -105,10 +105,9 @@
   !llvm.module.flags = !{!6, !7, !8}
   !llvm.ident = !{!9}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/dir")
   !2 = !{}
-  !3 = !{!4, !5}
   !4 = !DISubprogram(name: "getVal", scope: !1, file: !1, line: 2, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !6 = !{i32 2, !"Dwarf Version", i32 4}
