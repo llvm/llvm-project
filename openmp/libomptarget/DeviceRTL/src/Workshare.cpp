@@ -114,14 +114,10 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
   // Support for Static Init
 
-  static void for_static_init(int32_t gtid, int32_t schedtype,
+  static void for_static_init(int32_t, int32_t schedtype,
                               int32_t *plastiter, T *plower, T *pupper,
                               ST *pstride, ST chunk, bool IsSPMDExecutionMode) {
-    // When IsRuntimeUninitialized is true, we assume that the caller is
-    // in an L0 parallel region and that all worker threads participate.
-
-    // Assume we are in teams region or that we use a single block
-    // per target region
+    int32_t gtid = omp_get_thread_num();
     int numberOfActiveOMPThreads = omp_get_num_threads();
 
     // All warps that are in excess of the maximum requested, do
