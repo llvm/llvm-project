@@ -426,9 +426,7 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
 
 const SCEV *IndexedReference::getLastCoefficient() const {
   const SCEV *LastSubscript = getLastSubscript();
-  assert(isa<SCEVAddRecExpr>(LastSubscript) &&
-         "Expecting a SCEV add recurrence expression");
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LastSubscript);
+  auto *AR = cast<SCEVAddRecExpr>(LastSubscript);
   return AR->getStepRecurrence(SE);
 }
 
