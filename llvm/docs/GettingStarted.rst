@@ -127,6 +127,7 @@ Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
 Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
+DragonFlyBSD       amd64                 GCC, Clang
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
 NetBSD             x86\ :sup:`1`         GCC, Clang
