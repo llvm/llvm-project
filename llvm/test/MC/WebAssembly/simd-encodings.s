@@ -791,4 +791,16 @@ main:
     # CHECK: f64x2.fms # encoding: [0xfd,0xd0,0x01]
     f64x2.fms
 
+    # CHECK: i8x16.laneselect # encoding: [0xfd,0xb2,0x01]
+    i8x16.laneselect
+
+    # CHECK: i16x8.laneselect # encoding: [0xfd,0xb3,0x01]
+    i16x8.laneselect
+
+    # CHECK: i32x4.laneselect # encoding: [0xfd,0xd2,0x01]
+    i32x4.laneselect
+
+    # CHECK: i64x2.laneselect # encoding: [0xfd,0xd3,0x01]
+    i64x2.laneselect
+
     end_function
