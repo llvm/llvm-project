@@ -27,6 +27,7 @@ using FuncOp = func::FuncOp;
 } // namespace mlir
 
 #include "mlir/Dialect/CIR/IR/CIROpsDialect.h.inc"
+#include "mlir/Dialect/CIR/IR/CIROpsEnums.h.inc"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 
 #define GET_OP_CLASSES

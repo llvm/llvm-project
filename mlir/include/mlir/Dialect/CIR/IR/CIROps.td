@@ -16,10 +16,10 @@
 
 include "mlir/Dialect/CIR/IR/CIRDialect.td"
 include "mlir/Dialect/CIR/IR/CIRTypes.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Ops
@@ -62,54 +62,67 @@ def ConstantOp : CIR_Op<"cst",
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
+def InitStyle_None      : I32EnumAttrCase<"uninitialized", 1>;
+def InitStyle_ParamInit : I32EnumAttrCase<"paraminit", 2>;
+def InitStyle_CInit     : I32EnumAttrCase<"cinit", 3>;
+def InitStyle_CallInit  : I32EnumAttrCase<"callinit", 4>;
+def InitStyle_ListInit  : I32EnumAttrCase<"listinit", 5>;
+
+def InitStyle : I32EnumAttr<
+    "InitStyle",
+    "variable initialization style",
+    [InitStyle_None, InitStyle_ParamInit,
+     InitStyle_CInit, InitStyle_CallInit,
+     InitStyle_ListInit]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                     string transform, string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+      comparator # "(" #
+      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
+             ", $" # rhsArg # ")">> {
+  string lhs = lhsArg;
+  string rhs = rhsArg;
+  string transformer = transform;
+}
+
 // FIXME: add alignment, bool attr on being param, automatic scope?.
-def AllocaOp : CIR_Op<"alloca", []> {
-  let summary = "define a local variable";
+def AllocaOp : CIR_Op<"alloca", [
+  AllocaTypesMatchWith<"'type' matches pointee type of 'addr'",
+                 "addr", "type",
+                 "$_self.cast<PointerType>().getPointee()">]> {
+  let summary = "local variable";
   let description = [{
-    The `cir.alloca` operation defines a local variable. The `initial_value`
-    can either be a unit attribute to represent a definition of an uninitialized
-    local variable, or constant to represent the definition of a
-    variable with an initial value. It can also be marked constant using the
-    `constant` unit attribute.
+    The `cir.alloca` operation defines a local variable.
+
+    Possible initialization styles are: uninitialized, paraminit,
+    callinit, cinit and listinit.
 
     The result is a pointer type for the original input type.
 
     Example:
 
     ```mlir
-    // Local variable with an initial value.
-    %0 = cir.alloca i32 = 1, !cir.ptr<i32>
-
-    // Uninitialized local variable.
-    %0 = cir.alloca f32 = uninitialized, !cir.ptr<f32>
-
-    // Constant local variable.
-    %0 = cir.alloca constant i8 = 3, !cir.ptr<i8>
+    // Local variable with uninitialized value.
+    %0 = cir.alloca i32, !cir.ptr<i32>, [cinit]
     ```
   }];
 
   let arguments = (ins
-      TypeAttr:$type,
-      AnyAttr:$initial_value,
-      UnitAttr:$constant
+    TypeAttr:$type,
+    Arg<InitStyle, "initialization style">:$init
   );
 
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
 
   let assemblyFormat = [{
-    (`constant` $constant^)?
-    custom<AllocaOpTypeAndInitialValue>($type, $initial_value)
-    attr-dict `,` `cir.ptr` type($addr)
+    $type `,` `cir.ptr` type($addr) `,` `[` $init `]`  attr-dict
   }];
 
-  let extraClassDeclaration = [{
-    bool isUninitialized() {
-      return getInitialValue().isa<UnitAttr>();
-    }
-  }];
-
-  let hasVerifier = 1;
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
