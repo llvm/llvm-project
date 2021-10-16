@@ -112,7 +112,7 @@ cc_library(
 
 cc_test(
     name = "codegen_tests",
-    size = "small",
+    size = "medium",
     srcs = glob(
         [
             "CodeGen/*.cpp",
@@ -167,7 +167,7 @@ cc_test(
 
 cc_test(
     name = "debuginfo_tests",
-    size = "small",
+    size = "medium",
     srcs = glob(
         [
             "DebugInfo/DWARF/*.cpp",
@@ -219,7 +219,7 @@ cc_test(
 
 cc_test(
     name = "execution_engine_mcjit_tests",
-    size = "small",
+    size = "medium",
     srcs = glob(
         [
             "ExecutionEngine/MCJIT/*.cpp",
@@ -245,7 +245,7 @@ cc_test(
 
 cc_test(
     name = "execution_engine_orc_tests",
-    size = "small",
+    size = "medium",
     srcs = glob(
         [
             "ExecutionEngine/Orc/*.cpp",
@@ -381,7 +381,7 @@ cc_test(
 
 cc_test(
     name = "mi_tests",
-    size = "small",
+    size = "medium",
     srcs = glob(
         ["MI/*.cpp"],
         allow_empty = False,
@@ -525,9 +525,10 @@ cc_test(
     ],
 )
 
+# Note that the name of this test is important as it is used in the test itself.
 cc_test(
-    name = "support_tests",
-    size = "small",
+    name = "SupportTests",
+    size = "medium",
     srcs = glob(
         [
             "Support/*.cpp",

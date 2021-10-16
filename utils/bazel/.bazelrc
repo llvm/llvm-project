@@ -69,8 +69,17 @@ build:generic_gcc --copt=-Wno-misleading-indentation --host_copt=-Wno-misleading
 build:generic_gcc --copt=-Werror --host_copt=-Werror
 
 ###############################################################################
-# Windows specific flags for building with VC.
+# Generic Windows flags common to both MSVC and Clang.
 ###############################################################################
+
+# Yay for security warnings. Boo for non-standard.
+build:windows --copt=/D_CRT_SECURE_NO_WARNINGS --host_copt=/D_CRT_SECURE_NO_WARNINGS
+
+###############################################################################
+# Windows specific flags for building with MSVC.
+###############################################################################
+
+build:msvc --config=windows
 
 build:msvc --copt=/WX --host_copt=/WX    # Treat warnings as errors...
 # ...but disable the ones that are violated
@@ -87,8 +96,30 @@ build:msvc --linkopt=/WX --host_linkopt=/WX # Treat warnings as errors...
 # ...but disable the ones that are violated.
 build:msvc --linkopt=/IGNORE:4001 --host_linkopt=/IGNORE:4001 # no object files
 
-# Yay for security warnings. Boo for non-standard.
-build:msvc --copt=/D_CRT_SECURE_NO_WARNINGS --host_copt=/D_CRT_SECURE_NO_WARNINGS
+###############################################################################
+# Options for Windows `clang-cl` builds.
+###############################################################################
+
+# We just start with the baseline Windows config as `clang-cl` doesn't accept
+# some of the generic Clang flags.
+build:clang-cl --config=windows
+
+# Switch from MSVC to the `clang-cl` compiler.
+build:clang-cl --compiler=clang-cl
+
+# C++14 standard version is required.
+build:clang-cl --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
+
+# Use Clang's internal warning flags instead of the ones that sometimes map
+# through to MSVC's flags.
+build:clang-cl --copt=/clang:-Wall --host_copt=/clang:-Wall
+build:clang-cl --copt=/clang:-Werror --host_copt=/clang:-Werror
+
+# This doesn't appear to be enforced by any upstream bot.
+build:clang-cl --copt=/clang:-Wno-unused --host_copt=/clang:-Wno-unused
+
+# There appears to be an unused constant in GoogleTest on Windows.
+build:clang-cl --copt=/clang:-Wno-unused-const-variable --host_copt=/clang:-Wno-unused-const-variable
 
 ###############################################################################
 
