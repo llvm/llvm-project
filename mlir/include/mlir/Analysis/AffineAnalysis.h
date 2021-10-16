@@ -25,6 +25,7 @@ namespace mlir {
 class AffineApplyOp;
 class AffineForOp;
 class AffineValueMap;
+class FlatAffineRelation;
 class FlatAffineValueConstraints;
 class Operation;
 
@@ -88,6 +89,30 @@ struct MemRefAccess {
   unsigned getRank() const;
   // Returns true if this access is of a store op.
   bool isStore() const;
+
+  /// Creates an access relation for the access. An access relation maps
+  /// elements of an iteration domain to the element(s) of an array domain
+  /// accessed by that iteration of the associated statement through some array
+  /// reference. For example, given the MLIR code:
+  ///
+  /// affine.for %i0 = 0 to 10 {
+  ///   affine.for %i1 = 0 to 10 {
+  ///     %a = affine.load %arr[%i0 + %i1, %i0 + 2 * %i1] : memref<100x100xf32>
+  ///   }
+  /// }
+  ///
+  /// The access relation, assuming that the memory locations for %arr are
+  /// represented as %m0, %m1 would be:
+  ///
+  ///   (%i0, %i1) -> (%m0, %m1)
+  ///   %m0 = %i0 + %i1
+  ///   %m1 = %i0 + 2 * %i1
+  ///   0  <= %i0 < 10
+  ///   0  <= %i1 < 10
+  ///
+  /// Returns failure for yet unimplemented/unsupported cases (see docs of
+  /// mlir::getIndexSet and mlir::getRelationFromMap for these cases).
+  LogicalResult getAccessRelation(FlatAffineRelation &accessRel) const;
 
   /// Populates 'accessMap' with composition of AffineApplyOps reachable from
   /// 'indices'.
