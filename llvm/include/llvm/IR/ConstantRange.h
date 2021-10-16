@@ -383,6 +383,11 @@ public:
   /// treating both this and \p Other as unsigned ranges.
   ConstantRange multiply(const ConstantRange &Other) const;
 
+  /// Return range of possible values for a signed multiplication of this and
+  /// \p Other. However, if overflow is possible always return a full range
+  /// rather than trying to determine a more precise result.
+  ConstantRange smul_fast(const ConstantRange &Other) const;
+
   /// Return a new range representing the possible values resulting
   /// from a signed maximum of a value in this range and a value in \p Other.
   ConstantRange smax(const ConstantRange &Other) const;

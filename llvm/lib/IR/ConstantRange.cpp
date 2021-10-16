@@ -1054,6 +1054,25 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   return UR.isSizeStrictlySmallerThan(SR) ? UR : SR;
 }
 
+ConstantRange ConstantRange::smul_fast(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt Min = getSignedMin();
+  APInt Max = getSignedMax();
+  APInt OtherMin = Other.getSignedMin();
+  APInt OtherMax = Other.getSignedMax();
+
+  bool O1, O2, O3, O4;
+  auto Muls = {Min.smul_ov(OtherMin, O1), Min.smul_ov(OtherMax, O2),
+               Max.smul_ov(OtherMin, O3), Max.smul_ov(OtherMax, O4)};
+  if (O1 || O2 || O3 || O4)
+    return getFull();
+
+  auto Compare = [](const APInt &A, const APInt &B) { return A.slt(B); };
+  return getNonEmpty(std::min(Muls, Compare), std::max(Muls, Compare) + 1);
+}
+
 ConstantRange
 ConstantRange::smax(const ConstantRange &Other) const {
   // X smax Y is: range(smax(X_smin, Y_smin),
