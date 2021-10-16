@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=x86_64-unknown-linux
 // RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=x86_64-unknown-linux-gnux32
 // RUN: %clang_cc1 %s -fblocks -pedantic -pedantic -verify -triple=arm64_32-apple-ios7.0
+// RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=powerpc64-ibm-aix-xcoff
 
 // rdar://6097662
 typedef int (*T)[2];

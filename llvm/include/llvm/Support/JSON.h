@@ -234,7 +234,7 @@ inline bool operator!=(const Array &L, const Array &R) { return !(L == R); }
 /// Each Value is one of the JSON kinds:
 ///   null    (nullptr_t)
 ///   boolean (bool)
-///   number  (double or int64)
+///   number  (double, int64 or uint64)
 ///   string  (StringRef)
 ///   array   (json::Array)
 ///   object  (json::Object)
@@ -342,9 +342,20 @@ public:
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
   }
-  // Integers (except boolean). Must be non-narrowing convertible to int64_t.
+
+  // Unsigned 64-bit long integers.
+  template <typename T,
+            typename = std::enable_if_t<std::is_same<T, uint64_t>::value>,
+            bool = false, bool = false>
+  Value(T V) : Type(T_UINT64) {
+    create<uint64_t>(uint64_t{V});
+  }
+
+  // Integers (except boolean and uint64_t).
+  // Must be non-narrowing convertible to int64_t.
   template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>,
-            typename = std::enable_if_t<!std::is_same<T, bool>::value>>
+            typename = std::enable_if_t<!std::is_same<T, bool>::value>,
+            typename = std::enable_if_t<!std::is_same<T, uint64_t>::value>>
   Value(T I) : Type(T_Integer) {
     create<int64_t>(int64_t{I});
   }
@@ -382,6 +393,7 @@ public:
       return Boolean;
     case T_Double:
     case T_Integer:
+    case T_UINT64:
       return Number;
     case T_String:
     case T_StringRef:
@@ -410,6 +422,8 @@ public:
       return as<double>();
     if (LLVM_LIKELY(Type == T_Integer))
       return as<int64_t>();
+    if (LLVM_LIKELY(Type == T_UINT64))
+      return as<uint64_t>();
     return llvm::None;
   }
   // Succeeds if the Value is a Number, and exactly representable as int64_t.
@@ -422,6 +436,16 @@ public:
                       D >= double(std::numeric_limits<int64_t>::min()) &&
                       D <= double(std::numeric_limits<int64_t>::max())))
         return D;
+    }
+    return llvm::None;
+  }
+  llvm::Optional<uint64_t> getAsUINT64() const {
+    if (Type == T_UINT64)
+      return as<uint64_t>();
+    else if (Type == T_Integer) {
+      int64_t N = as<int64_t>();
+      if (N >= 0)
+        return as<uint64_t>();
     }
     return llvm::None;
   }
@@ -467,11 +491,12 @@ private:
 
   friend class OStream;
 
-  enum ValueType : char {
+  enum ValueType : char16_t {
     T_Null,
     T_Boolean,
     T_Double,
     T_Integer,
+    T_UINT64,
     T_StringRef,
     T_String,
     T_Object,
@@ -479,8 +504,9 @@ private:
   };
   // All members mutable, see moveFrom().
   mutable ValueType Type;
-  mutable llvm::AlignedCharArrayUnion<bool, double, int64_t, llvm::StringRef,
-                                      std::string, json::Array, json::Object>
+  mutable llvm::AlignedCharArrayUnion<bool, double, int64_t, uint64_t,
+                                      llvm::StringRef, std::string, json::Array,
+                                      json::Object>
       Union;
   friend bool operator==(const Value &, const Value &);
 };
@@ -681,6 +707,14 @@ inline bool fromJSON(const Value &E, bool &Out, Path P) {
     return true;
   }
   P.report("expected boolean");
+  return false;
+}
+inline bool fromJSON(const Value &E, uint64_t &Out, Path P) {
+  if (auto S = E.getAsUINT64()) {
+    Out = *S;
+    return true;
+  }
+  P.report("expected uint64_t");
   return false;
 }
 inline bool fromJSON(const Value &E, std::nullptr_t &Out, Path P) {

@@ -5,8 +5,8 @@
 define i64 @test_cmpb(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_cmpb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpb 4, 4, 6
-; CHECK-NEXT:    cmpb 3, 3, 5
+; CHECK-NEXT:    cmpb r4, r4, r6
+; CHECK-NEXT:    cmpb r3, r3, r5
 ; CHECK-NEXT:    blr
 entry:
   %0 = trunc i64 %a to i32

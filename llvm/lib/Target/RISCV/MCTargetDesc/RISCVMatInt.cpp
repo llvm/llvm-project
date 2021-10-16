@@ -250,6 +250,33 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
+  // Perform optimization with SH*ADD in the Zba extension.
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZba]) {
+    assert(ActiveFeatures[RISCV::Feature64Bit] &&
+           "Expected RV32 to only need 2 instructions");
+    int64_t Div = 0;
+    unsigned Opc = 0;
+    RISCVMatInt::InstSeq TmpSeq;
+    // Select the opcode and divisor.
+    if ((Val % 3) == 0 && isInt<32>(Val / 3)) {
+      Div = 3;
+      Opc = RISCV::SH1ADD;
+    } else if ((Val % 5) == 0 && isInt<32>(Val / 5)) {
+      Div = 5;
+      Opc = RISCV::SH2ADD;
+    } else if ((Val % 9) == 0 && isInt<32>(Val / 9)) {
+      Div = 9;
+      Opc = RISCV::SH3ADD;
+    }
+    // Build the new instruction sequence.
+    if (Div > 0) {
+      generateInstSeqImpl(Val / Div, ActiveFeatures, TmpSeq);
+      TmpSeq.push_back(RISCVMatInt::Inst(Opc, 0));
+      if (TmpSeq.size() < Res.size())
+        Res = TmpSeq;
+    }
+  }
+
   return Res;
 }
 

@@ -15900,7 +15900,7 @@ checkLiteralOperatorTemplateParameterList(Sema &SemaRef,
     //
     // As a DR resolution, we also allow placeholders for deduced class
     // template specializations.
-    if (SemaRef.getLangOpts().CPlusPlus20 &&
+    if (SemaRef.getLangOpts().CPlusPlus20 && PmDecl &&
         !PmDecl->isTemplateParameterPack() &&
         (PmDecl->getType()->isRecordType() ||
          PmDecl->getType()->getAs<DeducedTemplateSpecializationType>()))

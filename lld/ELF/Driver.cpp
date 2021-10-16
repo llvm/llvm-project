@@ -810,7 +810,7 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
     return {true, true};
 
   if (s != "none")
-    error("unknown -pack-dyn-relocs format: " + s);
+    error("unknown --pack-dyn-relocs format: " + s);
   return {false, false};
 }
 

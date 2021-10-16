@@ -129,12 +129,12 @@ static cl::opt<unsigned> StoreMergeDependenceLimit(
 
 static cl::opt<bool> EnableReduceLoadOpStoreWidth(
     "combiner-reduce-load-op-store-width", cl::Hidden, cl::init(true),
-    cl::desc("DAG cominber enable reducing the width of load/op/store "
+    cl::desc("DAG combiner enable reducing the width of load/op/store "
              "sequence"));
 
 static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     "combiner-shrink-load-replace-store-with-store", cl::Hidden, cl::init(true),
-    cl::desc("DAG cominber enable load/<replace bytes>/store with "
+    cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
 namespace {
