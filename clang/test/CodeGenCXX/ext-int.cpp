@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,NewStructPathTBAA
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,NoNewStructPathTBAA
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,NewStructPathTBAA
 
-// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,NewStructPathTBAA
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,NoNewStructPathTBAA
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,NewStructPathTBAA
 
 #include <typeinfo>
 

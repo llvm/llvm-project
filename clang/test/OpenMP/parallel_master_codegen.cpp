@@ -301,7 +301,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -359,7 +359,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -411,7 +411,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -442,7 +442,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -473,7 +473,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK9-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK9-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -506,7 +506,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -544,7 +544,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK13-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK13-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -582,7 +582,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK14-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK14-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK14-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK14-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -611,28 +611,28 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[A:%.*]] = alloca [[STRUCT_ST:%.*]], align 4
 // CHECK17-NEXT:    [[Y_CASTED:%.*]] = alloca i64, align 8
-// CHECK17-NEXT:    call void @_ZN2StC1Ev(%struct.St* nonnull align 4 dereferenceable(8) [[A]])
+// CHECK17-NEXT:    call void @_ZN2StC1Ev(%struct.St* noundef [[A]])
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i32, i32* @_ZZ36parallel_master_default_firstprivatevE1y, align 4
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[Y_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP0]], i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i64, i64* [[Y_CASTED]], align 8
 // CHECK17-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.St*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.St* [[A]], i64 [[TMP1]])
-// CHECK17-NEXT:    call void @_ZN2StD1Ev(%struct.St* nonnull align 4 dereferenceable(8) [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK17-NEXT:    call void @_ZN2StD1Ev(%struct.St* noundef [[A]]) #[[ATTR3:[0-9]+]]
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StC1Ev
-// CHECK17-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK17-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK17-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[THIS1:%.*]] = load %struct.St*, %struct.St** [[THIS_ADDR]], align 8
-// CHECK17-NEXT:    call void @_ZN2StC2Ev(%struct.St* nonnull align 4 dereferenceable(8) [[THIS1]])
+// CHECK17-NEXT:    call void @_ZN2StC2Ev(%struct.St* noundef [[THIS1]])
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK17-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.St* nonnull align 4 dereferenceable(8) [[A:%.*]], i64 [[Y:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK17-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.St* noundef nonnull align 4 dereferenceable(8) [[A:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -671,17 +671,17 @@ void parallel_master_allocate() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StD1Ev
-// CHECK17-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK17-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK17-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[THIS1:%.*]] = load %struct.St*, %struct.St** [[THIS_ADDR]], align 8
-// CHECK17-NEXT:    call void @_ZN2StD2Ev(%struct.St* nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
+// CHECK17-NEXT:    call void @_ZN2StD2Ev(%struct.St* noundef [[THIS1]]) #[[ATTR3]]
 // CHECK17-NEXT:    ret void
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StC2Ev
-// CHECK17-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK17-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK17-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
@@ -694,7 +694,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2StD2Ev
-// CHECK17-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK17-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK17-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
@@ -707,28 +707,28 @@ void parallel_master_allocate() {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[A:%.*]] = alloca [[STRUCT_ST:%.*]], align 4
 // CHECK18-NEXT:    [[Y_CASTED:%.*]] = alloca i64, align 8
-// CHECK18-NEXT:    call void @_ZN2StC1Ev(%struct.St* nonnull align 4 dereferenceable(8) [[A]])
+// CHECK18-NEXT:    call void @_ZN2StC1Ev(%struct.St* noundef [[A]])
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i32, i32* @_ZZ36parallel_master_default_firstprivatevE1y, align 4
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[Y_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP0]], i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i64, i64* [[Y_CASTED]], align 8
 // CHECK18-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.St*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.St* [[A]], i64 [[TMP1]])
-// CHECK18-NEXT:    call void @_ZN2StD1Ev(%struct.St* nonnull align 4 dereferenceable(8) [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK18-NEXT:    call void @_ZN2StD1Ev(%struct.St* noundef [[A]]) #[[ATTR3:[0-9]+]]
 // CHECK18-NEXT:    ret void
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@_ZN2StC1Ev
-// CHECK18-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK18-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK18-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
 // CHECK18-NEXT:    [[THIS1:%.*]] = load %struct.St*, %struct.St** [[THIS_ADDR]], align 8
-// CHECK18-NEXT:    call void @_ZN2StC2Ev(%struct.St* nonnull align 4 dereferenceable(8) [[THIS1]])
+// CHECK18-NEXT:    call void @_ZN2StC2Ev(%struct.St* noundef [[THIS1]])
 // CHECK18-NEXT:    ret void
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK18-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.St* nonnull align 4 dereferenceable(8) [[A:%.*]], i64 [[Y:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK18-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.St* noundef nonnull align 4 dereferenceable(8) [[A:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK18-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -767,17 +767,17 @@ void parallel_master_allocate() {
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@_ZN2StD1Ev
-// CHECK18-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK18-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK18-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
 // CHECK18-NEXT:    [[THIS1:%.*]] = load %struct.St*, %struct.St** [[THIS_ADDR]], align 8
-// CHECK18-NEXT:    call void @_ZN2StD2Ev(%struct.St* nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
+// CHECK18-NEXT:    call void @_ZN2StD2Ev(%struct.St* noundef [[THIS1]]) #[[ATTR3]]
 // CHECK18-NEXT:    ret void
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@_ZN2StC2Ev
-// CHECK18-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK18-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK18-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
@@ -790,7 +790,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK18-LABEL: define {{[^@]+}}@_ZN2StD2Ev
-// CHECK18-SAME: (%struct.St* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
+// CHECK18-SAME: (%struct.St* noundef [[THIS:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK18-NEXT:  entry:
 // CHECK18-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.St*, align 8
 // CHECK18-NEXT:    store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]], align 8
@@ -812,7 +812,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK21-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK21-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK21-NEXT:  entry:
 // CHECK21-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK21-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -850,7 +850,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK22-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK22-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK22-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK22-NEXT:  entry:
 // CHECK22-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK22-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -882,7 +882,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK25-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK25-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK25-NEXT:  entry:
 // CHECK25-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK25-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -924,7 +924,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK26-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK26-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK26-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK26-NEXT:  entry:
 // CHECK26-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK26-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -966,7 +966,7 @@ void parallel_master_allocate() {
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK29-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK29-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK29-NEXT:  entry:
 // CHECK29-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK29-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1004,5 +1004,4 @@ void parallel_master_allocate() {
 // CHECK29-LABEL: define {{[^@]+}}@_ZTW1a
 // CHECK29-SAME: () #[[ATTR4:[0-9]+]] comdat {
 // CHECK29-NEXT:    ret i32* @a
-//
 //

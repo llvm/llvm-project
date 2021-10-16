@@ -136,7 +136,7 @@ float _Complex div_float_rc(float a, float _Complex b) {
   // SPIR: call spir_func {{.*}} @__divsc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_float_rc(float %a, [2 x float] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_float_rc(float noundef %a, [2 x float] noundef %b.coerce)
   // A = a
   // B = 0
   //
@@ -165,7 +165,7 @@ float _Complex div_float_cc(float _Complex a, float _Complex b) {
   // SPIR: call spir_func {{.*}} @__divsc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_float_cc([2 x float] %a.coerce, [2 x float] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_float_cc([2 x float] noundef %a.coerce, [2 x float] noundef %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast float
@@ -313,7 +313,7 @@ double _Complex div_double_rc(double a, double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_double_rc(double %a, [2 x double] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_double_rc(double noundef %a, [2 x double] noundef %b.coerce)
   // A = a
   // B = 0
   //
@@ -342,7 +342,7 @@ double _Complex div_double_cc(double _Complex a, double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_double_cc([2 x double] %a.coerce, [2 x double] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_double_cc([2 x double] noundef %a.coerce, [2 x double] noundef %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast double
@@ -506,7 +506,7 @@ long double _Complex div_long_double_rc(long double a, long double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_long_double_rc(fp128 %a, [2 x fp128] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_long_double_rc(fp128 noundef %a, [2 x fp128] noundef %b.coerce)
   // A = a
   // B = 0
   //
@@ -538,7 +538,7 @@ long double _Complex div_long_double_cc(long double _Complex a, long double _Com
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_long_double_cc([2 x fp128] %a.coerce, [2 x fp128] %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_long_double_cc([2 x fp128] noundef %a.coerce, [2 x fp128] noundef %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast fp128

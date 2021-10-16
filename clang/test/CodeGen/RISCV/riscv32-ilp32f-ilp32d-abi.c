@@ -11,7 +11,7 @@
 // Floats are passed in FPRs, so argument 'i' will be passed zero-extended
 // because it will be passed in a GPR.
 
-// CHECK: define{{.*}} void @f_fpr_tracking(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, i8 zeroext %i)
+// CHECK: define{{.*}} void @f_fpr_tracking(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, float noundef %h, i8 noundef zeroext %i)
 void f_fpr_tracking(float a, float b, float c, float d, float e, float f,
                     float g, float h, uint8_t i) {}
 
@@ -70,7 +70,7 @@ struct float_float_s f_ret_float_float_s() {
   return (struct float_float_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} void @f_float_float_s_arg_insufficient_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, [2 x i32] %h.coerce)
+// CHECK: define{{.*}} void @f_float_float_s_arg_insufficient_fprs(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, [2 x i32] %h.coerce)
 void f_float_float_s_arg_insufficient_fprs(float a, float b, float c, float d,
     float e, float f, float g, struct float_float_s h) {}
 
@@ -109,7 +109,7 @@ struct float_int32_s f_ret_float_int32_s() {
   return (struct float_int32_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_float_int64_s_arg(%struct.float_int64_s* %a)
+// CHECK: define{{.*}} void @f_float_int64_s_arg(%struct.float_int64_s* noundef %a)
 void f_float_int64_s_arg(struct float_int64_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_float_int64_s(%struct.float_int64_s* noalias sret(%struct.float_int64_s) align 8 %agg.result)
@@ -136,18 +136,18 @@ struct float_int8_zbf_s f_ret_float_int8_zbf_s() {
   return (struct float_int8_zbf_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_float_int8_s_arg_insufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, [2 x i32] %i.coerce)
+// CHECK: define{{.*}} void @f_float_int8_s_arg_insufficient_gprs(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, i32 noundef %h, [2 x i32] %i.coerce)
 void f_float_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
                                           int f, int g, int h, struct float_int8_s i) {}
 
-// CHECK: define{{.*}} void @f_struct_float_int8_insufficient_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, [2 x i32] %i.coerce)
+// CHECK: define{{.*}} void @f_struct_float_int8_insufficient_fprs(float noundef %a, float noundef %b, float noundef %c, float noundef %d, float noundef %e, float noundef %f, float noundef %g, float noundef %h, [2 x i32] %i.coerce)
 void f_struct_float_int8_insufficient_fprs(float a, float b, float c, float d,
                                            float e, float f, float g, float h, struct float_int8_s i) {}
 
 // Complex floating-point values or structs containing a single complex
 // floating-point value should be passed as if it were an fp+fp struct.
 
-// CHECK: define{{.*}} void @f_floatcomplex(float %a.coerce0, float %a.coerce1)
+// CHECK: define{{.*}} void @f_floatcomplex(float noundef %a.coerce0, float noundef %a.coerce1)
 void f_floatcomplex(float __complex__ a) {}
 
 // CHECK: define{{.*}} { float, float } @f_ret_floatcomplex()
@@ -233,7 +233,7 @@ struct floatarr2_tricky4_s f_ret_floatarr2_tricky4_s() {
 
 struct int_float_int_s { int a; float b; int c; };
 
-// CHECK: define{{.*}} void @f_int_float_int_s_arg(%struct.int_float_int_s* %a)
+// CHECK: define{{.*}} void @f_int_float_int_s_arg(%struct.int_float_int_s* noundef %a)
 void f_int_float_int_s_arg(struct int_float_int_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int_float_int_s(%struct.int_float_int_s* noalias sret(%struct.int_float_int_s) align 4 %agg.result)
@@ -243,7 +243,7 @@ struct int_float_int_s f_ret_int_float_int_s() {
 
 struct int64_float_s { int64_t a; float b; };
 
-// CHECK: define{{.*}} void @f_int64_float_s_arg(%struct.int64_float_s* %a)
+// CHECK: define{{.*}} void @f_int64_float_s_arg(%struct.int64_float_s* noundef %a)
 void f_int64_float_s_arg(struct int64_float_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int64_float_s(%struct.int64_float_s* noalias sret(%struct.int64_float_s) align 8 %agg.result)

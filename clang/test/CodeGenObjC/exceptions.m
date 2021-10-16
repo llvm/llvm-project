@@ -91,7 +91,7 @@ void f3() {
   // CHECK-NEXT: br i1 [[DEST1]]
 
   @try {
-    // CHECK:    call void @f3_helper(i32 0, i32* nonnull [[X]])
+    // CHECK:    call void @f3_helper(i32 noundef 0, i32* noundef nonnull [[X]])
     // CHECK:    call void @objc_exception_try_exit(
     f3_helper(0, &x);
   } @finally {
@@ -100,11 +100,11 @@ void f3() {
     // CHECK-NEXT: [[DEST2:%.*]] = icmp eq
     // CHECK-NEXT: br i1 [[DEST2]]
     @try {
-      // CHECK:  call void @f3_helper(i32 1, i32* nonnull [[X]])
+      // CHECK:  call void @f3_helper(i32 noundef 1, i32* noundef nonnull [[X]])
       // CHECK:  call void @objc_exception_try_exit(
       f3_helper(1, &x);
     } @finally {
-      // CHECK:  call void @f3_helper(i32 2, i32* nonnull [[X]])
+      // CHECK:  call void @f3_helper(i32 noundef 2, i32* noundef nonnull [[X]])
       f3_helper(2, &x);
 
       // This loop is large enough to dissuade the optimizer from just
@@ -121,7 +121,7 @@ void f3() {
     // CHECK:    [[DEST1]]
   }
 
-  // CHECK:      call void @f3_helper(i32 4, i32* nonnull [[X]])
+  // CHECK:      call void @f3_helper(i32 noundef 4, i32* noundef nonnull [[X]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[XPTR]])
   // CHECK-NEXT: ret void
   f3_helper(4, &x);
@@ -136,14 +136,14 @@ void f4() {
   // CHECK:      call void @objc_exception_try_enter([[EXNDATA_T]]* nonnull [[EXNDATA]])
   // CHECK:      call i32 @_setjmp
   @try {
-  // CHECK:      call void @f4_help(i32 0)
+  // CHECK:      call void @f4_help(i32 noundef 0)
     f4_help(0);
 
   // The finally cleanup has two threaded entrypoints after optimization:
 
   // finally.no-call-exit:  Predecessor is when the catch throws.
   // CHECK:      call i8* @objc_exception_extract([[EXNDATA_T]]* nonnull [[EXNDATA]])
-  // CHECK-NEXT: call void @f4_help(i32 2)
+  // CHECK-NEXT: call void @f4_help(i32 noundef 2)
   // CHECK-NEXT: br label
   //   -> rethrow
 
@@ -153,7 +153,7 @@ void f4() {
   // CHECK:      phi i8*
   // CHECK-NEXT: phi i1
   // CHECK-NEXT: call void @objc_exception_try_exit([[EXNDATA_T]]* nonnull [[EXNDATA]])
-  // CHECK-NEXT: call void @f4_help(i32 2)
+  // CHECK-NEXT: call void @f4_help(i32 noundef 2)
   // CHECK-NEXT: br i1
   //   -> ret, rethrow
 
@@ -169,7 +169,7 @@ void f4() {
   //   -> finally.call-exit, match
   } @catch (NSArray *a) {
   // match:
-  // CHECK:      call void @f4_help(i32 1)
+  // CHECK:      call void @f4_help(i32 noundef 1)
   // CHECK-NEXT: br label
   //   -> finally.call-exit
     f4_help(1);

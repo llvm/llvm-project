@@ -47,15 +47,15 @@ void test_array(struct nested_array arg) {
 }
 
 extern void complex_callee(__complex__ double);
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_complex({ double, double } %{{.*}})
-// CHECK64: define{{.*}} void @test_complex([2 x double] %cd.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_complex({ double, double } noundef %{{.*}})
+// CHECK64: define{{.*}} void @test_complex([2 x double] noundef %cd.coerce)
 void test_complex(__complex__ double cd) {
   complex_callee(cd);
 }
 
 // Long double is the same as double on AAPCS, it should be homogeneous.
 extern void complex_long_callee(__complex__ long double);
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_complex_long({ double, double } %{{.*}})
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_complex_long({ double, double } noundef %{{.*}})
 void test_complex_long(__complex__ long double cd) {
   complex_callee(cd);
 }
@@ -70,7 +70,7 @@ struct big_struct {
   float f4;
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_big([5 x i32] %{{.*}})
-// CHECK64: define{{.*}} void @test_big(%struct.big_struct* %{{.*}})
+// CHECK64: define{{.*}} void @test_big(%struct.big_struct* noundef %{{.*}})
 // CHECK64: call void @llvm.memcpy
 // CHECK64: call void @big_callee(%struct.big_struct*
 extern void big_callee(struct big_struct);
@@ -114,36 +114,36 @@ void test_neon(struct neon_struct arg) {
   neon_callee(arg);
 }
 
-// CHECK-LABEL: define{{.*}} arm_aapcs_vfpcc void @f33(%struct.s33* byval(%struct.s33) align 4 %s)
+// CHECK-LABEL: define{{.*}} arm_aapcs_vfpcc void @f33(%struct.s33* noundef byval(%struct.s33) align 4 %s)
 struct s33 { char buf[32*32]; };
 void f33(struct s33 s) { }
 
 typedef struct { long long x; int y; } struct_long_long_int;
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_1(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, i32 %j, i64 %k, i32 %l)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_1(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, i64 noundef %k, i32 noundef %l)
 void test_vfp_stack_gpr_split_1(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, long long k, int l) {}
 
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_2(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, i32 %j, [2 x i64] %k.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_2(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, [2 x i64] %k.coerce)
 void test_vfp_stack_gpr_split_2(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, struct_long_long_int k) {}
 
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_3(%struct.struct_long_long_int* noalias sret(%struct.struct_long_long_int) align 8 %agg.result, double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, [2 x i64] %k.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_3(%struct.struct_long_long_int* noalias sret(%struct.struct_long_long_int) align 8 %agg.result, double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, [2 x i64] %k.coerce)
 struct_long_long_int test_vfp_stack_gpr_split_3(double a, double b, double c, double d, double e, double f, double g, double h, double i, struct_long_long_int k) {}
 
 typedef struct { int a; int b:4; int c; } struct_int_bitfield_int;
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_test_vfp_stack_gpr_split_bitfield(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, i32 %j, i32 %k, [3 x i32] %l.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_test_vfp_stack_gpr_split_bitfield(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, i32 noundef %k, [3 x i32] %l.coerce)
 void test_test_vfp_stack_gpr_split_bitfield(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, int k, struct_int_bitfield_int l) {}
 
 // Note: this struct requires internal padding
 typedef struct { int x; long long y; } struct_int_long_long;
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_4(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, i32 %j, [2 x i64] %k.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_4(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, [2 x i64] %k.coerce)
 void test_vfp_stack_gpr_split_4(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, struct_int_long_long k) {}
 
 // This very large struct (passed byval) uses up the GPRs, so no padding is needed
 typedef struct { int x[17]; } struct_seventeen_ints;
 typedef struct { int x[4]; } struct_four_ints;
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_5(%struct.struct_seventeen_ints* byval(%struct.struct_seventeen_ints) align 4 %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, double %j, [4 x i32] %k.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_5(%struct.struct_seventeen_ints* noundef byval(%struct.struct_seventeen_ints) align 4 %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, double noundef %j, [4 x i32] %k.coerce)
 void test_vfp_stack_gpr_split_5(struct_seventeen_ints a, double b, double c, double d, double e, double f, double g, double h, double i, double j, struct_four_ints k) {}
 
 // Here, parameter k would need padding to prevent it from being split, but it
 // is passed ByVal (due to being > 64 bytes), so the backend handles this instead.
 void test_vfp_stack_gpr_split_6(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, struct_seventeen_ints k) {}
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_6(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, i32 %j, %struct.struct_seventeen_ints* byval(%struct.struct_seventeen_ints) align 4 %k)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_6(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, %struct.struct_seventeen_ints* noundef byval(%struct.struct_seventeen_ints) align 4 %k)

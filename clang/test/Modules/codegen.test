@@ -25,7 +25,7 @@ FOO: $_ZN13implicit_dtorD1Ev = comdat any
 USE: $_Z4instIiEvv = comdat any
 USE: $_Z10always_inlv = comdat any
 FOO: $_ZN13implicit_dtorD2Ev = comdat any
-FOO: define weak_odr void @_Z2f1PKcz(i8* %fmt, ...) #{{[0-9]+}} comdat
+FOO: define weak_odr void @_Z2f1PKcz(i8* noundef %fmt, ...) #{{[0-9]+}} comdat
 FOO:   call void @llvm.va_start(i8* %{{[a-zA-Z0-9]*}})
 
 Test that implicit special members are emitted into the FOO module if they're

@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -enable-noundef-analysis -o - %s | FileCheck %s
+// RUN: %clang -cc1 -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -o - %s | FileCheck %s
 
 union u1 {
   int val;

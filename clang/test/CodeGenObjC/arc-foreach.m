@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64 %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64-OPT %s
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-apple-darwin -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64 %s
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-apple-darwin -O1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64-OPT %s
 // rdar://9503326
 // rdar://9606600
 
