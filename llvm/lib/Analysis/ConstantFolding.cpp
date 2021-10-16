@@ -2065,7 +2065,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return nullptr;
 
     LibFunc Func = NotLibFunc;
-    TLI->getLibFunc(Name, Func);
+    if (!TLI->getLibFunc(Name, Func))
+      return nullptr;
+
     switch (Func) {
     default:
       break;
