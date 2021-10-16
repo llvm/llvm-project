@@ -1384,6 +1384,11 @@ def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
                    LLVM_Type:$isVolatile);
 }
 
+def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2]> {
+  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$val, LLVM_Type:$len,
+                   LLVM_Type:$isVolatile);
+}
+
 // Intrinsics with multiple returns.
 
 def LLVM_SAddWithOverflowOp
