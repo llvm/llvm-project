@@ -46,9 +46,7 @@ define i16 @neg_abs_i16(i16 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negw %ax
-; X64-NEXT:    cmovsw %di, %ax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    cmovnsw %di, %ax
 ; X64-NEXT:    retq
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 true)
   %neg = sub nsw i16 0, %abs
@@ -69,8 +67,7 @@ define i32 @neg_abs_i32(i32 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negl %eax
-; X64-NEXT:    cmovsl %edi, %eax
-; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovnsl %edi, %eax
 ; X64-NEXT:    retq
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   %neg = sub nsw i32 0, %abs
@@ -97,8 +94,7 @@ define i64 @neg_abs_i64(i64 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    negq %rax
-; X64-NEXT:    cmovsq %rdi, %rax
-; X64-NEXT:    negq %rax
+; X64-NEXT:    cmovnsq %rdi, %rax
 ; X64-NEXT:    retq
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   %neg = sub nsw i64 0, %abs
@@ -197,11 +193,10 @@ define i16 @sub_abs_i16(i16 %x, i16 %y) nounwind {
 ;
 ; X64-LABEL: sub_abs_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    negw %cx
-; X64-NEXT:    cmovsw %di, %cx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negw %ax
+; X64-NEXT:    cmovnsw %di, %ax
+; X64-NEXT:    addl %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 false)
@@ -223,11 +218,10 @@ define i32 @sub_abs_i32(i32 %x, i32 %y) nounwind {
 ;
 ; X64-LABEL: sub_abs_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    negl %ecx
-; X64-NEXT:    cmovsl %edi, %ecx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovnsl %edi, %eax
+; X64-NEXT:    addl %esi, %eax
 ; X64-NEXT:    retq
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 false)
   %neg = sub i32 %y, %abs
@@ -257,11 +251,10 @@ define i64 @sub_abs_i64(i64 %x, i64 %y) nounwind {
 ;
 ; X64-LABEL: sub_abs_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    negq %rcx
-; X64-NEXT:    cmovsq %rdi, %rcx
-; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    cmovnsq %rdi, %rax
+; X64-NEXT:    addq %rsi, %rax
 ; X64-NEXT:    retq
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 false)
   %neg = sub i64 %y, %abs
