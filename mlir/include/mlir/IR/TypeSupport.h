@@ -170,10 +170,11 @@ struct TypeUniquer {
   get(MLIRContext *ctx, Args &&...args) {
 #ifndef NDEBUG
     if (!ctx->getTypeUniquer().isParametricStorageInitialized(T::getTypeID()))
-      llvm::report_fatal_error(llvm::Twine("can't create type '") +
-                               llvm::getTypeName<T>() +
-                               "' because storage uniquer isn't initialized: "
-                               "the dialect was likely not loaded.");
+      llvm::report_fatal_error(
+          llvm::Twine("can't create type '") + llvm::getTypeName<T>() +
+          "' because storage uniquer isn't initialized: the dialect was likely "
+          "not loaded, or the type wasn't added with addTypes<...>() "
+          "in the Dialect::initialize() method.");
 #endif
     return ctx->getTypeUniquer().get<typename T::ImplType>(
         [&](TypeStorage *storage) {
@@ -188,10 +189,11 @@ struct TypeUniquer {
   get(MLIRContext *ctx) {
 #ifndef NDEBUG
     if (!ctx->getTypeUniquer().isSingletonStorageInitialized(T::getTypeID()))
-      llvm::report_fatal_error(llvm::Twine("can't create type '") +
-                               llvm::getTypeName<T>() +
-                               "' because storage uniquer isn't initialized: "
-                               "the dialect was likely not loaded.");
+      llvm::report_fatal_error(
+          llvm::Twine("can't create type '") + llvm::getTypeName<T>() +
+          "' because storage uniquer isn't initialized: the dialect was likely "
+          "not loaded, or the type wasn't added with addTypes<...>() "
+          "in the Dialect::initialize() method.");
 #endif
     return ctx->getTypeUniquer().get<typename T::ImplType>(T::getTypeID());
   }
