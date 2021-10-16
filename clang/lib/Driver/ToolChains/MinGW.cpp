@@ -349,20 +349,20 @@ static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
 }
 
 void toolchains::MinGW::findGccLibDir() {
-  llvm::SmallVector<llvm::SmallString<32>, 2> Archs;
-  Archs.emplace_back(getTriple().getArchName());
-  Archs[0] += "-w64-mingw32";
-  Archs.emplace_back("mingw32");
-  if (Arch.empty())
-    Arch = std::string(Archs[0].str());
+  llvm::SmallVector<llvm::SmallString<32>, 2> SubdirNames;
+  SubdirNames.emplace_back(getTriple().getArchName());
+  SubdirNames[0] += "-w64-mingw32";
+  SubdirNames.emplace_back("mingw32");
+  if (SubdirName.empty())
+    SubdirName = std::string(SubdirNames[0].str());
   // lib: Arch Linux, Ubuntu, Windows
   // lib64: openSUSE Linux
   for (StringRef CandidateLib : {"lib", "lib64"}) {
-    for (StringRef CandidateArch : Archs) {
+    for (StringRef CandidateSysroot : SubdirNames) {
       llvm::SmallString<1024> LibDir(Base);
-      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateArch);
+      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
       if (findGccVersion(LibDir, GccLibDir, Ver)) {
-        Arch = std::string(CandidateArch);
+        SubdirName = std::string(CandidateSysroot);
         return;
       }
     }
@@ -391,7 +391,7 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
-      Arch = std::string(CandidateSubdir);
+      SubdirName = std::string(CandidateSubdir);
       return (ClangRoot + Sep + CandidateSubdir).str();
     }
   }
@@ -423,10 +423,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   // correct crtbegin.o ,cetend.o would be found.
   getFilePaths().push_back(GccLibDir);
   getFilePaths().push_back(
-      (Base + Arch + llvm::sys::path::get_separator() + "lib").str());
+      (Base + SubdirName + llvm::sys::path::get_separator() + "lib").str());
   getFilePaths().push_back(Base + "lib");
   // openSUSE
-  getFilePaths().push_back(Base + Arch + "/sys-root/mingw/lib");
+  getFilePaths().push_back(Base + SubdirName + "/sys-root/mingw/lib");
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
@@ -573,11 +573,12 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (GetRuntimeLibType(DriverArgs) == ToolChain::RLT_Libgcc) {
     // openSUSE
     addSystemInclude(DriverArgs, CC1Args,
-                     Base + Arch + "/sys-root/mingw/include");
+                     Base + SubdirName + "/sys-root/mingw/include");
   }
 
   addSystemInclude(DriverArgs, CC1Args,
-                   Base + Arch + llvm::sys::path::get_separator() + "include");
+                   Base + SubdirName + llvm::sys::path::get_separator() +
+                       "include");
   addSystemInclude(DriverArgs, CC1Args, Base + "include");
 }
 
@@ -596,8 +597,9 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
                                 .str();
     if (getDriver().getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
-    addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
-                                              Slash + "c++" + Slash + "v1");
+    addSystemInclude(DriverArgs, CC1Args,
+                     Base + SubdirName + Slash + "include" + Slash + "c++" +
+                         Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "include" + Slash + "c++" + Slash + "v1");
     break;
@@ -606,9 +608,10 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
   case ToolChain::CST_Libstdcxx:
     llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
     CppIncludeBases.emplace_back(Base);
-    llvm::sys::path::append(CppIncludeBases[0], Arch, "include", "c++");
+    llvm::sys::path::append(CppIncludeBases[0], SubdirName, "include", "c++");
     CppIncludeBases.emplace_back(Base);
-    llvm::sys::path::append(CppIncludeBases[1], Arch, "include", "c++", Ver);
+    llvm::sys::path::append(CppIncludeBases[1], SubdirName, "include", "c++",
+                            Ver);
     CppIncludeBases.emplace_back(Base);
     llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
     CppIncludeBases.emplace_back(GccLibDir);
@@ -616,7 +619,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
       CppIncludeBase += Slash;
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + SubdirName);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
     }
     break;
