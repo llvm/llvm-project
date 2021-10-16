@@ -2014,7 +2014,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     /// the host native double versions.  Float versions are not called
     /// directly but for all these it is true (float)(f((double)arg)) ==
     /// f(arg).  Long double not supported yet.
-    APFloat APF = Op->getValueAPF();
+    const APFloat &APF = Op->getValueAPF();
 
     switch (IntrinsicID) {
       default: break;
@@ -2320,12 +2320,12 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     if (!Ty->isFloatingPointTy())
       return nullptr;
-    APFloat Op1V = Op1->getValueAPF();
+    const APFloat &Op1V = Op1->getValueAPF();
 
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
         return nullptr;
-      APFloat Op2V = Op2->getValueAPF();
+      const APFloat &Op2V = Op2->getValueAPF();
 
       if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
         RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
