@@ -2167,7 +2167,7 @@ public:
     }
     // If any of 'sliceMaskDimSizes' are zero, then set all to zero (masked
     // region is a conjunction of mask dim intervals).
-    if (llvm::any_of(sliceMaskDimSizes, [](int64_t sz) { return sz == 0; }))
+    if (llvm::is_contained(sliceMaskDimSizes, 0))
       sliceMaskDimSizes.assign(maskDimSizes.size(), 0);
 
     // Replace 'extractStridedSliceOp' with ConstantMaskOp with sliced mask
