@@ -1346,24 +1346,33 @@ ConstantRange::shl(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  APInt max = getUnsignedMax();
-  APInt Other_umax = Other.getUnsignedMax();
+  APInt Min = getUnsignedMin();
+  APInt Max = getUnsignedMax();
+  if (const APInt *RHS = Other.getSingleElement()) {
+    unsigned BW = getBitWidth();
+    if (RHS->uge(BW))
+      return getEmpty();
 
-  // If we are shifting by maximum amount of
-  // zero return return the original range.
-  if (Other_umax.isZero())
-    return *this;
-  // there's overflow!
-  if (Other_umax.ugt(max.countLeadingZeros()))
+    unsigned EqualLeadingBits = (Min ^ Max).countLeadingZeros();
+    if (RHS->ule(EqualLeadingBits))
+      return getNonEmpty(Min << *RHS, (Max << *RHS) + 1);
+
+    return getNonEmpty(APInt::getZero(BW),
+                       APInt::getBitsSetFrom(BW, RHS->getZExtValue()) + 1);
+  }
+
+  APInt OtherMax = Other.getUnsignedMax();
+
+  // There's overflow!
+  if (OtherMax.ugt(Max.countLeadingZeros()))
     return getFull();
 
   // FIXME: implement the other tricky cases
 
-  APInt min = getUnsignedMin();
-  min <<= Other.getUnsignedMin();
-  max <<= Other_umax;
+  Min <<= Other.getUnsignedMin();
+  Max <<= OtherMax;
 
-  return ConstantRange(std::move(min), std::move(max) + 1);
+  return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
 }
 
 ConstantRange

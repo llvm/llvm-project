@@ -102,12 +102,8 @@ static bool hasStdClassWithName(const CXXRecordDecl *RD,
                                 ArrayRef<llvm::StringLiteral> Names) {
   if (!RD || !RD->getDeclContext()->isStdNamespace())
     return false;
-  if (RD->getDeclName().isIdentifier()) {
-    StringRef Name = RD->getName();
-    return llvm::any_of(Names, [&Name](StringRef GivenName) -> bool {
-      return Name == GivenName;
-    });
-  }
+  if (RD->getDeclName().isIdentifier())
+    return llvm::is_contained(Names, RD->getName());
   return false;
 }
 

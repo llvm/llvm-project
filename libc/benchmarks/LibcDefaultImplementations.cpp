@@ -15,7 +15,7 @@ extern int bcmp(const void *, const void *, size_t);
 // List of implementations to test.
 
 using llvm::libc_benchmarks::BzeroConfiguration;
-using llvm::libc_benchmarks::MemcmpConfiguration;
+using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
 
@@ -24,13 +24,13 @@ llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
       {__llvm_libc::memcpy, "__llvm_libc::memcpy"}};
   return llvm::makeArrayRef(kMemcpyConfigurations);
 }
-llvm::ArrayRef<MemcmpConfiguration> getMemcmpConfigurations() {
-  static constexpr MemcmpConfiguration kMemcmpConfigurations[] = {
+llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
+  static constexpr MemcmpOrBcmpConfiguration kMemcmpConfiguration[] = {
       {__llvm_libc::memcmp, "__llvm_libc::memcmp"}};
-  return llvm::makeArrayRef(kMemcmpConfigurations);
+  return llvm::makeArrayRef(kMemcmpConfiguration);
 }
-llvm::ArrayRef<MemcmpConfiguration> getBcmpConfigurations() {
-  static constexpr MemcmpConfiguration kBcmpConfigurations[] = {
+llvm::ArrayRef<MemcmpOrBcmpConfiguration> getBcmpConfigurations() {
+  static constexpr MemcmpOrBcmpConfiguration kBcmpConfigurations[] = {
       {__llvm_libc::bcmp, "__llvm_libc::bcmp"}};
   return llvm::makeArrayRef(kBcmpConfigurations);
 }

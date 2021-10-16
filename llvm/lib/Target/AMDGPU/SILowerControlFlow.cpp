@@ -768,8 +768,15 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
     for (auto &I : MBB.instrs())
       LIS->RemoveMachineInstrFromMaps(I);
   }
-  if (MDT)
+  if (MDT) {
+    // If Succ, the single successor of MBB, is dominated by MBB, MDT needs
+    // updating by changing Succ's idom to the one of MBB; otherwise, MBB must
+    // be a leaf node in MDT and could be erased directly.
+    if (MDT->dominates(&MBB, Succ))
+      MDT->changeImmediateDominator(MDT->getNode(Succ),
+                                    MDT->getNode(&MBB)->getIDom());
     MDT->eraseNode(&MBB);
+  }
   MBB.clear();
   MBB.eraseFromParent();
   if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {

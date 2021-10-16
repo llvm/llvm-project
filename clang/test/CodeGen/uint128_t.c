@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin9
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=powerpc64-ibm-aix-xcoff
 
 typedef unsigned long long uint64_t;
 extern uint64_t numer;

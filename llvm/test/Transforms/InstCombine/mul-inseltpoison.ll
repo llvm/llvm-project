@@ -45,8 +45,8 @@ define i32 @neg(i32 %i) {
 
 define i32 @test10(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %c = icmp slt i32 %a, 0
@@ -57,8 +57,8 @@ define i32 @test10(i32 %a, i32 %b) {
 
 define i32 @test11(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %c = icmp sle i32 %a, -1
@@ -72,8 +72,8 @@ declare void @use32(i32)
 define i32 @test12(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[A_LOBIT:%.*]] = lshr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A]], 31
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[A_LOBIT]])
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
@@ -310,8 +310,8 @@ define i32 @mul_bools_mixed_ext_use3(i1 %x, i1 %y) {
 
 define i32 @signbit_mul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @signbit_mul(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %d = lshr i32 %a, 31
@@ -322,8 +322,8 @@ define i32 @signbit_mul(i32 %a, i32 %b) {
 define i32 @signbit_mul_commute_extra_use(i32 %a, i32 %b) {
 ; CHECK-LABEL: @signbit_mul_commute_extra_use(
 ; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A]], 31
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[ISNEG]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[D]])
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
@@ -337,8 +337,8 @@ define i32 @signbit_mul_commute_extra_use(i32 %a, i32 %b) {
 
 define <2 x i32> @signbit_mul_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @signbit_mul_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[A:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[E:%.*]] = and <2 x i32> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[E:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> [[B:%.*]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %d = lshr <2 x i32> %a, <i32 31, i32 31>
@@ -348,8 +348,8 @@ define <2 x i32> @signbit_mul_vec(<2 x i32> %a, <2 x i32> %b) {
 
 define <2 x i32> @signbit_mul_vec_commute(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @signbit_mul_vec_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[A:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[E:%.*]] = and <2 x i32> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[E:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> [[B:%.*]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %d = lshr <2 x i32> %a, <i32 31, i32 31>

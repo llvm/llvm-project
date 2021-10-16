@@ -276,6 +276,17 @@ public:
     return failure();
   }
 
+  /// Parse an optional keyword or string and set instance into 'result'.`
+  ParseResult parseOptionalKeywordOrString(std::string *result) override {
+    StringRef keyword;
+    if (succeeded(parseOptionalKeyword(&keyword))) {
+      *result = keyword.str();
+      return success();
+    }
+
+    return parseOptionalString(result);
+  }
+
   /// Parse a floating point value from the stream.
   ParseResult parseFloat(double &result) override {
     bool isNegative = parser.consumeIf(Token::minus);

@@ -5,30 +5,6 @@ Number,Name,Assignee,Patch,Status,First released version
 `P1868 <https://wg21.link/P1868>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)",Mark de Wever,"`D103413 <https://reviews.llvm.org/D103413>`__ `D103425 <https://reviews.llvm.org/D103425>`__ `D103670 <https://reviews.llvm.org/D103670>`__",|Complete|,Clang 14
 `P2216 <https://wg21.link/P2216>`_,"std::format improvements",Mark de Wever,,|In Progress|,
 `P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``",Mark de Wever,,|In Progress|,
-`LWG-3242 <https://wg21.link/LWG3242>`_,"std::format: missing rules for arg-id in width and precision",Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
-`LWG-3243 <https://wg21.link/LWG3243>`_,"std::format and negative zeroes",,,|Not Started|,
-`LWG-3246 <https://wg21.link/LWG3246>`_,"What are the constraints on the template parameter of basic_format_arg?",,,|Not Started|,
-`LWG-3248 <https://wg21.link/LWG3248>`_,"std::format #b, #B, #o, #x, and #X presentation types misformat negative numbers",Mark de Wever,`D103433 <https://reviews.llvm.org/D103433>`__,|Complete|,Clang 14
-`LWG-3250 <https://wg21.link/LWG3250>`_,"std::format: # (alternate form) for NaN and inf",,,|Not Started|,
-`LWG-3327 <https://wg21.link/LWG3327>`_,"Format alignment specifiers vs. text direction",,,|Nothing To Do|,
-`LWG-3340 <https://wg21.link/LWG3340>`_,"Formatting functions should throw on argument/format string mismatch in [format.functions]",,,|Not Started|,
-`LWG-3371 <https://wg21.link/LWG3371>`_,"visit_format_arg and make_format_args are not hidden friends",Mark de Wever,`D103357 <https://llvm.org/D103357>`__,|Complete|,Clang 14
-`LWG-3372 <https://wg21.link/LWG3372>`_,"vformat_to should not try to deduce Out twice",,,|Not Started|,
-`LWG-3373 <https://wg21.link/LWG3373>`_,"{to,from}_chars_result and format_to_n_result need the 'we really mean what we say'",,,|Not Started|,
-`LWG-3462 <https://wg21.link/LWG3462>`_,"§[formatter.requirements]: Formatter requirements forbid use of fc.arg()",,,|Not Started|,
-`LWG-3539 <https://wg21.link/LWG3539>`_,"format_to must not copy models of output_iterator<const charT&>",,,|Not Started|,
-`LWG-3540 <https://wg21.link/LWG3540>`_,"§[format.arg] There should be no const in basic_format_arg(const T* p)",,,|Not Started|,
-`LWG-3541 <https://wg21.link/LWG3541>`_,"indirectly_readable_traits should be SFINAE-friendly for all types",,,|Not Started|,
-`LWG-3542 <https://wg21.link/LWG3542>`_,"basic_format_arg mishandles basic_string_view with custom traits",,,|Not Started|,
-`LWG-3544 <https://wg21.link/LWG3544>`_,"format-arg-store::args is unintentionally not exposition-only",,,|Not Started|,
-`LWG-3567 <https://wg21.link/LWG3567>`_,"Formatting move-only iterators take two",,,|Not Started|,
 
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting",,,|Not Started|,
 `P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters",,,|Not Started|,
-`LWG-3218 <https://wg21.link/LWG3218>`_,"Modifier for %d parse flag does not match POSIX and format specification",,,|Not Started|,
-`LWG-3230 <https://wg21.link/LWG3230>`_,"Format specifier %y/%Y is missing locale alternative versions",,,|Not Started|,
-`LWG-3241 <https://wg21.link/LWG3241>`_,"chrono-spec grammar ambiguity in [time.format]",,,|Not Started|,
-`LWG-3262 <https://wg21.link/LWG3262>`_,"Formatting of negative durations is not specified",,,|Not Started|,
-`LWG-3270 <https://wg21.link/LWG3270>`_,"Parsing and formatting %j with durations",,,|Not Started|,
-`LWG-3272 <https://wg21.link/LWG3272>`_,"%I%p should parse/format duration since midnight",,,|Not Started|,
-`LWG-3332 <https://wg21.link/LWG3332>`_,"Issue in [time.format]",,,|Not Started|,
