@@ -445,7 +445,9 @@ int omp_get_team_size(int Level) {
   return returnValIfLevelIsActive(Level, state::ParallelTeamSize, 1);
 }
 
-int omp_get_num_threads(void) { return state::ParallelTeamSize; }
+int omp_get_num_threads(void) {
+  return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
+}
 
 int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
 
