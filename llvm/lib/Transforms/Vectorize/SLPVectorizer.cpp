@@ -1640,9 +1640,12 @@ private:
         if (Mask.size() != VL.size() && VL.size() == Scalars.size())
           return std::equal(VL.begin(), VL.end(), Scalars.begin());
         return VL.size() == Mask.size() &&
-               std::equal(
-                   VL.begin(), VL.end(), Mask.begin(),
-                   [Scalars](Value *V, int Idx) { return V == Scalars[Idx]; });
+               std::equal(VL.begin(), VL.end(), Mask.begin(),
+                          [Scalars](Value *V, int Idx) {
+                            return (isa<UndefValue>(V) &&
+                                    Idx == UndefMaskElem) ||
+                                   (Idx != UndefMaskElem && V == Scalars[Idx]);
+                          });
       };
       if (!ReorderIndices.empty()) {
         // TODO: implement matching if the nodes are just reordered, still can

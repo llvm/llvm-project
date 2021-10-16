@@ -106,7 +106,7 @@ def AffineScalarReplacement : FunctionPass<"affine-scalrep"> {
 
     ```mlir
     func @store_load_affine_apply() -> memref<10x10xf32> {
-      %cf7 = constant 7.0 : f32
+      %cf7 = arith.constant 7.0 : f32
       %m = alloc() : memref<10x10xf32>
       affine.for %i0 = 0 to 10 {
         affine.for %i1 = 0 to 10 {
@@ -124,7 +124,7 @@ def AffineScalarReplacement : FunctionPass<"affine-scalrep"> {
     ```mlir
     module {
       func @store_load_affine_apply() -> memref<10x10xf32> {
-        %cst = constant 7.000000e+00 : f32
+        %cst = arith.constant 7.000000e+00 : f32
         %0 = alloc() : memref<10x10xf32>
         affine.for %arg0 = 0 to 10 {
           affine.for %arg1 = 0 to 10 {

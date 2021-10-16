@@ -1369,7 +1369,7 @@ createNewAllocDeallocPairForShapedValue(OpBuilder &b, Location loc,
     b.setInsertionPointToStart(bbArg.getOwner());
     loc = bbArg.getOwner()->getParentOp()->getLoc();
   } else {
-    b.setInsertionPointAfter(shapedValue.getDefiningOp());
+    b.setInsertionPoint(shapedValue.getDefiningOp());
     loc = shapedValue.getDefiningOp()->getLoc();
   }
 

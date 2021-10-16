@@ -285,7 +285,8 @@ StringTable:
 ## Case 19: use the value of the `Length` field for the first 4 bytes of the
 ##          table. We dump the string table from the offset of 0x38.
 # RUN: yaml2obj --docnum=1 %s -DSYMNAME='nameInStrTbl' -DLENGTHVALUE=20 -o %t19
-# RUN: od -A n -t x1 -v -j 0x38 %t19 | FileCheck %s --check-prefix=CASE19
+# RUN: od -A n -t x1 -v -j 0x38 %t19 \
+# RUN:   | FileCheck %s --ignore-case --check-prefix=CASE19
 
 # CASE19:      00 00 00 14 6e 61 6d 65 49 6e 53 74 72 54 62 6c
 # CASE19-NEXT: 00

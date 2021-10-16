@@ -914,7 +914,8 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
    assured that there are enough threads available, because we checked on that
    earlier within critical section forkjoin */
 static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
-                                    kmp_info_t *master_th, int master_gtid) {
+                                    kmp_info_t *master_th, int master_gtid,
+                                    int fork_teams_workers) {
   int i;
   int use_hot_team;
 
@@ -1003,7 +1004,12 @@ static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
     }
 
 #if KMP_AFFINITY_SUPPORTED
-    __kmp_partition_places(team);
+    // Do not partition the places list for teams construct workers who
+    // haven't actually been forked to do real work yet. This partitioning
+    // will take place in the parallel region nested within the teams construct.
+    if (!fork_teams_workers) {
+      __kmp_partition_places(team);
+    }
 #endif
   }
 
@@ -1600,6 +1606,41 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       }
 #endif
 
+      // Figure out the proc_bind policy for the nested parallel within teams
+      kmp_proc_bind_t proc_bind = master_th->th.th_set_proc_bind;
+      // proc_bind_default means don't update
+      kmp_proc_bind_t proc_bind_icv = proc_bind_default;
+      if (master_th->th.th_current_task->td_icvs.proc_bind == proc_bind_false) {
+        proc_bind = proc_bind_false;
+      } else {
+        // No proc_bind clause specified; use current proc-bind-var
+        if (proc_bind == proc_bind_default) {
+          proc_bind = master_th->th.th_current_task->td_icvs.proc_bind;
+        }
+        /* else: The proc_bind policy was specified explicitly on parallel
+           clause.
+           This overrides proc-bind-var for this parallel region, but does not
+           change proc-bind-var. */
+        // Figure the value of proc-bind-var for the child threads.
+        if ((level + 1 < __kmp_nested_proc_bind.used) &&
+            (__kmp_nested_proc_bind.bind_types[level + 1] !=
+             master_th->th.th_current_task->td_icvs.proc_bind)) {
+          proc_bind_icv = __kmp_nested_proc_bind.bind_types[level + 1];
+        }
+      }
+      KMP_CHECK_UPDATE(parent_team->t.t_proc_bind, proc_bind);
+      // Need to change the bind-var ICV to correct value for each implicit task
+      if (proc_bind_icv != proc_bind_default &&
+          master_th->th.th_current_task->td_icvs.proc_bind != proc_bind_icv) {
+        kmp_info_t **other_threads = parent_team->t.t_threads;
+        for (i = 0; i < master_th->th.th_team_nproc; ++i) {
+          other_threads[i]->th.th_current_task->td_icvs.proc_bind =
+              proc_bind_icv;
+        }
+      }
+      // Reset for next parallel region
+      master_th->th.th_set_proc_bind = proc_bind_default;
+
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
       if (((__itt_frame_submit_v3_ptr && __itt_get_timestamp_ptr) ||
            KMP_ITT_DEBUG) &&
@@ -1616,6 +1657,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
       }
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
+#if KMP_AFFINITY_SUPPORTED
+      __kmp_partition_places(parent_team);
+#endif
 
       KF_TRACE(10, ("__kmp_fork_call: before internal fork: root=%p, team=%p, "
                     "master_th=%p, gtid=%d\n",
@@ -1956,15 +2000,20 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
     // Figure out the proc_bind_policy for the new team.
     kmp_proc_bind_t proc_bind = master_th->th.th_set_proc_bind;
-    kmp_proc_bind_t proc_bind_icv =
-        proc_bind_default; // proc_bind_default means don't update
+    // proc_bind_default means don't update
+    kmp_proc_bind_t proc_bind_icv = proc_bind_default;
     if (master_th->th.th_current_task->td_icvs.proc_bind == proc_bind_false) {
       proc_bind = proc_bind_false;
     } else {
+      // No proc_bind clause specified; use current proc-bind-var for this
+      // parallel region
       if (proc_bind == proc_bind_default) {
-        // No proc_bind clause specified; use current proc-bind-var for this
-        // parallel region
         proc_bind = master_th->th.th_current_task->td_icvs.proc_bind;
+      }
+      // Have teams construct take proc_bind value from KMP_TEAMS_PROC_BIND
+      if (master_th->th.th_teams_microtask &&
+          microtask == (microtask_t)__kmp_teams_master) {
+        proc_bind = __kmp_teams_proc_bind;
       }
       /* else: The proc_bind policy was specified explicitly on parallel clause.
          This overrides proc-bind-var for this parallel region, but does not
@@ -1973,7 +2022,11 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       if ((level + 1 < __kmp_nested_proc_bind.used) &&
           (__kmp_nested_proc_bind.bind_types[level + 1] !=
            master_th->th.th_current_task->td_icvs.proc_bind)) {
-        proc_bind_icv = __kmp_nested_proc_bind.bind_types[level + 1];
+        // Do not modify the proc bind icv for the two teams construct forks
+        // They just let the proc bind icv pass through
+        if (!master_th->th.th_teams_microtask ||
+            !(microtask == (microtask_t)__kmp_teams_master || ap == NULL))
+          proc_bind_icv = __kmp_nested_proc_bind.bind_types[level + 1];
       }
     }
 
@@ -2145,7 +2198,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     if (!root->r.r_active) // Only do assignment if it prevents cache ping-pong
       root->r.r_active = TRUE;
 
-    __kmp_fork_team_threads(root, team, master_th, gtid);
+    __kmp_fork_team_threads(root, team, master_th, gtid, !ap);
     __kmp_setup_icv_copy(team, nthreads,
                          &master_th->th.th_current_task->td_icvs, loc);
 
@@ -2414,6 +2467,14 @@ void __kmp_join_call(ident_t *loc, int gtid
   } // active_level == 1
 #endif /* USE_ITT_BUILD */
 
+#if KMP_AFFINITY_SUPPORTED
+  if (!exit_teams) {
+    // Restore master thread's partition.
+    master_th->th.th_first_place = team->t.t_first_place;
+    master_th->th.th_last_place = team->t.t_last_place;
+  }
+#endif // KMP_AFFINITY_SUPPORTED
+
   if (master_th->th.th_teams_microtask && !exit_teams &&
       team->t.t_pkfn != (microtask_t)__kmp_teams_master &&
       team->t.t_level == master_th->th.th_teams_level + 1) {
@@ -2521,11 +2582,6 @@ void __kmp_join_call(ident_t *loc, int gtid
                 master_th, team));
   __kmp_pop_current_task_from_thread(master_th);
 
-#if KMP_AFFINITY_SUPPORTED
-  // Restore master thread's partition.
-  master_th->th.th_first_place = team->t.t_first_place;
-  master_th->th.th_last_place = team->t.t_last_place;
-#endif // KMP_AFFINITY_SUPPORTED
   master_th->th.th_def_allocator = team->t.t_def_allocator;
 
 #if OMPD_SUPPORT
@@ -5019,6 +5075,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
   kmp_team_t *team;
   int use_hot_team = !root->r.r_active;
   int level = 0;
+  int do_place_partition = 1;
 
   KA_TRACE(20, ("__kmp_allocate_team: called\n"));
   KMP_DEBUG_ASSERT(new_nproc >= 1 && argc >= 0);
@@ -5040,6 +5097,12 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         ++level; // not increment if #teams==1, or for outer fork of the teams;
         // increment otherwise
       }
+      // Do not perform the place partition if inner fork of the teams
+      // Wait until nested parallel region encountered inside teams construct
+      if ((master->th.th_teams_size.nteams == 1 &&
+           master->th.th_teams_level >= team->t.t_level) ||
+          (team->t.t_pkfn == (microtask_t)__kmp_teams_master))
+        do_place_partition = 0;
     }
     hot_teams = master->th.th_hot_teams;
     if (level < __kmp_hot_teams_max_level && hot_teams &&
@@ -5077,6 +5140,10 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       __kmp_resize_dist_barrier(team, old_nthr, new_nproc);
     }
 
+    // If not doing the place partition, then reset the team's proc bind
+    // to indicate that partitioning of all threads still needs to take place
+    if (do_place_partition == 0)
+      team->t.t_proc_bind = proc_bind_default;
     // Has the number of threads changed?
     /* Let's assume the most common case is that the number of threads is
        unchanged, and put that case first. */
@@ -5106,16 +5173,20 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       if ((team->t.t_size_changed == 0) &&
           (team->t.t_proc_bind == new_proc_bind)) {
         if (new_proc_bind == proc_bind_spread) {
-          __kmp_partition_places(
-              team, 1); // add flag to update only master for spread
+          if (do_place_partition) {
+            // add flag to update only master for spread
+            __kmp_partition_places(team, 1);
+          }
         }
         KA_TRACE(200, ("__kmp_allocate_team: reusing hot team #%d bindings: "
                        "proc_bind = %d, partition = [%d,%d]\n",
                        team->t.t_id, new_proc_bind, team->t.t_first_place,
                        team->t.t_last_place));
       } else {
-        KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
-        __kmp_partition_places(team);
+        if (do_place_partition) {
+          KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
+          __kmp_partition_places(team);
+        }
       }
 #else
       KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
@@ -5192,10 +5263,12 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       }
 #endif
 
-      KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
+      if (do_place_partition) {
+        KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
 #if KMP_AFFINITY_SUPPORTED
-      __kmp_partition_places(team);
+        __kmp_partition_places(team);
 #endif
+      }
     } else { // team->t.t_nproc < new_nproc
 #if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
       kmp_affin_mask_t *old_mask;
@@ -5331,10 +5404,12 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       }
 #endif
 
-      KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
+      if (do_place_partition) {
+        KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
 #if KMP_AFFINITY_SUPPORTED
-      __kmp_partition_places(team);
+        __kmp_partition_places(team);
 #endif
+      }
     } // Check changes in number of threads
 
     kmp_info_t *master = team->t.t_threads[0];

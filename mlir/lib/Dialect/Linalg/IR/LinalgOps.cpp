@@ -886,7 +886,7 @@ namespace {
 /// defined as dynamic, but the size was defined using a `constant` op. For
 /// example
 ///
-///  %c5 = constant 5: index
+///  %c5 = arith.constant 5: index
 ///  %0 = linalg.init_tensor [%arg0, %c5] : tensor<?x?xf32>
 ///
 ///  to

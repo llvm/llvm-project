@@ -1795,14 +1795,19 @@ int testTypeID(MlirContext ctx) {
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
       mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.constant"), loc);
+      mlirStringRefCreateFromCString("arith.constant"), loc);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
 
+  if (!mlirOperationVerify(constZero)) {
+    fprintf(stderr, "ERROR: Expected operation to verify correctly\n");
+    return 5;
+  }
+
   if (mlirOperationIsNull(constZero)) {
     fprintf(stderr, "ERROR: Expected registered operation to be present\n");
-    return 5;
+    return 6;
   }
 
   MlirTypeID registeredOpID = mlirOperationGetTypeID(constZero);
@@ -1810,7 +1815,7 @@ int testTypeID(MlirContext ctx) {
   if (mlirTypeIDIsNull(registeredOpID)) {
     fprintf(stderr,
             "ERROR: Expected registered operation type id to be present\n");
-    return 6;
+    return 7;
   }
 
   // Create an unregistered operation, which should not have a type id.
@@ -1820,7 +1825,7 @@ int testTypeID(MlirContext ctx) {
   MlirOperation unregisteredOp = mlirOperationCreate(&opState);
   if (mlirOperationIsNull(unregisteredOp)) {
     fprintf(stderr, "ERROR: Expected unregistered operation to be present\n");
-    return 7;
+    return 8;
   }
 
   MlirTypeID unregisteredOpID = mlirOperationGetTypeID(unregisteredOp);
@@ -1828,7 +1833,7 @@ int testTypeID(MlirContext ctx) {
   if (!mlirTypeIDIsNull(unregisteredOpID)) {
     fprintf(stderr,
             "ERROR: Expected unregistered operation type id to be null\n");
-    return 8;
+    return 9;
   }
 
   mlirOperationDestroy(constZero);

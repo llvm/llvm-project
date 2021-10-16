@@ -7,7 +7,17 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard Bitmanip
-// extensions, version 0.93.
+// extensions, versions:
+//   Zba - 1.0
+//   Zbb - 1.0
+//   Zbc - 1.0
+//   Zbs - 1.0
+//   Zbe - 0.93
+//   Zbf - 0.93
+//   Zbm - 0.93
+//   Zbp - 0.93
+//   Zbr - 0.93
+//   Zbt - 0.93
 // This version is still experimental as the Bitmanip extensions haven't been
 // ratified yet.
 //
@@ -485,15 +495,6 @@ def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">,
             Sched<[WriteRotateReg32, ReadRotateReg32, ReadRotateReg32]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
-let Predicates = [HasStdExtZbs, IsRV64] in {
-// NOTE: These instructions have been removed from the 0.94 spec. As a result
-// we have no isel patterns for them.
-def BCLRW : ALUW_rr<0b0100100, 0b001, "bclrw">, Sched<[]>;
-def BSETW : ALUW_rr<0b0010100, 0b001, "bsetw">, Sched<[]>;
-def BINVW : ALUW_rr<0b0110100, 0b001, "binvw">, Sched<[]>;
-def BEXTW : ALUW_rr<0b0100100, 0b101, "bextw">, Sched<[]>;
-} // Predicates = [HasStdExtZbs, IsRV64]
-
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def GORCW  : ALUW_rr<0b0010100, 0b101, "gorcw">, Sched<[]>;
 def GREVW  : ALUW_rr<0b0110100, 0b101, "grevw">, Sched<[]>;
@@ -506,17 +507,6 @@ def XPERMW : ALU_rr<0b0010100, 0b000, "xperm.w">, Sched<[]>;
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
 def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">,
             Sched<[WriteRotateImm32, ReadRotateImm32]>;
-
-let Predicates = [HasStdExtZbs, IsRV64] in {
-// NOTE: These instructions have been removed from the 0.94 spec. As a result
-// we have no isel patterns for them.
-def BCLRIW : RVBShiftW_ri<0b0100100, 0b001, OPC_OP_IMM_32, "bclriw">,
-              Sched<[]>;
-def BSETIW : RVBShiftW_ri<0b0010100, 0b001, OPC_OP_IMM_32, "bsetiw">,
-              Sched<[]>;
-def BINVIW : RVBShiftW_ri<0b0110100, 0b001, OPC_OP_IMM_32, "binviw">,
-              Sched<[]>;
-} // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def GORCIW : RVBShiftW_ri<0b0010100, 0b101, OPC_OP_IMM_32, "gorciw">, Sched<[]>;
@@ -615,8 +605,6 @@ def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-// NOTE: The 0.93 spec shows zext.w as an alias of pack/packw. It has been
-// changed to add.uw in a draft after 0.94.
 def : InstAlias<"zext.w $rd, $rs", (ADDUW GPR:$rd, GPR:$rs, X0)>;
 }
 

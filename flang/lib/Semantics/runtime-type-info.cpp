@@ -637,7 +637,7 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
     object.set_type(scope.MakeCharacterType(
         ParamValue{len, common::TypeParamAttr::Len}, KindExpr{1}));
   }
-  using Ascii = evaluate::Type<TypeCategory::Character, 1>;
+  using evaluate::Ascii;
   using AsciiExpr = evaluate::Expr<Ascii>;
   object.set_init(evaluate::AsGenericExpr(AsciiExpr{name}));
   Symbol &symbol{*scope

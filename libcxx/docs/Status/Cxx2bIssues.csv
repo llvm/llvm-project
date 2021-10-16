@@ -110,7 +110,7 @@
 `3407 <https://wg21.link/LWG3407>`__,"Some problems with the wording changes of P1739R4","October 2021","",""
 `3422 <https://wg21.link/LWG3422>`__,"Issues of ``seed_seq``'s constructors","October 2021","",""
 `3470 <https://wg21.link/LWG3470>`__,"``convertible-to-non-slicing`` seems to reject valid case","October 2021","",""
-`3480 <https://wg21.link/LWG3480>`__,"``directory_iterator`` and ``recursive_directory_iterator`` are not C++20 ranges","October 2021","",""
+`3480 <https://wg21.link/LWG3480>`__,"``directory_iterator`` and ``recursive_directory_iterator`` are not C++20 ranges","October 2021","|Complete|","14.0"
 `3498 <https://wg21.link/LWG3498>`__,"Inconsistent ``noexcept``-specifiers for ``basic_syncbuf``","October 2021","",""
 `3535 <https://wg21.link/LWG3535>`__,"``join_view::iterator::iterator_category`` and ``::iterator_concept`` lie","October 2021","",""
 `3554 <https://wg21.link/LWG3554>`__,"``chrono::parse`` needs ``const charT*`` and ``basic_string_view<charT>`` overloads","October 2021","",""

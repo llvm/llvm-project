@@ -11,7 +11,7 @@
 /*
     filesystem synopsis
 
-    namespace std { namespace filesystem {
+    namespace std::filesystem {
 
     class path;
 
@@ -48,13 +48,13 @@
 
     // enable directory_iterator range-based for statements
     directory_iterator begin(directory_iterator iter) noexcept;
-    directory_iterator end(const directory_iterator&) noexcept;
+    directory_iterator end(directory_iterator) noexcept;
 
     class recursive_directory_iterator;
 
     // enable recursive_directory_iterator range-based for statements
     recursive_directory_iterator begin(recursive_directory_iterator iter) noexcept;
-    recursive_directory_iterator end(const recursive_directory_iterator&) noexcept;
+    recursive_directory_iterator end(recursive_directory_iterator) noexcept;
 
     class file_status;
 
@@ -224,14 +224,25 @@
     path weakly_canonical(path const& p);
     path weakly_canonical(path const& p, error_code& ec);
 
+} // namespace std::filesystem
 
-} }  // namespaces std::filesystem
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
+
+template <>
+inline constexpr bool std::ranges::enable_view<std::filesystem::directory_iterator> = true;
+template <>
+inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
 
 */
 
 #include <__availability>
 #include <__config>
 #include <__debug>
+#include <__ranges/enable_borrowed_range.h>
+#include <__ranges/enable_view.h>
 #include <__utility/forward.h>
 #include <chrono>
 #include <compare>
@@ -2869,7 +2880,7 @@ begin(directory_iterator __iter) noexcept {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY directory_iterator
-end(const directory_iterator&) noexcept {
+end(directory_iterator) noexcept {
   return directory_iterator();
 }
 
@@ -3001,13 +3012,25 @@ begin(recursive_directory_iterator __iter) noexcept {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY recursive_directory_iterator
-end(const recursive_directory_iterator&) noexcept {
+end(recursive_directory_iterator) noexcept {
   return recursive_directory_iterator();
 }
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+template <>
+inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::directory_iterator> = true;
+template <>
+inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::recursive_directory_iterator> = true;
+
+template <>
+inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> = true;
+template <>
+inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::recursive_directory_iterator> = true;
+#endif
 
 #endif // !_LIBCPP_CXX03_LANG
 
