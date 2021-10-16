@@ -25,12 +25,9 @@ struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   u32 link;
-  atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
+  u32 tag;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
-  static const u32 kUseCountBits = 20;
-  static const u32 kMaxUseCount = 1 << kUseCountBits;
-  static const u32 kUseCountMask = (1 << kUseCountBits) - 1;
 
   typedef StackTrace args_type;
   bool eq(hash_type hash, const args_type &args) const {
@@ -53,19 +50,6 @@ struct StackDepotNode {
   typedef StackDepotHandle handle_type;
 };
 
-COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
-
-int StackDepotHandle::use_count() const {
-  return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
-         StackDepotNode::kUseCountMask;
-}
-void StackDepotHandle::inc_use_count_unsafe() {
-  u32 prev =
-      atomic_fetch_add(&node_->tag_and_use_count, 1, memory_order_relaxed) &
-      StackDepotNode::kUseCountMask;
-  CHECK_LT(prev + 1, StackDepotNode::kMaxUseCount);
-}
-
 // FIXME(dvyukov): this single reserved bit is used in TSan.
 typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
@@ -74,15 +58,27 @@ static StackDepot theDepot;
 // caching efficiency.
 static TwoLevelMap<uptr *, StackDepot::kNodesSize1, StackDepot::kNodesSize2>
     tracePtrs;
+// Keep mutable data out of frequently access nodes to improve caching
+// efficiency.
+static TwoLevelMap<atomic_uint32_t, StackDepot::kNodesSize1,
+                   StackDepot::kNodesSize2>
+    useCounts;
+
+int StackDepotHandle::use_count() const {
+  return atomic_load_relaxed(&useCounts[id_]);
+}
+
+void StackDepotHandle::inc_use_count_unsafe() {
+  atomic_fetch_add(&useCounts[id_], 1, memory_order_relaxed);
+}
 
 uptr StackDepotNode::allocated() {
-  return traceAllocator.allocated() + tracePtrs.MemoryUsage();
+  return traceAllocator.allocated() + tracePtrs.MemoryUsage() +
+         useCounts.MemoryUsage();
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
-  CHECK_EQ(args.tag & (~kUseCountMask >> kUseCountBits), args.tag);
-  atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
-               memory_order_relaxed);
+  tag = args.tag;
   stack_hash = hash;
   uptr *stack_trace = traceAllocator.alloc(args.size + 1);
   *stack_trace = args.size;
@@ -94,8 +90,6 @@ StackDepotNode::args_type StackDepotNode::load(u32 id) const {
   const uptr *stack_trace = tracePtrs[id];
   if (!stack_trace)
     return {};
-  u32 tag =
-      atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
   return args_type(stack_trace + 1, *stack_trace, tag);
 }
 
