@@ -18380,6 +18380,17 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(IntNo, A->getType());
     return Builder.CreateCall(Callee, {A, B, C});
   }
+  case WebAssembly::BI__builtin_wasm_laneselect_i8x16:
+  case WebAssembly::BI__builtin_wasm_laneselect_i16x8:
+  case WebAssembly::BI__builtin_wasm_laneselect_i32x4:
+  case WebAssembly::BI__builtin_wasm_laneselect_i64x2: {
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_laneselect, A->getType());
+    return Builder.CreateCall(Callee, {A, B, C});
+  }
   default:
     return nullptr;
   }
