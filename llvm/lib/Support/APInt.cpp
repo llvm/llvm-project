@@ -1952,8 +1952,9 @@ APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
 APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
   APInt Res = *this * RHS;
 
-  if (*this != 0 && RHS != 0)
-    Overflow = Res.sdiv(RHS) != *this || Res.sdiv(*this) != RHS;
+  if (RHS != 0)
+    Overflow = Res.sdiv(RHS) != *this ||
+               (isMinSignedValue() && RHS.isAllOnes());
   else
     Overflow = false;
   return Res;
