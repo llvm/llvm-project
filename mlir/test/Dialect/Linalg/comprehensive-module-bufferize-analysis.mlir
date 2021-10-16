@@ -278,6 +278,32 @@ func @extract_slice_to_linalg_write_use(
   return %D, %E: tensor<4x4xf32>, tensor<4x4xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @insert_slice_double_extract_slice
+func @insert_slice_double_extract_slice(
+    %s1: index, %s2: index, %s3: index, %s4: index, %A: tensor<8x6xf32>,
+    %B: tensor<6x6xf32>, %C: tensor<30x20xf32> {linalg.inplaceable = true})
+        -> tensor<30x20xf32> {
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %15 = tensor.extract_slice %C[%s3, %s4] [%s1, %s2] [1, 1] : tensor<30x20xf32> to tensor<?x?xf32>
+
+  //      CHECK: linalg.matmul
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %18 = linalg.matmul ins(%A, %B : tensor<8x6xf32>, tensor<6x6xf32>) outs(%15 : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %19 = tensor.extract_slice %18[0, 0] [%s1, %s2] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %20 = tensor.insert_slice %19 into %C[%s3, %s4] [%s1, %s2] [1, 1] : tensor<?x?xf32> into tensor<30x20xf32>
+
+  return %20 : tensor<30x20xf32>
+}
+
 //===----------------------------------------------------------------------===//
 // Transitive cases
 //===----------------------------------------------------------------------===//

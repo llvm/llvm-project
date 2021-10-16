@@ -1193,9 +1193,6 @@ bool BufferizationAliasInfo::areEquivalentExtractSliceOps(
     return false;
   if (!sameOffsetsSizesAndStrides(st, sti, isEqualConstantIntOrValue))
     return false;
-  // TODO: Is the following needed?
-  if (!equivalentInfo.isEquivalent(st.result(), sti.source()))
-    return false;
   return true;
 }
 
