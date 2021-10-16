@@ -19,7 +19,7 @@ test_mm_malloc() {
 
 // CHECK-LABEL: @test_mm_malloc
 
-// CHECK: define internal i8* @_mm_malloc(i64 [[REG1:[0-9a-zA-Z_%.]+]], i64 [[REG2:[0-9a-zA-Z_%.]+]])
+// CHECK: define internal i8* @_mm_malloc(i64 noundef [[REG1:[0-9a-zA-Z_%.]+]], i64 noundef [[REG2:[0-9a-zA-Z_%.]+]])
 // CHECK: [[REG3:[0-9a-zA-Z_%.]+]] = alloca i8*, align 8
 // CHECK: store i64 [[REG1]], i64* [[REG4:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG2]], i64* [[REG5:[0-9a-zA-Z_%.]+]], align 8
