@@ -453,7 +453,7 @@ defm : SLMWriteResPair<WriteAESIMC,    [SLM_FPC_RSV0], 8, [5]>;
 defm : SLMWriteResPair<WriteAESKeyGen, [SLM_FPC_RSV0], 8, [5]>;
 
 // Carry-less multiplication instructions.
-defm : SLMWriteResPair<WriteCLMul, [SLM_FPC_RSV0], 10, [10]>;
+defm : SLMWriteResPair<WriteCLMul, [SLM_FPC_RSV0], 10, [10], 8, 1>;
 
 def : WriteRes<WriteSystem,     [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [SLM_FPC_RSV0]> { let Latency = 100; }
