@@ -110,6 +110,13 @@ Attribute Changes in Clang
   attribute is handled instead, e.g. in ``handleDeclAttribute``.
   (This was changed in order to better support attributes in code completion).
 
+- __has_cpp_attribute, __has_c_attribute, __has_attribute, and __has_declspec
+  will now macro expand their argument. This causes a change in behavior for
+  code using ``__has_cpp_attribute(__clang__::attr)`` (and same for
+  ``__has_c_attribute``) where it would previously expand to ``0`` for all
+  attributes, but will now issue an error due to the expansion of the
+  predefined ``__clang__`` macro.
+
 Windows Support
 ---------------
 
