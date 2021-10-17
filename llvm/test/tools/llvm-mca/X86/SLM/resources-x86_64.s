@@ -1183,21 +1183,21 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  10     13    10.00   *                   bsrq	(%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        bswapl	%eax
 # CHECK-NEXT:  1      1     0.50                        bswapq	%rax
-# CHECK-NEXT:  1      1     0.50                        btw	%si, %di
-# CHECK-NEXT:  1      1     0.50                        btcw	%si, %di
-# CHECK-NEXT:  1      1     0.50                        btrw	%si, %di
-# CHECK-NEXT:  1      1     0.50                        btsw	%si, %di
-# CHECK-NEXT:  1      4     1.00    *                   btw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btcw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btrw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btsw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btcw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btrw	%si, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btsw	%si, (%rax)
-# CHECK-NEXT:  1      1     0.50                        btw	$7, %di
-# CHECK-NEXT:  1      1     0.50                        btcw	$7, %di
-# CHECK-NEXT:  1      1     0.50                        btrw	$7, %di
-# CHECK-NEXT:  1      1     0.50                        btsw	$7, %di
+# CHECK-NEXT:  1      1     1.00                        btw	%si, %di
+# CHECK-NEXT:  1      1     1.00                        btcw	%si, %di
+# CHECK-NEXT:  1      1     1.00                        btrw	%si, %di
+# CHECK-NEXT:  1      1     1.00                        btsw	%si, %di
+# CHECK-NEXT:  7      4     1.00    *                   btw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btcw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btrw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btsw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btcw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btrw	%si, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btsw	%si, (%rax)
+# CHECK-NEXT:  1      1     1.00                        btw	$7, %di
+# CHECK-NEXT:  1      1     1.00                        btcw	$7, %di
+# CHECK-NEXT:  1      1     1.00                        btrw	$7, %di
+# CHECK-NEXT:  1      1     1.00                        btsw	$7, %di
 # CHECK-NEXT:  1      4     1.00    *                   btw	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btcw	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btrw	$7, (%rax)
@@ -1205,21 +1205,21 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btcw	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btrw	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btsw	$7, (%rax)
-# CHECK-NEXT:  1      1     0.50                        btl	%esi, %edi
-# CHECK-NEXT:  1      1     0.50                        btcl	%esi, %edi
-# CHECK-NEXT:  1      1     0.50                        btrl	%esi, %edi
-# CHECK-NEXT:  1      1     0.50                        btsl	%esi, %edi
-# CHECK-NEXT:  1      4     1.00    *                   btl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btcl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btrl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btsl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btcl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btrl	%esi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btsl	%esi, (%rax)
-# CHECK-NEXT:  1      1     0.50                        btl	$7, %edi
-# CHECK-NEXT:  1      1     0.50                        btcl	$7, %edi
-# CHECK-NEXT:  1      1     0.50                        btrl	$7, %edi
-# CHECK-NEXT:  1      1     0.50                        btsl	$7, %edi
+# CHECK-NEXT:  1      1     1.00                        btl	%esi, %edi
+# CHECK-NEXT:  1      1     1.00                        btcl	%esi, %edi
+# CHECK-NEXT:  1      1     1.00                        btrl	%esi, %edi
+# CHECK-NEXT:  1      1     1.00                        btsl	%esi, %edi
+# CHECK-NEXT:  7      4     1.00    *                   btl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btcl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btrl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btsl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btcl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btrl	%esi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btsl	%esi, (%rax)
+# CHECK-NEXT:  1      1     1.00                        btl	$7, %edi
+# CHECK-NEXT:  1      1     1.00                        btcl	$7, %edi
+# CHECK-NEXT:  1      1     1.00                        btrl	$7, %edi
+# CHECK-NEXT:  1      1     1.00                        btsl	$7, %edi
 # CHECK-NEXT:  1      4     1.00    *                   btl	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btcl	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btrl	$7, (%rax)
@@ -1227,21 +1227,21 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btcl	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btrl	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            lock		btsl	$7, (%rax)
-# CHECK-NEXT:  1      1     0.50                        btq	%rsi, %rdi
-# CHECK-NEXT:  1      1     0.50                        btcq	%rsi, %rdi
-# CHECK-NEXT:  1      1     0.50                        btrq	%rsi, %rdi
-# CHECK-NEXT:  1      1     0.50                        btsq	%rsi, %rdi
-# CHECK-NEXT:  1      4     1.00    *                   btq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btcq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btrq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            btsq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btcq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btrq	%rsi, (%rax)
-# CHECK-NEXT:  1      4     2.00    *      *            lock		btsq	%rsi, (%rax)
-# CHECK-NEXT:  1      1     0.50                        btq	$7, %rdi
-# CHECK-NEXT:  1      1     0.50                        btcq	$7, %rdi
-# CHECK-NEXT:  1      1     0.50                        btrq	$7, %rdi
-# CHECK-NEXT:  1      1     0.50                        btsq	$7, %rdi
+# CHECK-NEXT:  1      1     1.00                        btq	%rsi, %rdi
+# CHECK-NEXT:  1      1     1.00                        btcq	%rsi, %rdi
+# CHECK-NEXT:  1      1     1.00                        btrq	%rsi, %rdi
+# CHECK-NEXT:  1      1     1.00                        btsq	%rsi, %rdi
+# CHECK-NEXT:  7      4     1.00    *                   btq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btcq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btrq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            btsq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btcq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btrq	%rsi, (%rax)
+# CHECK-NEXT:  7      4     2.00    *      *            lock		btsq	%rsi, (%rax)
+# CHECK-NEXT:  1      1     1.00                        btq	$7, %rdi
+# CHECK-NEXT:  1      1     1.00                        btcq	$7, %rdi
+# CHECK-NEXT:  1      1     1.00                        btrq	$7, %rdi
+# CHECK-NEXT:  1      1     1.00                        btsq	$7, %rdi
 # CHECK-NEXT:  1      4     1.00    *                   btq	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  1      4     2.00    *      *            btrq	$7, (%rax)
@@ -1953,7 +1953,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -     49.00   -     627.00 565.00 835.00
+# CHECK-NEXT: 400.00  -      -     49.00   -     660.00 598.00 835.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -2110,72 +2110,72 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     10.00  10.00  1.00   bsrq	(%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     bswapl	%eax
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     bswapq	%rax
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btw	%si, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcw	%si, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrw	%si, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsw	%si, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsw	%si, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btw	$7, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcw	$7, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrw	$7, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsw	$7, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsw	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btl	%esi, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcl	%esi, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrl	%esi, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsl	%esi, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsl	%esi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btl	$7, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcl	$7, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrl	$7, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsl	$7, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsl	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsq	%rsi, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btq	$7, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcq	$7, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrq	$7, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsq	$7, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btcq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btrq	$7, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   lock		btsq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btw	%si, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcw	%si, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrw	%si, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsw	%si, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsw	%si, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btw	$7, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcw	$7, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrw	$7, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsw	$7, %di
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsl	%esi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btl	$7, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcl	$7, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrl	$7, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsl	$7, %edi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsq	%rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btq	$7, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btcq	$7, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btrq	$7, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     btsq	$7, %rdi
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   1.00   btq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btcq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btrq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   btsq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btcq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btrq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   lock		btsq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cbtw
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cwtl
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     cltq
