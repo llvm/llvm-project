@@ -129,6 +129,9 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
+- The value of ``__STDC_VERSION__`` has been bumped to ``202000L`` when passing
+  ``-std=c2x`` so that it can be distinguished from C17 mode. This value is
+  expected to change again when C23 is published.
 - Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
   are now ill-formed in all language modes. The motivation for this change is outlined in
   `P2362 <wg21.link/P2362>`_.
