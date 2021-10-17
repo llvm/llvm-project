@@ -7,450 +7,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "ToolChains/CommonArgs.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
-#include "llvm/Option/ArgList.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ToolChains/CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-namespace {
-// Represents the major and version number components of a RISC-V extension
-struct RISCVExtensionVersion {
-  StringRef Major;
-  StringRef Minor;
-};
-} // end anonymous namespace
-
-static StringRef getExtensionTypeDesc(StringRef Ext) {
-  if (Ext.startswith("sx"))
-    return "non-standard supervisor-level extension";
-  if (Ext.startswith("s"))
-    return "standard supervisor-level extension";
-  if (Ext.startswith("x"))
-    return "non-standard user-level extension";
-  if (Ext.startswith("z"))
-    return "standard user-level extension";
-  return StringRef();
-}
-
-static StringRef getExtensionType(StringRef Ext) {
-  if (Ext.startswith("sx"))
-    return "sx";
-  if (Ext.startswith("s"))
-    return "s";
-  if (Ext.startswith("x"))
-    return "x";
-  if (Ext.startswith("z"))
-    return "z";
-  return StringRef();
-}
-
-// If the extension is supported as experimental, return the version of that
-// extension that the compiler currently supports.
-static Optional<RISCVExtensionVersion>
-isExperimentalExtension(StringRef Ext) {
-  if (Ext == "zba" || Ext == "zbb" || Ext == "zbc" || Ext == "zbs")
-    return RISCVExtensionVersion{"1", "0"};
-  if (Ext == "zbe" || Ext == "zbf" || Ext == "zbm" || Ext == "zbp" ||
-      Ext == "zbr" || Ext == "zbt")
-    return RISCVExtensionVersion{"0", "93"};
-  if (Ext == "v" || Ext == "zvamo" || Ext == "zvlsseg")
-    return RISCVExtensionVersion{"0", "10"};
-  if (Ext == "zfh")
-    return RISCVExtensionVersion{"0", "1"};
-  return None;
-}
-
-static bool isSupportedExtension(StringRef Ext) {
-  // LLVM supports "z" extensions which are marked as experimental.
-  if (isExperimentalExtension(Ext))
-    return true;
-
-  // LLVM does not support "sx", "s" nor "x" extensions.
-  return false;
-}
-
-// Extensions may have a version number, and may be separated by
-// an underscore '_' e.g.: rv32i2_m2.
-// Version number is divided into major and minor version numbers,
-// separated by a 'p'. If the minor version is 0 then 'p0' can be
-// omitted from the version string. E.g., rv32i2p0, rv32i2, rv32i2p1.
-static bool getExtensionVersion(const Driver &D, const ArgList &Args,
-                                StringRef MArch, StringRef Ext, StringRef In,
-                                std::string &Major, std::string &Minor) {
-  Major = std::string(In.take_while(isDigit));
-  In = In.substr(Major.size());
-
-  if (Major.size() && In.consume_front("p")) {
-    Minor = std::string(In.take_while(isDigit));
-    In = In.substr(Major.size() + 1);
-
-    // Expected 'p' to be followed by minor version number.
-    if (Minor.empty()) {
-      std::string Error =
-        "minor version number missing after 'p' for extension";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
-      return false;
-    }
-  }
-
-  // Expected multi-character extension with version number to have no
-  // subsequent characters (i.e. must either end string or be followed by
-  // an underscore).
-  if (Ext.size() > 1 && In.size()) {
-    std::string Error =
-        "multi-character extensions must be separated by underscores";
-    D.Diag(diag::err_drv_invalid_riscv_ext_arch_name) << MArch << Error << In;
-    return false;
-  }
-
-  // If experimental extension, require use of current version number number
-  if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
-    if (!Args.hasArg(options::OPT_menable_experimental_extensions)) {
-      std::string Error =
-          "requires '-menable-experimental-extensions' for experimental extension";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-          << MArch << Error << Ext;
-      return false;
-    } else if (Major.empty() && Minor.empty()) {
-      std::string Error =
-          "experimental extension requires explicit version number";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-          << MArch << Error << Ext;
-      return false;
-    }
-    auto SupportedVers = *ExperimentalExtension;
-    if (Major != SupportedVers.Major || Minor != SupportedVers.Minor) {
-      std::string Error =
-          "unsupported version number " + Major;
-      if (!Minor.empty())
-        Error += "." + Minor;
-      Error += " for experimental extension (this compiler supports "
-            + SupportedVers.Major.str() + "."
-            + SupportedVers.Minor.str() + ")";
-
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-          << MArch << Error << Ext;
-      return false;
-    }
-    return true;
-  }
-
-  // Allow extensions to declare no version number
-  if (Major.empty() && Minor.empty())
-    return true;
-
-  // TODO: Handle supported extensions with version number.
-  std::string Error = "unsupported version number " + Major;
-  if (!Minor.empty())
-    Error += "." + Minor;
-  Error += " for extension";
-  D.Diag(diag::err_drv_invalid_riscv_ext_arch_name) << MArch << Error << Ext;
-
-  return false;
-}
-
-// Handle other types of extensions other than the standard
-// general purpose and standard user-level extensions.
-// Parse the ISA string containing non-standard user-level
-// extensions, standard supervisor-level extensions and
-// non-standard supervisor-level extensions.
-// These extensions start with 'z', 'x', 's', 'sx' prefixes, follow a
-// canonical order, might have a version number (major, minor)
-// and are separated by a single underscore '_'.
-// Set the hardware features for the extensions that are supported.
-static void getExtensionFeatures(const Driver &D,
-                                 const ArgList &Args,
-                                 std::vector<StringRef> &Features,
-                                 StringRef &MArch, StringRef &Exts) {
-  if (Exts.empty())
-    return;
-
-  // Multi-letter extensions are seperated by a single underscore
-  // as described in RISC-V User-Level ISA V2.2.
-  SmallVector<StringRef, 8> Split;
-  Exts.split(Split, StringRef("_"));
-
-  SmallVector<StringRef, 4> Prefix{"z", "x", "s", "sx"};
-  auto I = Prefix.begin();
-  auto E = Prefix.end();
-
-  SmallVector<StringRef, 8> AllExts;
-
-  for (StringRef Ext : Split) {
-    if (Ext.empty()) {
-      D.Diag(diag::err_drv_invalid_riscv_arch_name) << MArch
-        << "extension name missing after separator '_'";
-      return;
-    }
-
-    StringRef Type = getExtensionType(Ext);
-    StringRef Desc = getExtensionTypeDesc(Ext);
-    auto Pos = Ext.find_if(isDigit);
-    StringRef Name(Ext.substr(0, Pos));
-    StringRef Vers(Ext.substr(Pos));
-
-    if (Type.empty()) {
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << "invalid extension prefix" << Ext;
-      return;
-    }
-
-    // Check ISA extensions are specified in the canonical order.
-    while (I != E && *I != Type)
-      ++I;
-
-    if (I == E) {
-      std::string Error = std::string(Desc);
-      Error += " not given in canonical order";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch <<  Error << Ext;
-      return;
-    }
-
-    // The order is OK, do not advance I to the next prefix
-    // to allow repeated extension type, e.g.: rv32ixabc_xdef.
-
-    if (Name.size() == Type.size()) {
-      std::string Error = std::string(Desc);
-      Error += " name missing after";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Type;
-      return;
-    }
-
-    std::string Major, Minor;
-    if (!getExtensionVersion(D, Args, MArch, Name, Vers, Major, Minor))
-      return;
-
-    // Check if duplicated extension.
-    if (llvm::is_contained(AllExts, Name)) {
-      std::string Error = "duplicated ";
-      Error += Desc;
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Name;
-      return;
-    }
-
-    // Extension format is correct, keep parsing the extensions.
-    // TODO: Save Type, Name, Major, Minor to avoid parsing them later.
-    AllExts.push_back(Name);
-  }
-
-  // Set target features.
-  // TODO: Hardware features to be handled in Support/TargetParser.cpp.
-  // TODO: Use version number when setting target features.
-  for (auto Ext : AllExts) {
-    if (!isSupportedExtension(Ext)) {
-      StringRef Desc = getExtensionTypeDesc(getExtensionType(Ext));
-      std::string Error = "unsupported ";
-      Error += Desc;
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
-      return;
-    }
-    if (Ext == "zvlsseg") {
-      Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvlsseg");
-    } else if (Ext == "zvamo") {
-      Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvlsseg");
-      Features.push_back("+experimental-zvamo");
-    } else if (isExperimentalExtension(Ext))
-      Features.push_back(Args.MakeArgString("+experimental-" + Ext));
-    else
-      Features.push_back(Args.MakeArgString("+" + Ext));
-  }
-}
-
 // Returns false if an error is diagnosed.
-static bool getArchFeatures(const Driver &D, StringRef MArch,
+static bool getArchFeatures(const Driver &D, StringRef Arch,
                             std::vector<StringRef> &Features,
                             const ArgList &Args) {
-  // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(MArch, [](char c) { return isupper(c); })) {
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "string must be lowercase";
+  bool EnableExperimentalExtensions =
+      Args.hasArg(options::OPT_menable_experimental_extensions);
+  auto ISAInfo =
+      llvm::RISCVISAInfo::parseArchString(Arch, EnableExperimentalExtensions);
+  if (!ISAInfo) {
+    handleAllErrors(ISAInfo.takeError(), [&](llvm::StringError &ErrMsg) {
+      D.Diag(diag::err_drv_invalid_riscv_arch_name)
+          << Arch << ErrMsg.getMessage();
+    });
+
     return false;
   }
 
-  // ISA string must begin with rv32 or rv64.
-  if (!(MArch.startswith("rv32") || MArch.startswith("rv64")) ||
-      (MArch.size() < 5)) {
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "string must begin with rv32{i,e,g} or rv64{i,g}";
-    return false;
-  }
-
-  bool HasRV64 = MArch.startswith("rv64");
-
-  // The canonical order specified in ISA manual.
-  // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
-  StringRef StdExts = "mafdqlcbjtpvn";
-  bool HasF = false, HasD = false;
-  char Baseline = MArch[4];
-
-  // First letter should be 'e', 'i' or 'g'.
-  switch (Baseline) {
-  default:
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "first letter should be 'e', 'i' or 'g'";
-    return false;
-  case 'e': {
-    StringRef Error;
-    // Currently LLVM does not support 'e'.
-    // Extension 'e' is not allowed in rv64.
-    if (HasRV64)
-      Error = "standard user-level extension 'e' requires 'rv32'";
-    else
-      Error = "unsupported standard user-level extension 'e'";
-    D.Diag(diag::err_drv_invalid_riscv_arch_name) << MArch << Error;
-    return false;
-  }
-  case 'i':
-    break;
-  case 'g':
-    // g = imafd
-    StdExts = StdExts.drop_front(4);
-    Features.push_back("+m");
-    Features.push_back("+a");
-    Features.push_back("+f");
-    Features.push_back("+d");
-    HasF = true;
-    HasD = true;
-    break;
-  }
-
-  // Skip rvxxx
-  StringRef Exts = MArch.substr(5);
-
-  // Remove multi-letter standard extensions, non-standard extensions and
-  // supervisor-level extensions. They have 'z', 'x', 's', 'sx' prefixes.
-  // Parse them at the end.
-  // Find the very first occurrence of 's', 'x' or 'z'.
-  StringRef OtherExts;
-  size_t Pos = Exts.find_first_of("zsx");
-  if (Pos != StringRef::npos) {
-    OtherExts = Exts.substr(Pos);
-    Exts = Exts.substr(0, Pos);
-  }
-
-  std::string Major, Minor;
-  if (!getExtensionVersion(D, Args, MArch, std::string(1, Baseline), Exts,
-                           Major, Minor))
-    return false;
-
-  // Consume the base ISA version number and any '_' between rvxxx and the
-  // first extension
-  Exts = Exts.drop_front(Major.size());
-  if (!Minor.empty())
-    Exts = Exts.drop_front(Minor.size() + 1 /*'p'*/);
-  Exts.consume_front("_");
-
-  // TODO: Use version number when setting target features
-
-  auto StdExtsItr = StdExts.begin();
-  auto StdExtsEnd = StdExts.end();
-
-  for (auto I = Exts.begin(), E = Exts.end(); I != E; ) {
-    char c = *I;
-
-    // Check ISA extensions are specified in the canonical order.
-    while (StdExtsItr != StdExtsEnd && *StdExtsItr != c)
-      ++StdExtsItr;
-
-    if (StdExtsItr == StdExtsEnd) {
-      // Either c contains a valid extension but it was not given in
-      // canonical order or it is an invalid extension.
-      StringRef Error;
-      if (StdExts.contains(c))
-        Error = "standard user-level extension not given in canonical order";
-      else
-        Error = "invalid standard user-level extension";
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-          << MArch << Error << std::string(1, c);
-      return false;
-    }
-
-    // Move to next char to prevent repeated letter.
-    ++StdExtsItr;
-
-    std::string Next, Major, Minor;
-    if (std::next(I) != E)
-      Next = std::string(std::next(I), E);
-    if (!getExtensionVersion(D, Args, MArch, std::string(1, c), Next, Major,
-                             Minor))
-      return false;
-
-    // The order is OK, then push it into features.
-    // TODO: Use version number when setting target features
-    switch (c) {
-    default:
-      // Currently LLVM supports only "mafdc".
-      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-          << MArch << "unsupported standard user-level extension"
-          << std::string(1, c);
-      return false;
-    case 'm':
-      Features.push_back("+m");
-      break;
-    case 'a':
-      Features.push_back("+a");
-      break;
-    case 'f':
-      Features.push_back("+f");
-      HasF = true;
-      break;
-    case 'd':
-      Features.push_back("+d");
-      HasD = true;
-      break;
-    case 'c':
-      Features.push_back("+c");
-      break;
-    case 'v':
-      Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvlsseg");
-      break;
-    }
-
-    // Consume full extension name and version, including any optional '_'
-    // between this extension and the next
-    ++I;
-    I += Major.size();
-    if (Minor.size())
-      I += Minor.size() + 1 /*'p'*/;
-    if (*I == '_')
-      ++I;
-  }
-
-  // Dependency check.
-  // It's illegal to specify the 'd' (double-precision floating point)
-  // extension without also specifying the 'f' (single precision
-  // floating-point) extension.
-  if (HasD && !HasF) {
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "d requires f extension to also be specified";
-    return false;
-  }
-
-  // Additional dependency checks.
-  // TODO: The 'q' extension requires rv64.
-  // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
-
-  // Handle all other types of extensions.
-  getExtensionFeatures(D, Args, Features, MArch, OtherExts);
-
+  (*ISAInfo)->toFeatures(Args, Features);
   return true;
 }
 
@@ -598,24 +189,30 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   // rv32* -> ilp32
   // rv64g | rv64*d -> lp64d
   // rv64* -> lp64
-  StringRef MArch = getRISCVArch(Args, Triple);
+  StringRef Arch = getRISCVArch(Args, Triple);
 
-  if (MArch.startswith_insensitive("rv32")) {
-    // FIXME: parse `March` to find `D` extension properly
-    if (MArch.substr(4).contains_insensitive("d") ||
-        MArch.startswith_insensitive("rv32g"))
-      return "ilp32d";
-    else if (MArch.startswith_insensitive("rv32e"))
-      return "ilp32e";
-    else
+  auto ParseResult = llvm::RISCVISAInfo::parseArchString(
+      Arch, /* EnableExperimentalExtension */ true);
+  if (!ParseResult) {
+    // Ignore parsing error, just go 3rd step.
+    consumeError(ParseResult.takeError());
+  } else {
+    auto &ISAInfo = *ParseResult;
+    bool HasD = ISAInfo->hasExtension("d");
+    unsigned XLen = ISAInfo->getXLen();
+    if (XLen == 32) {
+      bool HasE = ISAInfo->hasExtension("e");
+      if (HasD)
+        return "ilp32d";
+      if (HasE)
+        return "ilp32e";
       return "ilp32";
-  } else if (MArch.startswith_insensitive("rv64")) {
-    // FIXME: parse `March` to find `D` extension properly
-    if (MArch.substr(4).contains_insensitive("d") ||
-        MArch.startswith_insensitive("rv64g"))
-      return "lp64d";
-    else
+    } else if (XLen == 64) {
+      if (HasD)
+        return "lp64d";
       return "lp64";
+    }
+    llvm_unreachable();
   }
 
   // 3. Choose a default based on the triple
