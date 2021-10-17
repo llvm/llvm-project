@@ -1048,7 +1048,7 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, float* noc
 ; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    cmp r3, #8
 ; CHECK-NEXT:    blo.w .LBB16_12
-; CHECK-NEXT:  @ %bb.1: @ %entry
+; CHECK-NEXT:  @ %bb.1: @ %if.then
 ; CHECK-NEXT:    lsrs.w r12, r3, #2
 ; CHECK-NEXT:    beq.w .LBB16_12
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
