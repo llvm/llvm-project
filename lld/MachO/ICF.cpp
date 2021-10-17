@@ -110,20 +110,18 @@ static bool equalsConstant(const ConcatInputSection *ia,
       const auto *sb = rb.referent.get<Symbol *>();
       if (sa->kind() != sb->kind())
         return false;
-      if (isa<Defined>(sa)) {
-        const auto *da = cast<Defined>(sa);
-        const auto *db = cast<Defined>(sb);
-        if (da->isec && db->isec) {
-          isecA = da->isec;
-          isecB = db->isec;
-        } else {
-          assert(da->isAbsolute() && db->isAbsolute());
-          return da->value == db->value;
-        }
-      } else {
+      if (!isa<Defined>(sa)) {
         assert(isa<DylibSymbol>(sa));
         return sa == sb;
       }
+      const auto *da = cast<Defined>(sa);
+      const auto *db = cast<Defined>(sb);
+      if (!da->isec || !db->isec) {
+        assert(da->isAbsolute() && db->isAbsolute());
+        return da->value == db->value;
+      }
+      isecA = da->isec;
+      isecB = db->isec;
     } else {
       isecA = ra.referent.get<InputSection *>();
       isecB = rb.referent.get<InputSection *>();
