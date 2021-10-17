@@ -837,6 +837,42 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
   }
 }
 
+void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
+    const parser::OmpObjectList &objList) {
+  for (const auto &ompObject : objList.v) {
+    std::visit(
+        common::visitors{
+            [&](const parser::Designator &) {
+              if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+                const auto &scope{context_.FindScope(name->symbol->name())};
+                if (FindCommonBlockContaining(*name->symbol)) {
+                  context_.Say(name->source,
+                      "A variable in a %s directive cannot be an element of a "
+                      "common block"_err_en_US,
+                      ContextDirectiveAsFortran());
+                } else if (!IsSave(*name->symbol) &&
+                    scope.kind() != Scope::Kind::MainProgram &&
+                    scope.kind() != Scope::Kind::Module) {
+                  context_.Say(name->source,
+                      "A variable that appears in a %s directive must be "
+                      "declared in the scope of a module or have the SAVE "
+                      "attribute, either explicitly or implicitly"_err_en_US,
+                      ContextDirectiveAsFortran());
+                }
+                if (FindEquivalenceSet(*name->symbol)) {
+                  context_.Say(name->source,
+                      "A variable in a %s directive cannot appear in an "
+                      "EQUIVALENCE statement"_err_en_US,
+                      ContextDirectiveAsFortran());
+                }
+              }
+            },
+            [&](const parser::Name &) {}, // common block
+        },
+        ompObject.u);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &c) {
   const auto &dir{std::get<parser::Verbatim>(c.t)};
   PushContextAndClauseSets(
@@ -847,6 +883,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &c) {
   const auto &dir{std::get<parser::Verbatim>(c.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(c.t)};
   CheckIsVarPartOfAnotherVar(dir.source, objectList);
+  CheckThreadprivateOrDeclareTargetVar(objectList);
   dirContext_.pop_back();
 }
 
@@ -892,7 +929,25 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &) {
+void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
+  if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
+    CheckIsVarPartOfAnotherVar(dir.source, *objectList);
+    CheckThreadprivateOrDeclareTargetVar(*objectList);
+  } else if (const auto *clauseList{
+                 parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
+    for (const auto &clause : clauseList->v) {
+      if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
+        CheckIsVarPartOfAnotherVar(dir.source, toClause->v);
+        CheckThreadprivateOrDeclareTargetVar(toClause->v);
+      } else if (const auto *linkClause{
+                     std::get_if<parser::OmpClause::Link>(&clause.u)}) {
+        CheckIsVarPartOfAnotherVar(dir.source, linkClause->v);
+        CheckThreadprivateOrDeclareTargetVar(linkClause->v);
+      }
+    }
+  }
   dirContext_.pop_back();
 }
 
@@ -1635,7 +1690,8 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
   OmpDirectiveSet nonPartialVarSet{llvm::omp::Directive::OMPD_allocate,
-      llvm::omp::Directive::OMPD_threadprivate};
+      llvm::omp::Directive::OMPD_threadprivate,
+      llvm::omp::Directive::OMPD_declare_target};
   for (const auto &ompObject : objList.v) {
     std::visit(
         common::visitors{
