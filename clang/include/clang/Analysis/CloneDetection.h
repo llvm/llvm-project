@@ -235,9 +235,7 @@ public:
   static void filterGroups(
       std::vector<CloneDetector::CloneGroup> &CloneGroups,
       llvm::function_ref<bool(const CloneDetector::CloneGroup &)> Filter) {
-    CloneGroups.erase(
-        std::remove_if(CloneGroups.begin(), CloneGroups.end(), Filter),
-        CloneGroups.end());
+    llvm::erase_if(CloneGroups, Filter);
   }
 
   /// Splits the given CloneGroups until the given Compare function returns true

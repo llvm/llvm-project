@@ -153,8 +153,7 @@ private:
           return getDecl(CheckDR) == getDecl(DR) && Pred(Check);
         return false;
       };
-      toScanFor.erase(std::remove_if(toScanFor.begin(), toScanFor.end(), P),
-                      toScanFor.end());
+      llvm::erase_if(toScanFor, P);
     }
 
     void CheckExpr(const Expr *E_p) {

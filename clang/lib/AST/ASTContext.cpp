@@ -9199,13 +9199,9 @@ void getIntersectionOfProtocols(ASTContext &Context,
 
   // Remove any implied protocols from the list of inherited protocols.
   if (!ImpliedProtocols.empty()) {
-    IntersectionSet.erase(
-      std::remove_if(IntersectionSet.begin(),
-                     IntersectionSet.end(),
-                     [&](ObjCProtocolDecl *proto) -> bool {
-                       return ImpliedProtocols.count(proto) > 0;
-                     }),
-      IntersectionSet.end());
+    llvm::erase_if(IntersectionSet, [&](ObjCProtocolDecl *proto) -> bool {
+      return ImpliedProtocols.count(proto) > 0;
+    });
   }
 
   // Sort the remaining protocols by name.
@@ -11719,13 +11715,9 @@ ASTContext::filterFunctionTargetAttrs(const TargetAttr *TD) const {
   assert(TD != nullptr);
   ParsedTargetAttr ParsedAttr = TD->parse();
 
-  ParsedAttr.Features.erase(
-      llvm::remove_if(ParsedAttr.Features,
-                      [&](const std::string &Feat) {
-                        return !Target->isValidFeatureName(
-                            StringRef{Feat}.substr(1));
-                      }),
-      ParsedAttr.Features.end());
+  llvm::erase_if(ParsedAttr.Features, [&](const std::string &Feat) {
+    return !Target->isValidFeatureName(StringRef{Feat}.substr(1));
+  });
   return ParsedAttr;
 }
 

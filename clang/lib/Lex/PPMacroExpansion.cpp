@@ -155,11 +155,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   // If we were the first overrider for any macro, it's no longer a leaf.
   auto &LeafMacros = LeafModuleMacros[II];
   if (HidAny) {
-    LeafMacros.erase(std::remove_if(LeafMacros.begin(), LeafMacros.end(),
-                                    [](ModuleMacro *MM) {
-                                      return MM->NumOverriddenBy != 0;
-                                    }),
-                     LeafMacros.end());
+    llvm::erase_if(LeafMacros,
+                   [](ModuleMacro *MM) { return MM->NumOverriddenBy != 0; });
   }
 
   // The new macro is always a leaf macro.

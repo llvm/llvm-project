@@ -270,8 +270,7 @@ void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
     I->Imports.remove_if(IsVictim);
     I->ImportedBy.remove_if(IsVictim);
   }
-  Roots.erase(std::remove_if(Roots.begin(), Roots.end(), IsVictim),
-              Roots.end());
+  llvm::erase_if(Roots, IsVictim);
 
   // Remove the modules from the PCH chain.
   for (auto I = First; I != Last; ++I) {

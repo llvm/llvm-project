@@ -312,8 +312,7 @@ public:
 
   template <typename ExcludePredicate>
   bool removeBindings(const ExcludePredicate &Predicate) {
-    Bindings.erase(std::remove_if(Bindings.begin(), Bindings.end(), Predicate),
-                   Bindings.end());
+    llvm::erase_if(Bindings, Predicate);
     return !Bindings.empty();
   }
 

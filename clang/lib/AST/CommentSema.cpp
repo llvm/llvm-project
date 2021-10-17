@@ -236,9 +236,7 @@ void Sema::actOnParamCommandDirectionArg(ParamCommandComment *Command,
 
   if (Direction == -1) {
     // Try again with whitespace removed.
-    ArgLower.erase(
-        std::remove_if(ArgLower.begin(), ArgLower.end(), clang::isWhitespace),
-        ArgLower.end());
+    llvm::erase_if(ArgLower, clang::isWhitespace);
     Direction = getParamPassDirection(ArgLower);
 
     SourceRange ArgRange(ArgLocBegin, ArgLocEnd);

@@ -1069,9 +1069,7 @@ static void
 checkAndRemoveNonDriverDiags(SmallVectorImpl<StoredDiagnostic> &StoredDiags) {
   // Get rid of stored diagnostics except the ones from the driver which do not
   // have a source location.
-  StoredDiags.erase(
-      std::remove_if(StoredDiags.begin(), StoredDiags.end(), isNonDriverDiag),
-      StoredDiags.end());
+  llvm::erase_if(StoredDiags, isNonDriverDiag);
 }
 
 static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &

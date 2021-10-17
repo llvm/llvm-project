@@ -2156,12 +2156,9 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
     }
 
     // Other candidate final overriders might be overridden by this function.
-    FinalOverriders.erase(
-        std::remove_if(FinalOverriders.begin(), FinalOverriders.end(),
-                       [&](CXXMethodDecl *OtherD) {
-                         return recursivelyOverrides(D, OtherD);
-                       }),
-        FinalOverriders.end());
+    llvm::erase_if(FinalOverriders, [&](CXXMethodDecl *OtherD) {
+      return recursivelyOverrides(D, OtherD);
+    });
 
     FinalOverriders.push_back(D);
   };
