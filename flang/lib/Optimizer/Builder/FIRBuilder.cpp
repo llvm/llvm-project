@@ -22,3 +22,22 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
   }
   return val;
 }
+
+static mlir::Value genNullPointerComparison(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Value addr,
+                                            arith::CmpIPredicate condition) {
+  auto intPtrTy = builder.getIntPtrType();
+  auto ptrToInt = builder.createConvert(loc, intPtrTy, addr);
+  auto c0 = builder.createIntegerConstant(loc, intPtrTy, 0);
+  return builder.create<arith::CmpIOp>(loc, condition, ptrToInt, c0);
+}
+
+mlir::Value fir::FirOpBuilder::genIsNotNull(mlir::Location loc,
+                                            mlir::Value addr) {
+  return genNullPointerComparison(*this, loc, addr, arith::CmpIPredicate::ne);
+}
+
+mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
+  return genNullPointerComparison(*this, loc, addr, arith::CmpIPredicate::eq);
+}
