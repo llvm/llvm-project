@@ -143,12 +143,12 @@ def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
   let ResourceCycles = [2,1];
 }
 defm : X86WriteRes<WriteLAHFSAHF,        [SLM_IEC_RSV01], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTest,         [SLM_IEC_RSV01], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestImmLd,    [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1,1], 1>;
-defm : X86WriteRes<WriteBitTestRegLd,    [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1,1], 1>;
-defm : X86WriteRes<WriteBitTestSet,      [SLM_IEC_RSV01], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [SLM_IEC_RSV01, SLM_MEC_RSV], 3, [1,1], 1>;
-defm : X86WriteRes<WriteBitTestSetRegLd, [SLM_IEC_RSV01, SLM_MEC_RSV], 3, [1,1], 1>;
+defm : X86WriteRes<WriteBitTest,         [SLM_IEC_RSV0, SLM_IEC_RSV1], 1, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [SLM_IEC_RSV0, SLM_IEC_RSV1, SLM_MEC_RSV], 4, [1,1,1], 1>;
+defm : X86WriteRes<WriteBitTestRegLd,    [SLM_IEC_RSV0, SLM_IEC_RSV1, SLM_MEC_RSV], 4, [1,1,1], 7>;
+defm : X86WriteRes<WriteBitTestSet,      [SLM_IEC_RSV0, SLM_IEC_RSV1], 1, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [SLM_IEC_RSV0, SLM_IEC_RSV1, SLM_MEC_RSV], 3, [1,1,1], 1>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [SLM_IEC_RSV0, SLM_IEC_RSV1, SLM_MEC_RSV], 3, [1,1,1], 7>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -385,8 +385,8 @@ defm : SLMWriteResPair<WriteShuffleY, [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 defm : SLMWriteResPair<WriteShuffleX, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVarShuffleX, [SLM_FPC_RSV0],  5, [5], 4>;
-defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  5, [5], 4>;
+defm : SLMWriteResPair<WriteVarShuffleX, [SLM_FPC_RSV0],  5, [5], 4, 1>;
+defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
@@ -430,16 +430,16 @@ defm : X86WriteResPairUnsupported<WritePHAddZ>;
 
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
-defm : SLMWriteResPair<WritePCmpIStrM,  [SLM_FPC_RSV0], 13, [13]>;
+defm : SLMWriteResPair<WritePCmpIStrM,  [SLM_FPC_RSV0], 13, [13], 5, 1>;
 
 // Packed Compare Explicit Length Strings, Return Mask
-defm : SLMWriteResPair<WritePCmpEStrM,  [SLM_FPC_RSV0], 17, [17]>;
+defm : SLMWriteResPair<WritePCmpEStrM,  [SLM_FPC_RSV0], 17, [17], 8, 1>;
 
 // Packed Compare Implicit Length Strings, Return Index
-defm : SLMWriteResPair<WritePCmpIStrI,  [SLM_FPC_RSV0], 17, [17]>;
+defm : SLMWriteResPair<WritePCmpIStrI,  [SLM_FPC_RSV0], 17, [17], 6, 1>;
 
 // Packed Compare Explicit Length Strings, Return Index
-defm : SLMWriteResPair<WritePCmpEStrI,  [SLM_FPC_RSV0], 21, [21]>;
+defm : SLMWriteResPair<WritePCmpEStrI,  [SLM_FPC_RSV0], 21, [21], 9, 1>;
 
 // MOVMSK Instructions.
 def : WriteRes<WriteFMOVMSK,    [SLM_FPC_RSV1]> { let Latency = 4; }
@@ -453,7 +453,7 @@ defm : SLMWriteResPair<WriteAESIMC,    [SLM_FPC_RSV0], 8, [5]>;
 defm : SLMWriteResPair<WriteAESKeyGen, [SLM_FPC_RSV0], 8, [5]>;
 
 // Carry-less multiplication instructions.
-defm : SLMWriteResPair<WriteCLMul, [SLM_FPC_RSV0], 10, [10]>;
+defm : SLMWriteResPair<WriteCLMul, [SLM_FPC_RSV0], 10, [10], 8, 1>;
 
 def : WriteRes<WriteSystem,     [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [SLM_FPC_RSV0]> { let Latency = 100; }

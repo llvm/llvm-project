@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetStreamer.h"
+#include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 using namespace llvm;
 
@@ -43,53 +45,19 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   else
     emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16);
 
-  std::string Arch = "rv32";
-  if (STI.hasFeature(RISCV::Feature64Bit))
-    Arch = "rv64";
-  if (STI.hasFeature(RISCV::FeatureRV32E))
-    Arch += "e1p9";
-  else
-    Arch += "i2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtM))
-    Arch += "_m2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtA))
-    Arch += "_a2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtF))
-    Arch += "_f2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtD))
-    Arch += "_d2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtC))
-    Arch += "_c2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtV))
-    Arch += "_v0p10";
-  if (STI.hasFeature(RISCV::FeatureStdExtZfh))
-    Arch += "_zfh0p1";
-  if (STI.hasFeature(RISCV::FeatureStdExtZba))
-    Arch += "_zba1p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbb))
-    Arch += "_zbb1p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbc))
-    Arch += "_zbc1p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbe))
-    Arch += "_zbe0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbf))
-    Arch += "_zbf0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbm))
-    Arch += "_zbm0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbp))
-    Arch += "_zbp0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbr))
-    Arch += "_zbr0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbs))
-    Arch += "_zbs1p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtZbt))
-    Arch += "_zbt0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtZvamo))
-    Arch += "_zvamo0p10";
-  if (STI.hasFeature(RISCV::FeatureStdExtZvlsseg))
-    Arch += "_zvlsseg0p10";
+  unsigned XLen = STI.hasFeature(RISCV::Feature64Bit) ? 64 : 32;
+  std::vector<std::string> FeatureVector;
+  RISCVFeatures::toFeatureVector(FeatureVector, STI.getFeatureBits());
 
-  emitTextAttribute(RISCVAttrs::ARCH, Arch);
+  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+  if (!ParseResult) {
+    /* Assume any error about features should handled earlier.  */
+    consumeError(ParseResult.takeError());
+    llvm_unreachable("Parsing feature error when emitTargetAttributes?");
+  } else {
+    auto &ISAInfo = *ParseResult;
+    emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+  }
 }
 
 // This part is for ascii assembly output
