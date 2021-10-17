@@ -658,7 +658,7 @@ INTERCEPTOR(int, putenv, char *string) {
   return res;
 }
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_LINUX
 INTERCEPTOR(int, fstat, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstat)(fd, buf);
@@ -697,7 +697,7 @@ INTERCEPTOR(int, __fxstat64, int magic, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT___FXSTAT64
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_LINUX
 INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstatat)(fd, pathname, buf, flags);
@@ -705,7 +705,9 @@ INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
   return res;
 }
 # define MSAN_INTERCEPT_FSTATAT INTERCEPT_FUNCTION(fstatat)
-#else
+#endif
+
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
 INTERCEPTOR(int, __fxstatat, int magic, int fd, char *pathname, void *buf,
             int flags) {
   ENSURE_MSAN_INITED();
