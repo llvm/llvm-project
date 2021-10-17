@@ -1223,6 +1223,18 @@ def fpimm0 : FPImmLeaf<fAny, [{
   return Imm.isExactlyValue(+0.0);
 }]>;
 
+def fpimm_half : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+0.5);
+}]>;
+
+def fpimm_one : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+1.0);
+}]>;
+
+def fpimm_two : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+2.0);
+}]>;
+
 def gi_fpimm16 : GICustomOperandRenderer<"renderFPImm16">,
   GISDNodeXFormEquiv<fpimm16XForm>;
 def gi_fpimm32 : GICustomOperandRenderer<"renderFPImm32">,
