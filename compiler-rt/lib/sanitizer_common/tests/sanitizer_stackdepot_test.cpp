@@ -130,22 +130,22 @@ static struct StackDepotBenchmarkParams {
   bool UseCount;
 } params[] = {
     // All traces are unique, very unusual.
-    {10000000, 1, 1},
-    {8000000, 1, 4},
-    {8000000, 1, 16},
+    {10000000, 1, 1, false, false},
+    {8000000, 1, 4, false, false},
+    {8000000, 1, 16, false, false},
     // Probably most realistic sets.
-    {3000000, 10, 1},
-    {3000000, 10, 4},
-    {3000000, 10, 16},
+    {3000000, 10, 1, false, false},
+    {3000000, 10, 4, false, false},
+    {3000000, 10, 16, false, false},
     // Update use count as msan/dfsan.
     {3000000, 10, 1, false, true},
     {3000000, 10, 4, false, true},
     {3000000, 10, 16, false, true},
     // Unrealistic, as above, but traces are unique inside of thread.
-    {4000000, 1, 4, true},
-    {2000000, 1, 16, true},
-    {2000000, 10, 4, true},
-    {500000, 10, 16, true},
+    {4000000, 1, 4, true, false},
+    {2000000, 1, 16, true, false},
+    {2000000, 10, 4, true, false},
+    {500000, 10, 16, true, false},
     {1500000, 10, 4, true, true},
     {800000, 10, 16, true, true},
 };
