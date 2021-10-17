@@ -212,7 +212,7 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
         return "lp64d";
       return "lp64";
     }
-    llvm_unreachable();
+    llvm_unreachable("unhandled XLen");
   }
 
   // 3. Choose a default based on the triple
