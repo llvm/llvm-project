@@ -1174,14 +1174,12 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Remove any macro definitions that are explicitly ignored by the module.
   // They aren't supposed to affect how the module is built anyway.
   HeaderSearchOptions &HSOpts = Invocation->getHeaderSearchOpts();
-  PPOpts.Macros.erase(
-      std::remove_if(PPOpts.Macros.begin(), PPOpts.Macros.end(),
-                     [&HSOpts](const std::pair<std::string, bool> &def) {
+  llvm::erase_if(
+      PPOpts.Macros, [&HSOpts](const std::pair<std::string, bool> &def) {
         StringRef MacroDef = def.first;
         return HSOpts.ModulesIgnoreMacros.count(
                    llvm::CachedHashString(MacroDef.split('=').first)) > 0;
-      }),
-      PPOpts.Macros.end());
+      });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts()->ModuleName =

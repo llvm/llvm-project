@@ -1085,14 +1085,10 @@ namespace {
 
     void performLifetimeExtension() {
       // Disable the cleanups for lifetime-extended temporaries.
-      CleanupStack.erase(std::remove_if(CleanupStack.begin(),
-                                        CleanupStack.end(),
-                                        [](Cleanup &C) {
-                                          return !C.isDestroyedAtEndOf(
-                                              ScopeKind::FullExpression);
-                                        }),
-                         CleanupStack.end());
-     }
+      llvm::erase_if(CleanupStack, [](Cleanup &C) {
+        return !C.isDestroyedAtEndOf(ScopeKind::FullExpression);
+      });
+    }
 
     /// Throw away any remaining cleanups at the end of evaluation. If any
     /// cleanups would have had a side-effect, note that as an unmodeled
