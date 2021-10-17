@@ -786,3 +786,36 @@ MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   }
   return MDNode::get(MD->getContext(), Sub);
 }
+
+MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
+  // Fast path if 0-length
+  if (Len == 0)
+    return nullptr;
+
+  // Regular TBAA is invariant of length, so we only need to consider
+  // struct-path TBAA.
+  if (!isStructPathTBAA(MD))
+    return MD;
+
+  TBAAStructTagNode Tag(MD);
+
+  // Only new format TBAA has a size
+  if (!Tag.isNewFormat())
+    return MD;
+
+  // If unknown size, drop the TBAA.
+  if (Len == -1)
+    return nullptr;
+
+  // Otherwise, create TBAA with the new Len
+  SmallVector<Metadata *, 4> NextNodes(MD->operands());
+  ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
+
+  // Don't create a new MDNode if it is the same length.
+  if (PreviousSize->equalsInt(Len))
+    return MD;
+
+  NextNodes[3] =
+      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), Len));
+  return MDNode::get(MD->getContext(), NextNodes);
+}
