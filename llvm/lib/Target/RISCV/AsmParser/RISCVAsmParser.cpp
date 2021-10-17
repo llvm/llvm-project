@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 #include <limits>
 
@@ -49,6 +50,10 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
+
+namespace llvm {
+extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+} // namespace llvm
 
 namespace {
 struct RISCVOperand;
@@ -2059,106 +2064,35 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
   if (Tag == RISCVAttrs::ARCH) {
     StringRef Arch = StringValue;
-    if (Arch.consume_front("rv32"))
+    for (auto Feature : RISCVFeatureKV)
+      if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+        clearFeatureBits(Feature.Value, Feature.Key);
+
+    auto ParseResult = llvm::RISCVISAInfo::parseArchString(
+        StringValue, /*EnableExperimentalExtension=*/true,
+        /*ExperimentalExtensionVersionCheck=*/false);
+    if (!ParseResult) {
+      std::string Buffer;
+      raw_string_ostream OutputErrMsg(Buffer);
+      handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+        OutputErrMsg << "invalid arch name '" << Arch << "', "
+                     << ErrMsg.getMessage();
+      });
+
+      return Error(ValueExprLoc, OutputErrMsg.str());
+    }
+    auto &ISAInfo = *ParseResult;
+
+    for (auto Feature : RISCVFeatureKV)
+      if (ISAInfo->hasExtension(Feature.Key))
+        setFeatureBits(Feature.Value, Feature.Key);
+
+    if (ISAInfo->getXLen() == 32)
       clearFeatureBits(RISCV::Feature64Bit, "64bit");
-    else if (Arch.consume_front("rv64"))
+    else if (ISAInfo->getXLen() == 64)
       setFeatureBits(RISCV::Feature64Bit, "64bit");
     else
       return Error(ValueExprLoc, "bad arch string " + Arch);
-
-    // .attribute arch overrides the current architecture, so unset all
-    // currently enabled extensions
-    clearFeatureBits(RISCV::FeatureRV32E, "e");
-    clearFeatureBits(RISCV::FeatureStdExtM, "m");
-    clearFeatureBits(RISCV::FeatureStdExtA, "a");
-    clearFeatureBits(RISCV::FeatureStdExtF, "f");
-    clearFeatureBits(RISCV::FeatureStdExtD, "d");
-    clearFeatureBits(RISCV::FeatureStdExtC, "c");
-    clearFeatureBits(RISCV::FeatureStdExtV, "experimental-v");
-    clearFeatureBits(RISCV::FeatureStdExtZfh, "experimental-zfh");
-    clearFeatureBits(RISCV::FeatureStdExtZba, "experimental-zba");
-    clearFeatureBits(RISCV::FeatureStdExtZbb, "experimental-zbb");
-    clearFeatureBits(RISCV::FeatureStdExtZbc, "experimental-zbc");
-    clearFeatureBits(RISCV::FeatureStdExtZbe, "experimental-zbe");
-    clearFeatureBits(RISCV::FeatureStdExtZbf, "experimental-zbf");
-    clearFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
-    clearFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
-    clearFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
-    clearFeatureBits(RISCV::FeatureStdExtZbs, "experimental-zbs");
-    clearFeatureBits(RISCV::FeatureStdExtZbt, "experimental-zbt");
-    clearFeatureBits(RISCV::FeatureStdExtZvamo, "experimental-zvamo");
-    clearFeatureBits(RISCV::FeatureStdExtZvlsseg, "experimental-zvlsseg");
-
-    while (!Arch.empty()) {
-      bool DropFirst = true;
-      if (Arch[0] == 'i')
-        clearFeatureBits(RISCV::FeatureRV32E, "e");
-      else if (Arch[0] == 'e')
-        setFeatureBits(RISCV::FeatureRV32E, "e");
-      else if (Arch[0] == 'g') {
-        clearFeatureBits(RISCV::FeatureRV32E, "e");
-        setFeatureBits(RISCV::FeatureStdExtM, "m");
-        setFeatureBits(RISCV::FeatureStdExtA, "a");
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-        setFeatureBits(RISCV::FeatureStdExtD, "d");
-      } else if (Arch[0] == 'm')
-        setFeatureBits(RISCV::FeatureStdExtM, "m");
-      else if (Arch[0] == 'a')
-        setFeatureBits(RISCV::FeatureStdExtA, "a");
-      else if (Arch[0] == 'f')
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-      else if (Arch[0] == 'd') {
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-        setFeatureBits(RISCV::FeatureStdExtD, "d");
-      } else if (Arch[0] == 'c') {
-        setFeatureBits(RISCV::FeatureStdExtC, "c");
-      } else if (Arch[0] == 'v') {
-        setFeatureBits(RISCV::FeatureStdExtV, "experimental-v");
-      } else if (Arch[0] == 's' || Arch[0] == 'x' || Arch[0] == 'z') {
-        StringRef Ext =
-            Arch.take_until([](char c) { return ::isdigit(c) || c == '_'; });
-        if (Ext == "zba")
-          setFeatureBits(RISCV::FeatureStdExtZba, "experimental-zba");
-        else if (Ext == "zbb")
-          setFeatureBits(RISCV::FeatureStdExtZbb, "experimental-zbb");
-        else if (Ext == "zbc")
-          setFeatureBits(RISCV::FeatureStdExtZbc, "experimental-zbc");
-        else if (Ext == "zbe")
-          setFeatureBits(RISCV::FeatureStdExtZbe, "experimental-zbe");
-        else if (Ext == "zbf")
-          setFeatureBits(RISCV::FeatureStdExtZbf, "experimental-zbf");
-        else if (Ext == "zbm")
-          setFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
-        else if (Ext == "zbp")
-          setFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
-        else if (Ext == "zbr")
-          setFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
-        else if (Ext == "zbs")
-          setFeatureBits(RISCV::FeatureStdExtZbs, "experimental-zbs");
-        else if (Ext == "zbt")
-          setFeatureBits(RISCV::FeatureStdExtZbt, "experimental-zbt");
-        else if (Ext == "zfh")
-          setFeatureBits(RISCV::FeatureStdExtZfh, "experimental-zfh");
-        else if (Ext == "zvamo")
-          setFeatureBits(RISCV::FeatureStdExtZvamo, "experimental-zvamo");
-        else if (Ext == "zvlsseg")
-          setFeatureBits(RISCV::FeatureStdExtZvlsseg, "experimental-zvlsseg");
-        else
-          return Error(ValueExprLoc, "bad arch string " + Ext);
-        Arch = Arch.drop_until([](char c) { return ::isdigit(c) || c == '_'; });
-        DropFirst = false;
-      } else
-        return Error(ValueExprLoc, "bad arch string " + Arch);
-
-      if (DropFirst)
-        Arch = Arch.drop_front(1);
-      int major = 0;
-      int minor = 0;
-      Arch.consumeInteger(10, major);
-      Arch.consume_front("p");
-      Arch.consumeInteger(10, minor);
-      Arch = Arch.drop_while([](char c) { return c == '_'; });
-    }
   }
 
   if (IsIntegerValue)
@@ -2167,54 +2101,26 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     if (Tag != RISCVAttrs::ARCH) {
       getTargetStreamer().emitTextAttribute(Tag, StringValue);
     } else {
-      std::string formalArchStr = "rv32";
-      if (getFeatureBits(RISCV::Feature64Bit))
-        formalArchStr = "rv64";
-      if (getFeatureBits(RISCV::FeatureRV32E))
-        formalArchStr = (Twine(formalArchStr) + "e1p9").str();
-      else
-        formalArchStr = (Twine(formalArchStr) + "i2p0").str();
+      std::vector<std::string> FeatureVector;
+      RISCVFeatures::toFeatureVector(FeatureVector, getSTI().getFeatureBits());
 
-      if (getFeatureBits(RISCV::FeatureStdExtM))
-        formalArchStr = (Twine(formalArchStr) + "_m2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtA))
-        formalArchStr = (Twine(formalArchStr) + "_a2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtF))
-        formalArchStr = (Twine(formalArchStr) + "_f2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtD))
-        formalArchStr = (Twine(formalArchStr) + "_d2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtC))
-        formalArchStr = (Twine(formalArchStr) + "_c2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtV))
-        formalArchStr = (Twine(formalArchStr) + "_v0p10").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZfh))
-        formalArchStr = (Twine(formalArchStr) + "_zfh0p1").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZba))
-        formalArchStr = (Twine(formalArchStr) + "_zba1p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbb))
-        formalArchStr = (Twine(formalArchStr) + "_zbb1p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbc))
-        formalArchStr = (Twine(formalArchStr) + "_zbc1p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbe))
-        formalArchStr = (Twine(formalArchStr) + "_zbe0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbf))
-        formalArchStr = (Twine(formalArchStr) + "_zbf0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbm))
-        formalArchStr = (Twine(formalArchStr) + "_zbm0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbp))
-        formalArchStr = (Twine(formalArchStr) + "_zbp0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbr))
-        formalArchStr = (Twine(formalArchStr) + "_zbr0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbs))
-        formalArchStr = (Twine(formalArchStr) + "_zbs1p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZbt))
-        formalArchStr = (Twine(formalArchStr) + "_zbt0p93").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZvamo))
-        formalArchStr = (Twine(formalArchStr) + "_zvamo0p10").str();
-      if (getFeatureBits(RISCV::FeatureStdExtZvlsseg))
-        formalArchStr = (Twine(formalArchStr) + "_zvlsseg0p10").str();
+      // Parse that by RISCVISAInfo->
+      unsigned XLen = getFeatureBits(RISCV::Feature64Bit) ? 64 : 32;
+      auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+      if (!ParseResult) {
+        std::string Buffer;
+        raw_string_ostream OutputErrMsg(Buffer);
+        handleAllErrors(ParseResult.takeError(),
+                        [&](llvm::StringError &ErrMsg) {
+                          OutputErrMsg << ErrMsg.getMessage();
+                        });
 
-      getTargetStreamer().emitTextAttribute(Tag, formalArchStr);
+        return Error(ValueExprLoc, OutputErrMsg.str());
+      }
+      auto &ISAInfo = *ParseResult;
+
+      // Then emit the arch string.
+      getTargetStreamer().emitTextAttribute(Tag, ISAInfo->toString());
     }
   }
 

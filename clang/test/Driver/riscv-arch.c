@@ -1,5 +1,7 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang -target riscv32-unknown-elf -march=rv32i2p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv32-unknown-elf -march=rv32im -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv32-unknown-elf -march=rv32ima -### %s \
@@ -67,6 +69,8 @@
 // CHECK-ILP32D-SAME: {{^}} "-target-feature" "+c"
 
 // RUN: %clang -target riscv64-unknown-elf -march=rv64i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang -target riscv64-unknown-elf -march=rv64i2p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv64-unknown-elf -march=rv64im -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -195,11 +199,6 @@
 
 // Testing specific messages and unsupported extensions.
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32e -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32E %s
-// RV32E: error: invalid arch name 'rv32e',
-// RV32E: standard user-level extension 'e'
-
 // RUN: %clang -target riscv64-unknown-elf -march=rv64e -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64E %s
 // RV64E: error: invalid arch name 'rv64e',
@@ -308,11 +307,6 @@
 // RV32-IMINOR-MISS: error: invalid arch name 'rv32i2p',
 // RV32-IMINOR-MISS: minor version number missing after 'p' for extension 'i'
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32i2p0 -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-IMINOR0 %s
-// RV32-IMINOR0: error: invalid arch name 'rv32i2p0',
-// RV32-IMINOR0: unsupported version number 2.0 for extension 'i'
-
 // RUN: %clang -target riscv32-unknown-elf -march=rv32i2p1 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-IMINOR1 %s
 // RV32-IMINOR1: error: invalid arch name 'rv32i2p1', unsupported
@@ -417,7 +411,7 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-BADVERS %s
 // RV32-EXPERIMENTAL-V-BADVERS: error: invalid arch name 'rv32iv0p1'
-// RV32-EXPERIMENTAL-V-BADVERS: unsupported version number 0.1 for experimental extension
+// RV32-EXPERIMENTAL-V-BADVERS: unsupported version number 0.1 for experimental extension 'v'
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-GOODVERS %s
@@ -445,7 +439,7 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izvamo0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVAMO-BADVERS %s
 // RV32-EXPERIMENTAL-ZVAMO-BADVERS: error: invalid arch name 'rv32izvamo0p1'
-// RV32-EXPERIMENTAL-ZVAMO-BADVERS: unsupported version number 0.1 for experimental extension
+// RV32-EXPERIMENTAL-ZVAMO-BADVERS: unsupported version number 0.1 for experimental extension 'zvamo'
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izvamo0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVAMO-GOODVERS %s
@@ -464,7 +458,7 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izvlsseg0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-BADVERS %s
 // RV32-EXPERIMENTAL-ZVLSSEG-BADVERS: error: invalid arch name 'rv32izvlsseg0p1'
-// RV32-EXPERIMENTAL-ZVLSSEG-BADVERS: unsupported version number 0.1 for experimental extension
+// RV32-EXPERIMENTAL-ZVLSSEG-BADVERS: unsupported version number 0.1 for experimental extension 'zvlsseg'
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izvlsseg0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-GOODVERS %s

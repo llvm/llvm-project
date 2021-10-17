@@ -65,9 +65,9 @@
 
 // CHECK-LP64F: "-target-abi" "lp64f"
 
-// RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64d -mabi=lp64d 2>&1 \
+// RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64ifd -mabi=lp64d 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64D %s
-// RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64d 2>&1 \
+// RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64ifd 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64D %s
 // RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64g 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64D %s
