@@ -211,6 +211,8 @@ private:
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckIsVarPartOfAnotherVar(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
+  void CheckThreadprivateOrDeclareTargetVar(
+      const parser::OmpObjectList &objList);
   void CheckIntentInPointer(
       const parser::OmpObjectList &, const llvm::omp::Clause);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
