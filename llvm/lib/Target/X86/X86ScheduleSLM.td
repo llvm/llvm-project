@@ -430,16 +430,16 @@ defm : X86WriteResPairUnsupported<WritePHAddZ>;
 
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
-defm : SLMWriteResPair<WritePCmpIStrM,  [SLM_FPC_RSV0], 13, [13]>;
+defm : SLMWriteResPair<WritePCmpIStrM,  [SLM_FPC_RSV0], 13, [13], 5, 1>;
 
 // Packed Compare Explicit Length Strings, Return Mask
-defm : SLMWriteResPair<WritePCmpEStrM,  [SLM_FPC_RSV0], 17, [17]>;
+defm : SLMWriteResPair<WritePCmpEStrM,  [SLM_FPC_RSV0], 17, [17], 8, 1>;
 
 // Packed Compare Implicit Length Strings, Return Index
-defm : SLMWriteResPair<WritePCmpIStrI,  [SLM_FPC_RSV0], 17, [17]>;
+defm : SLMWriteResPair<WritePCmpIStrI,  [SLM_FPC_RSV0], 17, [17], 6, 1>;
 
 // Packed Compare Explicit Length Strings, Return Index
-defm : SLMWriteResPair<WritePCmpEStrI,  [SLM_FPC_RSV0], 21, [21]>;
+defm : SLMWriteResPair<WritePCmpEStrI,  [SLM_FPC_RSV0], 21, [21], 9, 1>;
 
 // MOVMSK Instructions.
 def : WriteRes<WriteFMOVMSK,    [SLM_FPC_RSV1]> { let Latency = 4; }
