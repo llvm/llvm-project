@@ -152,7 +152,7 @@ public:
       }
       return C;
     });
-    N.erase(std::remove(N.begin(), N.end(), '_'), N.end());
+    llvm::erase_value(N, '_');
     return N;
   }
 

@@ -11,17 +11,10 @@
 // 1. MOVi32imm + ANDWrr ==> ANDWri + ANDWri
 //    MOVi64imm + ANDXrr ==> ANDXri + ANDXri
 //
-// 2. MOVi32imm + ADDWrr ==> ADDWRi + ADDWRi
-//    MOVi64imm + ADDXrr ==> ANDXri + ANDXri
-//
-// 3. MOVi32imm + SUBWrr ==> SUBWRi + SUBWRi
-//    MOVi64imm + SUBXrr ==> SUBXri + SUBXri
-//
 //    The mov pseudo instruction could be expanded to multiple mov instructions
 //    later. In this case, we could try to split the constant  operand of mov
-//    instruction into two immediates which can be directly encoded into
-//    *Wri/*Xri instructions. It makes two AND/ADD/SUB instructions instead of
-//    multiple `mov` + `and/add/sub` instructions.
+//    instruction into two bitmask immediates. It makes two AND instructions
+//    intead of multiple `mov` + `and` instructions.
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -47,13 +40,6 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
   MachineLoopInfo *MLI;
   MachineRegisterInfo *MRI;
-
-  bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
-                        MachineInstr *&SubregToRegMI);
-
-  template <typename T>
-  bool visitADDSUB(MachineInstr &MI,
-                   SmallSetVector<MachineInstr *, 8> &ToBeRemoved, bool IsAdd);
 
   template <typename T>
   bool visitAND(MachineInstr &MI,
@@ -133,9 +119,31 @@ bool AArch64MIPeepholeOpt::visitAND(
   assert((RegSize == 32 || RegSize == 64) &&
          "Invalid RegSize for AND bitmask peephole optimization");
 
-  // Perform several essential checks against current MI.
-  MachineInstr *MovMI, *SubregToRegMI;
-  if (!checkMovImmInstr(MI, MovMI, SubregToRegMI))
+  // Check whether AND's MBB is in loop and the AND is loop invariant.
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineLoop *L = MLI->getLoopFor(MBB);
+  if (L && !L->isLoopInvariant(MI))
+    return false;
+
+  // Check whether AND's operand is MOV with immediate.
+  MachineInstr *MovMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  MachineInstr *SubregToRegMI = nullptr;
+  // If it is SUBREG_TO_REG, check its operand.
+  if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+    SubregToRegMI = MovMI;
+    MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(2).getReg());
+  }
+
+  if (MovMI->getOpcode() != AArch64::MOVi32imm &&
+      MovMI->getOpcode() != AArch64::MOVi64imm)
+    return false;
+
+  // If the MOV has multiple uses, do not split the immediate because it causes
+  // more instructions.
+  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
+    return false;
+
+  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
     return false;
 
   // Split the bitmask immediate into two.
@@ -152,7 +160,6 @@ bool AArch64MIPeepholeOpt::visitAND(
 
   // Create new AND MIs.
   DebugLoc DL = MI.getDebugLoc();
-  MachineBasicBlock *MBB = MI.getParent();
   const TargetRegisterClass *ANDImmRC =
       (RegSize == 32) ? &AArch64::GPR32spRegClass : &AArch64::GPR64spRegClass;
   Register DstReg = MI.getOperand(0).getReg();
@@ -175,135 +182,6 @@ bool AArch64MIPeepholeOpt::visitAND(
     ToBeRemoved.insert(SubregToRegMI);
   ToBeRemoved.insert(MovMI);
 
-  return true;
-}
-
-template <typename T>
-static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
-  // The immediate must be in the form of ((imm0 << 12) + imm1), in which both
-  // imm0 and imm1 are non-zero 12-bit unsigned int.
-  if ((Imm & 0xfff000) == 0 || (Imm & 0xfff) == 0 ||
-      (Imm & ~static_cast<T>(0xffffff)) != 0)
-    return false;
-
-  // The immediate can not be composed via a single instruction.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(Imm, RegSize, Insn);
-  if (Insn.size() == 1)
-    return false;
-
-  // Split Imm into (Imm0 << 12) + Imm1;
-  Imm0 = (Imm >> 12) & 0xfff;
-  Imm1 = Imm & 0xfff;
-  return true;
-}
-
-template <typename T>
-bool AArch64MIPeepholeOpt::visitADDSUB(
-    MachineInstr &MI, SmallSetVector<MachineInstr *, 8> &ToBeRemoved,
-    bool IsAdd) {
-  // Try below transformation.
-  //
-  // MOVi32imm + ADDWrr ==> ANDWri + ANDWri
-  // MOVi64imm + ADDXrr ==> ANDXri + ANDXri
-  //
-  // MOVi32imm + SUBWrr ==> SUBWri + SUBWri
-  // MOVi64imm + SUBXrr ==> SUBXri + SUBXri
-  //
-  // The mov pseudo instruction could be expanded to multiple mov instructions
-  // later. Let's try to split the constant operand of mov instruction into two
-  // legal add/sub immediates. It makes only two ADD/SUB instructions intead of
-  // multiple `mov` + `and/sub` instructions.
-
-  unsigned RegSize = sizeof(T) * 8;
-  assert((RegSize == 32 || RegSize == 64) &&
-         "Invalid RegSize for legal add/sub immediate peephole optimization");
-
-  // Perform several essential checks against current MI.
-  MachineInstr *MovMI, *SubregToRegMI;
-  if (!checkMovImmInstr(MI, MovMI, SubregToRegMI))
-    return false;
-
-  // Split the immediate to Imm0 and Imm1, and calculate the Opcode.
-  T Imm = static_cast<T>(MovMI->getOperand(1).getImm()), Imm0, Imm1;
-  unsigned Opcode;
-  if (splitAddSubImm(Imm, RegSize, Imm0, Imm1)) {
-    if (IsAdd)
-      Opcode = RegSize == 32 ? AArch64::ADDWri : AArch64::ADDXri;
-    else
-      Opcode = RegSize == 32 ? AArch64::SUBWri : AArch64::SUBXri;
-  } else if (splitAddSubImm(-Imm, RegSize, Imm0, Imm1)) {
-    if (IsAdd)
-      Opcode = RegSize == 32 ? AArch64::SUBWri : AArch64::SUBXri;
-    else
-      Opcode = RegSize == 32 ? AArch64::ADDWri : AArch64::ADDXri;
-  } else {
-    return false;
-  }
-
-  // Create new ADD/SUB MIs.
-  DebugLoc DL = MI.getDebugLoc();
-  MachineBasicBlock *MBB = MI.getParent();
-  const TargetRegisterClass *RC =
-      (RegSize == 32) ? &AArch64::GPR32spRegClass : &AArch64::GPR64spRegClass;
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register TmpReg = MRI->createVirtualRegister(RC);
-
-  MRI->constrainRegClass(SrcReg, RC);
-  BuildMI(*MBB, MI, DL, TII->get(Opcode), TmpReg)
-      .addReg(SrcReg)
-      .addImm(Imm0)
-      .addImm(12);
-
-  MRI->constrainRegClass(DstReg, RC);
-  BuildMI(*MBB, MI, DL, TII->get(Opcode), DstReg)
-      .addReg(TmpReg)
-      .addImm(Imm1)
-      .addImm(0);
-
-  // Record the MIs need to be removed.
-  ToBeRemoved.insert(&MI);
-  if (SubregToRegMI)
-    ToBeRemoved.insert(SubregToRegMI);
-  ToBeRemoved.insert(MovMI);
-
-  return true;
-}
-
-// Checks if the corresponding MOV immediate instruction is applicable for
-// this peephole optimization.
-bool AArch64MIPeepholeOpt::checkMovImmInstr(MachineInstr &MI,
-                                            MachineInstr *&MovMI,
-                                            MachineInstr *&SubregToRegMI) {
-  // Check whether current MI is in loop and is loop invariant.
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineLoop *L = MLI->getLoopFor(MBB);
-  if (L && !L->isLoopInvariant(MI))
-    return false;
-
-  // Check whether current MI's operand is MOV with immediate.
-  MovMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
-  SubregToRegMI = nullptr;
-  // If it is SUBREG_TO_REG, check its operand.
-  if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
-    SubregToRegMI = MovMI;
-    MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(2).getReg());
-  }
-
-  if (MovMI->getOpcode() != AArch64::MOVi32imm &&
-      MovMI->getOpcode() != AArch64::MOVi64imm)
-    return false;
-
-  // If the MOV has multiple uses, do not split the immediate because it causes
-  // more instructions.
-  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
-    return false;
-
-  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
-    return false;
-
-  // It is OK to perform this peephole optimization.
   return true;
 }
 
@@ -331,18 +209,6 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::ANDXrr:
         Changed = visitAND<uint64_t>(MI, ToBeRemoved);
-        break;
-      case AArch64::ADDWrr:
-        Changed = visitADDSUB<uint32_t>(MI, ToBeRemoved, true);
-        break;
-      case AArch64::SUBWrr:
-        Changed = visitADDSUB<uint32_t>(MI, ToBeRemoved, false);
-        break;
-      case AArch64::ADDXrr:
-        Changed = visitADDSUB<uint64_t>(MI, ToBeRemoved, true);
-        break;
-      case AArch64::SUBXrr:
-        Changed = visitADDSUB<uint64_t>(MI, ToBeRemoved, false);
         break;
       }
     }
