@@ -110,6 +110,7 @@ static_library("Support") {
     "PrettyStackTrace.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
+    "RISCVISAInfo.cpp",
     "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",
