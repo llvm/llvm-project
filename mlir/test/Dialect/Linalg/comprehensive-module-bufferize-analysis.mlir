@@ -364,11 +364,7 @@ func @nested_extract_slice_and_insert(
   // CHECK-NEXT: tensor.extract_slice
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   // CHECK-NEXT: tensor.extract_slice
-  // Atm, this 2nd tensor.extract_slice fails to bufferize inplace because
-  // clobbering analysis conservatively test for equivalent buffers.
-  // TODO: This is currently too restrictive and misses clobberings.
-  // When available, use container-containee analysis.
-  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   // CHECK-NEXT: tensor.extract_slice
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   // CHECK-NEXT: fill
@@ -744,9 +740,7 @@ func @insert_slice_chain(
   %0 = linalg.fill(%cst, %arg2) : f32, tensor<62x90xf32> -> tensor<62x90xf32>
 
   //      CHECK: tensor.extract_slice
-  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
-  // TODO: in order to have this extract_slice bufferize inplace, we need to write a range
-  // analysis and determine that intersection([0, 32)x[0, 90), [32, 62)x[0, 90)) is empty.
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
   %2 = tensor.extract_slice %0[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]
@@ -793,3 +787,229 @@ func @ip(%t: tensor<10x20xf32> {linalg.inplaceable = true},
  return %r : tensor<10x20xf32>
 }
 
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @linalg_op_same_out_tensors
+func @linalg_op_same_out_tensors(
+    %t1: tensor<?xf32> {linalg.inplaceable = true},
+    %t2: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>, tensor<?xf32>){
+
+  //      CHECK: linalg.generic
+  // CHECK-SAME: {__inplace_results_attr__ = ["true", "false"]
+  %o:2 = linalg.generic #trait ins(%t1 : tensor<?xf32>)
+                               outs (%t2, %t2 : tensor<?xf32>, tensor<?xf32>) {
+      ^bb(%0: f32, %1: f32, %2 : f32) :
+        linalg.yield %0, %0 : f32, f32
+    } -> (tensor<?xf32>, tensor<?xf32>)
+  return %o#0, %o#1 : tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @double_insert_slice_into_alias
+func @double_insert_slice_into_alias(
+    %v1: vector<32x90xf32>,
+    %v2: vector<30x90xf32>,
+    %arg2: tensor<62x90xf32> {linalg.inplaceable = true},
+    %s1: index, %s2: index, %s3: index, %s4: index)
+  -> (tensor<62x90xf32>, tensor<?x?xf32>)
+{
+  %c0 = arith.constant 0 : index
+
+  // Cannot bufferize inplace this extract_slice because both operand and result
+  // are modified and returned separately.
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %e = tensor.extract_slice %arg2[%s1, %s2][%s3, %s4][1, 1] : tensor<62x90xf32> to tensor<?x?xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %2 = tensor.extract_slice %arg2[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = [true, true]} : vector<32x90xf32>, tensor<32x90xf32>
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %8 = tensor.insert_slice %7 into %arg2[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %10 = tensor.extract_slice %e[32, 0] [30, 90] [1, 1] : tensor<?x?xf32> to tensor<30x90xf32>
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = [true, true]} : vector<30x90xf32>, tensor<30x90xf32>
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %15 = tensor.insert_slice %14 into %e[32, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<?x?xf32>
+
+  return %8, %15 : tensor<62x90xf32>, tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @interleaved_extract_insert_slice_chain_1
+func @interleaved_extract_insert_slice_chain_1(
+    %arg2: tensor<62x90xf32> {linalg.inplaceable = true})
+  -> (tensor<62x90xf32>)
+{
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %2 = tensor.extract_slice %arg2[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
+
+  // TODO: This should bufferize inplace once we have a proper range analysis.
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %10 = tensor.extract_slice %arg2[32, 0] [30, 90] [1, 1] : tensor<62x90xf32> to tensor<30x90xf32>
+
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %8 = tensor.insert_slice %2 into %arg2[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
+
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %15 = tensor.insert_slice %10 into %8[32, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<62x90xf32>
+
+  return %15 : tensor<62x90xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @interleaved_extract_insert_slice_chain_2
+func @interleaved_extract_insert_slice_chain_2(
+    %arg2: tensor<62x90xf32> {linalg.inplaceable = true})
+  -> (tensor<62x90xf32>)
+{
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %2 = tensor.extract_slice %arg2[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
+
+  // The slices are overlapping, so this can never bufferize inplace.
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %10 = tensor.extract_slice %arg2[31, 0] [30, 90] [1, 1] : tensor<62x90xf32> to tensor<30x90xf32>
+
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %8 = tensor.insert_slice %2 into %arg2[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
+
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %15 = tensor.insert_slice %10 into %8[31, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<62x90xf32>
+
+  return %15 : tensor<62x90xf32>
+}
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @reading_scf_for
+func @reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                      %s: index, %v: vector<5xf32>) -> (tensor<?xf32>, vector<5xf32>) {
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+
+  // Write to %t1.
+  // CHECK:      vector.transfer_write
+  // CHECK-SAME: __inplace_results_attr__ = ["false"]
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
+
+  // Read the old value of %t1 inside the loop via an alias.
+  // CHECK:      scf.for
+  %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
+    // CHECK:      tensor.extract_slice
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
+
+    // Read from %t1 via alias %e.
+    %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
+    scf.yield %e, %v2 : tensor<?xf32>, vector<5xf32>
+  }
+  // CHECK: __inplace_results_attr__ = ["true", "none"]
+
+  // Use %t3 in some way without reading it, so that it does not get DCE'd.
+  // CHECK:      linalg.generic
+  // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %o = linalg.generic #trait outs (%t3 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        linalg.yield %cst : f32
+    } -> (tensor<?xf32>)
+
+  return %o, %v3 : tensor<?xf32>, vector<5xf32>
+}
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @non_reading_scf_for
+func @non_reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                          %s: index, %v: vector<5xf32>) -> (tensor<?xf32>, vector<5xf32>) {
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+
+  // Write to %t1.
+  // CHECK:      vector.transfer_write
+  // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
+
+  // This loop does not read from %t1. It only writes to it.
+  // CHECK:      scf.for
+  %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
+    // CHECK:      tensor.extract_slice
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
+
+    // Write to %t1 via alias. (Overwrite %t3.)
+    // CHECK:      linalg.generic
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+    %o2 = linalg.generic #trait outs (%e : tensor<?xf32>) {
+        ^bb(%0: f32) :
+          linalg.yield %cst : f32
+      } -> (tensor<?xf32>)
+
+    // Read overwritten value. This is not a read of %t1.
+    %v2 = vector.transfer_read %o2[%s], %cst : tensor<?xf32>, vector<5xf32>
+    scf.yield %o2, %v2 : tensor<?xf32>, vector<5xf32>
+  }
+
+  // Use %t3 in some way without reading it, so that it does not get DCE'd.
+    // CHECK:      linalg.generic
+    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  %o = linalg.generic #trait outs (%t3 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        linalg.yield %cst : f32
+    } -> (tensor<?xf32>)
+
+  return %o, %v3 : tensor<?xf32>, vector<5xf32>
+}

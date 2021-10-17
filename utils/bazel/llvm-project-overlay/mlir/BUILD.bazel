@@ -2849,6 +2849,7 @@ cc_library(
         ":ToLLVMIRTranslation",
         ":LLVMToLLVMIRTranslation",
         "//llvm:Core",
+        "//llvm:MC",
         "//llvm:Support",
         "//llvm:Target",
     ] + if_cuda_available([

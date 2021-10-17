@@ -38,6 +38,7 @@ public:
     uint32_t regnum_remote = LLDB_INVALID_REGNUM;
     std::vector<uint32_t> value_regs;
     std::vector<uint32_t> invalidate_regs;
+    uint32_t value_reg_offset = 0;
   };
 
   DynamicRegisterInfo() = default;
@@ -101,6 +102,7 @@ protected:
   typedef std::vector<reg_num_collection> set_reg_num_collection;
   typedef std::vector<lldb_private::ConstString> name_collection;
   typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;
+  typedef std::map<uint32_t, uint32_t> reg_offset_map;
 
   llvm::Expected<uint32_t> ByteOffsetFromSlice(uint32_t index,
                                                llvm::StringRef slice_str,
@@ -122,6 +124,7 @@ protected:
   name_collection m_set_names;
   reg_to_regs_map m_value_regs_map;
   reg_to_regs_map m_invalidate_regs_map;
+  reg_offset_map m_value_reg_offset_map;
   size_t m_reg_data_byte_size = 0u; // The number of bytes required to store
                                     // all registers
   bool m_finalized = false;

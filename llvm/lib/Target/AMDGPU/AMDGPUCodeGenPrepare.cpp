@@ -151,8 +151,6 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 
   unsigned numBitsUnsigned(Value *Op, unsigned ScalarSize) const;
   unsigned numBitsSigned(Value *Op, unsigned ScalarSize) const;
-  bool isI24(Value *V, unsigned ScalarSize) const;
-  bool isU24(Value *V, unsigned ScalarSize) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
@@ -454,16 +452,6 @@ unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op,
   return ScalarSize - ComputeNumSignBits(Op, *DL, 0, AC);
 }
 
-bool AMDGPUCodeGenPrepare::isI24(Value *V, unsigned ScalarSize) const {
-  return ScalarSize >= 24 && // Types less than 24-bit should be treated
-                                     // as unsigned 24-bit values.
-    numBitsSigned(V, ScalarSize) < 24;
-}
-
-bool AMDGPUCodeGenPrepare::isU24(Value *V, unsigned ScalarSize) const {
-  return numBitsUnsigned(V, ScalarSize) <= 24;
-}
-
 static void extractValues(IRBuilder<> &Builder,
                           SmallVectorImpl<Value *> &Values, Value *V) {
   auto *VT = dyn_cast<FixedVectorType>(V->getType());
@@ -509,20 +497,25 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
 
   Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
 
-  // TODO: Should this try to match mulhi24?
-  if (ST->hasMulU24() && isU24(LHS, Size) && isU24(RHS, Size)) {
-    // The 24-bit mul intrinsics yields the low-order 32 bits. The result's bit
-    // width should not exceed 32 if `Size` > 32.
-    if (Size > 32 &&
-        numBitsUnsigned(LHS, Size) + numBitsUnsigned(RHS, Size) > 32) {
+  unsigned LHSBits = 0, RHSBits = 0;
+
+  if (ST->hasMulU24() && (LHSBits = numBitsUnsigned(LHS, Size)) <= 24 &&
+      (RHSBits = numBitsUnsigned(RHS, Size)) <= 24) {
+    // The mul24 instruction yields the low-order 32 bits. If the original
+    // result and the destination is wider than 32 bits, the mul24 would
+    // truncate the result.
+    if (Size > 32 && LHSBits + RHSBits > 32)
       return false;
-    }
 
     IntrID = Intrinsic::amdgcn_mul_u24;
-  } else if (ST->hasMulI24() && isI24(LHS, Size) && isI24(RHS, Size)) {
-    if (Size > 32 && numBitsSigned(LHS, Size) + numBitsSigned(RHS, Size) > 31) {
+  } else if (ST->hasMulI24() &&
+             (LHSBits = numBitsSigned(LHS, Size)) < 24 &&
+             (RHSBits = numBitsSigned(RHS, Size)) < 24) {
+    // The original result is positive if its destination is wider than 32 bits
+    // and its highest set bit is at bit 31. Generating mul24 and sign-extending
+    // it would yield a negative value.
+    if (Size > 32 && LHSBits + RHSBits > 30)
       return false;
-    }
 
     IntrID = Intrinsic::amdgcn_mul_i24;
   } else

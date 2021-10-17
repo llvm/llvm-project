@@ -2061,13 +2061,13 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
-  // and(ashr(subNSW(Y, X), ScalarSizeInBits(Y)-1), X) --> X s> Y ? X : 0.
-  if (match(&I, m_c_And(m_OneUse(m_AShr(
-                            m_NSWSub(m_Value(Y), m_Value(X)),
-                            m_SpecificInt(Ty->getScalarSizeInBits() - 1))),
-                        m_Deferred(X)))) {
-    Value *NewICmpInst = Builder.CreateICmpSGT(X, Y);
-    return SelectInst::Create(NewICmpInst, X, ConstantInt::getNullValue(Ty));
+  // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0
+  unsigned FullShift = Ty->getScalarSizeInBits() - 1;
+  if (match(&I, m_c_And(m_OneUse(m_AShr(m_Value(X), m_SpecificInt(FullShift))),
+                        m_Value(Y)))) {
+    Constant *Zero = ConstantInt::getNullValue(Ty);
+    Value *Cmp = Builder.CreateICmpSLT(X, Zero, "isneg");
+    return SelectInst::Create(Cmp, Y, Zero);
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions

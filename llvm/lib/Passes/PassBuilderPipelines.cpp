@@ -503,7 +503,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // The matrix extension can introduce large vector operations early, which can
   // benefit from running vector-combine early on.
   if (EnableMatrix)
-    FPM.addPass(VectorCombinePass());
+    FPM.addPass(VectorCombinePass(/*ScalarizationOnly=*/true));
 
   // Eliminate redundancies.
   FPM.addPass(MergedLoadStoreMotionPass());
@@ -1202,7 +1202,8 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, LTOPreLink));
 
-  if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
+  if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
+      PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(PseudoProbeUpdatePass());
 
   // Emit annotation remarks.
@@ -1258,7 +1259,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // on these, we schedule the cleanup here.
   MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
 
-  if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
+  if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
+      PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(PseudoProbeUpdatePass());
 
   // Handle OptimizerLastEPCallbacks added by clang on PreLink. Actual

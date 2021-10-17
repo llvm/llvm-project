@@ -17,6 +17,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8  \
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P8
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr8  \
+; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P8
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define dso_local i128 @ld_0___int128___int128(i64 %ptr) {

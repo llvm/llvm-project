@@ -617,3 +617,49 @@ define i12 @trunc_sandwich_big_sum_shift2_use1(i32 %x) {
   %r = lshr i12 %tr, 1
   ret i12 %r
 }
+
+define i16 @lshr_sext_i1_to_i16(i1 %a) {
+; CHECK-LABEL: @lshr_sext_i1_to_i16(
+; CHECK-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i16 4095, i16 0
+; CHECK-NEXT:    ret i16 [[LSHR]]
+;
+  %sext = sext i1 %a to i16
+  %lshr = lshr i16 %sext, 4
+  ret i16 %lshr
+}
+
+define i128 @lshr_sext_i1_to_i128(i1 %a) {
+; CHECK-LABEL: @lshr_sext_i1_to_i128(
+; CHECK-NEXT:    [[LSHR:%.*]] = select i1 [[A:%.*]], i128 77371252455336267181195263, i128 0
+; CHECK-NEXT:    ret i128 [[LSHR]]
+;
+  %sext = sext i1 %a to i128
+  %lshr = lshr i128 %sext, 42
+  ret i128 %lshr
+}
+
+define i32 @lshr_sext_i1_to_i32_use(i1 %a) {
+; CHECK-LABEL: @lshr_sext_i1_to_i32_use(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[LSHR:%.*]] = select i1 [[A]], i32 262143, i32 0
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %sext = sext i1 %a to i32
+  call void @use(i32 %sext)
+  %lshr = lshr i32 %sext, 14
+  ret i32 %lshr
+}
+
+define <3 x i14> @lshr_sext_i1_to_i14_splat_vec_use1(<3 x i1> %a) {
+; CHECK-LABEL: @lshr_sext_i1_to_i14_splat_vec_use1(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <3 x i1> [[A:%.*]] to <3 x i14>
+; CHECK-NEXT:    call void @usevec(<3 x i14> [[SEXT]])
+; CHECK-NEXT:    [[LSHR:%.*]] = select <3 x i1> [[A]], <3 x i14> <i14 1023, i14 1023, i14 1023>, <3 x i14> zeroinitializer
+; CHECK-NEXT:    ret <3 x i14> [[LSHR]]
+;
+  %sext = sext <3 x i1> %a to <3 x i14>
+  call void @usevec(<3 x i14> %sext)
+  %lshr = lshr <3 x i14> %sext, <i14 4, i14 4, i14 4>
+  ret <3 x i14> %lshr
+}

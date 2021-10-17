@@ -858,9 +858,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
    }
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
     for (BasicBlock *SuccBB : successors(BB)) {
-      assert(!(any_of(OtherExits,
-                      [SuccBB](BasicBlock *EB) { return EB == SuccBB; }) ||
-               SuccBB == LatchExit) &&
+      assert(!(llvm::is_contained(OtherExits, SuccBB) || SuccBB == LatchExit) &&
              "Breaks the definition of dedicated exits!");
     }
 #endif

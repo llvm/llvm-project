@@ -111,9 +111,6 @@ void ABIAArch64::AugmentRegisterInfo(
 
   std::array<llvm::Optional<uint32_t>, 32> x_regs;
   std::array<llvm::Optional<uint32_t>, 32> v_regs;
-  std::bitset<32> have_w_regs;
-  std::bitset<32> have_s_regs;
-  std::bitset<32> have_d_regs;
 
   for (auto it : llvm::enumerate(regs)) {
     lldb_private::DynamicRegisterInfo::Register &info = it.value();
@@ -133,14 +130,11 @@ void ABIAArch64::AugmentRegisterInfo(
 
     if (get_reg("x"))
       x_regs[reg_num] = it.index();
-    if (get_reg("v"))
+    else if (get_reg("v"))
       v_regs[reg_num] = it.index();
-    if (get_reg("w"))
-      have_w_regs[reg_num] = true;
-    if (get_reg("s"))
-      have_s_regs[reg_num] = true;
-    if (get_reg("d"))
-      have_d_regs[reg_num] = true;
+    // if we have at least one subregister, abort
+    else if (get_reg("w") || get_reg("s") || get_reg("d"))
+      return;
   }
 
   // Create aliases for partial registers: wN for xN, and sN/dN for vN.
