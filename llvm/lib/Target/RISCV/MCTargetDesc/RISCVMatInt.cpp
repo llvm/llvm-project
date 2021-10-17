@@ -20,7 +20,8 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
   for (auto Instr : Res) {
     bool Compressed;
     switch (Instr.Opc) {
-    default: llvm_unreachable("Unexpected opcode");
+    default:
+      llvm_unreachable("Unexpected opcode");
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -120,6 +121,14 @@ static void generateInstSeqImpl(int64_t Val,
       Hi52 = ((uint64_t)Hi52 << 12) | (0xffffffffull << 32);
       Unsigned = true;
     }
+  }
+
+  // Try to use SLLIUW for Hi52 when it is uint32 but not int32.
+  if (isUInt<32>((uint64_t)Hi52) && !isInt<32>((uint64_t)Hi52) &&
+      ActiveFeatures[RISCV::FeatureStdExtZba]) {
+    // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with SLLIUW.
+    Hi52 = ((uint64_t)Hi52) | (0xffffffffull << 32);
+    Unsigned = true;
   }
 
   generateInstSeqImpl(Hi52, ActiveFeatures, Res);
@@ -281,8 +290,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size,
-                  const FeatureBitset &ActiveFeatures,
-                  bool CompressionCost) {
+                  const FeatureBitset &ActiveFeatures, bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
   bool HasRVC = CompressionCost && ActiveFeatures[RISCV::FeatureStdExtC];
   int PlatRegSize = IsRV64 ? 64 : 32;
