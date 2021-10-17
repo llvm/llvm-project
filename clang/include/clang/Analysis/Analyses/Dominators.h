@@ -202,7 +202,7 @@ struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
 
     auto Children = children<OrderedNodeTy>(N);
     ChildrenTy Ret{Children.begin(), Children.end()};
-    Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+    llvm::erase_value(Ret, nullptr);
     return Ret;
   }
 };
