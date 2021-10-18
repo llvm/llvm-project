@@ -795,6 +795,7 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   // FIXME: This pass causes verification failures.
+  // See: https://bugs.llvm.org/show_bug.cgi?id=52204
   MF.getProperties().set(
       MachineFunctionProperties::Property::FailsVerification);
 
