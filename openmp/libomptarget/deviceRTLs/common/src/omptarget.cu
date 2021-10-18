@@ -102,12 +102,14 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
   }
 
+  __kmpc_impl_syncwarp(__kmpc_impl_activemask());
   if (GetLaneId() == 0) {
-    parallelLevel[GetWarpId()] =
-        1 + (__kmpc_get_hardware_num_threads_in_block() > 1
-                 ? OMP_ACTIVE_PARALLEL_LEVEL
-                 : 0);
+    parallelLevel[GetWarpId()] = (__kmpc_get_hardware_num_threads_in_block() > 1
+                                      ? OMP_ACTIVE_PARALLEL_LEVEL
+                                      : 0);
+    __kmpc_impl_threadfence();
   }
+  __kmpc_impl_syncwarp(__kmpc_impl_activemask());
 
   __kmpc_data_sharing_init_stack();
   if (!RequiresFullRuntime)

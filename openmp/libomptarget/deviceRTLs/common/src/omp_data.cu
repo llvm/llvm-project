@@ -34,8 +34,8 @@ uint32_t SHARED(usedMemIdx);
 uint32_t SHARED(usedSlotIdx);
 
 // SHARED doesn't work with array so we add the attribute explicitly.
-[[clang::loader_uninitialized]] uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+[[clang::loader_uninitialized]] uint32_t volatile parallelLevel
+    [MAX_THREADS_PER_TEAM / WARPSIZE];
 #pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
 uint16_t SHARED(threadLimit);
 uint16_t SHARED(threadsInTeam);

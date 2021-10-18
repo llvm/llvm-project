@@ -287,7 +287,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-NOINLINE EXTERN uint8_t __kmpc_parallel_level() {
+NOINLINE EXTERN uint32_t __kmpc_parallel_level() {
   return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
@@ -340,20 +340,22 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
                                         size_t nargs) {
 
   PRINT0(LD_IO | LD_PAR, "call kmpc_parallel_51\n");
-  // Handle the serialized case first, same for SPMD/non-SPMD except that in
-  // SPMD mode we already incremented the parallel level counter, account for
-  // that.
-  bool InParallelRegion =
-      (__kmpc_parallel_level() > __kmpc_is_spmd_exec_mode());
+  // Handle the serialized case first, same for SPMD/non-SPMD
+  bool InParallelRegion = (__kmpc_parallel_level() > 0);
   if (!if_expr || InParallelRegion) {
+    // increment parallel level to set all thread IDs to 0
     __kmpc_serialized_parallel(ident, global_tid);
-    __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
+    __kmp_invoke_microtask(GetOmpThreadId(), 0, fn, args, nargs);
+    // decrement parallel level to reset all thread IDs to the value it had
+    // before entering the region
     __kmpc_end_serialized_parallel(ident, global_tid);
     return;
   }
 
   if (__kmpc_is_spmd_exec_mode()) {
+    IncParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
     __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
+    DecParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 #ifdef __AMDGCN__
     __kmpc_barrier_simple_spmd(ident, 0);
 #endif
