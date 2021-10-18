@@ -22,7 +22,6 @@ static_library("LTO") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
-    "Caching.cpp",
     "LTO.cpp",
     "LTOBackend.cpp",
     "LTOCodeGenerator.cpp",
