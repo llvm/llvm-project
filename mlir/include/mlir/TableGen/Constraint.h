@@ -59,6 +59,9 @@ public:
     return Constraint(reinterpret_cast<const llvm::Record *>(ptr));
   }
 
+  // Return the underlying def.
+  const llvm::Record *getDef() const { return def; }
+
 protected:
   Constraint(Kind kind, const llvm::Record *record);
 
