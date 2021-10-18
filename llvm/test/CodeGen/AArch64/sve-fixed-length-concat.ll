@@ -460,8 +460,7 @@ define void @concat_v32i64(<16 x i64>* %a, <16 x i64>* %b, <32 x i64>* %c) #0 {
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @concat_v4f16(<2 x half> %op1, <2 x half> %op2) #0 {
 ; CHECK-LABEL: concat_v4f16:
-; CHECK: ext v0.8b, v0.8b, v0.8b, #4
-; CHECK-NEXT: ext v0.8b, v0.8b, v1.8b, #4
+; CHECK: zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT: ret
   %res = shufflevector <2 x half> %op1, <2 x half> %op2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x half> %res
