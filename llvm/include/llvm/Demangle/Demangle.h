@@ -31,7 +31,6 @@ enum : int {
 char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
 
-
 enum MSDemangleFlags {
   MSDF_None = 0,
   MSDF_DumpBackrefs = 1 << 0,
@@ -53,9 +52,9 @@ enum MSDemangleFlags {
 /// receives the size of the demangled string on output if n_buf is not nullptr.
 /// status receives one of the demangle_ enum entries above if it's not nullptr.
 /// Flags controls various details of the demangled representation.
-char *microsoftDemangle(const char *mangled_name, size_t *n_read,
-                        char *buf, size_t *n_buf,
-                        int *status, MSDemangleFlags Flags = MSDF_None);
+char *microsoftDemangle(const char *mangled_name, size_t *n_read, char *buf,
+                        size_t *n_buf, int *status,
+                        MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol. The API follows that of __cxa_demangle.
 char *rustDemangle(const char *MangledName, char *Buf, size_t *N, int *Status);
@@ -120,6 +119,7 @@ struct ItaniumPartialDemangler {
   bool isSpecialName() const;
 
   ~ItaniumPartialDemangler();
+
 private:
   void *RootNode;
   void *Context;
