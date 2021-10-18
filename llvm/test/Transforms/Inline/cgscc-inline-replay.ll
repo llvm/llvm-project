@@ -25,7 +25,7 @@
 ; REPLAY-FUNCTION: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
 ; REPLAY-FUNCTION: '_Z3sumii' inlined into 'main' with (cost=always)
 
-; REPLAY-ERROR: error: Could not open remarks file: Is a directory
+; REPLAY-ERROR: error: Could not open remarks file:
 ; REPLAY-ERROR-SCOPE: opt: for the --cgscc-inline-replay-scope option: Cannot find option named 'function'!
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
