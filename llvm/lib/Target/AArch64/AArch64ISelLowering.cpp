@@ -9577,6 +9577,86 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
   return DAG.getNode(Opcode, dl, VT, V, DAG.getConstant(Lane, dl, MVT::i64));
 }
 
+// Return true if we can get a new shuffle mask by checking the parameter mask
+// array to test whether every two adjacent mask values are continuous and
+// starting from an even number.
+static bool isWideTypeMask(ArrayRef<int> M, EVT VT,
+                           SmallVectorImpl<int> &NewMask) {
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts % 2 != 0)
+    return false;
+
+  NewMask.clear();
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    int M0 = M[i];
+    int M1 = M[i + 1];
+
+    // If both elements are undef, new mask is undef too.
+    if (M0 == -1 && M1 == -1) {
+      NewMask.push_back(-1);
+      continue;
+    }
+
+    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
+      NewMask.push_back(M1 / 2);
+      continue;
+    }
+
+    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
+      NewMask.push_back(M0 / 2);
+      continue;
+    }
+
+    NewMask.clear();
+    return false;
+  }
+
+  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
+  return true;
+}
+
+// Try to widen element type to get a new mask value for a better permutation
+// sequence, so that we can use NEON shuffle instructions, such as zip1/2,
+// UZP1/2, TRN1/2, REV, INS, etc.
+// For example:
+//  shufflevector <4 x i32> %a, <4 x i32> %b,
+//                <4 x i32> <i32 6, i32 7, i32 2, i32 3>
+// is equivalent to:
+//  shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 1>
+// Finally, we can get:
+//  mov     v0.d[0], v1.d[1]
+static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  EVT ScalarVT = VT.getVectorElementType();
+  unsigned ElementSize = ScalarVT.getFixedSizeInBits();
+  SDValue V0 = Op.getOperand(0);
+  SDValue V1 = Op.getOperand(1);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op)->getMask();
+
+  // If combining adjacent elements, like two i16's -> i32, two i32's -> i64 ...
+  // We need to make sure the wider element type is legal. Thus, ElementSize
+  // should be not larger than 32 bits, and i1 type should also be excluded.
+  if (ElementSize > 32 || ElementSize == 1)
+    return SDValue();
+
+  SmallVector<int, 8> NewMask;
+  if (isWideTypeMask(Mask, VT, NewMask)) {
+    MVT NewEltVT = VT.isFloatingPoint()
+                       ? MVT::getFloatingPointVT(ElementSize * 2)
+                       : MVT::getIntegerVT(ElementSize * 2);
+    MVT NewVT = MVT::getVectorVT(NewEltVT, VT.getVectorNumElements() / 2);
+    if (DAG.getTargetLoweringInfo().isTypeLegal(NewVT)) {
+      V0 = DAG.getBitcast(NewVT, V0);
+      V1 = DAG.getBitcast(NewVT, V1);
+      return DAG.getBitcast(VT,
+                            DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -9723,6 +9803,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, SrcVec, SrcLaneV),
         DstLaneV);
   }
+
+  if (SDValue NewSD = tryWidenMaskForShuffle(Op, DAG))
+    return NewSD;
 
   // If the shuffle is not directly supported and it has 4 elements, use
   // the PerfectShuffle-generated table to synthesize it from other shuffles.

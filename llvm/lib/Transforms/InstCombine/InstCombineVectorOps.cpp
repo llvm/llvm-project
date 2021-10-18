@@ -2467,16 +2467,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (LHS == RHS) {
     assert(!match(RHS, m_Undef()) &&
            "Shuffle with 2 undef ops not simplified?");
-    // Remap any references to RHS to use LHS.
-    SmallVector<int, 16> Elts;
-    for (unsigned i = 0; i != VWidth; ++i) {
-      // Propagate undef elements or force mask to LHS.
-      if (Mask[i] < 0)
-        Elts.push_back(UndefMaskElem);
-      else
-        Elts.push_back(Mask[i] % LHSWidth);
-    }
-    return new ShuffleVectorInst(LHS, Elts);
+    return new ShuffleVectorInst(LHS, createUnaryMask(Mask, LHSWidth));
   }
 
   // shuffle undef, x, mask --> shuffle x, undef, mask'

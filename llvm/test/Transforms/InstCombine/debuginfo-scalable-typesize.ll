@@ -21,7 +21,7 @@ define float @debug_scalablevec_bitcast_to_scalar() {
   call void @llvm.dbg.declare(metadata <vscale x 4 x float>* %v.addr, metadata !3, metadata !DIExpression()), !dbg !5
   %a = bitcast <vscale x 4 x float>* %v.addr to float*
   %b = load float, float* %a, align 16
-  ret float undef
+  ret float %b
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
