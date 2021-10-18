@@ -307,10 +307,7 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
   if (getKind() == CE_ObjCMessage)
     return false;
 
-  const IdentifierInfo *II = getCalleeIdentifier();
-  if (!II)
-    return false;
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(getDecl());
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(getDecl());
   if (!FD)
     return false;
 
@@ -320,44 +317,69 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
            (!CD.RequiredParams || CD.RequiredParams <= parameters().size());
   }
 
-  if (!CD.IsLookupDone) {
-    CD.IsLookupDone = true;
+  if (!CD.II.hasValue()) {
     CD.II = &getState()->getStateManager().getContext().Idents.get(
         CD.getFunctionName());
   }
 
-  if (II != CD.II)
+  const auto MatchNameOnly = [](const CallDescription &CD,
+                                const NamedDecl *ND) -> bool {
+    DeclarationName Name = ND->getDeclName();
+    if (const auto *II = Name.getAsIdentifierInfo())
+      return II == CD.II.getValue(); // Fast case.
+
+    // Simply report mismatch for:
+    // C++ overloaded operators, constructors, destructors, etc.
     return false;
+  };
 
-  // If CallDescription provides prefix names, use them to improve matching
-  // accuracy.
-  if (CD.QualifiedName.size() > 1 && FD) {
-    const DeclContext *Ctx = FD->getDeclContext();
-    // See if we'll be able to match them all.
-    size_t NumUnmatched = CD.QualifiedName.size() - 1;
-    for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
-      if (NumUnmatched == 0)
-        break;
+  const auto ExactMatchArgAndParamCounts =
+      [](const CallEvent &Call, const CallDescription &CD) -> bool {
+    const bool ArgsMatch =
+        !CD.RequiredArgs || CD.RequiredArgs == Call.getNumArgs();
+    const bool ParamsMatch =
+        !CD.RequiredParams || CD.RequiredParams == Call.parameters().size();
+    return ArgsMatch && ParamsMatch;
+  };
 
-      if (const auto *ND = dyn_cast<NamespaceDecl>(Ctx)) {
-        if (ND->getName() == CD.QualifiedName[NumUnmatched - 1])
-          --NumUnmatched;
+  const auto MatchQualifiedNameParts = [](const CallDescription &CD,
+                                          const Decl *D) -> bool {
+    const auto FindNextNamespaceOrRecord =
+        [](const DeclContext *Ctx) -> const DeclContext * {
+      while (Ctx && !isa<NamespaceDecl, RecordDecl>(Ctx))
+        Ctx = Ctx->getParent();
+      return Ctx;
+    };
+
+    auto QualifierPartsIt = CD.begin_qualified_name_parts();
+    const auto QualifierPartsEndIt = CD.end_qualified_name_parts();
+
+    // Match namespace and record names. Skip unrelated names if they don't
+    // match.
+    const DeclContext *Ctx = FindNextNamespaceOrRecord(D->getDeclContext());
+    for (; Ctx && QualifierPartsIt != QualifierPartsEndIt;
+         Ctx = FindNextNamespaceOrRecord(Ctx->getParent())) {
+      // If not matched just continue and try matching for the next one.
+      if (cast<NamedDecl>(Ctx)->getName() != *QualifierPartsIt)
         continue;
-      }
-
-      if (const auto *RD = dyn_cast<RecordDecl>(Ctx)) {
-        if (RD->getName() == CD.QualifiedName[NumUnmatched - 1])
-          --NumUnmatched;
-        continue;
-      }
+      ++QualifierPartsIt;
     }
 
-    if (NumUnmatched > 0)
-      return false;
-  }
+    // We matched if we consumed all expected qualifier segments.
+    return QualifierPartsIt == QualifierPartsEndIt;
+  };
 
-  return (!CD.RequiredArgs || CD.RequiredArgs == getNumArgs()) &&
-         (!CD.RequiredParams || CD.RequiredParams == parameters().size());
+  // Let's start matching...
+  if (!ExactMatchArgAndParamCounts(*this, CD))
+    return false;
+
+  if (!MatchNameOnly(CD, FD))
+    return false;
+
+  if (!CD.hasQualifiedNameParts())
+    return true;
+
+  return MatchQualifiedNameParts(CD, FD);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {

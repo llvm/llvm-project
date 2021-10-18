@@ -1237,9 +1237,7 @@ enum CallDescriptionFlags : int {
 /// arguments and the name of the function.
 class CallDescription {
   friend CallEvent;
-
-  mutable IdentifierInfo *II = nullptr;
-  mutable bool IsLookupDone = false;
+  mutable Optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<const char *> QualifiedName;
@@ -1273,7 +1271,9 @@ public:
                   Optional<size_t> RequiredParams = None)
       : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs),
         RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
-        Flags(Flags) {}
+        Flags(Flags) {
+    assert(!QualifiedName.empty());
+  }
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
@@ -1283,6 +1283,17 @@ public:
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
+
+  /// Get the qualified name parts in reversed order.
+  /// E.g. { "std", "vector", "data" } -> "vector", "std"
+  auto begin_qualified_name_parts() const {
+    return std::next(QualifiedName.rbegin());
+  }
+  auto end_qualified_name_parts() const { return QualifiedName.rend(); }
+
+  /// It's false, if and only if we expect a single identifier, such as
+  /// `getenv`. It's true for `std::swap`, or `my::detail::container::data`.
+  bool hasQualifiedNameParts() const { return QualifiedName.size() > 1; }
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
