@@ -328,9 +328,11 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
     if (const auto *II = Name.getAsIdentifierInfo())
       return II == CD.II.getValue(); // Fast case.
 
-    // Simply report mismatch for:
+    // Fallback to the slow stringification and comparison for:
     // C++ overloaded operators, constructors, destructors, etc.
-    return false;
+    // FIXME This comparison is way SLOWER than comparing pointers.
+    // At some point in the future, we should compare FunctionDecl pointers.
+    return Name.getAsString() == CD.getFunctionName();
   };
 
   const auto ExactMatchArgAndParamCounts =
