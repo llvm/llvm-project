@@ -50,16 +50,16 @@ entry:
 ; STATIC32-LABEL:   f2:
 ; STATIC32:   lui     $[[R0:[0-9]+]], %hi(__gnu_local_gp)
 ; STATIC32:   addiu   $[[GP:[0-9]+]], $[[R0]], %lo(__gnu_local_gp)
-; STATIC32:   rdhwr   $3, $29{{$}}
 ; STATIC32:   lw      $[[R0:[0-9]+]], %gottprel(t2)($[[GP]])
+; STATIC32:   rdhwr   $3, $29{{$}}
 ; STATIC32:   addu    $[[R1:[0-9]+]], $3, $[[R0]]
 ; STATIC32:   lw      $2, 0($[[R1]])
 
 ; STATIC64-LABEL:   f2:
 ; STATIC64:   lui     $[[R0:[0-9]+]], %hi(%neg(%gp_rel(f2)))
 ; STATIC64:   daddiu  $[[GP:[0-9]+]], $[[R0]], %lo(%neg(%gp_rel(f2)))
-; STATIC64:   rdhwr   $3, $29{{$}}
 ; STATIC64:   ld      $[[R0:[0-9]+]], %gottprel(t2)($[[GP]])
+; STATIC64:   rdhwr   $3, $29{{$}}
 ; STATIC64:   daddu   $[[R1:[0-9]+]], $3, $[[R0]]
 ; STATIC64:   lw      $2, 0($[[R1]])
 }
