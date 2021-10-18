@@ -639,28 +639,6 @@ public:
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
-  /// Parse an optional attribute.
-  virtual OptionalParseResult parseOptionalAttribute(Attribute &result,
-                                                     Type type,
-                                                     StringRef attrName,
-                                                     NamedAttrList &attrs) = 0;
-  template <typename AttrT>
-  OptionalParseResult parseOptionalAttribute(AttrT &result, StringRef attrName,
-                                             NamedAttrList &attrs) {
-    return parseOptionalAttribute(result, Type(), attrName, attrs);
-  }
-
-  /// Specialized variants of `parseOptionalAttribute` that remove potential
-  /// ambiguities in syntax.
-  virtual OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
-                                                     Type type,
-                                                     StringRef attrName,
-                                                     NamedAttrList &attrs) = 0;
-  virtual OptionalParseResult parseOptionalAttribute(StringAttr &result,
-                                                     Type type,
-                                                     StringRef attrName,
-                                                     NamedAttrList &attrs) = 0;
-
   /// Parse an arbitrary attribute of a given type and return it in result. This
   /// also adds the attribute to the specified attribute list with the specified
   /// name.
@@ -681,6 +659,40 @@ public:
 
     attrs.append(attrName, result);
     return success();
+  }
+
+  /// Parse an arbitrary optional attribute of a given type and return it in
+  /// result.
+  virtual OptionalParseResult parseOptionalAttribute(Attribute &result,
+                                                     Type type = {}) = 0;
+
+  /// Parse an optional array attribute and return it in result.
+  virtual OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                                     Type type = {}) = 0;
+
+  /// Parse an optional string attribute and return it in result.
+  virtual OptionalParseResult parseOptionalAttribute(StringAttr &result,
+                                                     Type type = {}) = 0;
+
+  /// Parse an optional attribute of a specific type and add it to the list with
+  /// the specified name.
+  template <typename AttrType>
+  OptionalParseResult parseOptionalAttribute(AttrType &result,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) {
+    return parseOptionalAttribute(result, Type(), attrName, attrs);
+  }
+
+  /// Parse an optional attribute of a specific type and add it to the list with
+  /// the specified name.
+  template <typename AttrType>
+  OptionalParseResult parseOptionalAttribute(AttrType &result, Type type,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) {
+    OptionalParseResult parseResult = parseOptionalAttribute(result, type);
+    if (parseResult.hasValue() && succeeded(*parseResult))
+      attrs.append(attrName, result);
+    return parseResult;
   }
 
   /// Parse a named dictionary into 'result' if it is present.
