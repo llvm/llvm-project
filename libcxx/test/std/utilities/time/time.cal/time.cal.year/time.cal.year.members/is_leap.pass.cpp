@@ -10,7 +10,7 @@
 // <chrono>
 // class year;
 
-// constexpr bool is_is_leap() const noexcept;
+// constexpr bool is_leap() const noexcept;
 //  y_ % 4 == 0 && (y_ % 100 != 0 || y_ % 400 == 0)
 //
 
