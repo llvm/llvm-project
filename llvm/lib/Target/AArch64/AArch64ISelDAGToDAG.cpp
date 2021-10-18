@@ -286,7 +286,8 @@ public:
   void SelectLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, unsigned Scale,
-                            unsigned Opc_rr, unsigned Opc_ri);
+                            unsigned Opc_rr, unsigned Opc_ri,
+                            bool IsIntr = false);
 
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
@@ -1487,7 +1488,7 @@ AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr,
 
 void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
                                                unsigned Scale, unsigned Opc_ri,
-                                               unsigned Opc_rr) {
+                                               unsigned Opc_rr, bool IsIntr) {
   assert(Scale < 4 && "Invalid scaling value.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
@@ -1497,11 +1498,11 @@ void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
   SDValue Base, Offset;
   unsigned Opc;
   std::tie(Opc, Base, Offset) = findAddrModeSVELoadStore(
-      N, Opc_rr, Opc_ri, N->getOperand(2),
+      N, Opc_rr, Opc_ri, N->getOperand(IsIntr ? 3 : 2),
       CurDAG->getTargetConstant(0, DL, MVT::i64), Scale);
 
-  SDValue Ops[] = {N->getOperand(1), // Predicate
-                   Base,             // Memory operand
+  SDValue Ops[] = {N->getOperand(IsIntr ? 2 : 1), // Predicate
+                   Base,                          // Memory operand
                    Offset, Chain};
 
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
@@ -3894,6 +3895,69 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_ld64b:
       SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
       return;
+    case Intrinsic::aarch64_sve_ld2_sret: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedLoad(Node, 2, 0, AArch64::LD2B_IMM, AArch64::LD2B,
+                             true);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+        SelectPredicatedLoad(Node, 2, 1, AArch64::LD2H_IMM, AArch64::LD2H,
+                             true);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedLoad(Node, 2, 2, AArch64::LD2W_IMM, AArch64::LD2W,
+                             true);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedLoad(Node, 2, 3, AArch64::LD2D_IMM, AArch64::LD2D,
+                             true);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ld3_sret: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedLoad(Node, 3, 0, AArch64::LD3B_IMM, AArch64::LD3B,
+                             true);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+        SelectPredicatedLoad(Node, 3, 1, AArch64::LD3H_IMM, AArch64::LD3H,
+                             true);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedLoad(Node, 3, 2, AArch64::LD3W_IMM, AArch64::LD3W,
+                             true);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedLoad(Node, 3, 3, AArch64::LD3D_IMM, AArch64::LD3D,
+                             true);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ld4_sret: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedLoad(Node, 4, 0, AArch64::LD4B_IMM, AArch64::LD4B,
+                             true);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+        SelectPredicatedLoad(Node, 4, 1, AArch64::LD4H_IMM, AArch64::LD4H,
+                             true);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedLoad(Node, 4, 2, AArch64::LD4W_IMM, AArch64::LD4W,
+                             true);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedLoad(Node, 4, 3, AArch64::LD4D_IMM, AArch64::LD4D,
+                             true);
+        return;
+      }
+      break;
+    }
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
