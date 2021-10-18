@@ -1,0 +1,15 @@
+name: 'Repo Lockdown'
+on:
+  pull_request_target:
+    types: opened
+
+permissions:
+  pull-requests: write
+
+jobs:
+  action:
+    runs-on: ubuntu-lastest
+    steps:
+      - uses: dessant/repo-lockdown@v2
+        with:
+          process-only: 'prs'

@@ -1,8 +1,0 @@
-# Configuration for Repo Lockdown - https://github.com/dessant/repo-lockdown
-
-skipCreatedBefore: "2020-03-21"
-
-pulls:
-  comment: >
-    This repository does not accept pull requests.
-    Please follow http://llvm.org/docs/Contributing.html#how-to-submit-a-patch for contribution to LLVM.
