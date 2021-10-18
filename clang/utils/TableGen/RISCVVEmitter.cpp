@@ -155,7 +155,6 @@ private:
   std::string IRName;
   bool HasSideEffects;
   bool IsMask;
-  bool HasMaskedOffOperand;
   bool HasVL;
   bool HasPolicy;
   bool HasNoMaskedOverloaded;
@@ -182,7 +181,6 @@ public:
   StringRef getName() const { return Name; }
   StringRef getMangledName() const { return MangledName; }
   bool hasSideEffects() const { return HasSideEffects; }
-  bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return HasPolicy; }
   bool hasNoMaskedOverloaded() const { return HasNoMaskedOverloaded; }
@@ -766,9 +764,9 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            StringRef RequiredExtension, unsigned NF)
     : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
-      HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
-      HasPolicy(HasPolicy), HasNoMaskedOverloaded(HasNoMaskedOverloaded),
-      HasAutoDef(HasAutoDef), ManualCodegen(ManualCodegen.str()), NF(NF) {
+      HasVL(HasVL), HasPolicy(HasPolicy),
+      HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
+      ManualCodegen(ManualCodegen.str()), NF(NF) {
 
   // Init Name and MangledName
   Name = NewName.str();
