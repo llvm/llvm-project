@@ -106,7 +106,7 @@ struct CommonType {
   /// Bits 24-27: kind (e.g. int, ptr, array...etc)
   /// Bits 28-30: unused
   /// Bit     31: kind_flag, currently used by
-  ///             struct, union, fwd and decl_tag
+  ///             struct, union and fwd
   uint32_t Info;
 
   /// "Size" is used by INT, ENUM, STRUCT and UNION.
