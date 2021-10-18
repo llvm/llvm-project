@@ -245,7 +245,8 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   // make unique temp output file to put generated code
   SmallString<128> Filename;
 
-  auto AddStream = [&](size_t Task) -> std::unique_ptr<NativeObjectStream> {
+  auto AddStream =
+      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
     StringRef Extension(Config.CGFileType == CGFT_AssemblyFile ? "s" : "o");
 
     int FD;
@@ -254,7 +255,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
     if (EC)
       emitError(EC.message());
 
-    return std::make_unique<NativeObjectStream>(
+    return std::make_unique<lto::NativeObjectStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
@@ -556,7 +557,7 @@ bool LTOCodeGenerator::optimize() {
   return true;
 }
 
-bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
+bool LTOCodeGenerator::compileOptimized(lto::AddStreamFn AddStream,
                                         unsigned ParallelismLevel) {
   if (!this->determineTarget())
     return false;
