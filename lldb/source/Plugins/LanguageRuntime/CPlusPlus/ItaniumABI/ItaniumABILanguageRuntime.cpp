@@ -410,11 +410,6 @@ lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginNameStatic() {
   return g_name;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
     const BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);

@@ -34,81 +34,81 @@ public:
 // numerics of the testing.
 TEST(AlignmentTest, LeftAlignedAllocs) {
   // Alignment < Page Size.
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignUp(
                         /* Ptr */ 0x4000, /* Alignment */ 0x1));
   // Alignment == Page Size.
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignUp(
                         /* Ptr */ 0x4000, /* Alignment */ 0x1000));
   // Alignment > Page Size.
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignUp(
                         /* Ptr */ 0x4000, /* Alignment */ 0x4000));
 }
 
 TEST(AlignmentTest, SingleByteAllocs) {
   // Alignment < Page Size.
-  EXPECT_EQ(0x1,
+  EXPECT_EQ(0x1u,
             AlignmentTestGPA::getRequiredBackingSize(
                 /* Size */ 0x1, /* Alignment */ 0x1, /* PageSize */ 0x1000));
-  EXPECT_EQ(0x7fff, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x7fffu, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x1));
 
   // Alignment == Page Size.
-  EXPECT_EQ(0x1,
+  EXPECT_EQ(0x1u,
             AlignmentTestGPA::getRequiredBackingSize(
                 /* Size */ 0x1, /* Alignment */ 0x1000, /* PageSize */ 0x1000));
-  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x7000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x1000));
 
   // Alignment > Page Size.
-  EXPECT_EQ(0x3001,
+  EXPECT_EQ(0x3001u,
             AlignmentTestGPA::getRequiredBackingSize(
                 /* Size */ 0x1, /* Alignment */ 0x4000, /* PageSize */ 0x1000));
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x4000));
 }
 
 TEST(AlignmentTest, PageSizedAllocs) {
   // Alignment < Page Size.
-  EXPECT_EQ(0x1000,
+  EXPECT_EQ(0x1000u,
             AlignmentTestGPA::getRequiredBackingSize(
                 /* Size */ 0x1000, /* Alignment */ 0x1, /* PageSize */ 0x1000));
-  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x7000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x1));
 
   // Alignment == Page Size.
-  EXPECT_EQ(0x1000, AlignmentTestGPA::getRequiredBackingSize(
+  EXPECT_EQ(0x1000u, AlignmentTestGPA::getRequiredBackingSize(
                         /* Size */ 0x1000, /* Alignment */ 0x1000,
                         /* PageSize */ 0x1000));
-  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x7000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x1000));
 
   // Alignment > Page Size.
-  EXPECT_EQ(0x4000, AlignmentTestGPA::getRequiredBackingSize(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::getRequiredBackingSize(
                         /* Size */ 0x1000, /* Alignment */ 0x4000,
                         /* PageSize */ 0x1000));
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x4000));
 }
 
 TEST(AlignmentTest, MoreThanPageAllocs) {
   // Alignment < Page Size.
-  EXPECT_EQ(0x2fff,
+  EXPECT_EQ(0x2fffu,
             AlignmentTestGPA::getRequiredBackingSize(
                 /* Size */ 0x2fff, /* Alignment */ 0x1, /* PageSize */ 0x1000));
-  EXPECT_EQ(0x5001, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x5001u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x1));
 
   // Alignment == Page Size.
-  EXPECT_EQ(0x2fff, AlignmentTestGPA::getRequiredBackingSize(
+  EXPECT_EQ(0x2fffu, AlignmentTestGPA::getRequiredBackingSize(
                         /* Size */ 0x2fff, /* Alignment */ 0x1000,
                         /* PageSize */ 0x1000));
-  EXPECT_EQ(0x5000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x5000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x1000));
 
   // Alignment > Page Size.
-  EXPECT_EQ(0x5fff, AlignmentTestGPA::getRequiredBackingSize(
+  EXPECT_EQ(0x5fffu, AlignmentTestGPA::getRequiredBackingSize(
                         /* Size */ 0x2fff, /* Alignment */ 0x4000,
                         /* PageSize */ 0x1000));
-  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+  EXPECT_EQ(0x4000u, AlignmentTestGPA::alignDown(
                         /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x4000));
 }

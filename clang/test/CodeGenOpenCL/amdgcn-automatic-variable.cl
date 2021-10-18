@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL1.2 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL12 %s
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL20 %s
 
-// CL12-LABEL: define{{.*}} void @func1(i32 addrspace(5)* %x)
-// CL20-LABEL: define{{.*}} void @func1(i32* %x)
+// CL12-LABEL: define{{.*}} void @func1(i32 addrspace(5)* noundef %x)
+// CL20-LABEL: define{{.*}} void @func1(i32* noundef %x)
 void func1(int *x) {
   // CL12: %[[x_addr:.*]] = alloca i32 addrspace(5)*{{.*}}addrspace(5)
   // CL12: store i32 addrspace(5)* %x, i32 addrspace(5)* addrspace(5)* %[[x_addr]]
@@ -48,9 +48,9 @@ void func2(void) {
   // CL20: store i32* %[[r1]], i32* addrspace(5)* %lp2, align 8
   int *lp2 = la;
 
-  // CL12: call void @func1(i32 addrspace(5)* %lv1)
+  // CL12: call void @func1(i32 addrspace(5)* noundef %lv1)
   // CL20: %[[r2:.*]] = addrspacecast i32 addrspace(5)* %lv1 to i32*
-  // CL20: call void @func1(i32* %[[r2]])
+  // CL20: call void @func1(i32* noundef %[[r2]])
   func1(&lv1);
 
   // CHECK: store i32 4, i32 addrspace(5)* %lvc

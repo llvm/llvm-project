@@ -465,9 +465,3 @@ lldb_private::ConstString ABIMacOSX_i386::GetPluginNameStatic() {
   static ConstString g_short_name("abi.macosx-i386");
   return g_short_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABIMacOSX_i386::GetPluginName() {
-  return GetPluginNameStatic();
-}

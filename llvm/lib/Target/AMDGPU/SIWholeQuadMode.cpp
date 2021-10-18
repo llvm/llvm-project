@@ -1506,6 +1506,11 @@ void SIWholeQuadMode::lowerKillInstrs(bool IsWQM) {
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
+  // This pass is a convenient place to re-enable machine verification after the
+  // problems caused by SILowerControlFlow have been fixed.
+  MF.getProperties().reset(
+      MachineFunctionProperties::Property::FailsVerification);
+
   LLVM_DEBUG(dbgs() << "SI Whole Quad Mode on " << MF.getName()
                     << " ------------- \n");
   LLVM_DEBUG(MF.dump(););

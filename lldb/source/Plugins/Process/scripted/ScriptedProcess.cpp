@@ -145,8 +145,6 @@ void ScriptedProcess::Terminate() {
   PluginManager::UnregisterPlugin(ScriptedProcess::CreateInstance);
 }
 
-ConstString ScriptedProcess::GetPluginName() { return GetPluginNameStatic(); }
-
 Status ScriptedProcess::DoLoadCore() {
   ProcessLaunchInfo launch_info = GetTarget().GetProcessLaunchInfo();
 

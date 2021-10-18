@@ -247,7 +247,7 @@ void test1d_message(void) {
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[SEVEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[EIGHT:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[CALL1:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* [[EIGHT]], i8* [[SEVEN]])
+  // CHECK-NEXT: [[CALL1:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* noundef [[EIGHT]], i8* noundef [[SEVEN]])
   // CHECK-NEXT: store i8* [[CALL1]], i8**
   // CHECK-NEXT: [[PCPTR2:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])
@@ -277,7 +277,7 @@ void test1d_property(void) {
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[SEVEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[EIGHT:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[CALL1:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* [[EIGHT]], i8* [[SEVEN]])
+  // CHECK-NEXT: [[CALL1:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* noundef [[EIGHT]], i8* noundef [[SEVEN]])
   // CHECK-NEXT: store i8* [[CALL1]], i8**
   // CHECK-NEXT: [[PCPTR2:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])

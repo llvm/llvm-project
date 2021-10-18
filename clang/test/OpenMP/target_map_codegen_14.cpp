@@ -172,7 +172,7 @@ void implicit_maps_templated_class (int a){
   ssst.bar<210>(789);
 }
 
-// CK15: define internal void [[KERNEL]]([[ST]]* [[THIS:%.+]], i[[sz]] [[ARG:%.+]])
+// CK15: define internal void [[KERNEL]]([[ST]]* noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK15: [[ADDR0:%.+]] = alloca [[ST]]*,
 // CK15: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK15: store [[ST]]* [[THIS]], [[ST]]** [[ADDR0]],
@@ -183,7 +183,7 @@ void implicit_maps_templated_class (int a){
 // CK15-32: {{.+}} = load i32, i32* [[ADDR1]],
 // CK15: {{.+}} = getelementptr inbounds [[ST]], [[ST]]* [[REF0]], i32 0, i32 0
 
-// CK15: define internal void [[KERNEL2]]([[ST]]* [[THIS:%.+]], i[[sz]] [[ARG:%.+]])
+// CK15: define internal void [[KERNEL2]]([[ST]]* noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK15: [[ADDR0:%.+]] = alloca [[ST]]*,
 // CK15: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK15: store [[ST]]* [[THIS]], [[ST]]** [[ADDR0]],

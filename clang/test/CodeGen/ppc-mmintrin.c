@@ -43,7 +43,7 @@ test_add() {
 // CHECK-P9-NEXT: store <4 x i32> [[REG6]], <4 x i32>* [[REG7:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-P9-NEXT: [[REG8:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG3]], align 16
 // CHECK-P9-NEXT: [[REG9:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG7]], align 16
-// CHECK-P9-NEXT: [[REG10:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_add(int vector[4], int vector[4])(<4 x i32> [[REG8]], <4 x i32> [[REG9]])
+// CHECK-P9-NEXT: [[REG10:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_add(int vector[4], int vector[4])(<4 x i32> noundef [[REG8]], <4 x i32> noundef [[REG9]])
 // CHECK-P9-NEXT: store <4 x i32> [[REG10]], <4 x i32>* [[REG11:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-P9-NEXT: [[REG12:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG11]], align 16
 // CHECK-P9-NEXT: [[REG13:[0-9a-zA-Z_%.]+]] = bitcast <4 x i32> %6 to <2 x i64>
@@ -70,7 +70,7 @@ test_add() {
 // CHECK-NEXT: store <8 x i16> [[REG27]], <8 x i16>* [[REG28:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG29:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG25]], align 16
 // CHECK-NEXT: [[REG30:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG28]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_add(short vector[8], short vector[8])(<8 x i16> [[REG29]], <8 x i16> [[REG30]])
+// CHECK-NEXT: call <8 x i16> @vec_add(short vector[8], short vector[8])(<8 x i16> noundef [[REG29]], <8 x i16> noundef [[REG30]])
 
 // CHECK: define available_externally i64 @_mm_add_pi8
 // CHECK: [[REG31:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats
@@ -81,7 +81,7 @@ test_add() {
 // CHECK-NEXT: store <16 x i8> [[REG35]], <16 x i8>* [[REG36:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG37:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG33]], align 16
 // CHECK-NEXT: [[REG38:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG36]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_add(signed char vector[16], signed char vector[16])(<16 x i8> [[REG37]], <16 x i8> [[REG38]])
+// CHECK-NEXT: call <16 x i8> @vec_add(signed char vector[16], signed char vector[16])(<16 x i8> noundef [[REG37]], <16 x i8> noundef [[REG38]])
 
 // CHECK: define available_externally i64 @_mm_adds_pu16
 // CHECK: [[REG39:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats
@@ -92,7 +92,7 @@ test_add() {
 // CHECK-NEXT: store <8 x i16> [[REG43]], <8 x i16>* [[REG44:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG45:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG41]], align 16
 // CHECK-NEXT: [[REG46:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG44]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_adds(unsigned short vector[8], unsigned short vector[8])(<8 x i16> [[REG45]], <8 x i16> [[REG46]])
+// CHECK-NEXT: call <8 x i16> @vec_adds(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef [[REG45]], <8 x i16> noundef [[REG46]])
 
 // CHECK: define available_externally i64 @_mm_adds_pu8
 // CHECK: [[REG47:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats
@@ -103,7 +103,7 @@ test_add() {
 // CHECK-NEXT: store <16 x i8> [[REG51]], <16 x i8>* [[REG52:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG53:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG49]], align 16
 // CHECK-NEXT: [[REG54:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG52]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_adds(unsigned char vector[16], unsigned char vector[16])(<16 x i8> [[REG53]], <16 x i8> [[REG54]])
+// CHECK-NEXT: call <16 x i8> @vec_adds(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef [[REG53]], <16 x i8> noundef [[REG54]])
 
 // CHECK: define available_externally i64 @_mm_adds_pi16
 // CHECK: [[REG55:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats
@@ -114,7 +114,7 @@ test_add() {
 // CHECK-NEXT: store <8 x i16> [[REG59]], <8 x i16>* [[REG60:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG61:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG57]], align 16
 // CHECK-NEXT: [[REG62:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG60]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_adds(short vector[8], short vector[8])(<8 x i16> [[REG61]], <8 x i16> [[REG62]])
+// CHECK-NEXT: call <8 x i16> @vec_adds(short vector[8], short vector[8])(<8 x i16> noundef [[REG61]], <8 x i16> noundef [[REG62]])
 
 // CHECK: define available_externally i64 @_mm_adds_pi8
 // CHECK: [[REG63:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats
@@ -125,7 +125,7 @@ test_add() {
 // CHECK-NEXT: store <16 x i8> [[REG67]], <16 x i8>* [[REG68:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG69:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG65]], align 16
 // CHECK-NEXT: [[REG70:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG68]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_adds(signed char vector[16], signed char vector[16])(<16 x i8> [[REG69]], <16 x i8> [[REG70]])
+// CHECK-NEXT: call <16 x i8> @vec_adds(signed char vector[16], signed char vector[16])(<16 x i8> noundef [[REG69]], <16 x i8> noundef [[REG70]])
 
 void __attribute__((noinline))
 test_alt_name_add() {
@@ -190,7 +190,7 @@ test_cmp() {
 // CHECK-P9-NEXT: store <4 x i32> [[REG82]], <4 x i32>* [[REG83:[0-9a-zA-Z_%.]+]]
 // CHECK-P9-NEXT: [[REG84:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG80]]
 // CHECK-P9-NEXT: [[REG85:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG83]]
-// CHECK-P9-NEXT: call <4 x i32> @vec_cmpeq(int vector[4], int vector[4])(<4 x i32> [[REG84]], <4 x i32> [[REG85]])
+// CHECK-P9-NEXT: call <4 x i32> @vec_cmpeq(int vector[4], int vector[4])(<4 x i32> noundef [[REG84]], <4 x i32> noundef [[REG85]])
 
 // CHECK-P8-COUNT-2: {{[0-9a-zA-Z_%.]+}} = getelementptr inbounds [2 x i32], [2 x i32]* {{[0-9a-zA-Z_%.]+}}
 // CHECK-P8: [[REG86:[0-9a-zA-Z_%.]+]] = icmp eq i32 {{[0-9a-zA-Z_%.]+}}, {{[0-9a-zA-Z_%.]+}}
@@ -209,7 +209,7 @@ test_cmp() {
 // CHECK-NEXT: store <8 x i16> [[REG92]], <8 x i16>* [[REG93:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG94:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG90]], align 16
 // CHECK-NEXT: [[REG95:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG93]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_cmpeq(short vector[8], short vector[8])(<8 x i16> [[REG94]], <8 x i16> [[REG95]])
+// CHECK-NEXT: call <8 x i16> @vec_cmpeq(short vector[8], short vector[8])(<8 x i16> noundef [[REG94]], <8 x i16> noundef [[REG95]])
 
 // CHECK: define available_externally i64 @_mm_cmpeq_pi8
 // CHECK: call i64 asm "cmpb $0,$1,$2;\0A", "=r,r,r"
@@ -227,7 +227,7 @@ test_cmp() {
 // CHECK-P9-NEXT: store <4 x i32> [[REG102]], <4 x i32>* [[REG103:[0-9a-zA-Z_%.]+]]
 // CHECK-P9-NEXT: [[REG104:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG100]]
 // CHECK-P9-NEXT: [[REG105:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG103]]
-// CHECK-P9-NEXT: call <4 x i32> @vec_cmpgt(int vector[4], int vector[4])(<4 x i32> [[REG104]], <4 x i32> [[REG85]])
+// CHECK-P9-NEXT: call <4 x i32> @vec_cmpgt(int vector[4], int vector[4])(<4 x i32> noundef [[REG104]], <4 x i32> noundef [[REG85]])
 
 // CHECK-P8-COUNT-2: {{[0-9a-zA-Z_%.]+}} = getelementptr inbounds [2 x i32], [2 x i32]* {{[0-9a-zA-Z_%.]+}}
 // CHECK-P8: [[REG106:[0-9a-zA-Z_%.]+]] = icmp sgt i32 {{[0-9a-zA-Z_%.]+}}, {{[0-9a-zA-Z_%.]+}}
@@ -246,7 +246,7 @@ test_cmp() {
 // CHECK-NEXT: store <8 x i16> [[REG112]], <8 x i16>* [[REG113:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG114:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG110]]
 // CHECK-NEXT: [[REG115:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG113]]
-// CHECK-NEXT: call <8 x i16> @vec_cmpgt(short vector[8], short vector[8])(<8 x i16> [[REG114]], <8 x i16> [[REG115]])
+// CHECK-NEXT: call <8 x i16> @vec_cmpgt(short vector[8], short vector[8])(<8 x i16> noundef [[REG114]], <8 x i16> noundef [[REG115]])
 
 // CHECK: define available_externally i64 @_mm_cmpgt_pi8
 // CHECK: [[REG116:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)
@@ -257,7 +257,7 @@ test_cmp() {
 // CHECK-NEXT: store <16 x i8> [[REG120]], <16 x i8>* [[REG121:[0-9a-zA-Z_%.]+]]
 // CHECK-NEXT: [[REG122:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG118]]
 // CHECK-NEXT: [[REG123:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG121]]
-// CHECK-NEXT: call <16 x i8> @vec_cmpgt(signed char vector[16], signed char vector[16])(<16 x i8> [[REG122]], <16 x i8> [[REG123]])
+// CHECK-NEXT: call <16 x i8> @vec_cmpgt(signed char vector[16], signed char vector[16])(<16 x i8> noundef [[REG122]], <16 x i8> noundef [[REG123]])
 
 void __attribute__((noinline))
 test_alt_name_cmp() {
@@ -428,16 +428,16 @@ test_madd() {
 
 // CHECK: define available_externally i64 @_mm_madd_pi16
 // CHECK: store <4 x i32> zeroinitializer, <4 x i32>* [[REG149:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG150:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG150:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG151:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG150]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG151]], <8 x i16>* [[REG152:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG153:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG153:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG154:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG153]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG154]], <8 x i16>* [[REG155:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG156:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG152]], align 16
 // CHECK-NEXT: [[REG157:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG155]], align 16
 // CHECK-NEXT: [[REG158:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG149]], align 16
-// CHECK-NEXT: [[REG159:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmsumshm(<8 x i16> [[REG156]], <8 x i16> [[REG157]], <4 x i32> [[REG158]])
+// CHECK-NEXT: [[REG159:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmsumshm(<8 x i16> noundef [[REG156]], <8 x i16> noundef [[REG157]], <4 x i32> noundef [[REG158]])
 // CHECK-NEXT: store <4 x i32> [[REG159]], <4 x i32>* {{[0-9a-zA-Z_%.]+}}, align 16
 
 // CHECK: define available_externally i64 @_m_pmaddwd
@@ -463,16 +463,16 @@ test_mul() {
 // CHECK-NEXT: store <8 x i16> [[REG165]], <8 x i16>* [[REG166:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG167:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG162]], align 16
 // CHECK-NEXT: [[REG168:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG166]], align 16
-// CHECK-NEXT: [[REG169:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmulesh(<8 x i16> [[REG167]], <8 x i16> [[REG168]])
+// CHECK-NEXT: [[REG169:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmulesh(<8 x i16> noundef [[REG167]], <8 x i16> noundef [[REG168]])
 // CHECK-NEXT: store <4 x i32> [[REG169]], <4 x i32>* [[REG170:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG171:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG162]], align 16
 // CHECK-NEXT: [[REG172:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG166]], align 16
-// CHECK-NEXT: [[REG173:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmulosh(<8 x i16> [[REG171]], <8 x i16> [[REG172]])
+// CHECK-NEXT: [[REG173:[0-9a-zA-Z_%.]+]] = call <4 x i32> @vec_vmulosh(<8 x i16> noundef [[REG171]], <8 x i16> noundef [[REG172]])
 // CHECK-NEXT: store <4 x i32> [[REG173]], <4 x i32>* [[REG174:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG175:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG170]], align 16
 // CHECK-NEXT: [[REG176:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG174]], align 16
 // CHECK-NEXT: [[REG177:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* {{[0-9a-zA-Z_%.]+}}, align 16
-// CHECK-NEXT: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])(<4 x i32> [[REG175]], <4 x i32> [[REG176]], <16 x i8> [[REG177]])
+// CHECK-NEXT: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])(<4 x i32> noundef [[REG175]], <4 x i32> noundef [[REG176]], <16 x i8> noundef [[REG177]])
 
 // CHECK: define available_externally i64 @_mm_mullo_pi16
 // CHECK: [[REG178:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)
@@ -512,7 +512,7 @@ test_packs() {
 
 // CHECK-LABEL: @test_packs
 
-// CHECK: define available_externally i64 @_mm_packs_pu16(i64 [[REG190:[0-9a-zA-Z_%.]+]], i64 [[REG191:[0-9a-zA-Z_%.]+]])
+// CHECK: define available_externally i64 @_mm_packs_pu16(i64 noundef [[REG190:[0-9a-zA-Z_%.]+]], i64 noundef [[REG191:[0-9a-zA-Z_%.]+]])
 // CHECK: store i64 [[REG190]], i64* [[REG192:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG191]], i64* [[REG193:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-LE: load i64, i64* [[REG192]], align 8
@@ -522,17 +522,17 @@ test_packs() {
 // CHECK-NEXT: store <8 x i16> [[REG194]], <8 x i16>* [[REG195:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG196:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG197:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG198:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG197]], align 16
-// CHECK-NEXT: [[REG199:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_packs(unsigned short vector[8], unsigned short vector[8])(<8 x i16> [[REG196]], <8 x i16> [[REG198]])
+// CHECK-NEXT: [[REG199:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_packs(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef [[REG196]], <8 x i16> noundef [[REG198]])
 // CHECK-NEXT: store <16 x i8> [[REG199]], <16 x i8>* [[REG200:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG201:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG195]], align 16
 // CHECK-NEXT: [[REG202:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG195]], align 16
-// CHECK-NEXT: [[REG203:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_pack(bool vector[8], bool vector[8])(<8 x i16> [[REG201]], <8 x i16> [[REG202]])
+// CHECK-NEXT: [[REG203:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_pack(bool vector[8], bool vector[8])(<8 x i16> noundef [[REG201]], <8 x i16> noundef [[REG202]])
 // CHECK-NEXT: store <16 x i8> [[REG203]], <16 x i8>* [[REG204:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG205:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG200]], align 16
 // CHECK-NEXT: [[REG206:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG204]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_sel(unsigned char vector[16], unsigned char vector[16], bool vector[16])(<16 x i8> [[REG205]], <16 x i8> zeroinitializer, <16 x i8> [[REG206]])
+// CHECK-NEXT: call <16 x i8> @vec_sel(unsigned char vector[16], unsigned char vector[16], bool vector[16])(<16 x i8> noundef [[REG205]], <16 x i8> noundef zeroinitializer, <16 x i8> noundef [[REG206]])
 
-// CHECK: define available_externally i64 @_mm_packs_pi16(i64 [[REG207:[0-9a-zA-Z_%.]+]], i64 [[REG208:[0-9a-zA-Z_%.]+]])
+// CHECK: define available_externally i64 @_mm_packs_pi16(i64 noundef [[REG207:[0-9a-zA-Z_%.]+]], i64 noundef [[REG208:[0-9a-zA-Z_%.]+]])
 // CHECK: store i64 [[REG207]], i64* [[REG209:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG208]], i64* [[REG210:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-LE: load i64, i64* [[REG209]], align 8
@@ -540,9 +540,9 @@ test_packs() {
 // CHECK-BE: load i64, i64* [[REG209]], align 8
 // CHECK: [[REG211:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG212:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG213:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG212]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_packs(short vector[8], short vector[8])(<8 x i16> [[REG211]], <8 x i16> [[REG213]])
+// CHECK-NEXT: call <16 x i8> @vec_packs(short vector[8], short vector[8])(<8 x i16> noundef [[REG211]], <8 x i16> noundef [[REG213]])
 
-// CHECK: define available_externally i64 @_mm_packs_pi32(i64 [[REG214:[0-9a-zA-Z_%.]+]], i64 [[REG215:[0-9a-zA-Z_%.]+]])
+// CHECK: define available_externally i64 @_mm_packs_pi32(i64 noundef [[REG214:[0-9a-zA-Z_%.]+]], i64 noundef [[REG215:[0-9a-zA-Z_%.]+]])
 // CHECK: store i64 [[REG214]], i64* [[REG216:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG215]], i64* [[REG217:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-LE: load i64, i64* [[REG216]], align 8
@@ -550,7 +550,7 @@ test_packs() {
 // CHECK-BE: load i64, i64* [[REG216]], align 8
 // CHECK: [[REG218:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG219:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG220:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG219]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_packs(int vector[4], int vector[4])(<4 x i32> [[REG218]], <4 x i32> [[REG220]])
+// CHECK-NEXT: call <8 x i16> @vec_packs(int vector[4], int vector[4])(<4 x i32> noundef [[REG218]], <4 x i32> noundef [[REG220]])
 
 void __attribute__((noinline))
 test_alt_name_packs() {
@@ -635,7 +635,7 @@ test_set1() {
 // CHECK: define available_externally i64 @_mm_set1_pi16
 
 // CHECK-P9: [[REG247:[0-9a-zA-Z_%.]+]] = load i16, i16* {{[0-9a-zA-Z_%.]+}}, align 2
-// CHECK-P9-NEXT: [[REG248:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(short)(i16 signext [[REG247]])
+// CHECK-P9-NEXT: [[REG248:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(short)(i16 noundef signext [[REG247]])
 // CHECK-P9-NEXT: store <8 x i16> %call, <8 x i16>* [[REG249:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-P9-NEXT: [[REG250:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG249:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-P9-NEXT: [[REG251:[0-9a-zA-Z_%.]+]] = bitcast <8 x i16> [[REG250]] to <2 x i64>
@@ -656,7 +656,7 @@ test_set1() {
 // CHECK-P8-NEXT: store i16 [[REG258]], i16* [[REG259]], align 2
 
 // CHECK: define available_externally i64 @_mm_set1_pi8
-// CHECK: [[REG260:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_splats(signed char)(i8 signext {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG260:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_splats(signed char)(i8 noundef signext {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: store <16 x i8> [[REG260]], <16 x i8>* [[REG261:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG262:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG261:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG263:[0-9a-zA-Z_%.]+]] = bitcast <16 x i8> %1 to <2 x i64>
@@ -749,12 +749,12 @@ test_sll() {
 
 // CHECK: define available_externally i64 @_mm_slli_pi16
 // CHECK: [[REG289:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG290:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sll_pi16(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG289]])
+// CHECK-NEXT: [[REG290:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sll_pi16(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG289]])
 // CHECK-NEXT: ret i64 [[REG290]]
 
 // CHECK: define available_externally i64 @_mm_slli_pi32
 // CHECK: [[REG291:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG292:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sll_pi32(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG291]])
+// CHECK-NEXT: [[REG292:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sll_pi32(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG291]])
 // CHECK-NEXT: ret i64 [[REG292]]
 
 // CHECK: define available_externally i64 @_mm_slli_si64
@@ -828,16 +828,16 @@ test_sra() {
 // CHECK: [[REG313:[0-9a-zA-Z_%.]+]] = icmp ule i64 {{[0-9a-zA-Z_%.]+}}, 15
 // CHECK-NEXT: br i1 [[REG313]], label %[[REG314:[0-9a-zA-Z_%.]+]], label %[[REG315:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG314]]
-// CHECK: [[REG316:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG316:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG317:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG316]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG317]], <8 x i16>* [[REG318:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG319:[0-9a-zA-Z_%.]+]] = load i64, i64* {{[0-9a-zA-Z_%.]+}}, align 8
 // CHECK-NEXT: [[REG320:[0-9a-zA-Z_%.]+]] = trunc i64 [[REG319]] to i16
-// CHECK-NEXT: [[REG321:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(unsigned short)(i16 zeroext [[REG320]])
+// CHECK-NEXT: [[REG321:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(unsigned short)(i16 noundef zeroext [[REG320]])
 // CHECK-NEXT: store <8 x i16> [[REG321]], <8 x i16>* [[REG322:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG323:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG318]], align 16
 // CHECK-NEXT: [[REG324:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG322]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])(<8 x i16> [[REG323]], <8 x i16> [[REG324]])
+// CHECK-NEXT: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])(<8 x i16> noundef [[REG323]], <8 x i16> noundef [[REG324]])
 // CHECK: store i64 {{[0-9a-zA-Z_%.]+}}, i64* [[REG325:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: br label %[[REG326:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG315]]
@@ -849,12 +849,12 @@ test_sra() {
 
 // CHECK: define available_externally i64 @_mm_srai_pi32
 // CHECK: [[REG328:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG329:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sra_pi32(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG328]])
+// CHECK-NEXT: [[REG329:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sra_pi32(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG328]])
 // CHECK-NEXT: ret i64 [[REG329]]
 
 // CHECK: define available_externally i64 @_mm_srai_pi16
 // CHECK: [[REG330:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG331:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sra_pi16(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG330]])
+// CHECK-NEXT: [[REG331:[0-9a-zA-Z_%.]+]] = call i64 @_mm_sra_pi16(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG330]])
 // CHECK-NEXT: ret i64 [[REG331]]
 
 void __attribute__((noinline))
@@ -919,16 +919,16 @@ test_srl() {
 // CHECK: [[REG349:[0-9a-zA-Z_%.]+]] = icmp ule i64 {{[0-9a-zA-Z_%.]+}}, 15
 // CHECK-NEXT: br i1 [[REG349]], label %[[REG350:[0-9a-zA-Z_%.]+]], label %[[REG351:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG350]]
-// CHECK: [[REG352:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG352:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG353:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG352]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG353]], <8 x i16>* [[REG354:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG355:[0-9a-zA-Z_%.]+]] = load i64, i64* {{[0-9a-zA-Z_%.]+}}, align 8
 // CHECK-NEXT: [[REG356:[0-9a-zA-Z_%.]+]] = trunc i64 [[REG355]] to i16
-// CHECK-NEXT: [[REG357:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(unsigned short)(i16 zeroext [[REG356]])
+// CHECK-NEXT: [[REG357:[0-9a-zA-Z_%.]+]] = call <8 x i16> @vec_splats(unsigned short)(i16 noundef zeroext [[REG356]])
 // CHECK-NEXT: store <8 x i16> [[REG357]], <8 x i16>* [[REG358:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG359:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG354]], align 16
 // CHECK-NEXT: [[REG360:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG358]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_sr(unsigned short vector[8], unsigned short vector[8])(<8 x i16> [[REG359]], <8 x i16> [[REG360]])
+// CHECK-NEXT: call <8 x i16> @vec_sr(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef [[REG359]], <8 x i16> noundef [[REG360]])
 // CHECK: store i64 {{[0-9a-zA-Z_%.]+}}, i64* [[REG361:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: br label %[[REG362:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG351]]
@@ -945,12 +945,12 @@ test_srl() {
 
 // CHECK: define available_externally i64 @_mm_srli_pi32
 // CHECK: [[REG366:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG367:[0-9a-zA-Z_%.]+]] = call i64 @_mm_srl_pi32(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG366]])
+// CHECK-NEXT: [[REG367:[0-9a-zA-Z_%.]+]] = call i64 @_mm_srl_pi32(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG366]])
 // CHECK-NEXT: ret i64 [[REG367]]
 
 // CHECK: define available_externally i64 @_mm_srli_pi16
 // CHECK: [[REG366:[0-9a-zA-Z_%.]+]] = sext i32 {{[0-9a-zA-Z_%.]+}} to i64
-// CHECK-NEXT: [[REG368:[0-9a-zA-Z_%.]+]] = call i64 @_mm_srl_pi16(i64 {{[0-9a-zA-Z_%.]+}}, i64 [[REG366]])
+// CHECK-NEXT: [[REG368:[0-9a-zA-Z_%.]+]] = call i64 @_mm_srl_pi16(i64 noundef {{[0-9a-zA-Z_%.]+}}, i64 noundef [[REG366]])
 // CHECK-NEXT: ret i64 [[REG368]]
 
 void __attribute__((noinline))
@@ -1015,81 +1015,81 @@ test_sub() {
 // CHECK-P8-NEXT: [[REG382:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG381]], align 4
 // CHECK-P8-NEXT: sub nsw i32 [[REG380]], [[REG382]]
 
-// CHECK-P9: [[REG383:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK-P9: [[REG383:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-P9-NEXT: [[REG384:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG383]] to <4 x i32>
 // CHECK-P9-NEXT: store <4 x i32> [[REG384]], <4 x i32>* [[REG385:[0-9a-zA-Z_%.]+]], align 16
-// CHECK-P9: [[REG386:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK-P9: [[REG386:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-P9-NEXT: [[REG387:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG386]] to <4 x i32>
 // CHECK-P9-NEXT: store <4 x i32> [[REG387]], <4 x i32>* [[REG388:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-P9-NEXT: [[REG389:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG385]], align 16
 // CHECK-P9-NEXT: [[REG390:[0-9a-zA-Z_%.]+]] = load <4 x i32>, <4 x i32>* [[REG388]], align 16
-// CHECK-P9-NEXT: call <4 x i32> @vec_sub(int vector[4], int vector[4])(<4 x i32> [[REG389]], <4 x i32> [[REG390]])
+// CHECK-P9-NEXT: call <4 x i32> @vec_sub(int vector[4], int vector[4])(<4 x i32> noundef [[REG389]], <4 x i32> noundef [[REG390]])
 
 // CHECK: define available_externally i64 @_mm_sub_pi16
-// CHECK: [[REG391:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG391:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG392:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG391]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG392]], <8 x i16>* [[REG393:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG394:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG394:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG395:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG394]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG395]], <8 x i16>* [[REG396:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG397:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG393]], align 16
 // CHECK-NEXT: [[REG398:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG396]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_sub(short vector[8], short vector[8])(<8 x i16> [[REG397]], <8 x i16> [[REG398]])
+// CHECK-NEXT: call <8 x i16> @vec_sub(short vector[8], short vector[8])(<8 x i16> noundef [[REG397]], <8 x i16> noundef [[REG398]])
 
 // CHECK: define available_externally i64 @_mm_sub_pi8
-// CHECK: [[REG399:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG399:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG400:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG399]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG400]], <16 x i8>* [[REG401:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG402:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG402:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG403:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG402]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG403]], <16 x i8>* [[REG404:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG405:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG401]], align 16
 // CHECK-NEXT: [[REG406:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG404]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_sub(signed char vector[16], signed char vector[16])(<16 x i8> [[REG405]], <16 x i8> [[REG406]])
+// CHECK-NEXT: call <16 x i8> @vec_sub(signed char vector[16], signed char vector[16])(<16 x i8> noundef [[REG405]], <16 x i8> noundef [[REG406]])
 
 // CHECK: define available_externally i64 @_mm_subs_pi16
-// CHECK: [[REG407:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG407:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG408:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG407]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG408]], <8 x i16>* [[REG409:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG410:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG410:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG411:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG410]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG411]], <8 x i16>* [[REG412:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG413:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG409]], align 16
 // CHECK-NEXT: [[REG414:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG412]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_subs(short vector[8], short vector[8])(<8 x i16> [[REG413]], <8 x i16> [[REG414]])
+// CHECK-NEXT: call <8 x i16> @vec_subs(short vector[8], short vector[8])(<8 x i16> noundef [[REG413]], <8 x i16> noundef [[REG414]])
 
 // CHECK: define available_externally i64 @_mm_subs_pi8
-// CHECK: [[REG415:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG415:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG416:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG415]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG416]], <16 x i8>* [[REG417:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG418:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG418:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG419:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG418]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG419]], <16 x i8>* [[REG420:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG421:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG417]], align 16
 // CHECK-NEXT: [[REG422:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG420]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_subs(signed char vector[16], signed char vector[16])(<16 x i8> [[REG421]], <16 x i8> [[REG422]])
+// CHECK-NEXT: call <16 x i8> @vec_subs(signed char vector[16], signed char vector[16])(<16 x i8> noundef [[REG421]], <16 x i8> noundef [[REG422]])
 
 // CHECK: define available_externally i64 @_mm_subs_pu16
-// CHECK: [[REG423:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG423:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG424:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG423]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG424]], <8 x i16>* [[REG425:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG426:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG426:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG427:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG426]] to <8 x i16>
 // CHECK-NEXT: store <8 x i16> [[REG427]], <8 x i16>* [[REG428:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG429:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG425]], align 16
 // CHECK-NEXT: [[REG430:[0-9a-zA-Z_%.]+]] = load <8 x i16>, <8 x i16>* [[REG428]], align 16
-// CHECK-NEXT: call <8 x i16> @vec_subs(unsigned short vector[8], unsigned short vector[8])(<8 x i16> [[REG429]], <8 x i16> [[REG430]])
+// CHECK-NEXT: call <8 x i16> @vec_subs(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef [[REG429]], <8 x i16> noundef [[REG430]])
 
 // CHECK: define available_externally i64 @_mm_subs_pu8
-// CHECK: [[REG431:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG431:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG432:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG431]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG432]], <16 x i8>* [[REG433:[0-9a-zA-Z_%.]+]], align 16
-// CHECK: [[REG434:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 {{[0-9a-zA-Z_%.]+}})
+// CHECK: [[REG434:[0-9a-zA-Z_%.]+]] = call <2 x i64> @vec_splats(unsigned long long)(i64 noundef {{[0-9a-zA-Z_%.]+}})
 // CHECK-NEXT: [[REG435:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG434]] to <16 x i8>
 // CHECK-NEXT: store <16 x i8> [[REG435]], <16 x i8>* [[REG436:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG437:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG433]], align 16
 // CHECK-NEXT: [[REG438:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG436]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_subs(unsigned char vector[16], unsigned char vector[16])(<16 x i8> [[REG437]], <16 x i8> [[REG438]])
+// CHECK-NEXT: call <16 x i8> @vec_subs(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef [[REG437]], <16 x i8> noundef [[REG438]])
 
 void __attribute__((noinline))
 test_alt_name_sub() {
@@ -1184,7 +1184,7 @@ test_unpack() {
 // CHECK-NEXT: store <16 x i8> [[REG472]], <16 x i8>* [[REG473:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG474:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG469]], align 16
 // CHECK-NEXT: [[REG475:[0-9a-zA-Z_%.]+]] = load <16 x i8>, <16 x i8>* [[REG473]], align 16
-// CHECK-NEXT: call <16 x i8> @vec_mergel(unsigned char vector[16], unsigned char vector[16])(<16 x i8> [[REG474]], <16 x i8> [[REG475]])
+// CHECK-NEXT: call <16 x i8> @vec_mergel(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef [[REG474]], <16 x i8> noundef [[REG475]])
 
 // CHECK: define available_externally i64 @_mm_unpacklo_pi32
 // CHECK: [[REG476:[0-9a-zA-Z_%.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* {{[0-9a-zA-Z_%.]+}}, i64 0, i64 0

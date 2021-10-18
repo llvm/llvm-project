@@ -34,7 +34,9 @@ public:
 
   static const char *GetPluginDescriptionStatic(bool is_host);
 
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost()).GetStringRef();
+  }
 
   // lldb_private::Platform functions
 

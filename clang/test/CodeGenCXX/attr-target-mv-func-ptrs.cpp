@@ -42,13 +42,13 @@ int bar() {
 // LINUX: store { i64, i64 } { i64 ptrtoint (i32 (%struct.S*, i32)* @_ZN1S3fooEi.ifunc to i64), i64 0 }, { i64, i64 }* [[MEMBER:%[a-z]+]]
 
 // Call to 'f' with the ifunc
-// LINUX: call void @_Z1fPFiiEM1SFiiE(i32 (i32)* @_Z3fooi.ifunc
+// LINUX: call void @_Z1fPFiiEM1SFiiE(i32 (i32)* noundef @_Z3fooi.ifunc
 
-// WINDOWS: define dso_local i32 @"?bar@@YAHXZ"()
+// WINDOWS: define dso_local noundef i32 @"?bar@@YAHXZ"()
 // Store to Free
 // WINDOWS: store i32 (i32)* @"?foo@@YAHH@Z.resolver", i32 (i32)**
 // Store to Member
 // WINDOWS: store i8* bitcast (i32 (%struct.S*, i32)* @"?foo@S@@QEAAHH@Z.resolver" to i8*), i8**
 
 // Call to 'f'
-// WINDOWS: call void @"?f@@YAXP6AHH@ZP8S@@EAAHH@Z@Z"(i32 (i32)* @"?foo@@YAHH@Z.resolver", i8* bitcast (i32 (%struct.S*, i32)* @"?foo@S@@QEAAHH@Z.resolver" to i8*))
+// WINDOWS: call void @"?f@@YAXP6AHH@ZP8S@@EAAHH@Z@Z"(i32 (i32)* noundef @"?foo@@YAHH@Z.resolver", i8* bitcast (i32 (%struct.S*, i32)* @"?foo@S@@QEAAHH@Z.resolver" to i8*))

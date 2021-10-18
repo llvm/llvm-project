@@ -95,12 +95,6 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
   return mangled.GetMangledName();
 }
 
-// PluginInterface protocol
-
-lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 // Static Functions
 
 Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
@@ -1095,7 +1089,8 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadLibStdcppFormatters(g_category);
       LoadLibCxxFormatters(g_category);

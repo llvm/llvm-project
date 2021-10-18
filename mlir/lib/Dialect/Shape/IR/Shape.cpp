@@ -9,12 +9,14 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -434,6 +436,15 @@ LogicalResult mlir::shape::AddOp::inferReturnTypes(
 bool mlir::shape::AddOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   // SizeType is compatible with IndexType.
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
+}
+
+OpFoldResult mlir::shape::AddOp::fold(ArrayRef<Attribute> operands) {
+  // add(x, 0) -> x
+  if (matchPattern(rhs(), m_Zero()))
+    return lhs();
+
+  return constFoldBinaryOp<IntegerAttr>(operands,
+                                        [](APInt a, APInt b) { return a + b; });
 }
 
 //===----------------------------------------------------------------------===//

@@ -531,7 +531,7 @@ namespace Unreferenced {
   const int &rt = t;
   int f(int);
   int u = f(rt);
-  // CHECK: call i32 @_ZN12Unreferenced1fEi(i32 1)
+  // CHECK: call noundef i32 @_ZN12Unreferenced1fEi(i32 noundef 1)
 }
 
 namespace InitFromConst {
@@ -549,28 +549,28 @@ namespace InitFromConst {
   constexpr int a[3] = { 1, 4, 9 };
 
   void test() {
-    // CHECK: call void @_ZN13InitFromConst7consumeIbEEvT_(i1 zeroext true)
+    // CHECK: call void @_ZN13InitFromConst7consumeIbEEvT_(i1 noundef zeroext true)
     consume(b);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIiEEvT_(i32 5)
+    // CHECK: call void @_ZN13InitFromConst7consumeIiEEvT_(i32 noundef 5)
     consume(n);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIdEEvT_(double 4.300000e+00)
+    // CHECK: call void @_ZN13InitFromConst7consumeIdEEvT_(double noundef 4.300000e+00)
     consume(d);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIRKNS_1SEEEvT_(%"struct.InitFromConst::S"* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZN13InitFromConstL1sE)
+    // CHECK: call void @_ZN13InitFromConst7consumeIRKNS_1SEEEvT_(%"struct.InitFromConst::S"* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZN13InitFromConstL1sE)
     consume<const S&>(s);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIRKNS_1SEEEvT_(%"struct.InitFromConst::S"* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZN13InitFromConstL1sE)
+    // CHECK: call void @_ZN13InitFromConst7consumeIRKNS_1SEEEvT_(%"struct.InitFromConst::S"* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @_ZN13InitFromConstL1sE)
     consume<const S&>(r);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIPKNS_1SEEEvT_(%"struct.InitFromConst::S"* @_ZN13InitFromConstL1sE)
+    // CHECK: call void @_ZN13InitFromConst7consumeIPKNS_1SEEEvT_(%"struct.InitFromConst::S"* noundef @_ZN13InitFromConstL1sE)
     consume(p);
 
     // CHECK: call void @_ZN13InitFromConst7consumeIMNS_1SEiEEvT_(i64 0)
     consume(mp);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIPKiEEvT_(i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZN13InitFromConstL1aE, i64 0, i64 0))
+    // CHECK: call void @_ZN13InitFromConst7consumeIPKiEEvT_(i32* noundef getelementptr inbounds ([3 x i32], [3 x i32]* @_ZN13InitFromConstL1aE, i64 0, i64 0))
     consume(a);
   }
 }

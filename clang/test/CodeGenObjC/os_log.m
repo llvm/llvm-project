@@ -37,10 +37,10 @@ void os_log_pack_send(void *);
 // CHECK: %[[V8:.*]] = ptrtoint %{{.*}}* %[[V7]] to i64
 // CHECK: %[[V9:.*]] = load i8*, i8** %[[A_ADDR]], align 8
 // CHECK: %[[V10:.*]] = ptrtoint i8* %[[V9]] to i64
-// CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(i8* %{{.*}}, i64 %[[V8]], i64 %[[V10]])
+// CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(i8* noundef %{{.*}}, i64 noundef %[[V8]], i64 noundef %[[V10]])
 // CHECK: %[[V11:.*]] = bitcast %{{.*}}* %[[V4]] to i8*
 // CHECK: call void @llvm.objc.release(i8* %[[V11]])
-// CHECK: call void @os_log_pack_send(i8* %{{.*}})
+// CHECK: call void @os_log_pack_send(i8* noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(%{{.*}}* %[[V7]])
 // CHECK-O2: %[[V13:.*]] = load %{{.*}}*, %{{.*}}** %[[OS_LOG_ARG]], align 8
 // CHECK-O2: %[[V14:.*]] = bitcast %{{.*}}* %[[V13]] to i8*
@@ -79,10 +79,10 @@ void test_builtin_os_log2(void *buf, id __unsafe_unretained a) {
 // CHECK: %[[V5:.*]] = call i8* @llvm.objc.retain(i8* %[[V4]])
 // CHECK: store i8* %[[V5]], i8** %[[OS_LOG_ARG]], align 8
 // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V5]] to i64
-// CHECK: call void @__os_log_helper_1_2_1_8_64(i8* %{{.*}}, i64 %[[V6]])
+// CHECK: call void @__os_log_helper_1_2_1_8_64(i8* noundef %{{.*}}, i64 noundef %[[V6]])
 // CHECK: %[[V7:.*]] = bitcast %{{.*}}* %[[V3]] to i8*
 // CHECK: call void @llvm.objc.release(i8* %[[V7]])
-// CHECK: call void @os_log_pack_send(i8* %{{.*}})
+// CHECK: call void @os_log_pack_send(i8* noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(i8* %[[V5]])
 // CHECK-O2: %[[V9:.*]] = load i8*, i8** %[[OS_LOG_ARG]], align 8
 // CHECK-O2: call void @llvm.objc.release(i8* %[[V9]])
@@ -107,10 +107,10 @@ void test_builtin_os_log3(void *buf) {
 // CHECK: %[[V11:.*]] = call i8* @llvm.objc.retain(i8* %[[V10]])
 // CHECK: store i8* %[[V11]], i8** %[[OS_LOG_ARG2]], align 8
 // CHECK: %[[V12:.*]] = ptrtoint i8* %[[V11]] to i64
-// CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(i8* %{{.*}}, i64 %[[V6]], i64 %[[V12]])
+// CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(i8* noundef %{{.*}}, i64 noundef %[[V6]], i64 noundef %[[V12]])
 // CHECK: call void @llvm.objc.release(i8* %[[V10]])
 // CHECK: call void @llvm.objc.release(i8* %[[V4]])
-// CHECK: call void @os_log_pack_send(i8* %{{.*}})
+// CHECK: call void @os_log_pack_send(i8* noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(i8* %[[V11]])
 // CHECK-O2: %[[V14:.*]] = load i8*, i8** %[[OS_LOG_ARG2]], align 8
 // CHECK-O2: call void @llvm.objc.release(i8* %[[V14]])

@@ -2199,9 +2199,8 @@ public:
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = m_exe_ctx.GetTargetRef();
-    result.GetOutputStream().Printf(
-        "Trace technology: %s\n",
-        target.GetTrace()->GetPluginName().AsCString());
+    result.GetOutputStream().Format("Trace technology: {0}\n",
+                                    target.GetTrace()->GetPluginName());
     return CommandObjectIterateOverThreads::DoExecute(command, result);
   }
 

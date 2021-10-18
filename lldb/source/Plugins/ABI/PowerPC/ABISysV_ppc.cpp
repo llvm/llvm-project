@@ -967,9 +967,3 @@ lldb_private::ConstString ABISysV_ppc::GetPluginNameStatic() {
   static ConstString g_name("sysv-ppc");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_ppc::GetPluginName() {
-  return GetPluginNameStatic();
-}

@@ -2,6 +2,6 @@
 
 // Return value should be passed in <2 x half> so the backend will use xmm0
 _Complex _Float16 f16(_Complex _Float16 A, _Complex _Float16 B) {
-  // CHECK-LABEL: define{{.*}}<2 x half> @f16({ half, half }* byval({ half, half }) align 4 %{{.*}}, { half, half }* byval({ half, half }) align 4 %{{.*}})
+  // CHECK-LABEL: define{{.*}}<2 x half> @f16({ half, half }* noundef byval({ half, half }) align 4 %{{.*}}, { half, half }* noundef byval({ half, half }) align 4 %{{.*}})
   return A + B;
 }

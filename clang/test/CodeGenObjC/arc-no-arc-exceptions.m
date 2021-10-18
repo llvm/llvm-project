@@ -34,7 +34,7 @@ void test1(id x) {
 void NSLog(id, ...);
 
 // CHECK-LABEL: define{{.*}} void @test2(
-// CHECK: invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to i8*), i32* %{{.*}})
+// CHECK: invoke void (i8*, ...) @NSLog(i8* noundef bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to i8*), i32* noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test2(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions
@@ -48,7 +48,7 @@ void test2(void) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test3(
-// CHECK: invoke void %{{.*}}(i8* %{{.*}})
+// CHECK: invoke void %{{.*}}(i8* noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test3(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions
@@ -63,7 +63,7 @@ void test3(void) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test4(
-// CHECK: invoke void %{{.*}}(i8* %{{.*}})
+// CHECK: invoke void %{{.*}}(i8* noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test4(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions

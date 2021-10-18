@@ -511,6 +511,14 @@ def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
+def : GCNPat<(getDivergentFrag<or>.ret (or_oneuse i64:$src0, i64:$src1), i64:$src2),
+             (REG_SEQUENCE VReg_64,
+               (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub0)),
+                              (i32 (EXTRACT_SUBREG $src1, sub0)),
+                              (i32 (EXTRACT_SUBREG $src2, sub0))), sub0,
+               (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub1)),
+                              (i32 (EXTRACT_SUBREG $src1, sub1)),
+                              (i32 (EXTRACT_SUBREG $src2, sub1))), sub1)>;
 
 // FIXME: Probably should hardcode clamp bit in pseudo and avoid this.
 class OpSelBinOpClampPat<SDPatternOperator node,

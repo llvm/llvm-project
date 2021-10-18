@@ -1344,3 +1344,20 @@ multiclass SIMDFM<Vec vec, bits<32> simdopA, bits<32> simdopS> {
 
 defm "" : SIMDFM<F32x4, 0xaf, 0xb0>;
 defm "" : SIMDFM<F64x2, 0xcf, 0xd0>;
+
+//===----------------------------------------------------------------------===//
+// Laneselect
+//===----------------------------------------------------------------------===//
+
+multiclass SIMDLANESELECT<Vec vec, bits<32> op> {
+  defm LANESELECT_#vec :
+    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+              [(set (vec.vt V128:$dst), (int_wasm_laneselect
+                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+              vec.prefix#".laneselect\t$dst, $a, $b, $c", vec.prefix#".laneselect", op>;
+}
+
+defm "" : SIMDLANESELECT<I8x16, 0xb2>;
+defm "" : SIMDLANESELECT<I16x8, 0xb3>;
+defm "" : SIMDLANESELECT<I32x4, 0xd2>;
+defm "" : SIMDLANESELECT<I64x2, 0xd3>;

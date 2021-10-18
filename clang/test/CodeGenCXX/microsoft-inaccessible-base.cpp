@@ -10,11 +10,11 @@ struct B : A { int b; };
 
 struct C : A, B { };
 extern "C" A *a_from_c(C *p) { return p; }
-// CHECK-LABEL: define dso_local %struct.A* @a_from_c(%struct.C* %{{.*}})
+// CHECK-LABEL: define dso_local %struct.A* @a_from_c(%struct.C* noundef %{{.*}})
 // CHECK: bitcast %struct.C* %{{.*}} to %struct.A*
 
 struct D : B, A { };
 extern "C" A *a_from_d(D *p) { return p; }
-// CHECK-LABEL: define dso_local %struct.A* @a_from_d(%struct.D* %{{.*}})
+// CHECK-LABEL: define dso_local %struct.A* @a_from_d(%struct.D* noundef %{{.*}})
 // CHECK: %[[p_i8:[^ ]*]] = bitcast %struct.D* %{{.*}} to i8*
 // CHECK: getelementptr inbounds i8, i8* %[[p_i8]], i64 8

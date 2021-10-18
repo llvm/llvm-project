@@ -67,7 +67,7 @@ struct A {
 // LAMBDA: ret void
 #endif
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1A11load_memberEv
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A11load_memberEv
   int load_member() {
     // ALIGN: %[[THISINT3:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT3]], 3, !nosanitize
@@ -79,7 +79,7 @@ struct A {
     // CHECK: ret i32
   }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1A11call_methodEv
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A11call_methodEv
   int call_method() {
     // ALIGN: %[[THISINT4:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT4]], 3, !nosanitize
@@ -127,7 +127,7 @@ struct A {
     // CHECK: ret void
   }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1A22call_through_referenceERS_
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A22call_through_referenceERS_
   static int call_through_reference(A &a) {
     // ALIGN: %[[OBJINT:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[OBJINT]], 3, !nosanitize
@@ -137,7 +137,7 @@ struct A {
     // CHECK: ret i32
   }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1A20call_through_pointerEPS_
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A20call_through_pointerEPS_
   static int call_through_pointer(A *a) {
     // CHECK: call void @__ubsan_handle_type_mismatch
     return a->load_member();
@@ -148,7 +148,7 @@ struct A {
 struct B {
   operator A*() const { return nullptr; }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1B11load_memberEPS_
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1B11load_memberEPS_
   static int load_member(B *bp) {
     // Check &b before converting it to an A*.
     // CHECK: call void @__ubsan_handle_type_mismatch
@@ -171,7 +171,7 @@ struct Base {
 struct Derived : public Base {
   int bar;
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN7Derived13load_member_2Ev
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_2Ev
   int load_member_2() {
     // ALIGN: %[[THISINT8:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT8]], 7, !nosanitize
@@ -188,7 +188,7 @@ struct Derived : public Base {
     // CHECK: ret i32
   }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN7Derived13load_member_3Ev
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_3Ev
   int load_member_3() {
     // ALIGN: %[[THISINT9:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT9]], 7, !nosanitize
@@ -202,7 +202,7 @@ struct Derived : public Base {
     // CHECK: ret i32
   }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN7Derived13load_member_1Ev
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_1Ev
   int load_member_1() override {
     // ALIGN: %[[THISINT10:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT10]], 7, !nosanitize

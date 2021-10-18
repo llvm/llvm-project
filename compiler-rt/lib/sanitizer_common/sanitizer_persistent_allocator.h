@@ -26,6 +26,8 @@ class PersistentAllocator {
   T *alloc(uptr count = 1);
   uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
 
+  void TestOnlyUnmap();
+
  private:
   T *tryAlloc(uptr count);
   T *refillAndAlloc(uptr count);
@@ -33,6 +35,13 @@ class PersistentAllocator {
   atomic_uintptr_t region_pos;  // Region allocator for Node's.
   atomic_uintptr_t region_end;
   atomic_uintptr_t mapped_size;
+
+  struct BlockInfo {
+    const BlockInfo *next;
+    uptr ptr;
+    uptr size;
+  };
+  const BlockInfo *curr;
 };
 
 template <typename T>
@@ -68,15 +77,32 @@ inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
     if (s)
       return s;
     atomic_store(&region_pos, 0, memory_order_relaxed);
-    uptr size = count * sizeof(T);
-    uptr allocsz = 64 * 1024;
-    if (allocsz < size)
-      allocsz = size;
+    uptr size = count * sizeof(T) + sizeof(BlockInfo);
+    uptr allocsz = RoundUpTo(Max<uptr>(size, 64u * 1024u), GetPageSizeCached());
     uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
+    BlockInfo *new_block = (BlockInfo *)(mem + allocsz) - 1;
+    new_block->next = curr;
+    new_block->ptr = mem;
+    new_block->size = allocsz;
+    curr = new_block;
+
     atomic_fetch_add(&mapped_size, allocsz, memory_order_relaxed);
+
+    allocsz -= sizeof(BlockInfo);
     atomic_store(&region_end, mem + allocsz, memory_order_release);
     atomic_store(&region_pos, mem, memory_order_release);
   }
+}
+
+template <typename T>
+void PersistentAllocator<T>::TestOnlyUnmap() {
+  while (curr) {
+    uptr mem = curr->ptr;
+    uptr allocsz = curr->size;
+    curr = curr->next;
+    UnmapOrDie((void *)mem, allocsz);
+  }
+  internal_memset(this, 0, sizeof(*this));
 }
 
 } // namespace __sanitizer

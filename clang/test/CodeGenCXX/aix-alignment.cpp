@@ -11,8 +11,8 @@ struct B {
   ~B() {}
 };
 
-// AIX32: %call = call noalias nonnull i8* @_Znam(i32 8)
-// AIX64: %call = call noalias nonnull i8* @_Znam(i64 8)
+// AIX32: %call = call noalias noundef nonnull i8* @_Znam(i32 noundef 8)
+// AIX64: %call = call noalias noundef nonnull i8* @_Znam(i64 noundef 8)
 B *allocBp() { return new B[0]; }
 
 // AIX-LABEL: delete.notnull:
@@ -32,7 +32,7 @@ typedef struct D {
   ~D(){};
 } D;
 
-// AIX: define void @_Z3foo1D(%struct.D* noalias sret(%struct.D) align 4 %agg.result, %struct.D* %x)
+// AIX: define void @_Z3foo1D(%struct.D* noalias sret(%struct.D) align 4 %agg.result, %struct.D* noundef %x)
 // AIX:   %1 = bitcast %struct.D* %agg.result to i8*
 // AIX:   %2 = bitcast %struct.D* %x to i8*
 // AIX32  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %2, i32 16, i1 false)

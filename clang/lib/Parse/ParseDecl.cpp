@@ -2021,6 +2021,18 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       Actions.CodeCompleteAfterFunctionEquals(D);
       return nullptr;
     }
+    // We're at the point where the parsing of function declarator is finished.
+    //
+    // A common error is that users accidently add a virtual specifier
+    // (e.g. override) in an out-line method definition.
+    // We attempt to recover by stripping all these specifiers coming after
+    // the declarator.
+    while (auto Specifier = isCXX11VirtSpecifier()) {
+      Diag(Tok, diag::err_virt_specifier_outside_class)
+          << VirtSpecifiers::getSpecifierName(Specifier)
+          << FixItHint::CreateRemoval(Tok.getLocation());
+      ConsumeToken();
+    }
     // Look at the next token to make sure that this isn't a function
     // declaration.  We have to check this because __attribute__ might be the
     // start of a function definition in GCC-extended K&R C.

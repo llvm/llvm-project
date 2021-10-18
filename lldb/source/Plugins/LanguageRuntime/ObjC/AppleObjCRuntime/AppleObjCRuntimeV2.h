@@ -54,7 +54,9 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V2;

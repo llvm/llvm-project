@@ -590,10 +590,6 @@ ScriptInterpreterPythonImpl::~ScriptInterpreterPythonImpl() {
   PyGILState_Release(gil_state);
 }
 
-lldb_private::ConstString ScriptInterpreterPythonImpl::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 void ScriptInterpreterPythonImpl::IOHandlerActivated(IOHandler &io_handler,
                                                      bool interactive) {
   const char *instructions = nullptr;

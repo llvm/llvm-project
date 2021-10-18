@@ -105,8 +105,8 @@ define void @vec_xst_trunc_ss(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ;
 ; CHECK-BE-LABEL: vec_xst_trunc_ss:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
 ; CHECK-BE-NEXT:    sldi r3, r5, 1
+; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
 ; CHECK-BE-NEXT:    stxsihx v2, r6, r3
 ; CHECK-BE-NEXT:    blr
 ;
@@ -136,8 +136,8 @@ define void @vec_xst_trunc_us(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ;
 ; CHECK-BE-LABEL: vec_xst_trunc_us:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
 ; CHECK-BE-NEXT:    sldi r3, r5, 1
+; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
 ; CHECK-BE-NEXT:    stxsihx v2, r6, r3
 ; CHECK-BE-NEXT:    blr
 ;
@@ -167,8 +167,8 @@ define void @vec_xst_trunc_si(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ;
 ; CHECK-BE-LABEL: vec_xst_trunc_si:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-BE-NEXT:    sldi r3, r5, 2
+; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-BE-NEXT:    stfiwx f0, r6, r3
 ; CHECK-BE-NEXT:    blr
 ;
@@ -198,8 +198,8 @@ define void @vec_xst_trunc_ui(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ;
 ; CHECK-BE-LABEL: vec_xst_trunc_ui:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-BE-NEXT:    sldi r3, r5, 2
+; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-BE-NEXT:    stfiwx f0, r6, r3
 ; CHECK-BE-NEXT:    blr
 ;
