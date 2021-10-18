@@ -567,25 +567,28 @@ namespace {
 // the files we were handed.
 struct ReadModuleNames : ASTReaderListener {
   Preprocessor &PP;
-  llvm::SmallVector<IdentifierInfo*, 8> LoadedModules;
+  llvm::SmallVector<std::string, 8> LoadedModules;
 
   ReadModuleNames(Preprocessor &PP) : PP(PP) {}
 
   void ReadModuleName(StringRef ModuleName) override {
-    LoadedModules.push_back(PP.getIdentifierInfo(ModuleName));
+    // Keep the module name as a string for now. It's not safe to create a new
+    // IdentifierInfo from an ASTReader callback.
+    LoadedModules.push_back(ModuleName.str());
   }
 
   void registerAll() {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
-    for (auto *II : LoadedModules)
-      MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
+    for (const std::string &LoadedModule : LoadedModules)
+      MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
+                         MM.findModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
-    for (auto *II : LoadedModules) {
+    for (const std::string &LoadedModule : LoadedModules) {
       if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
-              II->getName())) {
+              LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
         // Mark module as available if the only reason it was unavailable
