@@ -417,3 +417,51 @@ This is the maximum amount of time the client will wait for a response from the 
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 --------------------------------------------------------------------
 
+The target device runtime is an LLVM bitcode library that implements OpenMP 
+runtime functions on the target device. It is linked with the device code's LLVM 
+IR during compilation.
+
+Debugging
+^^^^^^^^^
+
+The device runtime supports debugging in the runtime itself. This is configured
+at compile-time using the flag ``-fopenmp-target-debug=<N>`` rather than using a
+separate debugging build. If debugging is not enabled, the debugging paths will
+be considered trivially dead and removed by the compiler with zero overhead.
+Debugging is enabled at runtime by running with the environment variable
+``LIBOMPTARGET_DEVICE_RTL_DEBUG=<N>`` set. The number set is a 32-bit field used
+to selectively enable and disable different features.  Currently, the following
+debugging features are supported.
+
+    * Enable debugging assertions in the device. ``0x01``
+    * Enable OpenMP runtime function traces in the device. ``0x2``
+
+.. code-block:: c++
+
+    void copy(double *X, double *Y) {
+    #pragma omp target teams distribute parallel for
+      for (std::size_t i = 0; i < N; ++i)
+        Y[i] = X[i];
+    }
+
+Compiling this code targeting ``nvptx64`` with debugging enabled will
+provide the following output from the device runtime library.
+
+.. code-block:: console
+
+    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-new-runtime \
+      -fopenmp-target-debug=3
+    $ env LIBOMPTARGET_DEVICE_RTL_DEBUG=3 ./zaxpy
+
+.. code-block:: text
+
+    Kernel.cpp:70: Thread 0 Entering int32_t __kmpc_target_init()
+    Parallelism.cpp:196: Thread 0 Entering int32_t __kmpc_global_thread_num()
+    Mapping.cpp:239: Thread 0 Entering uint32_t __kmpc_get_hardware_num_threads_in_block()
+    Workshare.cpp:616: Thread 0 Entering void __kmpc_distribute_static_init_4()
+    Parallelism.cpp:85: Thread 0 Entering void __kmpc_parallel_51()
+      Parallelism.cpp:69: Thread 0 Entering <OpenMP Outlined Function>
+        Workshare.cpp:575: Thread 0 Entering void __kmpc_for_static_init_4()
+        Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
+    Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
+    Kernel.cpp:103: Thread 0 Entering void __kmpc_target_deinit()
