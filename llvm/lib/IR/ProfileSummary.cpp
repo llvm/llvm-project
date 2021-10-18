@@ -249,7 +249,7 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
                             PartialProfileRatio);
 }
 
-void ProfileSummary::printSummary(raw_ostream &OS) {
+void ProfileSummary::printSummary(raw_ostream &OS) const {
   OS << "Total functions: " << NumFunctions << "\n";
   OS << "Maximum function count: " << MaxFunctionCount << "\n";
   OS << "Maximum block count: " << MaxCount << "\n";
@@ -257,7 +257,7 @@ void ProfileSummary::printSummary(raw_ostream &OS) {
   OS << "Total count: " << TotalCount << "\n";
 }
 
-void ProfileSummary::printDetailedSummary(raw_ostream &OS) {
+void ProfileSummary::printDetailedSummary(raw_ostream &OS) const {
   OS << "Detailed summary:\n";
   for (const auto &Entry : DetailedSummary) {
     OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
