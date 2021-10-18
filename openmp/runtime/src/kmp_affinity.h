@@ -806,6 +806,7 @@ public:
   void print(const char *env_var = "KMP_AFFINITY") const;
   void dump() const;
 };
+extern kmp_topology_t *__kmp_topology;
 
 class kmp_hw_subset_t {
 public:
@@ -823,6 +824,15 @@ private:
   bool absolute;
   // The set must be able to handle up to KMP_HW_LAST number of layers
   KMP_BUILD_ASSERT(sizeof(set) * 8 >= KMP_HW_LAST);
+  // Sorting the KMP_HW_SUBSET items to follow topology order
+  // All unknown topology types will be at the beginning of the subset
+  static int hw_subset_compare(const void *i1, const void *i2) {
+    kmp_hw_t type1 = ((const item_t *)i1)->type;
+    kmp_hw_t type2 = ((const item_t *)i2)->type;
+    int level1 = __kmp_topology->get_level(type1);
+    int level2 = __kmp_topology->get_level(type2);
+    return level1 - level2;
+  }
 
 public:
   // Force use of allocate()/deallocate()
@@ -881,6 +891,10 @@ public:
     }
     depth--;
   }
+  void sort() {
+    KMP_DEBUG_ASSERT(__kmp_topology);
+    qsort(items, depth, sizeof(item_t), hw_subset_compare);
+  }
   bool specified(kmp_hw_t type) const { return ((set & (1ull << type)) > 0); }
   void dump() const {
     printf("**********************\n");
@@ -896,8 +910,6 @@ public:
     printf("**********************\n");
   }
 };
-
-extern kmp_topology_t *__kmp_topology;
 extern kmp_hw_subset_t *__kmp_hw_subset;
 
 /* A structure for holding machine-specific hierarchy info to be computed once

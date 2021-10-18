@@ -739,6 +739,9 @@ bool kmp_topology_t::filter_hw_subset() {
   if (!__kmp_hw_subset)
     return false;
 
+  // First, sort the KMP_HW_SUBSET items by the machine topology
+  __kmp_hw_subset->sort();
+
   // Check to see if KMP_HW_SUBSET is a valid subset of the detected topology
   int hw_subset_depth = __kmp_hw_subset->get_depth();
   kmp_hw_t specified[KMP_HW_LAST];
@@ -769,23 +772,6 @@ bool kmp_topology_t::filter_hw_subset() {
       return false;
     }
     specified[equivalent_type] = type;
-
-    // Check to see if layers are in order
-    if (i + 1 < hw_subset_depth) {
-      kmp_hw_t next_type = get_equivalent_type(__kmp_hw_subset->at(i + 1).type);
-      if (next_type == KMP_HW_UNKNOWN) {
-        KMP_WARNING(
-            AffHWSubsetNotExistGeneric,
-            __kmp_hw_get_catalog_string(__kmp_hw_subset->at(i + 1).type));
-        return false;
-      }
-      int next_topology_level = get_level(next_type);
-      if (level > next_topology_level) {
-        KMP_WARNING(AffHWSubsetOutOfOrder, __kmp_hw_get_catalog_string(type),
-                    __kmp_hw_get_catalog_string(next_type));
-        return false;
-      }
-    }
 
     // Check to see if each layer's num & offset parameters are valid
     max_count = get_ratio(level);
