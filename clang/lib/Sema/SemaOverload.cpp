@@ -9586,7 +9586,8 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
   for (unsigned I = 0; I != NumParams; ++I) {
     QualType T1 = NextParam(F1, I1, I == 0);
     QualType T2 = NextParam(F2, I2, I == 0);
-    if (!T1.isNull() && !T1.isNull() && !Context.hasSameUnqualifiedType(T1, T2))
+    assert(!T1.isNull() && !T2.isNull() && "Unexpected null param types");
+    if (!Context.hasSameUnqualifiedType(T1, T2))
       return false;
   }
   return true;
