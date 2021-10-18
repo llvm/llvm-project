@@ -3,7 +3,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @fill(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) {
 ; CHECK: bb1.lver.check:
-; CHECK:   br i1 %memcheck.conflict, label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK:   br i1 %found.conflict, label %bb1.ph.lver.orig, label %bb1.ph
 bb1.ph:
   %ls1.20.promoted = load i8*, i8** %ls1.20
   %ls2.21.promoted = load i8*, i8** %ls2.21
@@ -37,7 +37,7 @@ bb3:
 define void @fill_no_null_opt(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) #0 {
 ; CHECK-LABEL: fill_no_null_opt(
 ; CHECK: bb1.lver.check:
-; CHECK: %lver.safe = or i1 %memcheck.conflict, %{{.*}}
+; CHECK: %lver.safe = or i1 %found.conflict, %{{.*}}
 ; CHECK:  br i1 %lver.safe, label %bb1.ph.lver.orig, label %bb1.ph
 bb1.ph:
   %ls1.20.promoted = load i8*, i8** %ls1.20

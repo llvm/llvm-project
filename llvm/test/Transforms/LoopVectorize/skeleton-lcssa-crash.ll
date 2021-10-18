@@ -41,8 +41,7 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[L_2_LCSSA3]], [[SCEVGEP912]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP58]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[FOUND_CONFLICT]], true
-; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]

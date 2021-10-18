@@ -55,8 +55,7 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult i8* [[SCEVGEP78]], [[SCEVGEP23]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT13]]
-; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[Z]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]

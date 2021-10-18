@@ -54,7 +54,7 @@ entry:
 ; CHECK:     = icmp
 
 ; CHECK-NOT: = icmp
-; CHECK:     br i1 %memcheck.conflict, label %for.body.ph.lver.orig, label %for.body.ph.ldist1
+; CHECK:     br i1 %conflict.rdx25, label %for.body.ph.lver.orig, label %for.body.ph.ldist1
 
 ; The non-distributed loop that the memchecks fall back on.
 

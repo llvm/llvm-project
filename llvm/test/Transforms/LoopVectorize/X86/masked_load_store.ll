@@ -38,8 +38,7 @@ define void @foo1(i32* nocapture %A, i32* nocapture readonly %B, i32* nocapture 
 ; AVX1-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX1-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX1-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -108,8 +107,7 @@ define void @foo1(i32* nocapture %A, i32* nocapture readonly %B, i32* nocapture 
 ; AVX2-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX2-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX2-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -223,8 +221,7 @@ define void @foo1(i32* nocapture %A, i32* nocapture readonly %B, i32* nocapture 
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AVX512:       vector.main.loop.iter.check:
 ; AVX512-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
@@ -400,8 +397,7 @@ define void @foo1_addrspace1(i32 addrspace(1)* nocapture %A, i32 addrspace(1)* n
 ; AVX1-NEXT:    [[BOUND110:%.*]] = icmp ult i8 addrspace(1)* [[B6]], [[SCEVGEP2]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX1-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX1-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -470,8 +466,7 @@ define void @foo1_addrspace1(i32 addrspace(1)* nocapture %A, i32 addrspace(1)* n
 ; AVX2-NEXT:    [[BOUND110:%.*]] = icmp ult i8 addrspace(1)* [[B6]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX2-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX2-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -585,8 +580,7 @@ define void @foo1_addrspace1(i32 addrspace(1)* nocapture %A, i32 addrspace(1)* n
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8 addrspace(1)* [[B6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AVX512:       vector.main.loop.iter.check:
 ; AVX512-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
@@ -771,8 +765,7 @@ define void @foo2(float* nocapture %A, float* nocapture readonly %B, i32* nocapt
 ; AVX1-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX1-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX1-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -843,8 +836,7 @@ define void @foo2(float* nocapture %A, float* nocapture readonly %B, i32* nocapt
 ; AVX2-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX2-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX2-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -963,8 +955,7 @@ define void @foo2(float* nocapture %A, float* nocapture readonly %B, i32* nocapt
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AVX512:       vector.main.loop.iter.check:
 ; AVX512-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
@@ -1156,8 +1147,7 @@ define void @foo3(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; AVX-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX:       vector.ph:
 ; AVX-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX:       vector.body:
@@ -1276,8 +1266,7 @@ define void @foo3(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
@@ -1461,8 +1450,7 @@ define void @foo4(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[B6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
@@ -1664,8 +1652,7 @@ define void @foo6(double* nocapture readonly %in, double* nocapture %out, i32 %s
 ; AVX2-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[IN6]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX2-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX2-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -1808,8 +1795,7 @@ define void @foo6(double* nocapture readonly %in, double* nocapture %out, i32 %s
 ; AVX512-NEXT:    [[BOUND110:%.*]] = icmp ult i8* [[IN6]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; AVX512-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[CONFLICT_RDX]], true
-; AVX512-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
