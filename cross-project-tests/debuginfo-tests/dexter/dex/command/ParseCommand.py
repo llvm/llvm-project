@@ -26,6 +26,7 @@ from dex.command.commands.DexExpectWatchType import DexExpectWatchType
 from dex.command.commands.DexExpectWatchValue import DexExpectWatchValue
 from dex.command.commands.DexLabel import DexLabel
 from dex.command.commands.DexLimitSteps import DexLimitSteps
+from dex.command.commands.DexFinishTest import DexFinishTest
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
 from dex.utils import Timer
@@ -46,6 +47,7 @@ def _get_valid_commands():
       DexExpectWatchValue.get_name() : DexExpectWatchValue,
       DexLabel.get_name() : DexLabel,
       DexLimitSteps.get_name() : DexLimitSteps,
+      DexFinishTest.get_name() : DexFinishTest,
       DexUnreachable.get_name() : DexUnreachable,
       DexWatch.get_name() : DexWatch
     }
