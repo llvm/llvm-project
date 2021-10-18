@@ -423,6 +423,18 @@ def RFBYTE      : P2InstCZD<0b1101011, 0b000010000, (outs P2GPR:$d), (ins), "rfb
 def RFWORD      : P2InstCZD<0b1101011, 0b000010001, (outs P2GPR:$d), (ins), "rfword $d">;
 def RFLONG      : P2InstCZD<0b1101011, 0b000010010, (outs P2GPR:$d), (ins), "rflong $d">;
 
+def WRFASTrr    : P2InstLIDS<0b11001000, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrfast $d, $s">;
+def WRFASTri    : P2InstLIDS<0b11001000, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrfast $d, #$s">;
+def WRFASTir    : P2InstLIDS<0b11001000, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrfast #$d, $s">;
+def WRFASTii    : P2InstLIDS<0b11001000, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrfast #$d, #$s">;
+
+def WFBYTEr     : P2InstLD<0b1101011, 0b000010101, 0b0, (outs P2GPR:$d), (ins), "wfbyte $d">;
+def WFBYTEi     : P2InstLD<0b1101011, 0b000010101, 0b1, (outs s9imm:$d), (ins), "wfbyte #$d">;
+def WFWORDr     : P2InstLD<0b1101011, 0b000010110, 0b0, (outs P2GPR:$d), (ins), "wfword $d">;
+def WFWORDi     : P2InstLD<0b1101011, 0b000010110, 0b1, (outs s9imm:$d), (ins), "wfword #$d">;
+def WFLONGr     : P2InstLD<0b1101011, 0b000010111, 0b0, (outs P2GPR:$d), (ins), "wflong $d">;
+def WFLONGi     : P2InstLD<0b1101011, 0b000010111, 0b1, (outs s9imm:$d), (ins), "wflong #$d">;
+
 def : Pat<(zextloadi8 imm9:$s), (RDBYTEri imm9:$s, always, noeff)>;
 def : Pat<(zextloadi8 addr:$s), (RDBYTErr P2GPR:$s, always, noeff)>;
 def : Pat<(zextloadi16 imm9:$s), (RDWORDri imm9:$s, always, noeff)>;
