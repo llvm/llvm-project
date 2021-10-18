@@ -17,10 +17,9 @@
 
 define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-LABEL: P10_Spill_CR_GT:
-; CHECK:         .localentry P10_Spill_CR_GT, 1
-; CHECK-NEXT:  # %bb.0: # %bb
-; CHECK-NEXT:    mflr r0
+; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
+; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
@@ -49,8 +48,8 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:  .LBB0_1: # %bb43
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bl call_1@notoc
-; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    setnbc r3, 4*cr4+eq
+; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    stb r4, 0(r3)
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    .p2align 4
@@ -210,8 +209,8 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ;
 ; CHECK-BE-LABEL: P10_Spill_CR_GT:
 ; CHECK-BE:       # %bb.0: # %bb
-; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    mfcr r12
+; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stw r12, 8(r1)
 ; CHECK-BE-NEXT:    stdu r1, -144(r1)
@@ -242,8 +241,8 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    bl call_1
 ; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    setnbc r3, 4*cr4+eq
+; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    stb r4, 0(r3)
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    .p2align 4

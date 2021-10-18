@@ -6304,8 +6304,8 @@ define dso_local void @st_not_disjoint32_uint16_t_float(i64 %ptr, i16 zeroext %s
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    stfs f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -6340,8 +6340,8 @@ define dso_local void @st_disjoint_align32_uint16_t_float(i64 %ptr, i16 zeroext 
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
+; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    pstfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
@@ -6692,8 +6692,8 @@ define dso_local void @st_not_disjoint32_uint16_t_double(i64 %ptr, i16 zeroext %
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    stfd f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -6728,8 +6728,8 @@ define dso_local void @st_disjoint_align32_uint16_t_double(i64 %ptr, i16 zeroext
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
+; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    pstfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
@@ -7652,8 +7652,8 @@ define dso_local void @st_not_disjoint32_int16_t_float(i64 %ptr, i16 signext %st
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    stfs f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -7688,8 +7688,8 @@ define dso_local void @st_disjoint_align32_int16_t_float(i64 %ptr, i16 signext %
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
+; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    pstfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
@@ -8041,8 +8041,8 @@ define dso_local void @st_not_disjoint32_int16_t_double(i64 %ptr, i16 signext %s
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    stfd f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -8077,8 +8077,8 @@ define dso_local void @st_disjoint_align32_int16_t_double(i64 %ptr, i16 signext 
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
+; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    pstfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
