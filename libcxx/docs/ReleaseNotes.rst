@@ -72,6 +72,12 @@ API Changes
   Calls to these functions where the template argument was deduced by the
   compiler are unaffected by this change.
 
+- The functions ``std::allocator<T>::allocate`` and
+  ``std::experimental::pmr::polymorphic_allocator<T>::allocate`` now throw
+  an exception of type ``std::bad_array_new_length`` when the requested size
+  exceeds the maximum supported size, as required by the C++ standard.
+  Previously the type ``std::length_error`` was used.
+
 Build System Changes
 --------------------
 
