@@ -1769,7 +1769,7 @@ TEST(APIntTest, isPowerOf2) {
   EXPECT_FALSE(APInt(5, 0x00).isPowerOf2());
   EXPECT_FALSE(APInt(32, 0x11).isPowerOf2());
   EXPECT_TRUE(APInt(17, 0x01).isPowerOf2());
-  EXPECT_TRUE(APInt(32, 0xff << 31).isPowerOf2());
+  EXPECT_TRUE(APInt(32, (unsigned)(0xffu << 31)).isPowerOf2());
 
   for (int N : {1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256}) {
     EXPECT_FALSE(APInt(N, 0).isPowerOf2());
