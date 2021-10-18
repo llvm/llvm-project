@@ -30,6 +30,7 @@ namespace {
 static bool BPFIRPeepholeImpl(Function &F) {
   LLVM_DEBUG(dbgs() << "******** BPF IR Peephole ********\n");
 
+  bool Changed = false;
   Instruction *ToErase = nullptr;
   for (auto &BB : F) {
     for (auto &I : BB) {
@@ -64,6 +65,7 @@ static bool BPFIRPeepholeImpl(Function &F) {
           auto *Inst = cast<Instruction>(*Call->user_begin());
           LLVM_DEBUG(dbgs() << "Remove:"; I.dump());
           LLVM_DEBUG(dbgs() << "Remove:"; Inst->dump(); dbgs() << '\n');
+          Changed = true;
           Inst->eraseFromParent();
           ToErase = &I;
         }
@@ -83,13 +85,14 @@ static bool BPFIRPeepholeImpl(Function &F) {
           continue;
         LLVM_DEBUG(dbgs() << "Remove:"; I.dump());
         LLVM_DEBUG(dbgs() << "Remove:"; Call->dump(); dbgs() << '\n');
+        Changed = true;
         Call->eraseFromParent();
         ToErase = &I;
       }
     }
   }
 
-  return false;
+  return Changed;
 }
 
 class BPFIRPeephole final : public FunctionPass {
