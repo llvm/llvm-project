@@ -64,7 +64,9 @@ public:
       lldb_private::LazyBool &private_shared_cache) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   bool IsFullyInitialized() override;
 

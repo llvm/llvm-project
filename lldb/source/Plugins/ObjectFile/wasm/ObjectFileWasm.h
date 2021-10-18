@@ -48,7 +48,9 @@ public:
 
   /// PluginInterface protocol.
   /// \{
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
   /// \}
 
   /// LLVM RTTI support

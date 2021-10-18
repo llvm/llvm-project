@@ -122,11 +122,6 @@ ConstString EmulateInstructionARM64::GetPluginNameStatic() {
   return g_plugin_name;
 }
 
-lldb_private::ConstString EmulateInstructionARM64::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionARM64");
-  return g_plugin_name;
-}
-
 const char *EmulateInstructionARM64::GetPluginDescriptionStatic() {
   return "Emulate instructions for the ARM64 architecture.";
 }

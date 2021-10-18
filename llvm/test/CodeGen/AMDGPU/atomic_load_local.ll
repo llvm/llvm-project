@@ -1,6 +1,56 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
+; GCN-LABEL: {{^}}atomic_load_monotonic_i8:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u8 v0, v0{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i8 @atomic_load_monotonic_i8(i8 addrspace(3)* %ptr) {
+  %load = load atomic i8, i8 addrspace(3)* %ptr monotonic, align 1
+  ret i8 %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_i8_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u8 v0, v0 offset:16{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i8 @atomic_load_monotonic_i8_offset(i8 addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds i8, i8 addrspace(3)* %ptr, i8 16
+  %load = load atomic i8, i8 addrspace(3)* %gep monotonic, align 1
+  ret i8 %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_i16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_i16(i16 addrspace(3)* %ptr) {
+  %load = load atomic i16, i16 addrspace(3)* %ptr monotonic, align 2
+  ret i16 %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_i16_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0 offset:32{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_i16_offset(i16 addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds i16, i16 addrspace(3)* %ptr, i16 16
+  %load = load atomic i16, i16 addrspace(3)* %gep monotonic, align 2
+  ret i16 %load
+}
+
 ; GCN-LABEL: {{^}}atomic_load_monotonic_i32:
 ; GCN: s_waitcnt
 ; GFX9-NOT: s_mov_b32 m0

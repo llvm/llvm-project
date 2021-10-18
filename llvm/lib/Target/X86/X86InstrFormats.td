@@ -296,6 +296,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   // If this is a pseudo instruction, mark it isCodeGenOnly.
   let isCodeGenOnly = !eq(!cast<string>(f), "Pseudo");
 
+  let HasPositionOrder = 1;
+
   //
   // Attributes specific to X86 instructions...
   //

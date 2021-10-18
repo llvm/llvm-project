@@ -958,6 +958,9 @@ def err_duplicate_class_virt_specifier : Error<
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
 
+def err_virt_specifier_outside_class : Error<
+  "'%0' specifier is not allowed outside a class definition">;
+
 def err_expected_parameter_pack : Error<
   "expected the name of a parameter pack">;
 def err_paren_sizeof_parameter_pack : Error<

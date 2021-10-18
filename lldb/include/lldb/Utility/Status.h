@@ -184,16 +184,6 @@ public:
   ///     success (non-erro), \b false otherwise.
   bool Success() const;
 
-  /// Test for a failure due to a generic interrupt.
-  ///
-  /// Returns true if the error code in this object was caused by an
-  /// interrupt. At present only supports Posix EINTR.
-  ///
-  /// \return
-  ///     \b true if this object contains an value that describes
-  ///     failure due to interrupt, \b false otherwise.
-  bool WasInterrupted() const;
-
 protected:
   /// Member variables
   ValueType m_code = 0; ///< Status code as an integer value.
