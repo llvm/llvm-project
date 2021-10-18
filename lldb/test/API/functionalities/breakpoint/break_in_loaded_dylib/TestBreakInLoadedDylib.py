@@ -37,7 +37,7 @@ class TestBreakInLoadedDylib(TestBase):
         # Now set some breakpoints that won't take till the library is loaded:
         # This one is currently how lldbutils does it but test here in case that changes:
         bkpt1 = target.BreakpointCreateBySourceRegex("Break here in dylib", self.b_spec, self.lib_fullname)
-        self.assertEqual(bkpt1.GetNumLocations(), 0, "Library isn't loaded yet.")
+
         # Try the file list API as well.  Put in some bogus entries too, to make sure those
         # don't trip us up:
                                                
@@ -51,7 +51,6 @@ class TestBreakInLoadedDylib(TestBase):
         modules_list.Append(lldb.SBFileSpec("libI_bet_not_this_one_either.dylib"))
 
         bkpt2 = target.BreakpointCreateBySourceRegex("Break here in dylib", modules_list, files_list)
-        self.assertEqual(bkpt2.GetNumLocations(), 0, "Library isn't loaded yet")
 
         lldbutil.continue_to_breakpoint(process, bkpt1)
         self.assertEqual(bkpt1.GetHitCount(), 1, "Hit breakpoint 1")
