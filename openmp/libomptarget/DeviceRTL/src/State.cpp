@@ -498,10 +498,12 @@ int omp_get_initial_device(void) { return -1; }
 
 extern "C" {
 __attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
+  FunctionTracingRAII();
   return memory::allocShared(Bytes, "Frontend alloc shared");
 }
 
 __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
+  FunctionTracingRAII();
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 
@@ -523,6 +525,7 @@ constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
     allocator(omp_pteam_mem_alloc)
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
+  FunctionTracingRAII();
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
     SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
   } else {
@@ -533,11 +536,13 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
 }
 
 void __kmpc_end_sharing_variables() {
+  FunctionTracingRAII();
   if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
     memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
 void __kmpc_get_shared_variables(void ***GlobalArgs) {
+  FunctionTracingRAII();
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 }

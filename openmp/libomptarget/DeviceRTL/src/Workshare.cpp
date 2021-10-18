@@ -470,6 +470,7 @@ extern "C" {
 // init
 void __kmpc_dispatch_init_4(IdentTy *loc, int32_t tid, int32_t schedule,
                             int32_t lb, int32_t ub, int32_t st, int32_t chunk) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = pushDST();
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_init(
       loc, tid, (kmp_sched_t)schedule, lb, ub, st, chunk, DST);
@@ -478,6 +479,7 @@ void __kmpc_dispatch_init_4(IdentTy *loc, int32_t tid, int32_t schedule,
 void __kmpc_dispatch_init_4u(IdentTy *loc, int32_t tid, int32_t schedule,
                              uint32_t lb, uint32_t ub, int32_t st,
                              int32_t chunk) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = pushDST();
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_init(
       loc, tid, (kmp_sched_t)schedule, lb, ub, st, chunk, DST);
@@ -485,6 +487,7 @@ void __kmpc_dispatch_init_4u(IdentTy *loc, int32_t tid, int32_t schedule,
 
 void __kmpc_dispatch_init_8(IdentTy *loc, int32_t tid, int32_t schedule,
                             int64_t lb, int64_t ub, int64_t st, int64_t chunk) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = pushDST();
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_init(
       loc, tid, (kmp_sched_t)schedule, lb, ub, st, chunk, DST);
@@ -493,6 +496,7 @@ void __kmpc_dispatch_init_8(IdentTy *loc, int32_t tid, int32_t schedule,
 void __kmpc_dispatch_init_8u(IdentTy *loc, int32_t tid, int32_t schedule,
                              uint64_t lb, uint64_t ub, int64_t st,
                              int64_t chunk) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = pushDST();
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_init(
       loc, tid, (kmp_sched_t)schedule, lb, ub, st, chunk, DST);
@@ -501,6 +505,7 @@ void __kmpc_dispatch_init_8u(IdentTy *loc, int32_t tid, int32_t schedule,
 // next
 int __kmpc_dispatch_next_4(IdentTy *loc, int32_t tid, int32_t *p_last,
                            int32_t *p_lb, int32_t *p_ub, int32_t *p_st) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = peekDST();
   return omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_next(
       loc, tid, p_last, p_lb, p_ub, p_st, DST);
@@ -508,6 +513,7 @@ int __kmpc_dispatch_next_4(IdentTy *loc, int32_t tid, int32_t *p_last,
 
 int __kmpc_dispatch_next_4u(IdentTy *loc, int32_t tid, int32_t *p_last,
                             uint32_t *p_lb, uint32_t *p_ub, int32_t *p_st) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = peekDST();
   return omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_next(
       loc, tid, p_last, p_lb, p_ub, p_st, DST);
@@ -515,6 +521,7 @@ int __kmpc_dispatch_next_4u(IdentTy *loc, int32_t tid, int32_t *p_last,
 
 int __kmpc_dispatch_next_8(IdentTy *loc, int32_t tid, int32_t *p_last,
                            int64_t *p_lb, int64_t *p_ub, int64_t *p_st) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = peekDST();
   return omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_next(
       loc, tid, p_last, p_lb, p_ub, p_st, DST);
@@ -522,6 +529,7 @@ int __kmpc_dispatch_next_8(IdentTy *loc, int32_t tid, int32_t *p_last,
 
 int __kmpc_dispatch_next_8u(IdentTy *loc, int32_t tid, int32_t *p_last,
                             uint64_t *p_lb, uint64_t *p_ub, int64_t *p_st) {
+  FunctionTracingRAII();
   DynamicScheduleTracker *DST = peekDST();
   return omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_next(
       loc, tid, p_last, p_lb, p_ub, p_st, DST);
@@ -529,21 +537,25 @@ int __kmpc_dispatch_next_8u(IdentTy *loc, int32_t tid, int32_t *p_last,
 
 // fini
 void __kmpc_dispatch_fini_4(IdentTy *loc, int32_t tid) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_fini();
   popDST();
 }
 
 void __kmpc_dispatch_fini_4u(IdentTy *loc, int32_t tid) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_fini();
   popDST();
 }
 
 void __kmpc_dispatch_fini_8(IdentTy *loc, int32_t tid) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_fini();
   popDST();
 }
 
 void __kmpc_dispatch_fini_8u(IdentTy *loc, int32_t tid) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_fini();
   popDST();
 }
@@ -556,6 +568,7 @@ void __kmpc_for_static_init_4(IdentTy *loc, int32_t global_tid,
                               int32_t schedtype, int32_t *plastiter,
                               int32_t *plower, int32_t *pupper,
                               int32_t *pstride, int32_t incr, int32_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -565,6 +578,7 @@ void __kmpc_for_static_init_4u(IdentTy *loc, int32_t global_tid,
                                int32_t schedtype, int32_t *plastiter,
                                uint32_t *plower, uint32_t *pupper,
                                int32_t *pstride, int32_t incr, int32_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -574,6 +588,7 @@ void __kmpc_for_static_init_8(IdentTy *loc, int32_t global_tid,
                               int32_t schedtype, int32_t *plastiter,
                               int64_t *plower, int64_t *pupper,
                               int64_t *pstride, int64_t incr, int64_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -583,6 +598,7 @@ void __kmpc_for_static_init_8u(IdentTy *loc, int32_t global_tid,
                                int32_t schedtype, int32_t *plastiter,
                                uint64_t *plower, uint64_t *pupper,
                                int64_t *pstride, int64_t incr, int64_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -593,6 +609,7 @@ void __kmpc_distribute_static_init_4(IdentTy *loc, int32_t global_tid,
                                      int32_t *plower, int32_t *pupper,
                                      int32_t *pstride, int32_t incr,
                                      int32_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -603,6 +620,7 @@ void __kmpc_distribute_static_init_4u(IdentTy *loc, int32_t global_tid,
                                       uint32_t *plower, uint32_t *pupper,
                                       int32_t *pstride, int32_t incr,
                                       int32_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -613,6 +631,7 @@ void __kmpc_distribute_static_init_8(IdentTy *loc, int32_t global_tid,
                                      int64_t *plower, int64_t *pupper,
                                      int64_t *pstride, int64_t incr,
                                      int64_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
@@ -623,14 +642,19 @@ void __kmpc_distribute_static_init_8u(IdentTy *loc, int32_t global_tid,
                                       uint64_t *plower, uint64_t *pupper,
                                       int64_t *pstride, int64_t incr,
                                       int64_t chunk) {
+  FunctionTracingRAII();
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       mapping::isSPMDMode());
 }
 
-void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {}
+void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {
+  FunctionTracingRAII();
+}
 
-void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {}
+void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {
+  FunctionTracingRAII();
+}
 }
 
 #pragma omp end declare target

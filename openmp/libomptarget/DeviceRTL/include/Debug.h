@@ -49,13 +49,13 @@ int printf(const char *format, ...);
 /// Enter a debugging scope for performing function traces. Enabled with
 /// FunctionTracting set in the debug kind.
 #define FunctionTracingRAII()                                                  \
-  DebugEntryRAII Entry(__LINE__, __PRETTY_FUNCTION__);
+  DebugEntryRAII Entry(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 
 /// An RAII class for handling entries to debug locations. The current location
 /// and function will be printed on entry. Nested levels increase the
 /// indentation shown in the debugging output.
 struct DebugEntryRAII {
-  DebugEntryRAII(const unsigned Line, const char *Function);
+  DebugEntryRAII(const char *File, const unsigned Line, const char *Function);
   ~DebugEntryRAII();
 };
 

@@ -11,6 +11,7 @@
 
 #include "Utils.h"
 
+#include "Debug.h"
 #include "Interface.h"
 #include "Mapping.h"
 
@@ -129,10 +130,12 @@ int32_t utils::shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,
 
 extern "C" {
 int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {
+  FunctionTracingRAII();
   return impl::shuffleDown(lanes::All, Val, Delta, SrcLane);
 }
 
 int64_t __kmpc_shuffle_int64(int64_t Val, int16_t Delta, int16_t Width) {
+  FunctionTracingRAII();
   uint32_t lo, hi;
   utils::unpack(Val, lo, hi);
   hi = impl::shuffleDown(lanes::All, hi, Delta, Width);
