@@ -187,6 +187,10 @@ def MixedNormalVariadicResults : TEST_Op<
 // Test Attributes
 //===----------------------------------------------------------------------===//
 
+def AnyAttrOfOp : TEST_Op<"any_attr_of_i32_str"> {
+  let arguments = (ins AnyAttrOf<[I32Attr, StrAttr]>:$attr);
+}
+
 def NonNegIntAttrOp : TEST_Op<"non_negative_int_attr"> {
   let arguments = (ins
       Confined<I32Attr, [IntNonNegative]>:$i32attr,
