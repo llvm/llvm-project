@@ -1081,12 +1081,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   size_t MaxTasks = Lto->getMaxTasks();
   std::vector<std::pair<SmallString<128>, bool>> Files(MaxTasks);
 
-  auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+  auto AddStream = [&](size_t Task) -> std::unique_ptr<NativeObjectStream> {
     Files[Task].second = !SaveTemps;
     int FD = getOutputFileName(Filename, /* TempOutFile */ !SaveTemps,
                                Files[Task].first, Task);
-    return std::make_unique<lto::NativeObjectStream>(
+    return std::make_unique<NativeObjectStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
@@ -1096,7 +1095,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
 
   NativeObjectCache Cache;
   if (!options::cache_dir.empty())
-    Cache = check(localCache(options::cache_dir, AddBuffer));
+    Cache = check(localCache("ThinLTO", "Thin", options::cache_dir, AddBuffer));
 
   check(Lto->run(AddStream, Cache));
 
