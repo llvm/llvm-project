@@ -187,12 +187,11 @@ TEST(CallDescription, MatchConstructor) {
       using namespace std;
       basic_string<char> s("hello");
     })code";
-  // FIXME: We should match.
   const std::string Code = (Twine{MockStdStringHeader} + AdditionalCode).str();
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(
           new CallDescriptionAction<CXXConstructExpr>({
-              {{{"std", "basic_string", "basic_string"}, 2, 2}, false},
+              {{{"std", "basic_string", "basic_string"}, 2, 2}, true},
           })),
       Code));
 }
@@ -216,10 +215,9 @@ TEST(CallDescription, MatchConversionOperator) {
       aaa::bbb::Bar x;
       int tmp = x;
     })code";
-  // FIXME: We should match.
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"aaa", "bbb", "Bar", "operator int"}}, false},
+          {{{"aaa", "bbb", "Bar", "operator int"}}, true},
       })),
       Code));
 }
