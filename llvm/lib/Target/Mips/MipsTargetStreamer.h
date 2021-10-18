@@ -104,6 +104,7 @@ public:
   virtual void emitDirectiveCpreturn(unsigned SaveLocation,
                                      bool SaveLocationIsRegister);
 
+  virtual void emitDirectiveModulePcRel();
   // FP abiflags directives
   virtual void emitDirectiveModuleFP();
   virtual void emitDirectiveModuleOddSPReg();
@@ -294,6 +295,7 @@ public:
   void emitDirectiveCpreturn(unsigned SaveLocation,
                              bool SaveLocationIsRegister) override;
 
+  void emitDirectiveModulePcRel() override;
   // FP abiflags directives
   void emitDirectiveModuleFP() override;
   void emitDirectiveModuleOddSPReg() override;
