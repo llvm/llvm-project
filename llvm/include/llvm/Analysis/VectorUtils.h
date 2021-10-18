@@ -533,6 +533,12 @@ llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
 llvm::SmallVector<int, 16>
 createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
 
+/// Given a shuffle mask for a binary shuffle, create the equivalent shuffle
+/// mask assuming both operands are identical. This assumes that the unary
+/// shuffle will use elements from operand 0 (operand 1 will be unused).
+llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
+                                           unsigned NumElts);
+
 /// Concatenate a list of vectors.
 ///
 /// This function generates code that concatenate the vectors in \p Vecs into a
