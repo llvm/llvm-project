@@ -89,7 +89,7 @@ extern inline S&h(bool b) {
   return b ? j : i;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @"?g1@@YAHXZ"()
+// CHECK-LABEL: define dso_local i32 @"?g1@@YAHXZ"()
 int f1();
 int g1() {
   static int i = f1();

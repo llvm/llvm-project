@@ -1,6 +1,37 @@
 // RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -verify-diagnostics | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// Test AnyAttrOf attributes
+//===----------------------------------------------------------------------===//
+
+func @any_attr_of_pass() {
+  "test.any_attr_of_i32_str"() {
+    // CHECK: attr = 3 : i32
+    attr = 3 : i32
+  } : () -> ()
+
+  "test.any_attr_of_i32_str"() {
+    // CHECK: attr = "string_data"
+    attr = "string_data"
+  } : () -> ()
+
+  return
+}
+
+// -----
+
+func @any_attr_of_fail() {
+  // expected-error @+1 {{'test.any_attr_of_i32_str' op attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute or string attribute}}
+  "test.any_attr_of_i32_str"() {
+    attr = 3 : i64
+  } : () -> ()
+
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Test integer attributes
 //===----------------------------------------------------------------------===//
 

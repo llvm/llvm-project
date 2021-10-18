@@ -26,9 +26,9 @@ void delete_A(A *a) { delete a; }
 //
 // Ensure that we call the destroying delete and not the destructor.
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* noundef %[[a]])
-// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* noundef %[[a]], i8
-// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* noundef %[[a]], %{{.*}}* noundef byval(%{{.*}}) align 4 %{{.*}})
+// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* %[[a]])
+// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], i8
+// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}})
 // CHECK-NOT: call
 // CHECK: }
 
@@ -46,8 +46,8 @@ void delete_B(B *b) { delete b; }
 // CHECK-NOT: call
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
-// CHECK: call {{void|noundef i8\*|x86_thiscallcc noundef i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[b]]
-// CHECK-MSABI-SAME: , i32 noundef 1)
+// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[b]]
+// CHECK-MSABI-SAME: , i32 1)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -72,9 +72,9 @@ void delete_C(C *c) { delete c; }
 // CHECK: br i1
 //
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* noundef %[[a]])
-// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* noundef %[[a]], i8
-// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* noundef %[[a]], %{{.*}}* noundef byval(%{{.*}}) align 4 %{{.*}})
+// CHECK-ITANIUM: call void @_ZN1AdlEPS_St19destroying_delete_t(%{{.*}}* %[[a]])
+// CHECK-MSABI64: call void @"??3A@@SAXPEAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], i8
+// CHECK-MSABI32: call void @"??3A@@SAXPAU0@Udestroying_delete_t@std@@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}})
 // CHECK-NOT: call
 // CHECK: }
 
@@ -97,8 +97,8 @@ void delete_D(D *d) { delete d; }
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
 //
-// CHECK: call {{void|noundef i8\*|x86_thiscallcc noundef i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[d]]
-// CHECK-MSABI-SAME: , i32 noundef 1)
+// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[d]]
+// CHECK-MSABI-SAME: , i32 1)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -144,9 +144,9 @@ struct alignas(16) G : E, F { void *data; };
 void delete_G(G *g) { delete g; }
 // CHECK-LABEL: define {{.*}}delete_G
 // CHECK-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t(%{{.*}}* noundef %[[a]], i64 noundef 32, i64 noundef 16)
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"(%{{.*}}* noundef %[[a]], i8 {{[^,]*}}, i64 noundef 32, i64 noundef 16)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"(%{{.*}}* noundef %[[a]], %{{.*}}* noundef byval(%{{.*}}) align 4 %{{.*}}, i32 noundef 16, i32 noundef 16)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t(%{{.*}}* %[[a]], i64 32, i64 16)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"(%{{.*}}* %[[a]], i8 {{[^,]*}}, i64 32, i64 16)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"(%{{.*}}* %[[a]], %{{.*}}* byval(%{{.*}}) align 4 %{{.*}}, i32 16, i32 16)
 // CHECK-NOT: call
 // CHECK: }
 
@@ -158,7 +158,7 @@ H::~H() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 noundef 48, i64 noundef 16)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 48, i64 16)
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
@@ -173,8 +173,8 @@ H::~H() { call_in_dtor(); }
 // CHECK-MSABI64: getelementptr {{.*}}, i64 24
 // CHECK-MSABI32: getelementptr {{.*}}, i32 20
 // CHECK-MSABI-NOT: call{{ }}
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 noundef 48, i64 noundef 16)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 noundef 32, i32 noundef 16)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 48, i64 16)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 32, i32 16)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
 // CHECK-MSABI64: call void @"??1H@@UEAA@XZ"(
@@ -189,7 +189,7 @@ I::~I() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call
-// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 noundef 96, i64 noundef 32)
+// CHECK-ITANIUM: call void @_ZN1FdlEPS_St19destroying_delete_tmSt11align_val_t({{.*}}, i64 96, i64 32)
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
@@ -204,8 +204,8 @@ I::~I() { call_in_dtor(); }
 // CHECK-MSABI64: getelementptr {{.*}}, i64 24
 // CHECK-MSABI32: getelementptr {{.*}}, i32 20
 // CHECK-MSABI-NOT: call{{ }}
-// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 noundef 96, i64 noundef 32)
-// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 noundef 64, i32 noundef 32)
+// CHECK-MSABI64: call void @"??3F@@SAXPEAU0@Udestroying_delete_t@std@@_KW4align_val_t@2@@Z"({{.*}}, i64 96, i64 32)
+// CHECK-MSABI32: call void @"??3F@@SAXPAU0@Udestroying_delete_t@std@@IW4align_val_t@2@@Z"({{.*}}, i32 64, i32 32)
 // CHECK-MSABI: br label %[[RETURN:.*]]
 //
 // CHECK-MSABI64: call void @"??1I@@UEAA@XZ"(

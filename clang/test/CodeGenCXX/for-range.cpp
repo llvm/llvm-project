@@ -34,7 +34,7 @@ extern B array[5];
 
 // CHECK-LABEL: define{{.*}} void @_Z9for_arrayv(
 void for_array() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* noundef [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;
   for (B b : array) {
     // CHECK-NOT: 5begin
@@ -57,18 +57,18 @@ void for_array() {
     // CHECK: br label %[[COND]]
   }
   // CHECK: [[END]]:
-  // CHECK: call void @_ZN1AD1Ev(%struct.A* noundef [[A]])
+  // CHECK: call void @_ZN1AD1Ev(%struct.A* [[A]])
   // CHECK: ret void
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z9for_rangev(
 void for_range() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* noundef [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;
   for (B b : C()) {
     // CHECK: call void @_ZN1CC1Ev(
-    // CHECK: = call noundef %struct.B* @_Z5beginR1C(
-    // CHECK: = call noundef %struct.B* @_Z3endR1C(
+    // CHECK: = call %struct.B* @_Z5beginR1C(
+    // CHECK: = call %struct.B* @_Z3endR1C(
     // CHECK: br label %[[COND:.*]]
 
     // CHECK: [[COND]]:
@@ -89,18 +89,18 @@ void for_range() {
     // CHECK: br label %[[COND]]
   }
   // CHECK: [[END]]:
-  // CHECK: call void @_ZN1AD1Ev(%struct.A* noundef [[A]])
+  // CHECK: call void @_ZN1AD1Ev(%struct.A* [[A]])
   // CHECK: ret void
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z16for_member_rangev(
 void for_member_range() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* noundef [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;
   for (B b : D()) {
     // CHECK: call void @_ZN1DC1Ev(
-    // CHECK: = call noundef %struct.B* @_ZN1D5beginEv(
-    // CHECK: = call noundef %struct.B* @_ZN1D3endEv(
+    // CHECK: = call %struct.B* @_ZN1D5beginEv(
+    // CHECK: = call %struct.B* @_ZN1D3endEv(
     // CHECK: br label %[[COND:.*]]
 
     // CHECK: [[COND]]:
@@ -121,6 +121,6 @@ void for_member_range() {
     // CHECK: br label %[[COND]]
   }
   // CHECK: [[END]]:
-  // CHECK: call void @_ZN1AD1Ev(%struct.A* noundef [[A]])
+  // CHECK: call void @_ZN1AD1Ev(%struct.A* [[A]])
   // CHECK: ret void
 }

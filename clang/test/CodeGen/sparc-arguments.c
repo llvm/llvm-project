@@ -17,9 +17,9 @@ struct s1 x1;
 
 // Ensure the align 8 is passed through:
 // CHECK-LABEL: define{{.*}} void @f1()
-// CHECK: call void @f1_helper(%struct.s1* noundef byval(%struct.s1) align 8 @x1)
+// CHECK: call void @f1_helper(%struct.s1* byval(%struct.s1) align 8 @x1)
 // Also ensure the declaration of f1_helper includes it
-// CHECK: declare void @f1_helper(%struct.s1* noundef byval(%struct.s1) align 8)
+// CHECK: declare void @f1_helper(%struct.s1* byval(%struct.s1) align 8)
 
 void f1_helper(struct s1);
 void f1() {

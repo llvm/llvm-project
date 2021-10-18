@@ -31,7 +31,7 @@ void if_destruct(int z) {
   // Verify that the condition variable is destroyed at the end of the
   // "if" statement.
   // CHECK: call void @_ZN1XC1Ev
-  // CHECK: call noundef zeroext i1 @_ZN1XcvbEv
+  // CHECK: call zeroext i1 @_ZN1XcvbEv
   if (X x = X()) {
     // CHECK: store i32 18
     z = 18;
@@ -50,7 +50,7 @@ void if_destruct(int z) {
   // CHECK: call  void @_ZN1XD1Ev
 
   // CHECK: call void @_Z4getXv
-  // CHECK: call noundef zeroext i1 @_ZN1XcvbEv
+  // CHECK: call zeroext i1 @_ZN1XcvbEv
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   if (getX()) { }
@@ -82,7 +82,7 @@ void switch_destruct(int z) {
   z = 20;
 
   // CHECK: call void @_Z12getConvToIntv
-  // CHECK: call noundef i32 @_ZN16ConvertibleToIntcviEv
+  // CHECK: call i32 @_ZN16ConvertibleToIntcviEv
   // CHECK: call void @_ZN16ConvertibleToIntD1Ev
   switch(getConvToInt()) {
   case 0:
@@ -101,7 +101,7 @@ void while_destruct(int z) {
   // CHECK: [[CLEANUPDEST:%.*]] = alloca i32
   while (X x = X()) {
     // CHECK: call void @_ZN1XC1Ev
-    // CHECK-NEXT: [[COND:%.*]] = call noundef zeroext i1 @_ZN1XcvbEv
+    // CHECK-NEXT: [[COND:%.*]] = call zeroext i1 @_ZN1XcvbEv
     // CHECK-NEXT: br i1 [[COND]]
 
     // Loop-exit staging block.
@@ -124,7 +124,7 @@ void while_destruct(int z) {
   z = 22;
 
   // CHECK: call void @_Z4getXv
-  // CHECK-NEXT: call noundef zeroext i1 @_ZN1XcvbEv
+  // CHECK-NEXT: call zeroext i1 @_ZN1XcvbEv
   // CHECK-NEXT: call void @_ZN1XD1Ev
   // CHECK-NEXT: br
   while(getX()) { }
@@ -147,7 +147,7 @@ void for_destruct(int z) {
   for(Y y = Y(); X x = X(); ++z) {
     // %for.cond: The loop condition.
     // CHECK: call void @_ZN1XC1Ev
-    // CHECK-NEXT: [[COND:%.*]] = call noundef zeroext i1 @_ZN1XcvbEv(
+    // CHECK-NEXT: [[COND:%.*]] = call zeroext i1 @_ZN1XcvbEv(
     // CHECK-NEXT: br i1 [[COND]]
     // -> %for.body, %for.cond.cleanup
 
@@ -196,7 +196,7 @@ void for_destruct(int z) {
 
   // %for.cond6:
   // CHECK: call void @_Z4getXv
-  // CHECK-NEXT: call noundef zeroext i1 @_ZN1XcvbEv
+  // CHECK-NEXT: call zeroext i1 @_ZN1XcvbEv
   // CHECK-NEXT: call void @_ZN1XD1Ev
   // CHECK-NEXT: br
   // -> %for.body10, %for.end16
@@ -229,7 +229,7 @@ void do_destruct(int z) {
     // CHECK: store i32 77
     z = 77;
     // CHECK: call void @_Z4getXv
-    // CHECK: call noundef zeroext i1 @_ZN1XcvbEv
+    // CHECK: call zeroext i1 @_ZN1XcvbEv
     // CHECK: call void @_ZN1XD1Ev
     // CHECK: br
   } while (getX());
@@ -245,7 +245,7 @@ int instantiated(T x) {
   int result;
 
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   // CHECK: store i32 2
@@ -254,7 +254,7 @@ int instantiated(T x) {
   if (f(x)) { result = 2; } else { result = 3; }
 
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   // CHECK: store i32 4
@@ -262,13 +262,13 @@ int instantiated(T x) {
   while (f(x)) { result = 4; }
 
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   // CHECK: store i32 6
   // CHECK: br
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: store i32 5
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
@@ -277,7 +277,7 @@ int instantiated(T x) {
   }
 
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: switch i32
   // CHECK: store i32 7
@@ -294,7 +294,7 @@ int instantiated(T x) {
   // CHECK: store i32 9
   // CHECK: br
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef i32 @_Z1f1X
+  // CHECK: call i32 @_Z1f1X
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   do {
@@ -303,7 +303,7 @@ int instantiated(T x) {
 
   // CHECK: store i32 10
   // CHECK: call void @_ZN1XC1ERKS_
-  // CHECK: call noundef zeroext i1 @_ZN1XcvbEv
+  // CHECK: call zeroext i1 @_ZN1XcvbEv
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: br
   do {

@@ -3634,6 +3634,20 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
   if (auto otherOp = source().getDefiningOp<ShapeCastOp>()) {
     if (result().getType() == otherOp.source().getType())
       return otherOp.source();
+
+    // Only allows valid transitive folding.
+    VectorType srcType = otherOp.source().getType().cast<VectorType>();
+    VectorType resultType = getResult().getType().cast<VectorType>();
+    if (srcType.getRank() < resultType.getRank()) {
+      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
+        return {};
+    } else if (srcType.getRank() > resultType.getRank()) {
+      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
+        return {};
+    } else {
+      return {};
+    }
+
     setOperand(otherOp.source());
     return getResult();
   }

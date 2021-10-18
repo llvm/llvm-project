@@ -454,6 +454,8 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.XRayAlwaysEmitTypedEvents = LangOpts.XRayAlwaysEmitTypedEvents;
   CodeGenOpts.DisableFree = FrontendOpts.DisableFree;
   FrontendOpts.GenerateGlobalModuleIndex = FrontendOpts.UseGlobalModuleIndex;
+  if (FrontendOpts.ShowStats)
+    CodeGenOpts.ClearASTBeforeBackend = false;
   LangOpts.SanitizeCoverage = CodeGenOpts.hasSanitizeCoverage();
   LangOpts.ForceEmitVTables = CodeGenOpts.ForceEmitVTables;
   LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;

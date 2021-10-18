@@ -95,7 +95,7 @@ void test_array_of_floats(void) {
   float a[4] = {1.0, 2.0, 3.0, 4.0};
   takes_array_of_floats(a);
 }
-// CHECK: declare arm_aapcs_vfpcc void @takes_array_of_floats(float* noundef)
+// CHECK: declare arm_aapcs_vfpcc void @takes_array_of_floats(float*)
 
 /* Struct-type homogenous aggregate */
 typedef struct {

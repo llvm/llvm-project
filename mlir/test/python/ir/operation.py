@@ -728,3 +728,15 @@ def testOperationErase():
 
       # Ensure we can create another operation
       Operation.create("custom.op2")
+
+
+# CHECK-LABEL: TEST: testOperationLoc
+@run
+def testOperationLoc():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with ctx:
+    loc = Location.name("loc")
+    op = Operation.create("custom.op", loc=loc)
+    assert op.location == loc
+    assert op.operation.location == loc

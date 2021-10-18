@@ -11,6 +11,6 @@ void f(Foo *p) {
   p->~Foo();
 }
 
-// CHECK-LABEL: define{{.*}} void @"?f@@YAXPEAUFoo@@@Z"(%struct.Foo* noundef %p)
+// CHECK-LABEL: define{{.*}} void @"?f@@YAXPEAUFoo@@@Z"(%struct.Foo* %p)
 // CHECK: call void @"??1Foo@@UEAA@XZ"
 // CHECK: ret void

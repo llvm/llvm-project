@@ -7,7 +7,7 @@ float foo(float X) {
   return __builtin_sqrtf(X);
 }
 
-// HAS_ERRNO: declare float @sqrtf(float noundef) [[ATTR:#[0-9]+]]
+// HAS_ERRNO: declare float @sqrtf(float) [[ATTR:#[0-9]+]]
 // HAS_ERRNO-NOT: attributes [[ATTR]] = {{{.*}} readnone
 
 // NO_ERRNO: declare float @llvm.sqrt.f32(float) [[ATTR:#[0-9]+]]

@@ -217,7 +217,7 @@ inline void use(bool b, ...) {
 // CHECK: store {{.*}}, i32* @[[XB]],
 
 // CHECK-IMPORT: define {{.*}} @[[A_INIT:__cxx_global.*]]()
-// CHECK-IMPORT: call noundef i32 @_Z11non_trivialv(
+// CHECK-IMPORT: call i32 @_Z11non_trivialv(
 // CHECK-IMPORT: store {{.*}}, i32* @[[A]],
 
 // CHECK-IMPORT: define {{.*}} @[[B_INIT:__cxx_global.*]]()
@@ -225,7 +225,7 @@ inline void use(bool b, ...) {
 // CHECK-IMPORT: store {{.*}}, i32* @[[B]],
 
 // CHECK-IMPORT: define {{.*}} @[[C_INIT:__cxx_global.*]]()
-// CHECK-IMPORT: call noundef i32 @_Z11non_trivialv(
+// CHECK-IMPORT: call i32 @_Z11non_trivialv(
 // CHECK-IMPORT: store {{.*}}, i32* @[[C]],
 
 // CHECK-IMPORT: define {{.*}} @[[D_INIT:__cxx_global.*]]()

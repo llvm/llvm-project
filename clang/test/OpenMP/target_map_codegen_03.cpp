@@ -58,7 +58,7 @@ void implicit_maps_nested_integer (int a){
 #endif // CK4
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK1-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -70,7 +70,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -108,7 +108,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK1-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -118,7 +118,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -141,7 +141,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK2-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -153,7 +153,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -191,7 +191,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK2-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK2-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -201,7 +201,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -224,7 +224,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK3-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -236,7 +236,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -273,7 +273,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK3-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK3-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -282,7 +282,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -305,7 +305,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK4-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -317,7 +317,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -354,7 +354,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK4-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK4-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -363,7 +363,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -386,7 +386,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK5-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -398,7 +398,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -436,7 +436,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK5-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK5-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -446,7 +446,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -469,7 +469,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK6-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK6-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -481,7 +481,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -519,7 +519,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK6-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK6-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -529,7 +529,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -552,7 +552,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK7-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK7-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -564,7 +564,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -601,7 +601,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK7-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK7-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -610,7 +610,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -633,7 +633,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK8-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK8-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -645,7 +645,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -682,7 +682,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK8-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK8-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -691,7 +691,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -714,7 +714,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK9-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK9-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -726,7 +726,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK9-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK9-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -764,7 +764,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK9-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK9-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -774,7 +774,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK9-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK9-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -797,7 +797,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK10-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK10-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -809,7 +809,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -847,7 +847,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK10-SAME: (i64 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK10-SAME: (i64 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK10-NEXT:    store i64 [[I]], i64* [[I_ADDR]], align 8
@@ -857,7 +857,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -880,7 +880,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK11-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK11-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -892,7 +892,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -929,7 +929,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK11-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK11-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -938,7 +938,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -961,7 +961,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@_Z28implicit_maps_nested_integeri
-// CHECK12-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK12-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK12-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -973,7 +973,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -1010,7 +1010,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28implicit_maps_nested_integeri_l48
-// CHECK12-SAME: (i32 noundef [[I:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK12-SAME: (i32 [[I:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK12-NEXT:    store i32 [[I]], i32* [[I_ADDR]], align 4
@@ -1019,7 +1019,7 @@ void implicit_maps_nested_integer (int a){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4

@@ -35,12 +35,12 @@ namespace {
     struct E : public virtual EBase { virtual ~E() {} };
   };
 
-  // CHECK-1-LABEL: define internal noundef i32 @_ZN12_GLOBAL__N_13fooEv()
+  // CHECK-1-LABEL: define internal i32 @_ZN12_GLOBAL__N_13fooEv()
   int foo() {
     return 32;
   }
 
-  // CHECK-1-LABEL: define internal noundef i32 @_ZN12_GLOBAL__N_11A3fooEv()
+  // CHECK-1-LABEL: define internal i32 @_ZN12_GLOBAL__N_11A3fooEv()
   namespace A {
     int foo() {
       return 45;

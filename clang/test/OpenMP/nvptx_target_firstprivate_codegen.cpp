@@ -33,7 +33,7 @@ int foo(int n, double *ptr) {
     b[a] += e.X;
   }
 
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias noundef [[B_IN:%.+]], i{{[0-9]+}} noundef [[A_IN:%.+]], [[TTII]]* noalias noundef [[E_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias [[B_IN:%.+]], i{{[0-9]+}} [[A_IN:%.+]], [[TTII]]* noalias [[E_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT: alloca [[TTII]],
   // TCHECK: alloca i{{[0-9]+}},
@@ -95,7 +95,7 @@ int foo(int n, double *ptr) {
     ptr[0]++;
   }
 
-  // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* noundef [[PTR_IN:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
   // TCHECK-NOT: alloca double*,
   // TCHECK:  store double* [[PTR_IN]], double** [[PTR_ADDR]],
@@ -179,7 +179,7 @@ struct S1 {
     return (int)b;
   }
 
-  // TCHECK: define internal void @__omp_offloading_{{.+}}([[S1]]* noundef [[TH:%.+]], i{{[0-9]+}} noundef [[B_IN:%.+]])
+  // TCHECK: define internal void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK:  [[B_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT: alloca i{{[0-9]+}},
@@ -211,7 +211,7 @@ int bar(int n, double *ptr) {
 
 // template
 
-// TCHECK: define internal void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} noundef [[B_IN:%.+]])
+// TCHECK: define internal void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
 // TCHECK-NOT: alloca i{{[0-9]+}},

@@ -34,7 +34,7 @@ g aq(h j, g k, int, int) {
 }
 
 // Check for the uwtable attribute on the filter funclet.
-// CHECK: define internal noundef i32 @"?filt$0@0@at@@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer) #[[MD:[0-9]+]]
+// CHECK: define internal i32 @"?filt$0@0@at@@"(i8* %exception_pointers, i8* %frame_pointer) #[[MD:[0-9]+]]
 // CHECK: attributes #[[MD]] = { nounwind uwtable
 
 void at() {

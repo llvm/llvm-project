@@ -36,11 +36,11 @@ struct v4f {
 __attribute__((device)) v4f tex2d_ld(texture<float, 2, ElementType>, float, float) asm("llvm.nvvm.tex.unified.2d.v4f32.f32");
 __attribute__((device)) v4f tex2d_ld(texture<float, 2, NormalizedFloat>, int, int) asm("llvm.nvvm.tex.unified.2d.v4f32.s32");
 
-// DEVICE-LABEL: float @_Z3fooff(float noundef %x, float noundef %y)
+// DEVICE-LABEL: float @_Z3fooff(float %x, float %y)
 // DEVICE: call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @tex)
-// DEVICE: call %struct.v4f @llvm.nvvm.tex.unified.2d.v4f32.f32(i64 %{{.*}}, float noundef %{{.*}}, float noundef %{{.*}})
+// DEVICE: call %struct.v4f @llvm.nvvm.tex.unified.2d.v4f32.f32(i64 %{{.*}}, float %{{.*}}, float %{{.*}})
 // DEVICE: call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @norm)
-// DEVICE: call %struct.v4f @llvm.nvvm.tex.unified.2d.v4f32.s32(i64 %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}})
+// DEVICE: call %struct.v4f @llvm.nvvm.tex.unified.2d.v4f32.s32(i64 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
 __attribute__((device)) float foo(float x, float y) {
   return tex2d_ld(tex, x, y).x + tex2d_ld(norm, int(x), int(y)).x;
 }
