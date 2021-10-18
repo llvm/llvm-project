@@ -95,7 +95,8 @@ multiple stages by relying on
   mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
-  mlir::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
+                                                          patterns);
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation, to lower from the `toy` dialect, is the
