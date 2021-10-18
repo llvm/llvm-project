@@ -4,7 +4,40 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
 ;; Check replay inline decisions
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=Module  -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY %s
+
+;; Check baseline inline decisions with "inline-topdown-inline-all.prof" which inlines all sites
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=DEFAULT-ALL %s
+
+;; Check function scope replay inline decisions with "inline-topdown-inline-all.prof" and "inline-topdown-function-scope.txt" which only contains: '_Z3sumii' inlined into 'main'
+;; 1. _Z3sumii is inlined into main, but all other inline candidates in main (e.g. _Z3subii) are not inlined
+;; 2. Inline decisions made in other functions match default sample inlining, in this case _Z3subii is inlined into _Z3sumii
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-inline-replay=%S/Inputs/inline-replay-function-scope.txt -sample-profile-inline-replay-scope=Function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ALL-FUNCTION %s
+
+;; Check behavior on non-existent replay file
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+
+;; Check scope inlining errors out on non <Module|Function> inputs
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
+
+; DEFAULT: '_Z3sumii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
+; DEFAULT: '_Z3subii' inlined into '_Z3sumii' to match profiling context with (cost={{[-0-9]+}}
+; DEFAULT-NOT: '_Z3subii' inlined into 'main'
+
+; REPLAY: '_Z3sumii' inlined into 'main' to match profiling context with (cost=always)
+; REPLAY: '_Z3subii' inlined into 'main' to match profiling context with (cost=always)
+; REPLAY-NOT: '_Z3subii' inlined into '_Z3sumii'
+
+; DEFAULT-ALL: '_Z3sumii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
+; DEFAULT-ALL: '_Z3subii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
+; DEFAULT-ALL: '_Z3subii' inlined into '_Z3sumii' to match profiling context with (cost={{[-0-9]+}}
+
+; REPLAY-ALL-FUNCTION : _Z3sumii' inlined into 'main' to match profiling context with (cost=always)
+; REPLAY-ALL-FUNCTION-NOT: '_Z3subii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
+; REPLAY-ALL-FUNCTION: '_Z3subii' inlined into '_Z3sumii' to match profiling context with (cost={{[-0-9]+}}
+
+; REPLAY-ERROR: error: Could not open remarks file: Is a directory
+; REPLAY-ERROR-SCOPE: opt: for the --sample-profile-inline-replay-scope option: Cannot find option named 'function'!
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
@@ -111,12 +144,3 @@ attributes #0 = { "use-sample-profile" }
 !24 = !DILexicalBlockFile(scope: !18, file: !1, discriminator: 6)
 !25 = !DILocation(line: 11, scope: !12)
 !26 = !DILocation(line: 12, scope: !12)
-
-
-; DEFAULT: '_Z3sumii' inlined into 'main'
-; DEFAULT: '_Z3subii' inlined into '_Z3sumii'
-; DEFAULT-NOT: '_Z3subii' inlined into 'main'
-
-; REPLAY: '_Z3sumii' inlined into 'main'
-; REPLAY: '_Z3subii' inlined into 'main'
-; REPLAY-NOT: '_Z3subii' inlined into '_Z3sumii'
