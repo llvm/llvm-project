@@ -153,7 +153,8 @@ TEST_F(SymbolFilePDBTests, TestAbilitiesForPDB) {
 
   SymbolFile *symfile = module->GetSymbolFile();
   EXPECT_NE(nullptr, symfile);
-  EXPECT_EQ(symfile->GetPluginName(), SymbolFilePDB::GetPluginNameStatic());
+  EXPECT_EQ(symfile->GetPluginName(),
+            SymbolFilePDB::GetPluginNameStatic().GetStringRef());
 
   uint32_t expected_abilities = SymbolFile::kAllAbilities;
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
