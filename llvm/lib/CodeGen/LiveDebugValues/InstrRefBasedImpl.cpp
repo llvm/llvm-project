@@ -2175,7 +2175,7 @@ bool InstrRefBasedLDV::vlocJoin(
     // live-out values.
     SmallVector<InValueT, 8> Values;
     bool Bail = false;
-    unsigned BackEdgesStart = 0;
+    int BackEdgesStart = 0;
     for (auto p : BlockOrders) {
       // If the predecessor isn't in scope / to be explored, we'll never be
       // able to join any locations.
