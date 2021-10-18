@@ -51425,6 +51425,47 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   return combineAddOrSubToADCOrSBB(N, DAG);
 }
 
+// Try to fold (sub Y, cmovns X, -X) -> (add Y, cmovns -X, X) if the cmov
+// condition comes from the subtract node that produced -X. This matches the
+// cmov expansion for absolute value. By swapping the operands we convert abs
+// to nabs.
+static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
+    return SDValue();
+
+  X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
+  if (CC != X86::COND_S && CC != X86::COND_NS)
+    return SDValue();
+
+  // Condition should come from a negate operation.
+  SDValue Cond = N1.getOperand(3);
+  if (Cond.getOpcode() != X86ISD::SUB || !isNullConstant(Cond.getOperand(0)))
+    return SDValue();
+  assert(Cond.getResNo() == 1 && "Unexpected result number");
+
+  // Get the X and -X from the negate.
+  SDValue NegX = Cond.getValue(0);
+  SDValue X = Cond.getOperand(1);
+
+  SDValue FalseOp = N1.getOperand(0);
+  SDValue TrueOp = N1.getOperand(1);
+
+  // Cmov operands should be X and NegX. Order doesn't matter.
+  if (!(TrueOp == X && FalseOp == NegX) && !(TrueOp == NegX && FalseOp == X))
+    return SDValue();
+
+  // Build a new CMOV with the operands swapped.
+  SDLoc DL(N);
+  MVT VT = N->getSimpleValueType(0);
+  SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
+                             N1.getOperand(2), Cond);
+  // Convert sub to add.
+  return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+}
+
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -51455,6 +51496,9 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::ADD, DL, VT, Op0, DAG.getConstant(1, DL, VT));
     return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
   }
+
+  if (SDValue V = combineSubABS(N, DAG))
+    return V;
 
   // Try to synthesize horizontal subs from subs of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))

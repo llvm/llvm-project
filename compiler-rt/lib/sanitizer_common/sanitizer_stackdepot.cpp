@@ -36,7 +36,7 @@ struct StackDepotNode {
   bool eq(hash_type hash, const args_type &args) const {
     return hash == stack_hash;
   }
-  static uptr allocated() { return traceAllocator.allocated(); }
+  static uptr allocated();
   static hash_type hash(const args_type &args) {
     MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
@@ -74,6 +74,10 @@ static StackDepot theDepot;
 // caching efficiency.
 static TwoLevelMap<uptr *, StackDepot::kNodesSize1, StackDepot::kNodesSize2>
     tracePtrs;
+
+uptr StackDepotNode::allocated() {
+  return traceAllocator.allocated() + tracePtrs.MemoryUsage();
+}
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   CHECK_EQ(args.tag & (~kUseCountMask >> kUseCountBits), args.tag);
@@ -123,6 +127,12 @@ void StackDepotPrintAll() {
 
 StackDepotHandle StackDepotNode::get_handle(u32 id) {
   return StackDepotHandle(&theDepot.nodes[id], id);
+}
+
+void StackDepotTestOnlyUnmap() {
+  theDepot.TestOnlyUnmap();
+  tracePtrs.TestOnlyUnmap();
+  traceAllocator.TestOnlyUnmap();
 }
 
 } // namespace __sanitizer

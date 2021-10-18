@@ -324,6 +324,10 @@ namespace RISCVFeatures {
 // triple. Exits with report_fatal_error if not.
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
+// Convert FeatureBitset to FeatureVector.
+void toFeatureVector(std::vector<std::string> &FeatureVector,
+                     const FeatureBitset &FeatureBits);
+
 } // namespace RISCVFeatures
 
 namespace RISCVVType {

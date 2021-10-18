@@ -235,9 +235,12 @@ public:
                                     SmallPtrSetImpl<Argument *> &Args) const;
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
+  bool prefersVectorizedAddressing() const;
+  bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
 
 private:
+  bool supportsGather() const;
   InstructionCost getGSScalarCost(unsigned Opcode, Type *DataTy,
                                   bool VariableMask, Align Alignment,
                                   unsigned AddressSpace);

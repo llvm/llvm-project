@@ -186,8 +186,12 @@ static void __kmpc_spmd_kernel_deinit(bool RequiresFullRuntime) {
 }
 
 // Return true if the current target region is executed in SPMD mode.
+// NOTE: This function has to return 1 for SPMD mode, and 0 for generic mode.
+// That's because `__kmpc_parallel_51` checks if it's already in parallel region
+// by comparision between the parallel level and the return value of this
+// function.
 EXTERN int8_t __kmpc_is_spmd_exec_mode() {
-  return execution_param & OMP_TGT_EXEC_MODE_SPMD;
+  return (execution_param & OMP_TGT_EXEC_MODE_SPMD) == OMP_TGT_EXEC_MODE_SPMD;
 }
 
 EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid) {

@@ -3422,7 +3422,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Index == -1U && (Opcode == Instruction::ExtractElement ||
                        Opcode == Instruction::InsertElement)) {
     // TODO: On some SSE41+ targets, we expand to cmp+splat+select patterns:
-    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0. 
+    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0.
 
     // TODO: Move this to BasicTTIImpl.h? We'd need better gep + index handling.
     assert(isa<FixedVectorType>(Val) && "Fixed vector type expected");
@@ -4878,11 +4878,15 @@ bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
   return isLegalMaskedExpandLoad(DataTy);
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+bool X86TTIImpl::supportsGather() const {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
-  if (!(ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2())))
+  return ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2());
+}
+
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+  if (!supportsGather())
     return false;
 
   // This function is called now in two cases: from the Loop Vectorizer
@@ -5004,6 +5008,14 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.LoadSizes.push_back(2);
   Options.LoadSizes.push_back(1);
   return Options;
+}
+
+bool X86TTIImpl::prefersVectorizedAddressing() const {
+  return supportsGather();
+}
+
+bool X86TTIImpl::supportsEfficientVectorElementLoadStore() const {
+  return false;
 }
 
 bool X86TTIImpl::enableInterleavedAccessVectorization() {
@@ -5208,19 +5220,14 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {2, MVT::v16i8, 4}, // (load 32i8 and) deinterleave into 2 x 16i8
       {2, MVT::v32i8, 6}, // (load 64i8 and) deinterleave into 2 x 32i8
 
-      {2, MVT::v2i16, 2},   // (load 4i16 and) deinterleave into 2 x 2i16
-      {2, MVT::v4i16, 2},   // (load 8i16 and) deinterleave into 2 x 4i16
       {2, MVT::v8i16, 6},   // (load 16i16 and) deinterleave into 2 x 8i16
       {2, MVT::v16i16, 9},  // (load 32i16 and) deinterleave into 2 x 16i16
       {2, MVT::v32i16, 18}, // (load 64i16 and) deinterleave into 2 x 32i16
 
-      {2, MVT::v2i32, 2},   // (load 4i32 and) deinterleave into 2 x 2i32
-      {2, MVT::v4i32, 2},   // (load 8i32 and) deinterleave into 2 x 4i32
       {2, MVT::v8i32, 4},   // (load 16i32 and) deinterleave into 2 x 8i32
       {2, MVT::v16i32, 8},  // (load 32i32 and) deinterleave into 2 x 16i32
       {2, MVT::v32i32, 16}, // (load 64i32 and) deinterleave into 2 x 32i32
 
-      {2, MVT::v2i64, 2},   // (load 4i64 and) deinterleave into 2 x 2i64
       {2, MVT::v4i64, 4},   // (load 8i64 and) deinterleave into 2 x 4i64
       {2, MVT::v8i64, 8},   // (load 16i64 and) deinterleave into 2 x 8i64
       {2, MVT::v16i64, 16}, // (load 32i64 and) deinterleave into 2 x 16i64
@@ -5289,6 +5296,20 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {6, MVT::v8i64, 36}, // (load 48i64 and) deinterleave into 6 x 8i64
 
       {8, MVT::v8i32, 40} // (load 64i32 and) deinterleave into 8 x 8i32
+  };
+
+  static const CostTblEntry SSSE3InterleavedLoadTbl[] = {
+      {2, MVT::v4i16, 2},   // (load 8i16 and) deinterleave into 2 x 4i16
+  };
+
+  static const CostTblEntry SSE2InterleavedLoadTbl[] = {
+      {2, MVT::v2i16, 2},   // (load 4i16 and) deinterleave into 2 x 2i16
+      {2, MVT::v4i16, 7},   // (load 8i16 and) deinterleave into 2 x 4i16
+
+      {2, MVT::v2i32, 2},   // (load 4i32 and) deinterleave into 2 x 2i32
+      {2, MVT::v4i32, 2},   // (load 8i32 and) deinterleave into 2 x 4i32
+
+      {2, MVT::v2i64, 2},   // (load 4i64 and) deinterleave into 2 x 2i64
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
@@ -5384,6 +5405,16 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     //        should we discount the not-demanded indicies?
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedLoadTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSSE3())
+      if (const auto *Entry = CostTableLookup(SSSE3InterleavedLoadTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
         return MemOpCosts + Entry->Cost;
   } else {
