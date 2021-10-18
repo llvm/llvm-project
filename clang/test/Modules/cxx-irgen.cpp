@@ -52,7 +52,7 @@ namespace ImplicitSpecialMembers {
   // CHECK-LABEL: define {{.*}} @_ZN20OperatorDeleteLookup1AD0Ev(
   // CHECK: call {{.*}}void @_ZN20OperatorDeleteLookup1AdlEPv(
 
-  // CHECK-DAG: call {{.*}}i32 @_ZN8CtorInitIiE1fEv(
+  // CHECK-DAG: call {{[a-z\_\d]*[ ]?i32}} @_ZN8CtorInitIiE1fEv(
 
   extern B b1;
   B b2(b1);

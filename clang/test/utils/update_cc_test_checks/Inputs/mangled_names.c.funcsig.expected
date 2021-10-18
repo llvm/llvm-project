@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define {{[^@]+}}@test
-// CHECK-SAME: (i64 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (i64 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -21,7 +21,7 @@ long test(long a, int b) {
 
 // A function with a mangled name
 // CHECK-LABEL: define {{[^@]+}}@_Z4testlii
-// CHECK-SAME: (i64 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i64 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4

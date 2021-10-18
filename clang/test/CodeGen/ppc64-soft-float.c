@@ -3,13 +3,13 @@
 
 // Test float returns and params.
 
-// CHECK: define{{.*}} float @func_p1(float noundef %x)
+// CHECK: define{{.*}} float @func_p1(float %x)
 float func_p1(float x) { return x; }
 
-// CHECK: define{{.*}} double @func_p2(double noundef %x)
+// CHECK: define{{.*}} double @func_p2(double %x)
 double func_p2(double x) { return x; }
 
-// CHECK: define{{.*}} ppc_fp128 @func_p3(ppc_fp128 noundef %x)
+// CHECK: define{{.*}} ppc_fp128 @func_p3(ppc_fp128 %x)
 long double func_p3(long double x) { return x; }
 
 // Test homogeneous float aggregate passing and returning.

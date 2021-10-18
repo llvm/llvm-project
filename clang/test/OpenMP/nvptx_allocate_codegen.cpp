@@ -91,7 +91,7 @@ void bar() {
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, i32* @_ZZ4mainE1a, align 4
 // CHECK1-NEXT:    store double 3.000000e+00, double* [[B]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -117,7 +117,7 @@ void bar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -127,12 +127,12 @@ void bar() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load float, float* [[BAR_A]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
 // CHECK1-NEXT:    store double [[CONV]], double* addrspacecast (double addrspace(3)* @bar_b to double*), align 8
-// CHECK1-NEXT:    call void @_Z3bazRf(float* noundef nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR7]]
+// CHECK1-NEXT:    call void @_Z3bazRf(float* nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR7]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined___wrapper
-// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4

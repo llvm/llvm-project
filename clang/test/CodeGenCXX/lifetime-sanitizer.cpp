@@ -24,7 +24,7 @@ struct Y {
 
 extern "C" void a(), b(), c(), d();
 
-// CHECK: define dso_local void @_Z3fooi(i32 noundef %[[N:[^)]+]])
+// CHECK: define dso_local void @_Z3fooi(i32 %[[N:[^)]+]])
 void foo(int n) {
   // CHECK: store i32 %[[N]], i32* %[[NADDR:[^,]+]]
   // CHECK-LABEL: call void @a()

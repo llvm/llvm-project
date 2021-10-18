@@ -102,7 +102,7 @@ double sind(double);
 // CHECK-NEXT:    %[[ARRAYIDX:.+]] = getelementptr inbounds float, float* %[[TMP17]], i64 %[[IDXPROM]]
 // CHECK-NEXT:    %[[TMP19:.+]] = load float, float* %[[ARRAYIDX]], align 4
 // CHECK-NEXT:    %[[CONV:.+]] = fpext float %[[TMP19]] to double
-// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double noundef %[[CONV]])
+// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double %[[CONV]])
 // CHECK-NEXT:    %[[TMP20:.+]] = load float*, float** %[[C_ADDR]], align 8
 // CHECK-NEXT:    %[[TMP21:.+]] = load i32, i32* %[[I]], align 4
 // CHECK-NEXT:    %[[IDXPROM2:.+]] = sext i32 %[[TMP21]] to i64

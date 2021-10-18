@@ -13,7 +13,7 @@ namespace PR13164 {
 	// MSVC will fall back on the non-array operator new.
     void *a;
     int *p = new(arbitrary) int[4];
-    // CHECK: call noundef i8* @"??2@YAPAXIUarbitrary_t@@@Z"(i32 noundef 16, %struct.arbitrary_t*
+    // CHECK: call i8* @"??2@YAPAXIUarbitrary_t@@@Z"(i32 16, %struct.arbitrary_t*
   }
 
   struct S {
@@ -22,9 +22,9 @@ namespace PR13164 {
 
   void g() {
     S *s = new(arbitrary) S[2];
-    // CHECK: call noundef i8* @"??_US@PR13164@@SAPAXIUarbitrary_t@@@Z"(i32 noundef 2, %struct.arbitrary_t*
+    // CHECK: call i8* @"??_US@PR13164@@SAPAXIUarbitrary_t@@@Z"(i32 2, %struct.arbitrary_t*
     S *s1 = new(arbitrary) S;
-    // CHECK: call noundef i8* @"??2@YAPAXIUarbitrary_t@@@Z"(i32 noundef 1, %struct.arbitrary_t*
+    // CHECK: call i8* @"??2@YAPAXIUarbitrary_t@@@Z"(i32 1, %struct.arbitrary_t*
   }
 
   struct T {
@@ -34,6 +34,6 @@ namespace PR13164 {
   void h() {
     // This should still call the global operator new[].
     T *t = new(arbitrary2) T[2];
-    // CHECK: call noundef i8* @"??_U@YAPAXIUarbitrary2_t@@@Z"(i32 noundef 2, %struct.arbitrary2_t*
+    // CHECK: call i8* @"??_U@YAPAXIUarbitrary2_t@@@Z"(i32 2, %struct.arbitrary2_t*
   }
 }

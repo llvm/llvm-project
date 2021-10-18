@@ -15,7 +15,7 @@ half test()
 // CHECK: half 0xH3260
 }
 
-// CHECK-LABEL: @test_inc(half noundef %x)
+// CHECK-LABEL: @test_inc(half %x)
 // CHECK: [[INC:%.*]] = fadd half %x, 0xH3C00
 // CHECK: ret half [[INC]]
 half test_inc(half x)
@@ -30,12 +30,12 @@ __attribute__((overloadable)) float min(float, float);
 __kernel void foo( __global half* buf, __global float* buf2 )
 {
     buf[0] = min( buf[0], 1.5h );
-// CHECK: half noundef 0xH3E00
+// CHECK: half 0xH3E00
     buf[0] = min( buf2[0], 1.5f );
-// CHECK: float noundef 1.500000e+00
+// CHECK: float 1.500000e+00
 
     const half one = 1.6666;
     buf[1] = min( buf[1], one );
-// CHECK: half noundef 0xH3EAB
+// CHECK: half 0xH3EAB
 }
 

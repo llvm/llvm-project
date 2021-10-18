@@ -19,7 +19,7 @@ test_mm_malloc() {
 
 // CHECK-LABEL: @test_mm_malloc
 
-// CHECK: define internal i8* @_mm_malloc(i64 noundef [[REG1:[0-9a-zA-Z_%.]+]], i64 noundef [[REG2:[0-9a-zA-Z_%.]+]])
+// CHECK: define internal i8* @_mm_malloc(i64 [[REG1:[0-9a-zA-Z_%.]+]], i64 [[REG2:[0-9a-zA-Z_%.]+]])
 // CHECK: [[REG3:[0-9a-zA-Z_%.]+]] = alloca i8*, align 8
 // CHECK: store i64 [[REG1]], i64* [[REG4:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG2]], i64* [[REG5:[0-9a-zA-Z_%.]+]], align 8
@@ -35,7 +35,7 @@ test_mm_malloc() {
 // CHECK: [[REG24]]:
 // CHECK-NEXT: [[REG26:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG5]], align 8
 // CHECK-NEXT: [[REG27:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG4]], align 8
-// CHECK-NEXT: [[REG28:[0-9a-zA-Z_%.]+]] = call signext i32 @posix_memalign(i8** noundef [[REG29:[0-9a-zA-Z_%.]+]], i64 noundef [[REG26]], i64 noundef [[REG27]])
+// CHECK-NEXT: [[REG28:[0-9a-zA-Z_%.]+]] = call signext i32 @posix_memalign(i8** [[REG29:[0-9a-zA-Z_%.]+]], i64 [[REG26]], i64 [[REG27]])
 // CHECK-NEXT: [[REG30:[0-9a-zA-Z_%.]+]] = icmp eq i32 [[REG28]], 0
 // CHECK-NEXT: br i1 [[REG30]], label %[[REG31:[0-9a-zA-Z_%.]+]], label %[[REG32:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG31]]:
@@ -49,8 +49,8 @@ test_mm_malloc() {
 // CHECK-NEXT: [[REG34:[0-9a-zA-Z_%.]+]] = load i8*, i8** [[REG3]], align 8
 // CHECK-NEXT: ret i8* [[REG34]]
 
-// CHECK: define internal void @_mm_free(i8* noundef [[REG35:[0-9a-zA-Z_%.]+]])
+// CHECK: define internal void @_mm_free(i8* [[REG35:[0-9a-zA-Z_%.]+]])
 // CHECK: store i8* [[REG35]], i8** [[REG36:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: [[REG37:[0-9a-zA-Z_%.]+]] = load i8*, i8** [[REG36]], align 8
-// CHECK-NEXT: call void @free(i8* noundef [[REG37]])
+// CHECK-NEXT: call void @free(i8* [[REG37]])
 // CHECK-NEXT: ret void

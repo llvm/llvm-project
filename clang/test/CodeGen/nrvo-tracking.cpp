@@ -301,7 +301,7 @@ struct A {
 };
 
 // CHECK-LABEL: define{{.*}} void @_ZN7PR518624testINS_1AEEET_v
-// CHECK:       call noundef i32 @_ZN7PR518621AcviEv
+// CHECK:       call i32 @_ZN7PR518621AcviEv
 // CHECK-NEXT:  call void @_ZN7PR518621AC1Ei
 // CHECK-NEXT:  call void @llvm.lifetime.end
 template A test<A>();

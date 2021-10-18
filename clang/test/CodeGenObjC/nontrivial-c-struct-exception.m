@@ -44,7 +44,7 @@ void testStrongException(void) {
 // CHECK: call void @genWeak(%[[STRUCT_WEAK]]* sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])
 // CHECK: invoke void @genWeak(%[[STRUCT_WEAK]]* sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP1]])
 
-// CHECK: call void @calleeWeak(%[[STRUCT_WEAK]]* noundef %[[AGG_TMP]], %[[STRUCT_WEAK]]* noundef %[[AGG_TMP1]])
+// CHECK: call void @calleeWeak(%[[STRUCT_WEAK]]* %[[AGG_TMP]], %[[STRUCT_WEAK]]* %[[AGG_TMP1]])
 // CHECK: ret void
 
 // CHECK: landingpad { i8*, i32 }

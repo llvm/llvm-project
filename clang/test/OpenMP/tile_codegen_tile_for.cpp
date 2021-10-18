@@ -196,7 +196,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP40:.+]] = load i32, i32* %[[END_ADDR]], align 4
 // IR-NEXT:    %[[TMP41:.+]] = load i32, i32* %[[STEP_ADDR]], align 4
 // IR-NEXT:    %[[TMP42:.+]] = load i32, i32* %[[I]], align 4
-// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP39]], i32 noundef %[[TMP40]], i32 noundef %[[TMP41]], i32 noundef %[[TMP42]])
+// IR-NEXT:    call void (...) @body(i32 %[[TMP39]], i32 %[[TMP40]], i32 %[[TMP41]], i32 %[[TMP42]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

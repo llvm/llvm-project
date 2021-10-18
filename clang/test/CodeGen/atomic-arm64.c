@@ -68,7 +68,7 @@ void test3(pointer_pair_t pair) {
 // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T0]], i8* align 8 [[T1]], i64 32, i1 false)
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[QUAD_T]]* [[TEMP]] to i256*
 // CHECK-NEXT: [[T1:%.*]] = bitcast i256* [[T0]] to i8*
-// CHECK-NEXT: call void @__atomic_store(i64 noundef 32, i8* noundef bitcast ([[QUAD_T]]* @a_pointer_quad to i8*), i8* noundef [[T1]], i32 noundef 5)
+// CHECK-NEXT: call void @__atomic_store(i64 32, i8* bitcast ([[QUAD_T]]* @a_pointer_quad to i8*), i8* [[T1]], i32 5)
 void test4(pointer_quad_t quad) {
   __c11_atomic_store(&a_pointer_quad, quad, memory_order_seq_cst);
 }

@@ -29,7 +29,7 @@ A *g();
 void f(A *a) {
   A::E e1 = a->Foo;
   
-  // CHECK: call noundef %struct.A* @_Z1gv()
+  // CHECK: call %struct.A* @_Z1gv()
   A::E e2 = g()->Foo;
   // CHECK: call void @_ZN1AC1Ev(
   // CHECK: call void @_ZN1AD1Ev(
