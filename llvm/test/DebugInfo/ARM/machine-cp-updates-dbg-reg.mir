@@ -3,10 +3,13 @@
 ## Ensure that when the destination register of a copy instruction is used by a
 ## DBG_VALUE/DBG_VALUE_LIST, and then that instruction is deleted during copy
 ## propagation, the debug use is updated to the source register.
+##
+## Do the same for DBG_PHI instructions.
 
 # CHECK: ![[VAR_V:[0-9]+]] = !DILocalVariable(name: "v"
 # CHECK-LABEL: body:
 
+# CHECK: DBG_PHI $r0, 1
 # CHECK: DBG_VALUE $r0, $noreg, ![[VAR_V]], !DIExpression()
 # CHECK: DBG_VALUE_LIST ![[VAR_V]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $r0, 0
 
@@ -179,6 +182,7 @@ body:             |
 
     dead renamable $r1 = LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (volatile load (s32) from `i32* undef`)
     renamable $r4 = COPY killed renamable $r0
+    DBG_PHI $r4, 1
     DBG_VALUE $r4, $noreg, !30, !DIExpression(), debug-location !40
     DBG_VALUE_LIST !30, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $r4, 0, debug-location !40
     $r0 = COPY killed renamable $r4
