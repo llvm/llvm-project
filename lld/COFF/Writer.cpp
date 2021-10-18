@@ -1090,18 +1090,14 @@ void Writer::removeUnusedSections() {
     // later. Only remove sections that have no Chunks at all.
     return s->chunks.empty();
   };
-  ctx.outputSections.erase(std::remove_if(ctx.outputSections.begin(),
-                                          ctx.outputSections.end(), isUnused),
-                           ctx.outputSections.end());
+  llvm::erase_if(ctx.outputSections, isUnused);
 }
 
 // The Windows loader doesn't seem to like empty sections,
 // so we remove them if any.
 void Writer::removeEmptySections() {
   auto isEmpty = [](OutputSection *s) { return s->getVirtualSize() == 0; };
-  ctx.outputSections.erase(std::remove_if(ctx.outputSections.begin(),
-                                          ctx.outputSections.end(), isEmpty),
-                           ctx.outputSections.end());
+  llvm::erase_if(ctx.outputSections, isEmpty);
 }
 
 void Writer::assignOutputSectionIndices() {
