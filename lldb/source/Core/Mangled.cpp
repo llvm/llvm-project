@@ -297,7 +297,8 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
   if (m_mangled && m_demangled.IsNull()) {
     // Don't bother running anything that isn't mangled
     const char *mangled_name = m_mangled.GetCString();
-    ManglingScheme mangling_scheme = GetManglingScheme(m_mangled.GetStringRef());
+    ManglingScheme mangling_scheme =
+        GetManglingScheme(m_mangled.GetStringRef());
     if (mangling_scheme != eManglingSchemeNone &&
         !m_mangled.GetMangledCounterpart(m_demangled)) {
       // We didn't already mangle this name, demangle it and if all goes well
