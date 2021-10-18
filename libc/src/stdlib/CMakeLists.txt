@@ -9,6 +9,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atof
+  SRCS
+    atof.cpp
+  HDRS
+    atof.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
   atol
   SRCS
     atol.cpp
@@ -24,6 +34,26 @@ add_entrypoint_object(
     atoll.cpp
   HDRS
     atoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtof
+  SRCS
+    strtof.cpp
+  HDRS
+    strtof.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtod
+  SRCS
+    strtod.cpp
+  HDRS
+    strtod.h
   DEPENDS
     libc.src.__support.str_conv_utils
 )

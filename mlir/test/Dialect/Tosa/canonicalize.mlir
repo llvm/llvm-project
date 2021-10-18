@@ -233,7 +233,7 @@ func @transpose_nofold(%arg0: tensor<3x3xf32>) -> tensor<3x3xf32> {
 // CHECK-LABEL: @transpose_nofold_shape
 func @transpose_nofold_shape(%arg0: tensor<3x4xf32>) -> tensor<?x?xf32> {
   // CHECK: "tosa.transpose"
-  %0 = arith.constant dense<[0, 1]> : tensor<2xi32>
+  %0 = arith.constant dense<[1, 0]> : tensor<2xi32>
   %1 = "tosa.transpose"(%arg0, %0) { perms = [1, 0] }: (tensor<3x4xf32>, tensor<2xi32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
@@ -324,4 +324,15 @@ func @transpose_nofold_quantized_types() -> tensor<1x1x16x1x!quant.uniform<i8<-1
   // CHECK: tosa.transpose
   %0 = "tosa.transpose"(%input, %perms) : (tensor<1x1x1x16xi8>, tensor<4xi32>) -> tensor<1x1x16x1x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,2.100000e+00,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01}>>
   return %0: tensor<1x1x16x1x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,2.100000e+00,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01,1.000000e-01}>>
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_no_op
+func @transpose_no_op(%arg0: tensor<3x4x5x6xf32>) -> tensor<3x4x5x6xf32> {
+  // CHECK: return %arg0
+  // CHECK-NOT: tosa.transpose
+  %perms = "tosa.const"() {value = dense<[0, 1, 2, 3]> : tensor<4xi32>} : () -> tensor<4xi32>
+  %1 = "tosa.transpose"(%arg0, %perms) : (tensor<3x4x5x6xf32>, tensor<4xi32>) -> tensor<3x4x5x6xf32>
+  return %1 : tensor<3x4x5x6xf32>
 }
