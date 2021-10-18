@@ -16,9 +16,18 @@ define <vscale x 2 x double> @debug_local_scalable(<vscale x 2 x double> %tostor
 
 declare <vscale x 2 x double> @f(<vscale x 2 x double>*)
 
+define float @debug_scalablevec_bitcast_to_scalar() {
+  %v.addr = alloca <vscale x 4 x float>, align 16
+  call void @llvm.dbg.declare(metadata <vscale x 4 x float>* %v.addr, metadata !3, metadata !DIExpression()), !dbg !5
+  %a = bitcast <vscale x 4 x float>* %v.addr to float*
+  %b = load float, float* %a, align 16
+  ret float undef
+}
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.module.flags = !{!2}
+!llvm.dbg.cu = !{!0}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "/tmp/test.c", directory: "/tmp/")
