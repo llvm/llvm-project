@@ -216,6 +216,14 @@ public:
   void emitType(MCStreamer &OS) override;
 };
 
+class BTFTypeTypeTag : public BTFTypeBase {
+  StringRef Tag;
+
+public:
+  BTFTypeTypeTag(uint32_t BaseTypeId, StringRef Tag);
+  void completeType(BTFDebug &BDebug) override;
+};
+
 /// String table.
 class BTFStringTable {
   /// String table size in bytes.
