@@ -11,9 +11,11 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -555,11 +557,13 @@ static void fixupBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
 /// \param LoopBlocks A helper for DFS-traversal of the loop.
 /// \param LVMap A value-map that maps instructions from the original loop to
 /// instructions in the last peeled-off iteration.
+/// \param LoopBlocksIDoms Immediate dominators of the original loop blocks.
 static void cloneLoopBlocks(
     Loop *L, unsigned IterNumber, BasicBlock *InsertTop, BasicBlock *InsertBot,
     SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
-    ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
+    ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DomTreeUpdater &DTU,
+    const SmallDenseMap<BasicBlock *, BasicBlock *> &LoopBlocksIDoms,
     LoopInfo *LI, ArrayRef<MDNode *> LoopLocalNoAliasDeclScopes) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -585,14 +589,13 @@ static void cloneLoopBlocks(
     VMap[*BB] = NewBB;
 
     // If dominator tree is available, insert nodes to represent cloned blocks.
-    if (DT) {
-      if (Header == *BB)
-        DT->addNewBlock(NewBB, InsertTop);
-      else {
-        DomTreeNode *IDom = DT->getNode(*BB)->getIDom();
-        // VMap must contain entry for IDom, as the iteration order is RPO.
-        DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
-      }
+    if (Header == *BB)
+      DTU.applyUpdates({{DominatorTree::Insert, InsertTop, NewBB}});
+    else {
+      BasicBlock *IDom = LoopBlocksIDoms.lookup(*BB);
+      // VMap must contain entry for IDom, as the iteration order is RPO.
+      DTU.applyUpdates(
+          {{DominatorTree::Insert, cast<BasicBlock>(VMap[IDom]), NewBB}});
     }
   }
 
@@ -629,8 +632,8 @@ static void cloneLoopBlocks(
       LatchBR->setSuccessor(idx, InsertBot);
       break;
     }
-  if (DT)
-    DT->changeImmediateDominator(InsertBot, NewLatch);
+  DTU.applyUpdates({{DominatorTree::Insert, NewLatch, InsertBot},
+                    {DominatorTree::Delete, InsertTop, InsertBot}});
 
   // The new copy of the loop body starts with a bunch of PHI nodes
   // that pick an incoming value from either the preheader, or the previous
@@ -732,36 +735,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
   L->getExitEdges(ExitEdges);
 
-  DenseMap<BasicBlock *, BasicBlock *> ExitIDom;
-  if (DT) {
-    // We'd like to determine the idom of exit block after peeling one
-    // iteration.
-    // Let Exit is exit block.
-    // Let ExitingSet - is a set of predecessors of Exit block. They are exiting
-    // blocks.
-    // Let Latch' and ExitingSet' are copies after a peeling.
-    // We'd like to find an idom'(Exit) - idom of Exit after peeling.
-    // It is an evident that idom'(Exit) will be the nearest common dominator
-    // of ExitingSet and ExitingSet'.
-    // idom(Exit) is a nearest common dominator of ExitingSet.
-    // idom(Exit)' is a nearest common dominator of ExitingSet'.
-    // Taking into account that we have a single Latch, Latch' will dominate
-    // Header and idom(Exit).
-    // So the idom'(Exit) is nearest common dominator of idom(Exit)' and Latch'.
-    // All these basic blocks are in the same loop, so what we find is
-    // (nearest common dominator of idom(Exit) and Latch)'.
-    // In the loop below we remember nearest common dominator of idom(Exit) and
-    // Latch to update idom of Exit later.
-    assert(L->hasDedicatedExits() && "No dedicated exits?");
-    for (auto Edge : ExitEdges) {
-      if (ExitIDom.count(Edge.second))
-        continue;
-      BasicBlock *BB = DT->findNearestCommonDominator(
-          DT->getNode(Edge.second)->getIDom()->getBlock(), Latch);
-      assert(L->contains(BB) && "IDom is not in a loop");
-      ExitIDom[Edge.second] = BB;
-    }
-  }
+  SmallDenseSet<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdgesSet(
+      ExitEdges.begin(), ExitEdges.end());
 
   Function *F = Header->getParent();
 
@@ -834,31 +809,31 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
   identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  // Fill map with the loop blocks IDoms to later update the DT when cloning the
+  // loop blocks.
+  SmallDenseMap<BasicBlock *, BasicBlock *> LoopBlocksIDoms;
+  for (auto *BB : L->blocks())
+    LoopBlocksIDoms[BB] = DT->getNode(BB)->getIDom()->getBlock();
+
   // For each peeled-off iteration, make a copy of the loop.
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     ValueToValueMapTy VMap;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, DT, LI,
+                    LoopBlocks, VMap, LVMap, DTU, LoopBlocksIDoms, LI,
                     LoopLocalNoAliasDeclScopes);
 
     // Remap to use values from the current iteration instead of the
     // previous one.
     remapInstructionsInBlocks(NewBlocks, VMap);
 
-    if (DT) {
-      // Latches of the cloned loops dominate over the loop exit, so idom of the
-      // latter is the first cloned loop body, as original PreHeader dominates
-      // the original loop body.
-      if (Iter == 0)
-        for (auto Exit : ExitIDom)
-          DT->changeImmediateDominator(Exit.first,
-                                       cast<BasicBlock>(LVMap[Exit.second]));
-#ifdef EXPENSIVE_CHECKS
-      assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-#endif
-    }
+    // If DT is available, insert edges from cloned exiting blocks to the exits
+    for (auto Exit : ExitEdgesSet)
+      DTU.applyUpdates({{DominatorTree::Insert,
+                         cast<BasicBlock>(LVMap[Exit.first]), Exit.second}});
 
     auto *LatchBRCopy = cast<BranchInst>(VMap[LatchBR]);
     updateBranchWeights(InsertBot, LatchBRCopy, ExitWeight, FallThroughWeight);
@@ -867,7 +842,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     LatchBRCopy->setMetadata(LLVMContext::MD_loop, nullptr);
 
     InsertTop = InsertBot;
-    InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);
+    InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), &DTU, LI);
     InsertBot->setName(Header->getName() + ".peel.next");
 
     F->getBasicBlockList().splice(InsertTop->getIterator(),
@@ -902,7 +877,10 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   SE->forgetTopmostLoop(L);
 
   // Finally DomtTree must be correct.
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+  if (DTU.hasDomTree()) {
+    DTU.flush();
+    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+  }
 
   // FIXME: Incrementally update loop-simplify
   simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
