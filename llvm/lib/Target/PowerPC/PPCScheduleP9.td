@@ -9,8 +9,6 @@
 // This file defines the itinerary class data for the POWER9 processor.
 //
 //===----------------------------------------------------------------------===//
-include "PPCInstrInfo.td"
-
 def P9Model : SchedMachineModel {
   // The maximum number of instructions to be issued at the same time.
   // While a value of 8 is technically correct since 8 instructions can be

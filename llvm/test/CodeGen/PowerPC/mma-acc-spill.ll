@@ -26,10 +26,10 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    stxvp vsp34, 128(r1) # 32-byte Folded Spill
-; CHECK-NEXT:    ld r30, 272(r1)
-; CHECK-NEXT:    stxvp vsp36, 96(r1) # 32-byte Folded Spill
 ; CHECK-NEXT:    xxlor vs2, v4, v4
 ; CHECK-NEXT:    xxlor vs3, v5, v5
+; CHECK-NEXT:    ld r30, 272(r1)
+; CHECK-NEXT:    stxvp vsp36, 96(r1) # 32-byte Folded Spill
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-NEXT:    xxmfacc acc0
@@ -38,9 +38,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    bl foo@notoc
 ; CHECK-NEXT:    lxvp vsp0, 64(r1)
 ; CHECK-NEXT:    lxvp vsp2, 32(r1)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxvp vsp34, 128(r1) # 32-byte Folded Reload
 ; CHECK-NEXT:    lxvp vsp36, 96(r1) # 32-byte Folded Reload
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r30)
@@ -69,10 +69,10 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    xxlor vs0, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    stxvp vsp34, 208(r1) # 32-byte Folded Spill
-; CHECK-BE-NEXT:    ld r30, 368(r1)
 ; CHECK-BE-NEXT:    xxlor vs2, v4, v4
 ; CHECK-BE-NEXT:    xxlor vs3, v5, v5
 ; CHECK-BE-NEXT:    stxvp vsp36, 176(r1) # 32-byte Folded Spill
+; CHECK-BE-NEXT:    ld r30, 368(r1)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -82,9 +82,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    lxvp vsp0, 112(r1)
 ; CHECK-BE-NEXT:    lxvp vsp2, 144(r1)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxvp vsp34, 208(r1) # 32-byte Folded Reload
 ; CHECK-BE-NEXT:    lxvp vsp36, 176(r1) # 32-byte Folded Reload
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r30)

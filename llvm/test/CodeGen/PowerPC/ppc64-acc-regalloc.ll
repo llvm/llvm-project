@@ -16,11 +16,11 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; CHECK-NEXT:    lxv v4, 0(0)
 ; CHECK-NEXT:    xxlxor v0, v0, v0
 ; CHECK-NEXT:    xxlxor v1, v1, v1
-; CHECK-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    xxlxor v2, v2, v2
 ; CHECK-NEXT:    li r6, 1
 ; CHECK-NEXT:    li r4, 16
+; CHECK-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    extswsli r3, r3, 3
 ; CHECK-NEXT:    xvmaddadp v1, v4, v1
 ; CHECK-NEXT:    lxvdsx v5, 0, r3
@@ -29,30 +29,30 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; CHECK-NEXT:  .LBB0_1: # %bb9
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    addi r6, r6, 2
-; CHECK-NEXT:    lxv vs1, -64(r5)
-; CHECK-NEXT:    lxv vs2, -16(r5)
 ; CHECK-NEXT:    lxv vs0, 16(0)
+; CHECK-NEXT:    lxv vs1, -64(r5)
+; CHECK-NEXT:    xxlxor v7, v7, v7
 ; CHECK-NEXT:    vmr v9, v0
 ; CHECK-NEXT:    xxlxor v10, v10, v10
-; CHECK-NEXT:    xxlxor v7, v7, v7
 ; CHECK-NEXT:    mulld r6, r6, r3
-; CHECK-NEXT:    xvmaddadp v9, vs1, v2
-; CHECK-NEXT:    xxlxor v8, v8, v8
-; CHECK-NEXT:    xvmaddadp v10, vs2, v10
 ; CHECK-NEXT:    xvmaddadp v7, vs0, v5
 ; CHECK-NEXT:    xvmuldp v6, vs0, v2
+; CHECK-NEXT:    lxv vs0, -16(r5)
+; CHECK-NEXT:    xvmaddadp v9, vs1, v2
+; CHECK-NEXT:    xxlxor v8, v8, v8
 ; CHECK-NEXT:    xvmaddadp v7, v2, v2
 ; CHECK-NEXT:    xvmaddadp v6, v2, v2
 ; CHECK-NEXT:    lxvdsx v14, r6, r4
-; CHECK-NEXT:    xvmaddadp v8, vs1, v8
 ; CHECK-NEXT:    li r6, 0
-; CHECK-NEXT:    xvmuldp v11, vs2, v14
+; CHECK-NEXT:    xvmaddadp v8, vs1, v8
+; CHECK-NEXT:    xvmaddadp v10, vs0, v10
 ; CHECK-NEXT:    xvmuldp v3, vs1, v14
+; CHECK-NEXT:    xvmuldp v11, vs0, v14
 ; CHECK-NEXT:    xvmuldp vs5, v14, v2
 ; CHECK-NEXT:    xvmuldp v13, v4, v14
+; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    vmr v12, v2
 ; CHECK-NEXT:    xxlor vs14, v10, v10
-; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    xxlor vs4, v2, v2
 ; CHECK-NEXT:    # kill: def $vsrp2 killed $vsrp2 def $uacc1
 ; CHECK-NEXT:    xxlor vs6, v6, v6
@@ -60,11 +60,11 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; CHECK-NEXT:    xxlor vs8, v12, v12
 ; CHECK-NEXT:    xxlor vs9, v13, v13
 ; CHECK-NEXT:    vmr v12, v1
-; CHECK-NEXT:    xxlor vs15, v11, v11
-; CHECK-NEXT:    vmr v10, v2
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs2, v8, v8
 ; CHECK-NEXT:    xxlor vs3, v9, v9
+; CHECK-NEXT:    xxlor vs15, v11, v11
+; CHECK-NEXT:    vmr v10, v2
 ; CHECK-NEXT:    xxlor vs10, v12, v12
 ; CHECK-NEXT:    xxlor vs11, v13, v13
 ; CHECK-NEXT:    xxmtacc acc1
@@ -72,8 +72,8 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; CHECK-NEXT:    xxlor vs13, v11, v11
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xxmtacc acc2
-; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; CHECK-NEXT:    xxmtacc acc3
+; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; CHECK-NEXT:    xvf64gerpp acc1, vsp34, vs0
 ; CHECK-NEXT:    xvf64gerpp acc2, vsp34, vs0
 ; CHECK-NEXT:    xvf64gerpp acc3, vsp34, vs0
@@ -117,11 +117,11 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; TRACKLIVE-NEXT:    lxv v4, 0(0)
 ; TRACKLIVE-NEXT:    xxlxor v0, v0, v0
 ; TRACKLIVE-NEXT:    xxlxor v1, v1, v1
-; TRACKLIVE-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
-; TRACKLIVE-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; TRACKLIVE-NEXT:    xxlxor v2, v2, v2
 ; TRACKLIVE-NEXT:    li r6, 1
 ; TRACKLIVE-NEXT:    li r4, 16
+; TRACKLIVE-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; TRACKLIVE-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; TRACKLIVE-NEXT:    extswsli r3, r3, 3
 ; TRACKLIVE-NEXT:    xvmaddadp v1, v4, v1
 ; TRACKLIVE-NEXT:    lxvdsx v5, 0, r3
@@ -131,33 +131,33 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; TRACKLIVE-NEXT:    #
 ; TRACKLIVE-NEXT:    addi r6, r6, 2
 ; TRACKLIVE-NEXT:    lxv vs0, 16(0)
-; TRACKLIVE-NEXT:    xxlxor vs7, vs7, vs7
 ; TRACKLIVE-NEXT:    lxv vs1, -64(r5)
-; TRACKLIVE-NEXT:    lxv vs4, -16(r5)
-; TRACKLIVE-NEXT:    xxlxor vs12, vs12, vs12
+; TRACKLIVE-NEXT:    xxlxor vs7, vs7, vs7
 ; TRACKLIVE-NEXT:    xxlor vs3, v0, v0
 ; TRACKLIVE-NEXT:    xxlxor vs2, vs2, vs2
+; TRACKLIVE-NEXT:    xxlxor vs12, vs12, vs12
 ; TRACKLIVE-NEXT:    mulld r6, r6, r3
 ; TRACKLIVE-NEXT:    xxlor vs10, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs4, v2, v2
 ; TRACKLIVE-NEXT:    xxlor vs8, vs10, vs10
 ; TRACKLIVE-NEXT:    xxlor vs10, v1, v1
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, vs0, v5
 ; TRACKLIVE-NEXT:    xvmuldp vs6, vs0, v2
-; TRACKLIVE-NEXT:    xvmaddadp vs12, vs4, vs12
+; TRACKLIVE-NEXT:    lxv vs0, -16(r5)
 ; TRACKLIVE-NEXT:    xvmaddadp vs3, vs1, v2
 ; TRACKLIVE-NEXT:    xvmaddadp vs2, vs1, vs2
-; TRACKLIVE-NEXT:    xxlor vs0, v2, v2
 ; TRACKLIVE-NEXT:    lxvdsx v6, r6, r4
 ; TRACKLIVE-NEXT:    li r6, 0
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, v2, v2
 ; TRACKLIVE-NEXT:    xvmaddadp vs6, v2, v2
-; TRACKLIVE-NEXT:    xxlor vs14, vs12, vs12
-; TRACKLIVE-NEXT:    xxlor vs12, v2, v2
+; TRACKLIVE-NEXT:    xvmaddadp vs12, vs0, vs12
 ; TRACKLIVE-NEXT:    xvmuldp v3, vs1, v6
 ; TRACKLIVE-NEXT:    xvmuldp vs11, v4, v6
-; TRACKLIVE-NEXT:    xvmuldp vs13, vs4, v6
+; TRACKLIVE-NEXT:    xvmuldp vs13, vs0, v6
 ; TRACKLIVE-NEXT:    xvmuldp vs5, v6, v2
-; TRACKLIVE-NEXT:    xxlor vs4, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs0, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs14, vs12, vs12
+; TRACKLIVE-NEXT:    xxlor vs12, v2, v2
 ; TRACKLIVE-NEXT:    xxlor vs1, v3, v3
 ; TRACKLIVE-NEXT:    xxlor vs9, vs11, vs11
 ; TRACKLIVE-NEXT:    xxlor vs15, vs13, vs13

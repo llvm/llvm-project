@@ -26,34 +26,34 @@ define dso_local signext i32 @test_FI_elim([40 x i8]* noalias nocapture derefere
 ; CHECK-NEXT:    stdu r1, -80(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r9, r6
 ; CHECK-NEXT:    mr r6, r5
-; CHECK-NEXT:    li r5, 3
-; CHECK-NEXT:    li r10, -127
-; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    stb r5, 0(0)
-; CHECK-NEXT:    stb r10, 0(r3)
-; CHECK-NEXT:    stb r5, 0(r3)
-; CHECK-NEXT:    lbz r5, 2(r7)
-; CHECK-NEXT:    li r2, 1
-; CHECK-NEXT:    stb r10, 0(r3)
-; CHECK-NEXT:    pstxv v2, 64(r1), 0
-; CHECK-NEXT:    vaddudm v3, v2, v2
-; CHECK-NEXT:    mfvsrd r11, v2
 ; CHECK-NEXT:    li r0, 4
-; CHECK-NEXT:    stw r2, 0(r3)
-; CHECK-NEXT:    mr r7, r9
+; CHECK-NEXT:    li r11, 3
 ; CHECK-NEXT:    std r0, 0(r3)
-; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
-; CHECK-NEXT:    mfvsrd r12, v3
-; CHECK-NEXT:    neg r11, r11
-; CHECK-NEXT:    stb r5, 0(0)
-; CHECK-NEXT:    lbz r5, 2(r8)
-; CHECK-NEXT:    neg r12, r12
-; CHECK-NEXT:    std r11, 0(r3)
+; CHECK-NEXT:    stb r11, 0(0)
+; CHECK-NEXT:    li r12, -127
+; CHECK-NEXT:    stb r12, 0(r3)
+; CHECK-NEXT:    li r2, 1
+; CHECK-NEXT:    stb r11, 0(r3)
+; CHECK-NEXT:    stb r12, 0(r3)
+; CHECK-NEXT:    stw r2, 0(r3)
+; CHECK-NEXT:    mfvsrd r5, v2
+; CHECK-NEXT:    vaddudm v3, v2, v2
+; CHECK-NEXT:    pstxv v2, 64(r1), 0
+; CHECK-NEXT:    neg r5, r5
+; CHECK-NEXT:    mfvsrd r10, v3
+; CHECK-NEXT:    std r5, 0(r3)
+; CHECK-NEXT:    lbz r5, 2(r7)
+; CHECK-NEXT:    mr r7, r9
+; CHECK-NEXT:    neg r10, r10
 ; CHECK-NEXT:    std r2, 0(r3)
 ; CHECK-NEXT:    std r0, 0(r3)
-; CHECK-NEXT:    std r12, 0(r3)
+; CHECK-NEXT:    std r10, 0(r3)
+; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
+; CHECK-NEXT:    stb r5, 0(0)
+; CHECK-NEXT:    lbz r5, 2(r8)
 ; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-NEXT:    stb r5, 0(r3)
 ; CHECK-NEXT:    li r5, 2
@@ -74,36 +74,36 @@ define dso_local signext i32 @test_FI_elim([40 x i8]* noalias nocapture derefere
 ; CHECK-BE-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-BE-NEXT:    .cfi_offset lr, 16
 ; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    mr r9, r6
 ; CHECK-BE-NEXT:    mr r6, r5
-; CHECK-BE-NEXT:    li r5, 3
-; CHECK-BE-NEXT:    li r11, -127
-; CHECK-BE-NEXT:    lxv v2, 0(r3)
+; CHECK-BE-NEXT:    li r0, 4
+; CHECK-BE-NEXT:    li r11, 3
 ; CHECK-BE-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    pstxv v2, 144(r1), 0
-; CHECK-BE-NEXT:    stb r5, 0(0)
-; CHECK-BE-NEXT:    stb r11, 0(r3)
-; CHECK-BE-NEXT:    stb r5, 0(r3)
-; CHECK-BE-NEXT:    lbz r5, 2(r7)
-; CHECK-BE-NEXT:    vaddudm v3, v2, v2
-; CHECK-BE-NEXT:    mfvsrld r10, v2
+; CHECK-BE-NEXT:    std r0, 0(r3)
+; CHECK-BE-NEXT:    stb r11, 0(0)
+; CHECK-BE-NEXT:    li r12, -127
+; CHECK-BE-NEXT:    stb r12, 0(r3)
 ; CHECK-BE-NEXT:    li r30, 1
 ; CHECK-BE-NEXT:    stb r11, 0(r3)
-; CHECK-BE-NEXT:    li r0, 4
+; CHECK-BE-NEXT:    stb r12, 0(r3)
+; CHECK-BE-NEXT:    mfvsrld r5, v2
+; CHECK-BE-NEXT:    vaddudm v3, v2, v2
 ; CHECK-BE-NEXT:    stw r30, 0(r3)
+; CHECK-BE-NEXT:    pstxv v2, 144(r1), 0
+; CHECK-BE-NEXT:    mfvsrld r10, v3
+; CHECK-BE-NEXT:    neg r5, r5
+; CHECK-BE-NEXT:    std r5, 0(r3)
+; CHECK-BE-NEXT:    lbz r5, 2(r7)
 ; CHECK-BE-NEXT:    mr r7, r9
-; CHECK-BE-NEXT:    std r0, 0(r3)
-; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
-; CHECK-BE-NEXT:    mfvsrld r12, v3
-; CHECK-BE-NEXT:    stb r5, 0(0)
-; CHECK-BE-NEXT:    lbz r5, 2(r8)
 ; CHECK-BE-NEXT:    neg r10, r10
-; CHECK-BE-NEXT:    neg r12, r12
-; CHECK-BE-NEXT:    std r10, 0(r3)
 ; CHECK-BE-NEXT:    std r30, 0(r3)
 ; CHECK-BE-NEXT:    std r0, 0(r3)
+; CHECK-BE-NEXT:    std r10, 0(r3)
 ; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
-; CHECK-BE-NEXT:    std r12, 0(r3)
+; CHECK-BE-NEXT:    stb r5, 0(0)
+; CHECK-BE-NEXT:    lbz r5, 2(r8)
+; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-BE-NEXT:    stb r5, 0(r3)
 ; CHECK-BE-NEXT:    li r5, 2
 ; CHECK-BE-NEXT:    stw r5, 0(r3)

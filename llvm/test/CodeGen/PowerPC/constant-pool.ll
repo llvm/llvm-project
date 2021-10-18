@@ -364,15 +364,15 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v31, -16
-; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    stxv vs63, 32(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    xxsplti32dx vs63, 0, 1074935889
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -1719329096
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc

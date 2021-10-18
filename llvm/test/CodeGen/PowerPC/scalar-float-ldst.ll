@@ -3954,9 +3954,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_uint8_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stxsibx f0, 0, r3
@@ -4393,9 +4393,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_int8_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stxsibx f0, 0, r3
@@ -4836,9 +4836,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_uint16_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stxsihx f0, 0, r3
@@ -5279,9 +5279,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_int16_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stxsihx f0, 0, r3
@@ -5648,9 +5648,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_uint32_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stfiwx f0, 0, r3
@@ -5980,9 +5980,9 @@ entry:
 define dso_local void @st_not_disjoint64_float_int32_t(i64 %ptr, float %str) {
 ; CHECK-P10-LABEL: st_not_disjoint64_float_int32_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    pli r4, 232
 ; CHECK-P10-NEXT:    pli r5, 3567587329
+; CHECK-P10-NEXT:    xscvdpsxws f0, f1
 ; CHECK-P10-NEXT:    rldimi r5, r4, 32, 0
 ; CHECK-P10-NEXT:    or r3, r3, r5
 ; CHECK-P10-NEXT:    stfiwx f0, 0, r3
