@@ -57,7 +57,10 @@ public:
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   TypeSystemSwiftTypeRef(SwiftASTContextForExpressions &swift_ast_context);
+  /// Get the corresponding SwiftASTContext, and create one if necessary.
   SwiftASTContext *GetSwiftASTContext() const override;
+  /// Return SwiftASTContext, iff one has already been created.
+  SwiftASTContext *GetSwiftASTContextOrNull() const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
   void SetTriple(const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;

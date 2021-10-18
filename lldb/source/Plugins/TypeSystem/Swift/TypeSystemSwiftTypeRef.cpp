@@ -1335,13 +1335,18 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
   return m_swift_ast_context;
 }
 
+SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextOrNull() const {
+  return m_swift_ast_context;
+}
+
 void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {
   if (auto *swift_ast_context = GetSwiftASTContext())
     swift_ast_context->SetTriple(triple);
 }
 
 void TypeSystemSwiftTypeRef::ClearModuleDependentCaches() {
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  // There is no need to notify a not-yet created SwiftASTContext to reset.
+  if (auto *swift_ast_context = GetSwiftASTContextOrNull())
     swift_ast_context->ClearModuleDependentCaches();
 }
 const char *TypeSystemSwiftTypeRef::AsMangledName(opaque_compiler_type_t type) {
