@@ -262,14 +262,14 @@ void DwarfCompileUnit::addLocationAttribute(
 
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
+      unsigned PointerSize = Asm->getDataLayout().getPointerSize();
+      assert((PointerSize == 4 || PointerSize == 8) &&
+             "Add support for other sizes if necessary");
       if (Global->isThreadLocal()) {
         if (Asm->TM.useEmulatedTLS()) {
           // TODO: add debug info for emulated thread local mode.
         } else {
           // FIXME: Make this work with -gsplit-dwarf.
-          unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-          assert((PointerSize == 4 || PointerSize == 8) &&
-                 "Add support for other sizes if necessary");
           // Based on GCC's support for TLS:
           if (!DD->useSplitDwarf()) {
             // 1) Start with a constNu of the appropriate pointer size
@@ -292,6 +292,24 @@ void DwarfCompileUnit::addLocationAttribute(
                   DD->useGNUTLSOpcode() ? dwarf::DW_OP_GNU_push_tls_address
                                         : dwarf::DW_OP_form_tls_address);
         }
+      } else if (Asm->TM.getRelocationModel() == Reloc::RWPI ||
+                 Asm->TM.getRelocationModel() == Reloc::ROPI_RWPI) {
+        // Constant
+        addUInt(*Loc, dwarf::DW_FORM_data1,
+                PointerSize == 4 ? dwarf::DW_OP_const4u
+                                 : dwarf::DW_OP_const8u);
+        // Relocation offset
+        addExpr(*Loc, PointerSize == 4 ? dwarf::DW_FORM_data4
+                                       : dwarf::DW_FORM_data8,
+                Asm->getObjFileLowering().getIndirectSymViaRWPI(Sym));
+        // Base register
+        Register BaseReg = Asm->getObjFileLowering().getStaticBase();
+        BaseReg = Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + BaseReg);
+        // Offset from base register
+        addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
+        // Operation
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
       } else {
         DD->addArangeLabel(SymbolCU(this, Sym));
         addOpAddress(*Loc, Sym);
