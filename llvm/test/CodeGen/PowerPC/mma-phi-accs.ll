@@ -13,13 +13,13 @@ declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble
 define void @testPHI1(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %Len) {
 ; CHECK-LABEL: testPHI1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpwi r5, 3
 ; CHECK-NEXT:    xxsetaccz acc0
+; CHECK-NEXT:    cmpwi r5, 3
 ; CHECK-NEXT:    blt cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    lxv v2, 0(r4)
 ; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    addi r4, r4, 32
 ; CHECK-NEXT:    addi r5, r5, -2
 ; CHECK-NEXT:    mtctr r5
@@ -40,13 +40,13 @@ define void @testPHI1(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %Len) {
 ;
 ; CHECK-BE-LABEL: testPHI1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    cmpwi r5, 3
 ; CHECK-BE-NEXT:    xxsetaccz acc0
+; CHECK-BE-NEXT:    cmpwi r5, 3
 ; CHECK-BE-NEXT:    blt cr0, .LBB0_3
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-BE-NEXT:    clrldi r5, r5, 32
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-NEXT:    clrldi r5, r5, 32
 ; CHECK-BE-NEXT:    addi r4, r4, 32
 ; CHECK-BE-NEXT:    addi r5, r5, -2
 ; CHECK-BE-NEXT:    mtctr r5
@@ -110,8 +110,8 @@ define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %L
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r4)
 ; CHECK-NEXT:    lxv v3, 16(r4)
-; CHECK-NEXT:    lxv vs4, 32(r4)
 ; CHECK-NEXT:    cmpwi r5, 4
+; CHECK-NEXT:    lxv vs4, 32(r4)
 ; CHECK-NEXT:    xvf64ger acc0, vsp34, vs4
 ; CHECK-NEXT:    blt cr0, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
@@ -138,8 +138,8 @@ define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %L
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    lxv v3, 16(r4)
-; CHECK-BE-NEXT:    lxv vs4, 32(r4)
 ; CHECK-BE-NEXT:    cmpwi r5, 4
+; CHECK-BE-NEXT:    lxv vs4, 32(r4)
 ; CHECK-BE-NEXT:    xvf64ger acc0, vsp34, vs4
 ; CHECK-BE-NEXT:    blt cr0, .LBB1_3
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
@@ -273,8 +273,8 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-NEXT:    xvf32gernp acc0, v2, v2
 ; CHECK-NEXT:    bdnz .LBB3_4
 ; CHECK-NEXT:  .LBB3_5: # %for.cond.cleanup
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    xxmfacc acc0
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    stxv vs0, 48(r5)
 ; CHECK-NEXT:    stxv vs1, 32(r5)
 ; CHECK-NEXT:    stxv vs2, 16(r5)
@@ -305,8 +305,8 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-BE-NEXT:    xvf32gernp acc0, v2, v2
 ; CHECK-BE-NEXT:    bdnz .LBB3_4
 ; CHECK-BE-NEXT:  .LBB3_5: # %for.cond.cleanup
-; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
+; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r5)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r5)
