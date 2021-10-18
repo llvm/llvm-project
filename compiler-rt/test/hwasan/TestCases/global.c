@@ -5,6 +5,15 @@
 // RUN: not %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LSYM %s
 // RUN: not %env_hwasan_opts=symbolize=0 %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LNOSYM %s
 
+// Test with and without optimizations, with and without PIC, since different
+// backend passes run depending on these flags.
+// RUN: %clang_hwasan -fno-pic %s -o %t
+// RUN: not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK,RSYM %s
+// RUN: %clang_hwasan -fno-pic -O2 %s -o %t
+// RUN: not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK,RSYM %s
+// RUN: %clang_hwasan -O2 %s -o %t
+// RUN: not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK,RSYM %s
+
 // REQUIRES: pointer-tagging
 
 int x = 1;
