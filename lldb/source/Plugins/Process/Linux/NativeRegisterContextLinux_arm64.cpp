@@ -65,7 +65,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 #if LLDB_HAVE_USER_SVE_HEADER
     struct user_sve_header sve_header;
 #else
-    struct sve_header {};
+    struct {} sve_header;
 #endif
     struct iovec ioVec;
     ioVec.iov_base = &sve_header;
@@ -395,6 +395,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       if (GetRegisterInfo().IsSVERegVG(reg)) {
         uint64_t vg_value = reg_value.GetAsUInt64();
 
+#if LLDB_HAVE_USER_SVE_HEADER
         if (sve_vl_valid(vg_value * 8)) {
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
@@ -408,9 +409,11 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
         }
-
+#endif        
         return Status("SVE vector length update failed.");
+#if LLDB_HAVE_USER_SVE_HEADER
       }
+#endif        
 
       // If target supports SVE but currently in FPSIMD mode.
       if (m_sve_state == SVEState::FPSIMD) {
