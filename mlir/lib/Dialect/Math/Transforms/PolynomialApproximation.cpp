@@ -209,8 +209,8 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   };
 
   // Clamp operand into [plusClamp, minusClamp] range.
-  Value minusClamp = bcast(f32Cst(builder, -7.9053111076354980f));
-  Value plusClamp = bcast(f32Cst(builder, 7.90531110763549805f));
+  Value minusClamp = bcast(f32Cst(builder, -7.99881172180175781f));
+  Value plusClamp = bcast(f32Cst(builder, 7.99881172180175781f));
   Value x = clamp(builder, op.operand(), minusClamp, plusClamp);
 
   // Mask for tiny values that are approximated with `operand`.
