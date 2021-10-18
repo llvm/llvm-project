@@ -149,6 +149,9 @@ public:
   //  all sizes attached to them have been eliminated.
   // TiedOpsRewritten: The twoaddressinstruction pass will set this flag, it
   //  means that tied-def have been rewritten to meet the RegConstraint.
+  // FailsVerification: Means that the function is not expected to pass machine
+  //  verification. This can be set by passes that introduce known problems that
+  //  have not been fixed yet.
   enum class Property : unsigned {
     IsSSA,
     NoPHIs,
@@ -159,7 +162,8 @@ public:
     RegBankSelected,
     Selected,
     TiedOpsRewritten,
-    LastProperty = TiedOpsRewritten,
+    FailsVerification,
+    LastProperty = FailsVerification,
   };
 
   bool hasProperty(Property P) const {

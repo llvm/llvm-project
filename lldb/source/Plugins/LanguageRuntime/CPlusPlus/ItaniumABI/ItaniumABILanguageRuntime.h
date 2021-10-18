@@ -76,7 +76,9 @@ public:
       lldb::ThreadSP thread_sp) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   lldb::BreakpointResolverSP

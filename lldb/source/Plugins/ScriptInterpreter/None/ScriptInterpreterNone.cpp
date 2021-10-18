@@ -65,7 +65,3 @@ lldb_private::ConstString ScriptInterpreterNone::GetPluginNameStatic() {
 const char *ScriptInterpreterNone::GetPluginDescriptionStatic() {
   return "Null script interpreter";
 }
-
-lldb_private::ConstString ScriptInterpreterNone::GetPluginName() {
-  return GetPluginNameStatic();
-}

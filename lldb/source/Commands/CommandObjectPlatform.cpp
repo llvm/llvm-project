@@ -211,7 +211,7 @@ protected:
     ostrm.Printf("Available platforms:\n");
 
     PlatformSP host_platform_sp(Platform::GetHostPlatform());
-    ostrm.Printf("%s: %s\n", host_platform_sp->GetPluginName().GetCString(),
+    ostrm.Format("{0}: {1}\n", host_platform_sp->GetPluginName(),
                  host_platform_sp->GetDescription());
 
     uint32_t idx;
@@ -346,8 +346,8 @@ protected:
           if (error.Success()) {
             Stream &ostrm = result.GetOutputStream();
             if (hostname.empty())
-              ostrm.Printf("Disconnected from \"%s\"\n",
-                           platform_sp->GetPluginName().GetCString());
+              ostrm.Format("Disconnected from \"{0}\"\n",
+                           platform_sp->GetPluginName());
             else
               ostrm.Printf("Disconnected from \"%s\"\n", hostname.c_str());
             result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -356,9 +356,8 @@ protected:
           }
         } else {
           // Not connected...
-          result.AppendErrorWithFormat(
-              "not connected to '%s'",
-              platform_sp->GetPluginName().GetCString());
+          result.AppendErrorWithFormatv("not connected to '{0}'",
+                                        platform_sp->GetPluginName());
         }
       } else {
         // Bad args
@@ -1289,15 +1288,14 @@ protected:
 
             if (matches == 0) {
               if (match_desc)
-                result.AppendErrorWithFormat(
-                    "no processes were found that %s \"%s\" on the \"%s\" "
+                result.AppendErrorWithFormatv(
+                    "no processes were found that {0} \"{1}\" on the \"{2}\" "
                     "platform\n",
-                    match_desc, match_name,
-                    platform_sp->GetPluginName().GetCString());
+                    match_desc, match_name, platform_sp->GetPluginName());
               else
-                result.AppendErrorWithFormat(
-                    "no processes were found on the \"%s\" platform\n",
-                    platform_sp->GetPluginName().GetCString());
+                result.AppendErrorWithFormatv(
+                    "no processes were found on the \"{0}\" platform\n",
+                    platform_sp->GetPluginName());
             } else {
               result.AppendMessageWithFormat(
                   "%u matching process%s found on \"%s\"", matches,
@@ -1543,9 +1541,8 @@ protected:
           }
         } else {
           // Not connected...
-          result.AppendErrorWithFormat(
-              "not connected to '%s'",
-              platform_sp->GetPluginName().GetCString());
+          result.AppendErrorWithFormatv("not connected to '{0}'",
+                                        platform_sp->GetPluginName());
         }
       } else {
         // No args

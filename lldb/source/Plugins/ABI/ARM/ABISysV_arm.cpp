@@ -2032,9 +2032,3 @@ lldb_private::ConstString ABISysV_arm::GetPluginNameStatic() {
   static ConstString g_name("SysV-arm");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_arm::GetPluginName() {
-  return GetPluginNameStatic();
-}

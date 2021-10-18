@@ -528,8 +528,8 @@ SymbolFileDWARFDebugMap::GetSymbolFileByOSOIndex(uint32_t oso_idx) {
 
 SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
-  if (sym_file &&
-      sym_file->GetPluginName() == SymbolFileDWARF::GetPluginNameStatic())
+  if (sym_file && sym_file->GetPluginName() ==
+                      SymbolFileDWARF::GetPluginNameStatic().GetStringRef())
     return static_cast<SymbolFileDWARF *>(sym_file);
   return nullptr;
 }
@@ -1232,11 +1232,6 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
     // this once and can stop after the first iteration hence we return true.
     return true;
   });
-}
-
-// PluginInterface protocol
-lldb_private::ConstString SymbolFileDWARFDebugMap::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 lldb::CompUnitSP

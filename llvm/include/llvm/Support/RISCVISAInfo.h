@@ -12,7 +12,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 
 #include <map>
@@ -20,6 +19,9 @@
 #include <vector>
 
 namespace llvm {
+namespace opt {
+class ArgList;
+}
 struct RISCVExtensionInfo {
   std::string ExtName;
   unsigned MajorVersion;
