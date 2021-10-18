@@ -1,4 +1,4 @@
-//===-Caching.cpp - LLVM File Cache Handling ------------------------------===//
+//===-Caching.cpp - LLVM Link Time Optimizer Cache Handling ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the Caching used by ThinLTO.
+// This file implements the Caching for ThinLTO.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Caching.h"
+#include "llvm/LTO/Caching.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -26,19 +26,12 @@
 #endif
 
 using namespace llvm;
+using namespace llvm::lto;
 
-Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
-                                             Twine TempFilePrefixRef,
-                                             Twine CacheDirectoryPathRef,
-                                             AddBufferFn AddBuffer) {
-  if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPathRef))
+Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
+                                            AddBufferFn AddBuffer) {
+  if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPath))
     return errorCodeToError(EC);
-
-  // Create local copies which are safely captured-by-copy in lambdas
-  SmallString<64> CacheName, TempFilePrefix, CacheDirectoryPath;
-  CacheNameRef.toVector(CacheName);
-  TempFilePrefixRef.toVector(TempFilePrefix);
-  CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
   return [=](unsigned Task, StringRef Key) -> AddStreamFn {
     // This choice of file name allows the cache to be pruned (see pruneCache()
@@ -141,13 +134,12 @@ Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
     return [=](size_t Task) -> std::unique_ptr<NativeObjectStream> {
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;
-      sys::path::append(TempFilenameModel, CacheDirectoryPath,
-                        TempFilePrefix + "-%%%%%%.tmp.o");
+      sys::path::append(TempFilenameModel, CacheDirectoryPath, "Thin-%%%%%%.tmp.o");
       Expected<sys::fs::TempFile> Temp = sys::fs::TempFile::create(
           TempFilenameModel, sys::fs::owner_read | sys::fs::owner_write);
       if (!Temp) {
         errs() << "Error: " << toString(Temp.takeError()) << "\n";
-        report_fatal_error(CacheName + ": Can't get a temporary file");
+        report_fatal_error("ThinLTO: Can't get a temporary file");
       }
 
       // This CacheStream will move the temporary file into the cache when done.

@@ -19,10 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -127,17 +127,17 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   // The --thinlto-cache-dir option specifies the path to a directory in which
   // to cache native object files for ThinLTO incremental builds. If a path was
   // specified, configure LTO to use it as the cache directory.
-  NativeObjectCache cache;
+  lto::NativeObjectCache cache;
   if (!config->thinLTOCacheDir.empty())
-    cache =
-        check(localCache("ThinLTO", "Thin", config->thinLTOCacheDir,
-                         [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
-                           files[task] = std::move(mb);
-                         }));
+    cache = check(
+        lto::localCache(config->thinLTOCacheDir,
+                        [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
+                          files[task] = std::move(mb);
+                        }));
 
   checkError(ltoObj->run(
       [&](size_t task) {
-        return std::make_unique<NativeObjectStream>(
+        return std::make_unique<lto::NativeObjectStream>(
             std::make_unique<raw_svector_ostream>(buf[task]));
       },
       cache));

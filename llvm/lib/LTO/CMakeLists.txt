@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMLTO
+  Caching.cpp
   LTO.cpp
   LTOBackend.cpp
   LTOModule.cpp
