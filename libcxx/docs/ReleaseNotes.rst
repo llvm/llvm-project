@@ -42,23 +42,17 @@ New Features
   is incomplete. Some functions are known to be inefficient; both in memory
   usage and performance. The implementation is considered experimental and isn't
   considered ABI stable.
+
 - There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
   support in the ``<format>`` header. This only affects the estimation of the
   output width of the format functions.
-
-API Changes
------------
 
 - Support for building libc++ on top of a C Standard Library that does not support ``wchar_t`` was
   added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
   freestanding-friendly options provided by libc++.
 
-Build System Changes
---------------------
-
-- Building the libc++ shared or static library requires a C++ 20 capable compiler.
-  Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
-  can't use the system compiler to build libc++ anymore.
+API Changes
+-----------
 
 - The functions ``std::atomic<T*>::fetch_(add|sub)`` and
   ``std::atomic_fetch_(add|sub)`` no longer accept a function pointer. While
@@ -77,6 +71,13 @@ Build System Changes
 
   Calls to these functions where the template argument was deduced by the
   compiler are unaffected by this change.
+
+Build System Changes
+--------------------
+
+- Building the libc++ shared or static library requires a C++ 20 capable compiler.
+  Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
+  can't use the system compiler to build libc++ anymore.
 
 - Historically, there has been numerous ways of building libc++ and libc++abi. This has
   culminated in over 5 different ways to build the runtimes, which made it impossible to
