@@ -409,11 +409,9 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
         }
-#endif        
+#endif
         return Status("SVE vector length update failed.");
-#if LLDB_HAVE_USER_SVE_HEADER
       }
-#endif        
 
       // If target supports SVE but currently in FPSIMD mode.
       if (m_sve_state == SVEState::FPSIMD) {
