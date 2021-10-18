@@ -57,8 +57,8 @@ Build System Changes
 --------------------
 
 - Building the libc++ shared or static library requires a C++ 20 capable compiler.
-  Use ``-DLLVM_ENABLE_PROJECTS='clang;compiler-rt' -DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'``
-  to build libc++ using a fresh build of Clang.
+  Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
+  can't use the system compiler to build libc++ anymore.
 
 - The functions ``std::atomic<T*>::fetch_(add|sub)`` and
   ``std::atomic_fetch_(add|sub)`` no longer accept a function pointer. While
@@ -77,3 +77,35 @@ Build System Changes
 
   Calls to these functions where the template argument was deduced by the
   compiler are unaffected by this change.
+
+- Historically, there has been numerous ways of building libc++ and libc++abi. This has
+  culminated in over 5 different ways to build the runtimes, which made it impossible to
+  maintain with a good level of support. Starting with this release, the runtimes support
+  exactly two ways of being built, which should cater to all use-cases. Furthermore,
+  these builds are as lightweight as possible and will work consistently even when targetting
+  embedded platforms, which used not to be the case. Please see the documentation on building
+  libc++ to see those two ways of building and migrate over to the appropriate build instructions
+  as soon as possible.
+
+  All other ways to build are deprecated and will not be supported in the next release.
+  We understand that making these changes can be daunting. For that reason, here's a
+  summary of how to migrate from the two most common ways to build:
+
+  - If you were rooting your CMake invocation at ``<monorepo>/llvm`` and passing ``-DLLVM_ENABLE_PROJECTS=<...>``
+    (which was the previously advertised way to build the runtimes), please simply root your CMake invocation at
+    ``<monorepo>/runtimes`` and pass ``-DLLVM_ENABLE_RUNTIMES=<...>``.
+
+  - If you were doing two CMake invocations, one rooted at ``<monorepo>/libcxx`` and one rooted at
+    ``<monorepo>/libcxxabi`` (this used to be called a "Standalone build"), please move them to a
+    single invocation like so:
+
+    .. code-block:: bash
+
+        $ cmake -S <monorepo>/libcxx -B libcxx-build <LIBCXX-OPTIONS>
+        $ cmake -S <monorepo>/libcxxabi -B libcxxabi-build <LIBCXXABI-OPTIONS>
+
+    should become
+
+    .. code-block:: bash
+
+        $ cmake -S <monorepo>/runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" <LIBCXX-OPTIONS> <LIBCXXABI-OPTIONS>

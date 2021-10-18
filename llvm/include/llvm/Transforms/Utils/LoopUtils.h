@@ -495,12 +495,8 @@ Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
                 LoopInfo *LI, LPPassManager *LPM);
 
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks
-/// overlap.
-///
-/// Returns a pair of instructions where the first element is the first
-/// instruction generated in possibly a sequence of instructions and the
-/// second value is the final comparator value or NULL if no check is needed.
-std::pair<Instruction *, Instruction *>
+/// overlap. Returns the final comparator value or NULL if no check is needed.
+Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander);

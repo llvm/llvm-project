@@ -130,11 +130,9 @@ class ReplaceLDSUseImpl {
     std::vector<GlobalVariable *> LDSGlobals = AMDGPU::findVariablesToLower(M);
 
     // Remove LDS which don't qualify for replacement.
-    LDSGlobals.erase(std::remove_if(LDSGlobals.begin(), LDSGlobals.end(),
-                                    [&](GlobalVariable *GV) {
-                                      return shouldIgnorePointerReplacement(GV);
-                                    }),
-                     LDSGlobals.end());
+    llvm::erase_if(LDSGlobals, [&](GlobalVariable *GV) {
+      return shouldIgnorePointerReplacement(GV);
+    });
 
     return LDSGlobals;
   }

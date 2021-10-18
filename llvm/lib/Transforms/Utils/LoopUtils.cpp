@@ -1561,7 +1561,7 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
   return ChecksWithBounds;
 }
 
-std::pair<Instruction *, Instruction *> llvm::addRuntimeChecks(
+Value *llvm::addRuntimeChecks(
     Instruction *Loc, Loop *TheLoop,
     const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
     SCEVExpander &Exp) {
@@ -1570,21 +1570,9 @@ std::pair<Instruction *, Instruction *> llvm::addRuntimeChecks(
   auto ExpandedChecks = expandBounds(PointerChecks, TheLoop, Loc, Exp);
 
   LLVMContext &Ctx = Loc->getContext();
-  Instruction *FirstInst = nullptr;
   IRBuilder<> ChkBuilder(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
-
-  // FIXME: this helper is currently a duplicate of the one in
-  // LoopVectorize.cpp.
-  auto GetFirstInst = [](Instruction *FirstInst, Value *V,
-                         Instruction *Loc) -> Instruction * {
-    if (FirstInst)
-      return FirstInst;
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      return I->getParent() == Loc->getParent() ? I : nullptr;
-    return nullptr;
-  };
 
   for (const auto &Check : ExpandedChecks) {
     const PointerBounds &A = Check.first, &B = Check.second;
@@ -1614,30 +1602,16 @@ std::pair<Instruction *, Instruction *> llvm::addRuntimeChecks(
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
     Value *Cmp0 = ChkBuilder.CreateICmpULT(Start0, End1, "bound0");
-    FirstInst = GetFirstInst(FirstInst, Cmp0, Loc);
     Value *Cmp1 = ChkBuilder.CreateICmpULT(Start1, End0, "bound1");
-    FirstInst = GetFirstInst(FirstInst, Cmp1, Loc);
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
-    FirstInst = GetFirstInst(FirstInst, IsConflict, Loc);
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
-      FirstInst = GetFirstInst(FirstInst, IsConflict, Loc);
     }
     MemoryRuntimeCheck = IsConflict;
   }
 
-  if (!MemoryRuntimeCheck)
-    return std::make_pair(nullptr, nullptr);
-
-  // We have to do this trickery because the IRBuilder might fold the check to a
-  // constant expression in which case there is no Instruction anchored in a
-  // the block.
-  Instruction *Check =
-      BinaryOperator::CreateAnd(MemoryRuntimeCheck, ConstantInt::getTrue(Ctx));
-  ChkBuilder.Insert(Check, "memcheck.conflict");
-  FirstInst = GetFirstInst(FirstInst, Check, Loc);
-  return std::make_pair(FirstInst, Check);
+  return MemoryRuntimeCheck;
 }
 
 Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,

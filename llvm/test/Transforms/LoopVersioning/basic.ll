@@ -15,7 +15,7 @@ entry:
 ; CHECK:   icmp
 ; CHECK:   icmp
 ; CHECK-NOT: icmp
-; CHECK:   br i1 %memcheck.conflict, label %for.body.ph.lver.orig, label %for.body.ph
+; CHECK:   br i1 %conflict.rdx, label %for.body.ph.lver.orig, label %for.body.ph
 
 ; CHECK: for.body.ph.lver.orig:
 ; CHECK: for.body.lver.orig:
