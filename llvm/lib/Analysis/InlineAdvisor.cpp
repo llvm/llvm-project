@@ -16,7 +16,6 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -189,7 +188,8 @@ AnalysisKey InlineAdvisorAnalysis::Key;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
                                               InliningAdvisorMode Mode,
-                                              StringRef ReplayFile) {
+                                              StringRef ReplayFile,
+                                              ReplayInlineScope ReplayScope) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   switch (Mode) {
   case InliningAdvisorMode::Default:
@@ -198,8 +198,8 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     // Restrict replay to default advisor, ML advisors are stateful so
     // replay will need augmentations to interleave with them correctly.
     if (!ReplayFile.empty()) {
-      Advisor = std::make_unique<ReplayInlineAdvisor>(
-          M, FAM, M.getContext(), std::move(Advisor), ReplayFile,
+      Advisor = llvm::getReplayInlineAdvisor(
+          M, FAM, M.getContext(), std::move(Advisor), ReplayFile, ReplayScope,
           /* EmitRemarks =*/true);
     }
     break;

@@ -38,6 +38,9 @@ class OptimizationRemarkEmitter;
 /// training.
 enum class InliningAdvisorMode : int { Default, Release, Development };
 
+/// For Replay Inliner initialization
+enum class ReplayInlineScope : int { Function, Module };
+
 class InlineAdvisor;
 /// Capture state between an inlining decision having had been made, and
 /// its impact being observable. When collecting model training data, this
@@ -143,7 +146,11 @@ public:
   /// be up-to-date wrt previous inlining decisions. \p MandatoryOnly indicates
   /// only mandatory (always-inline) call sites should be recommended - this
   /// allows the InlineAdvisor track such inlininings.
-  /// Returns an InlineAdvice with the inlining recommendation.
+  /// Returns:
+  /// - An InlineAdvice with the inlining recommendation.
+  /// - Null when no recommendation is made (https://reviews.llvm.org/D110658).
+  /// TODO: Consider removing the Null return scenario by incorporating the
+  /// SampleProfile inliner into an InlineAdvisor
   std::unique_ptr<InlineAdvice> getAdvice(CallBase &CB,
                                           bool MandatoryOnly = false);
 
@@ -227,7 +234,7 @@ public:
       return !PAC.preservedWhenStateless();
     }
     bool tryCreate(InlineParams Params, InliningAdvisorMode Mode,
-                   StringRef ReplayFile);
+                   StringRef ReplayFile, ReplayInlineScope ReplayScope);
     InlineAdvisor *getAdvisor() const { return Advisor.get(); }
 
   private:
@@ -249,6 +256,11 @@ std::unique_ptr<InlineAdvisor>
 getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                           std::function<bool(CallBase &)> GetDefaultAdvice);
 #endif
+
+std::unique_ptr<InlineAdvisor> getReplayInlineAdvisor(
+    Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
+    std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
+    ReplayInlineScope Scope, bool EmitRemarks);
 
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
