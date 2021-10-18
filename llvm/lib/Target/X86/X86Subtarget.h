@@ -476,6 +476,10 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// loads from being used maliciously.
   bool UseLVILoadHardening = false;
 
+  /// Use an instruction sequence for taking the address of a global that allows
+  /// a memory tag in the upper address bits.
+  bool AllowTaggedGlobals = false;
+
   /// Use software floating point for code generation.
   bool UseSoftFloat = false;
 
@@ -795,6 +799,7 @@ public:
   bool preferMaskRegisters() const { return PreferMaskRegisters; }
   bool useGLMDivSqrtCosts() const { return UseGLMDivSqrtCosts; }
   bool useLVIControlFlowIntegrity() const { return UseLVIControlFlowIntegrity; }
+  bool allowTaggedGlobals() const { return AllowTaggedGlobals; }
   bool useLVILoadHardening() const { return UseLVILoadHardening; }
   bool useSpeculativeExecutionSideEffectSuppression() const {
     return UseSpeculativeExecutionSideEffectSuppression;
