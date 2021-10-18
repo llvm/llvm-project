@@ -513,8 +513,3 @@ const char *DynamicLoaderMacOS::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library loads/unloads "
          "in MacOSX user processes.";
 }
-
-// PluginInterface protocol
-lldb_private::ConstString DynamicLoaderMacOS::GetPluginName() {
-  return GetPluginNameStatic();
-}

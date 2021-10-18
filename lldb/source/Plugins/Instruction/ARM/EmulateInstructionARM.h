@@ -83,8 +83,8 @@ public:
     return false;
   }
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
 
   bool SetTargetTriple(const ArchSpec &arch) override;

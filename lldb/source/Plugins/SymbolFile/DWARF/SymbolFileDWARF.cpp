@@ -3991,9 +3991,6 @@ SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   return {};
 }
 
-// PluginInterface protocol
-ConstString SymbolFileDWARF::GetPluginName() { return GetPluginNameStatic(); }
-
 void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   SymbolFile::Dump(s);
   m_index->Dump(s);

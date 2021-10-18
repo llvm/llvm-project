@@ -45,7 +45,7 @@ public:
   virtual void SectionFileAddressesChanged();
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return "vendor-default"; }
 
   virtual std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language);

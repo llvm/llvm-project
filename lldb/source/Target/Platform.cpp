@@ -399,7 +399,7 @@ Platform::~Platform() = default;
 
 void Platform::GetStatus(Stream &strm) {
   std::string s;
-  strm.Printf("  Platform: %s\n", GetPluginName().GetCString());
+  strm.Format("  Platform: {0}\n", GetPluginName());
 
   ArchSpec arch(GetSystemArchitecture());
   if (arch.IsValid()) {
@@ -752,9 +752,8 @@ Status Platform::MakeDirectory(const FileSpec &file_spec,
     return llvm::sys::fs::create_directory(file_spec.GetPath(), permissions);
   else {
     Status error;
-    error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
-                                   GetPluginName().GetCString(),
-                                   LLVM_PRETTY_FUNCTION);
+    error.SetErrorStringWithFormatv("remote platform {0} doesn't support {1}",
+                                    GetPluginName(), LLVM_PRETTY_FUNCTION);
     return error;
   }
 }
@@ -768,9 +767,8 @@ Status Platform::GetFilePermissions(const FileSpec &file_spec,
     return Status(Value.getError());
   } else {
     Status error;
-    error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
-                                   GetPluginName().GetCString(),
-                                   LLVM_PRETTY_FUNCTION);
+    error.SetErrorStringWithFormatv("remote platform {0} doesn't support {1}",
+                                    GetPluginName(), LLVM_PRETTY_FUNCTION);
     return error;
   }
 }
@@ -782,14 +780,13 @@ Status Platform::SetFilePermissions(const FileSpec &file_spec,
     return llvm::sys::fs::setPermissions(file_spec.GetPath(), Perms);
   } else {
     Status error;
-    error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
-                                   GetPluginName().GetCString(),
-                                   LLVM_PRETTY_FUNCTION);
+    error.SetErrorStringWithFormatv("remote platform {0} doesn't support {1}",
+                                    GetPluginName(), LLVM_PRETTY_FUNCTION);
     return error;
   }
 }
 
-ConstString Platform::GetName() { return GetPluginName(); }
+ConstString Platform::GetName() { return ConstString(GetPluginName()); }
 
 const char *Platform::GetHostname() {
   if (IsHost())
@@ -949,26 +946,27 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
 Status Platform::ConnectRemote(Args &args) {
   Status error;
   if (IsHost())
-    error.SetErrorStringWithFormat("The currently selected platform (%s) is "
-                                   "the host platform and is always connected.",
-                                   GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "The currently selected platform ({0}) is "
+        "the host platform and is always connected.",
+        GetPluginName());
   else
-    error.SetErrorStringWithFormat(
-        "Platform::ConnectRemote() is not supported by %s",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "Platform::ConnectRemote() is not supported by {0}", GetPluginName());
   return error;
 }
 
 Status Platform::DisconnectRemote() {
   Status error;
   if (IsHost())
-    error.SetErrorStringWithFormat("The currently selected platform (%s) is "
-                                   "the host platform and is always connected.",
-                                   GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "The currently selected platform ({0}) is "
+        "the host platform and is always connected.",
+        GetPluginName());
   else
-    error.SetErrorStringWithFormat(
-        "Platform::DisconnectRemote() is not supported by %s",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "Platform::DisconnectRemote() is not supported by {0}",
+        GetPluginName());
   return error;
 }
 
@@ -1117,8 +1115,8 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
       ProcessAttachInfo attach_info(launch_info);
       process_sp = Attach(attach_info, debugger, &target, error);
       if (process_sp) {
-        LLDB_LOGF(log, "Platform::%s Attach() succeeded, Process plugin: %s",
-                  __FUNCTION__, process_sp->GetPluginName().AsCString());
+        LLDB_LOG(log, "Attach() succeeded, Process plugin: {0}",
+                 process_sp->GetPluginName());
         launch_info.SetHijackListener(attach_info.GetHijackListener());
 
         // Since we attached to the process, it will think it needs to detach

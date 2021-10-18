@@ -324,9 +324,6 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
-// PluginInterface
-ConstString ProcessGDBRemote::GetPluginName() { return GetPluginNameStatic(); }
-
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =

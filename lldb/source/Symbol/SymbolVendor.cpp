@@ -77,12 +77,6 @@ void SymbolVendor::SectionFileAddressesChanged() {
     m_sym_file_up->SectionFileAddressesChanged();
 }
 
-// PluginInterface protocol
-lldb_private::ConstString SymbolVendor::GetPluginName() {
-  static ConstString g_name("vendor-default");
-  return g_name;
-}
-
 std::vector<DataBufferSP>
 SymbolVendor::GetASTData(lldb::LanguageType language) {
   std::vector<DataBufferSP> ast_datas;

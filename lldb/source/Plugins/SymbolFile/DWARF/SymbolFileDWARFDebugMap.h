@@ -149,7 +149,9 @@ public:
                         lldb_private::CompileUnit *cu) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };

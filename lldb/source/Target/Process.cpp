@@ -3077,13 +3077,11 @@ void Process::CompleteAttach() {
     dyld->DidAttach();
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
-      LLDB_LOGF(log,
-                "Process::%s after DynamicLoader::DidAttach(), target "
-                "executable is %s (using %s plugin)",
-                __FUNCTION__,
-                exe_module_sp ? exe_module_sp->GetFileSpec().GetPath().c_str()
-                              : "<none>",
-                dyld->GetPluginName().AsCString("<unnamed>"));
+      LLDB_LOG(log,
+               "after DynamicLoader::DidAttach(), target "
+               "executable is {0} (using {1} plugin)",
+               exe_module_sp ? exe_module_sp->GetFileSpec() : FileSpec(),
+               dyld->GetPluginName());
     }
   }
 
@@ -3094,13 +3092,11 @@ void Process::CompleteAttach() {
     system_runtime->DidAttach();
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
-      LLDB_LOGF(log,
-                "Process::%s after SystemRuntime::DidAttach(), target "
-                "executable is %s (using %s plugin)",
-                __FUNCTION__,
-                exe_module_sp ? exe_module_sp->GetFileSpec().GetPath().c_str()
-                              : "<none>",
-                system_runtime->GetPluginName().AsCString("<unnamed>"));
+      LLDB_LOG(log,
+               "after SystemRuntime::DidAttach(), target "
+               "executable is {0} (using {1} plugin)",
+               exe_module_sp ? exe_module_sp->GetFileSpec() : FileSpec(),
+               system_runtime->GetPluginName());
     }
   }
 
@@ -6171,11 +6167,8 @@ void Process::MapSupportedStructuredDataPlugins(
         m_structured_data_plugin_map.insert(
             std::make_pair(type_name, plugin_sp));
         names_to_remove.push_back(type_name);
-        LLDB_LOGF(log,
-                  "Process::%s(): using plugin %s for type name "
-                  "%s",
-                  __FUNCTION__, plugin_sp->GetPluginName().GetCString(),
-                  type_name.GetCString());
+        LLDB_LOG(log, "using plugin {0} for type name {1}",
+                 plugin_sp->GetPluginName(), type_name);
       }
     }
 
@@ -6299,8 +6292,7 @@ llvm::Expected<const MemoryTagManager *> Process::GetMemoryTagManager() {
   if (!arch || !tag_manager) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "This architecture does not support memory tagging",
-        GetPluginName().GetCString());
+        "This architecture does not support memory tagging");
   }
 
   if (!SupportsMemoryTagging()) {

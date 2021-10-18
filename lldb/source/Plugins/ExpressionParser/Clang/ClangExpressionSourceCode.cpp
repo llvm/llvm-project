@@ -311,8 +311,7 @@ bool ClangExpressionSourceCode::GetText(
     }
     if (target->GetArchitecture().GetMachine() == llvm::Triple::x86_64) {
       if (lldb::PlatformSP platform_sp = target->GetPlatform()) {
-        static ConstString g_platform_ios_simulator("ios-simulator");
-        if (platform_sp->GetPluginName() == g_platform_ios_simulator) {
+        if (platform_sp->GetPluginName() == "ios-simulator") {
           target_specific_defines = "typedef bool BOOL;\n";
         }
       }

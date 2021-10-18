@@ -1211,9 +1211,6 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 
-// PluginInterface protocol
-ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
-
 llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
     swift::ReflectionSectionKind section) {
 #ifdef LLDB_ENABLE_SWIFT

@@ -1926,9 +1926,3 @@ lldb_private::ConstString ABIMacOSX_arm::GetPluginNameStatic() {
   static ConstString g_name("macosx-arm");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABIMacOSX_arm::GetPluginName() {
-  return GetPluginNameStatic();
-}

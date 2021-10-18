@@ -396,8 +396,4 @@ const char *ScriptInterpreterLua::GetPluginDescriptionStatic() {
   return "Lua script interpreter";
 }
 
-lldb_private::ConstString ScriptInterpreterLua::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 Lua &ScriptInterpreterLua::GetLua() { return *m_lua; }

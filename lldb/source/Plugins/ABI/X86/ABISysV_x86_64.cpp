@@ -1307,9 +1307,3 @@ lldb_private::ConstString ABISysV_x86_64::GetPluginNameStatic() {
   static ConstString g_name("sysv-x86_64");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_x86_64::GetPluginName() {
-  return GetPluginNameStatic();
-}

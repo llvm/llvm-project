@@ -85,7 +85,9 @@ public:
                               lldb::addr_t length);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // LLVM RTTI support
   static char ID;
