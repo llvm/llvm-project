@@ -153,8 +153,7 @@ void RecoveryReproducerContext::crashHandler(void *) {
     context->generate(description);
 
     // Emit an error using information only available within the context.
-    context->preCrashOperation->getContext()->printOpOnDiagnostic(false);
-    context->preCrashOperation->emitError()
+    emitError(context->preCrashOperation->getLoc())
         << "A failure has been detected while processing the MLIR module:"
         << description;
   }
@@ -235,13 +234,9 @@ void PassCrashReproducerGenerator::finalize(Operation *rootOp,
   if (succeeded(executionResult))
     return impl->activeContexts.clear();
 
-  MLIRContext *context = rootOp->getContext();
-  bool shouldPrintOnOp = context->shouldPrintOpOnDiagnostic();
-  context->printOpOnDiagnostic(false);
-  InFlightDiagnostic diag = rootOp->emitError()
+  InFlightDiagnostic diag = emitError(rootOp->getLoc())
                             << "Failures have been detected while "
                                "processing an MLIR pass pipeline";
-  context->printOpOnDiagnostic(shouldPrintOnOp);
 
   // If we are generating a global reproducer, we include all of the running
   // passes in the error message for the only active context.
