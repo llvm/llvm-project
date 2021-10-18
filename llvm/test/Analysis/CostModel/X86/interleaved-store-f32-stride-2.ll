@@ -13,13 +13,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store float %v1, float* %out1, align 4
-; SSE2: LV: Found an estimated cost of 6 for VF 2 For instruction:   store float %v1, float* %out1, align 4
+; SSE2: LV: Found an estimated cost of 2 for VF 2 For instruction:   store float %v1, float* %out1, align 4
 ; SSE2: LV: Found an estimated cost of 14 for VF 4 For instruction:   store float %v1, float* %out1, align 4
 ; SSE2: LV: Found an estimated cost of 28 for VF 8 For instruction:   store float %v1, float* %out1, align 4
 ; SSE2: LV: Found an estimated cost of 56 for VF 16 For instruction:   store float %v1, float* %out1, align 4
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   store float %v1, float* %out1, align 4
-; AVX1: LV: Found an estimated cost of 6 for VF 2 For instruction:   store float %v1, float* %out1, align 4
+; AVX1: LV: Found an estimated cost of 2 for VF 2 For instruction:   store float %v1, float* %out1, align 4
 ; AVX1: LV: Found an estimated cost of 15 for VF 4 For instruction:   store float %v1, float* %out1, align 4
 ; AVX1: LV: Found an estimated cost of 38 for VF 8 For instruction:   store float %v1, float* %out1, align 4
 ; AVX1: LV: Found an estimated cost of 76 for VF 16 For instruction:   store float %v1, float* %out1, align 4
