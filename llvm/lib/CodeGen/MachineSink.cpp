@@ -131,7 +131,7 @@ namespace {
     // will be split.
     SetVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ToSplit;
 
-    SparseBitVector<> RegsToClearKillFlags;
+    DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
         std::map<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
@@ -1439,7 +1439,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   // used registers.
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg() && MO.isUse())
-      RegsToClearKillFlags.set(MO.getReg()); // Remember to clear kill flags.
+      RegsToClearKillFlags.insert(MO.getReg()); // Remember to clear kill flags.
   }
 
   return true;
