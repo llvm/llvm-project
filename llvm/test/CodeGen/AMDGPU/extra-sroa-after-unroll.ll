@@ -1,6 +1,6 @@
-; RUN: opt -instnamer -O1 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O1 %s
-; RUN: opt -instnamer -O2 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O2 %s
-; RUN: opt -instnamer -O3 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O3 %s
+; RUN: opt -passes='default<O1>,instnamer' -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O1 %s
+; RUN: opt -passes='default<O2>,instnamer' -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O2 %s
+; RUN: opt -passes='default<O3>,instnamer' -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O3 %s
 target datalayout = "A5"
 
 ; GCN-LABEL: t0

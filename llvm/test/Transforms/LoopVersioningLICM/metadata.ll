@@ -1,4 +1,3 @@
-; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm 2>&1 | FileCheck %s
 ; RUN: opt < %s  -S -passes='function(loop-versioning-licm,loop-mssa(licm))' 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: @without_metadata(
