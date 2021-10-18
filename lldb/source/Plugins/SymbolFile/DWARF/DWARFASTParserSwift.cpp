@@ -27,7 +27,7 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -41,7 +41,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-DWARFASTParserSwift::DWARFASTParserSwift(SwiftASTContext &ast) : m_ast(ast) {}
+DWARFASTParserSwift::DWARFASTParserSwift(
+    TypeSystemSwiftTypeRef &swift_typesystem)
+    : m_swift_typesystem(swift_typesystem) {}
 
 DWARFASTParserSwift::~DWARFASTParserSwift() {}
 
@@ -151,7 +153,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (mangled_name) {
-    type_sp = m_ast.GetCachedType(mangled_name);
+    type_sp = m_swift_typesystem.GetCachedType(mangled_name);
     if (type_sp)
       return type_sp;
 
@@ -161,7 +163,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
     // Try to import the type from one of the loaded Swift modules.
     if (SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
-      compiler_type = m_ast.GetTypeFromMangledTypename(mangled_name);
+      compiler_type =
+          m_swift_typesystem.GetTypeFromMangledTypename(mangled_name);
   }
 
   if (!compiler_type && name) {
@@ -169,8 +172,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     llvm::StringRef typedef_name = GetTypedefName(die);
     if (typedef_name.startswith("$sBp")) {
       preferred_name = name;
-      compiler_type =
-          m_ast.GetTypeFromMangledTypename(ConstString(typedef_name));
+      compiler_type = m_swift_typesystem.GetTypeFromMangledTypename(
+          ConstString(typedef_name));
     }
   }
 
@@ -182,7 +185,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       // Make sure we at least have some function type. The mangling for
       // the "top_level_code" is returning the empty tuple type "()",
       // which is not a function type.
-      compiler_type = m_ast.GetVoidFunctionType();
+      compiler_type = m_swift_typesystem.GetVoidFunctionType();
     }
     break;
   default:
@@ -202,7 +205,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   // Cache this type.
   if (type_sp && mangled_name &&
       SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetStringRef()))
-    m_ast.SetCachedType(mangled_name, type_sp);
+    m_swift_typesystem.SetCachedType(mangled_name, type_sp);
   die.GetDWARF()->GetDIEToType()[die.GetDIE()] = type_sp.get();
 
   return type_sp;

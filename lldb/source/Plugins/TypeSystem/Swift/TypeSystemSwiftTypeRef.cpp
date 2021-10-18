@@ -24,6 +24,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "swift/AST/ClangModuleLoader.h"
@@ -1295,6 +1296,12 @@ CompilerType TypeSystemSwift::GetInstanceType(CompilerType compiler_type) {
   return {};
 }
 
+#ifndef NDEBUG
+TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef() {}
+#endif
+
+TypeSystemSwiftTypeRef::~TypeSystemSwiftTypeRef() {}
+
 TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
   m_module = &module;
   {
@@ -1365,16 +1372,16 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
   return {this, (opaque_compiler_type_t)mangled_typename.AsCString()};
 }
 
-lldb::TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    swift_ast_context->GetCachedType(mangled);
+TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
+  TypeSP type_sp;
+  if (m_swift_type_map.Lookup(mangled.GetCString(), type_sp))
+    return type_sp;
   return {};
 }
 
 void TypeSystemSwiftTypeRef::SetCachedType(ConstString mangled,
-                                           const lldb::TypeSP &type_sp) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    swift_ast_context->SetCachedType(mangled, type_sp);
+                                    const TypeSP &type_sp) {
+  m_swift_type_map.Insert(mangled.GetCString(), type_sp);
 }
 
 ConstString TypeSystemSwiftTypeRef::GetPluginName() {
@@ -1399,9 +1406,9 @@ void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
 }
 
 DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->GetDWARFParser();
-  return {};
+  if (!m_dwarf_ast_parser_up)
+    m_dwarf_ast_parser_up.reset(new DWARFASTParserSwift(*this));
+  return m_dwarf_ast_parser_up.get();
 }
 
 TypeSP TypeSystemSwiftTypeRef::LookupTypeInModule(
@@ -2285,6 +2292,27 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
   };
   VALIDATE_AND_RETURN(impl, GetPointerType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
+}
+
+CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType() {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer type = dem.createNode(Node::Kind::Type);
+  NodePointer fnty = dem.createNode(Node::Kind::FunctionType);
+  type->addChild(fnty, dem);
+  NodePointer args = dem.createNode(Node::Kind::ArgumentTuple);
+  fnty->addChild(args, dem);
+  NodePointer args_ty = dem.createNode(Node::Kind::Type);
+  args->addChild(args_ty, dem);
+  NodePointer args_tuple = dem.createNode(Node::Kind::Tuple);
+  args_ty->addChild(args_tuple, dem);
+  NodePointer rett = dem.createNode(Node::Kind::ReturnType);
+  fnty->addChild(rett, dem);
+  NodePointer ret_ty = dem.createNode(Node::Kind::Type);
+  rett->addChild(ret_ty, dem);
+  NodePointer ret_tuple = dem.createNode(Node::Kind::Tuple);
+  ret_ty->addChild(ret_tuple, dem);
+  return RemangleAsType(dem, type);
 }
 
 // Exploring the type

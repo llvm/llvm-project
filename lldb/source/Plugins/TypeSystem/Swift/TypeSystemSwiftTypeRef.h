@@ -15,6 +15,7 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "lldb/Core/SwiftForward.h"
+#include "lldb/Core/ThreadSafeDenseMap.h"
 
 #include "swift/AST/Type.h"
 
@@ -51,8 +52,9 @@ public:
 
 #ifndef NDEBUG
   /// Provided only for unit tests.
-  TypeSystemSwiftTypeRef() {}
+  TypeSystemSwiftTypeRef();
 #endif
+  ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   TypeSystemSwiftTypeRef(SwiftASTContextForExpressions &swift_ast_context);
   SwiftASTContext *GetSwiftASTContext() const override;
@@ -147,6 +149,9 @@ public:
   CompilerType GetPointeeType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetPointerType(lldb::opaque_compiler_type_t type) override;
 
+  /// Get a function type that returns nothing and take no parameters.
+  CompilerType GetVoidFunctionType();
+
   // Exploring the type
   llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -235,8 +240,8 @@ public:
                        CompilerType *pointee_type, bool *is_rvalue) override;
 
   // Swift-specific methods.
-  lldb::TypeSP GetCachedType(ConstString mangled) override;
-  void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
+  lldb::TypeSP GetCachedType(ConstString mangled);
+  void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
@@ -353,12 +358,16 @@ private:
   /// The sibling SwiftASTContext.
   mutable lldb::TypeSystemSP m_swift_ast_context_sp;
   mutable SwiftASTContext *m_swift_ast_context = nullptr;
+  std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_up;
 
   /// The APINotesManager responsible for each Clang module.
   llvm::DenseMap<clang::Module *,
                  std::unique_ptr<clang::api_notes::APINotesManager>>
       m_apinotes_manager;
-  };
+
+  /// All lldb::Type pointers produced by DWARFASTParser Swift go here.
+  ThreadSafeDenseMap<const char *, lldb::TypeSP> m_swift_type_map;
+};
 
 } // namespace lldb_private
 #endif
