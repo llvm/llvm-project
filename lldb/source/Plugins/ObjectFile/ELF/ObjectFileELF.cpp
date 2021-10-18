@@ -334,15 +334,6 @@ void ObjectFileELF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjectFileELF::GetPluginNameStatic() {
-  static ConstString g_name("elf");
-  return g_name;
-}
-
-const char *ObjectFileELF::GetPluginDescriptionStatic() {
-  return "ELF object file reader.";
-}
-
 ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           DataBufferSP &data_sp,
                                           lldb::offset_t data_offset,

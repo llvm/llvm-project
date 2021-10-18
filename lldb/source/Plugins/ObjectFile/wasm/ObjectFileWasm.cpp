@@ -86,11 +86,6 @@ void ObjectFileWasm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFileWasm::GetPluginNameStatic() {
-  static ConstString g_name("wasm");
-  return g_name;
-}
-
 ObjectFile *
 ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
                                offset_t data_offset, const FileSpec *file,
