@@ -103,28 +103,7 @@ class BuilderDarwin(Builder):
 
         return "ARCH_CFLAGS=\"-target {} {}\"".format(triple, version_min)
 
-    def buildDsym(self,
-                  sender=None,
-                  architecture=None,
-                  compiler=None,
-                  dictionary=None,
-                  testdir=None,
-                  testname=None):
-        """Build the binaries with dsym debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=YES",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getCCSpec(compiler),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(), "all",
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-
-        # True signifies that we can handle building dsym.
-        return True
+    def _getDebugInfoArgs(self, debug_info):
+        if debug_info == "dsym":
+            return ["MAKE_DSYM=YES"]
+        return super(BuilderDarwin, self)._getDebugInfoArgs(debug_info)
