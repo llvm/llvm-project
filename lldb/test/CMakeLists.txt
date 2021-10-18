@@ -135,9 +135,16 @@ if(TARGET clang)
             "`LLDB_INCLUDE_TESTS=OFF`.")
         endif()
       endif()
-      add_lldb_test_dependency(cxx)
     endif()
   endif()
+
+  # Add libc++ dependency for libc++-specific tests. This is an optional
+  # dependency as it's also possible to run the libc++ tests against the libc++
+  # installed on the system.
+  if (TARGET cxx)
+    add_lldb_test_dependency(cxx)
+  endif()
+
 endif()
 
 # BEGIN Swift Mods
