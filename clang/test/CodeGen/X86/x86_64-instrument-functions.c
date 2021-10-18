@@ -1,8 +1,4 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O0 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O2 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions-after-inlining -O2 -o - -emit-llvm %s | FileCheck -check-prefix=NOINLINE %s
-
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O0 -o - -emit-llvm %s | FileCheck %s
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O2 -o - -emit-llvm %s | FileCheck %s
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions-after-inlining -O2 -o - -emit-llvm %s | FileCheck -check-prefix=NOINLINE %s

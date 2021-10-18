@@ -1,10 +1,7 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fno-experimental-new-pass-manager -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fno-experimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 -fno-experimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fexperimental-new-pass-manager -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
 
 namespace {
 

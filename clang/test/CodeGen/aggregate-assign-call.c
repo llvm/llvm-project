@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
 //
 // Ensure that we place appropriate lifetime markers around indirectly returned
 // temporaries, and that the lifetime.ends appear in a timely manner.
