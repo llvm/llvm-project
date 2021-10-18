@@ -145,6 +145,10 @@ public:
 
   virtual bool IsMultiwordObject() { return false; }
 
+  bool IsUserCommand() { return m_is_user_command; }
+
+  void SetIsUserCommand(bool is_user) { m_is_user_command = is_user; }
+
   virtual CommandObjectMultiword *GetAsMultiwordCommand() { return nullptr; }
 
   virtual bool IsAlias() { return false; }
@@ -156,6 +160,10 @@ public:
 
   virtual lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
                                                 StringList *matches = nullptr) {
+    return lldb::CommandObjectSP();
+  }
+
+  virtual lldb::CommandObjectSP GetSubcommandSPExact(llvm::StringRef sub_cmd) {
     return lldb::CommandObjectSP();
   }
 
@@ -181,6 +189,13 @@ public:
   virtual bool LoadSubCommand(llvm::StringRef cmd_name,
                               const lldb::CommandObjectSP &command_obj) {
     return false;
+  }
+
+  virtual llvm::Error LoadUserSubcommand(llvm::StringRef cmd_name,
+                                         const lldb::CommandObjectSP &command_obj,
+                                         bool can_replace) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                              "can only add commands to container commands");
   }
 
   virtual bool WantsRawCommandString() = 0;
@@ -367,6 +382,7 @@ protected:
   lldb::CommandOverrideCallback m_deprecated_command_override_callback;
   lldb::CommandOverrideCallbackWithResult m_command_override_callback;
   void *m_command_override_baton;
+  bool m_is_user_command = false;
 
   // Helper function to populate IDs or ID ranges as the command argument data
   // to the specified command argument entry.

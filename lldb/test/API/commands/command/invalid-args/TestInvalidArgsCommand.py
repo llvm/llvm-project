@@ -9,10 +9,10 @@ class InvalidArgsCommandTestCase(TestBase):
     @no_debug_info_test
     def test_script_add(self):
         self.expect("command script add 1 2", error=True,
-                    substrs=["'command script add' requires one argument"])
+                    substrs=["Path component: '1' not found"])
 
         self.expect("command script add", error=True,
-                    substrs=["'command script add' requires one argument"])
+                    substrs=["'command script add' requires at least one argument"])
 
     @no_debug_info_test
     def test_script_clear(self):
