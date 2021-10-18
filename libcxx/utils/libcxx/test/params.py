@@ -123,10 +123,11 @@ DEFAULT_PARAMETERS = [
 
   Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
             help="The debugging level to enable in the test suite.",
-            actions=lambda debugLevel: [] if debugLevel == '' else [
+            actions=lambda debugLevel: [] if debugLevel == '' else filter(None, [
               AddFeature('debug_level={}'.format(debugLevel)),
-              AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel))
-            ]),
+              AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel)),
+              AddFeature('LIBCXX-DEBUG-FIXME') if debugLevel == '1' else None
+            ])),
 
   Parameter(name='use_sanitizer', choices=['', 'Address', 'Undefined', 'Memory', 'MemoryWithOrigins', 'Thread', 'DataFlow', 'Leaks'], type=str, default='',
             help="An optional sanitizer to enable when building and running the test suite.",
