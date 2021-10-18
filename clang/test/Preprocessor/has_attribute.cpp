@@ -18,16 +18,6 @@ CXX11(clang::__fallthrough__)
 // CHECK: __gsl__::suppress: 0
 CXX11(__gsl__::suppress)
 
-// We do somewhat support the __clang__ vendor namespace, but it is a
-// predefined macro and thus we encourage users to use _Clang instead.
-// Because of this, we do not support __has_cpp_attribute for that
-// vendor namespace.
-//
-// Note, we can't use CXX11 here because it will expand __clang__ to 1
-// too early.
-// CHECK: 1::fallthrough: 0
-__clang__::fallthrough: __has_cpp_attribute(__clang__::fallthrough)
-
 // CHECK: _Clang::fallthrough: 201603L
 CXX11(_Clang::fallthrough)
 
@@ -70,6 +60,50 @@ CXX11(unlikely)
 // CHECK: noreturn: 200809L
 // CHECK: unlikely: 201803L
 
+namespace PR48462 {
+// Test that macro expansion of the builtin argument works.
+#define C clang
+#define F fallthrough
+#define CF clang::fallthrough
+
+#if __has_cpp_attribute(F)
+int has_fallthrough;
+#endif
+// CHECK: int has_fallthrough;
+
+#if __has_cpp_attribute(C::F)
+int has_clang_falthrough_1;
+#endif
+// CHECK: int has_clang_falthrough_1;
+
+#if __has_cpp_attribute(clang::F)
+int has_clang_falthrough_2;
+#endif
+// CHECK: int has_clang_falthrough_2;
+
+#if __has_cpp_attribute(C::fallthrough)
+int has_clang_falthrough_3;
+#endif
+// CHECK: int has_clang_falthrough_3;
+
+#if __has_cpp_attribute(CF)
+int has_clang_falthrough_4;
+#endif
+// CHECK: int has_clang_falthrough_4;
+
+#define FUNCLIKE1(x) clang::x
+#if __has_cpp_attribute(FUNCLIKE1(fallthrough))
+int funclike_1;
+#endif
+// CHECK: int funclike_1;
+
+#define FUNCLIKE2(x) _Clang::x
+#if __has_cpp_attribute(FUNCLIKE2(fallthrough))
+int funclike_2;
+#endif
+// CHECK: int funclike_2;
+}
+
 // Test for Microsoft __declspec attributes
 
 #define DECLSPEC(x) x: __has_declspec_attribute(x)
@@ -81,3 +115,13 @@ DECLSPEC(__uuid__)
 
 // CHECK: fallthrough: 0
 DECLSPEC(fallthrough)
+
+namespace PR48462 {
+// Test that macro expansion of the builtin argument works.
+#define U uuid
+
+#if __has_declspec_attribute(U)
+int has_uuid;
+#endif
+// CHECK: int has_uuid;
+}
