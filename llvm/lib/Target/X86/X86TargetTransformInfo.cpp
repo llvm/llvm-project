@@ -5325,7 +5325,6 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {2, MVT::v16i16, 4}, // interleave 2 x 16i16 into 32i16 (and store)
       {2, MVT::v32i16, 8}, // interleave 2 x 32i16 into 64i16 (and store)
 
-      {2, MVT::v2i32, 1},   // interleave 2 x 2i32 into 4i32 (and store)
       {2, MVT::v4i32, 2},   // interleave 2 x 4i32 into 8i32 (and store)
       {2, MVT::v8i32, 4},   // interleave 2 x 8i32 into 16i32 (and store)
       {2, MVT::v16i32, 8},  // interleave 2 x 16i32 into 32i32 (and store)
@@ -5412,6 +5411,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
 
       {2, MVT::v2i16, 1},  // interleave 2 x 2i16 into 4i16 (and store)
       {2, MVT::v4i16, 1},  // interleave 2 x 4i16 into 8i16 (and store)
+
+      {2, MVT::v2i32, 1},  // interleave 2 x 2i32 into 4i32 (and store)
   };
 
   if (Opcode == Instruction::Load) {
