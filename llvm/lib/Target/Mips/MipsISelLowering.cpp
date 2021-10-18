@@ -794,9 +794,125 @@ static SDValue performCMovFPCombine(SDNode *N, SelectionDAG &DAG,
                      ValueIfFalse, FCC, ValueIfTrue, Glue);
 }
 
+static SDValue attemptAndToExt(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue FirstOperand = N->getOperand(0);
+  unsigned FirstOperandOpc = FirstOperand.getOpcode();
+  SDValue Mask = N->getOperand(1);
+  EVT ValTy = N->getValueType(0);
+  SDLoc DL(N);
+
+  uint64_t Pos = 0, SMPos, SMSize;
+  ConstantSDNode *CN;
+
+  // Op's second operand must be a shifted mask.
+  if (!(CN = dyn_cast<ConstantSDNode>(Mask)) ||
+      !isShiftedMask(CN->getZExtValue(), SMPos, SMSize))
+    return SDValue();
+
+  if (FirstOperandOpc == ISD::SRA || FirstOperandOpc == ISD::SRL) {
+    // Pattern match EXT.
+    //     and $dst, ((sra or srl) $src , pos), (2**size - 1)
+    //  => ext $dst, $src, pos, size
+    //
+    // Example:
+    //     srl $reg1, $reg0, 12
+    //     and $reg1, $reg1, 0xff
+    //  => ext $reg1, $reg0, 12, 8
+    //
+    //  This pattern is a replacement for a combination of AND and RSHIFT, which
+    //  aim to extract contiguous block of bits from the middle of the register.
+
+    // The second operand of the shift must be an immediate.
+    if (!(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))))
+      return SDValue();
+
+    Pos = CN->getZExtValue();
+
+    // Return if the shifted mask does not start at bit 0 or the sum of its size
+    // and pos exceeds the word's size.
+    if (SMPos != 0 || Pos + SMSize > ValTy.getSizeInBits())
+      return SDValue();
+
+    return DAG.getNode(MipsISD::Ext, DL, ValTy, FirstOperand.getOperand(0),
+                       DAG.getConstant(Pos, DL, MVT::i32),
+                       DAG.getConstant(SMSize, DL, MVT::i32));
+  }
+  // ANDI should be used for 12-bit masks.
+  if (CN->getZExtValue() > 0xfff && SMPos == 0)
+    // Pattern match EXT.
+    //     and $dst, $src, (2**size - 1)
+    //  => ext $dst, $src, 0, size
+    //
+    // Example:
+    //     and $reg1, $reg, 0xfffff
+    //  => ext $reg1, $reg, 0, 20
+    //
+    // This pattern is a replacement for AND which is extracting N lowest bits
+    // of the register. For the lowest 12 bits, this can be done with one
+    // instruction (ANDI). But for larger masks, it would require an additional
+    // immediate load.
+    return DAG.getNode(MipsISD::Ext, DL, ValTy, FirstOperand,
+                       DAG.getConstant(0, DL, MVT::i32),
+                       DAG.getConstant(SMSize, DL, MVT::i32));
+  return SDValue();
+}
+
+// Pattern match INS.
+//     and $dst, $src, ~((2**size - 1) << pos)
+//  => ins $dst, $zero, pos, size
+//
+// Example:
+//     and $reg, $reg, 0xffff00ff
+//  => ins $reg, $zero, 8, 8
+//
+// The pattern being matched is essentially trying to zero-out contiguous block
+// of bits. This would otherwire require an immediate load, in addition to AND.
+static SDValue attemptAndToIns(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Mask = N->getOperand(1);
+  ConstantSDNode *CN;
+  // Second operand has to be a constant mask.
+  if (!(CN = dyn_cast<ConstantSDNode>(Mask)))
+    return SDValue();
+
+  // ANDI should be used for 12-bit masks.
+  if (CN->getZExtValue() <= 0xfff)
+    return SDValue();
+
+  uint64_t SMPos, SMSize;
+  unsigned InvertedMask = ~CN->getSExtValue();
+  if (!isShiftedMask(InvertedMask, SMPos, SMSize))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue FirstOperand = N->getOperand(0);
+  EVT ValTy = N->getValueType(0);
+  return DAG.getNode(MipsISD::Ins, DL, ValTy, DAG.getConstant(0, DL, MVT::i32),
+                     DAG.getConstant(SMPos, DL, MVT::i32),
+                     DAG.getConstant(SMSize, DL, MVT::i32), FirstOperand);
+}
+
+static SDValue performANDCombineNM(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const MipsSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
+    return SDValue();
+
+  SDValue Combined;
+  if ((Combined = attemptAndToExt(N, DAG, DCI)))
+    return Combined;
+  if ((Combined = attemptAndToIns(N, DAG, DCI)))
+    return Combined;
+  return SDValue();
+}
+
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const MipsSubtarget &Subtarget) {
+  if (Subtarget.hasNanoMips())
+    return performANDCombineNM(N, DAG, DCI, Subtarget);
+
   if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
     return SDValue();
 
@@ -876,9 +992,165 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(SMSize, DL, MVT::i32));
 }
 
+static bool isShiftAnd(SDValue Node, uint64_t SMPos,
+                       uint64_t SMSize, TypeSize TSize, bool IsShiftFirst) {
+  unsigned FirstOpc = IsShiftFirst ? ISD::SHL : ISD::AND;
+  unsigned SecondOpc = IsShiftFirst ? ISD::AND : ISD::SHL;
+  if (Node.getOpcode() != FirstOpc)
+    return false;
+  if (Node.getOperand(0).getOpcode() != SecondOpc)
+    return false;
+  SDValue Shift = IsShiftFirst ? Node : Node.getOperand(0);
+  SDValue And = IsShiftFirst ? Node.getOperand(0) : Node;
+
+  ConstantSDNode *ShiftAmountN =
+      dyn_cast<ConstantSDNode>(Shift.getOperand(1));
+  ConstantSDNode *AndMaskN = dyn_cast<ConstantSDNode>(And.getOperand(1));
+  if (!ShiftAmountN || !AndMaskN)
+    return false;
+  unsigned ShiftAmount = ShiftAmountN->getZExtValue();
+  unsigned AndMask = AndMaskN->getZExtValue();
+  uint64_t SMPos1, SMSize1;
+  unsigned FinalMask = IsShiftFirst ? AndMask << ShiftAmount : AndMask;
+  if (!isShiftedMask(FinalMask, SMPos1, SMSize1))
+    return false;
+  // The shift masks must have the same position and size.
+  if (SMPos != SMPos1 || SMSize != SMSize1)
+    return false;
+  if ((ShiftAmount != SMPos) || (SMPos + SMSize > TSize))
+    return false;
+  return true;
+}
+
+static SDValue attemptOrToIns(SDValue &And, SDValue &Right, SDNode *N,
+                              SelectionDAG &DAG) {
+  uint64_t SMPos0, SMSize0, SMPos1, SMSize1;
+  ConstantSDNode *CN;
+
+  // See if Op's first operand matches (and $src1 , mask0).
+  if (And.getOpcode() != ISD::AND)
+    return SDValue();
+
+  if (!(CN = dyn_cast<ConstantSDNode>(And.getOperand(1))))
+    return SDValue();
+  unsigned Mask0 = ~CN->getZExtValue();
+  if (!isShiftedMask(Mask0, SMPos0, SMSize0))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT ValTy = N->getValueType(0);
+  TypeSize TSize = ValTy.getSizeInBits();
+
+  // Pattern match INS.
+  //     or $dst, (and $src1, mask0), (and (shl $src, pos), mask1)
+  //     where mask1 = (2**size - 1) << pos, mask0 = ~mask1
+  //  => ins $dst, $src, size, pos, $src1
+  //
+  // Example:
+  //     and $reg0, $reg0, 0xffff00ff
+  //     shl $reg1, $reg1, 8
+  //     and $reg1, $reg1, 0x0000ff00
+  //     or $reg0, $reg0, $reg1
+  //  => ins $reg0, $reg1, 8, 8
+  if (isShiftAnd(Right, SMPos0, SMSize0, TSize, false))
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, Right.getOperand(0).getOperand(0),
+                       DAG.getConstant(SMPos0, DL, MVT::i32),
+                       DAG.getConstant(SMSize0, DL, MVT::i32),
+                       And.getOperand(0));
+  // Pattern match INS.
+  //     or $dst, (and $src1, mask0), (shl (and $src, mask1), pos)
+  //     where mask1 = (2**size - 1), mask0 = ~(mask1 << pos)
+  //  => ins $dst, $src, size, pos, $src1
+  //
+  // Example:
+  //     and $reg0, $reg0, 0xffff00ff
+  //     and $reg1, $reg1, 0x000000ff
+  //     shl $reg1, $reg1, 8
+  //     or $reg0, $reg0, $reg1
+  //  => ins $reg0, $reg1, 8, 8
+  if (isShiftAnd(Right, SMPos0, SMSize0, TSize, true))
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, Right.getOperand(0).getOperand(0),
+                       DAG.getConstant(SMPos0, DL, MVT::i32),
+                       DAG.getConstant(SMSize0, DL, MVT::i32),
+                       And.getOperand(0));
+
+  // Pattern match INS.
+  //     or $dst, (and $src1, mask0), (and $src, mask1),
+  //     where mask1 = (2**size - 1) << pos, mask0 = ~mask1
+  //  => ins $dst, $src, size, pos, $src1
+  //
+  // Example:
+  //     and $reg0, $reg0, 0xfff00000
+  //     and $reg1, $reg1, 0x000fffff
+  //     or $reg0, $reg0, $reg1
+  //  => ins $reg0, $reg1, 0, 20
+  if (Right.getOpcode() == ISD::AND) {
+    if (!(CN = dyn_cast<ConstantSDNode>(Right.getOperand(1))) ||
+        !isShiftedMask(CN->getZExtValue(), SMPos1, SMSize1))
+      return SDValue();
+
+    // The masks must have the same position and size.
+    if (SMPos0 != SMPos1 || SMSize0 != SMSize1)
+      return SDValue();
+
+    // Mask has to start at bit 0, since there is no shift.
+    if ((SMPos0 != 0) || (SMPos0 + SMSize0 > TSize))
+      return SDValue();
+
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, Right.getOperand(0),
+                       DAG.getConstant(0, DL, MVT::i32),
+                       DAG.getConstant(SMSize0, DL, MVT::i32),
+                       And.getOperand(0));
+  }
+
+  // Pattern match INS.
+  //     or $dst, (and $src, mask), (shl $src1, pos)
+  //     where mask = ~((2**size - 1) << pos)
+  //  => ins $dst, $src, size, pos, $src1
+  //
+  // Example:
+  //     and $reg0, $reg0, 0x000fffff
+  //     shl $reg1, $reg1, 20
+  //     or $reg0, $reg0, $reg1
+  //  => ins $reg0, $reg1, 20, 12
+  if (Right.getOpcode() == ISD::SHL) {
+    if (!(CN = dyn_cast<ConstantSDNode>(Right.getOperand(1))))
+      return SDValue();
+    unsigned ShiftAmount = CN->getZExtValue();
+    // Second check makes sure that all upper bits are picked up.
+    if ((ShiftAmount != SMPos0) || (SMPos0 + SMSize0 != TSize))
+      return SDValue();
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, Right.getOperand(0),
+                       DAG.getConstant(SMPos0, DL, MVT::i32),
+                       DAG.getConstant(SMSize0, DL, MVT::i32),
+                       And.getOperand(0));
+  }
+  return SDValue();
+}
+
+static SDValue performORCombineNM(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const MipsSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
+    return SDValue();
+
+  // Attempt to combine 2 times, by swapping operands.
+  SDValue And0 = N->getOperand(0), And1 = N->getOperand(1);
+  SDValue Ins;
+  if ((Ins = attemptOrToIns(And0, And1, N, DAG)))
+    return Ins;
+  if ((Ins = attemptOrToIns(And1, And0, N, DAG)))
+    return Ins;
+
+  return SDValue();
+}
+
 static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const MipsSubtarget &Subtarget) {
+  if (Subtarget.hasNanoMips())
+    return performORCombineNM(N, DAG, DCI, Subtarget);
+
   // Pattern match INS.
   //  $dst = or (and $src1 , mask0), (and (shl $src, pos), mask1),
   //  where mask1 = (2**size - 1) << pos, mask0 = ~mask1

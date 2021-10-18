@@ -349,7 +349,9 @@ public:
   }
 
   /// Features related to the presence of specific instructions.
-  bool hasExtractInsert() const { return !inMips16Mode() && hasMips32r2(); }
+  bool hasExtractInsert() const {
+    return (!inMips16Mode() && hasMips32r2()) || hasNanoMips();
+  }
   bool hasMTHC1() const { return hasMips32r2(); }
 
   bool allowMixed16_32() const { return inMips16ModeDefault() |

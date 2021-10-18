@@ -97,6 +97,25 @@ class DivMod<string opstr, SDPatternOperator OpNode = null_frag> :
   bit usesCustomInserter = 1;
 }
 
+class ExtBaseNM<RegisterOperand RO = GPR32NMOpnd> :
+  InstNM<(outs RO:$rt), (ins RO:$rs, uimm5:$pos, uimm5_plus1:$size),
+         "ext\t$rt, $rs, $pos, $size",
+         [(set RO:$rt, (MipsExt RO:$rs, immZExt5:$pos, immZExt5Plus1:$size))],
+         II_EXT>, InstSize32 {
+  let isCodeGenOnly = 1;
+}
+
+class InsBaseNM<RegisterOperand RO = GPR32NMOpnd> :
+  InstNM<(outs RO:$rt),
+         (ins RO:$rs, uimm5:$pos, uimm5_inssize_plus1:$size, RO:$src),
+         "ins \t$rt, $rs, $pos, $size",
+         [(set RO:$rt,
+               (MipsIns RO:$rs, immZExt5:$pos, immZExt5Plus1:$size, RO:$src))],
+         II_INS>, InstSize32 {
+  let Constraints = "$src = $rt";
+  let isCodeGenOnly = 1;
+}
+
 class Trap<string opstr> :
   InstNM<(outs), (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, uimm5_nm:$imm),
          !strconcat(opstr, "\t$rt, $rs, $imm"), []>, InstSize32 {
@@ -275,6 +294,14 @@ def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
 def SRL_NM  : ArithLogicINM<"srl", uimm5_nm, GPR32NMOpnd, imm32ZExt5, srl>;
 def SRA_NM  : ArithLogicINM<"sra", uimm5_nm, GPR32NMOpnd, imm32ZExt5, sra>;
 def ROTR_NM : ArithLogicINM<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
+
+def EXT_NM : ExtBaseNM;
+def INS_NM : InsBaseNM;
+
+// Use $zero for 0, instead of allocating a separate register for 0 immediate.
+def : NMPat<
+ (MipsIns (i32 0), immZExt5:$pos, immZExt5Plus1:$size, GPR32NMOpnd:$src),
+ (INS_NM ZERO_NM, immZExt5:$pos, immZExt5Plus1:$size, GPR32NMOpnd:$src)>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
