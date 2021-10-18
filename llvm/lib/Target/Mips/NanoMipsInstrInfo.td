@@ -320,6 +320,7 @@ def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
+def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 
 def LEA_ADDiu_NM : EffectiveAddressNM<"addiu", GPR32NMOpnd>, InstSize32;
 
@@ -367,10 +368,10 @@ def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
 def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
 
-def : NMPat<(MipsFullAddr tglobaladdr:$in), (Li_NM tglobaladdr:$in)>;
-def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (Li_NM tglobaltlsaddr:$in)>;
-def : NMPat<(MipsFullAddr tblockaddress:$in), (Li_NM tblockaddress:$in)>;
-def : NMPat<(MipsFullAddr tjumptable:$in), (Li_NM tjumptable:$in)>;
+def : NMPat<(MipsFullAddr tglobaladdr:$in), (LA_NM tglobaladdr:$in)>;
+def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (LA_NM tglobaltlsaddr:$in)>;
+def : NMPat<(MipsFullAddr tblockaddress:$in), (LA_NM tblockaddress:$in)>;
+def : NMPat<(MipsFullAddr tjumptable:$in), (LA_NM tjumptable:$in)>;
 
 def : NMPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
             (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>;
