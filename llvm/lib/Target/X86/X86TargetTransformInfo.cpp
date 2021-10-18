@@ -5318,14 +5318,9 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
-      {2, MVT::v2i8, 1},  // interleave 2 x 2i8 into 4i8 (and store)
-      {2, MVT::v4i8, 1},  // interleave 2 x 4i8 into 8i8 (and store)
-      {2, MVT::v8i8, 1},  // interleave 2 x 8i8 into 16i8 (and store)
       {2, MVT::v16i8, 3}, // interleave 2 x 16i8 into 32i8 (and store)
       {2, MVT::v32i8, 4}, // interleave 2 x 32i8 into 64i8 (and store)
 
-      {2, MVT::v2i16, 1},  // interleave 2 x 2i16 into 4i16 (and store)
-      {2, MVT::v4i16, 1},  // interleave 2 x 4i16 into 8i16 (and store)
       {2, MVT::v8i16, 3},  // interleave 2 x 8i16 into 16i16 (and store)
       {2, MVT::v16i16, 4}, // interleave 2 x 16i16 into 32i16 (and store)
       {2, MVT::v32i16, 8}, // interleave 2 x 32i16 into 64i16 (and store)
@@ -5410,6 +5405,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {6, MVT::v8i64, 30}, // interleave 6 x 8i64 into 48i64 (and store)
   };
 
+  static const CostTblEntry SSE2InterleavedStoreTbl[] = {
+      {2, MVT::v2i8, 1},   // interleave 2 x 2i8 into 4i8 (and store)
+      {2, MVT::v4i8, 1},   // interleave 2 x 4i8 into 8i8 (and store)
+      {2, MVT::v8i8, 1},   // interleave 2 x 8i8 into 16i8 (and store)
+
+      {2, MVT::v2i16, 1},  // interleave 2 x 2i16 into 4i16 (and store)
+      {2, MVT::v4i16, 1},  // interleave 2 x 4i16 into 8i16 (and store)
+  };
+
   if (Opcode == Instruction::Load) {
     // FIXME: if we have a partially-interleaved groups, with gaps,
     //        should we discount the not-demanded indicies?
@@ -5434,6 +5438,11 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
            "Interleaved store only supports fully-interleaved groups.");
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedStoreTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2InterleavedStoreTbl, Factor,
                                               ETy.getSimpleVT()))
         return MemOpCosts + Entry->Cost;
   }
