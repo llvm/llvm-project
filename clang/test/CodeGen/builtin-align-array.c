@@ -13,7 +13,7 @@ extern int func(char *c);
 // CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[ALIGNED_INTPTR]], [[INTPTR]]
 // CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[ARRAYIDX]], i64 [[DIFF]]
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT]], i64 16) ]
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(i8* noundef [[ALIGNED_RESULT]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(i8* [[ALIGNED_RESULT]])
 // CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BUF]], i64 0, i64 22
 // CHECK-NEXT:    [[INTPTR2:%.*]] = ptrtoint i8* [[ARRAYIDX1]] to i64
 // CHECK-NEXT:    [[OVER_BOUNDARY:%.*]] = add i64 [[INTPTR2]], 31
@@ -21,7 +21,7 @@ extern int func(char *c);
 // CHECK-NEXT:    [[DIFF5:%.*]] = sub i64 [[ALIGNED_INTPTR4]], [[INTPTR2]]
 // CHECK-NEXT:    [[ALIGNED_RESULT6:%.*]] = getelementptr inbounds i8, i8* [[ARRAYIDX1]], i64 [[DIFF5]]
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT6]], i64 32) ]
-// CHECK-NEXT:    [[CALL7:%.*]] = call i32 @func(i8* noundef [[ALIGNED_RESULT6]])
+// CHECK-NEXT:    [[CALL7:%.*]] = call i32 @func(i8* [[ALIGNED_RESULT6]])
 // CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BUF]], i64 0, i64 16
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = ptrtoint i8* [[ARRAYIDX8]] to i64
 // CHECK-NEXT:    [[SET_BITS:%.*]] = and i64 [[SRC_ADDR]], 63
@@ -45,7 +45,7 @@ int test_array(void) {
 // CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[ALIGNED_INTPTR]], [[INTPTR]]
 // CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[ARRAYIDX]], i64 [[DIFF]]
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT]], i64 16) ]
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(i8* noundef [[ALIGNED_RESULT]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(i8* [[ALIGNED_RESULT]])
 // CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BUF]], i64 0, i64 32
 // CHECK-NEXT:    [[INTPTR2:%.*]] = ptrtoint i8* [[ARRAYIDX1]] to i64
 // CHECK-NEXT:    [[OVER_BOUNDARY:%.*]] = add i64 [[INTPTR2]], 31
@@ -53,7 +53,7 @@ int test_array(void) {
 // CHECK-NEXT:    [[DIFF5:%.*]] = sub i64 [[ALIGNED_INTPTR4]], [[INTPTR2]]
 // CHECK-NEXT:    [[ALIGNED_RESULT6:%.*]] = getelementptr inbounds i8, i8* [[ARRAYIDX1]], i64 [[DIFF5]]
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT6]], i64 32) ]
-// CHECK-NEXT:    [[CALL7:%.*]] = call i32 @func(i8* noundef [[ALIGNED_RESULT6]])
+// CHECK-NEXT:    [[CALL7:%.*]] = call i32 @func(i8* [[ALIGNED_RESULT6]])
 // CHECK-NEXT:    ret i32 1
 //
 int test_array_should_not_mask(void) {

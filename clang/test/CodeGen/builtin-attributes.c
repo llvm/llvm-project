@@ -1,7 +1,7 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple arm-unknown-linux-gnueabi -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: declare i32 @printf(i8* noundef, ...)
+// CHECK: declare i32 @printf(i8*, ...)
 void f0() {
   printf("a\n");
 }
@@ -21,27 +21,27 @@ char* f2(char* a, char* b) {
 // <rdar://problem/10070234>
 //
 // CHECK: f3
-// CHECK: call double @frexp(double noundef %
+// CHECK: call double @frexp(double %
 // CHECK-NOT: readnone
-// CHECK: call float @frexpf(float noundef %
+// CHECK: call float @frexpf(float %
 // CHECK-NOT: readnone
-// CHECK: call double @frexpl(double noundef %
+// CHECK: call double @frexpl(double %
 // CHECK-NOT: readnone
 //
 // Same thing for modf and friends.
 //
-// CHECK: call double @modf(double noundef %
+// CHECK: call double @modf(double %
 // CHECK-NOT: readnone
-// CHECK: call float @modff(float noundef %
+// CHECK: call float @modff(float %
 // CHECK-NOT: readnone
-// CHECK: call double @modfl(double noundef %
+// CHECK: call double @modfl(double %
 // CHECK-NOT: readnone
 //
-// CHECK: call double @remquo(double noundef %
+// CHECK: call double @remquo(double %
 // CHECK-NOT: readnone
-// CHECK: call float @remquof(float noundef %
+// CHECK: call float @remquof(float %
 // CHECK-NOT: readnone
-// CHECK: call double @remquol(double noundef %
+// CHECK: call double @remquol(double %
 // CHECK-NOT: readnone
 // CHECK: ret
 int f3(double x) {

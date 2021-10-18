@@ -11,7 +11,7 @@ struct S1 {
 };
 
 void __attribute__((regparm(3))) foo2(S1 a, int b);
-// CHECK: declare void @_Z4foo22S1i(%struct.S1* inreg noundef, i32 inreg noundef)
+// CHECK: declare void @_Z4foo22S1i(%struct.S1* inreg, i32 inreg)
 void bar2(S1 a, int b) {
   foo2(a, b);
 }
@@ -21,7 +21,7 @@ struct S2 {
 };
 
 void __attribute__((regparm(3))) foo3(struct S2 a, int b);
-// CHECK: declare void @_Z4foo32S2i(i32 inreg, i32 inreg noundef)
+// CHECK: declare void @_Z4foo32S2i(i32 inreg, i32 inreg)
 void bar3(struct S2 a, int b) {
   foo3(a, b);
 }
@@ -32,7 +32,7 @@ struct S3 {
   } a;
 };
 __attribute((regparm(2))) void foo4(S3 a, int b);
-// CHECK: declare void @_Z4foo42S3i(%struct.S3* noundef byval(%struct.S3) align 4, i32 inreg noundef)
+// CHECK: declare void @_Z4foo42S3i(%struct.S3* byval(%struct.S3) align 4, i32 inreg)
 void bar3(S3 a, int b) {
   foo4(a, b);
 }

@@ -35,7 +35,7 @@ public:
 void test2(id x) {
   extern void test2_helper(id (^)(void));
   test2_helper(^{ return x; });
-// TSAN: define linkonce_odr hidden void @__destroy_helper_block_8_32o(i8* noundef %0) unnamed_addr [[ATTR:#[0-9]+]]
+// TSAN: define linkonce_odr hidden void @__destroy_helper_block_8_32o(i8* %0) unnamed_addr [[ATTR:#[0-9]+]]
 }
 
 // TSAN: attributes [[ATTR]] = { noinline nounwind {{.*}} "sanitize_thread_no_checking_at_run_time" {{.*}} }

@@ -68,7 +68,7 @@ void implicit_maps_template_type_capture (int a){
   // CK18: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
   i = foo(i);
 }
-// CK18: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK18: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
 // CK18: [[ADDR:%.+]] = alloca i[[sz]],
 // CK18: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK18-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to i32*

@@ -60,7 +60,7 @@ __device__ void func1() {
   callee(&a); // implicit cast from parameters
 }
 // CHECK: define{{.*}} void @_Z5func1v()
-// CHECK: call void @_Z6calleePf(float* noundef addrspacecast (float addrspace(3)* @_ZZ5func1vE1a to float*))
+// CHECK: call void @_Z6calleePf(float* addrspacecast (float addrspace(3)* @_ZZ5func1vE1a to float*))
 
 __device__ void func2() {
   __shared__ float a[256];

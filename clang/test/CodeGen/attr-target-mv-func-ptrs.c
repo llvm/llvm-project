@@ -33,12 +33,12 @@ int bar() {
 // WINDOWS: ret i32 2
 
 // LINUX: define{{.*}} i32 @bar()
-// LINUX: call void @func(i32 (i32)* noundef @foo.ifunc)
+// LINUX: call void @func(i32 (i32)* @foo.ifunc)
 // LINUX: store i32 (i32)* @foo.ifunc
 // LINUX: store i32 (i32)* @foo.ifunc
 
 // WINDOWS: define dso_local i32 @bar()
-// WINDOWS: call void @func(i32 (i32)* noundef @foo.resolver)
+// WINDOWS: call void @func(i32 (i32)* @foo.resolver)
 // WINDOWS: store i32 (i32)* @foo.resolver
 // WINDOWS: store i32 (i32)* @foo.resolver
 

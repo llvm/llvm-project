@@ -9,7 +9,7 @@ int function() {
 }
 
 // CHECK-C: define dso_local i32 @function() {{.*}} {
-// CHECK-CXX: define dso_local noundef i32 @_Z8functionv() {{.*}} {
+// CHECK-CXX: define dso_local i32 @_Z8functionv() {{.*}} {
 // CHECK:   ret i32 32
 // CHECK: }
 

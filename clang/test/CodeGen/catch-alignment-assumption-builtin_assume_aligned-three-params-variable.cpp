@@ -7,7 +7,7 @@
 // CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_ALIGNMENT_ASSUMPTION:.*]] = {{.*}}, i32 100, i32 35 }, {{.*}}* @[[CHAR]] }
 
 void *caller(char **x, unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @{{.*}}(i8** noundef %[[X:.*]], i64 noundef %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @{{.*}}(i8** %[[X:.*]], i64 %[[OFFSET:.*]])
   // CHECK-NEXT:                      entry:
   // CHECK-NEXT:                        %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8

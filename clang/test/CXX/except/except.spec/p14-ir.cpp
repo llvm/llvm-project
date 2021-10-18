@@ -26,12 +26,12 @@ struct X4 {
 struct X5 : X0, X4 { };
 
 void test(X2 x2, X3 x3, X5 x5) {
-  // CHECK: define linkonce_odr void @_ZN2X2C1ERKS_(%struct.X2* {{[^,]*}} %this, %struct.X2* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+  // CHECK: define linkonce_odr void @_ZN2X2C1ERKS_(%struct.X2* {{[^,]*}} %this, %struct.X2* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
   // CHECK:      call void @_ZN2X2C2ERKS_({{.*}}) [[NUW:#[0-9]+]]
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   X2 x2a(x2);
-  // CHECK: define linkonce_odr void @_ZN2X3C1ERKS_(%struct.X3* {{[^,]*}} %this, %struct.X3* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+  // CHECK: define linkonce_odr void @_ZN2X3C1ERKS_(%struct.X3* {{[^,]*}} %this, %struct.X3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
   // CHECK:      call void @_ZN2X3C2ERKS_({{.*}}) [[NUW]]
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }

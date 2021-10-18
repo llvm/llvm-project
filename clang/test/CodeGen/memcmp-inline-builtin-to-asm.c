@@ -28,7 +28,7 @@ int memcmp(const void *p, const void *q, unsigned long size) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[P_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[Q_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[SIZE_ADDR_I]], align 8
-// CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @memcmp(i8* noundef [[TMP1]], i8* noundef [[TMP2]], i64 noundef [[TMP3]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @memcmp(i8* [[TMP1]], i8* [[TMP2]], i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret i32 [[CALL_I]]
 //
 int con_unify_unimap_q1(void) {

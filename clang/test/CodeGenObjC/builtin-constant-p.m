@@ -8,7 +8,7 @@
 
 extern void callee(void);
 
-// CHECK-LABEL: define{{.*}} void @test(%0* noundef %foo, %1* noundef %bar)
+// CHECK-LABEL: define{{.*}} void @test(%0* %foo, %1* %bar)
 void test(Foo *foo, Bar *bar) {
   // CHECK: [[ADDR_FOO:%.*]] = bitcast %0* %{{.*}} to i8*
   // CHECK-NEXT: call i1 @llvm.is.constant.p0i8(i8* [[ADDR_FOO]])
@@ -19,7 +19,7 @@ void test(Foo *foo, Bar *bar) {
 }
 
 // Test other Objective-C types.
-// CHECK-LABEL: define{{.*}} void @test_more(i8* noundef %object, i8* noundef %klass)
+// CHECK-LABEL: define{{.*}} void @test_more(i8* %object, i8* %klass)
 void test_more(id object, Class klass) {
   // CHECK: call i1 @llvm.is.constant.p0i8(i8* %{{.*}})
   // CHECK: call i1 @llvm.is.constant.p0i8(i8* %{{.*}})

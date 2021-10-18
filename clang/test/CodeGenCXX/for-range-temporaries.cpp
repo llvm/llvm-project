@@ -115,7 +115,7 @@ template void for_temps<D>();
 
 // CHECK: [[COND]]:
 // CHECK: call void @_ZN1EneERKS_(
-// CHECK: %[[CMP:.*]] = call noundef zeroext i1 @_ZN1HcvbEv(
+// CHECK: %[[CMP:.*]] = call zeroext i1 @_ZN1HcvbEv(
 // CHECK: call void @_ZN1HD1Ev(
 // CHECK: br i1 %[[CMP]], label %[[BODY:.*]], label %[[CLEANUP:.*]]
 

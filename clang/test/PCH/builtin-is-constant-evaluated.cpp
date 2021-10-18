@@ -38,9 +38,9 @@ void g(...);
 // CHECK:       store float 0.000000e+00, float* %[[D:.*]],
 // CHECK:       store float 0.000000e+00, float* %[[E:.*]],
 // CHECK:       load i8, i8* %[[A]],
-// CHECK:       call {{.*}} @_Z1gz(i32 noundef %{{[^,]+}}, i32 noundef 1
-// CXX11-SAME:  , i32 noundef 1
-// CHECK-SAME:  , double noundef %{{[^,]+}}, double noundef 0.000000e+00)
+// CHECK:       call {{.*}} @_Z1gz(i32 %{{[^,]+}}, i32 1
+// CXX11-SAME:  , i32 1
+// CHECK-SAME:  , double %{{[^,]+}}, double 0.000000e+00)
 void f() {
   bool a = __builtin_is_constant_evaluated();
   const bool b = __builtin_is_constant_evaluated();

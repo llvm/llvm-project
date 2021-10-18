@@ -23,7 +23,7 @@ int main() {
   }
 }
 
-// CHECK: define internal noundef i32 @{{.+}}(
+// CHECK: define internal i32 @{{.+}}(
 // Check that occupanices var is firstprivatized.
 // CHECK-DAG: atomicrmw add i32* [[FP_OCCUP:%.+]], i32 1 monotonic, align 4
 // CHECK-DAG: [[FP_OCCUP]] = load i32*, i32** [[FP_OCCUP_ADDR:%[^,]+]],

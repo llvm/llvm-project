@@ -5392,9 +5392,9 @@ def disable_free : Flag<["-"], "disable-free">,
 def clear_ast_before_backend : Flag<["-"], "clear-ast-before-backend">,
   HelpText<"Clear the Clang AST before running backend code generation">,
   MarshallingInfoFlag<CodeGenOpts<"ClearASTBeforeBackend">>;
-def disable_noundef_analysis : Flag<["-"], "disable-noundef-analysis">, Group<f_Group>,
-  HelpText<"Disable analyzing function argument and return types for mandatory definedness">,
-  MarshallingInfoFlag<CodeGenOpts<"DisableNoundefAttrs">>;
+def enable_noundef_analysis : Flag<["-"], "enable-noundef-analysis">, Group<f_Group>,
+  HelpText<"Enable analyzing function argument and return types for mandatory definedness">,
+  MarshallingInfoFlag<CodeGenOpts<"EnableNoundefAttrs">>;
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;
