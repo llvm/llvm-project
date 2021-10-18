@@ -12011,10 +12011,10 @@ bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
 
 /// A helper function for determining the number of interleaved accesses we
 /// will generate when lowering accesses of the given type.
-unsigned
-AArch64TargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
-                                                 const DataLayout &DL) const {
-  return (DL.getTypeSizeInBits(VecTy) + 127) / 128;
+unsigned AArch64TargetLowering::getNumInterleavedAccesses(
+    VectorType *VecTy, const DataLayout &DL, bool UseScalable) const {
+  unsigned VecSize = UseScalable ? Subtarget->getMinSVEVectorSizeInBits() : 128;
+  return std::max(1UL, (DL.getTypeSizeInBits(VecTy) + 127) / VecSize);
 }
 
 MachineMemOperand::Flags
@@ -12026,22 +12026,49 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
 }
 
 bool AArch64TargetLowering::isLegalInterleavedAccessType(
-    VectorType *VecTy, const DataLayout &DL) const {
+    VectorType *VecTy, const DataLayout &DL, bool &UseScalable) const {
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
+  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
+
+  UseScalable = false;
 
   // Ensure the number of vector elements is greater than 1.
-  if (cast<FixedVectorType>(VecTy)->getNumElements() < 2)
+  if (NumElements < 2)
     return false;
 
   // Ensure the element type is legal.
   if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
     return false;
 
+  if (Subtarget->useSVEForFixedLengthVectors() &&
+      (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
+       (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
+        isPowerOf2_32(NumElements) && VecSize > 128))) {
+    UseScalable = true;
+    return true;
+  }
+
   // Ensure the total vector size is 64 or a multiple of 128. Types larger than
   // 128 will be split into multiple interleaved accesses.
   return VecSize == 64 || VecSize % 128 == 0;
+}
+
+static ScalableVectorType *getSVEContainerIRType(FixedVectorType *VTy) {
+  if (VTy->getElementType() == Type::getInt64Ty(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 2);
+
+  if (VTy->getElementType() == Type::getInt32Ty(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 4);
+
+  if (VTy->getElementType() == Type::getInt16Ty(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 8);
+
+  if (VTy->getElementType() == Type::getInt8Ty(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 16);
+
+  llvm_unreachable("Cannot handle input vector type");
 }
 
 /// Lower an interleaved load into a ldN intrinsic.
@@ -12071,10 +12098,12 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(VTy, DL))
+  bool UseScalable;
+  if (!Subtarget->hasNEON() ||
+      !isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
 
-  unsigned NumLoads = getNumInterleavedAccesses(VTy, DL);
+  unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
 
   auto *FVTy = cast<FixedVectorType>(VTy);
 
@@ -12085,48 +12114,84 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
     FVTy =
         FixedVectorType::get(DL.getIntPtrType(EltTy), FVTy->getNumElements());
 
+  // If we're going to generate more than one load, reset the sub-vector type
+  // to something legal.
+  FVTy = FixedVectorType::get(FVTy->getElementType(),
+                              FVTy->getNumElements() / NumLoads);
+
+  auto *LDVTy =
+      UseScalable ? cast<VectorType>(getSVEContainerIRType(FVTy)) : FVTy;
+
   IRBuilder<> Builder(LI);
 
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
 
   if (NumLoads > 1) {
-    // If we're going to generate more than one load, reset the sub-vector type
-    // to something legal.
-    FVTy = FixedVectorType::get(FVTy->getElementType(),
-                                FVTy->getNumElements() / NumLoads);
-
     // We will compute the pointer operand of each load from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
     // element type.
     BaseAddr = Builder.CreateBitCast(
         BaseAddr,
-        FVTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
+        LDVTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
   }
 
-  Type *PtrTy = FVTy->getPointerTo(LI->getPointerAddressSpace());
-  Type *Tys[2] = {FVTy, PtrTy};
-  static const Intrinsic::ID LoadInts[3] = {Intrinsic::aarch64_neon_ld2,
-                                            Intrinsic::aarch64_neon_ld3,
-                                            Intrinsic::aarch64_neon_ld4};
-  Function *LdNFunc =
-      Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
+  Type *PtrTy =
+      UseScalable
+          ? LDVTy->getElementType()->getPointerTo(LI->getPointerAddressSpace())
+          : LDVTy->getPointerTo(LI->getPointerAddressSpace());
+  Type *PredTy = VectorType::get(Type::getInt1Ty(LDVTy->getContext()),
+                                 LDVTy->getElementCount());
+
+  static const Intrinsic::ID SVELoadIntrs[3] = {
+      Intrinsic::aarch64_sve_ld2_sret, Intrinsic::aarch64_sve_ld3_sret,
+      Intrinsic::aarch64_sve_ld4_sret};
+  static const Intrinsic::ID NEONLoadIntrs[3] = {Intrinsic::aarch64_neon_ld2,
+                                                 Intrinsic::aarch64_neon_ld3,
+                                                 Intrinsic::aarch64_neon_ld4};
+  Function *LdNFunc;
+  if (UseScalable)
+    LdNFunc = Intrinsic::getDeclaration(LI->getModule(),
+                                        SVELoadIntrs[Factor - 2], {LDVTy});
+  else
+    LdNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), NEONLoadIntrs[Factor - 2], {LDVTy, PtrTy});
 
   // Holds sub-vectors extracted from the load intrinsic return values. The
   // sub-vectors are associated with the shufflevector instructions they will
   // replace.
   DenseMap<ShuffleVectorInst *, SmallVector<Value *, 4>> SubVecs;
 
+  Value *PTrue = nullptr;
+  if (UseScalable) {
+    unsigned PgPattern =
+        getSVEPredPatternFromNumElements(FVTy->getNumElements());
+    if (Subtarget->getMinSVEVectorSizeInBits() ==
+            Subtarget->getMaxSVEVectorSizeInBits() &&
+        Subtarget->getMinSVEVectorSizeInBits() == DL.getTypeSizeInBits(FVTy))
+      PgPattern = AArch64SVEPredPattern::all;
+
+    auto *PTruePat =
+        ConstantInt::get(Type::getInt32Ty(LDVTy->getContext()), PgPattern);
+    PTrue = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue, {PredTy},
+                                    {PTruePat});
+  }
+
   for (unsigned LoadCount = 0; LoadCount < NumLoads; ++LoadCount) {
 
     // If we're generating more than one load, compute the base address of
     // subsequent loads as an offset from the previous.
     if (LoadCount > 0)
-      BaseAddr = Builder.CreateConstGEP1_32(FVTy->getElementType(), BaseAddr,
+      BaseAddr = Builder.CreateConstGEP1_32(LDVTy->getElementType(), BaseAddr,
                                             FVTy->getNumElements() * Factor);
 
-    CallInst *LdN = Builder.CreateCall(
-        LdNFunc, Builder.CreateBitCast(BaseAddr, PtrTy), "ldN");
+    CallInst *LdN;
+    if (UseScalable)
+      LdN = Builder.CreateCall(
+          LdNFunc, {PTrue, Builder.CreateBitCast(BaseAddr, PtrTy)}, "ldN");
+    else
+      LdN = Builder.CreateCall(LdNFunc, Builder.CreateBitCast(BaseAddr, PtrTy),
+                               "ldN");
 
     // Extract and store the sub-vectors returned by the load intrinsic.
     for (unsigned i = 0; i < Shuffles.size(); i++) {
@@ -12135,11 +12200,17 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
 
       Value *SubVec = Builder.CreateExtractValue(LdN, Index);
 
+      if (UseScalable)
+        SubVec = Builder.CreateExtractVector(
+            FVTy, SubVec,
+            ConstantInt::get(Type::getInt64Ty(VTy->getContext()), 0));
+
       // Convert the integer vector to pointer vector if the element is pointer.
       if (EltTy->isPointerTy())
         SubVec = Builder.CreateIntToPtr(
             SubVec, FixedVectorType::get(SVI->getType()->getElementType(),
                                          FVTy->getNumElements()));
+
       SubVecs[SVI].push_back(SubVec);
     }
   }
@@ -12198,14 +12269,16 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
+  bool UseScalable;
 
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(SubVecTy, DL))
+  if (!Subtarget->hasNEON() ||
+      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
     return false;
 
-  unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL);
+  unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
 
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
@@ -12226,15 +12299,18 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
     SubVecTy = FixedVectorType::get(IntTy, LaneLen);
   }
 
+  // If we're going to generate more than one store, reset the lane length
+  // and sub-vector type to something legal.
+  LaneLen /= NumStores;
+  SubVecTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
+
+  auto *STVTy = UseScalable ? cast<VectorType>(getSVEContainerIRType(SubVecTy))
+                            : SubVecTy;
+
   // The base address of the store.
   Value *BaseAddr = SI->getPointerOperand();
 
   if (NumStores > 1) {
-    // If we're going to generate more than one store, reset the lane length
-    // and sub-vector type to something legal.
-    LaneLen /= NumStores;
-    SubVecTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
-
     // We will compute the pointer operand of each store from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
     // element type.
@@ -12245,13 +12321,42 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto Mask = SVI->getShuffleMask();
 
-  Type *PtrTy = SubVecTy->getPointerTo(SI->getPointerAddressSpace());
-  Type *Tys[2] = {SubVecTy, PtrTy};
-  static const Intrinsic::ID StoreInts[3] = {Intrinsic::aarch64_neon_st2,
-                                             Intrinsic::aarch64_neon_st3,
-                                             Intrinsic::aarch64_neon_st4};
-  Function *StNFunc =
-      Intrinsic::getDeclaration(SI->getModule(), StoreInts[Factor - 2], Tys);
+  Type *PtrTy =
+      UseScalable
+          ? STVTy->getElementType()->getPointerTo(SI->getPointerAddressSpace())
+          : STVTy->getPointerTo(SI->getPointerAddressSpace());
+  Type *PredTy = VectorType::get(Type::getInt1Ty(STVTy->getContext()),
+                                 STVTy->getElementCount());
+
+  static const Intrinsic::ID SVEStoreIntrs[3] = {Intrinsic::aarch64_sve_st2,
+                                                 Intrinsic::aarch64_sve_st3,
+                                                 Intrinsic::aarch64_sve_st4};
+  static const Intrinsic::ID NEONStoreIntrs[3] = {Intrinsic::aarch64_neon_st2,
+                                                  Intrinsic::aarch64_neon_st3,
+                                                  Intrinsic::aarch64_neon_st4};
+  Function *StNFunc;
+  if (UseScalable)
+    StNFunc = Intrinsic::getDeclaration(SI->getModule(),
+                                        SVEStoreIntrs[Factor - 2], {STVTy});
+  else
+    StNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), NEONStoreIntrs[Factor - 2], {STVTy, PtrTy});
+
+  Value *PTrue = nullptr;
+  if (UseScalable) {
+    unsigned PgPattern =
+        getSVEPredPatternFromNumElements(SubVecTy->getNumElements());
+    if (Subtarget->getMinSVEVectorSizeInBits() ==
+            Subtarget->getMaxSVEVectorSizeInBits() &&
+        Subtarget->getMinSVEVectorSizeInBits() ==
+            DL.getTypeSizeInBits(SubVecTy))
+      PgPattern = AArch64SVEPredPattern::all;
+
+    auto *PTruePat =
+        ConstantInt::get(Type::getInt32Ty(STVTy->getContext()), PgPattern);
+    PTrue = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue, {PredTy},
+                                    {PTruePat});
+  }
 
   for (unsigned StoreCount = 0; StoreCount < NumStores; ++StoreCount) {
 
@@ -12259,10 +12364,11 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
     // Split the shufflevector operands into sub vectors for the new stN call.
     for (unsigned i = 0; i < Factor; i++) {
+      Value *Shuffle;
       unsigned IdxI = StoreCount * LaneLen * Factor + i;
       if (Mask[IdxI] >= 0) {
-        Ops.push_back(Builder.CreateShuffleVector(
-            Op0, Op1, createSequentialMask(Mask[IdxI], LaneLen, 0)));
+        Shuffle = Builder.CreateShuffleVector(
+            Op0, Op1, createSequentialMask(Mask[IdxI], LaneLen, 0));
       } else {
         unsigned StartMask = 0;
         for (unsigned j = 1; j < LaneLen; j++) {
@@ -12277,10 +12383,20 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
         // In the case of all undefs we're defaulting to using elems from 0
         // Note: StartMask cannot be negative, it's checked in
         // isReInterleaveMask
-        Ops.push_back(Builder.CreateShuffleVector(
-            Op0, Op1, createSequentialMask(StartMask, LaneLen, 0)));
+        Shuffle = Builder.CreateShuffleVector(
+            Op0, Op1, createSequentialMask(StartMask, LaneLen, 0));
       }
+
+      if (UseScalable)
+        Shuffle = Builder.CreateInsertVector(
+            STVTy, UndefValue::get(STVTy), Shuffle,
+            ConstantInt::get(Type::getInt64Ty(STVTy->getContext()), 0));
+
+      Ops.push_back(Shuffle);
     }
+
+    if (UseScalable)
+      Ops.push_back(PTrue);
 
     // If we generating more than one store, we compute the base address of
     // subsequent stores as an offset from the previous.
