@@ -468,6 +468,8 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
+  InitializeFirstCodeAddress();
+
   if (!GetGlobalPluginProperties().IgnoreFileIndexes()) {
     StreamString module_desc;
     GetObjectFile()->GetModule()->GetDescription(module_desc.AsRawOstream(),
@@ -510,6 +512,25 @@ void SymbolFileDWARF::InitializeObject() {
 
   m_index =
       std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(), *this);
+}
+
+void SymbolFileDWARF::InitializeFirstCodeAddress() {
+  InitializeFirstCodeAddressRecursive(
+      *m_objfile_sp->GetModule()->GetSectionList());
+  if (m_first_code_address == LLDB_INVALID_ADDRESS)
+    m_first_code_address = 0;
+}
+
+void SymbolFileDWARF::InitializeFirstCodeAddressRecursive(
+    const lldb_private::SectionList &section_list) {
+  for (SectionSP section_sp : section_list) {
+    if (section_sp->GetChildren().GetSize() > 0) {
+      InitializeFirstCodeAddressRecursive(section_sp->GetChildren());
+    } else if (section_sp->GetType() == eSectionTypeCode) {
+      m_first_code_address =
+          std::min(m_first_code_address, section_sp->GetFileAddress());
+    }
+  }
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
@@ -1111,6 +1132,12 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // The Sequences view contains only valid line sequences. Don't iterate over
   // the Rows directly.
   for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
+    // Ignore line sequences that do not start after the first code address.
+    // All addresses generated in a sequence are incremental so we only need
+    // to check the first one of the sequence. Check the comment at the
+    // m_first_code_address declaration for more details on this.
+    if (seq.LowPC < m_first_code_address)
+      continue;
     std::unique_ptr<LineSequence> sequence =
         LineTable::CreateLineSequenceContainer();
     for (unsigned idx = seq.FirstRowIndex; idx < seq.LastRowIndex; ++idx) {
@@ -2236,12 +2263,9 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
       addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
-
-    if (auto section_sp = addr.GetSection()) {
-      if (section_sp->GetPermissions() & ePermissionsExecutable) {
-        sc_list.Append(sc);
-        return true;
-      }
+    if (addr.IsValid() && addr.GetFileAddress() >= m_first_code_address) {
+      sc_list.Append(sc);
+      return true;
     }
   }
 
