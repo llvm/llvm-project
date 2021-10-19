@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // This test checks that we retain extern template instantiation declarations
 // for members of <locale> even when the debug mode is enabled, which is
 // necessary for correctness. See https://llvm.org/D94718 for details.

@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // Aligned allocation was not provided before macosx10.14 and as a result we
 // get availability errors when the deployment target is older than macosx10.14.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
