@@ -228,6 +228,19 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.free
+
+
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
