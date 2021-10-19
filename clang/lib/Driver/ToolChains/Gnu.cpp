@@ -477,11 +477,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
 
   if (IsStatic) {
-    if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
-        Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb)
-      CmdArgs.push_back("-Bstatic");
-    else
-      CmdArgs.push_back("-static");
+    CmdArgs.push_back("-static");
   } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");

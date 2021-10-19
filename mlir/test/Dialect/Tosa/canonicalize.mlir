@@ -174,6 +174,39 @@ func @reshape_canonicalize_double(%arg0: tensor<?x10xf32>) -> tensor<?x5xf32> {
 
 // -----
 
+// CHECK-LABEL: @reshape_canonicalize_const
+func @reshape_canonicalize_const() -> tensor<1x10xi32> {
+  // CHECK: %[[VAR0:.+]] = "tosa.const"() {value = dense<0> : tensor<1x10xi32>}
+  // CHECK: return %[[VAR0]]
+  %0 = "tosa.const"() {value = dense<0> : tensor<10xi32>} : () -> tensor<10xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = [1, 10]} : (tensor<10xi32>) -> tensor<1x10xi32>
+  return %1 : tensor<1x10xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @reshape_canonicalize_const_spat
+func @reshape_canonicalize_const_spat() -> (tensor<10xi32>, tensor<1x10xi32>) {
+  // CHECK-DAG: %[[VAR0:.+]] = "tosa.const"() {value = dense<0> : tensor<10xi32>}
+  // CHECK-DAG: %[[VAR1:.+]] = "tosa.const"() {value = dense<0> : tensor<1x10xi32>}
+  // CHECK: return %[[VAR0]], %[[VAR1]]
+  %0 = "tosa.const"() {value = dense<0> : tensor<10xi32>} : () -> tensor<10xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = [1, 10]} : (tensor<10xi32>) -> tensor<1x10xi32>
+  return %0 , %1 : tensor<10xi32>, tensor<1x10xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @reshape_canonicalize_const_sparse
+func @reshape_canonicalize_const_sparse() -> (tensor<3xi32>, tensor<1x3xi32>) {
+  //CHECK: "tosa.reshape"
+  %0 = "tosa.const"() {value = dense<[1, 2, 3]> : tensor<3xi32>} : ()-> tensor<3xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = [1, 3]} : (tensor<3xi32>) -> tensor<1x3xi32>
+  return %0 , %1 : tensor<3xi32>, tensor<1x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @slice_fold
 func @slice_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
   // CHECK: return %arg0
