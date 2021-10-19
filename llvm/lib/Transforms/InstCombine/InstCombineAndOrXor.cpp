@@ -2012,6 +2012,13 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     if (match(Op0, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
+
+    // (A & ~B) & ~C -> A & ~(B | C)
+    // (~B & A) & ~C -> A & ~(B | C)
+    if (match(Op0, m_OneUse(m_c_And(m_Value(A), m_Not(m_Value(B))))) &&
+        match(Op1, m_Not(m_Value(C))))
+      return BinaryOperator::CreateAnd(
+          A, Builder.CreateNot(Builder.CreateOr(B, C)));
   }
 
   {
