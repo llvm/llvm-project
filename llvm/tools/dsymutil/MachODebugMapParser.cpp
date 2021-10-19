@@ -215,7 +215,7 @@ struct DarwinStabName {
   const char *Name;
 };
 
-static const struct DarwinStabName DarwinStabNames[] = {
+const struct DarwinStabName DarwinStabNames[] = {
     {MachO::N_GSYM, "N_GSYM"},    {MachO::N_FNAME, "N_FNAME"},
     {MachO::N_FUN, "N_FUN"},      {MachO::N_STSYM, "N_STSYM"},
     {MachO::N_LCSYM, "N_LCSYM"},  {MachO::N_BNSYM, "N_BNSYM"},

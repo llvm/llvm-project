@@ -77,7 +77,7 @@ const char *const *LIPO_nullptr = nullptr;
 #include "LipoOpts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info LipoInfoTable[] = {
+const opt::OptTable::Info LipoInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {LIPO_##PREFIX, NAME,      HELPTEXT,                                         \

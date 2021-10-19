@@ -64,7 +64,7 @@ enum ID {
 #include "Opts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info InfoTable[] = {
+const opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -530,7 +530,7 @@ struct DarwinStabName {
   uint8_t NType;
   const char *Name;
 };
-static const struct DarwinStabName DarwinStabNames[] = {
+const struct DarwinStabName DarwinStabNames[] = {
     {MachO::N_GSYM, "GSYM"},
     {MachO::N_FNAME, "FNAME"},
     {MachO::N_FUN, "FUN"},
