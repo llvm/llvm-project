@@ -39,7 +39,7 @@ enum ObjcopyID {
 #include "ObjcopyOpts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info ObjcopyInfoTable[] = {
+const opt::OptTable::Info ObjcopyInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {OBJCOPY_##PREFIX,                                                           \
@@ -79,7 +79,7 @@ enum InstallNameToolID {
 #include "InstallNameToolOpts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info InstallNameToolInfoTable[] = {
+const opt::OptTable::Info InstallNameToolInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {INSTALL_NAME_TOOL_##PREFIX,                                                 \
@@ -116,7 +116,7 @@ enum BitcodeStripID {
 #include "BitcodeStripOpts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info BitcodeStripInfoTable[] = {
+const opt::OptTable::Info BitcodeStripInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {BITCODE_STRIP_##PREFIX,                                                     \
@@ -153,7 +153,7 @@ enum StripID {
 #include "StripOpts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info StripInfoTable[] = {
+const opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {STRIP_##PREFIX, NAME,       HELPTEXT,                                       \

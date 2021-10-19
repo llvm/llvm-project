@@ -209,7 +209,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::read((uint32_t *)&IterCnt, __ATOMIC_SEQ_CST);
+    Bound = atomic::load((uint32_t *)&IterCnt, __ATOMIC_SEQ_CST);
     if (TeamId < Bound + num_of_records)
       break;
   }

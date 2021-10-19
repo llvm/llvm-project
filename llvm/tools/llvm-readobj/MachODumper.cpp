@@ -74,7 +74,7 @@ std::unique_ptr<ObjDumper> createMachODumper(const object::MachOObjectFile &Obj,
 
 } // namespace llvm
 
-static const EnumEntry<uint32_t> MachOMagics[] = {
+const EnumEntry<uint32_t> MachOMagics[] = {
   { "Magic",      MachO::MH_MAGIC    },
   { "Cigam",      MachO::MH_CIGAM    },
   { "Magic64",    MachO::MH_MAGIC_64 },
@@ -83,7 +83,7 @@ static const EnumEntry<uint32_t> MachOMagics[] = {
   { "FatCigam",   MachO::FAT_CIGAM   },
 };
 
-static const EnumEntry<uint32_t> MachOHeaderFileTypes[] = {
+const EnumEntry<uint32_t> MachOHeaderFileTypes[] = {
   { "Relocatable",          MachO::MH_OBJECT      },
   { "Executable",           MachO::MH_EXECUTE     },
   { "FixedVMLibrary",       MachO::MH_FVMLIB      },
@@ -97,7 +97,7 @@ static const EnumEntry<uint32_t> MachOHeaderFileTypes[] = {
   { "KextBundle",           MachO::MH_KEXT_BUNDLE },
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuTypes[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuTypes[] = {
   { "Any"       , static_cast<uint32_t>(MachO::CPU_TYPE_ANY) },
   { "X86"       , MachO::CPU_TYPE_X86       },
   { "X86-64"    , MachO::CPU_TYPE_X86_64    },
@@ -109,7 +109,7 @@ static const EnumEntry<uint32_t> MachOHeaderCpuTypes[] = {
   { "PowerPC64" , MachO::CPU_TYPE_POWERPC64 },
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX86[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX86[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_I386_ALL),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_386),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_486),
@@ -132,13 +132,13 @@ static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX86[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_XEON_MP),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX64[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX64[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_ALL),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_ARCH1),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_H),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_ALL),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V4T),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6),
@@ -153,17 +153,17 @@ static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7EM),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_ALL),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_V8),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesSPARC[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesSPARC[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_SPARC_ALL),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesPPC[] = {
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesPPC[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_ALL),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_601),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_602),
@@ -179,7 +179,7 @@ static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesPPC[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_970),
 };
 
-static const EnumEntry<uint32_t> MachOHeaderFlags[] = {
+const EnumEntry<uint32_t> MachOHeaderFlags[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, MH_NOUNDEFS),
   LLVM_READOBJ_ENUM_ENT(MachO, MH_INCRLINK),
   LLVM_READOBJ_ENUM_ENT(MachO, MH_DYLDLINK),
@@ -208,7 +208,7 @@ static const EnumEntry<uint32_t> MachOHeaderFlags[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, MH_APP_EXTENSION_SAFE),
 };
 
-static const EnumEntry<unsigned> MachOSectionTypes[] = {
+const EnumEntry<unsigned> MachOSectionTypes[] = {
   { "Regular"                        , MachO::S_REGULAR },
   { "ZeroFill"                       , MachO::S_ZEROFILL },
   { "CStringLiterals"                , MachO::S_CSTRING_LITERALS },
@@ -233,7 +233,7 @@ static const EnumEntry<unsigned> MachOSectionTypes[] = {
   { "ThreadLocalInitFunctionPointers", MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS }
 };
 
-static const EnumEntry<unsigned> MachOSectionAttributes[] = {
+const EnumEntry<unsigned> MachOSectionAttributes[] = {
   { "LocReloc"         , 1 <<  0 /*S_ATTR_LOC_RELOC          */ },
   { "ExtReloc"         , 1 <<  1 /*S_ATTR_EXT_RELOC          */ },
   { "SomeInstructions" , 1 <<  2 /*S_ATTR_SOME_INSTRUCTIONS  */ },
@@ -246,7 +246,7 @@ static const EnumEntry<unsigned> MachOSectionAttributes[] = {
   { "PureInstructions" , 1 << 23 /*S_ATTR_PURE_INSTRUCTIONS  */ },
 };
 
-static const EnumEntry<unsigned> MachOSymbolRefTypes[] = {
+const EnumEntry<unsigned> MachOSymbolRefTypes[] = {
   { "UndefinedNonLazy",                     0 },
   { "ReferenceFlagUndefinedLazy",           1 },
   { "ReferenceFlagDefined",                 2 },
@@ -255,7 +255,7 @@ static const EnumEntry<unsigned> MachOSymbolRefTypes[] = {
   { "ReferenceFlagPrivateUndefinedLazy",    5 }
 };
 
-static const EnumEntry<unsigned> MachOSymbolFlags[] = {
+const EnumEntry<unsigned> MachOSymbolFlags[] = {
   { "ThumbDef",               0x8 },
   { "ReferencedDynamically", 0x10 },
   { "NoDeadStrip",           0x20 },
@@ -266,7 +266,7 @@ static const EnumEntry<unsigned> MachOSymbolFlags[] = {
   { "ColdFunc",             0x400 },
 };
 
-static const EnumEntry<unsigned> MachOSymbolTypes[] = {
+const EnumEntry<unsigned> MachOSymbolTypes[] = {
   { "Undef",           0x0 },
   { "Abs",             0x2 },
   { "Indirect",        0xA },
