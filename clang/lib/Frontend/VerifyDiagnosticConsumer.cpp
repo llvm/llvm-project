@@ -99,9 +99,7 @@ public:
     return true;
   }
 
-  bool match(StringRef S) override {
-    return S.find(Text) != StringRef::npos;
-  }
+  bool match(StringRef S) override { return S.contains(Text); }
 };
 
 /// RegexDirective - Directive with regular-expression matching.

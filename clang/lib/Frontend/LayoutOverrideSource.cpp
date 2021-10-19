@@ -43,7 +43,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
     StringRef LineStr(Line);
 
     // Determine whether the following line will start a
-    if (LineStr.find("*** Dumping AST Record Layout") != StringRef::npos)  {
+    if (LineStr.contains("*** Dumping AST Record Layout")) {
       // Flush the last type/layout, if there is one.
       if (!CurrentType.empty())
         Layouts[CurrentType] = CurrentLayout;
