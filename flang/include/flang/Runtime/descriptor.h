@@ -304,7 +304,10 @@ public:
 
   bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};
-    for (int j{0}; j < leadingDimensions && j < raw_.rank; ++j) {
+    if (leadingDimensions > raw_.rank) {
+      leadingDimensions = raw_.rank;
+    }
+    for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
       if (bytes != dim.ByteStride()) {
         return false;
