@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 
 namespace fir {
+class ExtendedValue;
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -54,6 +55,9 @@ public:
 
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
+
+  /// Get character length type
+  mlir::Type getCharacterLengthType() { return getIndexType(); }
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
@@ -266,9 +270,14 @@ private:
 
 namespace fir::factory {
 
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // String literal helper helpers
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
+/// Create a !fir.char<1> string literal global and returns a
+/// fir::CharBoxValue with its address and length.
+fir::ExtendedValue createStringLiteral(fir::FirOpBuilder &, mlir::Location,
+                                       llvm::StringRef string);
 
 /// Unique a compiler generated identifier. A short prefix should be provided
 /// to hint at the origin of the identifier.
@@ -277,6 +286,9 @@ std::string uniqueCGIdent(llvm::StringRef prefix, llvm::StringRef name);
 //===----------------------------------------------------------------------===//
 // Location helpers
 //===----------------------------------------------------------------------===//
+
+/// Generate a string literal containing the file name and return its address
+mlir::Value locationToFilename(fir::FirOpBuilder &, mlir::Location);
 
 /// Generate a constant of the given type with the location line number
 mlir::Value locationToLineNo(fir::FirOpBuilder &, mlir::Location, mlir::Type);

@@ -1311,6 +1311,10 @@ static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
 // GlobalLenOp
 //===----------------------------------------------------------------------===//
 
+mlir::Type fir::GlobalOp::resultType() {
+  return wrapAllocaResultType(getType());
+}
+
 static mlir::ParseResult parseGlobalLenOp(mlir::OpAsmParser &parser,
                                           mlir::OperationState &result) {
   llvm::StringRef fieldName;
