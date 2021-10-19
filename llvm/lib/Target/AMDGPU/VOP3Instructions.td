@@ -275,20 +275,25 @@ defm V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMD
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = isGFX7Plus in {
-
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP>>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
+} // End SubtargetPredicate = isGFX7Plus
 
 let isCommutable = 1 in {
 let SchedRW = [WriteIntMul, WriteSALU] in {
+let SubtargetPredicate = isGFX7GFX8GFX9GFX10 in {
 defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
 defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
+}
+let SubtargetPredicate = isGFX11Only, Constraints = "@earlyclobber $vdst" in {
+defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32_gfx11", VOP3b_I64_I1_I32_I32_I64>;
+defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32_gfx11", VOP3b_I64_I1_I32_I32_I64>;
+} // End SubtargetPredicate = isGFX11Only, Constraints = "@earlyclobber $vdst"
 } // End SchedRW = [WriteIntMul, WriteSALU]
 } // End isCommutable = 1
 
-} // End SubtargetPredicate = isGFX7Plus
 
 let FPDPRounding = 1 in {
   let Predicates = [Has16BitInsts, isGFX8Only] in {
@@ -772,8 +777,8 @@ defm V_DOT2_F16_F16        : VOP3_Realtriple_gfx11<0x266>;
 defm V_DOT2_BF16_BF16      : VOP3_Realtriple_gfx11<0x267>;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
-defm V_MAD_U64_U32         : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32", "v_mad_u64_u32">;
-defm V_MAD_I64_I32         : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32", "v_mad_i64_i32">;
+defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
+defm V_MAD_I64_I32_gfx11   : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32_gfx11", "v_mad_i64_i32">;
 // V_ADD_CO_U32, V_SUB_CO_U32, V_SUBREV_CO_U32 in VOP2Instructions.td
 defm V_ADD_NC_U16          : VOP3Only_Realtriple_with_name_gfx11<0x303, "V_ADD_U16", "v_add_nc_u16">;
 defm V_SUB_NC_U16          : VOP3Only_Realtriple_with_name_gfx11<0x304, "V_SUB_U16", "v_sub_nc_u16">;
