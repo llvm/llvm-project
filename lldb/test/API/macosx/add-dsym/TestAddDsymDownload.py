@@ -54,7 +54,7 @@ class AddDsymDownload(TestBase):
             os.path.basename(self.exe))
         self.dsym_for_uuid = self.getBuildArtifact("dsym-for-uuid.sh")
 
-        self.buildDefault(dictionary={'MAKE_DSYM': 'YES'})
+        self.build(debug_info="dsym")
         self.assertTrue(os.path.exists(self.exe))
         self.assertTrue(os.path.exists(self.dsym))
 

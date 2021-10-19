@@ -48,7 +48,8 @@
 # CHECK-NEXT:          ">",
 # CHECK-NEXT:          ":",
 # CHECK-NEXT:          "\"",
-# CHECK-NEXT:          "/"
+# CHECK-NEXT:          "/",
+# CHECK-NEXT:          "*"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "declarationProvider": true,

@@ -131,9 +131,9 @@ void Mangled::SetValue(ConstString name) {
 static char *GetMSVCDemangledStr(const char *M) {
   char *demangled_cstr = llvm::microsoftDemangle(
       M, nullptr, nullptr, nullptr, nullptr,
-      llvm::MSDemangleFlags(llvm::MSDF_NoAccessSpecifier |
-                            llvm::MSDF_NoCallingConvention |
-                            llvm::MSDF_NoMemberType));
+      llvm::MSDemangleFlags(
+          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
+          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
 
   if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
     if (demangled_cstr && demangled_cstr[0])

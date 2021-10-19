@@ -51,11 +51,11 @@ TEST_F(TerminalTest, PipeIsNotATerminal) {
 TEST_F(TerminalTest, SetEcho) {
   struct termios terminfo;
 
-  ASSERT_EQ(m_term.SetEcho(true), true);
+  ASSERT_THAT_ERROR(m_term.SetEcho(true), llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
   EXPECT_NE(terminfo.c_lflag & ECHO, 0U);
 
-  ASSERT_EQ(m_term.SetEcho(false), true);
+  ASSERT_THAT_ERROR(m_term.SetEcho(false), llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
   EXPECT_EQ(terminfo.c_lflag & ECHO, 0U);
 }
@@ -63,11 +63,11 @@ TEST_F(TerminalTest, SetEcho) {
 TEST_F(TerminalTest, SetCanonical) {
   struct termios terminfo;
 
-  ASSERT_EQ(m_term.SetCanonical(true), true);
+  ASSERT_THAT_ERROR(m_term.SetCanonical(true), llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
   EXPECT_NE(terminfo.c_lflag & ICANON, 0U);
 
-  ASSERT_EQ(m_term.SetCanonical(false), true);
+  ASSERT_THAT_ERROR(m_term.SetCanonical(false), llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
   EXPECT_EQ(terminfo.c_lflag & ICANON, 0U);
 }

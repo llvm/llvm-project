@@ -4349,8 +4349,9 @@ public:
     const int read_fd = m_read_file.GetDescriptor();
     Terminal terminal(read_fd);
     TerminalState terminal_state(terminal, false);
-    terminal.SetCanonical(false);
-    terminal.SetEcho(false);
+    // FIXME: error handling?
+    llvm::consumeError(terminal.SetCanonical(false));
+    llvm::consumeError(terminal.SetEcho(false));
 // FD_ZERO, FD_SET are not supported on windows
 #ifndef _WIN32
     const int pipe_read_fd = m_pipe.GetReadFileDescriptor();

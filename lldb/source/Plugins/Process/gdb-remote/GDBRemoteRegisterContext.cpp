@@ -87,34 +87,10 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
     if (m_reg_valid[reg] == false)
       return false;
-    if (reg_info->value_regs &&
-        reg_info->value_regs[0] != LLDB_INVALID_REGNUM &&
-        reg_info->value_regs[1] != LLDB_INVALID_REGNUM) {
-      std::vector<char> combined_data;
-      uint32_t offset = 0;
-      for (int i = 0; reg_info->value_regs[i] != LLDB_INVALID_REGNUM; i++) {
-        const RegisterInfo *parent_reg = GetRegisterInfo(
-            eRegisterKindLLDB, reg_info->value_regs[i]);
-        if (!parent_reg)
-          return false;
-        combined_data.resize(offset + parent_reg->byte_size);
-        if (m_reg_data.CopyData(parent_reg->byte_offset, parent_reg->byte_size,
-                                combined_data.data() + offset) !=
-            parent_reg->byte_size)
-          return false;
-        offset += parent_reg->byte_size;
-      }
-
-      Status error;
-      return value.SetFromMemoryData(
-                 reg_info, combined_data.data(), combined_data.size(),
-                 m_reg_data.GetByteOrder(), error) == combined_data.size();
-    } else {
-      const bool partial_data_ok = false;
-      Status error(value.SetValueFromData(
-          reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
-      return error.Success();
-    }
+    const bool partial_data_ok = false;
+    Status error(value.SetValueFromData(
+        reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
+    return error.Success();
   }
   return false;
 }
@@ -296,38 +272,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
 bool GDBRemoteRegisterContext::WriteRegister(const RegisterInfo *reg_info,
                                              const RegisterValue &value) {
   DataExtractor data;
-  if (value.GetData(data)) {
-    if (reg_info->value_regs &&
-        reg_info->value_regs[0] != LLDB_INVALID_REGNUM &&
-        reg_info->value_regs[1] != LLDB_INVALID_REGNUM) {
-      uint32_t combined_size = 0;
-      for (int i = 0; reg_info->value_regs[i] != LLDB_INVALID_REGNUM; i++) {
-        const RegisterInfo *parent_reg = GetRegisterInfo(
-            eRegisterKindLLDB, reg_info->value_regs[i]);
-        if (!parent_reg)
-          return false;
-        combined_size += parent_reg->byte_size;
-      }
-
-      if (data.GetByteSize() < combined_size)
-        return false;
-
-      uint32_t offset = 0;
-      for (int i = 0; reg_info->value_regs[i] != LLDB_INVALID_REGNUM; i++) {
-        const RegisterInfo *parent_reg = GetRegisterInfo(
-            eRegisterKindLLDB, reg_info->value_regs[i]);
-        assert(parent_reg);
-
-        DataExtractor parent_data{data, offset, parent_reg->byte_size};
-        if (!WriteRegisterBytes(parent_reg, parent_data, 0))
-          return false;
-        offset += parent_reg->byte_size;
-      }
-      assert(offset == combined_size);
-      return true;
-    } else
-      return WriteRegisterBytes(reg_info, data, 0);
-  }
+  if (value.GetData(data))
+    return WriteRegisterBytes(reg_info, data, 0);
   return false;
 }
 
