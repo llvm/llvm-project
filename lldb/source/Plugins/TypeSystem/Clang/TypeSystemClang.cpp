@@ -8358,9 +8358,8 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(Stream &s) {
-  Decl *tu = Decl::castFromDeclContext(GetTranslationUnitDecl());
-  tu->dump(s.AsRawOstream());
+void TypeSystemClang::Dump(llvm::raw_ostream &output) {
+  GetTranslationUnitDecl()->dump(output);
 }
 
 void TypeSystemClang::DumpFromSymbolFile(Stream &s,
@@ -9744,6 +9743,41 @@ ScratchTypeSystemClang::GetForTarget(Target &target,
     return &scratch_ast;
   // Search the sub-ASTs.
   return &scratch_ast.GetIsolatedAST(*ast_kind);
+}
+
+/// Returns a human-readable name that uniquely identifiers the sub-AST kind.
+static llvm::StringRef
+GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
+  switch (kind) {
+  case ScratchTypeSystemClang::IsolatedASTKind::CppModules:
+    return "C++ modules";
+  }
+  llvm_unreachable("Unimplemented IsolatedASTKind?");
+}
+
+void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
+  // First dump the main scratch AST.
+  output << "State of scratch Clang type system:\n";
+  TypeSystemClang::Dump(output);
+
+  // Now sort the isolated sub-ASTs.
+  typedef std::pair<IsolatedASTKey, TypeSystem *> KeyAndTS;
+  std::vector<KeyAndTS> sorted_typesystems;
+  for (const auto &a : m_isolated_asts)
+    sorted_typesystems.emplace_back(a.first, a.second.get());
+  llvm::stable_sort(sorted_typesystems,
+                    [](const KeyAndTS &lhs, const KeyAndTS &rhs) {
+                      return lhs.first < rhs.first;
+                    });
+
+  // Dump each sub-AST too.
+  for (const auto &a : sorted_typesystems) {
+    IsolatedASTKind kind =
+        static_cast<ScratchTypeSystemClang::IsolatedASTKind>(a.first);
+    output << "State of scratch Clang type subsystem "
+           << GetNameForIsolatedASTKind(kind) << ":\n";
+    a.second->Dump(output);
+  }
 }
 
 UserExpression *ScratchTypeSystemClang::GetUserExpression(

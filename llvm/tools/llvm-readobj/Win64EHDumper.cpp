@@ -16,13 +16,13 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
-static const EnumEntry<unsigned> UnwindFlags[] = {
+const EnumEntry<unsigned> UnwindFlags[] = {
   { "ExceptionHandler", UNW_ExceptionHandler },
   { "TerminateHandler", UNW_TerminateHandler },
   { "ChainInfo"       , UNW_ChainInfo        }
 };
 
-static const EnumEntry<unsigned> UnwindOpInfo[] = {
+const EnumEntry<unsigned> UnwindOpInfo[] = {
   { "RAX",  0 },
   { "RCX",  1 },
   { "RDX",  2 },

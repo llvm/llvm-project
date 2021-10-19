@@ -159,9 +159,8 @@ private:
   Value createWorkgroupBuffer() {
     int workgroupMemoryAddressSpace =
         gpu::GPUDialect::getWorkgroupAddressSpace();
-    auto bufferType =
-        MemRefType::get({kSubgroupSize}, valueType, ArrayRef<AffineMap>{},
-                        workgroupMemoryAddressSpace);
+    auto bufferType = MemRefType::get({kSubgroupSize}, valueType, AffineMap{},
+                                      workgroupMemoryAddressSpace);
     return funcOp.addWorkgroupAttribution(bufferType);
   }
 

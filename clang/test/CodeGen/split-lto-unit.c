@@ -7,7 +7,6 @@
 // SPLIT: !{i32 1, !"EnableSplitLTOUnit", i32 1}
 //
 // ; Check that regular LTO has EnableSplitLTOUnit = 1
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc < %s | llvm-dis -o - | FileCheck %s --implicit-check-not="EnableSplitLTOUnit" --check-prefix=SPLIT
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc < %s | llvm-dis -o - | FileCheck %s --implicit-check-not="EnableSplitLTOUnit" --check-prefix=SPLIT
+// RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc < %s | llvm-dis -o - | FileCheck %s --implicit-check-not="EnableSplitLTOUnit" --check-prefix=SPLIT
 
 int main() {}

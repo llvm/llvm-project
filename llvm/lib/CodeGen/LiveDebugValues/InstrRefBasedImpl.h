@@ -574,7 +574,7 @@ public:
   /// much later stage, in the TransferTracker class.
   MapVector<DebugVariable, DbgValue> Vars;
   DenseMap<DebugVariable, const DILocation *> Scopes;
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
 
 public:
   VLocTracker() {}
@@ -856,19 +856,16 @@ private:
   /// Attempt to eliminate un-necessary PHIs on entry to a block. Examines the
   /// live-in values coming from predecessors live-outs, and replaces any PHIs
   /// already present in this blocks live-ins with a live-through value if the
-  /// PHI isn't needed. Live out and live in variable values are stored in
-  /// \p VLOCOutLocs and \p VLOCInLocs. The live-ins for \p MBB are computed and
-  /// stored into \p VLOCInLocs.
-  /// \p InLocsT Output argument, where calculated live-in values are also
-  ///          stored.
+  /// PHI isn't needed. Live out variable values are stored in
+  /// \p VLOCOutLocs. The live-ins for \p MBB are stored in \p LiveIns, which
+  /// is also an output argument.
   /// \returns true if any live-ins change value, either from value propagation
   ///          or PHI elimination.
   bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-                LiveIdxT &VLOCInLocs,
                 const SmallSet<DebugVariable, 4> &AllVars,
                 SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-                DenseMap<DebugVariable, DbgValue> &InLocsT);
+                DenseMap<DebugVariable, DbgValue> &LiveIns);
 
   /// For the given block and live-outs feeding into it, try to find a
   /// machine location where all the variable values join together.

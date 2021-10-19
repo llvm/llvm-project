@@ -179,13 +179,12 @@ public:
   }
 
   bool vlocJoin(MachineBasicBlock &MBB, InstrRefBasedLDV::LiveIdxT &VLOCOutLocs,
-                InstrRefBasedLDV::LiveIdxT &VLOCInLocs,
                 const SmallSet<DebugVariable, 4> &AllVars,
                 SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DenseMap<DebugVariable, DbgValue> &InLocsT) {
-    return LDV->vlocJoin(MBB, VLOCOutLocs, VLOCInLocs, AllVars,
-                         InScopeBlocks, BlocksToExplore, InLocsT);
+    return LDV->vlocJoin(MBB, VLOCOutLocs, AllVars, InScopeBlocks,
+                         BlocksToExplore, InLocsT);
   }
 
   void buildVLocValueMap(const DILocation *DILoc,
@@ -1267,8 +1266,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 3.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If the incoming values are swapped between blocks, we should not
   // successfully join. The CFG merge would select the right values, but in
@@ -1316,8 +1316,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   VLiveOuts[2].find(Var)->second.ID = RspPHIInBlk2;
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If that value isn't available from that block, don't join.
   OutLocs[2][0] = LiveInRsp;
@@ -1392,8 +1393,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // And that, if the desired values aren't available, we don't merge.
   OutLocs[1][0] = LiveInRsp;
@@ -1415,8 +1417,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RaxPHIInBlk1);
+  }
 
   // Merging should not be permitted if there's a usable PHI on the backedge,
   // but it's in the wrong place. (Overwrite $rax).
@@ -1500,8 +1503,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Check too that permuting the live-out locations prevents merging
   OutLocs[0][0] = LiveInRax;
@@ -1526,8 +1530,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Likewise: the other backedge being a VPHI from block 1 should be accepted.
   OutLocs[2][0] = RspPHIInBlk1;
@@ -1535,8 +1540,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   VLiveOuts[2].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Here's where it becomes tricky: we should not merge if there are two
   // _distinct_ backedge PHIs. We can't have a PHI that happens in both rsp
@@ -1568,8 +1574,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   OutLocs[2][2] = RbxPHIInBlk1;
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RbxPHIInBlk1);
+  }
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
@@ -1624,41 +1631,39 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
 
   // vlocJoin is here to propagate incoming values, and eliminate PHIs. Start
   // off by propagating a value into the merging block, number 3.
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  bool Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                         AllBlocks, AllBlocks, JoinedLocs);
+  bool Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result); // Output locs should have changed.
-  auto It = VLiveIns[3].find(Var);
+  auto It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
+  // JoinedLocs.clear(); <--- leave commented out for next test,
 
   // And if we did it a second time, leaving the live-ins as it was, then
   // we should report no change.
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // If the live-in variable values are different, but there's no PHI placed
   // in this block, then just pick a location. It should be the first (in RPO)
   // predecessor to avoid being a backedge.
   VLiveOuts[2].clear();
   VLiveOuts[2].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   // RPO is blocks 0 2 1 3, so LiveInRax is picked as the first predecessor
   // of this join.
   EXPECT_EQ(It->second.ID, LiveInRax);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // No tests for whether vlocJoin will pass-through a variable with differing
   // expressions / properties. Those can only come about due to assignments; and
@@ -1668,18 +1673,17 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
 
   // Try placing a PHI. With differing input values (LiveInRsp, LiveInRax),
   // this PHI should not be eliminated.
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   // Expect no change.
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   // This should not have been assigned a fixed value.
   EXPECT_EQ(It->second.ID, ValueIDNum::EmptyValue);
   EXPECT_EQ(It->second.BlockNo, 3);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // Try a simple PHI elimination. Put a PHI in block 3, but LiveInRsp on both
   // incoming edges. Re-load in and out-locs with unrelated values; they're
@@ -1688,15 +1692,14 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // If the "current" live-in is a VPHI, but not a VPHI generated in the current
   // block, then it's the remains of an earlier value propagation. We should
@@ -1706,15 +1709,14 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRax); // from block 2
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // The above test, but test that we will install one value-propagated VPHI
   // over another.
@@ -1722,31 +1724,30 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(0, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 0);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // We shouldn't eliminate PHIs when properties disagree.
   DbgValueProperties PropsWithIndirect(EmptyExpr, true);
   VLiveOuts[1].clear();
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[2].insert(
+      {Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 3);
   JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // Even if properties disagree, we should still value-propagate if there's no
   // PHI to be eliminated. The disagreeing values should work themselves out,
@@ -1754,12 +1755,13 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1].clear();
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[2].insert(
+      {Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
+  JoinedLocs.insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
   // Also check properties come from block 2, the first RPO predecessor to block
@@ -1776,16 +1778,10 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[2].clear();
   VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB3, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 3);
-  EXPECT_EQ(It->second.Properties, EmptyProps);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinLoops) {
@@ -1810,16 +1806,12 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts, VLiveIns;
+  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts;
   VLiveOuts.resize(3);
-  VLiveIns.resize(3);
-  InstrRefBasedLDV::LiveIdxT VLiveOutIdx, VLiveInIdx;
+  InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
   VLiveOutIdx[MBB2] = &VLiveOuts[2];
-  VLiveInIdx[MBB0] = &VLiveIns[0];
-  VLiveInIdx[MBB1] = &VLiveIns[1];
-  VLiveInIdx[MBB2] = &VLiveIns[2];
 
   SmallPtrSet<const MachineBasicBlock *, 8> AllBlocks;
   AllBlocks.insert(MBB0);
@@ -1843,43 +1835,40 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   // the first RPO predecessor.
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
+  bool Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  auto It = VLiveIns[1].find(Var);
+  auto It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // If there is a VPHI: don't elimiante it if there are disagreeing values.
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // If we feed this VPHI back into itself though, we can eliminate it.
   VLiveOuts[0].clear();
   VLiveOuts[1].clear();
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // Don't eliminate backedge VPHIs if the predecessors have different
   // properties.
@@ -1887,28 +1876,26 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   DbgValueProperties PropsWithExpr(NewExpr, false);
   VLiveOuts[1].clear();
   VLiveOuts[1].insert({Var, DbgValue(1, PropsWithExpr, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // Backedges with VPHIs, but from the wrong block, shouldn't be eliminated.
   VLiveOuts[1].clear();
   VLiveOuts[1].insert({Var, DbgValue(0, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
@@ -1940,20 +1927,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts, VLiveIns;
+  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts;
   VLiveOuts.resize(5);
-  VLiveIns.resize(5);
-  InstrRefBasedLDV::LiveIdxT VLiveOutIdx, VLiveInIdx;
+  InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
   VLiveOutIdx[MBB2] = &VLiveOuts[2];
   VLiveOutIdx[MBB3] = &VLiveOuts[3];
   VLiveOutIdx[MBB4] = &VLiveOuts[4];
-  VLiveInIdx[MBB0] = &VLiveIns[0];
-  VLiveInIdx[MBB1] = &VLiveIns[1];
-  VLiveInIdx[MBB2] = &VLiveIns[2];
-  VLiveInIdx[MBB3] = &VLiveIns[3];
-  VLiveInIdx[MBB4] = &VLiveIns[4];
 
   SmallPtrSet<const MachineBasicBlock *, 8> AllBlocks;
   AllBlocks.insert(MBB0);
@@ -1976,15 +1957,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
   VLiveOuts[2].insert({Var, DbgValue(LiveInRbx, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  bool Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  auto It = VLiveIns[1].find(Var);
+  auto It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // Common VPHIs on backedges should merge.
   VLiveOuts[0].clear();
@@ -1993,15 +1973,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   VLiveOuts[2].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_TRUE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::Def);
   EXPECT_EQ(It->second.ID, LiveInRsp);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // They shouldn't merge if one of their properties is different.
   DbgValueProperties PropsWithIndirect(EmptyExpr, true);
@@ -2011,15 +1990,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   VLiveOuts[2].insert({Var, DbgValue(1, PropsWithIndirect, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 
   // VPHIs from different blocks should not merge.
   VLiveOuts[0].clear();
@@ -2028,15 +2006,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   VLiveOuts[2].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLocs.insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  Result =
+      vlocJoin(*MBB1, VLiveOutIdx, AllVars, AllBlocks, AllBlocks, JoinedLocs);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
+  It = JoinedLocs.find(Var);
   EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
   EXPECT_EQ(It->second.BlockNo, 1);
   JoinedLocs.clear();
-  VLiveIns[1].clear();
 }
 
 // Above are tests for picking VPHI locations, and eliminating VPHIs. No

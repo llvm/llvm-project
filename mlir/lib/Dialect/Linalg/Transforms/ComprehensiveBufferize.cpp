@@ -1219,27 +1219,24 @@ getEquivalentEnclosingFuncBBArg(Value v,
 /// with the same shape as `shapedType` and specified `layout` and
 /// `addressSpace`.
 static MemRefType getContiguousMemRefType(ShapedType shapedType,
-                                          ArrayRef<AffineMap> layout = {},
-                                          unsigned addressSpace = 0) {
-  if (RankedTensorType tensorType = shapedType.dyn_cast<RankedTensorType>())
-    return MemRefType::get(tensorType.getShape(), tensorType.getElementType(),
-                           layout, addressSpace);
-  MemRefType memrefType = shapedType.cast<MemRefType>();
-  return MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
-                         layout, addressSpace);
+                                          MemRefLayoutAttrInterface layout = {},
+                                          Attribute memorySpace = {}) {
+  return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
+                         layout, memorySpace);
 }
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and
 /// `addressSpace` or an UnrankedMemRefType otherwise.
-static Type getContiguousOrUnrankedMemRefType(Type type,
-                                              ArrayRef<AffineMap> layout = {},
-                                              unsigned addressSpace = 0) {
+static Type
+getContiguousOrUnrankedMemRefType(Type type,
+                                  MemRefLayoutAttrInterface layout = {},
+                                  Attribute memorySpace = {}) {
   if (type.isa<RankedTensorType, MemRefType>())
     return getContiguousMemRefType(type.cast<ShapedType>(), layout,
-                                   addressSpace);
-  assert(layout.empty() && "expected empty layout with UnrankedMemRefType");
-  return UnrankedMemRefType::get(getElementTypeOrSelf(type), addressSpace);
+                                   memorySpace);
+  assert(!layout && "expected empty layout with UnrankedMemRefType");
+  return UnrankedMemRefType::get(getElementTypeOrSelf(type), memorySpace);
 }
 
 /// Return a MemRefType to which the `tensorType` can be bufferized in a
@@ -1644,16 +1641,16 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
   auto rankedMemRefType = sourceType.dyn_cast<MemRefType>();
   auto unrankedMemRefType = sourceType.dyn_cast<UnrankedMemRefType>();
   assert(rankedMemRefType || unrankedMemRefType);
-  unsigned memorySpace = rankedMemRefType
-                             ? rankedMemRefType.getMemorySpaceAsInt()
-                             : unrankedMemRefType.getMemorySpaceAsInt();
+  Attribute memorySpace = rankedMemRefType
+                              ? rankedMemRefType.getMemorySpace()
+                              : unrankedMemRefType.getMemorySpace();
   TensorType tensorType = castOp.getResult().getType().cast<TensorType>();
-  ArrayRef<AffineMap> affineMaps =
+  MemRefLayoutAttrInterface layout =
       rankedMemRefType && tensorType.isa<RankedTensorType>()
-          ? rankedMemRefType.getAffineMaps()
-          : ArrayRef<AffineMap>{};
+          ? rankedMemRefType.getLayout()
+          : MemRefLayoutAttrInterface();
   Type memRefType = getContiguousOrUnrankedMemRefType(
-      castOp.getResult().getType(), affineMaps, memorySpace);
+      castOp.getResult().getType(), layout, memorySpace);
   Value res =
       b.create<memref::CastOp>(castOp.getLoc(), memRefType, resultBuffer);
   aliasInfo.insertNewBufferEquivalence(res, castOp.getResult());
