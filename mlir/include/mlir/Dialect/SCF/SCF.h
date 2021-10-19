@@ -50,6 +50,11 @@ ForOp getForInductionVarOwner(Value val);
 /// value is not an induction variable, then return nullptr.
 ParallelOp getParallelForInductionVarOwner(Value val);
 
+/// Return true if ops a and b (or their ancestors) are in mutually exclusive
+/// regions/blocks of an IfOp.
+// TODO: Consider moving this functionality to RegionBranchOpInterface.
+bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
+
 /// An owning vector of values, handy to return from functions.
 using ValueVector = std::vector<Value>;
 using LoopVector = std::vector<scf::ForOp>;
