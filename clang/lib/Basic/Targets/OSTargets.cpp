@@ -203,6 +203,7 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   }
 
   Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
+  Builder.defineMacro("__STDC_NO_THREADS__");
 
   // Starting with VS 2022 17.1, MSVC predefines the below macro to inform
   // users of the execution character set defined at compile time.
