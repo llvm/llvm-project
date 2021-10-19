@@ -765,7 +765,7 @@ The compiler would synthesize:
        printf("%d\n", _block->foo.value());
     }
     
-    void __block_literal_10(struct __block_literal_10 *dst, struct __block_literal_10 *src) {
+    void __block_copy_10(struct __block_literal_10 *dst, struct __block_literal_10 *src) {
          FOO_ctor(&dst->foo, &src->foo);
     }
     
