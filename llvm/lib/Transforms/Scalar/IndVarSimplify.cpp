@@ -1420,43 +1420,45 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   // rely on them which results in SCEV caching sub-optimal answers.  The
   // concern about caching sub-optimal results is why we only query SCEVs of
   // the loop invariant RHS here.
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  bool Changed = false;
+  for (auto *ExitingBB : ExitingBlocks) {
+    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+    assert(BI->isConditional() && "exit branch must be conditional");
 
-  auto *ExitingBB = L->getExitingBlock();
-  if (!ExitingBB)
-    return false;
-  auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
-  if (!BI)
-    return false;
-  assert(BI->isConditional() && "exit branch must be conditional");
+    auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICmp)
+      continue;
 
-  auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!ICmp)
-    return false;
+    auto *LHS = ICmp->getOperand(0);
+    auto *RHS = ICmp->getOperand(1);
+    // Avoid computing SCEVs in the loop to avoid poisoning cache with
+    // sub-optimal results.
+    if (!L->isLoopInvariant(RHS))
+      continue;
 
-  auto *LHS = ICmp->getOperand(0);
-  auto *RHS = ICmp->getOperand(1);
-  // Avoid computing SCEVs in the loop to avoid poisoning cache with
-  // sub-optimal results.
-  if (!L->isLoopInvariant(RHS))
-    return false;
+    // Match (icmp signed-cond zext, RHS)
+    Value *LHSOp = nullptr;
+    if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
+      continue;
 
-  // Match (icmp signed-cond zext, RHS)
-  Value *LHSOp = nullptr;
-  if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
-    return false;
+    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
+    const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
+    const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
+    auto FullCR = ConstantRange::getFull(InnerBitWidth);
+    FullCR = FullCR.zeroExtend(OuterBitWidth);
+    if (!FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS))))
+      continue;
 
-  const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
-  const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
-  const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
-  auto FullCR = ConstantRange::getFull(InnerBitWidth);
-  FullCR = FullCR.zeroExtend(OuterBitWidth);
-  if (!FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS))))
-    return false;
-
-  // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
-  // replace the signed condition with the unsigned version.
-  ICmp->setPredicate(ICmp->getUnsignedPredicate());
-  return true;
+    // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
+    // replace the signed condition with the unsigned version.
+    ICmp->setPredicate(ICmp->getUnsignedPredicate());
+    Changed = true;
+  }
+  return Changed;
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
