@@ -38,7 +38,7 @@ public:
     if (EntryI == Entries.end()) {
       auto &Entry = impl().createEntry(G, Target);
       DEBUG_WITH_TYPE("jitlink", {
-        dbgs() << "    Created" << impl().getTableName() << "entry for "
+        dbgs() << "    Created" << impl().getSectionName() << "entry for "
                << Target.getName() << ": " << Entry << "\n";
       });
       EntryI = Entries.insert(std::make_pair(Target.getName(), &Entry)).first;
@@ -46,7 +46,7 @@ public:
 
     assert(EntryI != Entries.end() && "Could not get entry symbol");
     DEBUG_WITH_TYPE("jitlink", {
-      dbgs() << "    Using " << impl().getTableName() << " entry "
+      dbgs() << "    Using " << impl().getSectionName() << " entry "
              << *EntryI->second << "\n";
     });
     return *EntryI->second;
