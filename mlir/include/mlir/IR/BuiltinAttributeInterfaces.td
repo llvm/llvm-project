@@ -432,4 +432,52 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
   }] # ElementsAttrInterfaceAccessors;
 }
 
+//===----------------------------------------------------------------------===//
+// MemRefLayoutAttrInterface
+//===----------------------------------------------------------------------===//
+
+def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    This interface is used for attributes that can represent the MemRef type's
+    layout semantics, such as dimension order in the memory, strides and offsets.
+    Such a layout attribute should be representable as a
+    [semi-affine map](Affine.md/#semi-affine-maps).
+
+    Note: the MemRef type's layout is assumed to represent simple strided buffer
+    layout. For more complicated case, like sparse storage buffers,
+    it is preferable to use separate type with more specic layout, rather then
+    introducing extra complexity to the builin MemRef type.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      "Get the MemRef layout as an AffineMap, the method must not return NULL",
+      "::mlir::AffineMap", "getAffineMap", (ins)
+    >,
+
+    InterfaceMethod<
+      "Return true if this attribute represents the identity layout",
+      "bool", "isIdentity", (ins),
+      [{}],
+      [{
+        return $_attr.getAffineMap().isIdentity();
+      }]
+    >,
+
+    InterfaceMethod<
+      "Check if the current layout is applicable to the provided shape",
+      "::mlir::LogicalResult", "verifyLayout",
+      (ins "::llvm::ArrayRef<int64_t>":$shape,
+           "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
+      [{}],
+      [{
+        return ::mlir::detail::verifyAffineMapAsLayout($_attr.getAffineMap(),
+                                                       shape, emitError);
+      }]
+    >
+  ];
+}
+
 #endif // MLIR_IR_BUILTINATTRIBUTEINTERFACES_TD_

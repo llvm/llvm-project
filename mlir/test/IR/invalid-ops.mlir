@@ -104,7 +104,8 @@ func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
 
 func @test_alloc_memref_map_rank_mismatch() {
 ^bb0:
-  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0) -> (d0)>, 1> // expected-error {{memref affine map dimension mismatch}}
+  // expected-error@+1 {{memref layout mismatch between rank and affine map: 2 != 1}}
+  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0) -> (d0)>, 1>
   return
 }
 
