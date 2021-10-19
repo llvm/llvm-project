@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @unknown_clause() {
-  // expected-error@+1 {{invalid is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{invalid is not a valid clause}}
   omp.parallel invalid {
   }
 
