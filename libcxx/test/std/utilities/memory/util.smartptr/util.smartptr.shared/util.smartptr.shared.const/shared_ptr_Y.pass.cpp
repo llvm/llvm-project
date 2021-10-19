@@ -133,4 +133,22 @@ int main(int, char**)
                                                              private_delete_arr_op*>::value, "");
     }
 #endif
+
+#if TEST_STD_VER > 14
+    {
+        std::shared_ptr<A[]> p1(new A[8]);
+        assert(p1.use_count() == 1);
+        assert(A::count == 8);
+        {
+            std::shared_ptr<const A[]> p2(p1);
+            assert(A::count == 8);
+            assert(p2.use_count() == 2);
+            assert(p1.use_count() == 2);
+            assert(p1.get() == p2.get());
+        }
+        assert(p1.use_count() == 1);
+        assert(A::count == 8);
+    }
+    assert(A::count == 0);
+#endif
 }
