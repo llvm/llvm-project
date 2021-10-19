@@ -574,7 +574,7 @@ public:
   /// much later stage, in the TransferTracker class.
   MapVector<DebugVariable, DbgValue> Vars;
   DenseMap<DebugVariable, const DILocation *> Scopes;
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
 
 public:
   VLocTracker() {}
