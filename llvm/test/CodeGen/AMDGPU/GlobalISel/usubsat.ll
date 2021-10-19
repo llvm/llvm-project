@@ -3202,7 +3202,7 @@ define <2 x i64> @v_usubsat_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v9, vcc_lo, v1, v5, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_sub_co_u32 v4, s0, v2, v6
-; GFX11-NEXT:    v_subb_u32_e64 v5, s0, v3, v7, s0
+; GFX11-NEXT:    v_sub_co_ci_u32_e64 v5, s0, v3, v7, s0
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s0, v[2:3], v[6:7]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0, vcc_lo

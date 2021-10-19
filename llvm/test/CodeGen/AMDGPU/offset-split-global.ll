@@ -1086,7 +1086,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(i8 addrspace(1)
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, -1, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1271,7 +1271,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(i8 addrspace
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, -1, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1311,7 +1311,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(i8 addrspace
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, -1, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, -1, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1352,7 +1352,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:2047 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1393,7 +1393,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-2048 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1434,7 +1434,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1475,7 +1475,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1516,7 +1516,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
@@ -1557,7 +1557,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(i8 addrspa
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 2, s1, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 2, s1, s0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off

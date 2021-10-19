@@ -660,13 +660,13 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x400, v4
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v7, v3
 ; GFX11-NEXT:    v_add_co_u32 v5, s0, s2, v5
-; GFX11-NEXT:    v_addc_u32_e64 v6, s0, s3, v6, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX11-NEXT:    v_fma_f32 v7, -v0, v2
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s0, |v7|, v2
-; GFX11-NEXT:    v_addc_u32_e64 v0, s0, 0, v0, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v0, s0, 0, v0, s0
 ; GFX11-NEXT:    global_store_b16 v[5:6], v0, off
 ; GFX11-NEXT:    s_cbranch_vccz BB4_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -781,7 +781,7 @@ define amdgpu_kernel void @urem16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_lshlrev_b64 v[5:6], 1, v[0:1]
 ; GFX11-NEXT:    v_mul_f32_e32 v8, v7, v3
 ; GFX11-NEXT:    v_add_co_u32 v5, s0, s2, v5
-; GFX11-NEXT:    v_addc_u32_e64 v6, s0, s3, v6, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    v_trunc_f32_e32 v8, v8
 ; GFX11-NEXT:    v_fma_f32 v7, -v8, v2, v7
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v8, v8
@@ -916,7 +916,7 @@ define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_add_co_u32 v5, s0, s2, v5
 ; GFX11-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-NEXT:    v_or_b32_e32 v8, 1, v8
-; GFX11-NEXT:    v_addc_u32_e64 v6, s0, s3, v6, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX11-NEXT:    v_fma_f32 v7, -v0, v2
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, v0
@@ -1057,7 +1057,7 @@ define amdgpu_kernel void @srem16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x400, v4
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, v8, v9
 ; GFX11-NEXT:    v_add_co_u32 v5, s0, s2, v5
-; GFX11-NEXT:    v_addc_u32_e64 v6, s0, s3, v6, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    v_mul_lo_u32 v0, v0, s1
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, v7, v0

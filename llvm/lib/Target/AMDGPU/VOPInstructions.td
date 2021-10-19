@@ -1312,7 +1312,7 @@ let AssemblerPredicate = isGFX11Only,
     defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
     let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in
       def _e64_gfx11 :
-        VOP3_Real<ps, SIEncodingFamily.GFX11>,
+        VOP3_Real<ps, SIEncodingFamily.GFX11, asmName>,
         VOP3be_gfx11<op, ps.Pfl> ;
   }
   multiclass VOP3be_Real_dpp_gfx11<bits<10> op, string opName, string asmName> {
