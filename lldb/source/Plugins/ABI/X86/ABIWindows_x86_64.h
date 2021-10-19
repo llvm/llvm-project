@@ -67,15 +67,13 @@ public:
 
   static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "windows-x86_64"; }
 
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   void CreateRegisterMapIfNeeded();

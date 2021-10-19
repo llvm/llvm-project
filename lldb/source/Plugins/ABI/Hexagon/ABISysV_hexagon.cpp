@@ -1193,11 +1193,6 @@ void ABISysV_hexagon::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ABISysV_hexagon::GetPluginNameStatic() {
-  static ConstString g_name("sysv-hexagon");
-  return g_name;
-}
-
 // get value object specialized to work with llvm IR types
 lldb::ValueObjectSP
 ABISysV_hexagon::GetReturnValueObjectImpl(lldb_private::Thread &thread,

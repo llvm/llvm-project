@@ -16,13 +16,11 @@ namespace lldb_private {
 
 class ArchitectureAArch64 : public Architecture {
 public:
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "aarch64"; }
   static void Initialize();
   static void Terminate();
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   void OverrideStopInfo(Thread &thread) const override{};
 

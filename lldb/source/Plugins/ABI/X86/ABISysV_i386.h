@@ -83,11 +83,9 @@ public:
 
   // PluginInterface protocol
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "sysv-i386"; }
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::ValueObjectSP

@@ -823,8 +823,3 @@ void ABIWindows_x86_64::Initialize() {
 void ABIWindows_x86_64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABIWindows_x86_64::GetPluginNameStatic() {
-  static ConstString g_name("windows-x86_64");
-  return g_name;
-}
