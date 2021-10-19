@@ -322,16 +322,10 @@ LLDBSwigPythonCreateScriptedProcess
 
     PythonObject result = {};
     if (arg_info.get().max_positional_args == 2) {
-        if (args_impl != nullptr) {
-           error_string.assign("args passed, but __init__ does not take an args dictionary");
-           Py_RETURN_NONE;
-        }
-        result = pfunc(target_arg, dict);
-    } else if (arg_info.get().max_positional_args >= 3) {
         PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBStructuredData(args_impl)));
-        result = pfunc(target_arg, args_arg, dict);
+        result = pfunc(target_arg, args_arg);
     } else {
-        error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
+        error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
         Py_RETURN_NONE;
     }
 
@@ -345,7 +339,8 @@ LLDBSwigPythonCreateScriptedThread
 (
     const char *python_class_name,
     const char *session_dictionary_name,
-    const lldb::TargetSP& target_sp,
+    const lldb::ProcessSP& process_sp,
+    lldb_private::StructuredDataImpl *args_impl,
     std::string &error_string
 )
 {
@@ -363,12 +358,12 @@ LLDBSwigPythonCreateScriptedThread
         return nullptr;
     }
 
-    // I do not want the SBTarget to be deallocated when going out of scope
+    // I do not want the SBProcess to be deallocated when going out of scope
     // because python has ownership of it and will manage memory for this
     // object by itself
-    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBTarget(target_sp)));
+    PythonObject process_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBProcess(process_sp)));
 
-    if (!target_arg.IsAllocated())
+    if (!process_arg.IsAllocated())
         Py_RETURN_NONE;
 
     llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
@@ -385,10 +380,11 @@ LLDBSwigPythonCreateScriptedThread
     }
 
     PythonObject result = {};
-    if (arg_info.get().max_positional_args == 1) {
-        result = pfunc(target_arg);
+    if (arg_info.get().max_positional_args == 2) {
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBStructuredData(args_impl)));
+        result = pfunc(process_arg, args_arg);
     } else {
-        error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
+        error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
         Py_RETURN_NONE;
     }
 
