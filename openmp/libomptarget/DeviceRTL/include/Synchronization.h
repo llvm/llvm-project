@@ -44,14 +44,11 @@ void system(int Ordering);
 
 namespace atomic {
 
-/// Atomically read \p Addr with \p Ordering semantics.
-uint32_t read(uint32_t *Addr, int Ordering);
+/// Atomically load \p Addr with \p Ordering semantics.
+uint32_t load(uint32_t *Addr, int Ordering);
 
 /// Atomically store \p V to \p Addr with \p Ordering semantics.
-uint32_t store(uint32_t *Addr, uint32_t V, int Ordering);
-
-/// Atomically store \p V to \p Addr with \p Ordering semantics.
-uint64_t store(uint64_t *Addr, uint64_t V, int Ordering);
+void store(uint32_t *Addr, uint32_t V, int Ordering);
 
 /// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
 uint32_t inc(uint32_t *Addr, uint32_t V, int Ordering);
