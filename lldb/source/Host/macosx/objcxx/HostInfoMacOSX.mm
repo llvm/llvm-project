@@ -55,17 +55,14 @@
 
 using namespace lldb_private;
 
-bool HostInfoMacOSX::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> HostInfoMacOSX::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSVERSION};
   char cstr[PATH_MAX];
   size_t cstr_len = sizeof(cstr);
-  if (::sysctl(mib, 2, cstr, &cstr_len, NULL, 0) == 0) {
-    s.assign(cstr, cstr_len);
-    return true;
-  }
+  if (::sysctl(mib, 2, cstr, &cstr_len, NULL, 0) == 0)
+    return std::string(cstr, cstr_len);
 
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
 bool HostInfoMacOSX::GetOSKernelDescription(std::string &s) {

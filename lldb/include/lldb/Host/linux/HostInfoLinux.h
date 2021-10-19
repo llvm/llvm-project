@@ -26,7 +26,7 @@ public:
   static void Terminate();
 
   static llvm::VersionTuple GetOSVersion();
-  static bool GetOSBuildString(std::string &s);
+  static llvm::Optional<std::string> GetOSBuildString();
   static bool GetOSKernelDescription(std::string &s);
   static llvm::StringRef GetDistributionId();
   static FileSpec GetProgramFileSpec();

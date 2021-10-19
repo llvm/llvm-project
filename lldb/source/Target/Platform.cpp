@@ -487,10 +487,12 @@ llvm::VersionTuple Platform::GetOSVersion(Process *process) {
 }
 
 bool Platform::GetOSBuildString(std::string &s) {
+  if (IsHost()) {
+    llvm::Optional<std::string> str = HostInfo::GetOSBuildString();
+    s = str.getValueOr("");
+    return str.hasValue();
+  }
   s.clear();
-
-  if (IsHost())
-    return HostInfo::GetOSBuildString(s);
   return GetRemoteOSBuildString(s);
 }
 
