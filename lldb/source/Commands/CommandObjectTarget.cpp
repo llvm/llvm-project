@@ -4990,6 +4990,55 @@ public:
   ~CommandObjectMultiwordTargetStopHooks() override = default;
 };
 
+#pragma mark CommandObjectTargetDumpTypesystem
+
+/// Dumps the TypeSystem of the selected Target.
+class CommandObjectTargetDumpTypesystem : public CommandObjectParsed {
+public:
+  CommandObjectTargetDumpTypesystem(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target dump typesystem",
+            "Dump the state of the target's internal type system.\n"
+            "Intended to be used for debugging LLDB itself.",
+            nullptr, eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetDumpTypesystem() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (!command.empty()) {
+      result.AppendError("target dump typesystem doesn't take arguments.");
+      return result.Succeeded();
+    }
+
+    // Go over every scratch TypeSystem and dump to the command output.
+    for (TypeSystem *ts : GetSelectedTarget().GetScratchTypeSystems())
+      ts->Dump(result.GetOutputStream().AsRawOstream());
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
+#pragma mark CommandObjectTargetDump
+
+/// Multi-word command for 'target dump'.
+class CommandObjectTargetDump : public CommandObjectMultiword {
+public:
+  // Constructors and Destructors
+  CommandObjectTargetDump(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target dump",
+            "Commands for dumping information about the target.",
+            "target dump [typesystem]") {
+    LoadSubCommand(
+        "typesystem",
+        CommandObjectSP(new CommandObjectTargetDumpTypesystem(interpreter)));
+  }
+
+  ~CommandObjectTargetDump() override = default;
+};
+
 #pragma mark CommandObjectMultiwordTarget
 
 // CommandObjectMultiwordTarget
@@ -5003,6 +5052,8 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetCreate(interpreter)));
   LoadSubCommand("delete",
                  CommandObjectSP(new CommandObjectTargetDelete(interpreter)));
+  LoadSubCommand("dump",
+                 CommandObjectSP(new CommandObjectTargetDump(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",
