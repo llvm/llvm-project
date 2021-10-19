@@ -12,6 +12,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/JITLink/TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
@@ -21,7 +22,6 @@
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"
-#include "TableManager.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -43,8 +43,8 @@ public:
   // Nice name for table
   StringRef getTableName() { return "GOT"; }
 
-  bool fixEdgeKind(LinkGraph &G, Block *B, Edge &E) {
-    Edge::Kind KindToSet = E.getKind();
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
     case x86_64::Delta64FromGOT: {
       // we need to make sure that the GOT section exists, but don't otherwise
@@ -70,6 +70,8 @@ public:
     default:
       return false;
     }
+    assert(KindToSet != Edge::Invalid &&
+           "Fell through switch, but no new kind to set");
     LLVM_DEBUG({
       dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
              << formatv("{0:x}", B->getFixupAddress(E)) << " ("
@@ -77,6 +79,7 @@ public:
              << formatv("{0:x}", E.getOffset()) << ")\n";
     });
     E.setKind(KindToSet);
+    E.setTarget(getEntryForTarget(G, E.getTarget()));
     return true;
   }
 
@@ -111,7 +114,7 @@ public:
   StringRef getTableName() { return "PLT"; }
 
   static const uint8_t StubContent[6];
-  bool fixEdgeKind(LinkGraph &G, Block *B, Edge &E) {
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == x86_64::BranchPCRel32 && !E.getTarget().isDefined()) {
       LLVM_DEBUG({
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
@@ -122,6 +125,7 @@ public:
       // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to
       // be optimized when the target is in-range.
       E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
+      E.setTarget(getEntryForTarget(G, E.getTarget()));
       return true;
     }
     return false;
@@ -161,7 +165,7 @@ public:
 
   StringRef getTableName() { return "TLSInfo"; }
 
-  bool fixEdgeKind(LinkGraph &G, Block *B, Edge &E) {
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == x86_64::RequestTLSDescInGOTAndTransformToDelta32) {
       LLVM_DEBUG({
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
@@ -170,6 +174,7 @@ public:
                << formatv("{0:x}", E.getOffset()) << ")\n";
       });
       E.setKind(x86_64::Delta32);
+      E.setTarget(getEntryForTarget(G, E.getTarget()));
       return true;
     }
     return false;
