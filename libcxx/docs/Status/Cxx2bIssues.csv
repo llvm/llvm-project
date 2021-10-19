@@ -125,7 +125,7 @@
 `3570 <https://wg21.link/LWG3570>`__,"``basic_osyncstream::emit`` should be an unformatted output function","October 2021","",""
 `3571 <https://wg21.link/LWG3571>`__,"``flush_emit`` should set ``badbit`` if the ``emit`` call fails","October 2021","",""
 `3572 <https://wg21.link/LWG3572>`__,"``copyable-box`` should be fully ``constexpr``","October 2021","","","|ranges|"
-`3573 <https://wg21.link/LWG3573>`__,"Missing Throws element for ``basic_string_view(It begin, End end)``","October 2021","",""
+`3573 <https://wg21.link/LWG3573>`__,"Missing Throws element for ``basic_string_view(It begin, End end)``","October 2021","|Complete|","14.0"
 `3574 <https://wg21.link/LWG3574>`__,"``common_iterator`` should be completely ``constexpr``-able","October 2021","","","|ranges|"
 `3580 <https://wg21.link/LWG3580>`__,"``iota_view``'s ``iterator``'s binary ``operator+`` should be improved","October 2021","","","|ranges|"
 `3581 <https://wg21.link/LWG3581>`__,"The range constructor makes ``basic_string_view`` not trivially move constructible","October 2021","","","|ranges|"

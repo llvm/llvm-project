@@ -16,6 +16,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <iterator>
 #include <ranges>
 
 #include "make_string.h"
@@ -43,6 +44,36 @@ constexpr bool test() {
   return true;
 }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
+template<class CharT>
+struct ThrowingSentinel {
+  friend bool operator==(const CharT*, ThrowingSentinel) noexcept { return true; }
+  friend std::iter_difference_t<const CharT*> operator-(const CharT*, ThrowingSentinel) noexcept { return {}; }
+  friend std::iter_difference_t<const CharT*> operator-(ThrowingSentinel, const CharT*) { throw 42; }
+};
+
+template <class CharT>
+void test_throwing() {
+  auto val = MAKE_STRING_VIEW(CharT, "test");
+  try {
+    (void)std::basic_string_view<CharT>(val.begin(), ThrowingSentinel<CharT>());
+    assert(false);
+  } catch (int i) {
+    assert(i == 42);
+  }
+}
+
+void test_throwing() {
+  test_throwing<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test_throwing<wchar_t>();
+#endif
+  test_throwing<char8_t>();
+  test_throwing<char16_t>();
+  test_throwing<char32_t>();
+}
+#endif
+
 static_assert( std::is_constructible_v<std::string_view, const char*, char*>);
 static_assert( std::is_constructible_v<std::string_view, char*, const char*>);
 static_assert(!std::is_constructible_v<std::string_view, char*, void*>);               // not a sentinel
@@ -53,6 +84,10 @@ static_assert( std::is_constructible_v<std::string_view, contiguous_iterator<cha
 int main(int, char**) {
   test();
   static_assert(test());
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  test_throwing();
+#endif
 
   return 0;
 }
