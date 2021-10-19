@@ -6,9 +6,9 @@ define <2 x i16> @vwmul_v2i16(<2 x i8>* %x, <2 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
   %b = load <2 x i8>, <2 x i8>* %y
@@ -22,9 +22,9 @@ define <4 x i16> @vwmul_v4i16(<4 x i8>* %x, <4 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x
   %b = load <4 x i8>, <4 x i8>* %y
@@ -38,9 +38,9 @@ define <2 x i32> @vwmul_v2i32(<2 x i16>* %x, <2 x i16>* %y) {
 ; CHECK-LABEL: vwmul_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, <2 x i16>* %x
   %b = load <2 x i16>, <2 x i16>* %y
@@ -54,9 +54,9 @@ define <8 x i16> @vwmul_v8i16(<8 x i8>* %x, <8 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
   %b = load <8 x i8>, <8 x i8>* %y
@@ -70,9 +70,9 @@ define <4 x i32> @vwmul_v4i32(<4 x i16>* %x, <4 x i16>* %y) {
 ; CHECK-LABEL: vwmul_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
   %b = load <4 x i16>, <4 x i16>* %y
@@ -86,9 +86,9 @@ define <2 x i64> @vwmul_v2i64(<2 x i32>* %x, <2 x i32>* %y) {
 ; CHECK-LABEL: vwmul_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v10, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
@@ -102,9 +102,9 @@ define <16 x i16> @vwmul_v16i16(<16 x i8>* %x, <16 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vle8.v v11, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
   %b = load <16 x i8>, <16 x i8>* %y
@@ -118,9 +118,9 @@ define <8 x i32> @vwmul_v8i32(<8 x i16>* %x, <8 x i16>* %y) {
 ; CHECK-LABEL: vwmul_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vle16.v v11, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
   %b = load <8 x i16>, <8 x i16>* %y
@@ -134,9 +134,9 @@ define <4 x i64> @vwmul_v4i64(<4 x i32>* %x, <4 x i32>* %y) {
 ; CHECK-LABEL: vwmul_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v25, v26
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vle32.v v11, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
   %b = load <4 x i32>, <4 x i32>* %y
@@ -151,9 +151,9 @@ define <32 x i16> @vwmul_v32i16(<32 x i8>* %x, <32 x i8>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
-; CHECK-NEXT:    vle8.v v26, (a0)
-; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v26, v28
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vle8.v v14, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
   %b = load <32 x i8>, <32 x i8>* %y
@@ -167,9 +167,9 @@ define <16 x i32> @vwmul_v16i32(<16 x i16>* %x, <16 x i16>* %y) {
 ; CHECK-LABEL: vwmul_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v26, (a0)
-; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v26, v28
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    vle16.v v14, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
   %b = load <16 x i16>, <16 x i16>* %y
@@ -183,9 +183,9 @@ define <8 x  i64> @vwmul_v8i64(<8 x  i32>* %x, <8 x  i32>* %y) {
 ; CHECK-LABEL: vwmul_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v26, v28
+; CHECK-NEXT:    vle32.v v12, (a0)
+; CHECK-NEXT:    vle32.v v14, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %a = load <8 x  i32>, <8 x  i32>* %x
   %b = load <8 x  i32>, <8 x  i32>* %y
@@ -200,9 +200,9 @@ define <64 x i16> @vwmul_v64i16(<64 x i8>* %x, <64 x i8>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
-; CHECK-NEXT:    vle8.v v28, (a0)
-; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v28, v16
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vle8.v v20, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, <64 x i8>* %x
   %b = load <64 x i8>, <64 x i8>* %y
@@ -217,9 +217,9 @@ define <32 x i32> @vwmul_v32i32(<32 x i16>* %x, <32 x i16>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
-; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vle16.v v16, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v28, v16
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vle16.v v20, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, <32 x i16>* %x
   %b = load <32 x i16>, <32 x i16>* %y
@@ -233,9 +233,9 @@ define <16 x i64> @vwmul_v16i64(<16 x i32>* %x, <16 x i32>* %y) {
 ; CHECK-LABEL: vwmul_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vle32.v v28, (a0)
-; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    vwmul.vv v8, v28, v16
+; CHECK-NEXT:    vle32.v v16, (a0)
+; CHECK-NEXT:    vle32.v v20, (a1)
+; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %x
   %b = load <16 x i32>, <16 x i32>* %y
@@ -356,12 +356,12 @@ define <2 x i32> @vwmul_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v2i32_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a1)
-; CHECK-NEXT:    vle8.v v26, (a0)
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vsext.vf2 v27, v25
-; CHECK-NEXT:    vsext.vf2 v25, v26
-; CHECK-NEXT:    vwmul.vv v8, v25, v27
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsext.vf2 v11, v9
+; CHECK-NEXT:    vwmul.vv v8, v11, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
   %b = load <2 x i8>, <2 x i8>* %y
@@ -375,11 +375,11 @@ define <4 x i32> @vwmul_v4i32_v4i8_v4i16(<4 x i8>* %x, <4 x i16>* %y) {
 ; CHECK-LABEL: vwmul_v4i32_v4i8_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vsext.vf2 v27, v25
-; CHECK-NEXT:    vwmul.vv v8, v27, v26
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vwmul.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x
   %b = load <4 x i16>, <4 x i16>* %y
@@ -393,10 +393,10 @@ define <4 x i64> @vwmul_v4i64_v4i32_v4i8(<4 x i32>* %x, <4 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v4i64_v4i32_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a1)
-; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsext.vf4 v27, v25
-; CHECK-NEXT:    vwmul.vv v8, v26, v27
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vsext.vf4 v11, v8
+; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
   %b = load <4 x i8>, <4 x i8>* %y
@@ -410,8 +410,8 @@ define <2 x i16> @vwmul_vx_v2i16(<2 x i8>* %x, i8 %y) {
 ; CHECK-LABEL: vwmul_vx_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
   %b = insertelement <2 x i8> undef, i8 %y, i32 0
@@ -426,8 +426,8 @@ define <4 x i16> @vwmul_vx_v4i16(<4 x i8>* %x, i8 %y) {
 ; CHECK-LABEL: vwmul_vx_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x
   %b = insertelement <4 x i8> undef, i8 %y, i32 0
@@ -442,8 +442,8 @@ define <2 x i32> @vwmul_vx_v2i32(<2 x i16>* %x, i16 %y) {
 ; CHECK-LABEL: vwmul_vx_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, <2 x i16>* %x
   %b = insertelement <2 x i16> undef, i16 %y, i32 0
@@ -458,8 +458,8 @@ define <8 x i16> @vwmul_vx_v8i16(<8 x i8>* %x, i8 %y) {
 ; CHECK-LABEL: vwmul_vx_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
   %b = insertelement <8 x i8> undef, i8 %y, i32 0
@@ -474,8 +474,8 @@ define <4 x i32> @vwmul_vx_v4i32(<4 x i16>* %x, i16 %y) {
 ; CHECK-LABEL: vwmul_vx_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
   %b = insertelement <4 x i16> undef, i16 %y, i32 0
@@ -490,8 +490,8 @@ define <2 x i64> @vwmul_vx_v2i64(<2 x i32>* %x, i32 %y) {
 ; CHECK-LABEL: vwmul_vx_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = insertelement <2 x i32> undef, i32 %y, i64 0
@@ -506,8 +506,8 @@ define <16 x i16> @vwmul_vx_v16i16(<16 x i8>* %x, i8 %y) {
 ; CHECK-LABEL: vwmul_vx_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v10, a1
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
   %b = insertelement <16 x i8> undef, i8 %y, i32 0
@@ -522,8 +522,8 @@ define <8 x i32> @vwmul_vx_v8i32(<8 x i16>* %x, i16 %y) {
 ; CHECK-LABEL: vwmul_vx_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v10, a1
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
   %b = insertelement <8 x i16> undef, i16 %y, i32 0
@@ -538,8 +538,8 @@ define <4 x i64> @vwmul_vx_v4i64(<4 x i32>* %x, i32 %y) {
 ; CHECK-LABEL: vwmul_vx_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v25, a1
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v10, a1
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
   %b = insertelement <4 x i32> undef, i32 %y, i64 0
@@ -555,8 +555,8 @@ define <32 x i16> @vwmul_vx_v32i16(<32 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
-; CHECK-NEXT:    vle8.v v26, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v26, a1
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v12, a1
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
   %b = insertelement <32 x i8> undef, i8 %y, i32 0
@@ -571,8 +571,8 @@ define <16 x i32> @vwmul_vx_v16i32(<16 x i16>* %x, i16 %y) {
 ; CHECK-LABEL: vwmul_vx_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v26, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v26, a1
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v12, a1
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
   %b = insertelement <16 x i16> undef, i16 %y, i32 0
@@ -587,8 +587,8 @@ define <8 x i64> @vwmul_vx_v8i64(<8 x i32>* %x, i32 %y) {
 ; CHECK-LABEL: vwmul_vx_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v26, a1
+; CHECK-NEXT:    vle32.v v12, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v12, a1
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
   %b = insertelement <8 x i32> undef, i32 %y, i64 0
@@ -604,8 +604,8 @@ define <64 x i16> @vwmul_vx_v64i16(<64 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
-; CHECK-NEXT:    vle8.v v28, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v28, a1
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v16, a1
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, <64 x i8>* %x
   %b = insertelement <64 x i8> undef, i8 %y, i32 0
@@ -621,8 +621,8 @@ define <32 x i32> @vwmul_vx_v32i32(<32 x i16>* %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
-; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v28, a1
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v16, a1
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, <32 x i16>* %x
   %b = insertelement <32 x i16> undef, i16 %y, i32 0
@@ -637,8 +637,8 @@ define <16 x i64> @vwmul_vx_v16i64(<16 x i32>* %x, i32 %y) {
 ; CHECK-LABEL: vwmul_vx_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vle32.v v28, (a0)
-; CHECK-NEXT:    vwmul.vx v8, v28, a1
+; CHECK-NEXT:    vle32.v v16, (a0)
+; CHECK-NEXT:    vwmul.vx v8, v16, a1
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %x
   %b = insertelement <16 x i32> undef, i32 %y, i64 0
@@ -653,9 +653,9 @@ define <8 x i16> @vwmul_vx_v8i16_i8(<8 x i8>* %x, i8* %y) {
 ; CHECK-LABEL: vwmul_vx_v8i16_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    lb a0, 0(a1)
-; CHECK-NEXT:    vwmul.vx v8, v25, a0
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
   %b = load i8, i8* %y
@@ -671,11 +671,11 @@ define <8 x i16> @vwmul_vx_v8i16_i16(<8 x i8>* %x, i16* %y) {
 ; CHECK-LABEL: vwmul_vx_v8i16_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    lh a0, 0(a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vsext.vf2 v26, v25
-; CHECK-NEXT:    vmul.vx v8, v26, a0
+; CHECK-NEXT:    vsext.vf2 v9, v8
+; CHECK-NEXT:    vmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
   %b = load i16, i16* %y
@@ -690,9 +690,9 @@ define <4 x i32> @vwmul_vx_v4i32_i8(<4 x i16>* %x, i8* %y) {
 ; CHECK-LABEL: vwmul_vx_v4i32_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    lb a0, 0(a1)
-; CHECK-NEXT:    vwmul.vx v8, v25, a0
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
   %b = load i8, i8* %y
@@ -708,9 +708,9 @@ define <4 x i32> @vwmul_vx_v4i32_i16(<4 x i16>* %x, i16* %y) {
 ; CHECK-LABEL: vwmul_vx_v4i32_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    lh a0, 0(a1)
-; CHECK-NEXT:    vwmul.vx v8, v25, a0
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
   %b = load i16, i16* %y
@@ -726,11 +726,11 @@ define <4 x i32> @vwmul_vx_v4i32_i32(<4 x i16>* %x, i32* %y) {
 ; CHECK-LABEL: vwmul_vx_v4i32_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lw a0, 0(a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vsext.vf2 v26, v25
-; CHECK-NEXT:    vmul.vx v8, v26, a0
+; CHECK-NEXT:    vsext.vf2 v9, v8
+; CHECK-NEXT:    vmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
   %b = load i32, i32* %y
@@ -748,24 +748,24 @@ define <2 x i64> @vwmul_vx_v2i64_i8(<2 x i32>* %x, i8* %y) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    lb a1, 0(a1)
-; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    srai a0, a1, 31
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vsext.vf2 v27, v25
-; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    vsext.vf2 v10, v8
+; RV32-NEXT:    vmul.vv v8, v9, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwmul_vx_v2i64_i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    lb a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v25, a0
+; RV64-NEXT:    vwmul.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load i8, i8* %y
@@ -784,24 +784,24 @@ define <2 x i64> @vwmul_vx_v2i64_i16(<2 x i32>* %x, i16* %y) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    lh a1, 0(a1)
-; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    srai a0, a1, 31
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vsext.vf2 v27, v25
-; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    vsext.vf2 v10, v8
+; RV32-NEXT:    vmul.vv v8, v9, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwmul_vx_v2i64_i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    lh a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v25, a0
+; RV64-NEXT:    vwmul.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load i16, i16* %y
@@ -820,24 +820,24 @@ define <2 x i64> @vwmul_vx_v2i64_i32(<2 x i32>* %x, i32* %y) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    srai a0, a1, 31
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vsext.vf2 v27, v25
-; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    vsext.vf2 v10, v8
+; RV32-NEXT:    vmul.vv v8, v9, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwmul_vx_v2i64_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    lw a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v25, a0
+; RV64-NEXT:    vwmul.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load i32, i32* %y
@@ -857,25 +857,25 @@ define <2 x i64> @vwmul_vx_v2i64_i64(<2 x i32>* %x, i64* %y) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    lw a2, 4(a1)
 ; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-NEXT:    vsext.vf2 v27, v25
-; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    vsext.vf2 v10, v8
+; RV32-NEXT:    vmul.vv v8, v9, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwmul_vx_v2i64_i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    ld a0, 0(a1)
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV64-NEXT:    vsext.vf2 v26, v25
-; RV64-NEXT:    vmul.vx v8, v26, a0
+; RV64-NEXT:    vsext.vf2 v9, v8
+; RV64-NEXT:    vmul.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load i64, i64* %y

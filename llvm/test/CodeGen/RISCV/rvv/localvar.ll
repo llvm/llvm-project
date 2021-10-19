@@ -14,9 +14,9 @@ define void @local_var_mf8() {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16
-; RV64IV-NEXT:    vle8.v v25, (a0)
+; RV64IV-NEXT:    vle8.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
-; RV64IV-NEXT:    vle8.v v25, (a0)
+; RV64IV-NEXT:    vle8.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add sp, sp, a0
@@ -40,9 +40,9 @@ define void @local_var_m1() {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16
-; RV64IV-NEXT:    vl1r.v v25, (a0)
+; RV64IV-NEXT:    vl1r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
-; RV64IV-NEXT:    vl1r.v v25, (a0)
+; RV64IV-NEXT:    vl1r.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add sp, sp, a0
@@ -67,9 +67,9 @@ define void @local_var_m2() {
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    add sp, sp, a0
@@ -101,9 +101,9 @@ define void @local_var_m4() {
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16
-; RV64IV-NEXT:    vl4r.v v28, (a0)
+; RV64IV-NEXT:    vl4r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
-; RV64IV-NEXT:    vl4r.v v28, (a0)
+; RV64IV-NEXT:    vl4r.v v8, (a0)
 ; RV64IV-NEXT:    addi sp, s0, -32
 ; RV64IV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -163,9 +163,9 @@ define void @local_var_m2_mix_local_scalar() {
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 32
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 32
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    lw a0, 24(sp)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
@@ -210,12 +210,12 @@ define void @local_var_m2_with_varsize_object(i64 %n) {
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    sub a0, s0, a0
 ; RV64IV-NEXT:    addi a0, a0, -32
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    sub a0, s0, a0
 ; RV64IV-NEXT:    addi a0, a0, -32
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi sp, s0, -32
 ; RV64IV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -263,9 +263,9 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, s1, a0
 ; RV64IV-NEXT:    addi a0, a0, 232
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, s1, 232
-; RV64IV-NEXT:    vl2r.v v26, (a0)
+; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    lw a0, 120(s1)
 ; RV64IV-NEXT:    addi sp, s0, -256
 ; RV64IV-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload

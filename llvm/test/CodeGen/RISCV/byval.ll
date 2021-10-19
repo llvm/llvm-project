@@ -33,7 +33,7 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    lw a0, 4(a0)
 ; RV32I-NEXT:    sw a0, 16(sp)
 ; RV32I-NEXT:    addi a0, sp, 12
-; RV32I-NEXT:    call callee
+; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
