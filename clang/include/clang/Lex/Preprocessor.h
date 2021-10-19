@@ -179,11 +179,26 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
+  IdentifierInfo *Ident__FLT_EVAL_METHOD__;        // __FLT_EVAL_METHOD
 
   // Weak, only valid (and set) while InMacroArgs is true.
   Token* ArgMacro;
 
   SourceLocation DATELoc, TIMELoc;
+
+  // FEM_UnsetOnCommandLine means that an explicit evaluation method was
+  // not specified on the command line. The target is queried to set the
+  // default evaluation method.
+  LangOptions::FPEvalMethodKind CurrentFPEvalMethod =
+      LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
+
+  // The most recent pragma location where the floating point evaluation
+  // method was modified. This is used to determine whether the
+  // 'pragma clang fp eval_method' was used whithin the current scope.
+  SourceLocation LastFPEvalPragmaLocation;
+
+  LangOptions::FPEvalMethodKind TUFPEvalMethod =
+      LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
 
   // Next __COUNTER__ value, starts at 0.
   unsigned CounterValue = 0;
@@ -2047,6 +2062,32 @@ public:
   }
   unsigned getCounterValue() const { return CounterValue; }
   void setCounterValue(unsigned V) { CounterValue = V; }
+
+  LangOptions::FPEvalMethodKind getCurrentFPEvalMethod() const {
+    assert(CurrentFPEvalMethod != LangOptions::FEM_UnsetOnCommandLine &&
+           "FPEvalMethod should be set either from command line or from the "
+           "target info");
+    return CurrentFPEvalMethod;
+  }
+
+  LangOptions::FPEvalMethodKind getTUFPEvalMethod() const {
+    return TUFPEvalMethod;
+  }
+
+  SourceLocation getLastFPEvalPragmaLocation() const {
+    return LastFPEvalPragmaLocation;
+  }
+
+  void setCurrentFPEvalMethod(SourceLocation PragmaLoc,
+                              LangOptions::FPEvalMethodKind Val) {
+    assert(Val != LangOptions::FEM_UnsetOnCommandLine &&
+           "FPEvalMethod should never be set to FEM_UnsetOnCommandLine");
+    // This is the location of the '#pragma float_control" where the
+    // execution state is modifed.
+    LastFPEvalPragmaLocation = PragmaLoc;
+    CurrentFPEvalMethod = Val;
+    TUFPEvalMethod = Val;
+  }
 
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();
