@@ -274,15 +274,11 @@ defm V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMD
 } // End SchedRW = [Write32Bit]
 } // End isReMaterializable = 1
 
-class VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
-  let HasModifiers = 0;
-}
-
 let SubtargetPredicate = isGFX7Plus in {
 
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD<>>;
+defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP>>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
 
 let isCommutable = 1 in {
