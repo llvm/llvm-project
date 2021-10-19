@@ -93,6 +93,17 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strdup_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strdup_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.string.strdup
+)
+
+add_libc_unittest(
   strlen_test
   SUITE
     libc_string_unittests
