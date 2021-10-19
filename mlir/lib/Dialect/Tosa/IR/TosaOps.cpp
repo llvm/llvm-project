@@ -154,9 +154,43 @@ struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
   }
 };
 
+struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
+  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.input1();
+    ArrayAttr newShape = op.new_shape();
+
+    // Check if input is constant
+    DenseElementsAttr inputAttr;
+    if (!matchPattern(input, m_Constant(&inputAttr)))
+      return failure();
+
+    // Check if has >1 consumer and is not splat
+    if (!input.hasOneUse() && !inputAttr.isSplat())
+      return failure();
+
+    // Grab the new shape
+    SmallVector<int64_t> newShapeValues = llvm::to_vector<6>(
+        llvm::map_range(newShape.getValue(), [](const Attribute &val) {
+          return val.cast<IntegerAttr>().getValue().getSExtValue();
+        }));
+
+    // Build new const op with correct output shape
+    ShapedType inputShape = input.getType().cast<ShapedType>();
+    DenseElementsAttr outputAttr =
+        inputAttr.reshape(inputShape.clone(newShapeValues));
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputAttr.getType(),
+                                               outputAttr);
+    return success();
+  }
+};
+
 void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
   results.insert<ReshapeReshapeOptimization>(context);
+  results.insert<ReshapeConstOptimization>(context);
 }
 
 struct ConstantTransposeOptimization
