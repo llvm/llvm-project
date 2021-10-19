@@ -16,11 +16,11 @@ OptionalHeader:
   ImageBase:       4194304
   SectionAlignment: 4096
   FileAlignment:   512
-  MajorOperatingSystemVersion: 6
+  MajorOperatingSystemVersion: 4
   MinorOperatingSystemVersion: 0
   MajorImageVersion: 0
   MinorImageVersion: 0
-  MajorSubsystemVersion: 6
+  MajorSubsystemVersion: 4
   MinorSubsystemVersion: 0
   Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
   DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
