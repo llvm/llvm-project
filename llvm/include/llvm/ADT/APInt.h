@@ -430,6 +430,17 @@ public:
     return countPopulationSlowCase() == 1;
   }
 
+  /// Check if this APInt's negated value is a power of two greater than zero.
+  bool isNegatedPowerOf2() const {
+    assert(BitWidth && "zero width values not allowed");
+    if (isNonNegative())
+      return false;
+    // NegatedPowerOf2 - shifted mask in the top bits.
+    unsigned LO = countLeadingOnes();
+    unsigned TZ = countTrailingZeros();
+    return (LO + TZ) == BitWidth;
+  }
+
   /// Check if the APInt's value is returned by getSignMask.
   ///
   /// \returns true if this is the value returned by getSignMask.

@@ -342,7 +342,7 @@ static bool isSSATMinMaxPattern(Instruction *Inst, const APInt &Imm) {
 
   if (InstSPF == SPF_SMAX &&
       PatternMatch::match(RHS, PatternMatch::m_ConstantInt(C)) &&
-      C->getValue() == Imm && Imm.isNegative() && (-Imm).isPowerOf2()) {
+      C->getValue() == Imm && Imm.isNegative() && Imm.isNegatedPowerOf2()) {
 
     auto isSSatMin = [&](Value *MinInst) {
       if (isa<SelectInst>(MinInst)) {
