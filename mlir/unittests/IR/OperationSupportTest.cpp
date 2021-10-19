@@ -225,4 +225,48 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
   ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
 }
 
+TEST(NamedAttrListTest, TestAppendAssign) {
+  MLIRContext ctx;
+  NamedAttrList attrs;
+  Builder b(&ctx);
+
+  attrs.append("foo", b.getStringAttr("bar"));
+  attrs.append("baz", b.getStringAttr("boo"));
+
+  {
+    auto it = attrs.begin();
+    EXPECT_EQ(it->first, b.getIdentifier("foo"));
+    EXPECT_EQ(it->second, b.getStringAttr("bar"));
+    ++it;
+    EXPECT_EQ(it->first, b.getIdentifier("baz"));
+    EXPECT_EQ(it->second, b.getStringAttr("boo"));
+  }
+
+  attrs.append("foo", b.getStringAttr("zoo"));
+  {
+    auto dup = attrs.findDuplicate();
+    ASSERT_TRUE(dup.hasValue());
+  }
+
+  SmallVector<NamedAttribute> newAttrs = {
+      b.getNamedAttr("foo", b.getStringAttr("f")),
+      b.getNamedAttr("zoo", b.getStringAttr("z")),
+  };
+  attrs.assign(newAttrs);
+
+  auto dup = attrs.findDuplicate();
+  ASSERT_FALSE(dup.hasValue());
+
+  {
+    auto it = attrs.begin();
+    EXPECT_EQ(it->first, b.getIdentifier("foo"));
+    EXPECT_EQ(it->second, b.getStringAttr("f"));
+    ++it;
+    EXPECT_EQ(it->first, b.getIdentifier("zoo"));
+    EXPECT_EQ(it->second, b.getStringAttr("z"));
+  }
+
+  attrs.assign({});
+  ASSERT_TRUE(attrs.empty());
+}
 } // end namespace
