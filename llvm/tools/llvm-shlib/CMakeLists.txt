@@ -86,9 +86,9 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
   # To get the export list for a single llvm library:
   # nm ${LIB_PATH} | awk "/T _LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" > ${LIB_PATH}.exports
 
-  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/libllvm-c.exports)
+  set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/libllvm-c.exports)
 
-  set(LIB_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  set(LIB_DIR ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(LIB_NAME ${LIB_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM)
   set(LIB_PATH ${LIB_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
   set(LIB_EXPORTS_PATH ${LIB_NAME}.exports)
@@ -132,11 +132,11 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   # Set this name here, not used in multi conf loop,
   # but add script will pick the right one.
-  set(LIBSFILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
+  set(LIBSFILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
 
   # Get the full name to the libs so the python script understands them.
   foreach(lib ${LIB_NAMES})
-    list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
+    list(APPEND FULL_LIB_NAMES ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
   endforeach()
 
   # Need to separate lib names with newlines.
@@ -150,7 +150,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
       # Write out the full lib names into file to be read by the python script.
       # One libsfile per build, the add_custom_command should expand
       # ${CMAKE_CFG_INTDIR} correctly and select the right one.
-      file(WRITE ${CMAKE_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
+      file(WRITE ${LLVM_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
     endforeach()
   else()
     # Write out the full lib names into file to be read by the python script.
@@ -160,7 +160,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Generate the exports file dynamically.
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
-  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
+  set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
   if(NOT LLVM_NM)
     if(CMAKE_CROSSCOMPILING)
       build_native_tool(llvm-nm llvm_nm)
