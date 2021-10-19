@@ -419,18 +419,18 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x
 ; CHECK-LABEL: insert_nxv4i1_nxv1i1_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
-; CHECK-NEXT:    vslideup.vi v25, v26, 0
+; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
   %vec = call <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv, i64 0)
   ret <vscale x 4 x i1> %vec
@@ -440,20 +440,20 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK-LABEL: insert_nxv4i1_nxv1i1_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, mu
-; CHECK-NEXT:    vslideup.vx v25, v26, a0
+; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
   %vec = call <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv, i64 2)
   ret <vscale x 4 x i1> %vec

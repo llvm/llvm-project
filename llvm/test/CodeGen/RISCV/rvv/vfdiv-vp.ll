@@ -32,9 +32,9 @@ define <vscale x 1 x half> @vfdiv_vf_nxv1f16(<vscale x 1 x half> %va, half %b, <
 ; CHECK-LABEL: vfdiv_vf_nxv1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 1 x half> %elt.head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
@@ -46,9 +46,9 @@ define <vscale x 1 x half> @vfdiv_vf_nxv1f16_unmasked(<vscale x 1 x half> %va, h
 ; CHECK-LABEL: vfdiv_vf_nxv1f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 1 x half> %elt.head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
@@ -86,9 +86,9 @@ define <vscale x 2 x half> @vfdiv_vf_nxv2f16(<vscale x 2 x half> %va, half %b, <
 ; CHECK-LABEL: vfdiv_vf_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 2 x half> %elt.head, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
@@ -100,9 +100,9 @@ define <vscale x 2 x half> @vfdiv_vf_nxv2f16_unmasked(<vscale x 2 x half> %va, h
 ; CHECK-LABEL: vfdiv_vf_nxv2f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 2 x half> %elt.head, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
@@ -140,9 +140,9 @@ define <vscale x 4 x half> @vfdiv_vf_nxv4f16(<vscale x 4 x half> %va, half %b, <
 ; CHECK-LABEL: vfdiv_vf_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 4 x half> %elt.head, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
@@ -154,9 +154,9 @@ define <vscale x 4 x half> @vfdiv_vf_nxv4f16_unmasked(<vscale x 4 x half> %va, h
 ; CHECK-LABEL: vfdiv_vf_nxv4f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 4 x half> %elt.head, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
@@ -194,9 +194,9 @@ define <vscale x 8 x half> @vfdiv_vf_nxv8f16(<vscale x 8 x half> %va, half %b, <
 ; CHECK-LABEL: vfdiv_vf_nxv8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 8 x half> %elt.head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
@@ -208,9 +208,9 @@ define <vscale x 8 x half> @vfdiv_vf_nxv8f16_unmasked(<vscale x 8 x half> %va, h
 ; CHECK-LABEL: vfdiv_vf_nxv8f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 8 x half> %elt.head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
@@ -248,9 +248,9 @@ define <vscale x 16 x half> @vfdiv_vf_nxv16f16(<vscale x 16 x half> %va, half %b
 ; CHECK-LABEL: vfdiv_vf_nxv16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 16 x half> %elt.head, <vscale x 16 x half> undef, <vscale x 16 x i32> zeroinitializer
@@ -262,9 +262,9 @@ define <vscale x 16 x half> @vfdiv_vf_nxv16f16_unmasked(<vscale x 16 x half> %va
 ; CHECK-LABEL: vfdiv_vf_nxv16f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x half> undef, half %b, i32 0
   %vb = shufflevector <vscale x 16 x half> %elt.head, <vscale x 16 x half> undef, <vscale x 16 x i32> zeroinitializer
@@ -356,9 +356,9 @@ define <vscale x 1 x float> @vfdiv_vf_nxv1f32(<vscale x 1 x float> %va, float %b
 ; CHECK-LABEL: vfdiv_vf_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 1 x float> %elt.head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
@@ -370,9 +370,9 @@ define <vscale x 1 x float> @vfdiv_vf_nxv1f32_unmasked(<vscale x 1 x float> %va,
 ; CHECK-LABEL: vfdiv_vf_nxv1f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 1 x float> %elt.head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
@@ -410,9 +410,9 @@ define <vscale x 2 x float> @vfdiv_vf_nxv2f32(<vscale x 2 x float> %va, float %b
 ; CHECK-LABEL: vfdiv_vf_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 2 x float> %elt.head, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
@@ -424,9 +424,9 @@ define <vscale x 2 x float> @vfdiv_vf_nxv2f32_unmasked(<vscale x 2 x float> %va,
 ; CHECK-LABEL: vfdiv_vf_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 2 x float> %elt.head, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
@@ -464,9 +464,9 @@ define <vscale x 4 x float> @vfdiv_vf_nxv4f32(<vscale x 4 x float> %va, float %b
 ; CHECK-LABEL: vfdiv_vf_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 4 x float> %elt.head, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
@@ -478,9 +478,9 @@ define <vscale x 4 x float> @vfdiv_vf_nxv4f32_unmasked(<vscale x 4 x float> %va,
 ; CHECK-LABEL: vfdiv_vf_nxv4f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 4 x float> %elt.head, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
@@ -518,9 +518,9 @@ define <vscale x 8 x float> @vfdiv_vf_nxv8f32(<vscale x 8 x float> %va, float %b
 ; CHECK-LABEL: vfdiv_vf_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 8 x float> %elt.head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
@@ -532,9 +532,9 @@ define <vscale x 8 x float> @vfdiv_vf_nxv8f32_unmasked(<vscale x 8 x float> %va,
 ; CHECK-LABEL: vfdiv_vf_nxv8f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x float> undef, float %b, i32 0
   %vb = shufflevector <vscale x 8 x float> %elt.head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
@@ -626,9 +626,9 @@ define <vscale x 1 x double> @vfdiv_vf_nxv1f64(<vscale x 1 x double> %va, double
 ; CHECK-LABEL: vfdiv_vf_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 1 x double> %elt.head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
@@ -640,9 +640,9 @@ define <vscale x 1 x double> @vfdiv_vf_nxv1f64_unmasked(<vscale x 1 x double> %v
 ; CHECK-LABEL: vfdiv_vf_nxv1f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v25
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 1 x double> %elt.head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
@@ -680,9 +680,9 @@ define <vscale x 2 x double> @vfdiv_vf_nxv2f64(<vscale x 2 x double> %va, double
 ; CHECK-LABEL: vfdiv_vf_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 2 x double> %elt.head, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
@@ -694,9 +694,9 @@ define <vscale x 2 x double> @vfdiv_vf_nxv2f64_unmasked(<vscale x 2 x double> %v
 ; CHECK-LABEL: vfdiv_vf_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vfmv.v.f v10, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v26
+; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 2 x double> %elt.head, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
@@ -734,9 +734,9 @@ define <vscale x 4 x double> @vfdiv_vf_nxv4f64(<vscale x 4 x double> %va, double
 ; CHECK-LABEL: vfdiv_vf_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28, v0.t
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 4 x double> %elt.head, <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer
@@ -748,9 +748,9 @@ define <vscale x 4 x double> @vfdiv_vf_nxv4f64_unmasked(<vscale x 4 x double> %v
 ; CHECK-LABEL: vfdiv_vf_nxv4f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v28, fa0
+; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
-; CHECK-NEXT:    vfdiv.vv v8, v8, v28
+; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x double> undef, double %b, i32 0
   %vb = shufflevector <vscale x 4 x double> %elt.head, <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer
