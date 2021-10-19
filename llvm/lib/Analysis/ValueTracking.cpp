@@ -494,7 +494,9 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == E)
         return true;
 
-      if (V == I || isSafeToSpeculativelyExecute(V)) {
+      if (V == I || (isa<Instruction>(V) &&
+                     !cast<Instruction>(V)->mayHaveSideEffects() &&
+                     !cast<Instruction>(V)->isTerminator())) {
        EphValues.insert(V);
        if (const User *U = dyn_cast<User>(V))
          append_range(WorkSet, U->operands());
