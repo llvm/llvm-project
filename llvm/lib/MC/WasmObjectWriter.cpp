@@ -292,6 +292,8 @@ private:
     W->OS << Str;
   }
 
+  void writeStringWithAlignment(const StringRef Str, unsigned Alignment);
+
   void writeI32(int32_t val) {
     char Buffer[4];
     support::endian::write32le(Buffer, val);
@@ -362,6 +364,28 @@ void WasmObjectWriter::startSection(SectionBookkeeping &Section,
   Section.Index = SectionCount++;
 }
 
+// Write a string with extra paddings for trailing alignment
+// TODO: support alignment at asm and llvm level?
+void WasmObjectWriter::writeStringWithAlignment(const StringRef Str,
+                                                unsigned Alignment) {
+
+  // Calculate the encoded size of str length and add pads based on it and
+  // alignment.
+  raw_null_ostream NullOS;
+  uint64_t StrSizeLength = encodeULEB128(Str.size(), NullOS);
+  uint64_t Offset = W->OS.tell() + StrSizeLength + Str.size();
+  uint64_t Paddings = offsetToAlignment(Offset, Align(Alignment));
+  Offset += Paddings;
+
+  // LEB128 greater than 5 bytes is invalid
+  assert((StrSizeLength + Paddings) <= 5 && "too long string to align");
+
+  encodeSLEB128(Str.size(), W->OS, StrSizeLength + Paddings);
+  W->OS << Str;
+
+  assert(W->OS.tell() == Offset && "invalid padding");
+}
+
 void WasmObjectWriter::startCustomSection(SectionBookkeeping &Section,
                                           StringRef Name) {
   LLVM_DEBUG(dbgs() << "startCustomSection " << Name << "\n");
@@ -371,7 +395,12 @@ void WasmObjectWriter::startCustomSection(SectionBookkeeping &Section,
   Section.PayloadOffset = W->OS.tell();
 
   // Custom sections in wasm also have a string identifier.
-  writeString(Name);
+  if (Name != "__clangast") {
+    writeString(Name);
+  } else {
+    // The on-disk hashtable in clangast needs to be aligned by 4 bytes.
+    writeStringWithAlignment(Name, 4);
+  }
 
   // The position where the custom section starts.
   Section.ContentsOffset = W->OS.tell();
