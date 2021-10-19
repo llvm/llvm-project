@@ -191,9 +191,6 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // All masked operations support overloading api.
   bit HasNoMaskedOverloaded = true;
 
-  // Reads or writes "memory" or has other side-effects.
-  bit HasSideEffects = false;
-
   // This builtin is valid for the given Log2LMULs.
   list<int> Log2LMUL = [0, 1, 2, 3, -1, -2, -3];
 
@@ -1475,7 +1472,6 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
     HasMask = false,
-    HasSideEffects = true,
     HasPolicy = false,
     Log2LMUL = [0],
     ManualCodegen = [{IntrinsicTypes = {ResultType};}] in // Set XLEN type
