@@ -379,6 +379,8 @@ def : NMPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
 def : NMPat<(trap), (TEQ_NM ZERO_NM, ZERO_NM, 0)>;
 
 // SetCC patterns.
+def : NMPat<(seteq GPR32NM:$lhs, 0), (SLTIU_NM GPR32NM:$lhs, 1)>;
+def : NMPat<(setne GPR32NM:$lhs, 0), (SLTU_NM ZERO_NM, GPR32NM:$lhs)>;
 def : NMPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
             (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
 def : NMPat<(setne GPR32NM:$lhs, GPR32NM:$rhs),

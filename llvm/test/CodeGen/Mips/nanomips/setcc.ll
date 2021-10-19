@@ -9,12 +9,26 @@ define i1 @test_seteq(i32 %a, i32 %b) {
   ret i1 %cmp
 }
 
+define i1 @test_seteq0(i32 %a, i32 %b) {
+; CHECK: sltiu $a0, $a0, 1
+; CHECK: SLTIU_NM
+  %cmp = icmp eq i32 %a, 0
+  ret i1 %cmp
+}
+
 define i1 @test_setne(i32 %a, i32 %b) {
 ; CHECK: xor $a0, $a0, $a1
 ; CHECK: XOR_NM
 ; CHECK: sltu $a0, $zero, $a0
 ; CHECK: SLTU_NM
   %cmp = icmp ne i32 %a, %b
+  ret i1 %cmp
+}
+
+define i1 @test_setne0(i32 %a, i32 %b) {
+; CHECK: sltu $a0, $zero, $a0
+; CHECK: SLTU_NM
+  %cmp = icmp ne i32 %a, 0
   ret i1 %cmp
 }
 
