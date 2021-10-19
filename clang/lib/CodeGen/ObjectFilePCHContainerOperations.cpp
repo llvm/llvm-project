@@ -270,25 +270,42 @@ public:
     assert(Buffer->IsComplete && "serialization did not complete");
     auto &SerializedAST = Buffer->Data;
     auto Size = SerializedAST.size();
-    auto Int8Ty = llvm::Type::getInt8Ty(*VMContext);
-    auto *Ty = llvm::ArrayType::get(Int8Ty, Size);
-    auto *Data = llvm::ConstantDataArray::getString(
-        *VMContext, StringRef(SerializedAST.data(), Size),
-        /*AddNull=*/false);
-    auto *ASTSym = new llvm::GlobalVariable(
-        *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage, Data,
-        "__clang_ast");
-    // The on-disk hashtable needs to be aligned.
-    ASTSym->setAlignment(llvm::Align(8));
 
-    // Mach-O also needs a segment name.
-    if (Triple.isOSBinFormatMachO())
-      ASTSym->setSection("__CLANG,__clangast");
-    // COFF has an eight character length limit.
-    else if (Triple.isOSBinFormatCOFF())
-      ASTSym->setSection("clangast");
-    else
-      ASTSym->setSection("__clangast");
+    if (Triple.isOSBinFormatWasm()) {
+      // Emit __clangast in custom section instead of named data segment
+      // to find it while iterating sections.
+      // This could be avoided if all data segements (the wasm sense) were
+      // represented as their own sections (in the llvm sense).
+      // TODO: https://github.com/WebAssembly/tool-conventions/issues/138
+      llvm::NamedMDNode *MD =
+          M->getOrInsertNamedMetadata("wasm.custom_sections");
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(*VMContext, "__clangast"),
+          llvm::MDString::get(*VMContext,
+                              StringRef(SerializedAST.data(), Size))};
+      auto *NameAndContent = llvm::MDTuple::get(*VMContext, Ops);
+      MD->addOperand(NameAndContent);
+    } else {
+      auto Int8Ty = llvm::Type::getInt8Ty(*VMContext);
+      auto *Ty = llvm::ArrayType::get(Int8Ty, Size);
+      auto *Data = llvm::ConstantDataArray::getString(
+          *VMContext, StringRef(SerializedAST.data(), Size),
+          /*AddNull=*/false);
+      auto *ASTSym = new llvm::GlobalVariable(
+          *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage,
+          Data, "__clang_ast");
+      // The on-disk hashtable needs to be aligned.
+      ASTSym->setAlignment(llvm::Align(8));
+
+      // Mach-O also needs a segment name.
+      if (Triple.isOSBinFormatMachO())
+        ASTSym->setSection("__CLANG,__clangast");
+      // COFF has an eight character length limit.
+      else if (Triple.isOSBinFormatCOFF())
+        ASTSym->setSection("clangast");
+      else
+        ASTSym->setSection("__clangast");
+    }
 
     LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
