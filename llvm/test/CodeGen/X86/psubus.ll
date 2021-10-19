@@ -26,6 +26,105 @@ vector.ph:
   ret <8 x i16> %res
 }
 
+; This is logically equivalent to the above.
+
+define <8 x i16> @ashr_xor_and(<8 x i16> %x) nounwind {
+; SSE-LABEL: ashr_xor_and:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psraw $15, %xmm1
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_xor_and:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_xor_and:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_xor_and:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogq $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %flipsign = xor <8 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  %res = and <8 x i16> %signsplat, %flipsign
+  ret <8 x i16> %res
+}
+
+define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x i8>* %p2) nounwind {
+; SSE-LABEL: ashr_xor_and_commute_uses:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, (%rdi)
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ashr_xor_and_commute_uses:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %signsplat = ashr <16 x i8> %x, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  store <16 x i8> %signsplat, <16 x i8>* %p1
+  %flipsign = xor <16 x i8> %x, <i8 undef, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>
+  store <16 x i8> %flipsign, <16 x i8>* %p2
+  %res = and <16 x i8> %flipsign, %signsplat
+  ret <16 x i8> %res
+}
+
+define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x, <4 x i32>* %p1, <4 x i32>* %p2) nounwind {
+; SSE-LABEL: ashr_xor_and_custom:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_xor_and_custom:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_xor_and_custom:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_xor_and_custom:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogd $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
+  %flipsign = xor <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %res = and <4 x i32> %flipsign, %signsplat
+  ret <4 x i32> %res
+}
+
 define <8 x i16> @test2(<8 x i16> %x) nounwind {
 ; SSE-LABEL: test2:
 ; SSE:       # %bb.0: # %vector.ph
