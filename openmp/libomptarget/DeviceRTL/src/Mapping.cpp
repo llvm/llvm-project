@@ -29,7 +29,7 @@ namespace impl {
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 constexpr const llvm::omp::GV &getGridValue() {
-  return llvm::omp::AMDGPUGridValues;
+  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
 uint32_t getGridDim(uint32_t n, uint16_t d) {

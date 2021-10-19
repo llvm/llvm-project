@@ -31,8 +31,12 @@ namespace impl {
 /// NOTE: This function needs to be implemented by every target.
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, int Ordering);
 
-uint32_t atomicRead(uint32_t *Address, int Ordering) {
+uint32_t atomicLoad(uint32_t *Address, int Ordering) {
   return __atomic_fetch_add(Address, 0U, __ATOMIC_SEQ_CST);
+}
+
+void atomicStore(uint32_t *Address, uint32_t Val, int Ordering) {
+  __atomic_store_n(Address, Val, Ordering);
 }
 
 uint32_t atomicAdd(uint32_t *Address, uint32_t Val, int Ordering) {
@@ -68,7 +72,7 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, int Ordering) {
   return __builtin_amdgcn_atomic_inc32(Address, Val, Ordering, "");
 }
 
-uint32_t SHARD(namedBarrierTracker);
+uint32_t SHARED(namedBarrierTracker);
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -79,7 +83,7 @@ void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
   // assert(NumThreads % 32 == 0);
 
-  uint32_t WarpSize = maping::getWarpSize();
+  uint32_t WarpSize = mapping::getWarpSize();
   uint32_t NumWaves = NumThreads / WarpSize;
 
   fence::team(__ATOMIC_ACQUIRE);
@@ -115,7 +119,7 @@ void namedBarrier() {
       // more waves still to go, spin until generation counter changes
       do {
         __builtin_amdgcn_s_sleep(0);
-        load = atomi::load(&namedBarrierTracker, __ATOMIC_RELAXED);
+        load = atomic::load(&namedBarrierTracker, __ATOMIC_RELAXED);
       } while ((load & 0xffff0000u) == generation);
     }
   }
@@ -192,7 +196,7 @@ int testLock(omp_lock_t *Lock) {
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
-void destoryLock(omp_lock_t *Lock) { unsetLock(Lock); }
+void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setLock(omp_lock_t *Lock) {
   // TODO: not sure spinning is a good idea here..
@@ -229,8 +233,12 @@ void fence::kernel(int Ordering) { impl::fenceKernel(Ordering); }
 
 void fence::system(int Ordering) { impl::fenceSystem(Ordering); }
 
-uint32_t atomic::read(uint32_t *Addr, int Ordering) {
-  return impl::atomicRead(Addr, Ordering);
+uint32_t atomic::load(uint32_t *Addr, int Ordering) {
+  return impl::atomicLoad(Addr, Ordering);
+}
+
+void atomic::store(uint32_t *Addr, uint32_t V, int Ordering) {
+   impl::atomicStore(Addr, V, Ordering);
 }
 
 uint32_t atomic::inc(uint32_t *Addr, uint32_t V, int Ordering) {
@@ -300,7 +308,7 @@ void __kmpc_end_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
 
 void omp_init_lock(omp_lock_t *Lock) { impl::initLock(Lock); }
 
-void omp_destroy_lock(omp_lock_t *Lock) { impl::destoryLock(Lock); }
+void omp_destroy_lock(omp_lock_t *Lock) { impl::destroyLock(Lock); }
 
 void omp_set_lock(omp_lock_t *Lock) { impl::setLock(Lock); }
 
