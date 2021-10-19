@@ -692,7 +692,7 @@ public:
       return ptr;
     }
 
-    int alloc_free(void *ptr) override {
+    int free(void *ptr) override {
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
@@ -1934,7 +1934,7 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  return DeviceInfo.DeviceAllocators[device_id].alloc_free(tgt_ptr);
+  return DeviceInfo.DeviceAllocators[device_id].free(tgt_ptr);
 }
 
 // Determine launch values for threadsPerGroup and num_groups.
