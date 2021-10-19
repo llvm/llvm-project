@@ -103,3 +103,27 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAddWrapperAndHandle) {
       (void *)&addWrapper, Result, 1, 2));
   EXPECT_EQ(Result, (int32_t)3);
 }
+
+class AddClass {
+public:
+  AddClass(int32_t X) : X(X) {}
+  int32_t addMethod(int32_t Y) { return X + Y; }
+
+private:
+  int32_t X;
+};
+
+static __orc_rt_CWrapperFunctionResult addMethodWrapper(const char *ArgData,
+                                                        size_t ArgSize) {
+  return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
+             ArgData, ArgSize, makeMethodWrapperHandler(&AddClass::addMethod))
+      .release();
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionMethodCallAndHandleRet) {
+  int32_t Result;
+  AddClass AddObj(1);
+  EXPECT_FALSE(!!WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::call(
+      (void *)&addMethodWrapper, Result, ExecutorAddr::fromPtr(&AddObj), 2));
+  EXPECT_EQ(Result, (int32_t)3);
+}
