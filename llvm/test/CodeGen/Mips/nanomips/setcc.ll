@@ -10,8 +10,8 @@ define i1 @test_seteq(i32 %a, i32 %b) {
 }
 
 define i1 @test_seteq0(i32 %a, i32 %b) {
-; CHECK: sltiu $a0, $a0, 1
-; CHECK: SLTIU_NM
+; CHECK: seqi $a0, $a0, 0
+; CHECK: SEQI_NM
   %cmp = icmp eq i32 %a, 0
   ret i1 %cmp
 }
@@ -133,5 +133,27 @@ define i1 @test_not_sltiu(i32 %a) {
 ; CHECK: sltu $a0, $a0, $a1
 ; CHECK: SLTU_NM
   %cmp = icmp ult i32 %a, 4096
+  ret i1 %cmp
+}
+
+; Making sure seqi immediate limits are respected.
+define i1 @test_seqi(i32 %a) {
+; CHECK: seqi $a0, $a0, 4095
+; CHECK: SEQI_NM
+  %cmp = icmp eq i32 %a, 4095
+  ret i1 %cmp
+}
+
+; Making sure seqi immediate limits are respected.
+define i1 @test_not_seqi(i32 %a) {
+; CHECK-NOT: seqi $a0, $a0, 4096
+; CHECK-NOT: SLTI_NM
+; CHECK: li $a1, 4096
+; CHECK: Li_NM
+; CHECK: xor $a0, $a0, $a1
+; CHECK: XOR_NM
+; CHECK: sltiu $a0, $a0, 1
+; CHECK: SLTIU_NM
+  %cmp = icmp eq i32 %a, 4096
   ret i1 %cmp
 }

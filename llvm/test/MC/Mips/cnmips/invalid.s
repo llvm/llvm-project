@@ -1,3 +1,4 @@
+# UNSUPPORTED: nanomips
 # Instructions that are invalid
 #
 # RUN: not llvm-mc %s -triple=mips64-unknown-linux -show-encoding -mcpu=octeon 2>%t1

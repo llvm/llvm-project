@@ -288,6 +288,7 @@ def XORI_NM  : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
 def ANDI_NM  : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
 def SLTI_NM  : ArithLogicINM<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
 def SLTIU_NM : ArithLogicINM<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
+def SEQI_NM  : ArithLogicINM<"seqi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, seteq>;
 
 // P.SHIFT pool of instructions
 def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
@@ -379,7 +380,6 @@ def : NMPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
 def : NMPat<(trap), (TEQ_NM ZERO_NM, ZERO_NM, 0)>;
 
 // SetCC patterns.
-def : NMPat<(seteq GPR32NM:$lhs, 0), (SLTIU_NM GPR32NM:$lhs, 1)>;
 def : NMPat<(setne GPR32NM:$lhs, 0), (SLTU_NM ZERO_NM, GPR32NM:$lhs)>;
 def : NMPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
             (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
