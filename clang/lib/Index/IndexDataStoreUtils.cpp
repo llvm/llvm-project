@@ -227,6 +227,8 @@ SymbolPropertySet index::getSymbolProperties(uint64_t Props) {
     SymbolProperties |= (SymbolPropertySet)SymbolProperty::Local;
   if (Props & INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE)
     SymbolProperties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
+  if (Props & INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ASYNC)
+    SymbolProperties |= (SymbolPropertySet)SymbolProperty::SwiftAsync;
 
   return SymbolProperties;
 }
@@ -458,6 +460,9 @@ indexstore_symbol_property_t index::getIndexStoreProperties(SymbolPropertySet Pr
       break;
     case SymbolProperty::ProtocolInterface:
       storeProp |= INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE;
+      break;
+    case SymbolProperty::SwiftAsync:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ASYNC;
       break;
     }
   });

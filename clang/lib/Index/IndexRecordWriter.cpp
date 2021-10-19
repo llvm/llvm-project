@@ -128,7 +128,7 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 5)); // Kind
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 5)); // SubKind
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 5)); // Language
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, SymbolPropertyBitNum)); // Properties
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 9)); // Properties
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, SymbolRoleBitNum)); // Roles
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, SymbolRoleBitNum)); // Related Roles
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Length of name in block
