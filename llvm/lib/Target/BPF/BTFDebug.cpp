@@ -832,7 +832,9 @@ void BTFDebug::emitBTFSection() {
     return;
 
   MCContext &Ctx = OS.getContext();
-  OS.SwitchSection(Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0));
+  MCSectionELF *Sec = Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0);
+  Sec->setAlignment(Align(4));
+  OS.SwitchSection(Sec);
 
   // Emit header.
   emitCommonHeader();
@@ -870,7 +872,9 @@ void BTFDebug::emitBTFExtSection() {
     return;
 
   MCContext &Ctx = OS.getContext();
-  OS.SwitchSection(Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0));
+  MCSectionELF *Sec = Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0);
+  Sec->setAlignment(Align(4));
+  OS.SwitchSection(Sec);
 
   // Emit header.
   emitCommonHeader();
