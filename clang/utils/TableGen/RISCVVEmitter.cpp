@@ -1046,7 +1046,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
       PrevDef->emitCodeGenSwitchBody(OS);
     }
     PrevDef = Def.get();
-    OS << "case RISCV::BI__builtin_rvv_" << Def->getName() << ":\n";
+    OS << "case RISCVVector::BI__builtin_rvv_" << Def->getName() << ":\n";
   }
   Defs.back()->emitCodeGenSwitchBody(OS);
   OS << "\n";

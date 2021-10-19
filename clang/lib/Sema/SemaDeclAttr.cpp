@@ -5340,8 +5340,8 @@ static void handleArmBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool RISCVAliasValid(unsigned BuiltinID, StringRef AliasName) {
-  return BuiltinID >= Builtin::FirstTSBuiltin &&
-         BuiltinID < RISCV::LastTSBuiltin;
+  return BuiltinID >= RISCV::FirstRVVBuiltin &&
+         BuiltinID <= RISCV::LastRVVBuiltin;
 }
 
 static void handleBuiltinAliasAttr(Sema &S, Decl *D,
