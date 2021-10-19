@@ -547,6 +547,9 @@ def UASWM_NM : StoreMultipleNM<"uaswm">;
 
 def MOVE_NM : InstNM<(outs GPR32NMOpnd:$rt), (ins GPR32NMOpnd:$rs),
                       "move\t$rt, $rs", []>, InstSize16;
+def MOVEP_NM : InstNM<(outs GPR32NMOpnd:$dst1, GPR32NMOpnd:$dst2),
+                      (ins GPR32NMOpnd:$src1, GPR32NMOpnd:$src2),
+                      "movep\t$dst1, $dst2, $src1, $src2", []>, InstSize16;
 
 }
 

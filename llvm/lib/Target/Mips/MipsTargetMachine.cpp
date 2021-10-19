@@ -319,6 +319,9 @@ void MipsPassConfig::addPreEmitPass() {
   // instructions which can be remapped to a 16 bit instruction.
   addPass(createMicroMipsSizeReducePass());
 
+  if (getMipsSubtarget().hasNanoMips())
+    addPass(createNanoMipsMoveOptimizerPass());
+
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
   addPass(createMipsDelaySlotFillerPass());
