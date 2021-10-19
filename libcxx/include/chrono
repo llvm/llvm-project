@@ -1839,6 +1839,7 @@ class weekday_last;
 class weekday {
 private:
     unsigned char __wd;
+    static constexpr unsigned char __weekday_from_days(int __days) noexcept;
 public:
   weekday() = default;
   inline explicit constexpr weekday(unsigned __val) noexcept : __wd(static_cast<unsigned char>(__val == 7 ? 0 : __val)) {}
@@ -1858,9 +1859,6 @@ public:
   inline constexpr bool ok() const noexcept { return __wd <= 6; }
          constexpr weekday_indexed operator[](unsigned __index) const noexcept;
          constexpr weekday_last    operator[](last_spec) const noexcept;
-
-  // TODO: Make private?
-  static constexpr unsigned char __weekday_from_days(int __days) noexcept;
 };
 
 
