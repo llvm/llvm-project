@@ -1461,7 +1461,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s) {
       llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return;
-  clang_type_system->Dump(s);
+  clang_type_system->Dump(s.AsRawOstream());
 }
 
 void SymbolFilePDB::FindTypesByRegex(

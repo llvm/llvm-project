@@ -4004,7 +4004,7 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
       llvm::dyn_cast_or_null<TypeSystemClang>(&ts_or_err.get());
   if (!clang)
     return;
-  clang->Dump(s);
+  clang->Dump(s.AsRawOstream());
 }
 
 SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
