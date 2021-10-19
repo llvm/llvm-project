@@ -1976,7 +1976,7 @@ void mlir::python::populateIRCore(py::module &m) {
             if (frames.empty())
               throw py::value_error("No caller frames provided");
             MlirLocation caller = frames.back().get();
-            for (PyLocation frame :
+            for (const PyLocation &frame :
                  llvm::reverse(llvm::makeArrayRef(frames).drop_back()))
               caller = mlirLocationCallSiteGet(frame.get(), caller);
             return PyLocation(context->getRef(),

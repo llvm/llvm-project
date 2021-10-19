@@ -555,6 +555,7 @@ void mlir::python::populateIRAffine(py::module &m) {
                     mlirAffineMapCompressUnusedSymbols(
                         maps.data(), maps.size(), compressed.data(), populate);
                     std::vector<PyAffineMap> res;
+                    res.reserve(compressed.size());
                     for (auto m : compressed)
                       res.push_back(PyAffineMap(context->getRef(), m));
                     return res;
