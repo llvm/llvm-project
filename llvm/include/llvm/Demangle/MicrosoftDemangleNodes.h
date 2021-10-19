@@ -80,6 +80,7 @@ enum OutputFlags {
   OF_NoAccessSpecifier = 4,
   OF_NoMemberType = 8,
   OF_NoReturnType = 16,
+  OF_NoVariableType = 32,
 };
 
 // Types
