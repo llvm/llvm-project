@@ -153,7 +153,6 @@ private:
   std::string Name; // Builtin name
   std::string MangledName;
   std::string IRName;
-  bool HasSideEffects;
   bool IsMask;
   bool HasVL;
   bool HasPolicy;
@@ -170,9 +169,9 @@ private:
 
 public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
-               StringRef MangledSuffix, StringRef IRName, bool HasSideEffects,
-               bool IsMask, bool HasMaskedOffOperand, bool HasVL,
-               bool HasPolicy, bool HasNoMaskedOverloaded, bool HasAutoDef,
+               StringRef MangledSuffix, StringRef IRName, bool IsMask,
+               bool HasMaskedOffOperand, bool HasVL, bool HasPolicy,
+               bool HasNoMaskedOverloaded, bool HasAutoDef,
                StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                StringRef RequiredExtension, unsigned NF);
@@ -180,7 +179,6 @@ public:
 
   StringRef getName() const { return Name; }
   StringRef getMangledName() const { return MangledName; }
-  bool hasSideEffects() const { return HasSideEffects; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return HasPolicy; }
   bool hasNoMaskedOverloaded() const { return HasNoMaskedOverloaded; }
@@ -757,14 +755,13 @@ void RVVType::applyModifier(StringRef Transformer) {
 //===----------------------------------------------------------------------===//
 RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef MangledSuffix,
-                           StringRef IRName, bool HasSideEffects, bool IsMask,
+                           StringRef IRName, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL, bool HasPolicy,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            StringRef RequiredExtension, unsigned NF)
-    : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
-      HasVL(HasVL), HasPolicy(HasPolicy),
+    : IRName(IRName), IsMask(IsMask), HasVL(HasVL), HasPolicy(HasPolicy),
       HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
       ManualCodegen(ManualCodegen.str()), NF(NF) {
 
@@ -1018,11 +1015,7 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
   OS << "#endif\n";
   for (auto &Def : Defs) {
     OS << "RISCVV_BUILTIN(__builtin_rvv_" << Def->getName() << ",\""
-       << Def->getBuiltinTypeStr() << "\", ";
-    if (!Def->hasSideEffects())
-      OS << "\"n\")\n";
-    else
-      OS << "\"\")\n";
+       << Def->getBuiltinTypeStr() << "\", \"n\")\n";
   }
   OS << "#undef RISCVV_BUILTIN\n";
 }
@@ -1093,7 +1086,6 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasVL = R->getValueAsBit("HasVL");
     bool HasPolicy = R->getValueAsBit("HasPolicy");
     bool HasNoMaskedOverloaded = R->getValueAsBit("HasNoMaskedOverloaded");
-    bool HasSideEffects = R->getValueAsBit("HasSideEffects");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
     StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
     StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
@@ -1165,17 +1157,17 @@ void RVVEmitter::createRVVIntrinsics(
         // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
-            HasSideEffects, /*IsMask=*/false, /*HasMaskedOffOperand=*/false,
-            HasVL, HasPolicy, HasNoMaskedOverloaded, HasAutoDef, ManualCodegen,
-            Types.getValue(), IntrinsicTypes, RequiredExtension, NF));
+            /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasPolicy,
+            HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
+            IntrinsicTypes, RequiredExtension, NF));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
               computeTypes(I, Log2LMUL, NF, ProtoMaskSeq);
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, MangledSuffixStr, IRNameMask,
-              HasSideEffects, /*IsMask=*/true, HasMaskedOffOperand, HasVL,
-              HasPolicy, HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
+              /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasPolicy,
+              HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
               MaskTypes.getValue(), IntrinsicTypes, RequiredExtension, NF));
         }
       } // end for Log2LMULList
