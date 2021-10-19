@@ -20,7 +20,7 @@ using namespace object;
 
 namespace {
 
-static const EnumEntry<unsigned> WasmSymbolTypes[] = {
+const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_TYPE_##X }
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA), ENUM_ENTRY(GLOBAL),
@@ -28,7 +28,7 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<uint32_t> WasmSectionTypes[] = {
+const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SEC_##X }
     ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),      ENUM_ENTRY(IMPORT),
@@ -39,7 +39,7 @@ static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+const EnumEntry<unsigned> WasmSymbolFlags[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_##X }
   ENUM_ENTRY(BINDING_GLOBAL),

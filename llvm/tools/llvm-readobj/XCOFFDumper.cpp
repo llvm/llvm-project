@@ -112,7 +112,7 @@ void XCOFFDumper::printRelocations() {
     printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
 
-static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
+const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
@@ -172,14 +172,14 @@ void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   }
 }
 
-static const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
+const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(XFT_FN), ECase(XFT_CT), ECase(XFT_CV), ECase(XFT_CD)
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
+const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(AUX_EXCEPT), ECase(AUX_FCN), ECase(AUX_SYM), ECase(AUX_FILE),
@@ -217,7 +217,7 @@ static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
+const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(XTY_ER), ECase(XTY_SD), ECase(XTY_LD), ECase(XTY_CM)
@@ -267,7 +267,7 @@ void XCOFFDumper::printSectAuxEntForStat(
   W.printNumber("NumberOfLineNum", AuxEntPtr->NumberOfLineNum);
 }
 
-static const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
+const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
@@ -316,14 +316,14 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   }
 }
 
-static const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
+const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(TB_C), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
+const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(TCPU_PPC64), ECase(TCPU_COM), ECase(TCPU_970)
@@ -534,7 +534,7 @@ void XCOFFDumper::printNeededLibraries() {
   }
 }
 
-static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
+const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(STYP_PAD),    ECase(STYP_DWARF), ECase(STYP_TEXT),
