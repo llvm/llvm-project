@@ -40,6 +40,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
+  using SameInt = Type<TypeCategory::Integer, KIND>;
   if (name == "all") {
     return FoldAllAny(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
@@ -59,7 +60,6 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
     return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
-    using LargestInt = Type<TypeCategory::Integer, 16>;
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);
     // Arguments do not have to be of the same integer type. Convert all
     // arguments to the biggest integer type before comparing them to
@@ -89,6 +89,26 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
+  } else if (name == "btest") {
+    if (const auto *ix{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
+      return std::visit(
+          [&](const auto &x) {
+            using IT = ResultType<decltype(x)>;
+            return FoldElementalIntrinsic<T, IT, SameInt>(context,
+                std::move(funcRef),
+                ScalarFunc<T, IT, SameInt>(
+                    [&](const Scalar<IT> &x, const Scalar<SameInt> &pos) {
+                      auto posVal{pos.ToInt64()};
+                      if (posVal < 0 || posVal >= x.bits) {
+                        context.messages().Say(
+                            "POS=%jd out of range for BTEST"_err_en_US,
+                            static_cast<std::intmax_t>(posVal));
+                      }
+                      return Scalar<T>{x.BTEST(posVal)};
+                    }));
+          },
+          ix->u);
+    }
   } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
     // A warning about an invalid argument is discarded from converting
     // the argument of isnan() / IEEE_IS_NAN().
@@ -139,7 +159,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: btest, dot_product, is_iostat_end,
+  // TODO: dot_product, is_iostat_end,
   // is_iostat_eor, logical, matmul, out_of_range,
   // parity, transfer
   return Expr<T>{std::move(funcRef)};

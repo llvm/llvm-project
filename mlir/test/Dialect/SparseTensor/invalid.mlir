@@ -162,8 +162,8 @@ func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
 
 #CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
 
-func @sparse_convert_mismatch(%arg0: tensor<10x10xf32>) -> tensor<10x?xf32, #CSR> {
+func @sparse_convert_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10xf32, #CSR> {
   // expected-error@+1 {{unexpected conversion mismatch in dimension 1}}
-  %0 = sparse_tensor.convert %arg0 : tensor<10x10xf32> to tensor<10x?xf32, #CSR>
-  return %0 : tensor<10x?xf32, #CSR>
+  %0 = sparse_tensor.convert %arg0 : tensor<10x?xf32> to tensor<10x10xf32, #CSR>
+  return %0 : tensor<10x10xf32, #CSR>
 }

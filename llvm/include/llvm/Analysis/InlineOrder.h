@@ -160,8 +160,7 @@ public:
     auto PredWrapper = [=](HeapT P) -> bool {
       return Pred(std::make_pair(P.first, 0));
     };
-    Heap.erase(std::remove_if(Heap.begin(), Heap.end(), PredWrapper),
-               Heap.end());
+    llvm::erase_if(Heap, PredWrapper);
     std::make_heap(Heap.begin(), Heap.end(), cmp);
   }
 

@@ -7,6 +7,8 @@
 {'is_defined': False, 'name': '_ZNSt13runtime_errorD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt14overflow_errorD1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt16invalid_argumentD1Ev', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthC1Ev', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthD1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castC1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD2Ev', 'type': 'FUNC'}
@@ -20,6 +22,7 @@
 {'is_defined': False, 'name': '_ZTISt13runtime_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTISt14overflow_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTISt16invalid_argument', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': False, 'name': '_ZTISt20bad_array_new_length', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTISt8bad_cast', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTISt9bad_alloc', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTISt9exception', 'size': 0, 'type': 'OBJECT'}

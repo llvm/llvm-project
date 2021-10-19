@@ -11,7 +11,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -252,8 +251,9 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
   return LHS < RHS;
 }
 
-void RISCVISAInfo::toFeatures(const llvm::opt::ArgList &Args,
-                              std::vector<StringRef> &Features) const {
+void RISCVISAInfo::toFeatures(
+    std::vector<StringRef> &Features,
+    std::function<StringRef(const Twine &)> StrAlloc) const {
   for (auto &Ext : Exts) {
     StringRef ExtName = Ext.first;
 
@@ -268,9 +268,9 @@ void RISCVISAInfo::toFeatures(const llvm::opt::ArgList &Args,
       Features.push_back("+experimental-zvlsseg");
       Features.push_back("+experimental-zvamo");
     } else if (isExperimentalExtension(ExtName)) {
-      Features.push_back(Args.MakeArgString("+experimental-" + ExtName));
+      Features.push_back(StrAlloc("+experimental-" + ExtName));
     } else {
-      Features.push_back(Args.MakeArgString("+" + ExtName));
+      Features.push_back(StrAlloc("+" + ExtName));
     }
   }
 }

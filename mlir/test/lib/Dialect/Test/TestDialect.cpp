@@ -771,7 +771,7 @@ OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
 
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
     ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results) {
-  for (Value input : this->operands()) {
+  for (Value input : this->getOperands()) {
     results.push_back(input);
   }
   return success();

@@ -691,9 +691,16 @@ def bitfield_extract_from_shr : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def bitfield_extract_from_shr_and : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_ASHR, G_LSHR):$root,
+    [{ return Helper.matchBitfieldExtractFromShrAnd(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
                                             bitfield_extract_from_and,
-                                            bitfield_extract_from_shr]>;
+                                            bitfield_extract_from_shr,
+                                            bitfield_extract_from_shr_and]>;
 
 def udiv_by_const : GICombineRule<
   (defs root:$root),

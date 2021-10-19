@@ -52,8 +52,7 @@ void LoopVersioning::versionLoop(
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
 
-  Instruction *FirstCheckInst;
-  Instruction *MemRuntimeCheck;
+  Value *MemRuntimeCheck;
   Value *SCEVRuntimeCheck;
   Value *RuntimeCheck = nullptr;
 
@@ -64,8 +63,8 @@ void LoopVersioning::versionLoop(
   SCEVExpander Exp2(*RtPtrChecking.getSE(),
                     VersionedLoop->getHeader()->getModule()->getDataLayout(),
                     "induction");
-  std::tie(FirstCheckInst, MemRuntimeCheck) = addRuntimeChecks(
-      RuntimeCheckBB->getTerminator(), VersionedLoop, AliasChecks, Exp2);
+  MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
+                                     VersionedLoop, AliasChecks, Exp2);
 
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
                    "scev.check");

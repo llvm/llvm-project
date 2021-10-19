@@ -334,7 +334,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; loop
 ; CHECK-LABEL: sum_arrays_outside_use(
 ; CHECK-LABEL: vector.memcheck:
-; CHECK:         br i1 %memcheck.conflict, label %scalar.ph, label %vector.ph  
+; CHECK:         br i1 %conflict.rdx, label %scalar.ph, label %vector.ph
 
 ; CHECK-LABEL: vector.body:
 ; CHECK:          %wide.load = load <2 x i32>, <2 x i32>*

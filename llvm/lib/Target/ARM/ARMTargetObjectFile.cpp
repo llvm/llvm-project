@@ -54,6 +54,16 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
   }
 }
 
+const MCRegister ARMElfTargetObjectFile::getStaticBase() const {
+  return ARM::R9;
+}
+
+const MCExpr *ARMElfTargetObjectFile::
+getIndirectSymViaRWPI(const MCSymbol *Sym) const {
+  return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_ARM_SBREL,
+                                 getContext());
+}
+
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {

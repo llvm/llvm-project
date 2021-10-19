@@ -2027,12 +2027,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   size_t NumShuffleLanes = 0;
   if (ShuffleCounts.size()) {
     std::tie(ShuffleSrc1, NumShuffleLanes) = GetMostCommon(ShuffleCounts);
-    ShuffleCounts.erase(std::remove_if(ShuffleCounts.begin(),
-                                       ShuffleCounts.end(),
-                                       [&](const auto &Pair) {
-                                         return Pair.first == ShuffleSrc1;
-                                       }),
-                        ShuffleCounts.end());
+    llvm::erase_if(ShuffleCounts,
+                   [&](const auto &Pair) { return Pair.first == ShuffleSrc1; });
   }
   if (ShuffleCounts.size()) {
     size_t AdditionalShuffleLanes;

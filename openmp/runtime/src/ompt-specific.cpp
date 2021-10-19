@@ -372,7 +372,6 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
 
     while (ancestor_level > 0) {
       // needed for thread_num
-      prev_team = team;
       prev_lwt = lwt;
       // next lightweight team (if any)
       if (lwt)
@@ -392,6 +391,7 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
           taskdata = taskdata->td_parent;
           if (team == NULL)
             return 0;
+          prev_team = team;
           team = team->t.t_parent;
           if (taskdata) {
             next_lwt = LWT_FROM_TEAM(taskdata->td_team);
@@ -435,7 +435,16 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
         *thread_num = __kmp_get_tid();
       else if (prev_lwt)
         *thread_num = 0;
-      else
+      else if (!prev_team) {
+        // The innermost parallel region contains at least one explicit task.
+        // The task at level > 0 is either an implicit task that
+        // corresponds to the mentioned region or one of the explicit tasks
+        // nested inside the same region. Note that the task isn't the
+        // innermost explicit tasks (because of condition level > 0).
+        // Since the task at this level still belongs to the innermost parallel
+        // region, thread_num is determined the same way as for level==0.
+        *thread_num = __kmp_get_tid();
+      } else
         *thread_num = prev_team->t.t_master_tid;
       //        *thread_num = team->t.t_master_tid;
     }
