@@ -1267,8 +1267,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 3.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If the incoming values are swapped between blocks, we should not
   // successfully join. The CFG merge would select the right values, but in
@@ -1316,8 +1317,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   VLiveOuts[2].find(Var)->second.ID = RspPHIInBlk2;
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If that value isn't available from that block, don't join.
   OutLocs[2][0] = LiveInRsp;
@@ -1392,8 +1394,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // And that, if the desired values aren't available, we don't merge.
   OutLocs[1][0] = LiveInRsp;
@@ -1415,8 +1418,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RaxPHIInBlk1);
+  }
 
   // Merging should not be permitted if there's a usable PHI on the backedge,
   // but it's in the wrong place. (Overwrite $rax).
@@ -1500,8 +1504,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Check too that permuting the live-out locations prevents merging
   OutLocs[0][0] = LiveInRax;
@@ -1526,8 +1531,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Likewise: the other backedge being a VPHI from block 1 should be accepted.
   OutLocs[2][0] = RspPHIInBlk1;
@@ -1535,8 +1541,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   VLiveOuts[2].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Here's where it becomes tricky: we should not merge if there are two
   // _distinct_ backedge PHIs. We can't have a PHI that happens in both rsp
@@ -1568,8 +1575,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   OutLocs[2][2] = RbxPHIInBlk1;
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RbxPHIInBlk1);
+  }
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
