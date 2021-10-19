@@ -451,7 +451,7 @@ lineIsWithinNolintBegin(const ClangTidyContext &Context,
   // The following blocks were never closed. Return diagnostics for each
   // instance that can be displayed along with the original clang-tidy check
   // that the user was attempting to suppress.
-  for (const auto NolintBegin : NolintBegins) {
+  for (const auto &NolintBegin : NolintBegins) {
     SuppressionErrors.emplace_back(
         createNolintError(Context, SM, NolintBegin.first, true));
   }
