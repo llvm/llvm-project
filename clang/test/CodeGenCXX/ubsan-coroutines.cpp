@@ -1,8 +1,6 @@
 // This test merely verifies that emitting the object file does not cause a
 // crash when the LLVM coroutines passes are run.
-// PR42867: Disable this test for the new PM since the passes that lower the
-// llvm.coro.* intrinsics have not yet been ported.
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -emit-obj -std=c++2a -fsanitize=null %s -o %t.o
+// RUN: %clang_cc1 -emit-obj -std=c++2a -fsanitize=null %s -o %t.o
 
 namespace std::experimental {
 template <typename R, typename... T> struct coroutine_traits {
