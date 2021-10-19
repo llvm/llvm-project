@@ -10669,8 +10669,10 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
       auto BitWidth = getTypeSizeInBits(NarrowType);
       const SCEV *MaxValue = getZeroExtendExpr(
           getConstant(APInt::getMaxValue(BitWidth)), WideType);
-      if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, FoundLHS, MaxValue) &&
-          isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, FoundRHS, MaxValue)) {
+      if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, FoundLHS,
+                                          MaxValue) &&
+          isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, FoundRHS,
+                                          MaxValue)) {
         const SCEV *TruncFoundLHS = getTruncateExpr(FoundLHS, NarrowType);
         const SCEV *TruncFoundRHS = getTruncateExpr(FoundRHS, NarrowType);
         if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred, TruncFoundLHS,
