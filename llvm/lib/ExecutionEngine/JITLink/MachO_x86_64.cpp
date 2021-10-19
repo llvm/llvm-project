@@ -420,79 +420,12 @@ private:
   }
 };
 
-class PerGraphGOTAndPLTStubsBuilder_MachO_x86_64
-    : public PerGraphGOTAndPLTStubsBuilder<
-          PerGraphGOTAndPLTStubsBuilder_MachO_x86_64> {
-public:
-
-  using PerGraphGOTAndPLTStubsBuilder<
-      PerGraphGOTAndPLTStubsBuilder_MachO_x86_64>::
-      PerGraphGOTAndPLTStubsBuilder;
-
-  bool isGOTEdgeToFix(Edge &E) const {
-    return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
-           E.getKind() ==
-               x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
-  }
-
-  Symbol &createGOTEntry(Symbol &Target) {
-    return x86_64::createAnonymousPointer(G, getGOTSection(), &Target);
-  }
-
-  void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    // Fix the edge kind.
-    switch (E.getKind()) {
-    case x86_64::RequestGOTAndTransformToDelta32:
-      E.setKind(x86_64::Delta32);
-      break;
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
-      E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
-      break;
-    default:
-      llvm_unreachable("Not a GOT transform edge");
-    }
-    // Fix the target, leave the addend as-is.
-    E.setTarget(GOTEntry);
-  }
-
-  bool isExternalBranchEdge(Edge &E) {
-    return E.getKind() == x86_64::BranchPCRel32 && E.getTarget().isExternal();
-  }
-
-  Symbol &createPLTStub(Symbol &Target) {
-    return x86_64::createAnonymousPointerJumpStub(G, getStubsSection(),
-                                                  getGOTEntry(Target));
-  }
-
-  void fixPLTEdge(Edge &E, Symbol &Stub) {
-    assert(E.getKind() == x86_64::BranchPCRel32 && "Not a Branch32 edge?");
-    assert(E.getAddend() == 0 &&
-           "BranchPCRel32 edge has unexpected addend value");
-
-    // Set the edge kind to BranchPCRel32ToPtrJumpStubBypassable. We will use
-    // this to check for stub optimization opportunities in the
-    // optimizeMachO_x86_64_GOTAndStubs pass below.
-    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
-    E.setTarget(Stub);
-  }
-
-private:
-  Section &getGOTSection() {
-    if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", MemProt::Read);
-    return *GOTSection;
-  }
-
-  Section &getStubsSection() {
-    if (!StubsSection)
-      StubsSection =
-          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
-    return *StubsSection;
-  }
-
-  Section *GOTSection = nullptr;
-  Section *StubsSection = nullptr;
-};
+Error buildGOTAndStubs_MachO_x86_64(LinkGraph &G) {
+  x86_64::GOTTableManager GOT;
+  x86_64::PLTTableManager PLT(GOT);
+  visitExistingEdges(G, GOT, PLT);
+  return Error::success();
+}
 
 } // namespace
 
@@ -543,11 +476,10 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add an in-place GOT/Stubs pass.
-    Config.PostPrunePasses.push_back(
-        PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::asPass);
+    Config.PostPrunePasses.push_back(buildGOTAndStubs_MachO_x86_64);
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(x86_64::optimize_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(x86_64::optimizeGOTAndStubAccesses);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))

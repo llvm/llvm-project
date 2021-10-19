@@ -21,7 +21,6 @@
 #include "EHFrameSupportImpl.h"
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
-#include "PerGraphGOTAndPLTStubsBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -31,139 +30,15 @@ using namespace llvm::jitlink::ELF_x86_64_Edges;
 
 namespace {
 
-constexpr StringRef ELFGOTSectionName = "$__GOT";
 constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
-
-class GOTTableManager_ELF_x86_64
-    : public TableManager<GOTTableManager_ELF_x86_64> {
-public:
-  static const uint8_t NullGOTEntryContent[8];
-
-  // Nice name for table
-  StringRef getTableName() { return "GOT"; }
-
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    Edge::Kind KindToSet = Edge::Invalid;
-    switch (E.getKind()) {
-    case x86_64::Delta64FromGOT: {
-      // we need to make sure that the GOT section exists, but don't otherwise
-      // need to fix up this edge
-      getGOTSection(G);
-      return false;
-    }
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
-      KindToSet = x86_64::PCRel32GOTLoadREXRelaxable;
-      break;
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-      KindToSet = x86_64::PCRel32GOTLoadRelaxable;
-      break;
-    case x86_64::RequestGOTAndTransformToDelta64:
-      KindToSet = x86_64::Delta64;
-      break;
-    case x86_64::RequestGOTAndTransformToDelta64FromGOT:
-      KindToSet = x86_64::Delta64FromGOT;
-      break;
-    case x86_64::RequestGOTAndTransformToDelta32:
-      KindToSet = x86_64::Delta32;
-      break;
-    default:
-      return false;
-    }
-    assert(KindToSet != Edge::Invalid &&
-           "Fell through switch, but no new kind to set");
-    LLVM_DEBUG({
-      dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-             << formatv("{0:x}", B->getFixupAddress(E)) << " ("
-             << formatv("{0:x}", B->getAddress()) << " + "
-             << formatv("{0:x}", E.getOffset()) << ")\n";
-    });
-    E.setKind(KindToSet);
-    E.setTarget(getEntryForTarget(G, E.getTarget()));
-    return true;
-  }
-
-  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(G), getGOTEntryBlockContent(), 0, 8, 0);
-    GOTEntryBlock.addEdge(x86_64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
-  }
-
-private:
-  Section &getGOTSection(LinkGraph &G) {
-    if (!GOTSection)
-      GOTSection = &G.createSection(ELFGOTSectionName, MemProt::Read);
-    return *GOTSection;
-  }
-  ArrayRef<char> getGOTEntryBlockContent() const {
-    return {reinterpret_cast<const char *>(NullGOTEntryContent),
-            sizeof(NullGOTEntryContent)};
-  }
-  Section *GOTSection = nullptr;
-};
-const uint8_t GOTTableManager_ELF_x86_64::NullGOTEntryContent[8] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-class PLTTableManager_ELF_x86_64
-    : public TableManager<PLTTableManager_ELF_x86_64> {
-public:
-  PLTTableManager_ELF_x86_64(GOTTableManager_ELF_x86_64 &GOTTable)
-      : GOTTable(GOTTable) {}
-
-  StringRef getTableName() { return "PLT"; }
-
-  static const uint8_t StubContent[6];
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == x86_64::BranchPCRel32 && !E.getTarget().isDefined()) {
-      LLVM_DEBUG({
-        dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-               << formatv("{0:x}", B->getFixupAddress(E)) << " ("
-               << formatv("{0:x}", B->getAddress()) << " + "
-               << formatv("{0:x}", E.getOffset()) << ")\n";
-      });
-      // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to
-      // be optimized when the target is in-range.
-      E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
-      E.setTarget(getEntryForTarget(G, E.getTarget()));
-      return true;
-    }
-    return false;
-  }
-
-  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
-    auto &StubContentBlock = G.createContentBlock(
-        getStubsSection(G), getStubBlockContent(), 0, 1, 0);
-    // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = GOTTable.getEntryForTarget(G, Target);
-    StubContentBlock.addEdge(x86_64::Delta32, 2, GOTEntrySymbol, -4);
-    return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
-  }
-
-private:
-  Section &getStubsSection(LinkGraph &G) {
-    if (!StubsSection)
-      StubsSection =
-          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
-    return *StubsSection;
-  }
-
-  ArrayRef<char> getStubBlockContent() {
-    return {reinterpret_cast<const char *>(StubContent), sizeof(StubContent)};
-  }
-
-  Section *StubsSection = nullptr;
-  GOTTableManager_ELF_x86_64 &GOTTable;
-};
-const uint8_t PLTTableManager_ELF_x86_64::StubContent[6] = {0xFF, 0x25, 0x00,
-                                                            0x00, 0x00, 0x00};
 
 class TLSInfoTableManager_ELF_x86_64
     : public TableManager<TLSInfoTableManager_ELF_x86_64> {
 public:
   static const uint8_t TLSInfoEntryContent[16];
 
-  StringRef getTableName() { return "TLSInfo"; }
+  static StringRef getSectionName() { return ELFTLSInfoSectionName; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == x86_64::RequestTLSDescInGOTAndTransformToDelta32) {
@@ -213,8 +88,8 @@ const uint8_t TLSInfoTableManager_ELF_x86_64::TLSInfoEntryContent[16] = {
 Error buildTables_ELF_x86_64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  GOTTableManager_ELF_x86_64 GOT;
-  PLTTableManager_ELF_x86_64 PLT(GOT);
+  x86_64::GOTTableManager GOT;
+  x86_64::PLTTableManager PLT(GOT);
   TLSInfoTableManager_ELF_x86_64 TLSInfo;
   visitExistingEdges(G, GOT, PLT, TLSInfo);
   return Error::success();
@@ -412,7 +287,8 @@ private:
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
               if (Sym.getName() == ELFGOTSymbolName)
-                if (auto *GOTSection = G.findSectionByName(ELFGOTSectionName)) {
+                if (auto *GOTSection = G.findSectionByName(
+                        x86_64::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
                   return {*GOTSection, true};
                 }
@@ -431,7 +307,8 @@ private:
     // Otherwise look for a GOT section: If it already has a start symbol we'll
     // record it, otherwise we'll create our own.
     // If there's a GOT section but we didn't find an external GOT symbol...
-    if (auto *GOTSection = G.findSectionByName(ELFGOTSectionName)) {
+    if (auto *GOTSection =
+            G.findSectionByName(x86_64::GOTTableManager::getSectionName())) {
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
@@ -522,7 +399,7 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
             identifyELFSectionStartAndEndSymbols));
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(x86_64::optimize_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(x86_64::optimizeGOTAndStubAccesses);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))

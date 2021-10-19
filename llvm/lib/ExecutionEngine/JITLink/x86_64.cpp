@@ -71,7 +71,7 @@ const char NullPointerContent[PointerSize] = {0x00, 0x00, 0x00, 0x00,
 const char PointerJumpStubContent[6] = {
     static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
 
-Error optimize_x86_64_GOTAndStubs(LinkGraph &G) {
+Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
 
   for (auto *B : G.blocks())
