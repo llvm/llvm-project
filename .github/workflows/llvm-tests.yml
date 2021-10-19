@@ -12,6 +12,13 @@ on:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+
 jobs:
   build_llvm:
     name: llvm check-all
