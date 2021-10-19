@@ -463,11 +463,20 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
     m_sets[set].registers = m_set_reg_nums[set].data();
   }
 
-  // make sure value_regs are terminated with LLDB_INVALID_REGNUM
+  // sort and unique all value registers and make sure each is terminated with
+  // LLDB_INVALID_REGNUM
 
   for (reg_to_regs_map::iterator pos = m_value_regs_map.begin(),
                                  end = m_value_regs_map.end();
        pos != end; ++pos) {
+    if (pos->second.size() > 1) {
+      llvm::sort(pos->second.begin(), pos->second.end());
+      reg_num_collection::iterator unique_end =
+          std::unique(pos->second.begin(), pos->second.end());
+      if (unique_end != pos->second.end())
+        pos->second.erase(unique_end, pos->second.end());
+    }
+    assert(!pos->second.empty());
     if (pos->second.back() != LLDB_INVALID_REGNUM)
       pos->second.push_back(LLDB_INVALID_REGNUM);
   }
@@ -669,16 +678,13 @@ void DynamicRegisterInfo::ConfigureOffsets() {
   // Now update all value_regs with each register info as needed
   for (auto &reg : m_regs) {
     if (reg.value_regs != nullptr) {
-      // Assign a valid offset to all pseudo registers that have only a single
-      // parent register in value_regs list, if not assigned by stub.  Pseudo
-      // registers with value_regs list populated will share same offset as
-      // that of their corresponding parent register.
+      // Assign a valid offset to all pseudo registers if not assigned by stub.
+      // Pseudo registers with value_regs list populated will share same offset
+      // as that of their corresponding primary register in value_regs list.
       if (reg.byte_offset == LLDB_INVALID_INDEX32) {
         uint32_t value_regnum = reg.value_regs[0];
-        if (value_regnum != LLDB_INVALID_INDEX32 &&
-            reg.value_regs[1] == LLDB_INVALID_INDEX32) {
-          reg.byte_offset =
-              GetRegisterInfoAtIndex(value_regnum)->byte_offset;
+        if (value_regnum != LLDB_INVALID_INDEX32) {
+          reg.byte_offset = GetRegisterInfoAtIndex(value_regnum)->byte_offset;
           auto it = m_value_reg_offset_map.find(reg.kinds[eRegisterKindLLDB]);
           if (it != m_value_reg_offset_map.end())
             reg.byte_offset += it->second;

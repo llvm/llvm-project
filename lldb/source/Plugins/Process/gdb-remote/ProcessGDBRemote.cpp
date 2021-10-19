@@ -4311,9 +4311,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             reg_info.encoding = eEncodingIEEE754;
           } else if (gdb_type == "aarch64v" ||
                      llvm::StringRef(gdb_type).startswith("vec") ||
-                     gdb_type == "i387_ext" || gdb_type == "uint128") {
-            // lldb doesn't handle 128-bit uints correctly (for ymm*h), so treat
-            // them as vector (similarly to xmm/ymm)
+                     gdb_type == "i387_ext") {
             reg_info.format = eFormatVectorOfUInt8;
             reg_info.encoding = eEncodingVector;
           }
