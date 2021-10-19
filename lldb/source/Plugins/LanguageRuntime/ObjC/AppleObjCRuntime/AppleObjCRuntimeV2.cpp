@@ -2003,6 +2003,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   const uint32_t num_classes = 128 * 1024;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
+  if (!get_class_info_code) {
+    // The callee will have already logged a useful error message.
+    return DescriptorMapUpdateResult::Fail();
+  }
+
   FunctionCaller *get_shared_cache_class_info_function =
       get_class_info_code->GetFunctionCaller();
 
