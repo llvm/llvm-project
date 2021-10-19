@@ -1,15 +1,9 @@
-# Flang 12.0.0 (In-Progress) Release Notes
-
-> **warning**
->
-> These are in-progress notes for the upcoming LLVM 12.0.0 release.
-> Release notes for previous releases can be found on [the Download
-> Page](https://releases.llvm.org/download.html).
+# Flang 13.0.0 Release Notes
 
 ## Introduction
 
 This document contains the release notes for the Flang Fortran frontend,
-part of the LLVM Compiler Infrastructure, release 12.0.0. Here we
+part of the LLVM Compiler Infrastructure, release 13.0.0. Here we
 describe the status of Flang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM

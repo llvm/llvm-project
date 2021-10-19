@@ -1,5 +1,5 @@
 ========================================
-Clang 13.0.0 (In-Progress) Release Notes
+Clang 13.0.0 Release Notes
 ========================================
 
 .. contents::
@@ -7,12 +7,6 @@ Clang 13.0.0 (In-Progress) Release Notes
    :depth: 2
 
 Written by the `LLVM Team <https://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 13 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
