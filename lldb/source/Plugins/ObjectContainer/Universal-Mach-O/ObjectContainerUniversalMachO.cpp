@@ -205,11 +205,6 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ObjectContainerUniversalMachO::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,

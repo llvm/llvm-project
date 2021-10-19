@@ -50,10 +50,6 @@ html:
 	@# Kind of a hack, but HTML-formatted docs are on the way out anyway.
 	@echo "Copying legacy HTML-formatted docs into $(BUILDDIR)/html"
 	@cp -a *.html $(BUILDDIR)/html
-	@# FIXME: What we really need is a way to specify redirects, so that
-	@# we can just redirect to a reST'ified version of this document.
-	@# PR14714 is tracking the issue of redirects.
-	@cp -a Block-ABI-Apple.txt $(BUILDDIR)/html
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 dirhtml:

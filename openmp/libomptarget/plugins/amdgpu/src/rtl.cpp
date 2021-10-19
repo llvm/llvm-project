@@ -1972,12 +1972,6 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
   if (thread_limit > 0) {
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
-    // Add master warp for GENERIC
-    if (ExecutionMode ==
-        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
-      threadsPerGroup += WarpSize;
-      DP("Adding master wavefront: +%d threads\n", WarpSize);
-    }
     if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
       DP("Setting threads per block to maximum %d\n", threadsPerGroup);
@@ -1999,8 +1993,9 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
       // Do not exceed max number of threads: sacrifice last warp for
       // the thread master
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size - WarpSize + 1;
-    else if (threadsPerGroup < WarpSize)
+    else if (threadsPerGroup <= WarpSize)
       // Cap threadsPerGroup at WarpSize level as we need a master
+      // FIXME: omp_get_num_threads still too big for thread_limit(<warpsize)
       threadsPerGroup = WarpSize + 1;
     else
       threadsPerGroup = WarpSize * (threadsPerGroup / WarpSize) + 1;

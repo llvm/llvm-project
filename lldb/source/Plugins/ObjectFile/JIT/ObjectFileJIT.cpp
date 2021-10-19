@@ -199,11 +199,6 @@ ArchSpec ObjectFileJIT::GetArchitecture() {
   return ArchSpec();
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ObjectFileJIT::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,
                                    bool value_is_offset) {
   size_t num_loaded_sections = 0;

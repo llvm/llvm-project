@@ -46,7 +46,9 @@ public:
 
   // PluginInterface API
 
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetStaticPluginName().GetStringRef();
+  }
 
   // StructuredDataPlugin API
 

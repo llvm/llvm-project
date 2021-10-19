@@ -70,7 +70,9 @@ public:
                                          lldb::user_id_t watch_id);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   Lua &GetLua();
 

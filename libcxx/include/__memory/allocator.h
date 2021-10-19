@@ -98,8 +98,7 @@ public:
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     _Tp* allocate(size_t __n) {
         if (__n > allocator_traits<allocator>::max_size(*this))
-            __throw_length_error("allocator<T>::allocate(size_t n)"
-                                 " 'n' exceeds maximum supported size");
+            __throw_bad_array_new_length();
         if (__libcpp_is_constant_evaluated()) {
             return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
         } else {
@@ -181,8 +180,7 @@ public:
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     const _Tp* allocate(size_t __n) {
         if (__n > allocator_traits<allocator>::max_size(*this))
-            __throw_length_error("allocator<const T>::allocate(size_t n)"
-                                 " 'n' exceeds maximum supported size");
+            __throw_bad_array_new_length();
         if (__libcpp_is_constant_evaluated()) {
             return static_cast<const _Tp*>(::operator new(__n * sizeof(_Tp)));
         } else {

@@ -93,10 +93,6 @@ const char *PlatformFreeBSD::GetPluginDescriptionStatic(bool is_host) {
     return "Remote FreeBSD user platform plug-in.";
 }
 
-ConstString PlatformFreeBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformFreeBSD::Initialize() {
   Platform::Initialize();
 

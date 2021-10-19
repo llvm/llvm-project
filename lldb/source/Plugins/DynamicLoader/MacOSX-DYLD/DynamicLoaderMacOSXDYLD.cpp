@@ -1146,11 +1146,6 @@ const char *DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic() {
          "in MacOSX user processes.";
 }
 
-// PluginInterface protocol
-lldb_private::ConstString DynamicLoaderMacOSXDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 uint32_t DynamicLoaderMacOSXDYLD::AddrByteSize() {
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
 

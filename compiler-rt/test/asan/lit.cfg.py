@@ -247,3 +247,46 @@ if not config.parallelism_group:
 
 if config.host_os == 'NetBSD':
   config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
+
+# Find ROCM runtime and compiler paths only
+# when built with -DSANITIZER_AMDGPU=1
+def configure_rocm(config, test_rocm_path):
+    if (not os.path.isdir(test_rocm_path)):
+        print("no directory found")
+        test_rocm_path = os.path.join('/opt','rocm')
+        if (not os.path.isdir(test_rocm_path)):
+            test_rocm_path = os.path.abspath(os.path.join(config.llvm_install_dir, os.pardir))
+            if (not os.path.isdir(test_rocm_path)):
+                sys.exit("ROCM installation not found, try exporting ASAN_TEST_ROCM variable")
+
+    test_device_libs  = os.path.join(test_rocm_path, 'amdgcn', 'bitcode')
+    test_hip_path     = os.path.join(test_rocm_path, 'hip')
+    hipcc             = os.path.join(test_hip_path, 'bin', 'hipcc')
+
+    build_clang = getattr(config, 'clang', None)
+    build_clang = build_clang.lstrip()
+    build_clang = build_clang.rstrip()
+    test_clang_path = os.path.dirname(build_clang)
+
+    def hip_build_invocation(hipcc, compile_flags):
+        return ' ' + ' '.join([hipcc] + compile_flags) + ' ' # append extra space to avoid concat issue in shell
+
+    hipcxx_sanitize_options = ["-fsanitize=address", "-shared-libsan", "-fgpu-sanitize"]
+
+    config.substitutions.append(
+        ('%hipcompiler',
+        hip_build_invocation(hipcc, config.cxx_mode_flags + [config.target_cflags] + hipcxx_sanitize_options)))
+
+    #ROCM SPECIFIC ENVIRONMENT VARIABLES
+    device_library_path    = 'DEVICE_LIB_PATH=' + test_device_libs
+    hip_path               = 'HIP_PATH='        + test_hip_path
+    rocm_path              = 'ROCM_PATH='       + test_rocm_path
+    clang_path             = 'HIP_CLANG_PATH='  + test_clang_path
+    rocm_environment       = [device_library_path, hip_path, rocm_path, clang_path]
+    export_rocm_components = 'export ' + ' '.join(rocm_environment)
+    config.substitutions.append(('%ROCM_ENV', export_rocm_components))
+    config.suffixes.append('.hip')
+
+test_rocm_path = os.environ.get('ASAN_TEST_ROCM','null')
+if config.support_amd_offload_tests == 'true':
+    configure_rocm(config, test_rocm_path)

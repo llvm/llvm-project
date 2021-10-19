@@ -1302,7 +1302,7 @@ AliasResult BasicAAResult::aliasGEP(
             computeConstantRange(Var.Val.V, true, &AC, Var.CxtI));
         if (!R.isFullSet() && !R.isEmptySet())
           VarIndexRange = R.sextOrTrunc(Var.Scale.getBitWidth())
-                              .multiply(ConstantRange(Var.Scale));
+                              .smul_fast(ConstantRange(Var.Scale));
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).

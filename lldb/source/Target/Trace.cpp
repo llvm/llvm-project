@@ -108,23 +108,21 @@ Error Trace::Stop() {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  return m_live_process->TraceStop(
-      TraceStopRequest(GetPluginName().AsCString()));
+  return m_live_process->TraceStop(TraceStopRequest(GetPluginName()));
 }
 
 Error Trace::Stop(llvm::ArrayRef<lldb::tid_t> tids) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  return m_live_process->TraceStop(
-      TraceStopRequest(GetPluginName().AsCString(), tids));
+  return m_live_process->TraceStop(TraceStopRequest(GetPluginName(), tids));
 }
 
 Expected<std::string> Trace::GetLiveProcessState() {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  return m_live_process->TraceGetState(GetPluginName().AsCString());
+  return m_live_process->TraceGetState(GetPluginName());
 }
 
 Optional<size_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
@@ -158,7 +156,7 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for thread %" PRIu64 ".",
         kind.data(), tid);
 
-  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
                                     static_cast<int64_t>(tid), 0,
                                     static_cast<int64_t>(*size)};
   return m_live_process->TraceGetBinaryData(request);
@@ -175,8 +173,8 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
         inconvertibleErrorCode(),
         "Tracing data \"%s\" is not available for the process.", kind.data());
 
-  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
-                                    None, 0, static_cast<int64_t>(*size)};
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), None, 0,
+                                    static_cast<int64_t>(*size)};
   return m_live_process->TraceGetBinaryData(request);
 }
 

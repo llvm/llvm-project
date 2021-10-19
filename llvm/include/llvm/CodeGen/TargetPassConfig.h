@@ -187,8 +187,7 @@ public:
   void substitutePass(AnalysisID StandardID, IdentifyingPassPtr TargetID);
 
   /// Insert InsertedPassID pass after TargetPassID pass.
-  void insertPass(AnalysisID TargetPassID, IdentifyingPassPtr InsertedPassID,
-                  bool VerifyAfter = true);
+  void insertPass(AnalysisID TargetPassID, IdentifyingPassPtr InsertedPassID);
 
   /// Allow the target to enable a specific standard pass by default.
   void enablePass(AnalysisID PassID) { substitutePass(PassID, PassID); }
@@ -323,8 +322,7 @@ public:
 
   /// Add standard passes after a pass that has just been added. For example,
   /// the MachineVerifier if it is enabled.
-  void addMachinePostPasses(const std::string &Banner, bool AllowVerify = true,
-                            bool AllowStrip = true);
+  void addMachinePostPasses(const std::string &Banner);
 
   /// Check whether or not GlobalISel should abort on error.
   /// When this is disabled, GlobalISel will fall back on SDISel instead of
@@ -449,16 +447,12 @@ protected:
 
   /// Add a CodeGen pass at this point in the pipeline after checking overrides.
   /// Return the pass that was added, or zero if no pass was added.
-  /// @p verifyAfter   if true and adding a machine function pass add an extra
-  ///                  machine verification pass afterwards.
-  AnalysisID addPass(AnalysisID PassID, bool verifyAfter = true);
+  AnalysisID addPass(AnalysisID PassID);
 
   /// Add a pass to the PassManager if that pass is supposed to be run, as
   /// determined by the StartAfter and StopAfter options. Takes ownership of the
   /// pass.
-  /// @p verifyAfter   if true and adding a machine function pass add an extra
-  ///                  machine verification pass afterwards.
-  void addPass(Pass *P, bool verifyAfter = true);
+  void addPass(Pass *P);
 
   /// addMachinePasses helper to create the target-selected or overriden
   /// regalloc pass.

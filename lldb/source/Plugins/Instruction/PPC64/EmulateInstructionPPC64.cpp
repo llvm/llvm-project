@@ -44,11 +44,6 @@ ConstString EmulateInstructionPPC64::GetPluginNameStatic() {
   return g_plugin_name;
 }
 
-ConstString EmulateInstructionPPC64::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionPPC64");
-  return g_plugin_name;
-}
-
 const char *EmulateInstructionPPC64::GetPluginDescriptionStatic() {
   return "Emulate instructions for the PPC64 architecture.";
 }
