@@ -726,7 +726,6 @@ static int printBuiltinTypes(MlirContext ctx) {
   MlirType memRef = mlirMemRefTypeContiguousGet(
       f32, sizeof(shape) / sizeof(int64_t), shape, memSpace2);
   if (!mlirTypeIsAMemRef(memRef) ||
-      mlirMemRefTypeGetNumAffineMaps(memRef) != 0 ||
       !mlirAttributeEqual(mlirMemRefTypeGetMemorySpace(memRef), memSpace2))
     return 18;
   mlirTypeDump(memRef);
