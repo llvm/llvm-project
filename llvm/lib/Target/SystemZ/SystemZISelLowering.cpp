@@ -7145,12 +7145,18 @@ SystemZTargetLowering::getStackProbeSize(MachineFunction &MF) const {
 // Force base value Base into a register before MI.  Return the register.
 static Register forceReg(MachineInstr &MI, MachineOperand &Base,
                          const SystemZInstrInfo *TII) {
-  if (Base.isReg())
-    return Base.getReg();
-
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (Base.isReg()) {
+    // Copy Base into a new virtual register to help register coalescing in
+    // cases with multiple uses.
+    Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::COPY), Reg)
+      .add(Base);
+    return Reg;
+  }
 
   Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
   BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LA), Reg)

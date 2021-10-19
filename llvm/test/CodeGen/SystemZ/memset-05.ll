@@ -48,43 +48,39 @@ define void @fun2(i8* %Addr, i32 %Len) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgfr %r1, %r3
 ; CHECK-NEXT:    aghi %r1, -1
-; CHECK-NEXT:    cgije %r1, -1, .LBB2_5
+; CHECK-NEXT:    cgije %r1, -1, .LBB2_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    cgije %r0, 0, .LBB2_4
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cgije %r0, 0, .LBB2_3
+; CHECK-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r3), 0(%r3)
 ; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    brctg %r0, .LBB2_3
+; CHECK-NEXT:    brctg %r0, .LBB2_2
+; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    exrl %r1, .Ltmp1
 ; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    exrl %r1, .Ltmp1
-; CHECK-NEXT:  .LBB2_5:
-; CHECK-NEXT:    cgije %r1, -1, .LBB2_10
-; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    cgije %r1, -1, .LBB2_8
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    srlg %r0, %r1, 8
 ; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    cgije %r0, 0, .LBB2_9
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB2_8: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cgije %r0, 0, .LBB2_7
+; CHECK-NEXT:  .LBB2_6: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r3), 0(%r3)
 ; CHECK-NEXT:    la %r3, 256(%r3)
-; CHECK-NEXT:    brctg %r0, .LBB2_8
-; CHECK-NEXT:  .LBB2_9:
+; CHECK-NEXT:    brctg %r0, .LBB2_6
+; CHECK-NEXT:  .LBB2_7:
 ; CHECK-NEXT:    exrl %r1, .Ltmp1
-; CHECK-NEXT:  .LBB2_10:
+; CHECK-NEXT:  .LBB2_8:
 ; CHECK-NEXT:    cgibe %r1, -1, 0(%r14)
-; CHECK-NEXT:  .LBB2_11:
+; CHECK-NEXT:  .LBB2_9:
 ; CHECK-NEXT:    srlg %r0, %r1, 8
-; CHECK-NEXT:    cgije %r0, 0, .LBB2_13
-; CHECK-NEXT:  .LBB2_12: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cgije %r0, 0, .LBB2_11
+; CHECK-NEXT:  .LBB2_10: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xc 0(256,%r2), 0(%r2)
 ; CHECK-NEXT:    la %r2, 256(%r2)
-; CHECK-NEXT:    brctg %r0, .LBB2_12
-; CHECK-NEXT:  .LBB2_13:
+; CHECK-NEXT:    brctg %r0, .LBB2_10
+; CHECK-NEXT:  .LBB2_11:
 ; CHECK-NEXT:    exrl %r1, .Ltmp0
 ; CHECK-NEXT:    br %r14
   tail call void @llvm.memset.p0i8.i32(i8* %Addr, i8 0, i32 %Len, i1 false)
