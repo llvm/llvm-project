@@ -29,20 +29,21 @@ Deallocate(pi)
 
 Deallocate(z%p)
 
+!ERROR: An allocatable or pointer component reference must be applied to a scalar base
 Deallocate(x%p, stat=s, errmsg=e)
-Deallocate(x%p, errmsg=e)
-Deallocate(x%p, stat=s)
+Deallocate(x, errmsg=e)
+Deallocate(x, stat=s)
 
-Deallocate(y%p, stat=s, errmsg=e)
-Deallocate(y%p, errmsg=e)
-Deallocate(y%p, stat=s)
+Deallocate(y, stat=s, errmsg=e)
+Deallocate(y, errmsg=e)
+Deallocate(y, stat=s)
 
 Deallocate(z, stat=s, errmsg=e)
 Deallocate(z, errmsg=e)
 Deallocate(z, stat=s)
 
-Deallocate(z, y%p, stat=s, errmsg=e)
-Deallocate(z, y%p, errmsg=e)
-Deallocate(z, y%p, stat=s)
+Deallocate(z, y, stat=s, errmsg=e)
+Deallocate(z, y, errmsg=e)
+Deallocate(z, y, stat=s)
 
 End Program
