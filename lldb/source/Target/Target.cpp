@@ -60,6 +60,7 @@
 #include "lldb/Utility/Timer.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
 
 #include <memory>
 #include <mutex>
@@ -2231,7 +2232,10 @@ std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
   if (!m_valid)
     return {};
 
-  std::vector<TypeSystem *> scratch_type_systems;
+  // Some TypeSystem instances are associated with several LanguageTypes so
+  // they will show up several times in the loop below. The SetVector filters
+  // out all duplicates as they serve no use for the caller.
+  llvm::SetVector<TypeSystem *> scratch_type_systems;
 
   LanguageSet languages_for_expressions =
       Language::GetLanguagesSupportingTypeSystemsForExpressions();
@@ -2247,10 +2251,10 @@ std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
                      "system available",
                      Language::GetNameForLanguageType(language));
     else
-      scratch_type_systems.emplace_back(&type_system_or_err.get());
+      scratch_type_systems.insert(&type_system_or_err.get());
   }
 
-  return scratch_type_systems;
+  return scratch_type_systems.takeVector();
 }
 
 PersistentExpressionState *
