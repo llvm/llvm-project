@@ -145,12 +145,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
     characteristics::TypeAndShape &actualType, bool isElemental,
     evaluate::FoldingContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic *intrinsic) {
+    const evaluate::SpecificIntrinsic *intrinsic,
+    bool allowIntegerConversions) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
   PadShortCharacterActual(actual, dummy.type, actualType, context, messages);
-  ConvertIntegerActual(actual, dummy.type, actualType, messages);
+  if (allowIntegerConversions) {
+    ConvertIntegerActual(actual, dummy.type, actualType, messages);
+  }
   bool typesCompatible{dummy.type.type().IsTkCompatibleWith(actualType.type())};
   if (typesCompatible) {
     if (isElemental) {
@@ -631,7 +634,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
 static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::DummyArgument &dummy,
     const characteristics::Procedure &proc, evaluate::FoldingContext &context,
-    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic) {
+    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
+    bool allowIntegerConversions) {
   auto &messages{context.messages()};
   std::string dummyName{"dummy argument"};
   if (!dummy.name.empty()) {
@@ -646,7 +650,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 arg.set_dummyIntent(object.intent);
                 bool isElemental{object.type.Rank() == 0 && proc.IsElemental()};
                 CheckExplicitDataArg(object, dummyName, *expr, *type,
-                    isElemental, context, scope, intrinsic);
+                    isElemental, context, scope, intrinsic,
+                    allowIntegerConversions);
               } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                   IsBOZLiteral(*expr)) {
                 // ok
@@ -779,7 +784,8 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
 static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     const evaluate::FoldingContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic *intrinsic) {
+    const evaluate::SpecificIntrinsic *intrinsic,
+    bool allowIntegerConversions) {
   parser::Messages buffer;
   parser::ContextualMessages messages{context.messages().at(), &buffer};
   RearrangeArguments(proc, actuals, messages);
@@ -789,8 +795,8 @@ static parser::Messages CheckExplicitInterface(
     for (auto &actual : actuals) {
       const auto &dummy{proc.dummyArguments.at(index++)};
       if (actual) {
-        CheckExplicitInterfaceArg(
-            *actual, dummy, proc, localContext, scope, intrinsic);
+        CheckExplicitInterfaceArg(*actual, dummy, proc, localContext, scope,
+            intrinsic, allowIntegerConversions);
       } else if (!dummy.IsOptional()) {
         if (dummy.name.empty()) {
           messages.Say(
@@ -815,13 +821,15 @@ static parser::Messages CheckExplicitInterface(
 parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
     const Scope &scope, const evaluate::SpecificIntrinsic *intrinsic) {
-  return CheckExplicitInterface(proc, actuals, context, &scope, intrinsic);
+  return CheckExplicitInterface(
+      proc, actuals, context, &scope, intrinsic, true);
 }
 
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
-    evaluate::ActualArguments &actuals,
-    const evaluate::FoldingContext &context) {
-  return !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr)
+    evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
+    bool allowIntegerConversions) {
+  return !CheckExplicitInterface(
+      proc, actuals, context, nullptr, nullptr, allowIntegerConversions)
               .AnyFatalError();
 }
 

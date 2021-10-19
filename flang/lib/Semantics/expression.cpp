@@ -2021,8 +2021,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           continue;
         }
       }
-      if (semantics::CheckInterfaceForGeneric(
-              *procedure, localActuals, GetFoldingContext()) &&
+      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+              GetFoldingContext(), false /* no integer conversions */) &&
           CheckCompatibleArguments(*procedure, localActuals)) {
         if ((procedure->IsElemental() && elemental) ||
             (!procedure->IsElemental() && nonElemental)) {
