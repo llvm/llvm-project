@@ -1621,13 +1621,15 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     KMP_FSYNC_ACQUIRED(taskdata); // acquired self (new task)
 #endif
 
+    if (task->routine != NULL) {
 #ifdef KMP_GOMP_COMPAT
-    if (taskdata->td_flags.native) {
-      ((void (*)(void *))(*(task->routine)))(task->shareds);
-    } else
+      if (taskdata->td_flags.native) {
+        ((void (*)(void *))(*(task->routine)))(task->shareds);
+      } else
 #endif /* KMP_GOMP_COMPAT */
-    {
-      (*(task->routine))(gtid, task);
+      {
+        (*(task->routine))(gtid, task);
+      }
     }
     KMP_POP_PARTITIONED_TIMER();
 

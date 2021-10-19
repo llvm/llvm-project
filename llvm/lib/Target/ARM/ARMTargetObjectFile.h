@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
 
@@ -22,6 +23,10 @@ public:
   }
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+
+  const MCRegister getStaticBase() const override;
+
+  const MCExpr *getIndirectSymViaRWPI(const MCSymbol *Sym) const override;
 
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
                                         unsigned Encoding,

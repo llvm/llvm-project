@@ -20,6 +20,8 @@
 ; CHECK:       ContainsNoDuplicateCall: {{.*}}
 ; CHECK:       Cost: {{.*}}
 ; CHECK:       Threshold: {{.*}}
+; CHECK-EMPTY:
+; CHECK:  Analyzing call of foo... (caller:main)
 
 define i8 addrspace(1)** @foo() {
   %1 = inttoptr i64 754974720 to i8 addrspace(1)**
@@ -28,5 +30,6 @@ define i8 addrspace(1)** @foo() {
 
 define i8 addrspace(1)** @main() {
   %1 = call i8 addrspace(1)** @foo()
+  %2 = call i8 addrspace(1)** @foo()
   ret i8 addrspace(1)** %1
 }

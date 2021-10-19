@@ -248,8 +248,8 @@ func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 
 // CHECK-LABEL:   func @tanh_scalar(
 // CHECK-SAME:                      %[[VAL_0:.*]]: f32) -> f32 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant -7.90531111 : f32
-// CHECK:           %[[VAL_2:.*]] = arith.constant 7.90531111 : f32
+// CHECK:           %[[VAL_1:.*]] = arith.constant -7.99881172 : f32
+// CHECK:           %[[VAL_2:.*]] = arith.constant 7.99881172 : f32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 4.000000e-04 : f32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0.00489352457 : f32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 6.37261954E-4 : f32
@@ -290,7 +290,7 @@ func @tanh_scalar(%arg0: f32) -> f32 {
 
 // CHECK-LABEL:   func @tanh_vector(
 // CHECK-SAME:                      %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-7.90531111> : vector<8xf32>
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-7.99881172> : vector<8xf32>
 // CHECK-NOT:       tanh
 // CHECK-COUNT-2:   select
 // CHECK:           %[[VAL_33:.*]] = select

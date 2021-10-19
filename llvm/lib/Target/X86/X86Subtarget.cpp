@@ -67,6 +67,13 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  // Tagged globals have non-zero upper bits, which makes direct references
+  // require a 64-bit immediate.  On the small code model this causes relocation
+  // errors, so we go through the GOT instead.
+  if (AllowTaggedGlobals && TM.getCodeModel() == CodeModel::Small &&
+      !isa_and_nonnull<Function>(GV))
+    return X86II::MO_GOTPCREL;
+
   // If we're not PIC, it's not very interesting.
   if (!isPositionIndependent())
     return X86II::MO_NO_FLAG;

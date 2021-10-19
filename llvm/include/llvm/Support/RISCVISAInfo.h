@@ -19,9 +19,6 @@
 #include <vector>
 
 namespace llvm {
-namespace opt {
-class ArgList;
-}
 struct RISCVExtensionInfo {
   std::string ExtName;
   unsigned MajorVersion;
@@ -57,8 +54,8 @@ public:
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features);
 
   /// Convert RISCV ISA info to a feature vector.
-  void toFeatures(const llvm::opt::ArgList &Args,
-                  std::vector<StringRef> &Features) const;
+  void toFeatures(std::vector<StringRef> &Features,
+                  std::function<StringRef(const Twine &)> StrAlloc) const;
 
   const OrderedExtensionMap &getExtensions() const { return Exts; };
 

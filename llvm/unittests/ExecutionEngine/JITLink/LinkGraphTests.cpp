@@ -345,8 +345,9 @@ TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
 
   EXPECT_EQ(Sec1.symbols_size(), 0u) << "Symbol was not removed from Sec1";
   EXPECT_EQ(Sec2.symbols_size(), 1u) << "Symbol was not added to Sec2";
-  if (Sec2.symbols_size() == 1)
+  if (Sec2.symbols_size() == 1) {
     EXPECT_EQ(*Sec2.symbols().begin(), &S1) << "Unexpected symbol";
+  }
 }
 
 TEST(LinkGraphTest, TransferBlock) {

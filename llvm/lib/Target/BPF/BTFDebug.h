@@ -204,7 +204,7 @@ public:
   void completeType(BTFDebug &BDebug) override;
 };
 
-/// Handle tags.
+/// Handle decl tags.
 class BTFTypeDeclTag : public BTFTypeBase {
   uint32_t Info;
   StringRef Tag;
@@ -325,9 +325,9 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types for function prototypes.
   void processFuncPrototypes(const Function *);
 
-  /// Generate types for annotations.
-  void processAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
-                          int ComponentId);
+  /// Generate types for decl annotations.
+  void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
+                              int ComponentId);
 
   /// Generate one field relocation record.
   void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,

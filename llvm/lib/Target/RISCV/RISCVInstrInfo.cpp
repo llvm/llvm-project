@@ -113,9 +113,7 @@ unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
                                         unsigned NumRegs) {
-  // We really want the positive remainder mod 32 here, that happens to be
-  // easily obtainable with a mask.
-  return ((DstReg - SrcReg) & 0x1f) < NumRegs;
+  return DstReg > SrcReg && (DstReg - SrcReg) < NumRegs;
 }
 
 void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,

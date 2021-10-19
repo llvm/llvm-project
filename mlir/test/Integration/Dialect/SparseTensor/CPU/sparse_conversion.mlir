@@ -184,25 +184,25 @@ module {
     %c11 = sparse_tensor.indices %c, %c1 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
     %c12 = sparse_tensor.indices %c, %c2 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
 
-    %d10 = sparse_tensor.indices %d, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %d11 = sparse_tensor.indices %d, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %d12 = sparse_tensor.indices %d, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e10 = sparse_tensor.indices %e, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e11 = sparse_tensor.indices %e, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e12 = sparse_tensor.indices %e, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f10 = sparse_tensor.indices %f, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f11 = sparse_tensor.indices %f, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f12 = sparse_tensor.indices %f, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d20 = sparse_tensor.indices %d, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d21 = sparse_tensor.indices %d, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d22 = sparse_tensor.indices %d, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e20 = sparse_tensor.indices %e, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e21 = sparse_tensor.indices %e, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e22 = sparse_tensor.indices %e, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f20 = sparse_tensor.indices %f, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f21 = sparse_tensor.indices %f, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f22 = sparse_tensor.indices %f, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
 
-    %g10 = sparse_tensor.indices %g, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %g11 = sparse_tensor.indices %g, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %g12 = sparse_tensor.indices %g, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h10 = sparse_tensor.indices %h, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h11 = sparse_tensor.indices %h, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h12 = sparse_tensor.indices %h, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i10 = sparse_tensor.indices %i, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i11 = sparse_tensor.indices %i, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i12 = sparse_tensor.indices %i, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g30 = sparse_tensor.indices %g, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g31 = sparse_tensor.indices %g, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g32 = sparse_tensor.indices %g, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h30 = sparse_tensor.indices %h, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h31 = sparse_tensor.indices %h, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h32 = sparse_tensor.indices %h, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i30 = sparse_tensor.indices %i, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i31 = sparse_tensor.indices %i, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i32 = sparse_tensor.indices %i, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
 
     call @check(%v10, %a10) : (memref<?xindex>, memref<?xindex>) -> ()
     call @check(%v11, %a11) : (memref<?xindex>, memref<?xindex>) -> ()
@@ -214,25 +214,25 @@ module {
     call @check(%v11, %c11) : (memref<?xindex>, memref<?xindex>) -> ()
     call @check(%v12, %c12) : (memref<?xindex>, memref<?xindex>) -> ()
 
-    call @check(%v20, %d10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v21, %d11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v22, %d12) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v20, %e10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v21, %e11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v22, %e12) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v20, %f10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v21, %f11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v22, %f12) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v20, %d20) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v21, %d21) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v22, %d22) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v20, %e20) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v21, %e21) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v22, %e22) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v20, %f20) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v21, %f21) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v22, %f22) : (memref<?xindex>, memref<?xindex>) -> ()
 
-    call @check(%v30, %g10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v31, %g11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v32, %g12) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v30, %h10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v31, %h11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v32, %h12) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v30, %i10) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v31, %i11) : (memref<?xindex>, memref<?xindex>) -> ()
-    call @check(%v32, %i12) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v30, %g30) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v31, %g31) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v32, %g32) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v30, %h30) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v31, %h31) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v32, %h32) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v30, %i30) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v31, %i31) : (memref<?xindex>, memref<?xindex>) -> ()
+    call @check(%v32, %i32) : (memref<?xindex>, memref<?xindex>) -> ()
 
     //
     // Sanity check direct results.

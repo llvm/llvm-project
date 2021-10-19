@@ -80,7 +80,7 @@ public:
   // passing to the BUILTIN() macro in Builtins.def.
   const std::string &getBuiltinStr() const { return BuiltinStr; }
 
-  // Return the clang buitlin type for RVV vector type which are used in the
+  // Return the clang builtin type for RVV vector type which are used in the
   // riscv_vector.h header file.
   const std::string &getClangBuiltinStr() const { return ClangBuiltinStr; }
 

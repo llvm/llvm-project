@@ -154,7 +154,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   const DataLayout &DL = AI.getModule()->getDataLayout();
   TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
-  unsigned PointerSize = DL.getMaxPointerSizeInBits();
+  unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
   ConstantRange R = ConstantRange::getEmpty(PointerSize);
   if (TS.isScalable())
@@ -752,10 +752,8 @@ GVToSSI createGlobalStackSafetyInfo(
         KV.second.Calls.clear();
     }
 
-  uint32_t PointerSize = Copy.begin()
-                             ->first->getParent()
-                             ->getDataLayout()
-                             .getMaxPointerSizeInBits();
+  uint32_t PointerSize =
+      Copy.begin()->first->getParent()->getDataLayout().getPointerSizeInBits();
   StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy));
 
   for (auto &F : SSDFA.run()) {

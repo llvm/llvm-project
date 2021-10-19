@@ -35,7 +35,6 @@ class SILowerSGPRSpills : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
-  VirtRegMap *VRM = nullptr;
   LiveIntervals *LIS = nullptr;
 
   // Save and Restore blocks of the current function. Typically there is a
@@ -267,7 +266,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
-  VRM = getAnalysisIfAvailable<VirtRegMap>();
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
   assert(SaveBlocks.empty() && RestoreBlocks.empty());

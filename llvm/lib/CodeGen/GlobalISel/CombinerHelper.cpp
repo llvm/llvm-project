@@ -4124,6 +4124,55 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
   return true;
 }
 
+bool CombinerHelper::matchBitfieldExtractFromShrAnd(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  const unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_ASHR);
+
+  const Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (!getTargetLowering().isConstantUnsignedBitfieldExtactLegal(
+          TargetOpcode::G_UBFX, Ty, Ty))
+    return false;
+
+  // Try to match shr (and x, c1), c2
+  Register AndSrc;
+  int64_t ShrAmt;
+  int64_t SMask;
+  if (!mi_match(Dst, MRI,
+                m_BinOp(Opcode,
+                        m_OneNonDBGUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
+                        m_ICst(ShrAmt))))
+    return false;
+
+  const unsigned Size = Ty.getScalarSizeInBits();
+  if (ShrAmt < 0 || ShrAmt >= Size)
+    return false;
+
+  // Check that ubfx can do the extraction, with no holes in the mask.
+  uint64_t UMask = SMask;
+  UMask |= maskTrailingOnes<uint64_t>(ShrAmt);
+  UMask &= maskTrailingOnes<uint64_t>(Size);
+  if (!isMask_64(UMask))
+    return false;
+
+  // Calculate start position and width of the extract.
+  const int64_t Pos = ShrAmt;
+  const int64_t Width = countTrailingOnes(UMask) - ShrAmt;
+
+  // It's preferable to keep the shift, rather than form G_SBFX.
+  // TODO: remove the G_AND via demanded bits analysis.
+  if (Opcode == TargetOpcode::G_ASHR && Width + ShrAmt == Size)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto WidthCst = B.buildConstant(Ty, Width);
+    auto PosCst = B.buildConstant(Ty, Pos);
+    B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {AndSrc, PosCst, WidthCst});
+  };
+  return true;
+}
+
 bool CombinerHelper::reassociationCanBreakAddressingModePattern(
     MachineInstr &PtrAdd) {
   assert(PtrAdd.getOpcode() == TargetOpcode::G_PTR_ADD);

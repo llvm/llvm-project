@@ -346,6 +346,10 @@ MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
+MlirLocation mlirOperationGetLocation(MlirOperation op) {
+  return wrap(unwrap(op)->getLoc());
+}
+
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
   if (const auto *abstractOp = unwrap(op)->getAbstractOperation()) {
     return wrap(abstractOp->typeID);
