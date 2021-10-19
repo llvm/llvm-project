@@ -975,11 +975,10 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#endif\n\n";
 
   // The same extension include in the same arch guard marco.
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<RVVIntrinsic> &A,
-                      const std::unique_ptr<RVVIntrinsic> &B) {
-                     return A->getRISCVExtensions() < B->getRISCVExtensions();
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                             const std::unique_ptr<RVVIntrinsic> &B) {
+    return A->getRISCVExtensions() < B->getRISCVExtensions();
+  });
 
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
@@ -1024,11 +1023,10 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
   // IR name could be empty, use the stable sort preserves the relative order.
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<RVVIntrinsic> &A,
-                      const std::unique_ptr<RVVIntrinsic> &B) {
-                     return A->getIRName() < B->getIRName();
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                             const std::unique_ptr<RVVIntrinsic> &B) {
+    return A->getIRName() < B->getIRName();
+  });
   // Print switch body when the ir name or ManualCodegen changes from previous
   // iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();

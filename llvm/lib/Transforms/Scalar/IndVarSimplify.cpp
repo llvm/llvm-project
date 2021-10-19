@@ -89,6 +89,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "indvars"
 
@@ -155,6 +156,9 @@ class IndVarSimplify {
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
+  /// See if we can convert an exit condition from signed to unsigned.
+  /// (See inline comment about why this is duplicated from simplifyAndExtend)
+  bool canonicalizeExitCondition(Loop *L);
   /// Try to eliminate loop exits based on analyzeable exit counts
   bool optimizeLoopExits(Loop *L, SCEVExpander &Rewriter);
   /// Try to form loop invariant tests for loop exits by changing how many
@@ -1346,7 +1350,6 @@ static bool optimizeLoopExitWithUnknownExitCount(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
-  using namespace PatternMatch;
   BasicBlock *TrueSucc, *FalseSucc;
   if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
@@ -1405,6 +1408,57 @@ static bool optimizeLoopExitWithUnknownExitCount(
                              Rewriter, DeadInsts);
 
   return true;
+}
+
+bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
+  // Note: This is duplicating a particular part on SimplifyIndVars reasoning.
+  // We need to duplicate it because given icmp zext(small-iv), C, IVUsers
+  // never reaches the icmp since the zext doesn't fold to an AddRec unless
+  // it already has flags.  The alternative to this would be to extending the
+  // set of "interesting" IV users to include the icmp, but doing that
+  // regresses results in practice by querying SCEVs before trip counts which
+  // rely on them which results in SCEV caching sub-optimal answers.  The
+  // concern about caching sub-optimal results is why we only query SCEVs of
+  // the loop invariant RHS here.
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  bool Changed = false;
+  for (auto *ExitingBB : ExitingBlocks) {
+    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+    assert(BI->isConditional() && "exit branch must be conditional");
+
+    auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICmp)
+      continue;
+
+    auto *LHS = ICmp->getOperand(0);
+    auto *RHS = ICmp->getOperand(1);
+    // Avoid computing SCEVs in the loop to avoid poisoning cache with
+    // sub-optimal results.
+    if (!L->isLoopInvariant(RHS))
+      continue;
+
+    // Match (icmp signed-cond zext, RHS)
+    Value *LHSOp = nullptr;
+    if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
+      continue;
+
+    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
+    const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
+    const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
+    auto FullCR = ConstantRange::getFull(InnerBitWidth);
+    FullCR = FullCR.zeroExtend(OuterBitWidth);
+    if (!FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS))))
+      continue;
+
+    // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
+    // replace the signed condition with the unsigned version.
+    ICmp->setPredicate(ICmp->getUnsignedPredicate());
+    Changed = true;
+  }
+  return Changed;
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -1787,6 +1841,11 @@ bool IndVarSimplify::run(Loop *L) {
 
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
+
+  if (canonicalizeExitCondition(L))
+    // We've changed the predicate, but have not changed exit counts, or the
+    // values which can flow through any SCEV.  i.e, no invalidation needed.
+    Changed = true;
 
   // Try to eliminate loop exits based on analyzeable exit counts
   if (optimizeLoopExits(L, Rewriter))  {
