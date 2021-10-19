@@ -1255,13 +1255,11 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
     return exact_cmd;
 
   // We didn't have an exact command, so now look for partial matches.
-  size_t num_found;
   StringList tmp_list;
   StringList *matches_ptr = matches ? matches : &tmp_list;
-  num_found =
-      AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
-  num_found += AddNamesMatchingPartialString(GetUserMultiwordCommands(),
-                                             cmd_str, *matches_ptr);
+  AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
+  AddNamesMatchingPartialString(GetUserMultiwordCommands(),
+                                cmd_str, *matches_ptr);
 
   return {};
 }
